@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
+import { TicketResultModal } from '@/components/TicketResultModal';
 
 interface Contest {
   id: string;
@@ -30,6 +31,13 @@ interface UserWallet {
   balance_coins: number;
 }
 
+interface TicketResult {
+  ticket_number: number;
+  distance_to_next_bonus: number | null;
+  next_bonus_position: number | null;
+  won_prize?: string;
+}
+
 const ContestDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user, session } = useAuth();
@@ -39,6 +47,8 @@ const ContestDetail: React.FC = () => {
   const [userWallet, setUserWallet] = useState<UserWallet>({ balance_coins: 0 });
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+  const [ticketResult, setTicketResult] = useState<TicketResult | null>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -91,10 +101,19 @@ const ContestDetail: React.FC = () => {
 
   const fetchUserWallet = async () => {
     try {
-      // Temporary placeholder data until database schema is fully configured
-      setUserWallet({ balance_coins: 150 });
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from('wallets')
+        .select('balance_coins')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      setUserWallet({ balance_coins: data?.balance_coins || 0 });
     } catch (error) {
       console.error('Error fetching wallet:', error);
+      setUserWallet({ balance_coins: 0 });
     }
   };
 
@@ -113,27 +132,37 @@ const ContestDetail: React.FC = () => {
     setPurchasing(true);
 
     try {
-      // Call edge function to handle ticket purchase
-      const { data, error } = await supabase.functions.invoke('purchase-ticket', {
-        body: { contest_id: contest.id }
-      });
+      // Call the unlock_ticket function using the generic rpc call
+      const { data, error } = await supabase.rpc('unlock_ticket' as any, {
+        p_contest_id: contest.id,
+        p_user_id: user.id
+      }) as { data: any; error: any };
 
-      if (error) throw error;
+      if (error || !data) throw error || new Error('No data returned');
 
-      toast({
-        title: "Zakoupený tiket",
-        description: `Váš tiket číslo ${data.ticket_number} byl úspěšně zakoupen!`
-      });
+      // Prepare result for modal
+      const result: TicketResult = {
+        ticket_number: data.ticket_number || 0,
+        distance_to_next_bonus: data.distance_to_next_bonus || null,
+        next_bonus_position: data.next_bonus_position || null,
+      };
+
+      // Check if user won main prize (ticket 1,000,000)
+      if (data.ticket_number === 1000000) {
+        result.won_prize = contest.main_prize;
+      }
+
+      setTicketResult(result);
+      setShowResultModal(true);
 
       // Refresh data
-      await fetchContestData();
       await fetchUserWallet();
 
     } catch (error) {
       console.error('Error purchasing ticket:', error);
       toast({
         title: "Chyba",
-        description: "Nepodařilo se zakoupit tiket. Zkuste to znovu.",
+        description: "Nepodařilo se uplatnit miocoiny. Zkuste to znovu.",
         variant: "destructive"
       });
     } finally {
@@ -270,9 +299,9 @@ const ContestDetail: React.FC = () => {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold mb-1">Koupit tiket</h3>
+                    <h3 className="text-lg font-semibold mb-1">Uplatnit miocoiny</h3>
                     <p className="text-muted-foreground">
-                      Cena: 1 mince | Váš zůstatek: {userWallet.balance_coins.toLocaleString('cs-CZ')} mincí
+                      Cena: 1 miocoin | Váš zůstatek: {userWallet.balance_coins.toLocaleString('cs-CZ')} miocoinů
                     </p>
                   </div>
                   <Button 
@@ -280,7 +309,7 @@ const ContestDetail: React.FC = () => {
                     disabled={purchasing || userWallet.balance_coins < 1}
                     size="lg"
                   >
-                    {purchasing ? 'Nakupuji...' : 'Koupit tiket'}
+                    {purchasing ? 'Uplatňuji...' : `Uplatnit ${userWallet.balance_coins >= 1 ? '1' : '0'} miocoinů`}
                   </Button>
                 </div>
               </CardContent>
@@ -289,6 +318,14 @@ const ContestDetail: React.FC = () => {
 
         </div>
       </div>
+
+      {/* Ticket Result Modal */}
+      <TicketResultModal
+        isOpen={showResultModal}
+        onClose={() => setShowResultModal(false)}
+        contestId={contest?.id || ''}
+        result={ticketResult}
+      />
     </div>
   );
 };
