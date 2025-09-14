@@ -86,12 +86,6 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleTopUp = () => {
-    toast({
-      title: "Dobíjení peněženky",
-      description: "Tato funkce bude brzy dostupná.",
-    });
-  };
 
   const handleVoucherPurchase = async () => {
     const amount = parseInt(voucherAmount);
@@ -213,22 +207,12 @@ const Profile: React.FC = () => {
                   </Card>
                 </div>
                 
-                <div className="flex flex-col md:flex-row gap-3">
-                  <Button 
-                    onClick={handleTopUp}
-                    className="flex-1"
-                    size="lg"
-                  >
-                    Dobít peněženku
-                  </Button>
-                  
+                <div className="flex justify-center">
                   <Button 
                     onClick={() => setShowVoucherForm(true)}
-                    variant="outline"
-                    className="flex-1"
                     size="lg"
                   >
-                    Koupit vouchery
+                    Dobít vouchery + miocoiny
                   </Button>
                 </div>
               </div>
