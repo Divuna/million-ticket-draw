@@ -19,6 +19,10 @@ export const Header: React.FC = () => {
               <Link to="/profile">
                 <Button variant="ghost">Profil</Button>
               </Link>
+              {/* Check if admin and show admin link */}
+              <Link to="/admin">
+                <Button variant="ghost">Admin</Button>
+              </Link>
               <Button variant="outline" onClick={signOut}>
                 Odhlásit se
               </Button>
