@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
+import { RefreshCw } from 'lucide-react';
 
 interface UserWallet {
   user_id: string;
@@ -22,6 +23,7 @@ const Profile: React.FC = () => {
   const { user, session } = useAuth();
   const [wallet, setWallet] = useState<UserWallet | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showVoucherForm, setShowVoucherForm] = useState(false);
   const [voucherAmount, setVoucherAmount] = useState('');
   const [purchaseLoading, setPurchaseLoading] = useState(false);
@@ -86,6 +88,26 @@ const Profile: React.FC = () => {
     }
   };
 
+
+  const handleRefreshBalance = async () => {
+    setRefreshing(true);
+    try {
+      await fetchUserWallet();
+      toast({
+        title: "Úspěch",
+        description: "Zůstatek byl aktualizován.",
+      });
+    } catch (error) {
+      console.error('Error refreshing balance:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se aktualizovat zůstatek. Zkuste to znovu.",
+        variant: "destructive"
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleVoucherPurchase = async () => {
     const amount = parseInt(voucherAmount);
@@ -181,7 +203,18 @@ const Profile: React.FC = () => {
               </div>
               
               <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold mb-4">Peněženka</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Peněženka</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleRefreshBalance}
+                    disabled={refreshing}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                    {refreshing ? 'Aktualizuji...' : 'Aktualizovat zůstatek'}
+                  </Button>
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <Card>

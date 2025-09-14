@@ -89,9 +89,27 @@ serve(async (req) => {
         throw new Error('Missing user_id or amount in session metadata')
       }
 
-      console.log(`Processing payment for user ${userId}, amount: ${amount}`)
+      console.log(`Processing payment for user ${userId}, amount: ${amount}, session: ${session.id}`)
 
-      // Insert payment record
+      // Check if payment already processed (idempotency)
+      const { data: existingPayment } = await supabaseClient
+        .from('payments')
+        .select('id')
+        .eq('stripe_session_id', session.id)
+        .single()
+
+      if (existingPayment) {
+        console.log(`Payment already processed for session ${session.id}`)
+        return new Response(
+          JSON.stringify({ received: true, message: 'Payment already processed' }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          }
+        )
+      }
+
+      // Insert payment record - the database trigger will handle wallet updates
       const { error: paymentError } = await supabaseClient
         .from('payments')
         .insert({
@@ -107,29 +125,7 @@ serve(async (req) => {
         throw new Error('Failed to record payment')
       }
 
-      // Update wallet balances
-      const { data: currentWallet } = await supabaseClient
-        .from('wallets')
-        .select('balance_coins, balance_vouchers')
-        .eq('user_id', userId)
-        .single()
-
-      if (currentWallet) {
-        const { error: walletError } = await supabaseClient
-          .from('wallets')
-          .update({
-            balance_coins: (currentWallet.balance_coins || 0) + amount,
-            balance_vouchers: (currentWallet.balance_vouchers || 0) + amount
-          })
-          .eq('user_id', userId)
-
-        if (walletError) {
-          console.error('Error updating wallet:', walletError)
-          throw new Error('Failed to update wallet')
-        }
-      }
-
-      console.log(`Successfully processed payment for user ${userId}`)
+      console.log(`Successfully recorded payment for user ${userId}, wallet will be updated by trigger`)
     }
 
     return new Response(
