@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
@@ -20,6 +22,9 @@ const Profile: React.FC = () => {
   const { user, session } = useAuth();
   const [wallet, setWallet] = useState<UserWallet | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showVoucherForm, setShowVoucherForm] = useState(false);
+  const [voucherAmount, setVoucherAmount] = useState('');
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -51,6 +56,49 @@ const Profile: React.FC = () => {
       title: "Dobíjení peněženky",
       description: "Tato funkce bude brzy dostupná.",
     });
+  };
+
+  const handleVoucherPurchase = async () => {
+    const amount = parseInt(voucherAmount);
+    
+    if (!amount || amount < 50) {
+      toast({
+        title: "Chyba",
+        description: "Minimální částka je 50 CZK.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setPurchaseLoading(true);
+
+    try {
+      // Call edge function to create Stripe checkout session
+      const { data, error } = await supabase.functions.invoke('create-stripe-checkout', {
+        body: { amount }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.checkout_url) {
+        // Redirect to Stripe checkout
+        window.location.href = data.checkout_url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se vytvořit platbu. Zkuste to znovu.",
+        variant: "destructive"
+      });
+    } finally {
+      setPurchaseLoading(false);
+    }
   };
 
   if (!session) {
@@ -130,18 +178,79 @@ const Profile: React.FC = () => {
                   </Card>
                 </div>
                 
-                <Button 
-                  onClick={handleTopUp}
-                  className="w-full md:w-auto"
-                  size="lg"
-                >
-                  Dobít peněženku
-                </Button>
+                <div className="flex flex-col md:flex-row gap-3">
+                  <Button 
+                    onClick={handleTopUp}
+                    className="flex-1"
+                    size="lg"
+                  >
+                    Dobít peněženku
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => setShowVoucherForm(true)}
+                    variant="outline"
+                    className="flex-1"
+                    size="lg"
+                  >
+                    Koupit vouchery
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Voucher Purchase Dialog */}
+      <Dialog open={showVoucherForm} onOpenChange={setShowVoucherForm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Koupit vouchery</DialogTitle>
+            <DialogDescription>
+              Zadejte částku v CZK (minimálně 50). 1 CZK = 1 voucher = 1 mince.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="amount" className="text-sm font-medium">
+                Částka (CZK) *
+              </label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="50"
+                min="50"
+                value={voucherAmount}
+                onChange={(e) => setVoucherAmount(e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
+                Minimální částka je 50 CZK
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowVoucherForm(false);
+                setVoucherAmount('');
+              }}
+              disabled={purchaseLoading}
+            >
+              Zrušit
+            </Button>
+            <Button 
+              onClick={handleVoucherPurchase}
+              disabled={purchaseLoading || !voucherAmount || parseInt(voucherAmount) < 50}
+            >
+              {purchaseLoading ? 'Zpracovávám...' : 'Pokračovat k platbě'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
