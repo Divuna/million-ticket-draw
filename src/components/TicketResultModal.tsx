@@ -39,6 +39,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const navigate = useNavigate();
   const { width, height } = useWindowSize();
   const isWinner = result?.won_prize;
+  const isMainPrize = result?.ticket_number === 1000000;
 
   const handleShowBonusPrizes = () => {
     navigate(`/contest/${contestId}/bonus`);
@@ -59,28 +60,47 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             width={width}
             height={height}
             recycle={false}
-            numberOfPieces={200}
-            gravity={0.3}
+            numberOfPieces={isMainPrize ? 500 : 150}
+            gravity={isMainPrize ? 0.2 : 0.4}
+            colors={isMainPrize ? ['#FFD700', '#FFA500', '#FF4500', '#DC143C', '#8A2BE2'] : undefined}
           />
         )}
         
         <DialogHeader>
           <DialogTitle className="text-center text-xl">
-            {isWinner ? 'Gratulujeme! 🎉' : 'Výsledek tiketu'}
+            {isMainPrize ? '' : isWinner ? 'Výhra! 🎉' : 'Výsledek tiketu'}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           {isWinner ? (
-            <div className="text-center space-y-3">
-              <div className="text-6xl">🏆</div>
-              <h3 className="text-lg font-semibold text-primary">
-                Gratulujeme, vyhrál jsi {result.won_prize}!
-              </h3>
-              <p className="text-muted-foreground">
-                Tiket #{result.ticket_number.toLocaleString('cs-CZ')}
-              </p>
-            </div>
+            isMainPrize ? (
+              <div className="text-center space-y-4">
+                <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent animate-pulse">
+                  HLAVNÍ VÝHRA!
+                </h1>
+                <div className="text-8xl">🏆</div>
+                <h3 className="text-xl font-semibold text-foreground">
+                  Vyhrál jsi hlavní cenu: {result.won_prize}
+                </h3>
+                <p className="text-muted-foreground">
+                  Tiket #{result.ticket_number.toLocaleString('cs-CZ')}
+                </p>
+              </div>
+            ) : (
+              <div className="text-center space-y-3">
+                <div className="text-6xl">🎁</div>
+                <h3 className="text-lg font-semibold text-green-600">
+                  Gratulujeme!
+                </h3>
+                <p className="text-base font-medium">
+                  Vyhrál jsi {result.won_prize}!
+                </p>
+                <p className="text-muted-foreground">
+                  Tiket #{result.ticket_number.toLocaleString('cs-CZ')}
+                </p>
+              </div>
+            )
           ) : (
             <div className="text-center space-y-4">
               <div className="text-4xl">🎯</div>
