@@ -14,13 +14,422 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_logs: {
+        Row: {
+          created_at: string
+          event: string
+          id: number
+          metadata: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: number
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: number
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      bonus_prizes: {
+        Row: {
+          contest_id: string
+          created_at: string
+          description: string
+          id: string
+          status: string
+          ticket_position: number
+        }
+        Insert: {
+          contest_id: string
+          created_at?: string
+          description: string
+          id?: string
+          status?: string
+          ticket_position: number
+        }
+        Update: {
+          contest_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          status?: string
+          ticket_position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bonus_prizes_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contests: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          main_prize: string
+          status: string
+          ticket_count: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          main_prize: string
+          status?: string
+          ticket_count?: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          main_prize?: string
+          status?: string
+          ticket_count?: number
+          title?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          status: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          status?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          status?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_wallets"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          method: string
+          status: string
+          stripe_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          method: string
+          status?: string
+          stripe_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          method?: string
+          status?: string
+          stripe_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_wallets"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          contest_id: string
+          created_at: string
+          id: string
+          number: number
+          user_id: string
+        }
+        Insert: {
+          contest_id: string
+          created_at?: string
+          id?: string
+          number: number
+          user_id: string
+        }
+        Update: {
+          contest_id?: string
+          created_at?: string
+          id?: string
+          number?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_wallets"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          address: string | null
+          apple_id: string | null
+          created_at: string
+          email: string
+          google_id: string | null
+          id: string
+          name: string | null
+          phone: string | null
+          role: string
+        }
+        Insert: {
+          address?: string | null
+          apple_id?: string | null
+          created_at?: string
+          email: string
+          google_id?: string | null
+          id: string
+          name?: string | null
+          phone?: string | null
+          role?: string
+        }
+        Update: {
+          address?: string | null
+          apple_id?: string | null
+          created_at?: string
+          email?: string
+          google_id?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          role?: string
+        }
+        Relationships: []
+      }
+      vouchers: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          redeemed: boolean
+          redeemed_at: string | null
+          user_id: string
+          value: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          redeemed?: boolean
+          redeemed_at?: string | null
+          user_id: string
+          value: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          redeemed?: boolean
+          redeemed_at?: string | null
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vouchers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vouchers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_wallets"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      wallets: {
+        Row: {
+          balance_coins: number
+          balance_vouchers: number
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          balance_coins?: number
+          balance_vouchers?: number
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          balance_coins?: number
+          balance_vouchers?: number
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "v_user_wallets"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      winners: {
+        Row: {
+          contest_id: string
+          created_at: string
+          delivered: boolean
+          id: string
+          notes: string | null
+          prize_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          contest_id: string
+          created_at?: string
+          delivered?: boolean
+          id?: string
+          notes?: string | null
+          prize_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          contest_id?: string
+          created_at?: string
+          delivered?: boolean
+          id?: string
+          notes?: string | null
+          prize_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winners_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "winners_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "winners_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_wallets"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      v_user_wallets: {
+        Row: {
+          balance_coins: number | null
+          balance_vouchers: number | null
+          created_at: string | null
+          email: string | null
+          name: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      fn_close_contest: {
+        Args: { p_contest: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
