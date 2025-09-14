@@ -64,7 +64,7 @@ serve(async (req) => {
     // Verify webhook signature
     let event: Stripe.Event
     try {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+      event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret)
     } catch (err) {
       console.error('Webhook signature verification failed:', err.message)
       return new Response(
@@ -96,7 +96,7 @@ serve(async (req) => {
         .from('payments')
         .select('id')
         .eq('stripe_session_id', session.id)
-        .single()
+        .maybeSingle()
 
       if (existingPayment) {
         console.log(`Payment already processed for session ${session.id}`)
