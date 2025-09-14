@@ -122,6 +122,9 @@ const Profile: React.FC = () => {
     }
 
     setPurchaseLoading(true);
+    
+    // Pre-open a blank window immediately (tied to user gesture)
+    const preOpenedWindow = window.open('', '_blank');
 
     try {
       // Call edge function to create Stripe checkout session
@@ -134,18 +137,33 @@ const Profile: React.FC = () => {
       }
 
       if (data.checkout_url) {
-        // Redirect to Stripe checkout - use window.open to avoid popup blockers
-        const newWindow = window.open(data.checkout_url, '_self');
-        if (!newWindow) {
-          // Fallback if popup is blocked
-          window.location.assign(data.checkout_url);
+        // Try to redirect pre-opened window first
+        if (preOpenedWindow && !preOpenedWindow.closed) {
+          preOpenedWindow.location.href = data.checkout_url;
+        } else {
+          // Fallback to top-level navigation (escape iframe)
+          if (window.top && window.top !== window) {
+            window.top.location.assign(data.checkout_url);
+          } else {
+            // Final fallback to current window
+            window.location.assign(data.checkout_url);
+          }
         }
       } else {
         throw new Error('No checkout URL received');
       }
 
+      setShowVoucherForm(false);
+      setVoucherAmount('');
+
     } catch (error) {
       console.error('Error creating checkout session:', error);
+      
+      // Close pre-opened window on error
+      if (preOpenedWindow && !preOpenedWindow.closed) {
+        preOpenedWindow.close();
+      }
+      
       toast({
         title: "Chyba",
         description: "Nepodařilo se vytvořit platbu. Zkuste to znovu.",
