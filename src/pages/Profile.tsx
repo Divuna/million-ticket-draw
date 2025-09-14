@@ -34,8 +34,45 @@ const Profile: React.FC = () => {
 
   const fetchUserWallet = async () => {
     try {
-      // For now, use basic user data since database tables may not be fully set up
-      // This will be replaced with proper database query once tables are created
+      const { data, error } = await (supabase as any)
+        .from('wallets')
+        .select('*')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching wallet:', error);
+        // Fallback to basic user data
+        setWallet({
+          user_id: user?.id || '',
+          email: user?.email || '',
+          name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
+          balance_coins: 0,
+          balance_vouchers: 0,
+          created_at: new Date().toISOString()
+        });
+      } else if (data) {
+        setWallet({
+          user_id: data.user_id || '',
+          email: user?.email || '',
+          name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
+          balance_coins: Number(data.balance_coins) || 0,
+          balance_vouchers: Number(data.balance_vouchers) || 0,
+          created_at: data.created_at || new Date().toISOString()
+        });
+      } else {
+        // No wallet data found, use fallback
+        setWallet({
+          user_id: user?.id || '',
+          email: user?.email || '',
+          name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
+          balance_coins: 0,
+          balance_vouchers: 0,
+          created_at: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Error:', error);
       setWallet({
         user_id: user?.id || '',
         email: user?.email || '',
@@ -44,8 +81,6 @@ const Profile: React.FC = () => {
         balance_vouchers: 0,
         created_at: new Date().toISOString()
       });
-    } catch (error) {
-      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
