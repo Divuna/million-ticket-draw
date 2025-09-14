@@ -134,8 +134,12 @@ const Profile: React.FC = () => {
       }
 
       if (data.checkout_url) {
-        // Redirect to Stripe checkout
-        window.location.href = data.checkout_url;
+        // Redirect to Stripe checkout - use window.open to avoid popup blockers
+        const newWindow = window.open(data.checkout_url, '_self');
+        if (!newWindow) {
+          // Fallback if popup is blocked
+          window.location.assign(data.checkout_url);
+        }
       } else {
         throw new Error('No checkout URL received');
       }
