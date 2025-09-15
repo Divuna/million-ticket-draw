@@ -41,6 +41,9 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
   purchasing,
   onBuyTicket
 }) => {
+  // Filter to show only available bonus prizes (not won ones)
+  const availableBonusPrizes = bonusPrizes.filter(prize => prize.status === 'pending');
+
   const handleBuyClick = () => {
     if (userWallet.balance_coins < 1) {
       toast({
@@ -95,6 +98,32 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
           </div>
         </CardContent>
       </Card>
+
+      {/* Available Bonus Prizes - No specific positions shown */}
+      {availableBonusPrizes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Dostupné bonusové ceny</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              {availableBonusPrizes.map((prize) => (
+                <div key={prize.id} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-semibold">{prize.description}</h4>
+                    <Badge variant="secondary">
+                      Dostupná
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Šance na výhru při nákupu tiketu
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Purchase Section */}
       {contest.status === 'active' && (
