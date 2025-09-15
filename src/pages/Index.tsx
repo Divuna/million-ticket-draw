@@ -1,16 +1,194 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { TicketResultModal } from '@/components/TicketResultModal';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+
+interface Contest {
+  id: string;
+  title: string;
+  description: string | null;
+  main_prize: string;
+  ticket_price: number;
+  status: string;
+  ticket_count: number;
+  created_at: string;
+}
+
+interface UnlockTicketResult {
+  ticket_number: number;
+  ticket_price: number;
+  next_bonus_position?: number;
+  distance_to_next_bonus?: number;
+  won_prize?: string;
+}
 
 const Index = () => {
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <h1 className="mb-4 text-4xl font-bold">OneMil</h1>
-          <p className="text-xl text-muted-foreground">Vítejte v aplikaci OneMil!</p>
+  const [contests, setContests] = useState<Contest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [processingContestId, setProcessingContestId] = useState<string | null>(null);
+  const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
+  const [modalContestId, setModalContestId] = useState<string | null>(null);
+  const { user } = useAuth();
+
+  const fetchContests = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('contests')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setContests(data as Contest[] || []);
+    } catch (error) {
+      console.error('Error fetching contests:', error);
+      toast.error('Chyba při načítání soutěží');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchContests();
+  }, []);
+
+  const handleUnlockTicket = async (contestId: string) => {
+    if (!user) {
+      toast.error('Pro koupi tiketu se musíte přihlásit');
+      return;
+    }
+
+    setProcessingContestId(contestId);
+    
+    try {
+      const { data, error } = await supabase.rpc('unlock_ticket' as any, {
+        p_contest_id: contestId,
+        p_user_id: user.id
+      });
+
+      if (error) throw error;
+
+      if (data) {
+        setModalResult(data);
+        setModalContestId(contestId);
+        
+        if (data.won_prize) {
+          toast.success(`Gratulujeme! Vyhrál jsi ${data.won_prize}!`);
+        } else {
+          toast.success(`Tiket #${data.ticket_number.toLocaleString('cs-CZ')} zakoupen!`);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error unlocking ticket:', error);
+      toast.error(error.message || 'Chyba při koupi tiketu');
+    } finally {
+      setProcessingContestId(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">Načítání soutěží...</div>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background dark">
+      <Header />
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center mb-8">
+          <h1 className="mb-4 text-4xl font-bold text-neon-cyan">OneMil</h1>
+          <p className="text-xl text-muted-foreground">Vyberte si soutěž a zkuste štěstí!</p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {contests.map((contest) => (
+            <Card key={contest.id} className="border-neon-purple glow-purple bg-card/50 backdrop-blur-sm relative">
+              {contest.status === 'closed' && (
+                <Badge className="absolute top-4 right-4 bg-destructive text-destructive-foreground">
+                  Hra ukončena – hlavní výhra padla
+                </Badge>
+              )}
+              
+              <CardHeader>
+                <div className="w-full h-48 bg-gradient-to-br from-purple-900/20 to-cyan-900/20 rounded-md mb-4 flex items-center justify-center">
+                  <div className="text-6xl">🎯</div>
+                </div>
+                <CardTitle className="text-neon-cyan">{contest.title}</CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  {contest.description}
+                </CardDescription>
+              </CardHeader>
+              
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Hlavní výhra:</span>
+                    <span className="text-sm font-medium text-neon-pink">{contest.main_prize}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Cena tiketu:</span>
+                    <span className="text-sm font-medium text-neon-purple">
+                      {contest.ticket_price} miocoinů
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Celkem tiketů:</span>
+                    <span className="text-sm font-medium">
+                      {contest.ticket_count.toLocaleString('cs-CZ')}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+              
+              <CardFooter>
+                <Button 
+                  className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white border-0 glow-cyan"
+                  onClick={() => handleUnlockTicket(contest.id)}
+                  disabled={contest.status === 'closed' || processingContestId === contest.id || !user}
+                >
+                  {processingContestId === contest.id 
+                    ? 'Zpracování...' 
+                    : `Uplatnit ${contest.ticket_price} miocoinů`
+                  }
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+
+        {contests.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-4">🎯</div>
+            <h3 className="text-xl font-semibold mb-2">Žádné soutěže</h3>
+            <p className="text-muted-foreground">Momentálně nejsou dostupné žádné soutěže.</p>
+          </div>
+        )}
+      </div>
+
+      <TicketResultModal
+        result={modalResult ? {
+          ticket_number: modalResult.ticket_number,
+          distance_to_next_bonus: modalResult.distance_to_next_bonus || 0,
+          next_bonus_position: modalResult.next_bonus_position || 0,
+          won_prize: modalResult.won_prize
+        } : null}
+        contestId={modalContestId}
+        isOpen={!!modalResult}
+        onClose={() => {
+          setModalResult(null);
+          setModalContestId(null);
+        }}
+      />
     </div>
   );
 };

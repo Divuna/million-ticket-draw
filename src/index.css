@@ -91,6 +91,12 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Neon colors */
+    --neon-cyan: 180 100% 50%;
+    --neon-purple: 280 100% 50%;
+    --neon-pink: 330 100% 50%;
+    --neon-green: 120 100% 50%;
   }
 }
 
@@ -101,5 +107,38 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .glow-cyan {
+    box-shadow: 0 0 20px hsl(var(--neon-cyan) / 0.3), 0 0 40px hsl(var(--neon-cyan) / 0.1);
+  }
+  
+  .glow-purple {
+    box-shadow: 0 0 20px hsl(var(--neon-purple) / 0.3), 0 0 40px hsl(var(--neon-purple) / 0.1);
+  }
+  
+  .text-neon-cyan {
+    color: hsl(var(--neon-cyan));
+    text-shadow: 0 0 10px hsl(var(--neon-cyan) / 0.5);
+  }
+  
+  .text-neon-purple {
+    color: hsl(var(--neon-purple));
+    text-shadow: 0 0 10px hsl(var(--neon-purple) / 0.5);
+  }
+  
+  .text-neon-pink {
+    color: hsl(var(--neon-pink));
+    text-shadow: 0 0 10px hsl(var(--neon-pink) / 0.5);
+  }
+  
+  .border-neon-cyan {
+    border-color: hsl(var(--neon-cyan));
+  }
+  
+  .border-neon-purple {
+    border-color: hsl(var(--neon-purple));
   }
 }
