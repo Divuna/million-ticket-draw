@@ -1,48 +1,45 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Navigate, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
+import { useParams, Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Gift } from 'lucide-react';
+import { Header } from '@/components/Header';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/Header';
-
-interface BonusPrize {
-  id: string;
-  description: string;
-  ticket_position: number;
-  status: string;
-  winner_user_id?: string;
-}
 
 interface Contest {
   id: string;
   title: string;
+  main_prize: string;
+  status: string;
+}
+
+interface BonusPrize {
+  id: string;
+  contest_id: string;
+  ticket_position: number;
+  description: string;
+  status: string;
 }
 
 const BonusDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { session } = useAuth();
-  const navigate = useNavigate();
-  const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
+  const { user, session } = useAuth();
   const [contest, setContest] = useState<Contest | null>(null);
+  const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (id) {
-      fetchData();
+    if (id && user) {
+      fetchContestAndBonuses();
     }
-  }, [id]);
+  }, [id, user]);
 
-  const fetchData = async () => {
+  const fetchContestAndBonuses = async () => {
     try {
-      setLoading(true);
-      
-      // Fetch contest info
+      // Fetch contest details
       const { data: contestData, error: contestError } = await supabase
         .from('contests')
-        .select('id, title')
+        .select('*')
         .eq('id', id)
         .single();
 
@@ -54,50 +51,12 @@ const BonusDetail: React.FC = () => {
         .from('bonus_prizes')
         .select('*')
         .eq('contest_id', id)
-        .order('ticket_position', { ascending: true });
+        .order('ticket_position');
 
       if (bonusError) throw bonusError;
-
-      // Fetch winners for these bonus prizes
-      const bonusPrizeIds = (bonusData || []).map(prize => prize.id);
-      const { data: winnersData, error: winnersError } = await supabase
-        .from('winners')
-        .select('prize_id, user_id')
-        .in('prize_id', bonusPrizeIds)
-        .eq('type', 'bonus');
-
-      if (winnersError) throw winnersError;
-
-      // Create a map of prize_id to winner_user_id
-      const winnersMap = new Map();
-      (winnersData || []).forEach(winner => {
-        winnersMap.set(winner.prize_id, winner.user_id);
-      });
-
-      // Process bonus prizes to add winner info
-      const processedPrizes = (bonusData || []).map((prize: any) => ({
-        ...prize,
-        winner_user_id: winnersMap.get(prize.id) || null
-      }));
-
-      // Development logging
-      if (import.meta.env.DEV) {
-        console.log('🎁 Bonus prizes fetched:', processedPrizes);
-        console.log('🏆 Winners data:', winnersData);
-        console.log('👤 Current user ID:', session?.user?.id);
-        console.log('🎯 User won prizes:', processedPrizes.filter(p => p.winner_user_id === session?.user?.id));
-        
-        // Verify winner display logic
-        processedPrizes.forEach(prize => {
-          const isCurrentUserWinner = prize.winner_user_id === session?.user?.id;
-          console.log(`🏅 Prize ${prize.description} (position ${prize.ticket_position}): winner_user_id=${prize.winner_user_id}, current_user=${session?.user?.id}, will_show_won=${isCurrentUserWinner}`);
-        });
-      }
-      
-      setBonusPrizes(processedPrizes);
-
+      setBonusPrizes(bonusData || []);
     } catch (error) {
-      console.error('Error fetching bonus data:', error);
+      console.error('Error fetching contest and bonuses:', error);
     } finally {
       setLoading(false);
     }
@@ -105,6 +64,12 @@ const BonusDetail: React.FC = () => {
 
   if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Only allow non-admin users (customers) to access this page
+  const isAdmin = user?.email === 'divispavel2@gmail.com';
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
   }
 
   if (loading) {
@@ -120,103 +85,65 @@ const BonusDetail: React.FC = () => {
     );
   }
 
+  if (!contest) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center h-64">
+            <p className="text-muted-foreground">Soutěž nebyla nalezena.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto space-y-6">
-          
-          {/* Header with back button */}
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate(`/contest/${id}`)}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold">Bonusové ceny</h1>
-              {contest && (
-                <p className="text-muted-foreground">{contest.title}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Info card */}
-          <Card className="border-dashed">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <Gift className="h-5 w-5 text-primary mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium mb-1">
-                    Tyto ceny mohou být ukryty kdekoli v průběhu hry
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Každý tiket má šanci vyhrát jednu z těchto bonusových cen na konkrétní pozici.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
+        <div className="max-w-4xl mx-auto">
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>{contest.title}</CardTitle>
+              <CardDescription>Bonusové ceny v této soutěži</CardDescription>
+            </CardHeader>
           </Card>
 
-          {/* Bonus prizes grid */}
-          {bonusPrizes.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {bonusPrizes.map((prize) => (
-                <Card key={prize.id} className="relative overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                      <Badge 
-                        variant={prize.winner_user_id === session?.user?.id ? 'destructive' : 'default'}
-                        className="text-xs"
-                      >
-                        #{prize.ticket_position.toLocaleString('cs-CZ')}
-                      </Badge>
-                      {prize.winner_user_id === session?.user?.id && (
-                        <span className="text-xs text-muted-foreground">Vyhráno</span>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {/* Prize image placeholder */}
-                      <div className="aspect-square bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg flex items-center justify-center">
-                        <Gift className="h-8 w-8 text-primary/40" />
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-semibold text-sm mb-1">{prize.description}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          Pozice tiketu #{prize.ticket_position.toLocaleString('cs-CZ')}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                  
-                  {prize.winner_user_id === session?.user?.id && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <span className="text-white font-bold text-lg">VYHRÁNO</span>
-                    </div>
-                  )}
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center py-8">
-                  <Gift className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Žádné bonusové ceny</h3>
-                  <p className="text-muted-foreground">
-                    Pro tuto soutěž nejsou zatím nastaveny žádné bonusové ceny.
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Dostupné bonusové ceny</h2>
+            
+            {bonusPrizes.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-center text-muted-foreground">
+                    V této soutěži nejsou žádné bonusové ceny.
                   </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {bonusPrizes.map((bonus) => (
+                  <Card key={bonus.id}>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-semibold">Pozice #{bonus.ticket_position}</h3>
+                          <p className="text-muted-foreground">{bonus.description}</p>
+                        </div>
+                        <div>
+                          <Badge variant={bonus.status === 'pending' ? 'default' : 'secondary'}>
+                            {bonus.status === 'pending' ? 'Dostupná' : 'Vyhrána'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
