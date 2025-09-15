@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
 import { TicketResultModal } from '@/components/TicketResultModal';
-import { CustomerContestView } from '@/components/CustomerContestView';
+
 import { AdminContestView } from '@/components/AdminContestView';
 
 interface Contest {
@@ -195,6 +195,12 @@ const ContestDetail: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
+  // Only allow admin access to contest details
+  const isAdmin = user?.email === 'divispavel2@gmail.com';
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -223,11 +229,12 @@ const ContestDetail: React.FC = () => {
   }
 
   const progressPercentage = (currentTickets / contest.ticket_count) * 100;
-  const isAdmin = user?.email === 'divispavel2@gmail.com';
 
-  const renderContestView = () => {
-    if (isAdmin) {
-      return (
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      
+      <div className="container mx-auto px-4 py-8">
         <AdminContestView
           contest={contest}
           bonusPrizes={bonusPrizes}
@@ -236,26 +243,6 @@ const ContestDetail: React.FC = () => {
           purchasing={purchasing}
           onBuyTicket={buyTicket}
         />
-      );
-    } else {
-      return (
-        <CustomerContestView
-          contest={contest}
-          bonusPrizes={bonusPrizes}
-          userWallet={userWallet}
-          purchasing={purchasing}
-          onBuyTicket={buyTicket}
-        />
-      );
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      
-      <div className="container mx-auto px-4 py-8">
-        {renderContestView()}
       </div>
 
       {/* Ticket Result Modal */}
