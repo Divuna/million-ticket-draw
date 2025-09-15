@@ -110,11 +110,14 @@ const Profile: React.FC = () => {
 
   const fetchUserProfile = async () => {
     try {
-      const { data, error } = await (supabase as any)
+      const result = await (supabase as any)
         .from('users')
         .select('nickname, first_name, last_name, address, phone')
         .eq('id', user?.id)
         .maybeSingle();
+
+      const data = (result as any)?.data as any;
+      const error = (result as any)?.error as any;
 
 
       if (error) {
