@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
 import { TicketResultModal } from '@/components/TicketResultModal';
+import { CustomerContestView } from '@/components/CustomerContestView';
+import { AdminContestView } from '@/components/AdminContestView';
 
 interface Contest {
   id: string;
@@ -225,121 +223,39 @@ const ContestDetail: React.FC = () => {
   }
 
   const progressPercentage = (currentTickets / contest.ticket_count) * 100;
+  const isAdmin = user?.email === 'divispavel2@gmail.com';
+
+  const renderContestView = () => {
+    if (isAdmin) {
+      return (
+        <AdminContestView
+          contest={contest}
+          bonusPrizes={bonusPrizes}
+          currentTickets={currentTickets}
+          userWallet={userWallet}
+          purchasing={purchasing}
+          onBuyTicket={buyTicket}
+        />
+      );
+    } else {
+      return (
+        <CustomerContestView
+          contest={contest}
+          bonusPrizes={bonusPrizes}
+          userWallet={userWallet}
+          purchasing={purchasing}
+          onBuyTicket={buyTicket}
+        />
+      );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto space-y-6">
-          
-          {/* Contest Header */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-3xl">{contest.title}</CardTitle>
-                  <CardDescription className="mt-2 text-lg">
-                    {contest.description}
-                  </CardDescription>
-                </div>
-                <Badge 
-                  variant={contest.status === 'active' ? 'default' : 'secondary'}
-                  className="text-sm"
-                >
-                  {contest.status === 'active' ? 'Aktivní' : 
-                   contest.status === 'draft' ? 'Koncept' : 'Uzavřena'}
-                </Badge>
-              </div>
-            </CardHeader>
-          </Card>
-
-          {/* Main Prize */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Hlavní cena</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center p-6 bg-primary/5 rounded-lg">
-                <h3 className="text-2xl font-bold text-primary mb-2">
-                  {contest.main_prize}
-                </h3>
-                <p className="text-muted-foreground">
-                  Tiket #{contest.ticket_count.toLocaleString('cs-CZ')}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Ticket Progress */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Pokrok prodeje tiketů</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Prodáno: {currentTickets.toLocaleString('cs-CZ')}</span>
-                  <span>Celkem: {contest.ticket_count.toLocaleString('cs-CZ')}</span>
-                </div>
-                <Progress value={progressPercentage} className="h-3" />
-                <p className="text-center text-lg font-semibold">
-                  {progressPercentage.toFixed(1)}% dokončeno
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bonus Prizes */}
-          {bonusPrizes.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Bonusové ceny</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {bonusPrizes.map((prize) => (
-                    <div key={prize.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-semibold">{prize.description}</h4>
-                        <Badge variant="outline">
-                          #{prize.ticket_position.toLocaleString('cs-CZ')}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Tiket #{prize.ticket_position.toLocaleString('cs-CZ')}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Purchase Section */}
-          {contest.status === 'active' && (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-1">Uplatnit miocoiny</h3>
-                    <p className="text-muted-foreground">
-                      Cena: 1 miocoin | Váš zůstatek: {userWallet.balance_coins.toLocaleString('cs-CZ')} miocoinů
-                    </p>
-                  </div>
-                  <Button 
-                    onClick={buyTicket}
-                    disabled={purchasing || userWallet.balance_coins < 1}
-                    size="lg"
-                  >
-                    {purchasing ? 'Uplatňuji...' : `Uplatnit ${userWallet.balance_coins >= 1 ? '1' : '0'} miocoinů`}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-        </div>
+        {renderContestView()}
       </div>
 
       {/* Ticket Result Modal */}
