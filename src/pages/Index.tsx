@@ -25,6 +25,7 @@ interface UnlockTicketResult {
   next_bonus_position?: number;
   distance_to_next_bonus?: number;
   won_prize?: string;
+  remaining_tickets?: number;
 }
 
 const Index = () => {
@@ -70,11 +71,26 @@ const Index = () => {
         p_user_id: user.id
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error unlocking ticket:', error);
+        
+        // Handle specific error cases with Czech messages
+        if (error.message?.includes('insufficient') || error.message?.includes('nedostatek')) {
+          toast.error('Nedostatek miocoinů pro nákup tiketu');
+        } else if (error.message?.includes('closed') || error.message?.includes('ukončen')) {
+          toast.error('Tato hra již byla ukončena');
+        } else {
+          toast.error(error.message || 'Chyba při koupi tiketu');
+        }
+        return;
+      }
 
       if (data) {
         setModalResult(data);
         setModalContestId(contestId);
+        
+        // Refresh contests to update remaining tickets display
+        fetchContests();
         
         if (data.won_prize) {
           toast.success(`Gratulujeme! Vyhrál jsi ${data.won_prize}!`);
@@ -84,7 +100,7 @@ const Index = () => {
       }
     } catch (error: any) {
       console.error('Error unlocking ticket:', error);
-      toast.error(error.message || 'Chyba při koupi tiketu');
+      toast.error('Chyba při koupi tiketu');
     } finally {
       setProcessingContestId(null);
     }
