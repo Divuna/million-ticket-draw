@@ -86,6 +86,12 @@ const BonusDetail: React.FC = () => {
         console.log('🏆 Winners data:', winnersData);
         console.log('👤 Current user ID:', session?.user?.id);
         console.log('🎯 User won prizes:', processedPrizes.filter(p => p.winner_user_id === session?.user?.id));
+        
+        // Verify winner display logic
+        processedPrizes.forEach(prize => {
+          const isCurrentUserWinner = prize.winner_user_id === session?.user?.id;
+          console.log(`🏅 Prize ${prize.description} (position ${prize.ticket_position}): winner_user_id=${prize.winner_user_id}, current_user=${session?.user?.id}, will_show_won=${isCurrentUserWinner}`);
+        });
       }
       
       setBonusPrizes(processedPrizes);

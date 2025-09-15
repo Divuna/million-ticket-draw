@@ -53,6 +53,12 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       wonPrize: result.won_prize,
       remainingTickets: result.remaining_tickets 
     });
+    
+    // Specific logging for bonus wins
+    if (result.won_prize) {
+      console.log('🎉 BONUS WIN DETECTED - won_prize:', result.won_prize);
+      console.log('🎉 Will show Czech bonus message:', `Gratulujeme, vyhrál jsi bonus: ${result.won_prize}`);
+    }
   }
 
   const handleShowBonusPrizes = () => {
