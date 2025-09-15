@@ -42,6 +42,11 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const isWinner = result?.won_prize;
   const isMainPrize = result?.ticket_number === 1000000;
 
+  // Development logging
+  if (import.meta.env.DEV && result) {
+    console.log('🎪 Ticket result modal opened with data:', result);
+  }
+
   const handleShowBonusPrizes = () => {
     navigate(`/contest/${contestId}/bonus`);
     onClose();

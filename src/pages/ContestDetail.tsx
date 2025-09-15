@@ -142,16 +142,32 @@ const ContestDetail: React.FC = () => {
 
       if (error || !data) throw error || new Error('No data returned');
 
+      // Development logging
+      if (import.meta.env.DEV) {
+        console.log('🎫 Ticket purchase result:', {
+          current_ticket: data.ticket_number,
+          next_bonus_position: data.next_bonus_position,
+          distance_to_next_bonus: data.distance_to_next_bonus,
+          won_prize: data.won_prize,
+          remaining_tickets: data.remaining_tickets
+        });
+        
+        if (data.won_prize) {
+          console.log('🎉 Winner record should be created for user:', user.id);
+        }
+      }
+
       // Prepare result for modal
       const result: TicketResult = {
         ticket_number: data.ticket_number || 0,
         distance_to_next_bonus: data.distance_to_next_bonus || null,
         next_bonus_position: data.next_bonus_position || null,
+        won_prize: data.won_prize,
       };
 
-      // Check if user won main prize (ticket 1,000,000)
-      if (data.ticket_number === 1000000) {
-        result.won_prize = contest.main_prize;
+      // Add remaining tickets to result
+      if (data.remaining_tickets !== undefined) {
+        (result as any).remaining_tickets = data.remaining_tickets;
       }
 
       setTicketResult(result);

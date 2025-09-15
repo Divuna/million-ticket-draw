@@ -13,6 +13,7 @@ interface BonusPrize {
   description: string;
   ticket_position: number;
   status: string;
+  winner_user_id?: string;
 }
 
 interface Contest {
@@ -48,15 +49,25 @@ const BonusDetail: React.FC = () => {
       if (contestError) throw contestError;
       setContest(contestData);
 
-      // Fetch bonus prizes
+      // Fetch bonus prizes with winner info
       const { data: bonusData, error: bonusError } = await supabase
         .from('bonus_prizes')
-        .select('*')
+        .select(`
+          *,
+          winners!left(user_id)
+        `)
         .eq('contest_id', id)
         .order('ticket_position', { ascending: true });
 
       if (bonusError) throw bonusError;
-      setBonusPrizes(bonusData || []);
+      
+      // Process bonus prizes to add winner info
+      const processedPrizes = (bonusData || []).map((prize: any) => ({
+        ...prize,
+        winner_user_id: prize.winners?.user_id || null
+      }));
+      
+      setBonusPrizes(processedPrizes);
 
     } catch (error) {
       console.error('Error fetching bonus data:', error);
@@ -131,12 +142,12 @@ const BonusDetail: React.FC = () => {
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
                       <Badge 
-                        variant={prize.status === 'won' ? 'destructive' : 'default'}
+                        variant={prize.winner_user_id === session?.user?.id ? 'destructive' : 'default'}
                         className="text-xs"
                       >
                         #{prize.ticket_position.toLocaleString('cs-CZ')}
                       </Badge>
-                      {prize.status === 'won' && (
+                      {prize.winner_user_id === session?.user?.id && (
                         <span className="text-xs text-muted-foreground">Vyhráno</span>
                       )}
                     </div>
@@ -157,7 +168,7 @@ const BonusDetail: React.FC = () => {
                     </div>
                   </CardContent>
                   
-                  {prize.status === 'won' && (
+                  {prize.winner_user_id === session?.user?.id && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                       <span className="text-white font-bold text-lg">VYHRÁNO</span>
                     </div>
