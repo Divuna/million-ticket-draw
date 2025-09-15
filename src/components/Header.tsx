@@ -19,10 +19,12 @@ export const Header: React.FC = () => {
               <Link to="/profile">
                 <Button variant="ghost">Profil</Button>
               </Link>
-              {/* Check if admin and show admin link */}
-              <Link to="/admin">
-                <Button variant="ghost">Admin</Button>
-              </Link>
+              {/* Show Admin link only for main admin email */}
+              {user.email === 'divispavel2@gmail.com' && (
+                <Link to="/admin">
+                  <Button variant="ghost">Admin</Button>
+                </Link>
+              )}
               <Button variant="outline" onClick={signOut}>
                 Odhlásit se
               </Button>
