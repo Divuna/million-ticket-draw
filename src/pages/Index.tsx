@@ -16,7 +16,6 @@ interface Contest {
   ticket_price: number;
   status: string;
   ticket_count: number;
-  remaining_tickets: number;
   created_at: string;
 }
 
@@ -48,22 +47,7 @@ const Index = () => {
 
       if (error) throw error;
       
-      // Calculate remaining tickets for each contest
-      const contestsWithRemaining = await Promise.all(
-        (data || []).map(async (contest) => {
-          const { count } = await supabase
-            .from('tickets')
-            .select('*', { count: 'exact', head: true })
-            .eq('contest_id', contest.id);
-          
-          return {
-            ...contest,
-            remaining_tickets: contest.ticket_count - (count || 0)
-          };
-        })
-      );
-      
-      setContests(contestsWithRemaining as Contest[]);
+      setContests(data as Contest[]);
     } catch (error) {
       console.error('Error fetching contests:', error);
       toast.error('Chyba při načítání soutěží');
@@ -182,12 +166,6 @@ const Index = () => {
                       {contest.ticket_count.toLocaleString('cs-CZ')}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Zbývá tiketů:</span>
-                    <span className="text-sm font-medium">
-                      {contest.remaining_tickets.toLocaleString('cs-CZ')}
-                    </span>
-                  </div>
                 </div>
               </CardContent>
               
@@ -221,7 +199,8 @@ const Index = () => {
           ticket_number: modalResult.ticket_number,
           distance_to_next_bonus: modalResult.distance_to_next_bonus || 0,
           next_bonus_position: modalResult.next_bonus_position || 0,
-          won_prize: modalResult.won_prize
+          won_prize: modalResult.won_prize,
+          remaining_tickets: modalResult.remaining_tickets
         } : null}
         contestId={modalContestId}
         isOpen={!!modalResult}

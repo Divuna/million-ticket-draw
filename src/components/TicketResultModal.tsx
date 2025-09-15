@@ -19,6 +19,7 @@ interface TicketResultModalProps {
     distance_to_next_bonus: number | null;
     next_bonus_position: number | null;
     won_prize?: string;
+    remaining_tickets?: number;
   } | null;
 }
 
@@ -114,6 +115,11 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 {result.distance_to_next_bonus && (
                   <p className="text-sm text-muted-foreground">
                     Do bonusové výhry zbývá: <span className="font-semibold text-primary">{result.distance_to_next_bonus.toLocaleString('cs-CZ')} tiketů</span>
+                  </p>
+                )}
+                {result.remaining_tickets !== undefined && (
+                  <p className="text-sm text-muted-foreground">
+                    Zbývá tiketů: <span className="font-semibold">{result.remaining_tickets.toLocaleString('cs-CZ')}</span>
                   </p>
                 )}
               </div>
