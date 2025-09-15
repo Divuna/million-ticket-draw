@@ -40,12 +40,7 @@ const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Check if user is admin and redirect
-  useEffect(() => {
-    if (user && user.email === 'divispavel2@gmail.com') {
-      navigate('/admin');
-    }
-  }, [user, navigate]);
+  // Removed automatic admin redirect to allow admins to view customer page
 
   const fetchContests = async () => {
     try {
