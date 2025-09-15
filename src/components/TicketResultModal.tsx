@@ -40,11 +40,19 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const navigate = useNavigate();
   const { width, height } = useWindowSize();
   const isWinner = result?.won_prize;
-  const isMainPrize = result?.ticket_number === 1000000;
+  const isMainPrize = result?.remaining_tickets === 0 && isWinner;
+  const isBonusWin = isWinner && !isMainPrize;
 
   // Development logging
   if (import.meta.env.DEV && result) {
     console.log('🎪 Ticket result modal opened with data:', result);
+    console.log('🎯 Win detection:', { 
+      isWinner, 
+      isMainPrize, 
+      isBonusWin,
+      wonPrize: result.won_prize,
+      remainingTickets: result.remaining_tickets 
+    });
   }
 
   const handleShowBonusPrizes = () => {
@@ -95,16 +103,18 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               </div>
             ) : (
               <div className="text-center space-y-3">
-                <div className="text-6xl">🎁</div>
-                <h3 className="text-lg font-semibold text-green-600">
-                  Gratulujeme!
-                </h3>
-                <p className="text-base font-medium">
-                  Vyhrál jsi {result.won_prize}!
+                <div className="text-6xl">🎉</div>
+                <p className="text-lg font-semibold text-green-600">
+                  Gratulujeme, vyhrál jsi bonus: {result.won_prize}
                 </p>
                 <p className="text-muted-foreground">
                   Tiket #{result.ticket_number.toLocaleString('cs-CZ')}
                 </p>
+                {result.remaining_tickets !== undefined && (
+                  <p className="text-sm text-muted-foreground">
+                    Zbývá tiketů: <span className="font-semibold">{result.remaining_tickets.toLocaleString('cs-CZ')}</span>
+                  </p>
+                )}
               </div>
             )
           ) : (
