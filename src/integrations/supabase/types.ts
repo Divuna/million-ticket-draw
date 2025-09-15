@@ -434,7 +434,7 @@ export type Database = {
         Returns: undefined
       }
       unlock_ticket: {
-        Args: { p_contest_id: string; p_user_id: string }
+        Args: { contest_id: string; user_id: string }
         Returns: Json
       }
     }

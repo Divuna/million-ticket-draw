@@ -67,8 +67,8 @@ const Index = () => {
     
     try {
       const { data, error } = await supabase.rpc('unlock_ticket' as any, {
-        p_contest_id: contestId,
-        p_user_id: user.id
+        contest_id: contestId,
+        user_id: user.id
       });
 
       if (error) {

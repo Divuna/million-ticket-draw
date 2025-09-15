@@ -134,8 +134,8 @@ const ContestDetail: React.FC = () => {
     try {
       // Call the unlock_ticket function using the generic rpc call
       const { data, error } = await supabase.rpc('unlock_ticket' as any, {
-        p_contest_id: contest.id,
-        p_user_id: user.id
+        contest_id: contest.id,
+        user_id: user.id
       }) as { data: any; error: any };
 
       if (error || !data) throw error || new Error('No data returned');
