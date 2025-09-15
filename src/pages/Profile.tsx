@@ -1,19 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, Gift } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { RefreshCw } from 'lucide-react';
 
 interface UserWallet {
   user_id: string;
@@ -24,62 +19,20 @@ interface UserWallet {
   created_at: string;
 }
 
-interface UserProfile {
-  id: string;
-  email: string;
-  name: string | null;
-  nickname: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  phone: string | null;
-  address: string | null;
-}
-
-const profileFormSchema = z.object({
-  nickname: z.string().optional(),
-  first_name: z.string().optional(),
-  last_name: z.string().optional(),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-});
-
 const Profile: React.FC = () => {
   const { user, session } = useAuth();
-  const navigate = useNavigate();
   const [wallet, setWallet] = useState<UserWallet | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [activeContest, setActiveContest] = useState<{ id: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showVoucherForm, setShowVoucherForm] = useState(false);
   const [voucherAmount, setVoucherAmount] = useState('');
   const [purchaseLoading, setPurchaseLoading] = useState(false);
-  const [profileSaving, setProfileSaving] = useState(false);
-
-  const form = useForm<z.infer<typeof profileFormSchema>>({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues: {
-      nickname: '',
-      first_name: '',
-      last_name: '',
-      phone: '',
-      address: '',
-    },
-  });
 
   useEffect(() => {
     if (user) {
-      fetchUserData();
+      fetchUserWallet();
     }
   }, [user]);
-
-  const fetchUserData = async () => {
-    await Promise.all([
-      fetchUserWallet(),
-      fetchUserProfile(),
-      fetchActiveContest()
-    ]);
-  };
 
   const fetchUserWallet = async () => {
     try {
@@ -135,45 +88,6 @@ const Profile: React.FC = () => {
     }
   };
 
-  const fetchUserProfile = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, email, name, nickname, first_name, last_name, phone, address')
-        .eq('id', user?.id)
-        .maybeSingle();
-
-      if (data) {
-        setUserProfile(data);
-        form.reset({
-          nickname: data.nickname || '',
-          first_name: data.first_name || '',
-          last_name: data.last_name || '',
-          phone: data.phone || '',
-          address: data.address || '',
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
-  };
-
-  const fetchActiveContest = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('contests')
-        .select('id')
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (data) {
-        setActiveContest(data);
-      }
-    } catch (error) {
-      console.error('Error fetching active contest:', error);
-    }
-  };
-
 
   const handleRefreshBalance = async () => {
     setRefreshing(true);
@@ -192,51 +106,6 @@ const Profile: React.FC = () => {
       });
     } finally {
       setRefreshing(false);
-    }
-  };
-
-  const onSubmitProfile = async (values: z.infer<typeof profileFormSchema>) => {
-    setProfileSaving(true);
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({
-          nickname: values.nickname || null,
-          first_name: values.first_name || null,
-          last_name: values.last_name || null,
-          phone: values.phone || null,
-          address: values.address || null,
-        })
-        .eq('id', user?.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Úspěch",
-        description: "Profil byl úspěšně aktualizován.",
-      });
-
-      await fetchUserProfile();
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se aktualizovat profil. Zkuste to znovu.",
-        variant: "destructive"
-      });
-    } finally {
-      setProfileSaving(false);
-    }
-  };
-
-  const handleViewBonusPrizes = () => {
-    if (activeContest) {
-      navigate(`/contest/${activeContest.id}/bonus`);
-    } else {
-      toast({
-        title: "Informace",
-        description: "Momentálně není aktivní žádná soutěž.",
-      });
     }
   };
 
@@ -354,94 +223,6 @@ const Profile: React.FC = () => {
                   </div>
                 )}
               </div>
-
-              {/* Profile Form */}
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold mb-4">Kontaktní údaje</h3>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmitProfile)} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="nickname"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Přezdívka</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Vaše přezdívka" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="first_name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Křestní jméno</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Vaše křestní jméno" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="last_name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Příjmení</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Vaše příjmení" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Telefon</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Váš telefon" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="address"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Doručovací adresa</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Adresa pro doručení výher" 
-                              className="resize-none" 
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <Button type="submit" disabled={profileSaving}>
-                      {profileSaving ? 'Ukládám...' : 'Uložit kontaktní údaje'}
-                    </Button>
-                  </form>
-                </Form>
-              </div>
               
               <div className="border-t pt-6">
                 <div className="flex items-center justify-between mb-4">
@@ -481,21 +262,12 @@ const Profile: React.FC = () => {
                   </Card>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <div className="flex justify-center">
                   <Button 
                     onClick={() => setShowVoucherForm(true)}
                     size="lg"
                   >
                     Dobít vouchery + miocoiny
-                  </Button>
-                  
-                  <Button 
-                    onClick={handleViewBonusPrizes}
-                    variant="outline"
-                    size="lg"
-                  >
-                    <Gift className="h-4 w-4 mr-2" />
-                    Zobrazit bonusové ceny
                   </Button>
                 </div>
               </div>
