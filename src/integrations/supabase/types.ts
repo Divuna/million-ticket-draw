@@ -81,6 +81,7 @@ export type Database = {
           main_prize: string
           status: string
           ticket_count: number
+          ticket_price: number
           title: string
         }
         Insert: {
@@ -90,6 +91,7 @@ export type Database = {
           main_prize: string
           status?: string
           ticket_count?: number
+          ticket_price?: number
           title: string
         }
         Update: {
@@ -99,6 +101,7 @@ export type Database = {
           main_prize?: string
           status?: string
           ticket_count?: number
+          ticket_price?: number
           title?: string
         }
         Relationships: []
@@ -429,6 +432,10 @@ export type Database = {
       fn_close_contest: {
         Args: { p_contest: string }
         Returns: undefined
+      }
+      unlock_ticket: {
+        Args: { p_contest_id: string; p_user_id: string }
+        Returns: Json
       }
     }
     Enums: {
