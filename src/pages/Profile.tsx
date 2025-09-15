@@ -110,11 +110,12 @@ const Profile: React.FC = () => {
 
   const fetchUserProfile = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('users')
         .select('nickname, first_name, last_name, address, phone')
         .eq('id', user?.id)
         .maybeSingle();
+
 
       if (error) {
         console.error('Error fetching profile:', error);
@@ -138,7 +139,7 @@ const Profile: React.FC = () => {
   const handleProfileSave = async () => {
     setProfileSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('users')
         .update({
           nickname: profile.nickname || null,

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface Contest {
   id: string;
@@ -118,6 +119,42 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
           </CardContent>
         </Card>
       )}
+      {/* Bonus Prizes Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Dostupné bonusové ceny</CardTitle>
+            <Button variant="outline" onClick={() => (window.location.href = `/contest/${contest.id}/bonus`)}>
+              Zobrazit vše
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {bonusPrizes && bonusPrizes.filter(p => p.status === 'pending').length > 0 ? (
+            <div className="space-y-3">
+              {bonusPrizes
+                .filter(p => p.status === 'pending')
+                .slice(0, 5)
+                .map((bp) => (
+                  <div key={bp.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div>
+                      <p className="font-medium">{bp.description}</p>
+                      <p className="text-sm text-muted-foreground">Lístek #{bp.ticket_position}</p>
+                    </div>
+                    <Badge>Volné</Badge>
+                  </div>
+                ))}
+              {bonusPrizes.filter(p => p.status === 'pending').length > 5 && (
+                <p className="text-sm text-muted-foreground">
+                  A další {bonusPrizes.filter(p => p.status === 'pending').length - 5} ceny...
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-muted-foreground">Žádné dostupné bonusové ceny.</p>
+          )}
+        </CardContent>
+      </Card>
 
     </div>
   );

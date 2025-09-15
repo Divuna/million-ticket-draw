@@ -245,9 +245,12 @@ export type Database = {
           apple_id: string | null
           created_at: string
           email: string
+          first_name: string | null
           google_id: string | null
           id: string
+          last_name: string | null
           name: string | null
+          nickname: string | null
           phone: string | null
           role: string
         }
@@ -256,9 +259,12 @@ export type Database = {
           apple_id?: string | null
           created_at?: string
           email: string
+          first_name?: string | null
           google_id?: string | null
           id: string
+          last_name?: string | null
           name?: string | null
+          nickname?: string | null
           phone?: string | null
           role?: string
         }
@@ -267,9 +273,12 @@ export type Database = {
           apple_id?: string | null
           created_at?: string
           email?: string
+          first_name?: string | null
           google_id?: string | null
           id?: string
+          last_name?: string | null
           name?: string | null
+          nickname?: string | null
           phone?: string | null
           role?: string
         }

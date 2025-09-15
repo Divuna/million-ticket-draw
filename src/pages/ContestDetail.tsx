@@ -7,6 +7,7 @@ import { toast } from '@/hooks/use-toast';
 import { TicketResultModal } from '@/components/TicketResultModal';
 
 import { AdminContestView } from '@/components/AdminContestView';
+import { CustomerContestView } from '@/components/CustomerContestView';
 
 interface Contest {
   id: string;
@@ -195,11 +196,8 @@ const ContestDetail: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Only allow admin access to contest details
+  // Determine admin access
   const isAdmin = user?.email === 'divispavel2@gmail.com';
-  if (!isAdmin) {
-    return <Navigate to="/" replace />;
-  }
 
   if (loading) {
     return (
@@ -235,14 +233,24 @@ const ContestDetail: React.FC = () => {
       <Header />
       
       <div className="container mx-auto px-4 py-8">
-        <AdminContestView
-          contest={contest}
-          bonusPrizes={bonusPrizes}
-          currentTickets={currentTickets}
-          userWallet={userWallet}
-          purchasing={purchasing}
-          onBuyTicket={buyTicket}
-        />
+        {isAdmin ? (
+          <AdminContestView
+            contest={contest}
+            bonusPrizes={bonusPrizes}
+            currentTickets={currentTickets}
+            userWallet={userWallet}
+            purchasing={purchasing}
+            onBuyTicket={buyTicket}
+          />
+        ) : (
+          <CustomerContestView
+            contest={contest}
+            bonusPrizes={bonusPrizes}
+            userWallet={userWallet}
+            purchasing={purchasing}
+            onBuyTicket={buyTicket}
+          />
+        )}
       </div>
 
       {/* Ticket Result Modal */}
