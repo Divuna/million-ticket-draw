@@ -44,35 +44,15 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
   if (!result) return null;
 
-  // Enhanced win detection using won_type and won_prize
-  const isBonusWin = result.won_type === 'bonus' || (!!result.won_prize && result.remaining_tickets !== 0);
-  const isMainPrize = result.won_type === 'main' || (result.remaining_tickets === 0 && !!result.won_prize);
+  // Detection logic using won_type
+  const isBonusWin = result?.won_type === 'bonus';
+  const isMainPrize = result?.won_type === 'main';
   const isWinner = isBonusWin || isMainPrize;
 
-  // Development logging - Enhanced for bonus win debugging
+  // Development logging
   if (import.meta.env.DEV && result) {
-    console.log('🎪 TicketResultModal - Full result object:', JSON.stringify(result, null, 2));
-    console.log('🎯 Enhanced win detection logic:', { 
-      'result.won_prize': result.won_prize,
-      'result.won_type': result.won_type,
-      'result.bonus_prize_id': result.bonus_prize_id,
-      'result.remaining_tickets': result.remaining_tickets,
-      'isBonusWin': isBonusWin,
-      'isMainPrize': isMainPrize,
-      'isWinner': isWinner
-    });
-    
-    // Explicit bonus win detection logging
-    if (result.won_type === 'bonus' && result.won_prize) {
-      console.log('✅ BONUS WIN CONFIRMED via won_type - prize:', result.won_prize);
-      console.log('✅ Will display Czech bonus message: "🎉 Gratulujeme, vyhrál jsi bonus: ' + result.won_prize + '"');
-    } else if (result.won_prize && result.won_prize !== null && result.won_prize !== '') {
-      console.log('✅ PRIZE WIN DETECTED - won_prize value:', result.won_prize);
-      console.log('✅ Will display win message for prize:', result.won_prize);
-    } else {
-      console.log('❌ NO WIN - won_prize is:', result.won_prize, 'won_type is:', result.won_type);
-      console.log('❌ Will display lose message with funny Czech text');
-    }
+    console.log('🎪 TicketResultModal - result:', result);
+    console.log('🎯 Win detection:', { isBonusWin, isMainPrize, isWinner });
   }
 
   const handleShowBonusPrizes = () => {
@@ -106,20 +86,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
         <div className="space-y-4 py-4">
           {isWinner ? (
-            isMainPrize ? (
-              <div className="text-center space-y-4">
-                <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent animate-pulse">
-                  HLAVNÍ VÝHRA!
-                </h1>
-                <div className="text-8xl">🏆</div>
-                <h3 className="text-xl font-semibold text-foreground">
-                  Vyhrál jsi hlavní cenu: {result.won_prize}
-                </h3>
-                <p className="text-muted-foreground">
-                  Tiket #{result.ticket_number.toLocaleString('cs-CZ')}
-                </p>
-              </div>
-            ) : (
+            isBonusWin ? (
               <div className="text-center space-y-3">
                 <div className="text-6xl">🎉</div>
                 <p className="text-lg font-semibold text-green-600">
@@ -134,7 +101,17 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                   </p>
                 )}
               </div>
-            )
+            ) : isMainPrize ? (
+              <div className="text-center space-y-3">
+                <div className="text-6xl">🏆</div>
+                <p className="text-lg font-semibold text-yellow-600">
+                  Gratulujeme, vyhrál jsi hlavní cenu!
+                </p>
+                <p className="text-muted-foreground">
+                  Tiket #{result.ticket_number.toLocaleString('cs-CZ')}
+                </p>
+              </div>
+            ) : null
           ) : (
             <div className="text-center space-y-4">
               <div className="text-4xl">🎯</div>
