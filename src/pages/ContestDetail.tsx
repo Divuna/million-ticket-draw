@@ -15,6 +15,7 @@ interface Contest {
   title: string;
   description: string;
   main_prize: string;
+  ticket_price: number;
   status: string;
   ticket_count: number;
   created_at: string;
@@ -64,34 +65,35 @@ const ContestDetail: React.FC = () => {
 
   const fetchContestData = async () => {
     try {
-      // Temporary placeholder data until database schema is fully configured
-      // This will be replaced with actual Supabase queries once types are available
-      setContest({
-        id: id || '',
-        title: 'Sample Contest',
-        description: 'This is a sample contest description.',
-        main_prize: 'iPhone 15 Pro',
-        status: 'active',
-        ticket_count: 1000000,
-        created_at: new Date().toISOString()
-      });
+      if (!id) return;
 
-      setBonusPrizes([
-        {
-          id: '1',
-          description: 'AirPods Pro',
-          ticket_position: 50000,
-          status: 'pending'
-        },
-        {
-          id: '2', 
-          description: 'iPad Air',
-          ticket_position: 250000,
-          status: 'pending'
-        }
-      ]);
+      // Fetch contest data
+      const { data: contestData, error: contestError } = await supabase
+        .from('contests')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-      setCurrentTickets(123456);
+      if (contestError) throw contestError;
+      setContest(contestData);
+
+      // Fetch bonus prizes
+      const { data: bonusData, error: bonusError } = await supabase
+        .from('bonus_prizes')
+        .select('*')
+        .eq('contest_id', id)
+        .order('ticket_position', { ascending: true });
+
+      if (bonusError) throw bonusError;
+      setBonusPrizes(bonusData || []);
+
+      // Fetch current tickets count
+      const { count } = await supabase
+        .from('tickets')
+        .select('*', { count: 'exact', head: true })
+        .eq('contest_id', id);
+
+      setCurrentTickets(count || 0);
     } catch (error) {
       console.error('Error fetching contest data:', error);
     } finally {

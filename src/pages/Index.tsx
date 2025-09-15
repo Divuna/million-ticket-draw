@@ -42,8 +42,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from('contests')
         .select(`
-          id, title, description, main_prize, ticket_price, ticket_count, status, created_at,
-          remaining_tickets:ticket_count
+          id, title, description, main_prize, ticket_price, ticket_count, status, created_at
         `)
         .order('created_at', { ascending: false });
 
