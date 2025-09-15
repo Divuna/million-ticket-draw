@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { Home } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -20,7 +21,10 @@ export const Header: React.FC = () => {
               {user.email === 'divispavel2@gmail.com' ? (
                 <>
                   <Link to="/">
-                    <Button variant="ghost">ÚVODNÍ STRÁNKA</Button>
+                    <Button variant="ghost">
+                      <Home className="mr-2 h-4 w-4" />
+                      ÚVODNÍ STRÁNKA
+                    </Button>
                   </Link>
                   <Link to="/admin">
                     <Button variant="ghost">Admin</Button>
