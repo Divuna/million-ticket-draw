@@ -43,21 +43,26 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const isMainPrize = result?.remaining_tickets === 0 && isWinner;
   const isBonusWin = isWinner && !isMainPrize;
 
-  // Development logging
+  // Development logging - Enhanced for bonus win debugging
   if (import.meta.env.DEV && result) {
-    console.log('🎪 Ticket result modal opened with data:', result);
-    console.log('🎯 Win detection:', { 
-      isWinner, 
-      isMainPrize, 
-      isBonusWin,
-      wonPrize: result.won_prize,
-      remainingTickets: result.remaining_tickets 
+    console.log('🎪 TicketResultModal - Full result object:', JSON.stringify(result, null, 2));
+    console.log('🎯 Win detection logic:', { 
+      'result.won_prize': result.won_prize,
+      'result.won_prize truthy': !!result.won_prize,
+      'result.remaining_tickets': result.remaining_tickets,
+      'isWinner': isWinner, 
+      'isMainPrize': isMainPrize, 
+      'isBonusWin': isBonusWin
     });
     
-    // Specific logging for bonus wins
-    if (result.won_prize) {
-      console.log('🎉 BONUS WIN DETECTED - won_prize:', result.won_prize);
-      console.log('🎉 Will show Czech bonus message:', `Gratulujeme, vyhrál jsi bonus: ${result.won_prize}`);
+    // Explicit bonus win detection logging
+    if (result.won_prize && result.won_prize !== null && result.won_prize !== '') {
+      console.log('✅ BONUS WIN CONFIRMED - won_prize value:', result.won_prize);
+      console.log('✅ Will display Czech bonus message: "Gratulujeme, vyhrál jsi bonus: ' + result.won_prize + '"');
+      console.log('✅ Expected UI flow: Show bonus win section with 🎉 emoji and green text');
+    } else {
+      console.log('❌ NO BONUS WIN - won_prize is:', result.won_prize);
+      console.log('❌ Will display lose message with funny Czech text');
     }
   }
 
