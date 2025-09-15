@@ -37,6 +37,7 @@ interface TicketResult {
   distance_to_next_bonus: number | null;
   next_bonus_position: number | null;
   won_prize?: string;
+  remaining_tickets?: number;
 }
 
 const ContestDetail: React.FC = () => {
@@ -163,12 +164,8 @@ const ContestDetail: React.FC = () => {
         distance_to_next_bonus: data.distance_to_next_bonus || null,
         next_bonus_position: data.next_bonus_position || null,
         won_prize: data.won_prize,
+        remaining_tickets: data.remaining_tickets,
       };
-
-      // Add remaining tickets to result
-      if (data.remaining_tickets !== undefined) {
-        (result as any).remaining_tickets = data.remaining_tickets;
-      }
 
       setTicketResult(result);
       setShowResultModal(true);
