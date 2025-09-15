@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
+import MyContests from "./pages/MyContests";
 import ContestDetail from "./pages/ContestDetail";
 import BonusDetail from "./pages/BonusDetail";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/my-contests" element={<MyContests />} />
             <Route path="/contest/:id" element={<ContestDetail />} />
             <Route path="/contest/:id/bonus" element={<BonusDetail />} />
             <Route path="/admin" element={<AdminDashboard />} />

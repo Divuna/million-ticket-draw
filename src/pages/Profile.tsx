@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, GamepadIcon } from 'lucide-react';
 
 interface UserWallet {
   user_id: string;
@@ -19,18 +21,36 @@ interface UserWallet {
   created_at: string;
 }
 
+interface UserProfile {
+  nickname: string;
+  first_name: string;
+  last_name: string;
+  address: string;
+  phone: string;
+}
+
 const Profile: React.FC = () => {
   const { user, session } = useAuth();
+  const navigate = useNavigate();
   const [wallet, setWallet] = useState<UserWallet | null>(null);
+  const [profile, setProfile] = useState<UserProfile>({
+    nickname: '',
+    first_name: '',
+    last_name: '',
+    address: '',
+    phone: ''
+  });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showVoucherForm, setShowVoucherForm] = useState(false);
   const [voucherAmount, setVoucherAmount] = useState('');
   const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
 
   useEffect(() => {
     if (user) {
       fetchUserWallet();
+      fetchUserProfile();
     }
   }, [user]);
 
@@ -85,6 +105,67 @@ const Profile: React.FC = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('nickname, first_name, last_name, address, phone')
+        .eq('id', user?.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      if (data) {
+        setProfile({
+          nickname: data.nickname || '',
+          first_name: data.first_name || '',
+          last_name: data.last_name || '',
+          address: data.address || '',
+          phone: data.phone || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleProfileSave = async () => {
+    setProfileSaving(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          nickname: profile.nickname || null,
+          first_name: profile.first_name || null,
+          last_name: profile.last_name || null,
+          address: profile.address || null,
+          phone: profile.phone || null
+        })
+        .eq('id', user?.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Úspěch",
+        description: "Profil byl úspěšně uložen.",
+      });
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se uložit profil. Zkuste to znovu.",
+        variant: "destructive"
+      });
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -224,6 +305,75 @@ const Profile: React.FC = () => {
                 )}
               </div>
               
+              {/* Profile Form Section */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold mb-4">Osobní údaje</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nickname">Přezdívka</Label>
+                    <Input
+                      id="nickname"
+                      type="text"
+                      value={profile.nickname}
+                      onChange={(e) => setProfile(prev => ({ ...prev, nickname: e.target.value }))}
+                      placeholder="Zadejte přezdívku"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefon</Label>
+                    <Input
+                      id="phone"
+                      type="text"
+                      value={profile.phone}
+                      onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="Zadejte telefon"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="first_name">Křestní jméno</Label>
+                    <Input
+                      id="first_name"
+                      type="text"
+                      value={profile.first_name}
+                      onChange={(e) => setProfile(prev => ({ ...prev, first_name: e.target.value }))}
+                      placeholder="Zadejte křestní jméno"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="last_name">Příjmení</Label>
+                    <Input
+                      id="last_name"
+                      type="text"
+                      value={profile.last_name}
+                      onChange={(e) => setProfile(prev => ({ ...prev, last_name: e.target.value }))}
+                      placeholder="Zadejte příjmení"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="address">Doručovací adresa</Label>
+                    <Textarea
+                      id="address"
+                      value={profile.address}
+                      onChange={(e) => setProfile(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="Zadejte doručovací adresu pro výhry"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+                
+                <Button 
+                  onClick={handleProfileSave}
+                  disabled={profileSaving}
+                  className="mb-6"
+                >
+                  {profileSaving ? 'Ukládám...' : 'Uložit profil'}
+                </Button>
+              </div>
+
               <div className="border-t pt-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">Peněženka</h3>
@@ -262,12 +412,21 @@ const Profile: React.FC = () => {
                   </Card>
                 </div>
                 
-                <div className="flex justify-center">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button 
                     onClick={() => setShowVoucherForm(true)}
                     size="lg"
                   >
                     Dobít vouchery + miocoiny
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => navigate('/my-contests')}
+                    variant="outline"
+                    size="lg"
+                  >
+                    <GamepadIcon className="h-5 w-5 mr-2" />
+                    Moje hry
                   </Button>
                 </div>
               </div>
