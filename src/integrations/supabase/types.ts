@@ -433,6 +433,15 @@ export type Database = {
         Args: { p_contest: string }
         Returns: undefined
       }
+      notify_sofinity_event: {
+        Args: {
+          p_contest_id?: string
+          p_event_name: string
+          p_metadata?: Json
+          p_user_id?: string
+        }
+        Returns: undefined
+      }
       unlock_ticket: {
         Args: { contest_id: string; user_id: string }
         Returns: Json
