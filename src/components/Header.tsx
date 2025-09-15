@@ -16,13 +16,19 @@ export const Header: React.FC = () => {
         <nav className="flex items-center space-x-4">
           {user ? (
             <>
-              <Link to="/profile">
-                <Button variant="ghost">Profil</Button>
-              </Link>
-              {/* Show Admin link only for main admin email */}
-              {user.email === 'divispavel2@gmail.com' && (
-                <Link to="/admin">
-                  <Button variant="ghost">Admin</Button>
+              {/* Show different navigation for admin vs regular users */}
+              {user.email === 'divispavel2@gmail.com' ? (
+                <>
+                  <Link to="/">
+                    <Button variant="ghost">ÚVODNÍ STRÁNKA</Button>
+                  </Link>
+                  <Link to="/admin">
+                    <Button variant="ghost">Admin</Button>
+                  </Link>
+                </>
+              ) : (
+                <Link to="/profile">
+                  <Button variant="ghost">Profil</Button>
                 </Link>
               )}
               <Button variant="outline" onClick={signOut}>
