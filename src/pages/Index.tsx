@@ -16,6 +16,7 @@ interface Contest {
   ticket_price: number;
   status: string;
   ticket_count: number;
+  remaining_tickets: number;
   created_at: string;
 }
 
@@ -40,11 +41,30 @@ const Index = () => {
     try {
       const { data, error } = await supabase
         .from('contests')
-        .select('*')
+        .select(`
+          id, title, description, main_prize, ticket_price, ticket_count, status, created_at,
+          remaining_tickets:ticket_count
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setContests(data as Contest[] || []);
+      
+      // Calculate remaining tickets for each contest
+      const contestsWithRemaining = await Promise.all(
+        (data || []).map(async (contest) => {
+          const { count } = await supabase
+            .from('tickets')
+            .select('*', { count: 'exact', head: true })
+            .eq('contest_id', contest.id);
+          
+          return {
+            ...contest,
+            remaining_tickets: contest.ticket_count - (count || 0)
+          };
+        })
+      );
+      
+      setContests(contestsWithRemaining as Contest[]);
     } catch (error) {
       console.error('Error fetching contests:', error);
       toast.error('Chyba při načítání soutěží');
@@ -161,6 +181,12 @@ const Index = () => {
                     <span className="text-sm text-muted-foreground">Celkem tiketů:</span>
                     <span className="text-sm font-medium">
                       {contest.ticket_count.toLocaleString('cs-CZ')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Zbývá tiketů:</span>
+                    <span className="text-sm font-medium">
+                      {contest.remaining_tickets.toLocaleString('cs-CZ')}
                     </span>
                   </div>
                 </div>
