@@ -11,7 +11,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
 import { RefreshCw, GamepadIcon } from 'lucide-react';
-
 interface UserWallet {
   user_id: string;
   email: string;
@@ -20,7 +19,6 @@ interface UserWallet {
   balance_vouchers: number;
   created_at: string;
 }
-
 interface UserProfile {
   nickname: string;
   first_name: string;
@@ -28,9 +26,11 @@ interface UserProfile {
   address: string;
   phone: string;
 }
-
 const Profile: React.FC = () => {
-  const { user, session } = useAuth();
+  const {
+    user,
+    session
+  } = useAuth();
   const navigate = useNavigate();
   const [wallet, setWallet] = useState<UserWallet | null>(null);
   const [profile, setProfile] = useState<UserProfile>({
@@ -46,22 +46,18 @@ const Profile: React.FC = () => {
   const [voucherAmount, setVoucherAmount] = useState('');
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
-
   useEffect(() => {
     if (user) {
       fetchUserWallet();
       fetchUserProfile();
     }
   }, [user]);
-
   const fetchUserWallet = async () => {
     try {
-      const { data, error } = await (supabase as any)
-        .from('wallets')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
+      const {
+        data,
+        error
+      } = await (supabase as any).from('wallets').select('*').eq('user_id', user?.id).maybeSingle();
       if (error) {
         console.error('Error fetching wallet:', error);
         // Fallback to basic user data
@@ -107,24 +103,15 @@ const Profile: React.FC = () => {
       setLoading(false);
     }
   };
-
   const fetchUserProfile = async () => {
     try {
-      const result = await (supabase as any)
-        .from('users')
-        .select('nickname, first_name, last_name, address, phone')
-        .eq('id', user?.id)
-        .maybeSingle();
-
+      const result = await (supabase as any).from('users').select('nickname, first_name, last_name, address, phone').eq('id', user?.id).maybeSingle();
       const data = (result as any)?.data as any;
       const error = (result as any)?.error as any;
-
-
       if (error) {
         console.error('Error fetching profile:', error);
         return;
       }
-
       if (data) {
         setProfile({
           nickname: data.nickname || '',
@@ -138,28 +125,24 @@ const Profile: React.FC = () => {
       console.error('Error:', error);
     }
   };
-
   const handleProfileSave = async () => {
     setProfileSaving(true);
     try {
-      const { error } = await (supabase as any)
-        .from('users')
-        .update({
-          nickname: profile.nickname || null,
-          first_name: profile.first_name || null,
-          last_name: profile.last_name || null,
-          address: profile.address || null,
-          phone: profile.phone || null
-        })
-        .eq('id', user?.id);
-
+      const {
+        error
+      } = await (supabase as any).from('users').update({
+        nickname: profile.nickname || null,
+        first_name: profile.first_name || null,
+        last_name: profile.last_name || null,
+        address: profile.address || null,
+        phone: profile.phone || null
+      }).eq('id', user?.id);
       if (error) {
         throw error;
       }
-
       toast({
         title: "Úspěch",
-        description: "Profil byl úspěšně uložen.",
+        description: "Profil byl úspěšně uložen."
       });
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -172,15 +155,13 @@ const Profile: React.FC = () => {
       setProfileSaving(false);
     }
   };
-
-
   const handleRefreshBalance = async () => {
     setRefreshing(true);
     try {
       await fetchUserWallet();
       toast({
         title: "Úspěch",
-        description: "Zůstatek byl aktualizován.",
+        description: "Zůstatek byl aktualizován."
       });
     } catch (error) {
       console.error('Error refreshing balance:', error);
@@ -193,10 +174,8 @@ const Profile: React.FC = () => {
       setRefreshing(false);
     }
   };
-
   const handleVoucherPurchase = async () => {
     const amount = parseInt(voucherAmount);
-    
     if (!amount || amount < 50) {
       toast({
         title: "Chyba",
@@ -205,22 +184,23 @@ const Profile: React.FC = () => {
       });
       return;
     }
-
     setPurchaseLoading(true);
-    
+
     // Pre-open a blank window immediately (tied to user gesture)
     const preOpenedWindow = window.open('', '_blank');
-
     try {
       // Call edge function to create Stripe checkout session
-      const { data, error } = await supabase.functions.invoke('create-stripe-checkout', {
-        body: { amount }
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('create-stripe-checkout', {
+        body: {
+          amount
+        }
       });
-
       if (error) {
         throw error;
       }
-
       if (data.checkout_url) {
         // Try to redirect pre-opened window first
         if (preOpenedWindow && !preOpenedWindow.closed) {
@@ -237,18 +217,15 @@ const Profile: React.FC = () => {
       } else {
         throw new Error('No checkout URL received');
       }
-
       setShowVoucherForm(false);
       setVoucherAmount('');
-
     } catch (error) {
       console.error('Error creating checkout session:', error);
-      
+
       // Close pre-opened window on error
       if (preOpenedWindow && !preOpenedWindow.closed) {
         preOpenedWindow.close();
       }
-      
       toast({
         title: "Chyba",
         description: "Nepodařilo se vytvořit platbu. Zkuste to znovu.",
@@ -258,26 +235,20 @@ const Profile: React.FC = () => {
       setPurchaseLoading(false);
     }
   };
-
   if (!session) {
     return <Navigate to="/login" replace />;
   }
-
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
+    return <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <p className="text-muted-foreground">Načítám profil...</p>
           </div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
@@ -299,14 +270,12 @@ const Profile: React.FC = () => {
                   <p className="text-lg">{wallet?.email || user?.email}</p>
                 </div>
                 
-                {wallet?.name && (
-                  <div className="space-y-2">
+                {wallet?.name && <div className="space-y-2">
                     <label className="text-sm font-medium text-muted-foreground">
                       Jméno:
                     </label>
                     <p className="text-lg">{wallet.name}</p>
-                  </div>
-                )}
+                  </div>}
               </div>
               
               {/* Profile Form Section */}
@@ -315,65 +284,47 @@ const Profile: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div className="space-y-2">
                     <Label htmlFor="nickname">Přezdívka</Label>
-                    <Input
-                      id="nickname"
-                      type="text"
-                      value={profile.nickname}
-                      onChange={(e) => setProfile(prev => ({ ...prev, nickname: e.target.value }))}
-                      placeholder="Zadejte přezdívku"
-                    />
+                    <Input id="nickname" type="text" value={profile.nickname} onChange={e => setProfile(prev => ({
+                    ...prev,
+                    nickname: e.target.value
+                  }))} placeholder="Zadejte přezdívku" />
                   </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="phone">Telefon</Label>
-                    <Input
-                      id="phone"
-                      type="text"
-                      value={profile.phone}
-                      onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="Zadejte telefon"
-                    />
+                    <Input id="phone" type="text" value={profile.phone} onChange={e => setProfile(prev => ({
+                    ...prev,
+                    phone: e.target.value
+                  }))} placeholder="Zadejte telefon" />
                   </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="first_name">Křestní jméno</Label>
-                    <Input
-                      id="first_name"
-                      type="text"
-                      value={profile.first_name}
-                      onChange={(e) => setProfile(prev => ({ ...prev, first_name: e.target.value }))}
-                      placeholder="Zadejte křestní jméno"
-                    />
+                    <Input id="first_name" type="text" value={profile.first_name} onChange={e => setProfile(prev => ({
+                    ...prev,
+                    first_name: e.target.value
+                  }))} placeholder="Zadejte křestní jméno" />
                   </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="last_name">Příjmení</Label>
-                    <Input
-                      id="last_name"
-                      type="text"
-                      value={profile.last_name}
-                      onChange={(e) => setProfile(prev => ({ ...prev, last_name: e.target.value }))}
-                      placeholder="Zadejte příjmení"
-                    />
+                    <Input id="last_name" type="text" value={profile.last_name} onChange={e => setProfile(prev => ({
+                    ...prev,
+                    last_name: e.target.value
+                  }))} placeholder="Zadejte příjmení" />
                   </div>
                   
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="address">Doručovací adresa</Label>
-                    <Textarea
-                      id="address"
-                      value={profile.address}
-                      onChange={(e) => setProfile(prev => ({ ...prev, address: e.target.value }))}
-                      placeholder="Zadejte doručovací adresu pro výhry"
-                      rows={3}
-                    />
+                    <Label htmlFor="address">Doručovací adresa výhry
+                  </Label>
+                    <Textarea id="address" value={profile.address} onChange={e => setProfile(prev => ({
+                    ...prev,
+                    address: e.target.value
+                  }))} placeholder="Zadejte doručovací adresu pro výhry" rows={3} />
                   </div>
                 </div>
                 
-                <Button 
-                  onClick={handleProfileSave}
-                  disabled={profileSaving}
-                  className="mb-6"
-                >
+                <Button onClick={handleProfileSave} disabled={profileSaving} className="mb-6">
                   {profileSaving ? 'Ukládám...' : 'Uložit profil'}
                 </Button>
               </div>
@@ -381,12 +332,7 @@ const Profile: React.FC = () => {
               <div className="border-t pt-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">Peněženka</h3>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleRefreshBalance}
-                    disabled={refreshing}
-                  >
+                  <Button variant="outline" size="sm" onClick={handleRefreshBalance} disabled={refreshing}>
                     <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                     {refreshing ? 'Aktualizuji...' : 'Aktualizovat zůstatek'}
                   </Button>
@@ -417,18 +363,11 @@ const Profile: React.FC = () => {
                 </div>
                 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button 
-                    onClick={() => setShowVoucherForm(true)}
-                    size="lg"
-                  >
+                  <Button onClick={() => setShowVoucherForm(true)} size="lg">
                     Dobít vouchery + miocoiny
                   </Button>
                   
-                  <Button 
-                    onClick={() => navigate('/my-contests')}
-                    variant="outline"
-                    size="lg"
-                  >
+                  <Button onClick={() => navigate('/my-contests')} variant="outline" size="lg">
                     <GamepadIcon className="h-5 w-5 mr-2" />
                     Moje hry
                   </Button>
@@ -454,14 +393,7 @@ const Profile: React.FC = () => {
               <label htmlFor="amount" className="text-sm font-medium">
                 Částka (CZK) *
               </label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="50"
-                min="50"
-                value={voucherAmount}
-                onChange={(e) => setVoucherAmount(e.target.value)}
-              />
+              <Input id="amount" type="number" placeholder="50" min="50" value={voucherAmount} onChange={e => setVoucherAmount(e.target.value)} />
               <p className="text-sm text-muted-foreground">
                 Minimální částka je 50 CZK
               </p>
@@ -469,27 +401,18 @@ const Profile: React.FC = () => {
           </div>
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setShowVoucherForm(false);
-                setVoucherAmount('');
-              }}
-              disabled={purchaseLoading}
-            >
+            <Button variant="outline" onClick={() => {
+            setShowVoucherForm(false);
+            setVoucherAmount('');
+          }} disabled={purchaseLoading}>
               Zrušit
             </Button>
-            <Button 
-              onClick={handleVoucherPurchase}
-              disabled={purchaseLoading || !voucherAmount || parseInt(voucherAmount) < 50}
-            >
+            <Button onClick={handleVoucherPurchase} disabled={purchaseLoading || !voucherAmount || parseInt(voucherAmount) < 50}>
               {purchaseLoading ? 'Zpracovávám...' : 'Pokračovat k platbě'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 };
-
 export default Profile;
