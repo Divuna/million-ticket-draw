@@ -36,8 +36,10 @@ interface TicketResult {
   ticket_number: number;
   distance_to_next_bonus: number | null;
   next_bonus_position: number | null;
-  won_prize?: string;
+  won_prize?: string | null;
   remaining_tickets?: number;
+  won_type?: 'bonus' | 'main' | null;
+  bonus_prize_id?: string | null;
 }
 
 const ContestDetail: React.FC = () => {
@@ -143,27 +145,33 @@ const ContestDetail: React.FC = () => {
 
       if (error || !data) throw error || new Error('No data returned');
 
-      // Development logging
+      // Development logging - Raw RPC unlock_ticket data
       if (import.meta.env.DEV) {
+        console.log('🎫 Raw RPC unlock_ticket data:', JSON.stringify(data, null, 2));
         console.log('🎫 Ticket purchase result:', {
           current_ticket: data.ticket_number,
           next_bonus_position: data.next_bonus_position,
           distance_to_next_bonus: data.distance_to_next_bonus,
           won_prize: data.won_prize,
+          won_type: data.won_type,
+          bonus_prize_id: data.bonus_prize_id,
           remaining_tickets: data.remaining_tickets
         });
         
         if (data.won_prize) {
           console.log('🎉 Winner record should be created for user:', user.id);
+          console.log('🎉 Won type:', data.won_type);
         }
       }
 
       // Prepare result for modal
       const result: TicketResult = {
         ticket_number: data.ticket_number || 0,
-        distance_to_next_bonus: data.distance_to_next_bonus || null,
-        next_bonus_position: data.next_bonus_position || null,
+        distance_to_next_bonus: data.distance_to_next_bonus,
+        next_bonus_position: data.next_bonus_position,
         won_prize: data.won_prize,
+        won_type: data.won_type,
+        bonus_prize_id: data.bonus_prize_id,
         remaining_tickets: data.remaining_tickets,
       };
 

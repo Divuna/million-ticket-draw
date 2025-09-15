@@ -18,8 +18,10 @@ interface TicketResultModalProps {
     ticket_number: number;
     distance_to_next_bonus: number | null;
     next_bonus_position: number | null;
-    won_prize?: string;
+    won_prize?: string | null;
     remaining_tickets?: number;
+    won_type?: 'bonus' | 'main' | null;
+    bonus_prize_id?: string | null;
   } | null;
 }
 
@@ -37,31 +39,38 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   contestId,
   result
 }) => {
-  const navigate = useNavigate();
   const { width, height } = useWindowSize();
-  const isWinner = result?.won_prize;
-  const isMainPrize = result?.remaining_tickets === 0 && isWinner;
-  const isBonusWin = isWinner && !isMainPrize;
+  const navigate = useNavigate();
+
+  if (!result) return null;
+
+  // Enhanced win detection using won_type and won_prize
+  const isBonusWin = result.won_type === 'bonus' || (!!result.won_prize && result.remaining_tickets !== 0);
+  const isMainPrize = result.won_type === 'main' || (result.remaining_tickets === 0 && !!result.won_prize);
+  const isWinner = isBonusWin || isMainPrize;
 
   // Development logging - Enhanced for bonus win debugging
   if (import.meta.env.DEV && result) {
     console.log('🎪 TicketResultModal - Full result object:', JSON.stringify(result, null, 2));
-    console.log('🎯 Win detection logic:', { 
+    console.log('🎯 Enhanced win detection logic:', { 
       'result.won_prize': result.won_prize,
-      'result.won_prize truthy': !!result.won_prize,
+      'result.won_type': result.won_type,
+      'result.bonus_prize_id': result.bonus_prize_id,
       'result.remaining_tickets': result.remaining_tickets,
-      'isWinner': isWinner, 
-      'isMainPrize': isMainPrize, 
-      'isBonusWin': isBonusWin
+      'isBonusWin': isBonusWin,
+      'isMainPrize': isMainPrize,
+      'isWinner': isWinner
     });
     
     // Explicit bonus win detection logging
-    if (result.won_prize && result.won_prize !== null && result.won_prize !== '') {
-      console.log('✅ BONUS WIN CONFIRMED - won_prize value:', result.won_prize);
-      console.log('✅ Will display Czech bonus message: "Gratulujeme, vyhrál jsi bonus: ' + result.won_prize + '"');
-      console.log('✅ Expected UI flow: Show bonus win section with 🎉 emoji and green text');
+    if (result.won_type === 'bonus' && result.won_prize) {
+      console.log('✅ BONUS WIN CONFIRMED via won_type - prize:', result.won_prize);
+      console.log('✅ Will display Czech bonus message: "🎉 Gratulujeme, vyhrál jsi bonus: ' + result.won_prize + '"');
+    } else if (result.won_prize && result.won_prize !== null && result.won_prize !== '') {
+      console.log('✅ PRIZE WIN DETECTED - won_prize value:', result.won_prize);
+      console.log('✅ Will display win message for prize:', result.won_prize);
     } else {
-      console.log('❌ NO BONUS WIN - won_prize is:', result.won_prize);
+      console.log('❌ NO WIN - won_prize is:', result.won_prize, 'won_type is:', result.won_type);
       console.log('❌ Will display lose message with funny Czech text');
     }
   }
@@ -74,8 +83,6 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const getRandomFunnyMessage = () => {
     return funnyMessages[Math.floor(Math.random() * funnyMessages.length)];
   };
-
-  if (!result) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -138,7 +145,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 <p className="text-sm text-muted-foreground">
                   Tvůj tiket: <span className="font-semibold">#{result.ticket_number.toLocaleString('cs-CZ')}</span>
                 </p>
-                {result.distance_to_next_bonus && (
+                {result.distance_to_next_bonus && !isWinner && (
                   <p className="text-sm text-muted-foreground">
                     Do bonusové výhry zbývá: <span className="font-semibold text-primary">{result.distance_to_next_bonus.toLocaleString('cs-CZ')} tiketů</span>
                   </p>

@@ -22,10 +22,12 @@ interface Contest {
 interface UnlockTicketResult {
   ticket_number: number;
   ticket_price: number;
-  next_bonus_position?: number;
-  distance_to_next_bonus?: number;
-  won_prize?: string;
+  next_bonus_position?: number | null;
+  distance_to_next_bonus?: number | null;
+  won_prize?: string | null;
   remaining_tickets?: number;
+  won_type?: 'bonus' | 'main' | null;
+  bonus_prize_id?: string | null;
 }
 
 const Index = () => {
@@ -89,6 +91,16 @@ const Index = () => {
       }
 
       if (data) {
+        // Development logging - Raw RPC unlock_ticket data
+        if (import.meta.env.DEV) {
+          console.log('🎫 Raw RPC unlock_ticket data:', JSON.stringify(data, null, 2));
+          console.log('🎫 Enhanced data fields:', {
+            won_prize: data.won_prize,
+            won_type: data.won_type,
+            bonus_prize_id: data.bonus_prize_id
+          });
+        }
+
         setModalResult(data);
         setModalContestId(contestId);
         
@@ -197,9 +209,11 @@ const Index = () => {
       <TicketResultModal
         result={modalResult ? {
           ticket_number: modalResult.ticket_number,
-          distance_to_next_bonus: modalResult.distance_to_next_bonus || 0,
-          next_bonus_position: modalResult.next_bonus_position || 0,
+          distance_to_next_bonus: modalResult.distance_to_next_bonus,
+          next_bonus_position: modalResult.next_bonus_position,
           won_prize: modalResult.won_prize,
+          won_type: modalResult.won_type,
+          bonus_prize_id: modalResult.bonus_prize_id,
           remaining_tickets: modalResult.remaining_tickets
         } : null}
         contestId={modalContestId}
