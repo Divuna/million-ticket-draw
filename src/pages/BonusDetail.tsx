@@ -49,23 +49,44 @@ const BonusDetail: React.FC = () => {
       if (contestError) throw contestError;
       setContest(contestData);
 
-      // Fetch bonus prizes with winner info
+      // Fetch bonus prizes
       const { data: bonusData, error: bonusError } = await supabase
         .from('bonus_prizes')
-        .select(`
-          *,
-          winners!left(user_id)
-        `)
+        .select('*')
         .eq('contest_id', id)
         .order('ticket_position', { ascending: true });
 
       if (bonusError) throw bonusError;
-      
+
+      // Fetch winners for these bonus prizes
+      const bonusPrizeIds = (bonusData || []).map(prize => prize.id);
+      const { data: winnersData, error: winnersError } = await supabase
+        .from('winners')
+        .select('prize_id, user_id')
+        .in('prize_id', bonusPrizeIds)
+        .eq('type', 'bonus');
+
+      if (winnersError) throw winnersError;
+
+      // Create a map of prize_id to winner_user_id
+      const winnersMap = new Map();
+      (winnersData || []).forEach(winner => {
+        winnersMap.set(winner.prize_id, winner.user_id);
+      });
+
       // Process bonus prizes to add winner info
       const processedPrizes = (bonusData || []).map((prize: any) => ({
         ...prize,
-        winner_user_id: prize.winners?.user_id || null
+        winner_user_id: winnersMap.get(prize.id) || null
       }));
+
+      // Development logging
+      if (import.meta.env.DEV) {
+        console.log('🎁 Bonus prizes fetched:', processedPrizes);
+        console.log('🏆 Winners data:', winnersData);
+        console.log('👤 Current user ID:', session?.user?.id);
+        console.log('🎯 User won prizes:', processedPrizes.filter(p => p.winner_user_id === session?.user?.id));
+      }
       
       setBonusPrizes(processedPrizes);
 
