@@ -90,7 +90,8 @@ export const useAuthState = () => {
   };
 
   const signInWithOAuth = async (provider: 'google' | 'apple') => {
-    const redirectUrl = `${window.location.origin}/profile`;
+    // OAuth will redirect to origin, then we handle admin check in auth state change
+    const redirectUrl = `${window.location.origin}/`;
     
     await supabase.auth.signInWithOAuth({
       provider,

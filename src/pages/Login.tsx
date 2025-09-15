@@ -27,7 +27,12 @@ const Login: React.FC = () => {
           variant: "destructive"
         });
       } else {
-        navigate('/profile');
+        // Check if user is admin based on email
+        if (email === 'divispavel2@gmail.com') {
+          navigate('/admin');
+        } else {
+          navigate('/profile');
+        }
       }
     } catch (error) {
       toast({

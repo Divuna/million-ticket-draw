@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,14 @@ const Index = () => {
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
   const [modalContestId, setModalContestId] = useState<string | null>(null);
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Check if user is admin and redirect
+  useEffect(() => {
+    if (user && user.email === 'divispavel2@gmail.com') {
+      navigate('/admin');
+    }
+  }, [user, navigate]);
 
   const fetchContests = async () => {
     try {
