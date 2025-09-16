@@ -7,6 +7,7 @@ import { ArrowLeft, Gift } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
+import { BottomNavigation } from '@/components/BottomNavigation';
 
 interface BonusPrize {
   id: string;
@@ -121,7 +122,7 @@ const BonusDetail: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
@@ -219,6 +220,8 @@ const BonusDetail: React.FC = () => {
 
         </div>
       </div>
+
+      <BottomNavigation />
     </div>
   );
 };

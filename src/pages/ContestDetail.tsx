@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
 import { TicketResultModal } from '@/components/TicketResultModal';
+import { BottomNavigation } from '@/components/BottomNavigation';
 
 import { AdminContestView } from '@/components/AdminContestView';
 import { CustomerContestView } from '@/components/CustomerContestView';
@@ -229,7 +230,7 @@ const ContestDetail: React.FC = () => {
   const progressPercentage = (currentTickets / contest.ticket_count) * 100;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
@@ -260,6 +261,8 @@ const ContestDetail: React.FC = () => {
         contestId={contest?.id || ''}
         result={ticketResult}
       />
+
+      {!isAdmin && <BottomNavigation />}
     </div>
   );
 };

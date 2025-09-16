@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TicketResultModal } from '@/components/TicketResultModal';
+import { BottomNavigation } from '@/components/BottomNavigation';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -137,7 +138,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background dark">
+    <div className="min-h-screen bg-background dark pb-20">
       <Header />
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
@@ -227,6 +228,8 @@ const Index = () => {
           setModalContestId(null);
         }}
       />
+
+      <BottomNavigation />
     </div>
   );
 };

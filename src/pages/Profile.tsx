@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
 import { RefreshCw, GamepadIcon } from 'lucide-react';
+import { BottomNavigation } from '@/components/BottomNavigation';
 interface UserWallet {
   user_id: string;
   email: string;
@@ -248,7 +249,7 @@ const Profile: React.FC = () => {
         </div>
       </div>;
   }
-  return <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background pb-20">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
@@ -413,6 +414,8 @@ const Profile: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BottomNavigation />
     </div>;
 };
 export default Profile;

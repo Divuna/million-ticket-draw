@@ -156,6 +156,38 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
         </CardContent>
       </Card>
 
+      {/* My Wins Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Moje výhry</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {/* Placeholder won prizes - will be populated with real data later */}
+            {[
+              { id: '1', title: 'Voucher 100 Kč', type: 'bonus', status: 'Stav bude doplněn' },
+              { id: '2', title: 'Hlavní cena - iPhone 15', type: 'main', status: 'Stav bude doplněn' }
+            ].map((prize) => (
+              <div key={prize.id} className="border rounded-lg p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold">{prize.title}</h4>
+                  <Badge variant={prize.type === 'main' ? 'default' : 'secondary'}>
+                    {prize.type === 'main' ? 'Hlavní cena' : 'Bonusová cena'}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">Stav: {prize.status}</p>
+                {/* Future states: paid, shipped, pending */}
+              </div>
+            ))}
+            
+            {/* Empty state when no wins */}
+            <div className="text-center py-6 text-muted-foreground">
+              <p>Zatím žádné výhry v této soutěži.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
     </div>
   );
 };
