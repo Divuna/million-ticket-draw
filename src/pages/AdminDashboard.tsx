@@ -265,7 +265,12 @@ const AdminDashboard: React.FC = () => {
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8">Administrátorský panel</h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold">Administrátorský panel</h1>
+            <Button asChild variant="outline">
+              <a href="/admin/winners">Správa výher</a>
+            </Button>
+          </div>
           
           <Tabs defaultValue="contests" className="space-y-6">
             <TabsList>

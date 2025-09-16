@@ -14,6 +14,7 @@ import BonusDetail from "./pages/BonusDetail";
 import Messages from "./pages/Messages";
 import Vouchers from "./pages/Vouchers";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminWinners from "./pages/AdminWinners";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
 import NotFound from "./pages/NotFound";
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/contest/:id/bonus" element={<BonusDetail />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/winners" element={<AdminWinners />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/payment-cancel" element={<PaymentCancel />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
