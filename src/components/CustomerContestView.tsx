@@ -122,33 +122,26 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
       {/* Bonus Prizes Section */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Dostupné bonusové ceny</CardTitle>
-            <Button variant="outline" onClick={() => (window.location.href = `/contest/${contest.id}/bonus`)}>
-              Zobrazit vše
-            </Button>
-          </div>
+          <CardTitle>Dostupné bonusové ceny</CardTitle>
         </CardHeader>
         <CardContent>
           {bonusPrizes && bonusPrizes.filter(p => p.status === 'pending').length > 0 ? (
-            <div className="space-y-3">
-              {bonusPrizes
-                .filter(p => p.status === 'pending')
-                .slice(0, 5)
-                .map((bp) => (
-                  <div key={bp.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                    <div>
-                      <p className="font-medium">{bp.description}</p>
-                      <p className="text-sm text-muted-foreground">Lístek #{bp.ticket_position}</p>
-                    </div>
-                    <Badge>Volné</Badge>
+            <div className="space-y-2">
+              {(() => {
+                // Group bonus prizes by description and count them
+                const grouped = bonusPrizes
+                  .filter(p => p.status === 'pending')
+                  .reduce((acc, prize) => {
+                    acc[prize.description] = (acc[prize.description] || 0) + 1;
+                    return acc;
+                  }, {} as Record<string, number>);
+
+                return Object.entries(grouped).map(([description, count]) => (
+                  <div key={description} className="py-2 border-b last:border-0">
+                    <p className="font-medium">{description} – {count}×</p>
                   </div>
-                ))}
-              {bonusPrizes.filter(p => p.status === 'pending').length > 5 && (
-                <p className="text-sm text-muted-foreground">
-                  A další {bonusPrizes.filter(p => p.status === 'pending').length - 5} ceny...
-                </p>
-              )}
+                ));
+              })()}
             </div>
           ) : (
             <p className="text-muted-foreground">Žádné dostupné bonusové ceny.</p>
