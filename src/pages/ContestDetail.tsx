@@ -173,7 +173,7 @@ const ContestDetail: React.FC = () => {
           id: win.id,
           description,
           type: win.type as 'main' | 'bonus',
-          status: 'Stav bude doplněn',
+          status: 'čeká na potvrzení',
           delivered: win.delivered
         });
       }
