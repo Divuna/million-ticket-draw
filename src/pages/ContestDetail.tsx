@@ -32,6 +32,14 @@ interface UserWallet {
   balance_coins: number;
 }
 
+interface UserWin {
+  id: string;
+  description: string;
+  type: 'main' | 'bonus';
+  status: string;
+  delivered: boolean;
+}
+
 interface TicketResult {
   ticket_number: number;
   distance_to_next_bonus: number | null;
@@ -49,6 +57,7 @@ const ContestDetail: React.FC = () => {
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [currentTickets, setCurrentTickets] = useState(0);
   const [userWallet, setUserWallet] = useState<UserWallet>({ balance_coins: 0 });
+  const [userWins, setUserWins] = useState<UserWin[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [ticketResult, setTicketResult] = useState<TicketResult | null>(null);
@@ -63,8 +72,9 @@ const ContestDetail: React.FC = () => {
   useEffect(() => {
     if (user) {
       fetchUserWallet();
+      fetchUserWins();
     }
-  }, [user]);
+  }, [user, id]);
 
   const fetchContestData = async () => {
     try {
@@ -119,6 +129,59 @@ const ContestDetail: React.FC = () => {
     } catch (error) {
       console.error('Error fetching wallet:', error);
       setUserWallet({ balance_coins: 0 });
+    }
+  };
+
+  const fetchUserWins = async () => {
+    try {
+      if (!user || !id) return;
+      
+      const { data, error } = await supabase
+        .from('winners')
+        .select(`
+          id,
+          type,
+          delivered,
+          prize_id,
+          contest_id,
+          contests!inner(main_prize)
+        `)
+        .eq('user_id', user.id)
+        .eq('contest_id', id);
+
+      if (error) throw error;
+
+      const wins: UserWin[] = [];
+      
+      for (const win of data || []) {
+        let description = '';
+        
+        if (win.type === 'main') {
+          description = win.contests?.main_prize || 'Hlavní cena';
+        } else if (win.type === 'bonus' && win.prize_id) {
+          // Fetch bonus prize description separately
+          const { data: bonusData } = await supabase
+            .from('bonus_prizes')
+            .select('description')
+            .eq('id', win.prize_id)
+            .single();
+          
+          description = bonusData?.description || 'Bonusová cena';
+        }
+
+        wins.push({
+          id: win.id,
+          description,
+          type: win.type as 'main' | 'bonus',
+          status: 'Stav bude doplněn',
+          delivered: win.delivered
+        });
+      }
+
+      setUserWins(wins);
+    } catch (error) {
+      console.error('Error fetching user wins:', error);
+      setUserWins([]);
     }
   };
 
@@ -180,6 +243,7 @@ const ContestDetail: React.FC = () => {
 
       // Refresh data
       await fetchUserWallet();
+      await fetchUserWins();
 
     } catch (error) {
       console.error('Error purchasing ticket:', error);
@@ -248,6 +312,7 @@ const ContestDetail: React.FC = () => {
             contest={contest}
             bonusPrizes={bonusPrizes}
             userWallet={userWallet}
+            userWins={userWins}
             purchasing={purchasing}
             onBuyTicket={buyTicket}
           />
