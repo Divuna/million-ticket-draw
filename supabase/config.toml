@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.send_event_to_sofinity]
 verify_jwt = false
+
+[functions.sofinity-integration-test]
+verify_jwt = false
