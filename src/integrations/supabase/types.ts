@@ -83,6 +83,7 @@ export type Database = {
           ticket_count: number
           ticket_price: number
           title: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
@@ -93,6 +94,7 @@ export type Database = {
           ticket_count?: number
           ticket_price?: number
           title: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
@@ -103,6 +105,7 @@ export type Database = {
           ticket_count?: number
           ticket_price?: number
           title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -376,6 +379,7 @@ export type Database = {
           id: string
           notes: string | null
           prize_id: string | null
+          status: string | null
           type: string
           user_id: string
         }
@@ -386,6 +390,7 @@ export type Database = {
           id?: string
           notes?: string | null
           prize_id?: string | null
+          status?: string | null
           type: string
           user_id: string
         }
@@ -396,6 +401,7 @@ export type Database = {
           id?: string
           notes?: string | null
           prize_id?: string | null
+          status?: string | null
           type?: string
           user_id?: string
         }

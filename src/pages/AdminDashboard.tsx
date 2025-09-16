@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -268,7 +268,7 @@ const AdminDashboard: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold">Administrátorský panel</h1>
             <Button asChild variant="outline">
-              <a href="/admin/winners">Správa výher</a>
+              <Link to="/admin/winners">Správa výher</Link>
             </Button>
           </div>
           
