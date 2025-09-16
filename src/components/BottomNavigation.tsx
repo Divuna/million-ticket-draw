@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, User, Gift, MessageCircle } from 'lucide-react';
+import { Home, User, Gift, MessageCircle, GamepadIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export const BottomNavigation: React.FC = () => {
@@ -10,7 +10,8 @@ export const BottomNavigation: React.FC = () => {
   const navItems = [
     { label: 'Domů', icon: Home, path: '/' },
     { label: 'Můj profil', icon: User, path: '/profile' },
-    { label: 'Vouchery', icon: Gift, path: '/my-contests' },
+    { label: 'Vouchery', icon: Gift, path: '/vouchers' },
+    { label: 'Moje hry', icon: GamepadIcon, path: '/my-contests' },
     { label: 'Zprávy', icon: MessageCircle, path: '/messages' },
   ];
 

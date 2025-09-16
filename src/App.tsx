@@ -12,6 +12,7 @@ import MyContests from "./pages/MyContests";
 import ContestDetail from "./pages/ContestDetail";
 import BonusDetail from "./pages/BonusDetail";
 import Messages from "./pages/Messages";
+import Vouchers from "./pages/Vouchers";
 import AdminDashboard from "./pages/AdminDashboard";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/vouchers" element={<Vouchers />} />
             <Route path="/my-contests" element={<MyContests />} />
             <Route path="/contest/:id" element={<ContestDetail />} />
             <Route path="/contest/:id/bonus" element={<BonusDetail />} />

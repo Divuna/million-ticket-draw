@@ -47,6 +47,7 @@ const Profile: React.FC = () => {
   const [voucherAmount, setVoucherAmount] = useState('');
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   useEffect(() => {
     if (user) {
       fetchUserWallet();
@@ -145,6 +146,10 @@ const Profile: React.FC = () => {
         title: "Úspěch",
         description: "Profil byl úspěšně uložen."
       });
+      
+      // Switch back to read-only mode and scroll to top
+      setEditMode(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       console.error('Error saving profile:', error);
       toast({
@@ -279,55 +284,127 @@ const Profile: React.FC = () => {
                   </div>}
               </div>
               
-              {/* Profile Form Section */}
+              {/* Profile Section */}
               <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold mb-4">Osobní údaje</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nickname">Přezdívka</Label>
-                    <Input id="nickname" type="text" value={profile.nickname} onChange={e => setProfile(prev => ({
-                    ...prev,
-                    nickname: e.target.value
-                  }))} placeholder="Zadejte přezdívku" />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Telefon</Label>
-                    <Input id="phone" type="text" value={profile.phone} onChange={e => setProfile(prev => ({
-                    ...prev,
-                    phone: e.target.value
-                  }))} placeholder="Zadejte telefon" />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="first_name">Křestní jméno</Label>
-                    <Input id="first_name" type="text" value={profile.first_name} onChange={e => setProfile(prev => ({
-                    ...prev,
-                    first_name: e.target.value
-                  }))} placeholder="Zadejte křestní jméno" />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="last_name">Příjmení</Label>
-                    <Input id="last_name" type="text" value={profile.last_name} onChange={e => setProfile(prev => ({
-                    ...prev,
-                    last_name: e.target.value
-                  }))} placeholder="Zadejte příjmení" />
-                  </div>
-                  
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="address">Doručovací adresa výhry
-                  </Label>
-                    <Textarea id="address" value={profile.address} onChange={e => setProfile(prev => ({
-                    ...prev,
-                    address: e.target.value
-                  }))} placeholder="Zadejte doručovací adresu pro výhry" rows={3} />
-                  </div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Osobní údaje</h3>
+                  {!editMode && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setEditMode(true)}
+                    >
+                      Upravit profil
+                    </Button>
+                  )}
                 </div>
                 
-                <Button onClick={handleProfileSave} disabled={profileSaving} className="mb-6">
-                  {profileSaving ? 'Ukládám...' : 'Uložit profil'}
-                </Button>
+                {editMode ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nickname">Přezdívka</Label>
+                        <Input id="nickname" type="text" value={profile.nickname} onChange={e => setProfile(prev => ({
+                        ...prev,
+                        nickname: e.target.value
+                      }))} placeholder="Zadejte přezdívku" />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Telefon</Label>
+                        <Input id="phone" type="text" value={profile.phone} onChange={e => setProfile(prev => ({
+                        ...prev,
+                        phone: e.target.value
+                      }))} placeholder="Zadejte telefon" />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="first_name">Křestní jméno</Label>
+                        <Input id="first_name" type="text" value={profile.first_name} onChange={e => setProfile(prev => ({
+                        ...prev,
+                        first_name: e.target.value
+                      }))} placeholder="Zadejte křestní jméno" />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="last_name">Příjmení</Label>
+                        <Input id="last_name" type="text" value={profile.last_name} onChange={e => setProfile(prev => ({
+                        ...prev,
+                        last_name: e.target.value
+                      }))} placeholder="Zadejte příjmení" />
+                      </div>
+                      
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="address">Doručovací adresa výhry
+                      </Label>
+                        <Textarea id="address" value={profile.address} onChange={e => setProfile(prev => ({
+                        ...prev,
+                        address: e.target.value
+                      }))} placeholder="Zadejte doručovací adresu pro výhry" rows={3} />
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 mb-6">
+                      <Button onClick={handleProfileSave} disabled={profileSaving}>
+                        {profileSaving ? 'Ukládám...' : 'Uložit profil'}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setEditMode(false)}
+                        disabled={profileSaving}
+                      >
+                        Zrušit
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    {profile.nickname && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          Přezdívka:
+                        </label>
+                        <p className="text-lg">{profile.nickname}</p>
+                      </div>
+                    )}
+                    
+                    {profile.phone && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          Telefon:
+                        </label>
+                        <p className="text-lg">{profile.phone}</p>
+                      </div>
+                    )}
+                    
+                    {(profile.first_name || profile.last_name) && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          Jméno:
+                        </label>
+                        <p className="text-lg">
+                          {[profile.first_name, profile.last_name].filter(Boolean).join(' ')}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {profile.address && (
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          Doručovací adresa:
+                        </label>
+                        <p className="text-lg whitespace-pre-wrap">{profile.address}</p>
+                      </div>
+                    )}
+                    
+                    {!profile.nickname && !profile.phone && !profile.first_name && !profile.last_name && !profile.address && (
+                      <div className="md:col-span-2 text-center py-8 text-muted-foreground">
+                        <p>Zatím nemáte vyplněny osobní údaje.</p>
+                        <p className="text-sm">Klikněte na "Upravit profil" pro jejich zadání.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="border-t pt-6">
