@@ -80,11 +80,20 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
               )}
             </div>
             <Badge 
-              variant={contest.status === 'active' ? 'default' : 'secondary'}
-              className="text-sm"
+              variant={
+                contest.status === 'active' ? 'default' : 
+                contest.status === 'paused' ? 'secondary' :
+                contest.status === 'closed' ? 'destructive' :
+                'outline'
+              }
+              className={
+                contest.status === 'paused' ? 'bg-orange-500 text-white' : 'text-sm'
+              }
             >
               {contest.status === 'active' ? 'Aktivní' : 
-               contest.status === 'draft' ? 'Koncept' : 'Uzavřena'}
+               contest.status === 'paused' ? 'Pozastavená' :
+               contest.status === 'closed' ? 'Uzavřená' :
+               contest.status === 'draft' ? 'Koncept' : 'Neznámý'}
             </Badge>
           </div>
         </CardHeader>
@@ -107,6 +116,18 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
         </CardContent>
       </Card>
 
+      {/* Closed Contest Banner */}
+      {contest.status === 'closed' && (
+        <Card className="border-red-500 bg-red-50">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-red-700 mb-2">Uzavřená – výhra padla</h3>
+              <p className="text-red-600">Tato soutěž byla ukončena a výherci byli určeni.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Purchase Section */}
       {contest.status === 'active' && (
         <Card>
@@ -124,6 +145,29 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
                 size="lg"
               >
                 {purchasing ? 'Uplatňuji...' : `Uplatnit ${userWallet.balance_coins >= 1 ? '1' : '0'} miocoinů`}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Paused Contest Section */}
+      {contest.status === 'paused' && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold mb-1">Uplatnit miocoiny</h3>
+                <p className="text-muted-foreground">
+                  Cena: 1 miocoin | Váš zůstatek: {userWallet.balance_coins.toLocaleString('cs-CZ')} miocoinů
+                </p>
+              </div>
+              <Button 
+                disabled
+                size="lg"
+                variant="outline"
+              >
+                Soutěž je pozastavena
               </Button>
             </div>
           </CardContent>

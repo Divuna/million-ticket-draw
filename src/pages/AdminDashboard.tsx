@@ -203,17 +203,54 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const closeContest = async (contestId: string) => {
+  const pauseResumeContest = async (contestId: string, newStatus: 'active' | 'paused') => {
     try {
-      const { data, error } = await supabase.functions.invoke('close-contest', {
-        body: { contest_id: contestId }
-      });
+      const { error } = await supabase
+        .from('contests')
+        .update({ status: newStatus })
+        .eq('id', contestId);
 
       if (error) throw error;
 
       toast({
         title: "Úspěch",
-        description: "Soutěž byla uzavřena a výherci určeni."
+        description: newStatus === 'active' ? "Soutěž byla obnovena." : "Soutěž byla pozastavena."
+      });
+
+      fetchContests();
+
+    } catch (error) {
+      console.error('Error updating contest status:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se změnit stav soutěže.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const closeContest = async (contestId: string) => {
+    const pin = prompt("Zadejte PIN pro uzavření soutěže:");
+    if (pin !== "1978") {
+      toast({
+        title: "Chyba",
+        description: "Nesprávný PIN kód.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('contests')
+        .update({ status: 'closed' })
+        .eq('id', contestId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Úspěch",
+        description: "Soutěž byla uzavřena."
       });
 
       fetchContests();
@@ -295,11 +332,20 @@ const AdminDashboard: React.FC = () => {
                             <div className="flex items-center space-x-3">
                               <h3 className="font-semibold text-lg">{contest.title}</h3>
                               <Badge 
-                                variant={contest.status === 'active' ? 'default' : 
-                                        contest.status === 'draft' ? 'secondary' : 'outline'}
+                                variant={
+                                  contest.status === 'active' ? 'default' : 
+                                  contest.status === 'paused' ? 'secondary' :
+                                  contest.status === 'closed' ? 'destructive' :
+                                  'outline'
+                                }
+                                className={
+                                  contest.status === 'paused' ? 'bg-orange-500 text-white hover:bg-orange-600' : ''
+                                }
                               >
                                 {contest.status === 'active' ? 'Aktivní' : 
-                                 contest.status === 'draft' ? 'Koncept' : 'Uzavřena'}
+                                 contest.status === 'paused' ? 'Pozastavená' :
+                                 contest.status === 'closed' ? 'Uzavřená' :
+                                 contest.status === 'draft' ? 'Koncept' : 'Neznámý'}
                               </Badge>
                             </div>
                             <p className="text-muted-foreground">{contest.description}</p>
@@ -311,13 +357,28 @@ const AdminDashboard: React.FC = () => {
                             </p>
                           </div>
                           <div className="flex space-x-2">
-                            {contest.status === 'active' && (
-                              <Button 
-                                variant="outline"
-                                onClick={() => closeContest(contest.id)}
-                              >
-                                Uzavřít
-                              </Button>
+                            {contest.status !== 'closed' && (
+                              <>
+                                {(contest.status === 'active' || contest.status === 'paused') && (
+                                  <Button 
+                                    variant="outline"
+                                    onClick={() => pauseResumeContest(
+                                      contest.id, 
+                                      contest.status === 'active' ? 'paused' : 'active'
+                                    )}
+                                    className={contest.status === 'active' ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : 'border-green-500 text-green-600 hover:bg-green-50'}
+                                  >
+                                    {contest.status === 'active' ? 'Pozastavit' : 'Obnovit'}
+                                  </Button>
+                                )}
+                                <Button 
+                                  variant="outline"
+                                  onClick={() => closeContest(contest.id)}
+                                  className="border-red-500 text-red-600 hover:bg-red-50"
+                                >
+                                  Uzavřít
+                                </Button>
+                              </>
                             )}
                           </div>
                         </div>

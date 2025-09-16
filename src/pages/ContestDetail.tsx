@@ -188,6 +188,16 @@ const ContestDetail: React.FC = () => {
   const buyTicket = async () => {
     if (!user || !contest) return;
 
+    // Check if contest allows ticket purchases
+    if (contest.status !== 'active') {
+      toast({
+        title: "Nedostupná akce",
+        description: contest.status === 'paused' ? "Soutěž je pozastavena." : "Soutěž je uzavřena.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (userWallet.balance_coins < 1) {
       toast({
         title: "Nedostatek mincí",
