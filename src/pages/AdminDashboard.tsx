@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Contest {
   id: string;
@@ -29,6 +30,29 @@ interface BonusPrize {
   status: string;
 }
 
+interface EdgeFunctionLog {
+  event_message: string;
+  event_type: string;
+  function_id: string;
+  level: string;
+  timestamp: number;
+}
+
+interface EventLog {
+  id: string;
+  event_name: string;
+  event_id: string;
+  user_id: string;
+  contest_id: string | null;
+  timestamp: string;
+}
+
+interface AIRequest {
+  id: string;
+  event_id: string;
+  type: string;
+}
+
 const AdminDashboard: React.FC = () => {
   const { user, session } = useAuth();
   const [contests, setContests] = useState<Contest[]>([]);
@@ -36,6 +60,13 @@ const AdminDashboard: React.FC = () => {
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  
+  // Log analyzer states
+  const [edgeFunctionLogs, setEdgeFunctionLogs] = useState<EdgeFunctionLog[]>([]);
+  const [eventLogs, setEventLogs] = useState<EventLog[]>([]);
+  const [aiRequests, setAIRequests] = useState<AIRequest[]>([]);
+  const [duplicateWarnings, setDuplicateWarnings] = useState<string[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
   
   // Form states
   const [contestForm, setContestForm] = useState({
@@ -265,6 +296,119 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const fetchSofinityLogs = async () => {
+    setLogsLoading(true);
+    try {
+      // Fetch edge function logs using the analytics query
+      const { data: edgeLogs } = await supabase.functions.invoke('analytics-query', {
+        body: {
+          query: `
+            select id, function_edge_logs.timestamp, event_message, response.status_code, 
+                   request.method, m.function_id, m.execution_time_ms, m.deployment_id, m.version,
+                   m.metadata
+            from function_edge_logs
+              cross join unnest(metadata) as m
+              cross join unnest(m.response) as response
+              cross join unnest(m.request) as request
+            where m.function_id in (
+              select id from functions 
+              where name in ('send_event_to_sofinity', 'sofinity-integration-test')
+            )
+            order by timestamp desc
+            limit 50
+          `
+        }
+      });
+
+      if (edgeLogs) {
+        setEdgeFunctionLogs(edgeLogs.map((log: any) => ({
+          event_message: log.event_message,
+          event_type: log.event_type || 'Log',
+          function_id: log.function_id,
+          level: log.status_code >= 400 ? 'error' : 'info',
+          timestamp: log.timestamp
+        })));
+      }
+
+      // Fetch EventLogs from Sofinity
+      const sofinityUrl = 'https://xkzhjldrojjlrkezorey.supabase.co';
+      const sofinityKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhremhqbGRyb2pqbHJrZXpvcmV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4NDEyMTQsImV4cCI6MjA3MzQxNzIxNH0.O8--xNUY9PFqIBlXDav1x-coeYbZEy8UzAtMDEZhS6U';
+      
+      const eventLogsResponse = await fetch(`${sofinityUrl}/rest/v1/EventLogs?select=id,event_name,event_id,user_id,contest_id,timestamp&order=timestamp.desc&limit=20`, {
+        headers: {
+          'apikey': sofinityKey,
+          'Authorization': `Bearer ${sofinityKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (eventLogsResponse.ok) {
+        const eventLogsData = await eventLogsResponse.json();
+        setEventLogs(eventLogsData);
+
+        // Fetch AIRequests for duplicate check
+        const aiRequestsResponse = await fetch(`${sofinityUrl}/rest/v1/AIRequests?select=id,event_id,type&eq.type=event_forward`, {
+          headers: {
+            'apikey': sofinityKey,
+            'Authorization': `Bearer ${sofinityKey}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (aiRequestsResponse.ok) {
+          const aiRequestsData = await aiRequestsResponse.json();
+          setAIRequests(aiRequestsData);
+
+          // Check for duplicates
+          const eventIdCounts: { [key: string]: number } = {};
+          aiRequestsData.forEach((req: AIRequest) => {
+            eventIdCounts[req.event_id] = (eventIdCounts[req.event_id] || 0) + 1;
+          });
+
+          const duplicates = Object.entries(eventIdCounts)
+            .filter(([_, count]) => count > 1)
+            .map(([eventId, count]) => `Event ID ${eventId} appears ${count} times`);
+          
+          setDuplicateWarnings(duplicates);
+        }
+      }
+
+    } catch (error) {
+      console.error('Error fetching Sofinity logs:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se načíst Sofinity logy.",
+        variant: "destructive"
+      });
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const testSofinityIntegration = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('sofinity-integration-test');
+      
+      if (error) throw error;
+
+      toast({
+        title: "Test dokončen",
+        description: "Sofinity integrace byla otestována. Zkontrolujte logy.",
+      });
+
+      // Refresh logs after test
+      setTimeout(() => fetchSofinityLogs(), 2000);
+
+    } catch (error) {
+      console.error('Error testing Sofinity integration:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se otestovat Sofinity integraci.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (!session) {
     return <Navigate to="/login" replace />;
   }
@@ -314,6 +458,7 @@ const AdminDashboard: React.FC = () => {
               <TabsTrigger value="contests">Soutěže</TabsTrigger>
               <TabsTrigger value="create">Vytvořit soutěž</TabsTrigger>
               <TabsTrigger value="prizes">Bonusové ceny</TabsTrigger>
+              <TabsTrigger value="logs">Sofinity Logy</TabsTrigger>
             </TabsList>
 
             {/* Contest List */}
@@ -518,6 +663,176 @@ const AdminDashboard: React.FC = () => {
                     </CardContent>
                   </Card>
                 )}
+              </div>
+            </TabsContent>
+
+            {/* Sofinity Logs */}
+            <TabsContent value="logs">
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>OneMil Log Analyzer - Sofinity Integration</CardTitle>
+                    <CardDescription>Analýza edge functions a EventLogs pro Sofinity integraci</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex space-x-2">
+                      <Button onClick={fetchSofinityLogs} disabled={logsLoading}>
+                        {logsLoading ? 'Načítám...' : 'Aktualizovat logy'}
+                      </Button>
+                      <Button onClick={testSofinityIntegration} variant="outline">
+                        Otestovat integraci
+                      </Button>
+                    </div>
+
+                    {duplicateWarnings.length > 0 && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+                        <h4 className="font-semibold text-yellow-800 mb-2">⚠️ Duplicity v AIRequests:</h4>
+                        <ul className="text-sm text-yellow-700 space-y-1">
+                          {duplicateWarnings.map((warning, index) => (
+                            <li key={index}>• {warning}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Edge Functions Logy (Posledních 50 volání)</CardTitle>
+                    <CardDescription>send_event_to_sofinity a sofinity-integration-test</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Čas</TableHead>
+                          <TableHead>Funkce</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Zpráva</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {edgeFunctionLogs.map((log, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="text-sm">
+                              {new Date(log.timestamp / 1000).toLocaleString('cs-CZ')}
+                            </TableCell>
+                            <TableCell className="text-sm font-mono">
+                              {log.function_id.substring(0, 8)}...
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={log.level === 'error' ? 'destructive' : 'default'}>
+                                {log.level}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm max-w-xs truncate">
+                              {log.event_message}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {edgeFunctionLogs.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground py-4">
+                              Žádné logy nenalezeny. Klikněte na "Aktualizovat logy" pro načtení.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>EventLogs z Sofinity (Posledních 20 událostí)</CardTitle>
+                    <CardDescription>Přehled událostí zapsaných do Sofinity EventLogs</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>ID</TableHead>
+                          <TableHead>Event Name</TableHead>
+                          <TableHead>Event ID</TableHead>
+                          <TableHead>User ID</TableHead>
+                          <TableHead>Contest ID</TableHead>
+                          <TableHead>Čas</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {eventLogs.map((event) => (
+                          <TableRow key={event.id}>
+                            <TableCell className="text-sm font-mono">
+                              {event.id.substring(0, 8)}...
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {event.event_name}
+                            </TableCell>
+                            <TableCell className="text-sm font-mono">
+                              {event.event_id?.substring(0, 8)}...
+                            </TableCell>
+                            <TableCell className="text-sm font-mono">
+                              {event.user_id?.substring(0, 8)}...
+                            </TableCell>
+                            <TableCell className="text-sm font-mono">
+                              {event.contest_id ? `${event.contest_id.substring(0, 8)}...` : '-'}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {new Date(event.timestamp).toLocaleString('cs-CZ')}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {eventLogs.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center text-muted-foreground py-4">
+                              Žádné EventLogs nenalezeny. Klikněte na "Aktualizovat logy" pro načtení.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>AIRequests Přehled</CardTitle>
+                    <CardDescription>Kontrola AIRequests záznamů typu event_forward</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-muted-foreground mb-4">
+                      Celkem AIRequests: {aiRequests.length} | 
+                      Duplicity: {duplicateWarnings.length}
+                    </div>
+                    {aiRequests.length > 0 && (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>ID</TableHead>
+                            <TableHead>Event ID</TableHead>
+                            <TableHead>Type</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {aiRequests.slice(0, 10).map((request) => (
+                            <TableRow key={request.id}>
+                              <TableCell className="text-sm font-mono">
+                                {request.id.substring(0, 8)}...
+                              </TableCell>
+                              <TableCell className="text-sm font-mono">
+                                {request.event_id.substring(0, 8)}...
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {request.type}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
           </Tabs>
