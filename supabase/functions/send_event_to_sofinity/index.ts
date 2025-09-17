@@ -58,12 +58,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Prepare Sofinity payload
     const sofinityPayload = {
+      project_id: "defababe-004b-4c63-9ff1-311540b0a3c9",
       event_name,
       user_id,
-      contest_id,
-      metadata,
-      timestamp: timestamp || new Date().toISOString(),
-      audit_log_id: auditLog.id
+      contest_id: contest_id || null,
+      metadata: metadata || {}
     };
 
     // Send to Sofinity API
@@ -80,7 +79,8 @@ const handler = async (req: Request): Promise<Response> => {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${sofinityServiceKey}`,
-        'apikey': sofinityServiceKey
+        'apikey': sofinityServiceKey,
+        'Prefer': 'return=representation'
       },
       body: JSON.stringify(sofinityPayload)
     });
