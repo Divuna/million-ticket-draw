@@ -106,6 +106,26 @@ const Index = () => {
           });
         }
 
+        // Send event to Sofinity
+        try {
+          await supabase.functions.invoke('send_event_to_sofinity', {
+            body: {
+              event_name: 'coin_redeemed',
+              user_id: user.id,
+              contest_id: contestId,
+              metadata: {
+                ticket_number: data.ticket_number,
+                ticket_price: data.ticket_price
+              }
+            }
+          });
+          
+          toast.success('Event byl odeslán do Sofinity');
+        } catch (sofinityError) {
+          console.error('Sofinity event error:', sofinityError);
+          // Don't block the main flow for Sofinity errors
+        }
+
         setModalResult(data);
         setModalContestId(contestId);
         

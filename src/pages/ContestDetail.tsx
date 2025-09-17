@@ -237,6 +237,30 @@ const ContestDetail: React.FC = () => {
         }
       }
 
+      // Send event to Sofinity
+      try {
+        await supabase.functions.invoke('send_event_to_sofinity', {
+          body: {
+            event_name: 'coin_redeemed',
+            user_id: user.id,
+            contest_id: contest.id,
+            metadata: {
+              ticket_number: data.ticket_number,
+              ticket_price: data.ticket_price
+            }
+          }
+        });
+        
+        toast({
+          title: "Úspěch",
+          description: "Event byl odeslán do Sofinity",
+          variant: "default"
+        });
+      } catch (sofinityError) {
+        console.error('Sofinity event error:', sofinityError);
+        // Don't block the main flow for Sofinity errors
+      }
+
       // Prepare result for modal
       const result: TicketResult = {
         ticket_number: data.ticket_number || 0,

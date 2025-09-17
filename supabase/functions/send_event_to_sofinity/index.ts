@@ -68,19 +68,19 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send to Sofinity API
     const sofinityUrl = Deno.env.get('SOFINITY_URL');
-    const sofinityKey = Deno.env.get('SOFINITY_SHARED_KEY');
+    const sofinityServiceKey = Deno.env.get('SOFINITY_SERVICE_KEY');
 
-    if (!sofinityUrl || !sofinityKey) {
+    if (!sofinityUrl || !sofinityServiceKey) {
       console.error('Missing Sofinity configuration');
       throw new Error('Sofinity configuration not found');
     }
 
-    const sofinityResponse = await fetch(sofinityUrl, {
+    const sofinityResponse = await fetch(`${sofinityUrl}/rest/v1/EventLogs`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sofinityKey}`,
-        'X-Shared-Key': sofinityKey
+        'Authorization': `Bearer ${sofinityServiceKey}`,
+        'apikey': sofinityServiceKey
       },
       body: JSON.stringify(sofinityPayload)
     });
