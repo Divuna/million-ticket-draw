@@ -29,10 +29,9 @@ const handler = async (req: Request): Promise<Response> => {
     const body = await req.json().catch(() => ({}));
     const testPayload: TestPayload = {
       project_id: body.project_id || 'defababe-004b-4c63-9ff1-311540b0a3c9',
-      event_name: body.event_name || 'contest_closed',
+      event_name: body.event_name || 'sofinity_integration_test',
       metadata: body.metadata || {
-        contest_id: 'test789',
-        ticket_number: 123
+        note: 'Edge Function test from OneMil'
       },
       user_id: body.user_id || 'bbc1d329-fe8d-449e-9960-6633a647b65a'
     };
