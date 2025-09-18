@@ -78,6 +78,7 @@ const AdminDashboard: React.FC = () => {
     ticket_count: 1000000,
     status: 'pending'
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [bonusForm, setBonusForm] = useState({
     description: '',
     ticket_position: ''
@@ -165,10 +166,10 @@ const AdminDashboard: React.FC = () => {
   };
 
   const createContest = async () => {
-    if (!contestForm.title.trim() || !contestForm.main_prize.trim() || !contestForm.main_image.trim()) {
+    if (!contestForm.title.trim() || !contestForm.main_prize.trim() || !selectedFile) {
       toast({
         title: "Chyba",
-        description: "Vyplňte všechna povinná pole (název, hlavní cena, obrázek).",
+        description: "Vyplňte všechna povinná pole a vyberte obrázek.",
         variant: "destructive"
       });
       return;
@@ -184,8 +185,31 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
+      // Upload image to Supabase Storage
+      const fileExt = selectedFile.name.split('.').pop()
+      const fileName = `${Date.now()}.${fileExt}`
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('contest-images')
+        .upload(fileName, selectedFile)
+
+      if (uploadError) {
+        throw new Error('Chyba při nahrávání obrázku')
+      }
+
+      // Get public URL for the uploaded image
+      const { data: { publicUrl } } = supabase.storage
+        .from('contest-images')
+        .getPublicUrl(fileName)
+
+      // Create contest with uploaded image URL
+      const contestData = {
+        ...contestForm,
+        main_image: publicUrl
+      }
+
       const { data, error } = await supabase.functions.invoke('create-contest', {
-        body: contestForm
+        body: contestData
       });
 
       if (error) throw error;
@@ -203,6 +227,7 @@ const AdminDashboard: React.FC = () => {
         ticket_count: 1000000, 
         status: 'pending' 
       });
+      setSelectedFile(null);
       fetchContests();
 
     } catch (error) {
@@ -589,12 +614,32 @@ const AdminDashboard: React.FC = () => {
                   
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Hlavní obrázek *</label>
-                    <Input
-                      type="text"
-                      placeholder="URL obrázku nebo cesta k souboru"
-                      value={contestForm.main_image}
-                      onChange={(e) => setContestForm({...contestForm, main_image: e.target.value})}
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png']
+                          if (!allowedTypes.includes(file.type)) {
+                            toast({
+                              title: "Chyba",
+                              description: "Povolené formáty: .jpg, .jpeg, .png",
+                              variant: "destructive"
+                            })
+                            e.target.value = ''
+                            return
+                          }
+                          setSelectedFile(file)
+                        }
+                      }}
+                      className="w-full p-2 border rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                     />
+                    {selectedFile && (
+                      <p className="text-sm text-muted-foreground">
+                        Vybraný soubor: {selectedFile.name}
+                      </p>
+                    )}
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
