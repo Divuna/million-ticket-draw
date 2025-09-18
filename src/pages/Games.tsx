@@ -17,6 +17,7 @@ interface Contest {
   title: string;
   description: string | null;
   main_prize: string;
+  main_image: string | null;
   ticket_price: number;
   status: string;
   ticket_count: number;
@@ -51,7 +52,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from('contests')
         .select(`
-          id, title, description, main_prize, ticket_price, ticket_count, status, created_at
+          id, title, description, main_prize, main_image, ticket_price, ticket_count, status, created_at
         `)
         .order('created_at', { ascending: false });
 
@@ -68,6 +69,20 @@ const Index = () => {
 
   useEffect(() => {
     fetchContests();
+  }, []);
+
+  // Real-time updates: refresh when contests table changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('contests-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contests' }, () => {
+        fetchContests();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleUnlockTicket = async (contestId: string) => {
@@ -179,8 +194,21 @@ const Index = () => {
               )}
               
               <CardHeader>
-                <div className="w-full h-48 bg-gradient-to-br from-purple-900/20 to-cyan-900/20 rounded-md mb-4 flex items-center justify-center">
-                  <div className="text-6xl">🎯</div>
+                <div className="w-full h-48 rounded-md mb-4 overflow-hidden bg-gradient-to-br from-purple-900/20 to-cyan-900/20 flex items-center justify-center">
+                  {contest.main_image ? (
+                    <img
+                      src={contest.main_image.startsWith('http') ? contest.main_image : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`}
+                      alt={contest.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.log('Contest image failed to load:', contest.main_image);
+                        toast.error('Obrázek soutěže se nepodařilo načíst');
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="text-6xl">🎯</div>
+                  )}
                 </div>
                 <CardTitle className="text-neon-cyan">{contest.title}</CardTitle>
                 <CardDescription className="text-muted-foreground">
@@ -204,6 +232,12 @@ const Index = () => {
                     <span className="text-sm text-muted-foreground">Celkem tiketů:</span>
                     <span className="text-sm font-medium">
                       {contest.ticket_count.toLocaleString('cs-CZ')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Stav:</span>
+                    <span className="text-sm font-medium">
+                      {contest.status}
                     </span>
                   </div>
                 </div>
