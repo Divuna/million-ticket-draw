@@ -541,19 +541,23 @@ const AdminDashboard: React.FC = () => {
                       <TableBody>
                         {contests.map((contest) => (
                           <TableRow key={contest.id}>
-                            <TableCell>
-                              {contest.main_image ? (
-                                <img 
-                                  src={contest.main_image} 
-                                  alt={contest.title}
-                                  className="w-12 h-12 object-cover rounded-md"
-                                />
-                              ) : (
-                                <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
-                                  <span className="text-xs text-muted-foreground">Bez obrázku</span>
-                                </div>
-                              )}
-                            </TableCell>
+                             <TableCell>
+                               {contest.main_image ? (
+                                 <img 
+                                   src={contest.main_image.startsWith('http') ? contest.main_image : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`} 
+                                   alt={contest.title}
+                                   className="w-12 h-12 object-cover rounded-md"
+                                   onError={(e) => {
+                                     console.log('Image loading error:', contest.main_image);
+                                     e.currentTarget.style.display = 'none';
+                                   }}
+                                 />
+                               ) : (
+                                 <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
+                                   <span className="text-xs text-muted-foreground">Bez obrázku</span>
+                                 </div>
+                               )}
+                             </TableCell>
                             <TableCell className="font-medium">{contest.title}</TableCell>
                             <TableCell>{contest.main_prize}</TableCell>
                             <TableCell>
