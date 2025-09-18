@@ -111,6 +111,28 @@ const AdminDashboard: React.FC = () => {
     }
   }, [selectedContest]);
 
+  // Realtime subscription for bonus prizes
+  useEffect(() => {
+    if (!selectedContest) return;
+
+    const channel = supabase
+      .channel('bonus-prizes-realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'bonus_prizes',
+        filter: `contest_id=eq.${selectedContest}`
+      }, () => {
+        console.log('Bonus prizes changed, refetching...');
+        fetchBonusPrizes();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedContest]);
+
   const checkAdminRole = async () => {
     try {
       // Temporary admin check - in production this would query the users table
@@ -144,30 +166,27 @@ const AdminDashboard: React.FC = () => {
   };
 
   const fetchBonusPrizes = async () => {
+    if (!selectedContest) {
+      setBonusPrizes([]);
+      return;
+    }
+
     try {
-      // Temporary placeholder data until database schema is fully configured
-      if (selectedContest === '1') {
-        setBonusPrizes([
-          {
-            id: '1',
-            contest_id: '1',
-            description: 'AirPods Pro',
-            ticket_position: 50000,
-            status: 'pending'
-          },
-          {
-            id: '2',
-            contest_id: '1',
-            description: 'iPad Air',
-            ticket_position: 250000,
-            status: 'pending'
-          }
-        ]);
-      } else {
-        setBonusPrizes([]);
-      }
+      const { data, error } = await supabase
+        .from('bonus_prizes')
+        .select('id, contest_id, description, ticket_position, amount, status')
+        .eq('contest_id', selectedContest)
+        .order('ticket_position', { ascending: true });
+
+      if (error) throw error;
+      setBonusPrizes(data || []);
     } catch (error) {
       console.error('Error fetching bonus prizes:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se načíst bonusové ceny.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -913,26 +932,62 @@ const AdminDashboard: React.FC = () => {
                   </CardContent>
                 </Card>
 
-                {selectedContest && bonusPrizes.length > 0 && (
+                {selectedContest && (
                   <Card>
                     <CardHeader>
                       <CardTitle>Bonusové ceny vybrané soutěže</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-3">
-                        {bonusPrizes.map((prize) => (
-                          <div key={prize.id} className="flex justify-between items-center p-3 border rounded-lg">
-                            <div>
-                              <h4 className="font-medium">{prize.description}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                Tiket #{prize.ticket_position.toLocaleString('cs-CZ')}
-                              </p>
-                            </div>
-                            <Badge variant="outline">{prize.status}</Badge>
+                      <CardDescription>
+                        {bonusPrizes.length > 0 ? (
+                          <div className="flex flex-wrap gap-4 mt-2 text-sm">
+                            <span>Celkem: <strong>{bonusPrizes.length}</strong> bonusů</span>
+                            <span>MioCoins: <strong>{bonusPrizes.filter(p => p.description.includes('MioCoin') || p.amount).reduce((sum, p) => sum + (p.amount || 0), 0).toLocaleString('cs-CZ')}</strong></span>
+                            <span>Fyzické předměty: <strong>{bonusPrizes.filter(p => !p.description.includes('MioCoin') && !p.amount).length}</strong></span>
+                            <span>Čekající: <strong>{bonusPrizes.filter(p => p.status === 'pending').length}</strong></span>
+                            <span>Vyhrané: <strong>{bonusPrizes.filter(p => p.status === 'won').length}</strong></span>
                           </div>
-                        ))}
-                      </div>
-                    </CardContent>
+                        ) : (
+                          'Žádné bonusové ceny pro tuto soutěž'
+                        )}
+                      </CardDescription>
+                    </CardHeader>
+                    {bonusPrizes.length > 0 && (
+                      <CardContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Popis</TableHead>
+                              <TableHead>Pozice tiketu</TableHead>
+                              <TableHead>Množství</TableHead>
+                              <TableHead>Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {bonusPrizes.map((prize) => (
+                              <TableRow key={prize.id}>
+                                <TableCell className="font-medium">{prize.description}</TableCell>
+                                <TableCell>#{prize.ticket_position.toLocaleString('cs-CZ')}</TableCell>
+                                <TableCell>
+                                  {prize.amount ? `${prize.amount.toLocaleString('cs-CZ')} MioCoins` : '1 kus'}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge 
+                                    variant={
+                                      prize.status === 'pending' ? 'outline' :
+                                      prize.status === 'won' ? 'default' :
+                                      prize.status === 'delivered' ? 'secondary' : 'outline'
+                                    }
+                                  >
+                                    {prize.status === 'pending' ? 'Čeká' :
+                                     prize.status === 'won' ? 'Vyhráno' :
+                                     prize.status === 'delivered' ? 'Doručeno' : prize.status}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    )}
                   </Card>
                 )}
               </div>
@@ -1046,27 +1101,62 @@ const AdminDashboard: React.FC = () => {
                   </CardContent>
                 </Card>
 
-                {selectedContest && bonusPrizes.length > 0 && (
+                {selectedContest && (
                   <Card>
                     <CardHeader>
                       <CardTitle>Bonusové ceny vybrané soutěže</CardTitle>
-                      <CardDescription>Přehled všech bonusových cen pro aktuální soutěž</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-3">
-                        {bonusPrizes.map((prize) => (
-                          <div key={prize.id} className="flex justify-between items-center p-3 border rounded-lg">
-                            <div>
-                              <h4 className="font-medium">{prize.description}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                Tiket #{prize.ticket_position.toLocaleString('cs-CZ')}
-                              </p>
-                            </div>
-                            <Badge variant="outline">{prize.status}</Badge>
+                      <CardDescription>
+                        {bonusPrizes.length > 0 ? (
+                          <div className="flex flex-wrap gap-4 mt-2 text-sm">
+                            <span>Celkem: <strong>{bonusPrizes.length}</strong> bonusů</span>
+                            <span>MioCoins: <strong>{bonusPrizes.filter(p => p.description.includes('MioCoin') || p.amount).reduce((sum, p) => sum + (p.amount || 0), 0).toLocaleString('cs-CZ')}</strong></span>
+                            <span>Fyzické předměty: <strong>{bonusPrizes.filter(p => !p.description.includes('MioCoin') && !p.amount).length}</strong></span>
+                            <span>Čekající: <strong>{bonusPrizes.filter(p => p.status === 'pending').length}</strong></span>
+                            <span>Vyhrané: <strong>{bonusPrizes.filter(p => p.status === 'won').length}</strong></span>
                           </div>
-                        ))}
-                      </div>
-                    </CardContent>
+                        ) : (
+                          'Po spuštění distribuce se zde zobrazí bonusové ceny'
+                        )}
+                      </CardDescription>
+                    </CardHeader>
+                    {bonusPrizes.length > 0 && (
+                      <CardContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Popis</TableHead>
+                              <TableHead>Pozice tiketu</TableHead>
+                              <TableHead>Množství</TableHead>
+                              <TableHead>Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {bonusPrizes.map((prize) => (
+                              <TableRow key={prize.id}>
+                                <TableCell className="font-medium">{prize.description}</TableCell>
+                                <TableCell>#{prize.ticket_position.toLocaleString('cs-CZ')}</TableCell>
+                                <TableCell>
+                                  {prize.amount ? `${prize.amount.toLocaleString('cs-CZ')} MioCoins` : '1 kus'}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge 
+                                    variant={
+                                      prize.status === 'pending' ? 'outline' :
+                                      prize.status === 'won' ? 'default' :
+                                      prize.status === 'delivered' ? 'secondary' : 'outline'
+                                    }
+                                  >
+                                    {prize.status === 'pending' ? 'Čeká' :
+                                     prize.status === 'won' ? 'Vyhráno' :
+                                     prize.status === 'delivered' ? 'Doručeno' : prize.status}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    )}
                   </Card>
                 )}
               </div>
