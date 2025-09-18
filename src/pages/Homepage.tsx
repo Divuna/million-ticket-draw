@@ -36,7 +36,7 @@ const Homepage = () => {
       if (!ref.current) return lastTime;
       
       const container = ref.current;
-      const scrollSpeed = 0.015; // Much slower: 0.015 pixels per millisecond (10% of previous speed)
+      const scrollSpeed = 0.15; // Much slower: 0.15 pixels per millisecond for calm movement
       const deltaTime = currentTime - lastTime;
       
       if (deltaTime > 25) { // ~40fps for smoother, calmer movement
