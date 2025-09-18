@@ -7,7 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Trophy, Gift, Lock, Unlock } from 'lucide-react';
+import { Trophy, Gift, Lock, Unlock, Sparkles } from 'lucide-react';
+import { BonusPrizeOverlay } from '@/components/BonusPrizeOverlay';
 
 interface TicketMapProps {
   contestId: string;
@@ -209,6 +210,13 @@ export const TicketMap: React.FC<TicketMapProps> = ({
         <CardTitle className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-primary" />
           Mapa tiketů - {contestTitle}
+          
+          <BonusPrizeOverlay contestId={contestId} contestTitle={contestTitle}>
+            <Button variant="outline" size="sm" className="ml-auto">
+              <Sparkles className="w-4 h-4 mr-1" />
+              Bonusy
+            </Button>
+          </BonusPrizeOverlay>
         </CardTitle>
         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
