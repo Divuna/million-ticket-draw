@@ -245,7 +245,6 @@ All colors MUST be HSL.
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* Internet Explorer 10+ */
-    scroll-behavior: smooth;
   }
   
   [data-carousel-content]::-webkit-scrollbar {
@@ -260,19 +259,6 @@ All colors MUST be HSL.
   [data-carousel-content].carousel-disabled {
     overflow-x: auto !important;
     scroll-behavior: smooth;
-  }
-
-  /* Ensure multiple cards are visible */
-  @media (min-width: 768px) {
-    [data-carousel-content] {
-      min-height: 200px; /* Ensure consistent height */
-    }
-  }
-
-  @media (max-width: 767px) {
-    [data-carousel-content] {
-      gap: 12px; /* Tighter gap on mobile */
-    }
   }
 
   /* Disable interactions for admin carousel */

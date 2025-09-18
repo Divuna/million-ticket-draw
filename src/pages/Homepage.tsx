@@ -31,15 +31,16 @@ const Homepage = () => {
       ref: React.RefObject<HTMLDivElement>, 
       direction: 'left' | 'right',
       currentTime: number,
-      lastTime: number
+      lastTime: number,
+      animationId: number
     ) => {
-      if (!ref.current) return lastTime;
+      if (!ref.current) return;
       
       const container = ref.current;
-      const scrollSpeed = 0.15; // Much slower: 0.15 pixels per millisecond for calm movement
+      const scrollSpeed = 0.5; // pixels per millisecond for smooth movement
       const deltaTime = currentTime - lastTime;
       
-      if (deltaTime > 25) { // ~40fps for smoother, calmer movement
+      if (deltaTime > 16) { // ~60fps throttling
         const scrollAmount = scrollSpeed * deltaTime;
         const currentScroll = container.scrollLeft;
         const maxScroll = container.scrollWidth - container.clientWidth;
@@ -70,7 +71,8 @@ const Homepage = () => {
         contestsCarouselRef, 
         'right', 
         currentTime, 
-        contestsLastTime
+        contestsLastTime,
+        contestsAnimationId
       );
       contestsAnimationId = requestAnimationFrame(animateContests);
     };
@@ -80,7 +82,8 @@ const Homepage = () => {
         vouchersCarouselRef, 
         'left', 
         currentTime, 
-        vouchersLastTime
+        vouchersLastTime,
+        vouchersAnimationId
       );
       vouchersAnimationId = requestAnimationFrame(animateVouchers);
     };
@@ -312,7 +315,7 @@ const Homepage = () => {
             {ongoingContests.map((contest) => (
               <div 
                 key={contest.id} 
-                className="flex-none w-60 md:w-64"
+                className="flex-none w-72"
                 style={{ scrollSnapAlign: 'start' }}
               >
                 <Card 
@@ -397,7 +400,7 @@ const Homepage = () => {
             {userVouchers.map((voucher) => (
               <div 
                 key={voucher.id} 
-                className="flex-none w-56 md:w-60"
+                className="flex-none w-64"
                 style={{ scrollSnapAlign: 'start' }}
               >
                 <Card 
