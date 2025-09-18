@@ -329,199 +329,45 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      // Get contest details to know ticket_count
-      const { data: contestData, error: contestError } = await supabase
-        .from('contests')
-        .select('ticket_count')
-        .eq('id', selectedContest)
-        .single();
-
-      if (contestError) throw contestError;
-
-      const ticketCount = contestData.ticket_count;
-      
-      // Calculate number of units but limit by ticket count (SAFETY RULE)
-      let numberOfUnits = Math.floor(totalValue / amountPerUnit);
-      const maxPossibleUnits = ticketCount - 1; // Reserve position 1,000,000 for main prize
-      
-      if (numberOfUnits > maxPossibleUnits) {
-        numberOfUnits = maxPossibleUnits;
-        toast({
-          title: "Upozornění",
-          description: `Počet jednotek omezen na ${maxPossibleUnits} kvůli limitu soutěže.`,
-          variant: "default"
-        });
-      }
-
-      if (numberOfUnits === 0) {
-        toast({
-          title: "Chyba",
-          description: "Není možné vytvořit žádné jednotky s danými hodnotami.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Check for existing bonus prizes to avoid duplicates
-      const { data: existingBonuses, error: existingError } = await supabase
-        .from('bonus_prizes')
-        .select('ticket_position')
-        .eq('contest_id', selectedContest);
-
-      if (existingError) throw existingError;
-
-      const existingPositions = new Set(existingBonuses?.map(b => b.ticket_position) || []);
-      const positions: number[] = [];
-
-      // Generate positions based on distribution rule with safety checks
-      if (distributionForm.distribution_rule === 'random') {
-        // Random distribution - avoid existing positions and main prize position
-        const availablePositions = Array.from({ length: ticketCount - 1 }, (_, i) => i + 1)
-          .filter(pos => !existingPositions.has(pos));
-        
-        if (availablePositions.length < numberOfUnits) {
-          numberOfUnits = availablePositions.length;
-          toast({
-            title: "Upozornění", 
-            description: `Počet jednotek snížen na ${numberOfUnits} kvůli dostupným pozicím.`,
-            variant: "default"
-          });
+      // Call the edge function to handle bonus distribution
+      const { data, error } = await supabase.functions.invoke('distribute-bonus-prizes', {
+        body: {
+          contest_id: selectedContest,
+          bonus_type: distributionForm.bonus_type === 'miocoin' ? 'MioCoin' : 'Physical Item',
+          total_value: totalValue,
+          amount_per_unit: amountPerUnit,
+          distribution_rule: distributionForm.distribution_rule,
+          step_min: 3,
+          step_max: 5
         }
+      });
 
-        for (let i = 0; i < numberOfUnits && availablePositions.length > 0; i++) {
-          const randomIndex = Math.floor(Math.random() * availablePositions.length);
-          positions.push(availablePositions.splice(randomIndex, 1)[0]);
-        }
-      } else {
-        // Step interval distribution (3-5 tickets) with safety checks
-        const minStep = 3;
-        const maxStep = 5;
-        let currentPosition = Math.floor(Math.random() * maxStep) + 1;
-        
-        let attempts = 0;
-        const maxAttempts = numberOfUnits * 3; // Prevent infinite loops
-
-        while (positions.length < numberOfUnits && currentPosition < ticketCount && attempts < maxAttempts) {
-          attempts++;
-          
-          if (!existingPositions.has(currentPosition)) {
-            positions.push(currentPosition);
-          }
-          
-          const stepSize = Math.floor(Math.random() * (maxStep - minStep + 1)) + minStep;
-          currentPosition += stepSize;
-        }
-
-        if (positions.length < numberOfUnits) {
-          toast({
-            title: "Upozornění",
-            description: `Vytvořeno pouze ${positions.length} bonusů z ${numberOfUnits} plánovaných kvůli omezenému prostoru.`,
-            variant: "default"
-          });
-        }
+      if (error) {
+        throw new Error(error.message || 'Failed to distribute bonuses');
       }
 
-      if (positions.length === 0) {
-        toast({
-          title: "Chyba",
-          description: "Nepodařilo se najít dostupné pozice pro bonusy.",
-          variant: "destructive"
-        });
-        return;
-      }
+      // Show success message
+      toast({
+        title: "Úspěch",
+        description: `Úspěšně vytvořeno ${data.created_bonuses} bonusových cen.`
+      });
 
-      // Create bonus prizes with proper descriptions
-      const bonusDescription = distributionForm.bonus_type === 'miocoin' 
-        ? `${amountPerUnit} MioCoins`
-        : distributionForm.total_value; // Use total_value as description for physical items
+      // Reset form and refresh data
+      setDistributionForm({
+        bonus_type: 'miocoin',
+        total_value: '',
+        amount_per_unit: '',
+        distribution_rule: 'random'
+      });
 
-      const bonusAmount = distributionForm.bonus_type === 'miocoin' ? Math.round(amountPerUnit) : 1;
-
-      let successCount = 0;
-      let errorCount = 0;
-
-      // Process each position with individual error handling
-      for (const position of positions) {
-        try {
-          // Insert bonus prize record
-          const { error: bonusError } = await supabase
-            .from('bonus_prizes')
-            .insert({
-              contest_id: selectedContest,
-              description: bonusDescription,
-              ticket_position: position,
-              status: 'pending',
-              amount: bonusAmount
-            });
-
-          if (bonusError) throw bonusError;
-
-          // Send Sofinity event (non-blocking)
-          try {
-            await supabase.functions.invoke('send_event_to_sofinity', {
-              body: {
-                event_name: 'bonus_prize_added',
-                contest_id: selectedContest,
-                metadata: {
-                  description: bonusDescription,
-                  ticket_position: position,
-                  amount: bonusAmount,
-                  bonus_type: distributionForm.bonus_type
-                }
-              }
-            });
-          } catch (sofinityError) {
-            console.error('Sofinity event error for position', position, ':', sofinityError);
-            // Don't fail the whole process for Sofinity errors
-          }
-
-          successCount++;
-        } catch (error) {
-          console.error('Error creating bonus at position', position, ':', error);
-          errorCount++;
-        }
-      }
-
-      // Show appropriate success/error messages in Czech
-      if (successCount === positions.length) {
-        toast({
-          title: "Úspěch",
-          description: `Úspěšně vytvořeno ${successCount} bonusových cen.`
-        });
-      } else if (successCount > 0) {
-        toast({
-          title: "Částečný úspěch",
-          description: `Vytvořeno ${successCount} z ${positions.length} bonusových cen.`,
-          variant: "default"
-        });
-      }
-
-      if (errorCount > 0) {
-        toast({
-          title: errorCount === positions.length ? "Chyba" : "Částečná chyba",
-          description: `${errorCount} bonusových cen se nepodařilo vytvořit.`,
-          variant: "destructive"
-        });
-      }
-
-      // Reset form and refresh data on any success
-      if (successCount > 0) {
-        setDistributionForm({
-          bonus_type: 'miocoin',
-          total_value: '',
-          amount_per_unit: '',
-          distribution_rule: 'random'
-        });
-
-        // Refresh contest detail to show new bonuses immediately
-        fetchBonusPrizes();
-      }
+      // Refresh contest detail to show new bonuses immediately
+      fetchBonusPrizes();
 
     } catch (error) {
       console.error('Error in bonus distribution:', error);
       toast({
         title: "Chyba",
-        description: "Nepodařilo se distribuovat bonusové ceny.",
+        description: error.message || "Nepodařilo se distribuovat bonusové ceny.",
         variant: "destructive"
       });
     }
