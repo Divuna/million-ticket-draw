@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TicketResultModal } from '@/components/TicketResultModal';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { AdminMenu } from '@/components/AdminMenu';
+import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -39,6 +41,7 @@ const Index = () => {
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
   const [modalContestId, setModalContestId] = useState<string | null>(null);
   const { user } = useAuth();
+  const { isAdmin } = useUserRole();
   const navigate = useNavigate();
 
   // Removed automatic admin redirect to allow admins to view customer page
@@ -249,7 +252,7 @@ const Index = () => {
         }}
       />
 
-      <BottomNavigation />
+      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
     </div>
   );
 };

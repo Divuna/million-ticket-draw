@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { AdminMenu } from '@/components/AdminMenu';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -21,6 +23,7 @@ interface Voucher {
 
 const Vouchers: React.FC = () => {
   const { user, session } = useAuth();
+  const { isAdmin } = useUserRole();
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -185,7 +188,7 @@ const Vouchers: React.FC = () => {
         </div>
       </div>
 
-      <BottomNavigation />
+      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
     </div>
   );
 };

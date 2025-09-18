@@ -8,6 +8,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { AdminMenu } from '@/components/AdminMenu';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface BonusPrize {
   id: string;
@@ -25,6 +27,7 @@ interface Contest {
 const BonusDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { session } = useAuth();
+  const { isAdmin } = useUserRole();
   const navigate = useNavigate();
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [contest, setContest] = useState<Contest | null>(null);
@@ -221,7 +224,7 @@ const BonusDetail: React.FC = () => {
         </div>
       </div>
 
-      <BottomNavigation />
+      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
     </div>
   );
 };

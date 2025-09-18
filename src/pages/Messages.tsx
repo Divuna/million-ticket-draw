@@ -1,10 +1,14 @@
 import React from 'react';
 import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { AdminMenu } from '@/components/AdminMenu';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MessageCircle } from 'lucide-react';
 
 const Messages: React.FC = () => {
+  const { isAdmin } = useUserRole();
+  
   return (
     <div className="min-h-screen bg-background pb-20">
       <Header />
@@ -33,7 +37,7 @@ const Messages: React.FC = () => {
         </div>
       </div>
 
-      <BottomNavigation />
+      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
     </div>
   );
 };

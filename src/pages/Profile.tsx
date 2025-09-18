@@ -12,6 +12,8 @@ import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
 import { RefreshCw, GamepadIcon } from 'lucide-react';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { AdminMenu } from '@/components/AdminMenu';
+import { useUserRole } from '@/hooks/useUserRole';
 interface UserWallet {
   user_id: string;
   email: string;
@@ -32,6 +34,7 @@ const Profile: React.FC = () => {
     user,
     session
   } = useAuth();
+  const { isAdmin } = useUserRole();
   const navigate = useNavigate();
   const [wallet, setWallet] = useState<UserWallet | null>(null);
   const [profile, setProfile] = useState<UserProfile>({
@@ -492,7 +495,7 @@ const Profile: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      <BottomNavigation />
+      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
     </div>;
 };
 export default Profile;

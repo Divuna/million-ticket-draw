@@ -6,6 +6,8 @@ import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
 import { TicketResultModal } from '@/components/TicketResultModal';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { AdminMenu } from '@/components/AdminMenu';
+import { useUserRole } from '@/hooks/useUserRole';
 
 import { AdminContestView } from '@/components/AdminContestView';
 import { CustomerContestView } from '@/components/CustomerContestView';
@@ -296,7 +298,7 @@ const ContestDetail: React.FC = () => {
   }
 
   // Determine admin access
-  const isAdmin = user?.email === 'divispavel2@gmail.com';
+  const { isAdmin } = useUserRole();
 
   if (loading) {
     return (
@@ -361,7 +363,7 @@ const ContestDetail: React.FC = () => {
         result={ticketResult}
       />
 
-      {!isAdmin && <BottomNavigation />}
+      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
     </div>
   );
 };

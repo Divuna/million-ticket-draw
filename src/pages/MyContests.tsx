@@ -7,6 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { Gamepad2, Trophy, Ticket } from 'lucide-react';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { AdminMenu } from '@/components/AdminMenu';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface Contest {
   id: string;
@@ -21,6 +23,7 @@ interface Contest {
 
 const MyContests: React.FC = () => {
   const { user, session } = useAuth();
+  const { isAdmin } = useUserRole();
   const navigate = useNavigate();
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -197,7 +200,7 @@ const MyContests: React.FC = () => {
         </div>
       </div>
 
-      <BottomNavigation />
+      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
     </div>
   );
 };
