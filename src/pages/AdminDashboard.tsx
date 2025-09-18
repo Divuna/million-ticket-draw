@@ -74,8 +74,9 @@ const AdminDashboard: React.FC = () => {
     title: '',
     description: '',
     main_prize: '',
+    main_image: '',
     ticket_count: 1000000,
-    status: 'draft'
+    status: 'pending'
   });
   const [bonusForm, setBonusForm] = useState({
     description: '',
@@ -164,10 +165,10 @@ const AdminDashboard: React.FC = () => {
   };
 
   const createContest = async () => {
-    if (!contestForm.title || !contestForm.main_prize) {
+    if (!contestForm.title.trim() || !contestForm.main_prize.trim() || !contestForm.main_image.trim()) {
       toast({
         title: "Chyba",
-        description: "Vyplňte povinná pole (název a hlavní cena).",
+        description: "Vyplňte všechna povinná pole (název, hlavní cena, obrázek).",
         variant: "destructive"
       });
       return;
@@ -198,8 +199,9 @@ const AdminDashboard: React.FC = () => {
         title: '', 
         description: '', 
         main_prize: '', 
+        main_image: '', 
         ticket_count: 1000000, 
-        status: 'draft' 
+        status: 'pending' 
       });
       fetchContests();
 
@@ -585,6 +587,16 @@ const AdminDashboard: React.FC = () => {
                     </div>
                   </div>
                   
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Hlavní obrázek *</label>
+                    <Input
+                      type="text"
+                      placeholder="URL obrázku nebo cesta k souboru"
+                      value={contestForm.main_image}
+                      onChange={(e) => setContestForm({...contestForm, main_image: e.target.value})}
+                    />
+                  </div>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Počet tiketů *</label>
@@ -603,10 +615,9 @@ const AdminDashboard: React.FC = () => {
                         value={contestForm.status}
                         onChange={(e) => setContestForm({...contestForm, status: e.target.value})}
                       >
-                        <option value="draft">Koncept</option>
-                        <option value="active">Aktivní</option>
-                        <option value="paused">Pozastavená</option>
-                        <option value="closed">Uzavřená</option>
+                        <option value="pending">Čeká</option>
+                        <option value="won">Vyhráno</option>
+                        <option value="delivered">Doručeno</option>
                       </select>
                     </div>
                   </div>

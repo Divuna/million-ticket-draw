@@ -14,6 +14,7 @@ interface Database {
           title: string
           description?: string | null
           main_prize: string
+          main_image: string
           status?: string
           ticket_count?: number
         }
@@ -59,10 +60,19 @@ serve(async (req) => {
       throw new Error('Admin access required')
     }
 
-    const { title, description, main_prize } = await req.json()
+    const { title, description, main_prize, main_image, status, ticket_count } = await req.json()
 
-    if (!title || !main_prize) {
-      throw new Error('Title and main prize are required')
+    if (!title || !main_prize || !main_image) {
+      throw new Error('Title, main prize and main image are required')
+    }
+
+    if (ticket_count && ticket_count < 1) {
+      throw new Error('Ticket count must be at least 1')
+    }
+
+    const validStatuses = ['pending', 'won', 'delivered']
+    if (status && !validStatuses.includes(status)) {
+      throw new Error('Invalid status')
     }
 
     // Create new contest
@@ -72,8 +82,9 @@ serve(async (req) => {
         title,
         description: description || null,
         main_prize,
-        status: 'draft',
-        ticket_count: 1000000
+        main_image,
+        status: status || 'pending',
+        ticket_count: ticket_count || 1000000
       })
       .select()
       .single()

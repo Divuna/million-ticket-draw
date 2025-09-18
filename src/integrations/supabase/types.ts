@@ -40,6 +40,7 @@ export type Database = {
       }
       bonus_prizes: {
         Row: {
+          amount: number | null
           contest_id: string
           created_at: string
           description: string
@@ -48,6 +49,7 @@ export type Database = {
           ticket_position: number
         }
         Insert: {
+          amount?: number | null
           contest_id: string
           created_at?: string
           description: string
@@ -56,6 +58,7 @@ export type Database = {
           ticket_position: number
         }
         Update: {
+          amount?: number | null
           contest_id?: string
           created_at?: string
           description?: string
@@ -78,7 +81,9 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          main_image: string | null
           main_prize: string
+          name: string
           status: string
           ticket_count: number
           ticket_price: number
@@ -89,7 +94,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          main_image?: string | null
           main_prize: string
+          name?: string
           status?: string
           ticket_count?: number
           ticket_price?: number
@@ -100,7 +107,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          main_image?: string | null
           main_prize?: string
+          name?: string
           status?: string
           ticket_count?: number
           ticket_price?: number
@@ -196,6 +205,47 @@ export type Database = {
           },
         ]
       }
+      prizes: {
+        Row: {
+          claimed: boolean | null
+          contest_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          prize_type: string
+          ticket_number: number
+          winner_user_id: string | null
+        }
+        Insert: {
+          claimed?: boolean | null
+          contest_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          prize_type: string
+          ticket_number: number
+          winner_user_id?: string | null
+        }
+        Update: {
+          claimed?: boolean | null
+          contest_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          prize_type?: string
+          ticket_number?: number
+          winner_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prizes_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tickets: {
         Row: {
           contest_id: string
@@ -256,6 +306,7 @@ export type Database = {
           nickname: string | null
           phone: string | null
           role: string
+          show_user_menu: boolean | null
         }
         Insert: {
           address?: string | null
@@ -270,6 +321,7 @@ export type Database = {
           nickname?: string | null
           phone?: string | null
           role?: string
+          show_user_menu?: boolean | null
         }
         Update: {
           address?: string | null
@@ -284,6 +336,7 @@ export type Database = {
           nickname?: string | null
           phone?: string | null
           role?: string
+          show_user_menu?: boolean | null
         }
         Relationships: []
       }
