@@ -240,29 +240,69 @@ All colors MUST be HSL.
     transform: scale(1.02) translateZ(0);
   }
 
-  /* Smooth carousel scrolling with enhanced performance */
-  .carousel-content {
+  /* Enhanced carousel scrolling with mobile support */
+  .carousel-content, .scroll-container {
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+  }
+  
+  .carousel-content::-webkit-scrollbar, .scroll-container::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
   }
 
-  /* Disable pointer events for admin carousel controls */
-  .carousel-disabled .carousel-control {
+  /* Disable interactions for admin carousel */
+  .carousel-disabled {
     pointer-events: none;
   }
+  
+  .carousel-disabled .coupon-card {
+    cursor: default !important;
+    transform: none !important;
+  }
+  
+  .carousel-disabled .coupon-card:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    border-color: inherit !important;
+    background: inherit !important;
+  }
 
-  /* Auto-scroll animation */
-  @keyframes carousel-auto-scroll {
+  /* Enhanced auto-scroll animation with performance optimization */
+  @keyframes carousel-smooth-scroll {
     0% {
       transform: translateX(0);
     }
     100% {
-      transform: translateX(-100px);
+      transform: translateX(-300px);
     }
+  }
+
+  /* Improved hover animations for cards */
+  .hover-scale {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, box-shadow;
+  }
+  
+  .hover-scale:hover:not(.carousel-disabled *) {
+    transform: scale(1.02) translateZ(0);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   }
 
   /* Role indicator animations */
   .role-indicator {
     animation: fade-in 0.3s ease-out;
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    .carousel-content, .scroll-container {
+      scroll-snap-type: x mandatory;
+    }
+    
+    .carousel-item {
+      scroll-snap-align: start;
+    }
   }
 }

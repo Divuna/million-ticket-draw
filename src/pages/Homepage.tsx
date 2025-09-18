@@ -25,21 +25,27 @@ const Homepage = () => {
     const scrollCarousel = (ref: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
       if (!ref.current) return;
       
-      const container = ref.current.querySelector('[data-carousel-content]');
+      // Find the actual scrollable container - look for the carousel content
+      const container = ref.current.querySelector('.carousel-content') || 
+                       ref.current.querySelector('[data-carousel-content]') ||
+                       ref.current.querySelector('.scroll-container');
+      
       if (!container) return;
 
-      const scrollAmount = 300;
+      const scrollAmount = 280; // Width of one card approximately
       const currentScroll = container.scrollLeft;
       const maxScroll = container.scrollWidth - container.clientWidth;
 
       if (direction === 'right') {
-        if (currentScroll >= maxScroll) {
+        // Scroll right, reset to start when reaching end
+        if (currentScroll >= maxScroll - 10) { // Small buffer for precision
           container.scrollTo({ left: 0, behavior: 'smooth' });
         } else {
           container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
         }
       } else {
-        if (currentScroll <= 0) {
+        // Scroll left, reset to end when reaching start
+        if (currentScroll <= 10) { // Small buffer for precision
           container.scrollTo({ left: maxScroll, behavior: 'smooth' });
         } else {
           container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
@@ -267,15 +273,17 @@ const Homepage = () => {
             </div>
           </div>
           
-          <Carousel className="w-full" ref={contestsCarouselRef}>
-            <CarouselContent className="ml-4" data-carousel-content>
+          <Carousel className={`w-full ${isAdmin ? 'carousel-disabled' : ''}`} ref={contestsCarouselRef}>
+            <CarouselContent className="ml-4 carousel-content scroll-container" data-carousel-content>
               {ongoingContests.map((contest) => (
-                <CarouselItem key={contest.id} className="basis-72">
+                <CarouselItem key={contest.id} className="basis-72 pl-4">
                   <Card 
-                    className={`coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden transition-all duration-200 ${
-                      user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-amber-500' : isAdmin ? '' : 'cursor-pointer hover:opacity-80'
+                    className={`coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden transition-all duration-300 ${
+                      user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-100 hover:to-yellow-100 dark:hover:from-amber-800/30 dark:hover:to-yellow-800/30' : 
+                      !user ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]' : 
+                      'opacity-90'
                     }`}
-                    onClick={() => handleContestClick(contest.id)}
+                    onClick={() => !isAdmin && handleContestClick(contest.id)}
                   >
                     {/* Coupon notches */}
                     <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
@@ -313,8 +321,8 @@ const Homepage = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className={`hidden md:flex ${isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`} />
-            <CarouselNext className={`hidden md:flex ${isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`} />
+            <CarouselPrevious className={`hidden md:flex transition-opacity duration-200 ${isAdmin ? 'opacity-30 cursor-not-allowed pointer-events-none' : 'hover:bg-accent/80'}`} />
+            <CarouselNext className={`hidden md:flex transition-opacity duration-200 ${isAdmin ? 'opacity-30 cursor-not-allowed pointer-events-none' : 'hover:bg-accent/80'}`} />
           </Carousel>
         </section>
 
@@ -341,23 +349,25 @@ const Homepage = () => {
             </div>
           </div>
           
-          <Carousel className="w-full" ref={vouchersCarouselRef}>
-            <CarouselContent className="ml-4" style={{ direction: 'rtl' }} data-carousel-content>
+          <Carousel className={`w-full ${isAdmin ? 'carousel-disabled' : ''}`} ref={vouchersCarouselRef}>
+            <CarouselContent className="ml-4 carousel-content scroll-container" style={{ direction: 'rtl' }} data-carousel-content>
               {userVouchers.map((voucher) => (
-                <CarouselItem key={voucher.id} className="basis-64" style={{ direction: 'ltr' }}>
+                <CarouselItem key={voucher.id} className="basis-64 pl-4" style={{ direction: 'ltr' }}>
                   <Card 
-                    className={`coupon-card relative overflow-hidden transition-all duration-200 ${
+                    className={`coupon-card relative overflow-hidden transition-all duration-300 ${
                       voucher.status === 'available' 
                         ? 'border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' 
                         : 'border-gray-400 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 opacity-60'
                     } ${
                       user && !isAdmin && voucher.status === 'available' 
-                        ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-green-500' 
+                        ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-green-500 hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-800/30 dark:hover:to-emerald-800/30' 
                         : !user && voucher.status === 'available'
-                          ? 'cursor-pointer hover:opacity-80'
-                          : ''
+                          ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]'
+                          : voucher.status === 'available' && isAdmin
+                            ? 'opacity-90'
+                            : ''
                     }`}
-                    onClick={() => voucher.status === 'available' && handleVoucherRedeem(voucher.id)}
+                    onClick={() => !isAdmin && voucher.status === 'available' && handleVoucherRedeem(voucher.id)}
                   >
                     {/* Coupon notches */}
                     <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
@@ -430,8 +440,8 @@ const Homepage = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className={`hidden md:flex ${isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`} />
-            <CarouselNext className={`hidden md:flex ${isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`} />
+            <CarouselPrevious className={`hidden md:flex transition-opacity duration-200 ${isAdmin ? 'opacity-30 cursor-not-allowed pointer-events-none' : 'hover:bg-accent/80'}`} />
+            <CarouselNext className={`hidden md:flex transition-opacity duration-200 ${isAdmin ? 'opacity-30 cursor-not-allowed pointer-events-none' : 'hover:bg-accent/80'}`} />
           </Carousel>
         </section>
 
