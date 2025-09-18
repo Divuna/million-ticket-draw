@@ -210,16 +210,36 @@ const Index = () => {
               </CardContent>
               
               <CardFooter>
-                <Button 
-                  className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white border-0 glow-cyan"
-                  onClick={() => handleUnlockTicket(contest.id)}
-                  disabled={contest.status === 'closed' || processingContestId === contest.id || !user}
-                >
-                  {processingContestId === contest.id 
-                    ? 'Zpracování...' 
-                    : `Uplatnit ${contest.ticket_price} miocoinů`
-                  }
-                </Button>
+                {/* Show interactive button only for logged-in non-admin users */}
+                {user && !isAdmin && (
+                  <Button 
+                    className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white border-0 glow-cyan"
+                    onClick={() => handleUnlockTicket(contest.id)}
+                    disabled={contest.status === 'closed' || processingContestId === contest.id}
+                  >
+                    {processingContestId === contest.id 
+                      ? 'Zpracování...' 
+                      : `Uplatnit ${contest.ticket_price} miocoinů`
+                    }
+                  </Button>
+                )}
+                
+                {/* Show login prompt for non-logged-in users */}
+                {!user && (
+                  <Button 
+                    className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white border-0 glow-cyan"
+                    onClick={() => navigate('/login')}
+                  >
+                    Přihlásit se pro koupi tiketu
+                  </Button>
+                )}
+                
+                {/* Show read-only message for admin users */}
+                {user && isAdmin && (
+                  <div className="w-full text-center text-sm text-muted-foreground py-3">
+                    Admin zobrazení - pouze pro čtení
+                  </div>
+                )}
               </CardFooter>
             </Card>
           ))}
@@ -252,7 +272,8 @@ const Index = () => {
         }}
       />
 
-      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
+      {/* Show bottom navigation only for non-admin users */}
+      {!isAdmin && <BottomNavigation />}
     </div>
   );
 };

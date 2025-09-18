@@ -11,6 +11,7 @@ import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AdminMenu } from '@/components/AdminMenu';
 
 interface Contest {
   id: string;
@@ -838,6 +839,7 @@ const AdminDashboard: React.FC = () => {
           </Tabs>
         </div>
       </div>
+      <AdminMenu />
     </div>
   );
 };

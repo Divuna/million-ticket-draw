@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
+import { AdminMenu } from '@/components/AdminMenu';
 
 interface WinnerData {
   id: string;
@@ -279,6 +280,7 @@ const AdminWinners: React.FC = () => {
           </Card>
         </div>
       </div>
+      <AdminMenu />
     </div>
   );
 };
