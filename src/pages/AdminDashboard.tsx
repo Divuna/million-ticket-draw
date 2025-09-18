@@ -73,7 +73,9 @@ const AdminDashboard: React.FC = () => {
   const [contestForm, setContestForm] = useState({
     title: '',
     description: '',
-    main_prize: ''
+    main_prize: '',
+    ticket_count: 1000000,
+    status: 'draft'
   });
   const [bonusForm, setBonusForm] = useState({
     description: '',
@@ -171,6 +173,15 @@ const AdminDashboard: React.FC = () => {
       return;
     }
 
+    if (contestForm.ticket_count < 1) {
+      toast({
+        title: "Chyba",
+        description: "Počet tiketů musí být alespoň 1.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke('create-contest', {
         body: contestForm
@@ -183,7 +194,13 @@ const AdminDashboard: React.FC = () => {
         description: "Soutěž byla úspěšně vytvořena."
       });
 
-      setContestForm({ title: '', description: '', main_prize: '' });
+      setContestForm({ 
+        title: '', 
+        description: '', 
+        main_prize: '', 
+        ticket_count: 1000000, 
+        status: 'draft' 
+      });
       fetchContests();
 
     } catch (error) {
@@ -565,6 +582,32 @@ const AdminDashboard: React.FC = () => {
                         value={contestForm.main_prize}
                         onChange={(e) => setContestForm({...contestForm, main_prize: e.target.value})}
                       />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Počet tiketů *</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="1000000"
+                        value={contestForm.ticket_count}
+                        onChange={(e) => setContestForm({...contestForm, ticket_count: parseInt(e.target.value) || 1})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Stav soutěže *</label>
+                      <select 
+                        className="w-full p-2 border rounded-md"
+                        value={contestForm.status}
+                        onChange={(e) => setContestForm({...contestForm, status: e.target.value})}
+                      >
+                        <option value="draft">Koncept</option>
+                        <option value="active">Aktivní</option>
+                        <option value="paused">Pozastavená</option>
+                        <option value="closed">Uzavřená</option>
+                      </select>
                     </div>
                   </div>
                   
