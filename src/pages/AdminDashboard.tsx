@@ -18,6 +18,7 @@ interface Contest {
   title: string;
   description: string;
   main_prize: string;
+  main_image: string;
   status: string;
   ticket_count: number;
   created_at: string;
@@ -112,29 +113,21 @@ const AdminDashboard: React.FC = () => {
 
   const fetchContests = async () => {
     try {
-      // Temporary placeholder data until database schema is fully configured
-      setContests([
-        {
-          id: '1',
-          title: 'iPhone 15 Pro Giveaway',
-          description: 'Win the latest iPhone 15 Pro!',
-          main_prize: 'iPhone 15 Pro 256GB',
-          status: 'active',
-          ticket_count: 1000000,
-          created_at: new Date().toISOString()
-        },
-        {
-          id: '2',
-          title: 'MacBook Air Contest',
-          description: 'Professional laptop for creative work.',
-          main_prize: 'MacBook Air M2',
-          status: 'draft',
-          ticket_count: 1000000,
-          created_at: new Date().toISOString()
-        }
-      ]);
+      const { data, error } = await supabase
+        .from('contests')
+        .select('id, title, description, main_prize, main_image, status, ticket_count, created_at')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setContests(data || []);
     } catch (error) {
       console.error('Error fetching contests:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se načíst soutěže.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -516,13 +509,42 @@ const AdminDashboard: React.FC = () => {
                   <CardDescription>Přehled všech soutěží a jejich správa</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {contests.map((contest) => (
-                      <div key={contest.id} className="border rounded-lg p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-2">
-                            <div className="flex items-center space-x-3">
-                              <h3 className="font-semibold text-lg">{contest.title}</h3>
+                  {contests.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      Žádné soutěže nebyly nalezeny.
+                    </p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Obrázek</TableHead>
+                          <TableHead>Název soutěže</TableHead>
+                          <TableHead>Hlavní cena</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Počet tiketů</TableHead>
+                          <TableHead>Vytvořeno</TableHead>
+                          <TableHead>Akce</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {contests.map((contest) => (
+                          <TableRow key={contest.id}>
+                            <TableCell>
+                              {contest.main_image ? (
+                                <img 
+                                  src={contest.main_image} 
+                                  alt={contest.title}
+                                  className="w-12 h-12 object-cover rounded-md"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
+                                  <span className="text-xs text-muted-foreground">Bez obrázku</span>
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="font-medium">{contest.title}</TableCell>
+                            <TableCell>{contest.main_prize}</TableCell>
+                            <TableCell>
                               <Badge 
                                 variant={
                                   contest.status === 'active' ? 'default' : 
@@ -537,52 +559,59 @@ const AdminDashboard: React.FC = () => {
                                 {contest.status === 'active' ? 'Aktivní' : 
                                  contest.status === 'paused' ? 'Pozastavená' :
                                  contest.status === 'closed' ? 'Uzavřená' :
-                                 contest.status === 'draft' ? 'Koncept' : 'Neznámý'}
+                                 contest.status === 'draft' ? 'Koncept' :
+                                 contest.status === 'pending' ? 'Čeká' :
+                                 contest.status === 'won' ? 'Vyhráno' :
+                                 contest.status === 'delivered' ? 'Doručeno' : 'Neznámý'}
                               </Badge>
-                            </div>
-                            <p className="text-muted-foreground">{contest.description}</p>
-                            <p className="text-sm">
-                              <strong>Hlavní cena:</strong> {contest.main_prize}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              Vytvořeno: {new Date(contest.created_at).toLocaleDateString('cs-CZ')}
-                            </p>
-                          </div>
-                          <div className="flex space-x-2">
-                            {contest.status !== 'closed' && (
-                              <>
-                                {(contest.status === 'active' || contest.status === 'paused') && (
+                            </TableCell>
+                            <TableCell>{contest.ticket_count.toLocaleString('cs-CZ')}</TableCell>
+                            <TableCell>{new Date(contest.created_at).toLocaleDateString('cs-CZ')}</TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                {contest.status !== 'closed' && (
                                   <Button 
                                     variant="outline"
+                                    size="sm"
                                     onClick={() => pauseResumeContest(
                                       contest.id, 
-                                      contest.status === 'active' ? 'paused' : 'active'
+                                      'paused'
                                     )}
-                                    className={contest.status === 'active' ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : 'border-green-500 text-green-600 hover:bg-green-50'}
+                                    className="border-orange-500 text-orange-600 hover:bg-orange-50"
                                   >
-                                    {contest.status === 'active' ? 'Pozastavit' : 'Obnovit'}
+                                    Pozastavit
+                                  </Button>
+                                )}
+                                {contest.status !== 'closed' && (
+                                  <Button 
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => closeContest(contest.id)}
+                                    className="border-red-500 text-red-600 hover:bg-red-50"
+                                  >
+                                    Uzavřít
                                   </Button>
                                 )}
                                 <Button 
                                   variant="outline"
-                                  onClick={() => closeContest(contest.id)}
-                                  className="border-red-500 text-red-600 hover:bg-red-50"
+                                  size="sm"
+                                  onClick={() => {
+                                    toast({
+                                      title: "Editace soutěže",
+                                      description: "Funkce editace bude implementována později."
+                                    });
+                                  }}
+                                  className="border-blue-500 text-blue-600 hover:bg-blue-50"
                                 >
-                                  Uzavřít
+                                  Editovat
                                 </Button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {contests.length === 0 && (
-                      <p className="text-center text-muted-foreground py-8">
-                        Žádné soutěže nebyly nalezeny.
-                      </p>
-                    )}
-                  </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
