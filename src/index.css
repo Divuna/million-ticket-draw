@@ -240,9 +240,25 @@ All colors MUST be HSL.
     transform: scale(1.02) translateZ(0);
   }
 
-  /* Smooth carousel scrolling */
+  /* Smooth carousel scrolling with enhanced performance */
   .carousel-content {
     scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Disable pointer events for admin carousel controls */
+  .carousel-disabled .carousel-control {
+    pointer-events: none;
+  }
+
+  /* Auto-scroll animation */
+  @keyframes carousel-auto-scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-100px);
+    }
   }
 
   /* Role indicator animations */

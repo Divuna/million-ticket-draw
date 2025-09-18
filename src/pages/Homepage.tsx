@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,53 @@ const Homepage = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
+  const contestsCarouselRef = useRef<HTMLDivElement>(null);
+  const vouchersCarouselRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll functionality for carousels (disabled for admin)
+  useEffect(() => {
+    if (isAdmin) return; // No auto-scroll for admin
+
+    const scrollCarousel = (ref: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
+      if (!ref.current) return;
+      
+      const container = ref.current.querySelector('[data-carousel-content]');
+      if (!container) return;
+
+      const scrollAmount = 300;
+      const currentScroll = container.scrollLeft;
+      const maxScroll = container.scrollWidth - container.clientWidth;
+
+      if (direction === 'right') {
+        if (currentScroll >= maxScroll) {
+          container.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+          container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+      } else {
+        if (currentScroll <= 0) {
+          container.scrollTo({ left: maxScroll, behavior: 'smooth' });
+        } else {
+          container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+        }
+      }
+    };
+
+    // Auto-scroll contests to the right every 4 seconds
+    const contestInterval = setInterval(() => {
+      scrollCarousel(contestsCarouselRef, 'right');
+    }, 4000);
+
+    // Auto-scroll vouchers to the left every 5 seconds
+    const voucherInterval = setInterval(() => {
+      scrollCarousel(vouchersCarouselRef, 'left');
+    }, 5000);
+
+    return () => {
+      clearInterval(contestInterval);
+      clearInterval(voucherInterval);
+    };
+  }, [isAdmin]);
 
   const handleVoucherClick = () => {
     if (!user) {
@@ -48,7 +95,7 @@ const Homepage = () => {
 
   const handleContestClick = (contestId: string) => {
     if (!user) {
-      toast.error('Pro koupi voucheru se musíte přihlásit');
+      toast.error('Pro hraní her se musíte přihlásit');
       navigate('/login');
       return;
     }
@@ -57,9 +104,8 @@ const Homepage = () => {
       return; // Read-only for admin
     }
     
-    // Link to voucher purchase for this contest
-    navigate('/vouchers');
-    toast.success(`Navigace k voucheru pro soutěž ${contestId}`);
+    // Navigate to main games page
+    navigate('/games');
   };
 
   const handleVoucherRedeem = (voucherId: string) => {
@@ -221,13 +267,13 @@ const Homepage = () => {
             </div>
           </div>
           
-          <Carousel className="w-full">
-            <CarouselContent className="ml-4">
+          <Carousel className="w-full" ref={contestsCarouselRef}>
+            <CarouselContent className="ml-4" data-carousel-content>
               {ongoingContests.map((contest) => (
                 <CarouselItem key={contest.id} className="basis-72">
                   <Card 
                     className={`coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden transition-all duration-200 ${
-                      user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-amber-500' : ''
+                      user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-amber-500' : isAdmin ? '' : 'cursor-pointer hover:opacity-80'
                     }`}
                     onClick={() => handleContestClick(contest.id)}
                   >
@@ -253,7 +299,7 @@ const Homepage = () => {
                         </div>
                         <div className="border-t border-dashed border-amber-300 pt-2">
                           <div className="text-xs text-amber-600 dark:text-amber-500">
-                            {user && !isAdmin ? 'Klikněte pro koupi voucheru' : 'Placeholder obsah'}
+                            {user && !isAdmin ? 'Klikněte pro hraní her' : !user ? 'Přihlaste se pro hraní' : 'Placeholder obsah'}
                           </div>
                           {isAdmin && (
                             <div className="text-xs text-amber-500 mt-1">
@@ -267,8 +313,8 @@ const Homepage = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="hidden md:flex" />
-            <CarouselNext className="hidden md:flex" />
+            <CarouselPrevious className={`hidden md:flex ${isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`} />
+            <CarouselNext className={`hidden md:flex ${isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`} />
           </Carousel>
         </section>
 
@@ -295,8 +341,8 @@ const Homepage = () => {
             </div>
           </div>
           
-          <Carousel className="w-full">
-            <CarouselContent className="ml-4" style={{ direction: 'rtl' }}>
+          <Carousel className="w-full" ref={vouchersCarouselRef}>
+            <CarouselContent className="ml-4" style={{ direction: 'rtl' }} data-carousel-content>
               {userVouchers.map((voucher) => (
                 <CarouselItem key={voucher.id} className="basis-64" style={{ direction: 'ltr' }}>
                   <Card 
@@ -307,7 +353,9 @@ const Homepage = () => {
                     } ${
                       user && !isAdmin && voucher.status === 'available' 
                         ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-green-500' 
-                        : ''
+                        : !user && voucher.status === 'available'
+                          ? 'cursor-pointer hover:opacity-80'
+                          : ''
                     }`}
                     onClick={() => voucher.status === 'available' && handleVoucherRedeem(voucher.id)}
                   >
@@ -382,8 +430,8 @@ const Homepage = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="hidden md:flex" />
-            <CarouselNext className="hidden md:flex" />
+            <CarouselPrevious className={`hidden md:flex ${isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`} />
+            <CarouselNext className={`hidden md:flex ${isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`} />
           </Carousel>
         </section>
 
