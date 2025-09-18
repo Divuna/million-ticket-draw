@@ -79,6 +79,7 @@ const AdminDashboard: React.FC = () => {
     status: 'pending'
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [bonusForm, setBonusForm] = useState({
     description: '',
     ticket_position: ''
@@ -228,6 +229,7 @@ const AdminDashboard: React.FC = () => {
         status: 'pending' 
       });
       setSelectedFile(null);
+      setImagePreview(null);
       fetchContests();
 
     } catch (error) {
@@ -630,15 +632,45 @@ const AdminDashboard: React.FC = () => {
                             e.target.value = ''
                             return
                           }
+                          
+                          // Check file size (5MB max)
+                          const maxSize = 5 * 1024 * 1024 // 5MB in bytes
+                          if (file.size > maxSize) {
+                            toast({
+                              title: "Chyba",
+                              description: "Maximální velikost souboru je 5 MB",
+                              variant: "destructive"
+                            })
+                            e.target.value = ''
+                            return
+                          }
+                          
                           setSelectedFile(file)
+                          
+                          // Create preview
+                          const reader = new FileReader()
+                          reader.onload = (e) => {
+                            setImagePreview(e.target?.result as string)
+                          }
+                          reader.readAsDataURL(file)
                         }
                       }}
                       className="w-full p-2 border rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                     />
                     {selectedFile && (
                       <p className="text-sm text-muted-foreground">
-                        Vybraný soubor: {selectedFile.name}
+                        Vybraný soubor: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
                       </p>
+                    )}
+                    {imagePreview && (
+                      <div className="mt-2">
+                        <p className="text-sm font-medium mb-2">Náhled:</p>
+                        <img 
+                          src={imagePreview} 
+                          alt="Preview" 
+                          className="max-w-xs max-h-48 rounded-md border object-cover"
+                        />
+                      </div>
                     )}
                   </div>
                   
