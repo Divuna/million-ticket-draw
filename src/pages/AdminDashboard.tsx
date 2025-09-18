@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
@@ -31,6 +32,7 @@ interface BonusPrize {
   description: string;
   ticket_position: number;
   status: string;
+  amount?: number;
 }
 
 interface EdgeFunctionLog {
@@ -86,6 +88,14 @@ const AdminDashboard: React.FC = () => {
   const [bonusForm, setBonusForm] = useState({
     description: '',
     ticket_position: ''
+  });
+
+  // Bonus distribution form state
+  const [distributionForm, setDistributionForm] = useState({
+    bonus_type: 'miocoin',
+    total_value: '',
+    amount_per_unit: '',
+    distribution_rule: 'random'
   });
 
   useEffect(() => {
@@ -281,6 +291,170 @@ const AdminDashboard: React.FC = () => {
       toast({
         title: "Chyba",
         description: "Nepodařilo se přidat bonusovou cenu.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Automatic bonus distribution function
+  const addBonusDistribution = async () => {
+    if (!selectedContest || !distributionForm.total_value || !distributionForm.amount_per_unit) {
+      toast({
+        title: "Chyba",
+        description: "Vyberte soutěž a vyplňte všechna pole.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const totalValue = parseFloat(distributionForm.total_value);
+    const amountPerUnit = parseFloat(distributionForm.amount_per_unit);
+
+    if (totalValue <= 0 || amountPerUnit <= 0) {
+      toast({
+        title: "Chyba",
+        description: "Hodnoty musí být kladné čísla.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (amountPerUnit > totalValue) {
+      toast({
+        title: "Chyba",
+        description: "Množství na jednotku nemůže být větší než celková hodnota.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const numberOfUnits = Math.floor(totalValue / amountPerUnit);
+
+    if (numberOfUnits === 0) {
+      toast({
+        title: "Chyba",
+        description: "Není možné vytvořit žádné jednotky s danými hodnotami.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Get contest details to know ticket_count
+      const { data: contestData, error: contestError } = await supabase
+        .from('contests')
+        .select('ticket_count')
+        .eq('id', selectedContest)
+        .single();
+
+      if (contestError) throw contestError;
+
+      const ticketCount = contestData.ticket_count;
+      const positions: number[] = [];
+
+      // Generate positions based on distribution rule
+      if (distributionForm.distribution_rule === 'random') {
+        // Random distribution
+        const availablePositions = Array.from({ length: ticketCount - 1 }, (_, i) => i + 1); // 1 to ticketCount-1
+        for (let i = 0; i < numberOfUnits; i++) {
+          if (availablePositions.length === 0) break;
+          const randomIndex = Math.floor(Math.random() * availablePositions.length);
+          positions.push(availablePositions.splice(randomIndex, 1)[0]);
+        }
+      } else {
+        // Step interval distribution (3-5 tickets)
+        const minStep = 3;
+        const maxStep = 5;
+        let currentPosition = Math.floor(Math.random() * maxStep) + 1; // Start at random position 1-5
+        
+        for (let i = 0; i < numberOfUnits && currentPosition < ticketCount; i++) {
+          positions.push(currentPosition);
+          const stepSize = Math.floor(Math.random() * (maxStep - minStep + 1)) + minStep;
+          currentPosition += stepSize;
+        }
+      }
+
+      // Create bonus prizes
+      const bonusDescription = distributionForm.bonus_type === 'miocoin' 
+        ? `${amountPerUnit} MioCoins`
+        : distributionForm.total_value; // Use total_value as description for physical items
+
+      const bonusAmount = distributionForm.bonus_type === 'miocoin' ? amountPerUnit : 1;
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const position of positions) {
+        try {
+          // Create bonus prize record
+          const { error: bonusError } = await supabase
+            .from('bonus_prizes')
+            .insert({
+              contest_id: selectedContest,
+              description: bonusDescription,
+              ticket_position: position,
+              status: 'pending',
+              amount: bonusAmount
+            });
+
+          if (bonusError) throw bonusError;
+
+          // Send Sofinity event
+          try {
+            await supabase.functions.invoke('send_event_to_sofinity', {
+              body: {
+                event_name: 'bonus_prize_added',
+                contest_id: selectedContest,
+                metadata: {
+                  description: bonusDescription,
+                  ticket_position: position,
+                  amount: bonusAmount,
+                  bonus_type: distributionForm.bonus_type
+                }
+              }
+            });
+          } catch (sofinityError) {
+            console.error('Sofinity event error for position', position, ':', sofinityError);
+            // Don't fail the whole process for Sofinity errors
+          }
+
+          successCount++;
+        } catch (error) {
+          console.error('Error creating bonus at position', position, ':', error);
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast({
+          title: "Úspěch",
+          description: `Vytvořeno ${successCount} bonusových cen z ${positions.length} plánovaných.`
+        });
+
+        // Reset form
+        setDistributionForm({
+          bonus_type: 'miocoin',
+          total_value: '',
+          amount_per_unit: '',
+          distribution_rule: 'random'
+        });
+
+        fetchBonusPrizes();
+      }
+
+      if (errorCount > 0) {
+        toast({
+          title: "Částečná chyba",
+          description: `${errorCount} bonusových cen se nepodařilo vytvořit.`,
+          variant: "destructive"
+        });
+      }
+
+    } catch (error) {
+      console.error('Error in bonus distribution:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se distribuovat bonusové ceny.",
         variant: "destructive"
       });
     }
@@ -509,7 +683,8 @@ const AdminDashboard: React.FC = () => {
             <TabsList>
               <TabsTrigger value="contests">Soutěže</TabsTrigger>
               <TabsTrigger value="create">Vytvořit soutěž</TabsTrigger>
-              <TabsTrigger value="prizes">Bonusové ceny</TabsTrigger>
+            <TabsTrigger value="prizes">Bonusové ceny</TabsTrigger>
+            <TabsTrigger value="distribution">Automatické bonusy</TabsTrigger>
               <TabsTrigger value="logs">Sofinity Logy</TabsTrigger>
             </TabsList>
 
@@ -829,6 +1004,140 @@ const AdminDashboard: React.FC = () => {
                   <Card>
                     <CardHeader>
                       <CardTitle>Bonusové ceny vybrané soutěže</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-3">
+                        {bonusPrizes.map((prize) => (
+                          <div key={prize.id} className="flex justify-between items-center p-3 border rounded-lg">
+                            <div>
+                              <h4 className="font-medium">{prize.description}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                Tiket #{prize.ticket_position.toLocaleString('cs-CZ')}
+                              </p>
+                            </div>
+                            <Badge variant="outline">{prize.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* Automatic Bonus Distribution */}
+            <TabsContent value="distribution">
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Automatická distribuce bonusů</CardTitle>
+                    <CardDescription>Automaticky rozdělte bonusové ceny podle pravidel distribuce</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Vyberte soutěž *</label>
+                      <Select value={selectedContest} onValueChange={setSelectedContest}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Vyberte soutěž..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {contests.filter(c => c.status !== 'closed').map((contest) => (
+                            <SelectItem key={contest.id} value={contest.id}>
+                              {contest.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Typ bonusu *</label>
+                        <Select 
+                          value={distributionForm.bonus_type} 
+                          onValueChange={(value) => setDistributionForm({...distributionForm, bonus_type: value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="miocoin">MioCoin</SelectItem>
+                            <SelectItem value="physical">Fyzická věc</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Pravidlo distribuce *</label>
+                        <Select 
+                          value={distributionForm.distribution_rule} 
+                          onValueChange={(value) => setDistributionForm({...distributionForm, distribution_rule: value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="random">Náhodně</SelectItem>
+                            <SelectItem value="interval">Interval 3-5 tiketů</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          {distributionForm.bonus_type === 'miocoin' ? 'Celková hodnota MioCoins *' : 'Celkové množství *'}
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder={distributionForm.bonus_type === 'miocoin' ? "Např. 100000" : "Např. 100"}
+                          min="1"
+                          step={distributionForm.bonus_type === 'miocoin' ? "0.01" : "1"}
+                          value={distributionForm.total_value}
+                          onChange={(e) => setDistributionForm({...distributionForm, total_value: e.target.value})}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          {distributionForm.bonus_type === 'miocoin' ? 'MioCoins na jednotku *' : 'Kusů na jednotku *'}
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder={distributionForm.bonus_type === 'miocoin' ? "Např. 5000" : "Např. 1"}
+                          min="1"
+                          step={distributionForm.bonus_type === 'miocoin' ? "0.01" : "1"}
+                          value={distributionForm.amount_per_unit}
+                          onChange={(e) => setDistributionForm({...distributionForm, amount_per_unit: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    
+                    {distributionForm.total_value && distributionForm.amount_per_unit && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <div className="text-sm text-muted-foreground">
+                          <strong>Výsledek:</strong> {Math.floor(parseFloat(distributionForm.total_value) / parseFloat(distributionForm.amount_per_unit))} bonusových cen
+                          × {distributionForm.amount_per_unit} {distributionForm.bonus_type === 'miocoin' ? 'MioCoins' : 'kusů'}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <Button 
+                      onClick={addBonusDistribution} 
+                      disabled={!selectedContest || !distributionForm.total_value || !distributionForm.amount_per_unit}
+                      className="w-full md:w-auto"
+                    >
+                      Distribuovat bonusy
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {selectedContest && bonusPrizes.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Bonusové ceny vybrané soutěže</CardTitle>
+                      <CardDescription>Přehled všech bonusových cen pro aktuální soutěž</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="grid gap-3">
