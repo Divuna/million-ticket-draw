@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-
+import { supabase } from '@/integrations/supabase/client';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -11,12 +11,68 @@ import { useAuth } from '@/hooks/useAuth';
 import { Gift, Trophy, ChevronRight, Ticket, Star } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface Contest {
+  id: string;
+  title: string;
+  main_prize: string;
+  main_image: string | null;
+  status: string;
+  ticket_count: number;
+  ticket_price: number;
+  created_at: string;
+}
+
 const Homepage = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
   const contestsCarouselRef = useRef<HTMLDivElement>(null);
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
+  const [contests, setContests] = useState<Contest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch contests from database
+  const fetchContests = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('contests')
+        .select('id, title, main_prize, main_image, status, ticket_count, ticket_price, created_at')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      
+      setContests(data || []);
+    } catch (error) {
+      console.error('Error fetching contests:', error);
+      toast.error('Nepodařilo se načíst soutěže');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load contests on component mount
+  useEffect(() => {
+    fetchContests();
+  }, []);
+
+  // Subscribe to contest changes for real-time updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('contest-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'contests' }, 
+        () => {
+          fetchContests(); // Refresh contests when any contest changes
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Auto-scroll functionality for carousels (disabled for admin)
   useEffect(() => {
@@ -125,14 +181,7 @@ const Homepage = () => {
     toast.success(`Uplatnění voucheru ${voucherId}`);
   };
 
-  // Placeholder data for carousels
-  const ongoingContests = [
-    { id: '1', name: 'Luxusní Auto 2024', prize: 'BMW X5 M50i', couponCode: 'AUTO2024' },
-    { id: '2', name: 'Million Cash', prize: '1,000,000 Kč', couponCode: 'CASH2024' },
-    { id: '3', name: 'Dream House', prize: 'Rodinný dům v Praze', couponCode: 'HOUSE24' },
-    { id: '4', name: 'Luxury Trip', prize: 'Dovolená na Maledivách', couponCode: 'TRIP2024' },
-  ];
-
+  // Placeholder data for vouchers (keeping existing voucher data)
   const userVouchers = [
     { id: '1', name: 'Voucher 50 Kč', value: '50 Kč', status: 'available', code: 'V50-2024' },
     { id: '2', name: 'Voucher 100 Kč', value: '100 Kč', status: 'available', code: 'V100-2024' },
@@ -278,55 +327,124 @@ const Homepage = () => {
               WebkitOverflowScrolling: 'touch'
             }}
           >
-            {ongoingContests.map((contest) => (
-              <div 
-                key={contest.id} 
-                className="flex-none w-72"
-                style={{ scrollSnapAlign: 'start' }}
-              >
-                <Card 
-                  className={`coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden transition-all duration-300 h-full ${
-                    user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-100 hover:to-yellow-100 dark:hover:from-amber-800/30 dark:hover:to-yellow-800/30' : 
-                    !user ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]' : 
-                    'opacity-90'
-                  }`}
-                  onClick={() => !isAdmin && handleContestClick(contest.id)}
-                >
-                  {/* Coupon notches */}
+            {loading ? (
+              // Loading placeholder
+              <div className="flex-none w-72">
+                <Card className="coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden h-full">
                   <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
                   <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
-                  
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-bold text-amber-800 dark:text-amber-400">
-                      {contest.name}
-                    </CardTitle>
-                    <div className="text-xs text-amber-600 dark:text-amber-500 font-mono">
-                      #{contest.couponCode}
-                    </div>
+                    <div className="h-4 bg-amber-200 dark:bg-amber-800 rounded animate-pulse mb-2" />
+                    <div className="h-3 bg-amber-100 dark:bg-amber-900 rounded animate-pulse w-20" />
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Star className="w-4 h-4 text-amber-500" />
-                        <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
-                          {contest.prize}
-                        </span>
-                      </div>
-                      <div className="border-t border-dashed border-amber-300 pt-2">
-                        <div className="text-xs text-amber-600 dark:text-amber-500">
-                          {user && !isAdmin ? 'Klikněte pro hraní her' : !user ? 'Přihlaste se pro hraní' : 'Placeholder obsah'}
-                        </div>
-                        {isAdmin && (
-                          <div className="text-xs text-amber-500 mt-1">
-                            Admin zobrazení - pouze pro čtení
-                          </div>
-                        )}
-                      </div>
+                    <div className="h-16 bg-amber-100 dark:bg-amber-900 rounded animate-pulse mb-2" />
+                    <div className="h-3 bg-amber-200 dark:bg-amber-800 rounded animate-pulse" />
+                  </CardContent>
+                </Card>
+              </div>
+            ) : contests.length === 0 ? (
+              // No contests message
+              <div className="flex-none w-72">
+                <Card className="coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden h-full">
+                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
+                  <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-bold text-amber-800 dark:text-amber-400">
+                      Žádné aktivní soutěže
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-amber-600 dark:text-amber-500">
+                      Momentálně nejsou k dispozici žádné aktivní soutěže
                     </div>
                   </CardContent>
                 </Card>
               </div>
-            ))}
+            ) : (
+              contests.map((contest) => (
+                <div 
+                  key={contest.id} 
+                  className="flex-none w-72"
+                  style={{ scrollSnapAlign: 'start' }}
+                >
+                  <Card 
+                    className={`coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden transition-all duration-300 h-full ${
+                      user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-100 hover:to-yellow-100 dark:hover:from-amber-800/30 dark:hover:to-yellow-800/30' : 
+                      !user ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]' : 
+                      'opacity-90'
+                    }`}
+                    onClick={() => !isAdmin && handleContestClick(contest.id)}
+                  >
+                    {/* Coupon notches */}
+                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
+                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
+                    
+                    <CardHeader className="pb-2">
+                      {/* Contest Image */}
+                      <div className="w-full h-32 rounded-lg overflow-hidden mb-3 bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center">
+                        {contest.main_image ? (
+                          <img 
+                            src={contest.main_image.startsWith('http') ? contest.main_image : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`}
+                            alt={contest.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              console.log('Contest image loading error:', contest.main_image);
+                              toast.error('Obrázek soutěže se nepodařilo načíst');
+                              // Replace with fallback
+                              e.currentTarget.style.display = 'none';
+                              if (e.currentTarget.nextSibling) {
+                                (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <div 
+                          className={`w-full h-full flex items-center justify-center text-amber-600 dark:text-amber-400 ${contest.main_image ? 'hidden' : 'flex'}`}
+                          style={{ display: contest.main_image ? 'none' : 'flex' }}
+                        >
+                          <div className="text-center">
+                            <Trophy className="w-8 h-8 mx-auto mb-2" />
+                            <span className="text-xs">Bez obrázku</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <CardTitle className="text-lg font-bold text-amber-800 dark:text-amber-400">
+                        {contest.title}
+                      </CardTitle>
+                      <div className="text-xs text-amber-600 dark:text-amber-500 font-mono">
+                        #{contest.id.slice(0, 8)}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Star className="w-4 h-4 text-amber-500" />
+                          <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                            {contest.main_prize}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs text-amber-600 dark:text-amber-500">
+                          <span>Tiketů: {contest.ticket_count.toLocaleString('cs-CZ')}</span>
+                          <span>Cena: {contest.ticket_price} Miocoin</span>
+                        </div>
+                        <div className="border-t border-dashed border-amber-300 pt-2">
+                          <div className="text-xs text-amber-600 dark:text-amber-500">
+                            {user && !isAdmin ? 'Klikněte pro hraní her' : !user ? 'Přihlaste se pro hraní' : 'Contest zobrazení'}
+                          </div>
+                          {isAdmin && (
+                            <div className="text-xs text-amber-500 mt-1">
+                              Admin zobrazení - pouze pro čtení
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ))
+            )}
           </div>
         </section>
 
