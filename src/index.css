@@ -180,6 +180,7 @@ All colors MUST be HSL.
     border-left: 4px dashed;
     border-right: 4px dashed;
     position: relative;
+    transform: translateZ(0); /* Enable hardware acceleration */
   }
   
   .coupon-card::before {
@@ -204,5 +205,19 @@ All colors MUST be HSL.
     height: 1px;
     border-bottom: 2px dashed currentColor;
     opacity: 0.3;
+  }
+
+  /* Enhanced hover scale animation */
+  .hover-scale {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-scale:hover {
+    transform: scale(1.02) translateZ(0);
+  }
+
+  /* Smooth carousel scrolling */
+  .carousel-content {
+    scroll-behavior: smooth;
   }
 }

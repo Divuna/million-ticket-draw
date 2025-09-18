@@ -46,6 +46,38 @@ const Homepage = () => {
     navigate('/games');
   };
 
+  const handleContestClick = (contestId: string) => {
+    if (!user) {
+      toast.error('Pro koupi voucheru se musíte přihlásit');
+      navigate('/login');
+      return;
+    }
+    
+    if (isAdmin) {
+      return; // Read-only for admin
+    }
+    
+    // Link to voucher purchase for this contest
+    navigate('/vouchers');
+    toast.success(`Navigace k voucheru pro soutěž ${contestId}`);
+  };
+
+  const handleVoucherRedeem = (voucherId: string) => {
+    if (!user) {
+      toast.error('Pro uplatnění voucheru se musíte přihlásit');
+      navigate('/login');
+      return;
+    }
+    
+    if (isAdmin) {
+      return; // Read-only for admin
+    }
+    
+    // Link to voucher redemption
+    navigate('/vouchers');
+    toast.success(`Uplatnění voucheru ${voucherId}`);
+  };
+
   // Placeholder data for carousels
   const ongoingContests = [
     { id: '1', name: 'Luxusní Auto 2024', prize: 'BMW X5 M50i', couponCode: 'AUTO2024' },
@@ -169,7 +201,12 @@ const Homepage = () => {
             <CarouselContent className="ml-4">
               {ongoingContests.map((contest) => (
                 <CarouselItem key={contest.id} className="basis-72">
-                  <Card className="coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden">
+                  <Card 
+                    className={`coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden transition-all duration-200 ${
+                      user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-amber-500' : ''
+                    }`}
+                    onClick={() => handleContestClick(contest.id)}
+                  >
                     {/* Coupon notches */}
                     <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
                     <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
@@ -192,8 +229,13 @@ const Homepage = () => {
                         </div>
                         <div className="border-t border-dashed border-amber-300 pt-2">
                           <div className="text-xs text-amber-600 dark:text-amber-500">
-                            Placeholder obsah
+                            {user && !isAdmin ? 'Klikněte pro koupi voucheru' : 'Placeholder obsah'}
                           </div>
+                          {isAdmin && (
+                            <div className="text-xs text-amber-500 mt-1">
+                              Admin zobrazení - pouze pro čtení
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -220,11 +262,18 @@ const Homepage = () => {
             <CarouselContent className="ml-4" style={{ direction: 'rtl' }}>
               {userVouchers.map((voucher) => (
                 <CarouselItem key={voucher.id} className="basis-64" style={{ direction: 'ltr' }}>
-                  <Card className={`coupon-card relative overflow-hidden ${
-                    voucher.status === 'available' 
-                      ? 'border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' 
-                      : 'border-gray-400 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 opacity-60'
-                  }`}>
+                  <Card 
+                    className={`coupon-card relative overflow-hidden transition-all duration-200 ${
+                      voucher.status === 'available' 
+                        ? 'border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' 
+                        : 'border-gray-400 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 opacity-60'
+                    } ${
+                      user && !isAdmin && voucher.status === 'available' 
+                        ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-green-500' 
+                        : ''
+                    }`}
+                    onClick={() => voucher.status === 'available' && handleVoucherRedeem(voucher.id)}
+                  >
                     {/* Coupon notches */}
                     <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
                     <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
@@ -273,8 +322,22 @@ const Homepage = () => {
                               ? 'text-green-600 dark:text-green-500' 
                               : 'text-gray-600 dark:text-gray-500'
                           }`}>
-                            Placeholder obsah
+                            {voucher.status === 'available' && user && !isAdmin 
+                              ? 'Klikněte pro uplatnění' 
+                              : voucher.status === 'used' 
+                                ? 'Voucher již použit' 
+                                : 'Placeholder obsah'
+                            }
                           </div>
+                          {isAdmin && (
+                            <div className={`text-xs mt-1 ${
+                              voucher.status === 'available' 
+                                ? 'text-green-500' 
+                                : 'text-gray-500'
+                            }`}>
+                              Admin zobrazení - pouze pro čtení
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>
