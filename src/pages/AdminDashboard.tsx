@@ -296,7 +296,7 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Automatic bonus distribution function
+  // Automatic bonus distribution function with safety rules
   const addBonusDistribution = async () => {
     if (!selectedContest || !distributionForm.total_value || !distributionForm.amount_per_unit) {
       toast({
@@ -328,17 +328,6 @@ const AdminDashboard: React.FC = () => {
       return;
     }
 
-    const numberOfUnits = Math.floor(totalValue / amountPerUnit);
-
-    if (numberOfUnits === 0) {
-      toast({
-        title: "Chyba",
-        description: "Není možné vytvořit žádné jednotky s danými hodnotami.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
       // Get contest details to know ticket_count
       const { data: contestData, error: contestError } = await supabase
@@ -350,43 +339,111 @@ const AdminDashboard: React.FC = () => {
       if (contestError) throw contestError;
 
       const ticketCount = contestData.ticket_count;
+      
+      // Calculate number of units but limit by ticket count (SAFETY RULE)
+      let numberOfUnits = Math.floor(totalValue / amountPerUnit);
+      const maxPossibleUnits = ticketCount - 1; // Reserve position 1,000,000 for main prize
+      
+      if (numberOfUnits > maxPossibleUnits) {
+        numberOfUnits = maxPossibleUnits;
+        toast({
+          title: "Upozornění",
+          description: `Počet jednotek omezen na ${maxPossibleUnits} kvůli limitu soutěže.`,
+          variant: "default"
+        });
+      }
+
+      if (numberOfUnits === 0) {
+        toast({
+          title: "Chyba",
+          description: "Není možné vytvořit žádné jednotky s danými hodnotami.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check for existing bonus prizes to avoid duplicates
+      const { data: existingBonuses, error: existingError } = await supabase
+        .from('bonus_prizes')
+        .select('ticket_position')
+        .eq('contest_id', selectedContest);
+
+      if (existingError) throw existingError;
+
+      const existingPositions = new Set(existingBonuses?.map(b => b.ticket_position) || []);
       const positions: number[] = [];
 
-      // Generate positions based on distribution rule
+      // Generate positions based on distribution rule with safety checks
       if (distributionForm.distribution_rule === 'random') {
-        // Random distribution
-        const availablePositions = Array.from({ length: ticketCount - 1 }, (_, i) => i + 1); // 1 to ticketCount-1
-        for (let i = 0; i < numberOfUnits; i++) {
-          if (availablePositions.length === 0) break;
+        // Random distribution - avoid existing positions and main prize position
+        const availablePositions = Array.from({ length: ticketCount - 1 }, (_, i) => i + 1)
+          .filter(pos => !existingPositions.has(pos));
+        
+        if (availablePositions.length < numberOfUnits) {
+          numberOfUnits = availablePositions.length;
+          toast({
+            title: "Upozornění", 
+            description: `Počet jednotek snížen na ${numberOfUnits} kvůli dostupným pozicím.`,
+            variant: "default"
+          });
+        }
+
+        for (let i = 0; i < numberOfUnits && availablePositions.length > 0; i++) {
           const randomIndex = Math.floor(Math.random() * availablePositions.length);
           positions.push(availablePositions.splice(randomIndex, 1)[0]);
         }
       } else {
-        // Step interval distribution (3-5 tickets)
+        // Step interval distribution (3-5 tickets) with safety checks
         const minStep = 3;
         const maxStep = 5;
-        let currentPosition = Math.floor(Math.random() * maxStep) + 1; // Start at random position 1-5
+        let currentPosition = Math.floor(Math.random() * maxStep) + 1;
         
-        for (let i = 0; i < numberOfUnits && currentPosition < ticketCount; i++) {
-          positions.push(currentPosition);
+        let attempts = 0;
+        const maxAttempts = numberOfUnits * 3; // Prevent infinite loops
+
+        while (positions.length < numberOfUnits && currentPosition < ticketCount && attempts < maxAttempts) {
+          attempts++;
+          
+          if (!existingPositions.has(currentPosition)) {
+            positions.push(currentPosition);
+          }
+          
           const stepSize = Math.floor(Math.random() * (maxStep - minStep + 1)) + minStep;
           currentPosition += stepSize;
         }
+
+        if (positions.length < numberOfUnits) {
+          toast({
+            title: "Upozornění",
+            description: `Vytvořeno pouze ${positions.length} bonusů z ${numberOfUnits} plánovaných kvůli omezenému prostoru.`,
+            variant: "default"
+          });
+        }
       }
 
-      // Create bonus prizes
+      if (positions.length === 0) {
+        toast({
+          title: "Chyba",
+          description: "Nepodařilo se najít dostupné pozice pro bonusy.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Create bonus prizes with proper descriptions
       const bonusDescription = distributionForm.bonus_type === 'miocoin' 
         ? `${amountPerUnit} MioCoins`
         : distributionForm.total_value; // Use total_value as description for physical items
 
-      const bonusAmount = distributionForm.bonus_type === 'miocoin' ? amountPerUnit : 1;
+      const bonusAmount = distributionForm.bonus_type === 'miocoin' ? Math.round(amountPerUnit) : 1;
 
       let successCount = 0;
       let errorCount = 0;
 
+      // Process each position with individual error handling
       for (const position of positions) {
         try {
-          // Create bonus prize record
+          // Insert bonus prize record
           const { error: bonusError } = await supabase
             .from('bonus_prizes')
             .insert({
@@ -399,7 +456,7 @@ const AdminDashboard: React.FC = () => {
 
           if (bonusError) throw bonusError;
 
-          // Send Sofinity event
+          // Send Sofinity event (non-blocking)
           try {
             await supabase.functions.invoke('send_event_to_sofinity', {
               body: {
@@ -425,13 +482,30 @@ const AdminDashboard: React.FC = () => {
         }
       }
 
-      if (successCount > 0) {
+      // Show appropriate success/error messages in Czech
+      if (successCount === positions.length) {
         toast({
           title: "Úspěch",
-          description: `Vytvořeno ${successCount} bonusových cen z ${positions.length} plánovaných.`
+          description: `Úspěšně vytvořeno ${successCount} bonusových cen.`
         });
+      } else if (successCount > 0) {
+        toast({
+          title: "Částečný úspěch",
+          description: `Vytvořeno ${successCount} z ${positions.length} bonusových cen.`,
+          variant: "default"
+        });
+      }
 
-        // Reset form
+      if (errorCount > 0) {
+        toast({
+          title: errorCount === positions.length ? "Chyba" : "Částečná chyba",
+          description: `${errorCount} bonusových cen se nepodařilo vytvořit.`,
+          variant: "destructive"
+        });
+      }
+
+      // Reset form and refresh data on any success
+      if (successCount > 0) {
         setDistributionForm({
           bonus_type: 'miocoin',
           total_value: '',
@@ -439,15 +513,8 @@ const AdminDashboard: React.FC = () => {
           distribution_rule: 'random'
         });
 
+        // Refresh contest detail to show new bonuses immediately
         fetchBonusPrizes();
-      }
-
-      if (errorCount > 0) {
-        toast({
-          title: "Částečná chyba",
-          description: `${errorCount} bonusových cen se nepodařilo vytvořit.`,
-          variant: "destructive"
-        });
       }
 
     } catch (error) {
