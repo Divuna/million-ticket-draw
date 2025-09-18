@@ -33,6 +33,8 @@ export const TicketMap: React.FC<TicketMapProps> = ({
   const [tickets, setTickets] = useState<TicketData[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingTicket, setProcessingTicket] = useState<number | null>(null);
+  const [animatingTickets, setAnimatingTickets] = useState<Set<number>>(new Set());
+  const [recentlyUnlocked, setRecentlyUnlocked] = useState<number | null>(null);
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
@@ -142,6 +144,22 @@ export const TicketMap: React.FC<TicketMapProps> = ({
       }
 
       if (data) {
+        // Trigger success animation for non-admin users
+        if (!isAdmin) {
+          setRecentlyUnlocked(data.ticket_number);
+          setAnimatingTickets(prev => new Set([...prev, data.ticket_number]));
+          
+          // Remove animation after 2 seconds
+          setTimeout(() => {
+            setAnimatingTickets(prev => {
+              const next = new Set(prev);
+              next.delete(data.ticket_number);
+              return next;
+            });
+            setRecentlyUnlocked(null);
+          }, 2000);
+        }
+        
         // Refresh ticket data
         fetchTicketData();
         
@@ -162,24 +180,49 @@ export const TicketMap: React.FC<TicketMapProps> = ({
   const getTicketStyles = (ticket: TicketData) => {
     const baseStyles = "w-12 h-12 border rounded-lg flex items-center justify-center text-xs font-medium relative transition-all duration-200";
     
+    // Check if this is a milestone ticket (every 100,000)
+    const isMilestone = ticket.number % 100000 === 0;
+    
+    // Check if ticket is currently animating
+    const isAnimating = animatingTickets.has(ticket.number);
+    const isRecentlyUnlocked = recentlyUnlocked === ticket.number;
+    
+    // Animation classes for non-admin users
+    const animationClasses = !isAdmin && user ? [
+      isAnimating ? 'animate-pulse' : '',
+      isRecentlyUnlocked ? 'ring-2 ring-primary ring-opacity-75 animate-scale-in' : '',
+      isMilestone && ticket.status === 'locked' ? 'ring-1 ring-amber-400 shadow-lg shadow-amber-400/25' : '',
+    ].filter(Boolean).join(' ') : '';
+    
     switch (ticket.status) {
       case 'locked':
-        return `${baseStyles} bg-muted text-muted-foreground border-border hover:bg-muted/80 cursor-pointer`;
+        const milestoneStyles = isMilestone ? 'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-800 border-amber-300 dark:from-amber-900/20 dark:to-amber-800/20 dark:text-amber-400 dark:border-amber-700' : 'bg-muted text-muted-foreground border-border hover:bg-muted/80';
+        return `${baseStyles} ${milestoneStyles} ${animationClasses} ${user && !isAdmin ? 'cursor-pointer' : ''}`;
       case 'unlocked':
-        return `${baseStyles} bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700`;
+        return `${baseStyles} bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700 ${animationClasses}`;
       case 'bonus':
-        return `${baseStyles} bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700`;
+        return `${baseStyles} bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700 ${animationClasses}`;
       case 'main_prize':
-        return `${baseStyles} bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-700`;
+        return `${baseStyles} bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-700 ${animationClasses}`;
       default:
-        return baseStyles;
+        return `${baseStyles} ${animationClasses}`;
     }
   };
 
   const getTicketIcon = (ticket: TicketData) => {
+    // Check if this is a milestone ticket
+    const isMilestone = ticket.number % 100000 === 0;
+    
     switch (ticket.status) {
       case 'locked':
-        return <Lock className="w-3 h-3" />;
+        return (
+          <div className="flex items-center justify-center">
+            <Lock className="w-3 h-3" />
+            {isMilestone && (
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+            )}
+          </div>
+        );
       case 'unlocked':
         return <Unlock className="w-3 h-3" />;
       case 'bonus':
