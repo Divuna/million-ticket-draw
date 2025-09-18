@@ -24,6 +24,11 @@ interface Contest {
   ticket_count: number;
   ticket_price: number;
   created_at: string;
+  total_bonus_units?: number;
+  total_miocoins?: number;
+  physical_items?: number;
+  pending_bonuses?: number;
+  won_bonuses?: number;
 }
 
 interface BonusPrize {
@@ -105,6 +110,25 @@ const AdminDashboard: React.FC = () => {
     }
   }, [user]);
 
+  // Realtime subscription for bonus prizes updates on contests table
+  useEffect(() => {
+    const channel = supabase
+      .channel('contests-bonus-realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'bonus_prizes'
+      }, () => {
+        console.log('Bonus prizes changed, refreshing contests...');
+        fetchContests();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   useEffect(() => {
     if (selectedContest) {
       fetchBonusPrizes();
@@ -149,12 +173,47 @@ const AdminDashboard: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('contests')
-        .select('id, title, description, main_prize, main_image, status, ticket_count, ticket_price, created_at')
+        .select(`
+          id, title, description, main_prize, main_image, status, ticket_count, ticket_price, created_at,
+          bonus_prizes!left (
+            id,
+            amount,
+            status,
+            description
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      setContests(data || []);
+      // Process data to aggregate bonus statistics
+      const processedContests = (data || []).map(contest => {
+        const bonuses = contest.bonus_prizes || [];
+        
+        const total_bonus_units = bonuses.length;
+        const total_miocoins = bonuses
+          .filter(b => b.description.includes('MioCoin') || b.amount)
+          .reduce((sum, b) => sum + (b.amount || 0), 0);
+        const physical_items = bonuses
+          .filter(b => !b.description.includes('MioCoin') && !b.amount)
+          .length;
+        const pending_bonuses = bonuses.filter(b => b.status === 'pending').length;
+        const won_bonuses = bonuses.filter(b => b.status === 'won').length;
+
+        // Remove the bonus_prizes property to avoid issues
+        const { bonus_prizes, ...contestData } = contest;
+        
+        return {
+          ...contestData,
+          total_bonus_units,
+          total_miocoins,
+          physical_items,
+          pending_bonuses,
+          won_bonuses
+        };
+      });
+
+      setContests(processedContests);
     } catch (error) {
       console.error('Error fetching contests:', error);
       toast({
@@ -633,18 +692,48 @@ const AdminDashboard: React.FC = () => {
                       Žádné soutěže nebyly nalezeny.
                     </p>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Obrázek</TableHead>
-                          <TableHead>Název soutěže</TableHead>
-                          <TableHead>Hlavní cena</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Počet tiketů</TableHead>
-                          <TableHead>Vytvořeno</TableHead>
-                          <TableHead>Akce</TableHead>
-                        </TableRow>
-                      </TableHeader>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Obrázek</TableHead>
+                            <TableHead>Název soutěže</TableHead>
+                            <TableHead>Hlavní cena</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Počet tiketů</TableHead>
+                            <TableHead 
+                              className="text-center cursor-help" 
+                              title="Aktualizováno po poslední distribuci bonusů"
+                            >
+                              Celkem bonusů
+                            </TableHead>
+                            <TableHead 
+                              className="text-center cursor-help" 
+                              title="Aktualizováno po poslední distribuci bonusů"
+                            >
+                              MioCoins
+                            </TableHead>
+                            <TableHead 
+                              className="text-center cursor-help" 
+                              title="Aktualizováno po poslední distribuci bonusů"
+                            >
+                              Fyzické předměty
+                            </TableHead>
+                            <TableHead 
+                              className="text-center cursor-help" 
+                              title="Aktualizováno po poslední distribuci bonusů"
+                            >
+                              Čekající
+                            </TableHead>
+                            <TableHead 
+                              className="text-center cursor-help" 
+                              title="Aktualizováno po poslední distribuci bonusů"
+                            >
+                              Vyhrané
+                            </TableHead>
+                            <TableHead>Vytvořeno</TableHead>
+                            <TableHead>Akce</TableHead>
+                          </TableRow>
+                        </TableHeader>
                       <TableBody>
                         {contests.map((contest) => (
                           <TableRow key={contest.id}>
@@ -688,8 +777,23 @@ const AdminDashboard: React.FC = () => {
                                  contest.status === 'delivered' ? 'Doručeno' : 'Neznámý'}
                               </Badge>
                             </TableCell>
-                            <TableCell>{contest.ticket_count.toLocaleString('cs-CZ')}</TableCell>
-                            <TableCell>{new Date(contest.created_at).toLocaleDateString('cs-CZ')}</TableCell>
+                             <TableCell>{contest.ticket_count.toLocaleString('cs-CZ')}</TableCell>
+                             <TableCell className="text-center">
+                               {(contest.total_bonus_units || 0).toLocaleString('cs-CZ')}
+                             </TableCell>
+                             <TableCell className="text-center">
+                               {(contest.total_miocoins || 0).toLocaleString('cs-CZ')}
+                             </TableCell>
+                             <TableCell className="text-center">
+                               {(contest.physical_items || 0).toLocaleString('cs-CZ')}
+                             </TableCell>
+                             <TableCell className="text-center">
+                               {(contest.pending_bonuses || 0).toLocaleString('cs-CZ')}
+                             </TableCell>
+                             <TableCell className="text-center">
+                               {(contest.won_bonuses || 0).toLocaleString('cs-CZ')}
+                             </TableCell>
+                             <TableCell>{new Date(contest.created_at).toLocaleDateString('cs-CZ')}</TableCell>
                             <TableCell>
                               <div className="flex space-x-2">
                                 <Button 
