@@ -569,29 +569,25 @@ const AdminDashboard: React.FC = () => {
                             <TableCell>{new Date(contest.created_at).toLocaleDateString('cs-CZ')}</TableCell>
                             <TableCell>
                               <div className="flex space-x-2">
-                                {contest.status !== 'closed' && (
-                                  <Button 
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => pauseResumeContest(
-                                      contest.id, 
-                                      'paused'
-                                    )}
-                                    className="border-orange-500 text-orange-600 hover:bg-orange-50"
-                                  >
-                                    Pozastavit
-                                  </Button>
-                                )}
-                                {contest.status !== 'closed' && (
-                                  <Button 
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => closeContest(contest.id)}
-                                    className="border-red-500 text-red-600 hover:bg-red-50"
-                                  >
-                                    Uzavřít
-                                  </Button>
-                                )}
+                                <Button 
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => pauseResumeContest(
+                                    contest.id, 
+                                    'paused'
+                                  )}
+                                  className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                                >
+                                  Pozastavit
+                                </Button>
+                                <Button 
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => closeContest(contest.id)}
+                                  className="border-red-500 text-red-600 hover:bg-red-50"
+                                >
+                                  Uzavřít
+                                </Button>
                                 <Button 
                                   variant="outline"
                                   size="sm"
