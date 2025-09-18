@@ -1,0 +1,330 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Header } from '@/components/Header';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from '@/components/ui/carousel';
+import { BottomNavigation } from '@/components/BottomNavigation';
+import { AdminMenu } from '@/components/AdminMenu';
+import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/hooks/useAuth';
+import { Gift, Trophy, ChevronRight, Ticket, Star } from 'lucide-react';
+import { toast } from 'sonner';
+
+const Homepage = () => {
+  const { user } = useAuth();
+  const { isAdmin } = useUserRole();
+  const navigate = useNavigate();
+
+  const handleVoucherClick = () => {
+    if (!user) {
+      toast.error('Pro nákup voucheru se musíte přihlásit');
+      navigate('/login');
+      return;
+    }
+    
+    if (isAdmin) {
+      return; // Read-only for admin
+    }
+    
+    // Link to voucher purchase - using vouchers page for now
+    navigate('/vouchers');
+  };
+
+  const handleGamesClick = () => {
+    if (!user) {
+      toast.error('Pro hraní her se musíte přihlásit');
+      navigate('/login');
+      return;
+    }
+    
+    if (isAdmin) {
+      return; // Read-only for admin
+    }
+    
+    // Link to existing main games page
+    navigate('/games');
+  };
+
+  // Placeholder data for carousels
+  const ongoingContests = [
+    { id: '1', name: 'Luxusní Auto 2024', prize: 'BMW X5 M50i', couponCode: 'AUTO2024' },
+    { id: '2', name: 'Million Cash', prize: '1,000,000 Kč', couponCode: 'CASH2024' },
+    { id: '3', name: 'Dream House', prize: 'Rodinný dům v Praze', couponCode: 'HOUSE24' },
+    { id: '4', name: 'Luxury Trip', prize: 'Dovolená na Maledivách', couponCode: 'TRIP2024' },
+  ];
+
+  const userVouchers = [
+    { id: '1', name: 'Voucher 50 Kč', value: '50 Kč', status: 'available', code: 'V50-2024' },
+    { id: '2', name: 'Voucher 100 Kč', value: '100 Kč', status: 'available', code: 'V100-2024' },
+    { id: '3', name: 'Voucher 200 Kč', value: '200 Kč', status: 'used', code: 'V200-2024' },
+    { id: '4', name: 'Voucher 500 Kč', value: '500 Kč', status: 'available', code: 'V500-2024' },
+  ];
+
+  return (
+    <div className="min-h-screen bg-background dark pb-20">
+      <Header />
+      
+      <div className="container mx-auto px-4 py-8 space-y-12">
+        {/* Main Banner */}
+        <section className="w-full">
+          <div className="h-64 md:h-80 bg-gradient-to-br from-purple-900/20 to-cyan-900/20 rounded-lg border border-neon-purple glow-purple flex items-center justify-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
+            <div className="text-center space-y-4 z-10">
+              <div className="text-6xl md:text-8xl animate-bounce">🎯</div>
+              <h2 className="text-2xl md:text-4xl font-bold text-neon-cyan">
+                Rotující Výhry
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Placeholder pro rotující zobrazení hlavních cen
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Two Dominant Boxes */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Voucher Purchase Box */}
+          <Card className={`border-neon-cyan glow-cyan bg-card/50 backdrop-blur-sm transition-all duration-200 ${
+            user && !isAdmin ? 'cursor-pointer hover:scale-105' : ''
+          }`} onClick={handleVoucherClick}>
+            <CardHeader className="text-center space-y-4">
+              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
+                <Gift className="w-8 h-8 text-white" />
+              </div>
+              <CardTitle className="text-2xl font-bold text-neon-cyan">
+                Kupte Voucher
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <p className="text-muted-foreground">
+                Získejte vouchers s okamžitou hodnotou
+              </p>
+              {user && !isAdmin && (
+                <Button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 glow-cyan">
+                  Koupit Voucher
+                  <ChevronRight className="ml-2 w-4 h-4" />
+                </Button>
+              )}
+              {!user && (
+                <Button variant="outline" className="w-full border-cyan-400 text-cyan-400 hover:bg-cyan-400/10">
+                  Přihlásit se pro nákup
+                </Button>
+              )}
+              {isAdmin && (
+                <div className="text-sm text-muted-foreground py-2">
+                  Admin zobrazení - pouze pro čtení
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Games Box */}
+          <Card className={`border-neon-purple glow-purple bg-card/50 backdrop-blur-sm transition-all duration-200 ${
+            user && !isAdmin ? 'cursor-pointer hover:scale-105' : ''
+          }`} onClick={handleGamesClick}>
+            <CardHeader className="text-center space-y-4">
+              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center">
+                <Trophy className="w-8 h-8 text-white" />
+              </div>
+              <CardTitle className="text-2xl font-bold text-neon-purple">
+                Hraj o luxusní ceny
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <p className="text-muted-foreground">
+                Připojte se k hlavním hrám a vyhrajte velké ceny
+              </p>
+              {user && !isAdmin && (
+                <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 glow-purple">
+                  Hrát Hry
+                  <ChevronRight className="ml-2 w-4 h-4" />
+                </Button>
+              )}
+              {!user && (
+                <Button variant="outline" className="w-full border-purple-400 text-purple-400 hover:bg-purple-400/10">
+                  Přihlásit se pro hraní
+                </Button>
+              )}
+              {isAdmin && (
+                <div className="text-sm text-muted-foreground py-2">
+                  Admin zobrazení - pouze pro čtení
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Ongoing Contests Carousel */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-bold text-neon-cyan flex items-center gap-2">
+              <Ticket className="w-6 h-6" />
+              Probíhající Soutěže
+            </h3>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </div>
+          
+          <Carousel className="w-full">
+            <CarouselContent className="ml-4">
+              {ongoingContests.map((contest) => (
+                <CarouselItem key={contest.id} className="basis-72">
+                  <Card className="coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden">
+                    {/* Coupon notches */}
+                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
+                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
+                    
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg font-bold text-amber-800 dark:text-amber-400">
+                        {contest.name}
+                      </CardTitle>
+                      <div className="text-xs text-amber-600 dark:text-amber-500 font-mono">
+                        #{contest.couponCode}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Star className="w-4 h-4 text-amber-500" />
+                          <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                            {contest.prize}
+                          </span>
+                        </div>
+                        <div className="border-t border-dashed border-amber-300 pt-2">
+                          <div className="text-xs text-amber-600 dark:text-amber-500">
+                            Placeholder obsah
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="hidden md:flex" />
+            <CarouselNext className="hidden md:flex" />
+          </Carousel>
+        </section>
+
+        {/* User Vouchers Carousel */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-bold text-neon-pink flex items-center gap-2">
+              <Gift className="w-6 h-6" />
+              Vaše Vouchery
+            </h3>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </div>
+          
+          <Carousel className="w-full">
+            <CarouselContent className="ml-4" style={{ direction: 'rtl' }}>
+              {userVouchers.map((voucher) => (
+                <CarouselItem key={voucher.id} className="basis-64" style={{ direction: 'ltr' }}>
+                  <Card className={`coupon-card relative overflow-hidden ${
+                    voucher.status === 'available' 
+                      ? 'border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' 
+                      : 'border-gray-400 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 opacity-60'
+                  }`}>
+                    {/* Coupon notches */}
+                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
+                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
+                    
+                    <CardHeader className="pb-2">
+                      <CardTitle className={`text-lg font-bold ${
+                        voucher.status === 'available' 
+                          ? 'text-green-800 dark:text-green-400' 
+                          : 'text-gray-800 dark:text-gray-400'
+                      }`}>
+                        {voucher.name}
+                      </CardTitle>
+                      <div className={`text-xs font-mono ${
+                        voucher.status === 'available' 
+                          ? 'text-green-600 dark:text-green-500' 
+                          : 'text-gray-600 dark:text-gray-500'
+                      }`}>
+                        #{voucher.code}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-2xl font-bold ${
+                            voucher.status === 'available' 
+                              ? 'text-green-700 dark:text-green-300' 
+                              : 'text-gray-700 dark:text-gray-300'
+                          }`}>
+                            {voucher.value}
+                          </span>
+                          <div className={`px-2 py-1 rounded text-xs font-medium ${
+                            voucher.status === 'available' 
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+                          }`}>
+                            {voucher.status === 'available' ? 'Dostupný' : 'Použitý'}
+                          </div>
+                        </div>
+                        <div className={`border-t border-dashed pt-2 ${
+                          voucher.status === 'available' 
+                            ? 'border-green-300' 
+                            : 'border-gray-300'
+                        }`}>
+                          <div className={`text-xs ${
+                            voucher.status === 'available' 
+                              ? 'text-green-600 dark:text-green-500' 
+                              : 'text-gray-600 dark:text-gray-500'
+                          }`}>
+                            Placeholder obsah
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="hidden md:flex" />
+            <CarouselNext className="hidden md:flex" />
+          </Carousel>
+        </section>
+
+        {/* Footer */}
+        <footer className="border-t border-border pt-8 mt-16">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <h4 className="font-semibold text-neon-cyan mb-4">Informace</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="#" className="hover:text-foreground transition-colors">O nás</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Jak to funguje</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Kontakt</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-neon-purple mb-4">FAQ</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="#" className="hover:text-foreground transition-colors">Časté otázky</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Nápověda</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Podpora</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-neon-pink mb-4">Podmínky</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="#" className="hover:text-foreground transition-colors">Obchodní podmínky</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Ochrana osobních údajů</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Pravidla soutěží</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="text-center text-sm text-muted-foreground mt-8 pt-8 border-t border-border">
+            © 2024 OneMil. Všechna práva vyhrazena.
+          </div>
+        </footer>
+      </div>
+
+      {/* Show admin menu or regular bottom navigation */}
+      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
+    </div>
+  );
+};
+
+export default Homepage;
