@@ -110,6 +110,17 @@ const Homepage = () => {
               <p className="text-lg text-muted-foreground">
                 Placeholder pro rotující zobrazení hlavních cen
               </p>
+              {/* Role-based messaging */}
+              {isAdmin && (
+                <div className="mt-4 px-4 py-2 bg-amber-100/10 border border-amber-400/30 rounded-lg">
+                  <p className="text-sm text-amber-400">Admin zobrazení - všechny sekce jsou pouze pro čtení</p>
+                </div>
+              )}
+              {!user && (
+                <div className="mt-4 px-4 py-2 bg-blue-100/10 border border-blue-400/30 rounded-lg">
+                  <p className="text-sm text-blue-400">Přihlaste se pro plnou interaktivitu</p>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -194,7 +205,20 @@ const Homepage = () => {
               <Ticket className="w-6 h-6" />
               Probíhající Soutěže
             </h3>
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            <div className="flex items-center gap-2">
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              {/* Role indicator */}
+              {isAdmin && (
+                <div className="px-2 py-1 bg-amber-100/10 border border-amber-400/30 rounded text-xs text-amber-400">
+                  Pouze čtení
+                </div>
+              )}
+              {!user && (
+                <div className="px-2 py-1 bg-blue-100/10 border border-blue-400/30 rounded text-xs text-blue-400">
+                  Přihlásit pro interakci
+                </div>
+              )}
+            </div>
           </div>
           
           <Carousel className="w-full">
@@ -255,7 +279,20 @@ const Homepage = () => {
               <Gift className="w-6 h-6" />
               Vaše Vouchery
             </h3>
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            <div className="flex items-center gap-2">
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              {/* Role indicator */}
+              {isAdmin && (
+                <div className="px-2 py-1 bg-amber-100/10 border border-amber-400/30 rounded text-xs text-amber-400">
+                  Pouze čtení
+                </div>
+              )}
+              {!user && (
+                <div className="px-2 py-1 bg-blue-100/10 border border-blue-400/30 rounded text-xs text-blue-400">
+                  Přihlásit pro správu
+                </div>
+              )}
+            </div>
           </div>
           
           <Carousel className="w-full">
@@ -350,36 +387,143 @@ const Homepage = () => {
           </Carousel>
         </section>
 
-        {/* Footer */}
-        <footer className="border-t border-border pt-8 mt-16">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <h4 className="font-semibold text-neon-cyan mb-4">Informace</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">O nás</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Jak to funguje</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Kontakt</a></li>
+        {/* Enhanced Footer */}
+        <footer className="border-t border-border pt-12 mt-20 bg-gradient-to-br from-background to-muted/20">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+            {/* Company Info */}
+            <div className="space-y-4">
+              <h4 className="font-bold text-xl text-neon-cyan mb-6">OneMil</h4>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Vaše platforma pro soutěže a výhry. Získejte šanci vyhrát luxusní ceny a vouchery.
+              </p>
+              <div className="flex space-x-4 pt-4">
+                <div className="w-8 h-8 bg-neon-cyan/20 rounded-full flex items-center justify-center">
+                  <span className="text-xs text-neon-cyan">FB</span>
+                </div>
+                <div className="w-8 h-8 bg-neon-purple/20 rounded-full flex items-center justify-center">
+                  <span className="text-xs text-neon-purple">TW</span>
+                </div>
+                <div className="w-8 h-8 bg-neon-pink/20 rounded-full flex items-center justify-center">
+                  <span className="text-xs text-neon-pink">IG</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Information Links */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-lg text-neon-purple mb-6">Informace</h4>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                <li>
+                  <a href="#" className="hover:text-neon-purple transition-colors duration-200 story-link">
+                    O společnosti
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-neon-purple transition-colors duration-200 story-link">
+                    Jak to funguje
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-neon-purple transition-colors duration-200 story-link">
+                    Naše mise
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-neon-purple transition-colors duration-200 story-link">
+                    Kariéra
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-neon-purple transition-colors duration-200 story-link">
+                    Tiskové zprávy
+                  </a>
+                </li>
               </ul>
             </div>
-            <div>
-              <h4 className="font-semibold text-neon-purple mb-4">FAQ</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Časté otázky</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Nápověda</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Podpora</a></li>
+
+            {/* FAQ & Support */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-lg text-neon-cyan mb-6">Podpora</h4>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                <li>
+                  <a href="#" className="hover:text-neon-cyan transition-colors duration-200 story-link">
+                    Často kladené otázky
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-neon-cyan transition-colors duration-200 story-link">
+                    Centrum nápovědy
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-neon-cyan transition-colors duration-200 story-link">
+                    Kontaktujte nás
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-neon-cyan transition-colors duration-200 story-link">
+                    Nahlásit problém
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-neon-cyan transition-colors duration-200 story-link">
+                    Živý chat
+                  </a>
+                </li>
               </ul>
             </div>
-            <div>
-              <h4 className="font-semibold text-neon-pink mb-4">Podmínky</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Obchodní podmínky</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Ochrana osobních údajů</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Pravidla soutěží</a></li>
+
+            {/* Legal Terms */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-lg text-neon-pink mb-6">Právní podmínky</h4>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                <li>
+                  <a href="#" className="hover:text-neon-pink transition-colors duration-200 story-link">
+                    Všeobecné obchodní podmínky
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-neon-pink transition-colors duration-200 story-link">
+                    Ochrana osobních údajů
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-neon-pink transition-colors duration-200 story-link">
+                    Pravidla soutěží
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-neon-pink transition-colors duration-200 story-link">
+                    Zásady použití cookies
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-neon-pink transition-colors duration-200 story-link">
+                    Autorská práva
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
-          <div className="text-center text-sm text-muted-foreground mt-8 pt-8 border-t border-border">
-            © 2024 OneMil. Všechna práva vyhrazena.
+
+          {/* Bottom Bar */}
+          <div className="border-t border-border pt-8 pb-8">
+            <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+              <div className="text-sm text-muted-foreground">
+                © 2024 OneMil s.r.o. Všechna práva vyhrazena.
+              </div>
+              <div className="flex items-center space-x-6 text-sm text-muted-foreground">
+                <span>Verze 1.0.0</span>
+                <span>•</span>
+                <span>Česká republika</span>
+                <span>•</span>
+                <span>
+                  {isAdmin && "Admin režim"}
+                  {!isAdmin && user && "Přihlášený uživatel"}
+                  {!user && "Návštěvník"}
+                </span>
+              </div>
+            </div>
           </div>
         </footer>
       </div>
