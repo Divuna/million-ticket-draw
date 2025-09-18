@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from '@/components/ui/carousel';
+
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -20,18 +20,13 @@ const Homepage = () => {
 
   // Auto-scroll functionality for carousels (disabled for admin)
   useEffect(() => {
-    if (isAdmin) return; // No auto-scroll for admin
+    if (isAdmin || !user) return; // No auto-scroll for admin or non-logged-in users
 
     const scrollCarousel = (ref: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
       if (!ref.current) return;
       
-      // Find the actual scrollable container - look for the carousel content
-      const container = ref.current.querySelector('.carousel-content') || 
-                       ref.current.querySelector('[data-carousel-content]') ||
-                       ref.current.querySelector('.scroll-container');
-      
-      if (!container) return;
-
+      // The ref points directly to the scrollable container
+      const container = ref.current;
       const scrollAmount = 280; // Width of one card approximately
       const currentScroll = container.scrollLeft;
       const maxScroll = container.scrollWidth - container.clientWidth;
@@ -53,12 +48,12 @@ const Homepage = () => {
       }
     };
 
-    // Auto-scroll contests to the right every 4 seconds
+    // Auto-scroll contests to the right every 4 seconds (only for logged-in non-admin users)
     const contestInterval = setInterval(() => {
       scrollCarousel(contestsCarouselRef, 'right');
     }, 4000);
 
-    // Auto-scroll vouchers to the left every 5 seconds
+    // Auto-scroll vouchers to the left every 5 seconds (only for logged-in non-admin users)
     const voucherInterval = setInterval(() => {
       scrollCarousel(vouchersCarouselRef, 'left');
     }, 5000);
@@ -67,7 +62,7 @@ const Homepage = () => {
       clearInterval(contestInterval);
       clearInterval(voucherInterval);
     };
-  }, [isAdmin]);
+  }, [isAdmin, user]);
 
   const handleVoucherClick = () => {
     if (!user) {
@@ -273,57 +268,66 @@ const Homepage = () => {
             </div>
           </div>
           
-          <Carousel className={`w-full ${isAdmin ? 'carousel-disabled' : ''}`} ref={contestsCarouselRef}>
-            <CarouselContent className="ml-4 carousel-content scroll-container" data-carousel-content>
-              {ongoingContests.map((contest) => (
-                <CarouselItem key={contest.id} className="basis-72 pl-4">
-                  <Card 
-                    className={`coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden transition-all duration-300 ${
-                      user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-100 hover:to-yellow-100 dark:hover:from-amber-800/30 dark:hover:to-yellow-800/30' : 
-                      !user ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]' : 
-                      'opacity-90'
-                    }`}
-                    onClick={() => !isAdmin && handleContestClick(contest.id)}
-                  >
-                    {/* Coupon notches */}
-                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
-                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
-                    
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg font-bold text-amber-800 dark:text-amber-400">
-                        {contest.name}
-                      </CardTitle>
-                      <div className="text-xs text-amber-600 dark:text-amber-500 font-mono">
-                        #{contest.couponCode}
+          <div 
+            ref={contestsCarouselRef}
+            data-carousel-content
+            className={`flex overflow-x-auto scroll-smooth gap-4 pb-4 ${isAdmin ? 'carousel-disabled' : ''}`}
+            style={{ 
+              scrollBehavior: 'smooth', 
+              scrollSnapType: 'x mandatory',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
+            {ongoingContests.map((contest) => (
+              <div 
+                key={contest.id} 
+                className="flex-none w-72"
+                style={{ scrollSnapAlign: 'start' }}
+              >
+                <Card 
+                  className={`coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden transition-all duration-300 h-full ${
+                    user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-100 hover:to-yellow-100 dark:hover:from-amber-800/30 dark:hover:to-yellow-800/30' : 
+                    !user ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]' : 
+                    'opacity-90'
+                  }`}
+                  onClick={() => !isAdmin && handleContestClick(contest.id)}
+                >
+                  {/* Coupon notches */}
+                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
+                  <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
+                  
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-bold text-amber-800 dark:text-amber-400">
+                      {contest.name}
+                    </CardTitle>
+                    <div className="text-xs text-amber-600 dark:text-amber-500 font-mono">
+                      #{contest.couponCode}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-amber-500" />
+                        <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                          {contest.prize}
+                        </span>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Star className="w-4 h-4 text-amber-500" />
-                          <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
-                            {contest.prize}
-                          </span>
+                      <div className="border-t border-dashed border-amber-300 pt-2">
+                        <div className="text-xs text-amber-600 dark:text-amber-500">
+                          {user && !isAdmin ? 'Klikněte pro hraní her' : !user ? 'Přihlaste se pro hraní' : 'Placeholder obsah'}
                         </div>
-                        <div className="border-t border-dashed border-amber-300 pt-2">
-                          <div className="text-xs text-amber-600 dark:text-amber-500">
-                            {user && !isAdmin ? 'Klikněte pro hraní her' : !user ? 'Přihlaste se pro hraní' : 'Placeholder obsah'}
+                        {isAdmin && (
+                          <div className="text-xs text-amber-500 mt-1">
+                            Admin zobrazení - pouze pro čtení
                           </div>
-                          {isAdmin && (
-                            <div className="text-xs text-amber-500 mt-1">
-                              Admin zobrazení - pouze pro čtení
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className={`hidden md:flex transition-opacity duration-200 ${isAdmin ? 'opacity-30 cursor-not-allowed pointer-events-none' : 'hover:bg-accent/80'}`} />
-            <CarouselNext className={`hidden md:flex transition-opacity duration-200 ${isAdmin ? 'opacity-30 cursor-not-allowed pointer-events-none' : 'hover:bg-accent/80'}`} />
-          </Carousel>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* User Vouchers Carousel */}
@@ -338,7 +342,7 @@ const Homepage = () => {
               {/* Role indicator */}
               {isAdmin && (
                 <div className="px-2 py-1 bg-amber-100/10 border border-amber-400/30 rounded text-xs text-amber-400">
-                  Pouze čtení
+                  Pouze čtění
                 </div>
               )}
               {!user && (
@@ -349,100 +353,109 @@ const Homepage = () => {
             </div>
           </div>
           
-          <Carousel className={`w-full ${isAdmin ? 'carousel-disabled' : ''}`} ref={vouchersCarouselRef}>
-            <CarouselContent className="ml-4 carousel-content scroll-container" style={{ direction: 'rtl' }} data-carousel-content>
-              {userVouchers.map((voucher) => (
-                <CarouselItem key={voucher.id} className="basis-64 pl-4" style={{ direction: 'ltr' }}>
-                  <Card 
-                    className={`coupon-card relative overflow-hidden transition-all duration-300 ${
+          <div 
+            ref={vouchersCarouselRef}
+            data-carousel-content
+            className={`flex overflow-x-auto scroll-smooth gap-4 pb-4 ${isAdmin ? 'carousel-disabled' : ''}`}
+            style={{ 
+              scrollBehavior: 'smooth', 
+              scrollSnapType: 'x mandatory',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
+            {userVouchers.map((voucher) => (
+              <div 
+                key={voucher.id} 
+                className="flex-none w-64"
+                style={{ scrollSnapAlign: 'start' }}
+              >
+                <Card 
+                  className={`coupon-card relative overflow-hidden transition-all duration-300 h-full ${
+                    voucher.status === 'available' 
+                      ? 'border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' 
+                      : 'border-gray-400 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 opacity-60'
+                  } ${
+                    user && !isAdmin && voucher.status === 'available' 
+                      ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-green-500 hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-800/30 dark:hover:to-emerald-800/30' 
+                      : !user && voucher.status === 'available'
+                        ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]'
+                        : voucher.status === 'available' && isAdmin
+                          ? 'opacity-90'
+                          : ''
+                  }`}
+                  onClick={() => !isAdmin && voucher.status === 'available' && handleVoucherRedeem(voucher.id)}
+                >
+                  {/* Coupon notches */}
+                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
+                  <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
+                  
+                  <CardHeader className="pb-2">
+                    <CardTitle className={`text-lg font-bold ${
                       voucher.status === 'available' 
-                        ? 'border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' 
-                        : 'border-gray-400 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 opacity-60'
-                    } ${
-                      user && !isAdmin && voucher.status === 'available' 
-                        ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-green-500 hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-800/30 dark:hover:to-emerald-800/30' 
-                        : !user && voucher.status === 'available'
-                          ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]'
-                          : voucher.status === 'available' && isAdmin
-                            ? 'opacity-90'
-                            : ''
-                    }`}
-                    onClick={() => !isAdmin && voucher.status === 'available' && handleVoucherRedeem(voucher.id)}
-                  >
-                    {/* Coupon notches */}
-                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
-                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
-                    
-                    <CardHeader className="pb-2">
-                      <CardTitle className={`text-lg font-bold ${
-                        voucher.status === 'available' 
-                          ? 'text-green-800 dark:text-green-400' 
-                          : 'text-gray-800 dark:text-gray-400'
-                      }`}>
-                        {voucher.name}
-                      </CardTitle>
-                      <div className={`text-xs font-mono ${
-                        voucher.status === 'available' 
-                          ? 'text-green-600 dark:text-green-500' 
-                          : 'text-gray-600 dark:text-gray-500'
-                      }`}>
-                        #{voucher.code}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className={`text-2xl font-bold ${
-                            voucher.status === 'available' 
-                              ? 'text-green-700 dark:text-green-300' 
-                              : 'text-gray-700 dark:text-gray-300'
-                          }`}>
-                            {voucher.value}
-                          </span>
-                          <div className={`px-2 py-1 rounded text-xs font-medium ${
-                            voucher.status === 'available' 
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
-                              : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-                          }`}>
-                            {voucher.status === 'available' ? 'Dostupný' : 'Použitý'}
-                          </div>
-                        </div>
-                        <div className={`border-t border-dashed pt-2 ${
+                        ? 'text-green-800 dark:text-green-400' 
+                        : 'text-gray-800 dark:text-gray-400'
+                    }`}>
+                      {voucher.name}
+                    </CardTitle>
+                    <div className={`text-xs font-mono ${
+                      voucher.status === 'available' 
+                        ? 'text-green-600 dark:text-green-500' 
+                        : 'text-gray-600 dark:text-gray-500'
+                    }`}>
+                      #{voucher.code}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-2xl font-bold ${
                           voucher.status === 'available' 
-                            ? 'border-green-300' 
-                            : 'border-gray-300'
+                            ? 'text-green-700 dark:text-green-300' 
+                            : 'text-gray-700 dark:text-gray-300'
                         }`}>
-                          <div className={`text-xs ${
-                            voucher.status === 'available' 
-                              ? 'text-green-600 dark:text-green-500' 
-                              : 'text-gray-600 dark:text-gray-500'
-                          }`}>
-                            {voucher.status === 'available' && user && !isAdmin 
-                              ? 'Klikněte pro uplatnění' 
-                              : voucher.status === 'used' 
-                                ? 'Voucher již použit' 
-                                : 'Placeholder obsah'
-                            }
-                          </div>
-                          {isAdmin && (
-                            <div className={`text-xs mt-1 ${
-                              voucher.status === 'available' 
-                                ? 'text-green-500' 
-                                : 'text-gray-500'
-                            }`}>
-                              Admin zobrazení - pouze pro čtení
-                            </div>
-                          )}
+                          {voucher.value}
+                        </span>
+                        <div className={`px-2 py-1 rounded text-xs font-medium ${
+                          voucher.status === 'available' 
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+                        }`}>
+                          {voucher.status === 'available' ? 'Dostupný' : 'Použitý'}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className={`hidden md:flex transition-opacity duration-200 ${isAdmin ? 'opacity-30 cursor-not-allowed pointer-events-none' : 'hover:bg-accent/80'}`} />
-            <CarouselNext className={`hidden md:flex transition-opacity duration-200 ${isAdmin ? 'opacity-30 cursor-not-allowed pointer-events-none' : 'hover:bg-accent/80'}`} />
-          </Carousel>
+                      <div className={`border-t border-dashed pt-2 ${
+                        voucher.status === 'available' 
+                          ? 'border-green-300' 
+                          : 'border-gray-300'
+                      }`}>
+                        <div className={`text-xs ${
+                          voucher.status === 'available' 
+                            ? 'text-green-600 dark:text-green-500' 
+                            : 'text-gray-600 dark:text-gray-500'
+                        }`}>
+                          {voucher.status === 'available' && user && !isAdmin 
+                            ? 'Klikněte pro uplatnění' 
+                            : voucher.status === 'used' 
+                              ? 'Voucher již použit' 
+                              : 'Placeholder obsah'
+                          }
+                        </div>
+                        {isAdmin && (
+                          <div className={`text-xs mt-1 ${
+                            voucher.status === 'available' 
+                              ? 'text-green-500' 
+                              : 'text-gray-500'
+                          }`}>
+                            Admin zobrazení - pouze pro čtení
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* Enhanced Footer */}
