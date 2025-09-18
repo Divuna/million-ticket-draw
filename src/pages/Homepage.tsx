@@ -18,83 +18,49 @@ const Homepage = () => {
   const contestsCarouselRef = useRef<HTMLDivElement>(null);
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
 
-  // Smooth auto-scroll functionality for carousels (only for logged-in non-admin users)
+  // Auto-scroll functionality for carousels (disabled for admin)
   useEffect(() => {
     if (isAdmin || !user) return; // No auto-scroll for admin or non-logged-in users
 
-    let contestsAnimationId: number;
-    let vouchersAnimationId: number;
-    let contestsLastTime = 0;
-    let vouchersLastTime = 0;
-
-    const smoothScrollCarousel = (
-      ref: React.RefObject<HTMLDivElement>, 
-      direction: 'left' | 'right',
-      currentTime: number,
-      lastTime: number,
-      animationId: number
-    ) => {
+    const scrollCarousel = (ref: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
       if (!ref.current) return;
       
+      // The ref points directly to the scrollable container
       const container = ref.current;
-      const scrollSpeed = 0.5; // pixels per millisecond for smooth movement
-      const deltaTime = currentTime - lastTime;
-      
-      if (deltaTime > 16) { // ~60fps throttling
-        const scrollAmount = scrollSpeed * deltaTime;
-        const currentScroll = container.scrollLeft;
-        const maxScroll = container.scrollWidth - container.clientWidth;
+      const scrollAmount = 280; // Width of one card approximately
+      const currentScroll = container.scrollLeft;
+      const maxScroll = container.scrollWidth - container.clientWidth;
 
-        if (direction === 'right') {
-          // Scroll right, reset to start when reaching end
-          if (currentScroll >= maxScroll - 5) {
-            container.scrollTo({ left: 0, behavior: 'auto' });
-          } else {
-            container.scrollBy({ left: scrollAmount, behavior: 'auto' });
-          }
+      if (direction === 'right') {
+        // Scroll right, reset to start when reaching end
+        if (currentScroll >= maxScroll - 10) { // Small buffer for precision
+          container.scrollTo({ left: 0, behavior: 'smooth' });
         } else {
-          // Scroll left, reset to end when reaching start
-          if (currentScroll <= 5) {
-            container.scrollTo({ left: maxScroll, behavior: 'auto' });
-          } else {
-            container.scrollBy({ left: -scrollAmount, behavior: 'auto' });
-          }
+          container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
         }
-        
-        return currentTime;
+      } else {
+        // Scroll left, reset to end when reaching start
+        if (currentScroll <= 10) { // Small buffer for precision
+          container.scrollTo({ left: maxScroll, behavior: 'smooth' });
+        } else {
+          container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+        }
       }
-      return lastTime;
     };
 
-    const animateContests = (currentTime: number) => {
-      contestsLastTime = smoothScrollCarousel(
-        contestsCarouselRef, 
-        'right', 
-        currentTime, 
-        contestsLastTime,
-        contestsAnimationId
-      );
-      contestsAnimationId = requestAnimationFrame(animateContests);
-    };
+    // Auto-scroll contests to the right every 4 seconds (only for logged-in non-admin users)
+    const contestInterval = setInterval(() => {
+      scrollCarousel(contestsCarouselRef, 'right');
+    }, 4000);
 
-    const animateVouchers = (currentTime: number) => {
-      vouchersLastTime = smoothScrollCarousel(
-        vouchersCarouselRef, 
-        'left', 
-        currentTime, 
-        vouchersLastTime,
-        vouchersAnimationId
-      );
-      vouchersAnimationId = requestAnimationFrame(animateVouchers);
-    };
-
-    // Start smooth animations
-    contestsAnimationId = requestAnimationFrame(animateContests);
-    vouchersAnimationId = requestAnimationFrame(animateVouchers);
+    // Auto-scroll vouchers to the left every 5 seconds (only for logged-in non-admin users)
+    const voucherInterval = setInterval(() => {
+      scrollCarousel(vouchersCarouselRef, 'left');
+    }, 5000);
 
     return () => {
-      cancelAnimationFrame(contestsAnimationId);
-      cancelAnimationFrame(vouchersAnimationId);
+      clearInterval(contestInterval);
+      clearInterval(voucherInterval);
     };
   }, [isAdmin, user]);
 
@@ -305,9 +271,9 @@ const Homepage = () => {
           <div 
             ref={contestsCarouselRef}
             data-carousel-content
-            className={`flex gap-4 pb-4 ${isAdmin ? 'carousel-disabled overflow-x-auto' : 'overflow-x-hidden'}`}
+            className={`flex overflow-x-auto scroll-smooth gap-4 pb-4 ${isAdmin ? 'carousel-disabled' : ''}`}
             style={{ 
-              scrollBehavior: user && !isAdmin ? 'auto' : 'smooth', 
+              scrollBehavior: 'smooth', 
               scrollSnapType: 'x mandatory',
               WebkitOverflowScrolling: 'touch'
             }}
@@ -390,9 +356,9 @@ const Homepage = () => {
           <div 
             ref={vouchersCarouselRef}
             data-carousel-content
-            className={`flex gap-4 pb-4 ${isAdmin ? 'carousel-disabled overflow-x-auto' : 'overflow-x-hidden'}`}
+            className={`flex overflow-x-auto scroll-smooth gap-4 pb-4 ${isAdmin ? 'carousel-disabled' : ''}`}
             style={{ 
-              scrollBehavior: user && !isAdmin ? 'auto' : 'smooth', 
+              scrollBehavior: 'smooth', 
               scrollSnapType: 'x mandatory',
               WebkitOverflowScrolling: 'touch'
             }}
