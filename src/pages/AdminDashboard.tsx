@@ -21,6 +21,7 @@ interface Contest {
   main_image: string;
   status: string;
   ticket_count: number;
+  ticket_price: number;
   created_at: string;
 }
 
@@ -77,6 +78,7 @@ const AdminDashboard: React.FC = () => {
     main_prize: '',
     main_image: '',
     ticket_count: 1000000,
+    ticket_price: 1,
     status: 'pending'
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -115,7 +117,7 @@ const AdminDashboard: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('contests')
-        .select('id, title, description, main_prize, main_image, status, ticket_count, created_at')
+        .select('id, title, description, main_prize, main_image, status, ticket_count, ticket_price, created_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -178,6 +180,15 @@ const AdminDashboard: React.FC = () => {
       return;
     }
 
+    if (contestForm.ticket_price < 0.01) {
+      toast({
+        title: "Chyba",
+        description: "Cena tiketu musí být alespoň 0,01 Miocoin.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       // Upload image to Supabase Storage
       const fileExt = selectedFile.name.split('.').pop()
@@ -219,6 +230,7 @@ const AdminDashboard: React.FC = () => {
         main_prize: '', 
         main_image: '', 
         ticket_count: 1000000, 
+        ticket_price: 1,
         status: 'pending' 
       });
       setSelectedFile(null);
@@ -699,7 +711,7 @@ const AdminDashboard: React.FC = () => {
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Počet tiketů *</label>
                       <Input
@@ -708,6 +720,17 @@ const AdminDashboard: React.FC = () => {
                         placeholder="1000000"
                         value={contestForm.ticket_count}
                         onChange={(e) => setContestForm({...contestForm, ticket_count: parseInt(e.target.value) || 1})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Cena tiketu (Miocoin) *</label>
+                      <Input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="1"
+                        value={contestForm.ticket_price}
+                        onChange={(e) => setContestForm({...contestForm, ticket_price: parseFloat(e.target.value) || 1})}
                       />
                     </div>
                     <div className="space-y-2">
