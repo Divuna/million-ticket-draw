@@ -6,6 +6,19 @@
 All colors MUST be HSL.
 */
 
+/* Custom grid columns for ticket map */
+@layer utilities {
+  .grid-cols-15 {
+    grid-template-columns: repeat(15, minmax(0, 1fr));
+  }
+  .grid-cols-20 {
+    grid-template-columns: repeat(20, minmax(0, 1fr));
+  }
+  .grid-cols-25 {
+    grid-template-columns: repeat(25, minmax(0, 1fr));
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

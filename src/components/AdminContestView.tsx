@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
+import { TicketMap } from '@/components/TicketMap';
 
 interface Contest {
   id: string;
@@ -159,6 +160,14 @@ export const AdminContestView: React.FC<AdminContestViewProps> = ({
           </CardContent>
         </Card>
       )}
+
+      {/* Ticket Map Section */}
+      <TicketMap
+        contestId={contest.id}
+        contestTitle={contest.title}
+        ticketCount={contest.ticket_count}
+        ticketPrice={contest.ticket_price}
+      />
 
       {/* Purchase Section */}
       {contest.status === 'active' && (

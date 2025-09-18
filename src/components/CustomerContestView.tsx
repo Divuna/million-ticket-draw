@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { TicketMap } from '@/components/TicketMap';
 
 interface Contest {
   id: string;
@@ -202,6 +203,14 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Ticket Map Section */}
+      <TicketMap
+        contestId={contest.id}
+        contestTitle={contest.title}
+        ticketCount={contest.ticket_count}
+        ticketPrice={contest.ticket_price}
+      />
 
       {/* My Wins Section */}
       <Card>
