@@ -4,9 +4,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthProvider";
+import TestAuthProvider from "@/components/TestAuthProvider";
 import Homepage from "./pages/Homepage";
 import Games from "./pages/Games";
 import Login from "./pages/Login";
+import TestLogin from "./pages/TestLogin";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import MyContests from "./pages/MyContests";
@@ -24,8 +26,8 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    
-      <AuthProvider>
+    <AuthProvider>
+      <TestAuthProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -33,6 +35,7 @@ const App = () => (
             <Route path="/" element={<Homepage />} />
             <Route path="/games" element={<Games />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/test-login" element={<TestLogin />} />
             <Route path="/register" element={<Register />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/vouchers" element={<Vouchers />} />
@@ -48,8 +51,8 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </AuthProvider>
-    
+      </TestAuthProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

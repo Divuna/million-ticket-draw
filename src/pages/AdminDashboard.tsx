@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
+import { useTestAuth } from '@/hooks/useTestAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AdminMenu } from '@/components/AdminMenu';
+import { TestTube, AlertTriangle } from 'lucide-react';
 
 interface Contest {
   id: string;
@@ -65,6 +68,8 @@ interface AIRequest {
 
 const AdminDashboard: React.FC = () => {
   const { user, session } = useAuth();
+  const { testUser, isTestMode, testSignOut } = useTestAuth();
+  const [searchParams] = useSearchParams();
   const [contests, setContests] = useState<Contest[]>([]);
   const [selectedContest, setSelectedContest] = useState<string>('');
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
@@ -104,11 +109,21 @@ const AdminDashboard: React.FC = () => {
   });
 
   useEffect(() => {
-    if (user) {
+    // Support both regular auth and test auth
+    if (user || (isTestMode && testUser)) {
       checkAdminRole();
       fetchContests();
     }
-  }, [user]);
+  }, [user, isTestMode, testUser]);
+
+  // Enhanced authentication check to support test mode
+  useEffect(() => {
+    // If in test mode, check admin role based on test user
+    if (isTestMode && testUser) {
+      checkAdminRole();
+      fetchContests();
+    }
+  }, [isTestMode, testUser]);
 
   // Realtime subscription for bonus prizes updates on contests table
   useEffect(() => {
@@ -626,7 +641,8 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  if (!session) {
+  // Enhanced authentication check for both regular and test mode
+  if (!session && !(isTestMode && testUser)) {
     return <Navigate to="/login" replace />;
   }
 
@@ -660,6 +676,27 @@ const AdminDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      
+      {/* Test Mode Banner */}
+      {isTestMode && testUser && (
+        <Alert className="mx-4 mt-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+          <TestTube className="h-4 w-4 text-yellow-600" />
+          <AlertDescription className="flex items-center justify-between">
+            <span className="text-yellow-800 dark:text-yellow-200">
+              <strong>🧪 TEST REŽIM AKTIVNÍ</strong> - Přihlášen jako: {testUser.email} 
+              (Toto není produkční přihlášení!)
+            </span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={testSignOut}
+              className="ml-4 border-yellow-600 text-yellow-700 hover:bg-yellow-100"
+            >
+              Ukončit test
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">

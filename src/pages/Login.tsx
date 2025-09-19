@@ -133,6 +133,17 @@ const Login: React.FC = () => {
                 Zaregistrujte se
               </Link>
             </p>
+            
+            {/* Test Login Link - Only for development/testing */}
+            <div className="text-center pt-4 border-t border-border">
+              <p className="text-xs text-muted-foreground mb-2">Vývojářské nástroje:</p>
+              <Link 
+                to="/test-login" 
+                className="text-xs text-yellow-600 hover:text-yellow-700 hover:underline"
+              >
+                🧪 Test Login (pouze pro testování)
+              </Link>
+            </div>
           </CardFooter>
         </form>
       </Card>
