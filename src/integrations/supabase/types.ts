@@ -501,6 +501,16 @@ export type Database = {
         Args: { p_contest: string }
         Returns: undefined
       }
+      get_contest_bonus_stats: {
+        Args: { contest_id: string }
+        Returns: {
+          pending_bonuses: number
+          physical_items: number
+          total_bonus_units: number
+          total_miocoins: number
+          won_bonuses: number
+        }[]
+      }
       notify_sofinity_event: {
         Args: {
           p_contest_id?: string

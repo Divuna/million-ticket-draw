@@ -183,7 +183,7 @@ const AdminDashboard: React.FC = () => {
       const contestsWithStats = await Promise.all(
         (contestsData || []).map(async (contest) => {
           const { data: bonusStats, error: bonusError } = await supabase
-            .rpc('get_contest_bonus_stats', { contest_id: contest.id });
+            .rpc('get_contest_bonus_stats' as any, { contest_id: contest.id });
 
           if (bonusError) {
             console.error('Error fetching bonus stats for contest:', contest.id, bonusError);
