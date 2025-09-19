@@ -18,9 +18,19 @@ interface TestAuthContextType {
 export const TestAuthContext = createContext<TestAuthContextType | undefined>(undefined);
 
 export const useTestAuth = () => {
+  console.log('useTestAuth called, context:', TestAuthContext);
   const context = useContext(TestAuthContext);
+  console.log('useTestAuth context value:', context);
+  
+  // Return a default object if context is not available (for safety)
   if (context === undefined) {
-    throw new Error('useTestAuth must be used within a TestAuthProvider');
+    console.warn('TestAuthProvider not found, returning default test auth state');
+    return {
+      testUser: null,
+      testSignIn: async () => ({ error: { message: 'Test auth not available' } }),
+      testSignOut: () => {},
+      isTestMode: false,
+    };
   }
   return context;
 };
