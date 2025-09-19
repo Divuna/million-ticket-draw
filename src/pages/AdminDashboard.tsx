@@ -171,49 +171,49 @@ const AdminDashboard: React.FC = () => {
 
   const fetchContests = async () => {
     try {
-      const { data, error } = await supabase
+      // First get all contests
+      const { data: contestsData, error: contestsError } = await supabase
         .from('contests')
-        .select(`
-          id, title, description, main_prize, main_image, status, ticket_count, ticket_price, created_at,
-          bonus_prizes!left (
-            id,
-            amount,
-            status,
-            description
-          )
-        `)
+        .select('id, title, description, main_prize, main_image, status, ticket_count, ticket_price, created_at')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (contestsError) throw contestsError;
 
-      // Process data to aggregate bonus statistics
-      const processedContests = (data || []).map(contest => {
-        const bonuses = contest.bonus_prizes || [];
-        
-        const total_bonus_units = bonuses.length;
-        const total_miocoins = bonuses
-          .filter(b => b.description.includes('MioCoin') || b.amount)
-          .reduce((sum, b) => sum + (b.amount || 0), 0);
-        const physical_items = bonuses
-          .filter(b => !b.description.includes('MioCoin') && !b.amount)
-          .length;
-        const pending_bonuses = bonuses.filter(b => b.status === 'pending').length;
-        const won_bonuses = bonuses.filter(b => b.status === 'won').length;
+      // Then get aggregated bonus statistics for each contest
+      const contestsWithStats = await Promise.all(
+        (contestsData || []).map(async (contest) => {
+          const { data: bonusStats, error: bonusError } = await supabase
+            .rpc('get_contest_bonus_stats', { contest_id: contest.id });
 
-        // Remove the bonus_prizes property to avoid issues
-        const { bonus_prizes, ...contestData } = contest;
-        
-        return {
-          ...contestData,
-          total_bonus_units,
-          total_miocoins,
-          physical_items,
-          pending_bonuses,
-          won_bonuses
-        };
-      });
+          if (bonusError) {
+            console.error('Error fetching bonus stats for contest:', contest.id, bonusError);
+            // Return contest with zero stats if query fails
+            return {
+              ...contest,
+              total_bonus_units: 0,
+              total_miocoins: 0,
+              physical_items: 0,
+              pending_bonuses: 0,
+              won_bonuses: 0
+            };
+          }
 
-      setContests(processedContests);
+          const stats = bonusStats?.[0] || {
+            total_bonus_units: 0,
+            total_miocoins: 0,
+            physical_items: 0,
+            pending_bonuses: 0,
+            won_bonuses: 0
+          };
+
+          return {
+            ...contest,
+            ...stats
+          };
+        })
+      );
+
+      setContests(contestsWithStats);
     } catch (error) {
       console.error('Error fetching contests:', error);
       toast({
