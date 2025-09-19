@@ -27,11 +27,14 @@ interface Contest {
   ticket_count: number;
   ticket_price: number;
   created_at: string;
-  total_bonus_units?: number;
+  total_positions?: number;
   total_miocoins?: number;
+  pending_count?: number;
   physical_items?: number;
-  pending_bonuses?: number;
-  won_bonuses?: number;
+  won_count?: number;
+  min_position?: number;
+  max_position?: number;
+  first_20_positions?: string;
 }
 
 interface BonusPrize {
@@ -198,27 +201,33 @@ const AdminDashboard: React.FC = () => {
       const contestsWithStats = await Promise.all(
         (contestsData || []).map(async (contest) => {
           const { data: bonusStats, error: bonusError } = await supabase
-            .rpc('get_contest_bonus_stats' as any, { contest_id: contest.id });
+            .rpc('get_contest_bonus_stats_enhanced' as any, { contest_id: contest.id });
 
           if (bonusError) {
             console.error('Error fetching bonus stats for contest:', contest.id, bonusError);
             // Return contest with zero stats if query fails
             return {
               ...contest,
-              total_bonus_units: 0,
+              total_positions: 0,
               total_miocoins: 0,
               physical_items: 0,
-              pending_bonuses: 0,
-              won_bonuses: 0
+              pending_count: 0,
+              won_count: 0,
+              min_position: null,
+              max_position: null,
+              first_20_positions: 'No bonuses'
             };
           }
 
           const stats = bonusStats?.[0] || {
-            total_bonus_units: 0,
+            total_positions: 0,
             total_miocoins: 0,
             physical_items: 0,
-            pending_bonuses: 0,
-            won_bonuses: 0
+            pending_count: 0,
+            won_count: 0,
+            min_position: null,
+            max_position: null,
+            first_20_positions: 'No bonuses'
           };
 
           return {
@@ -730,47 +739,47 @@ const AdminDashboard: React.FC = () => {
                     </p>
                   ) : (
                       <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Obrázek</TableHead>
-                            <TableHead>Název soutěže</TableHead>
-                            <TableHead>Hlavní cena</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Počet tiketů</TableHead>
-                            <TableHead 
-                              className="text-center cursor-help" 
-                              title="Aktualizováno po poslední distribuci bonusů"
-                            >
-                              Celkem bonusů
-                            </TableHead>
-                            <TableHead 
-                              className="text-center cursor-help" 
-                              title="Aktualizováno po poslední distribuci bonusů"
-                            >
-                              MioCoins
-                            </TableHead>
-                            <TableHead 
-                              className="text-center cursor-help" 
-                              title="Aktualizováno po poslední distribuci bonusů"
-                            >
-                              Fyzické předměty
-                            </TableHead>
-                            <TableHead 
-                              className="text-center cursor-help" 
-                              title="Aktualizováno po poslední distribuci bonusů"
-                            >
-                              Čekající
-                            </TableHead>
-                            <TableHead 
-                              className="text-center cursor-help" 
-                              title="Aktualizováno po poslední distribuci bonusů"
-                            >
-                              Vyhrané
-                            </TableHead>
-                            <TableHead>Vytvořeno</TableHead>
-                            <TableHead>Akce</TableHead>
-                          </TableRow>
-                        </TableHeader>
+                         <TableHeader>
+                           <TableRow>
+                             <TableHead>Obrázek</TableHead>
+                             <TableHead>Název soutěže</TableHead>
+                             <TableHead>Hlavní cena</TableHead>
+                             <TableHead>Status</TableHead>
+                             <TableHead>Počet tiketů</TableHead>
+                             <TableHead 
+                               className="text-center cursor-help" 
+                               title="Celkový počet bonusových pozic (unikátní)"
+                             >
+                               Pozice
+                             </TableHead>
+                             <TableHead 
+                               className="text-center cursor-help" 
+                               title="Celkový součet MioCoins bonusů"
+                             >
+                               MioCoins
+                             </TableHead>
+                             <TableHead 
+                               className="text-center cursor-help" 
+                               title="Počet čekajících / vyhraných bonusů"
+                             >
+                               Čekající / Vyhrané
+                             </TableHead>
+                             <TableHead 
+                               className="text-center cursor-help" 
+                               title="Min-Max pozice bonusů"
+                             >
+                               Rozsah
+                             </TableHead>
+                             <TableHead 
+                               className="cursor-help" 
+                               title="Prvních 20 bonusových pozic pro rychlou vizuální kontrolu (copyable)"
+                             >
+                               První 20 pozic
+                             </TableHead>
+                             <TableHead>Vytvořeno</TableHead>
+                             <TableHead>Akce</TableHead>
+                           </TableRow>
+                         </TableHeader>
                       <TableBody>
                         {contests.map((contest) => (
                           <TableRow key={contest.id}>
@@ -814,23 +823,50 @@ const AdminDashboard: React.FC = () => {
                                  contest.status === 'delivered' ? 'Doručeno' : 'Neznámý'}
                               </Badge>
                             </TableCell>
-                             <TableCell>{contest.ticket_count.toLocaleString('cs-CZ')}</TableCell>
-                             <TableCell className="text-center">
-                               {(contest.total_bonus_units || 0).toLocaleString('cs-CZ')}
-                             </TableCell>
-                             <TableCell className="text-center">
-                               {(contest.total_miocoins || 0).toLocaleString('cs-CZ')}
-                             </TableCell>
-                             <TableCell className="text-center">
-                               {(contest.physical_items || 0).toLocaleString('cs-CZ')}
-                             </TableCell>
-                             <TableCell className="text-center">
-                               {(contest.pending_bonuses || 0).toLocaleString('cs-CZ')}
-                             </TableCell>
-                             <TableCell className="text-center">
-                               {(contest.won_bonuses || 0).toLocaleString('cs-CZ')}
-                             </TableCell>
-                             <TableCell>{new Date(contest.created_at).toLocaleDateString('cs-CZ')}</TableCell>
+                              <TableCell>{contest.ticket_count.toLocaleString('cs-CZ')}</TableCell>
+                              <TableCell className="text-center">
+                                <span className="font-mono">
+                                  {(contest.total_positions || 0).toLocaleString('cs-CZ')}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className="font-mono">
+                                  {(contest.total_miocoins || 0).toLocaleString('cs-CZ')}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className="font-mono text-orange-600">
+                                  {(contest.pending_count || 0).toLocaleString('cs-CZ')}
+                                </span>
+                                <span className="mx-1">/</span>
+                                <span className="font-mono text-green-600">
+                                  {(contest.won_count || 0).toLocaleString('cs-CZ')}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className="font-mono text-sm">
+                                  {contest.min_position && contest.max_position ? 
+                                    `${contest.min_position.toLocaleString('cs-CZ')}-${contest.max_position.toLocaleString('cs-CZ')}` : 
+                                    'N/A'
+                                  }
+                                </span>
+                              </TableCell>
+                              <TableCell className="max-w-xs">
+                                <div 
+                                  className="text-xs font-mono bg-muted p-2 rounded cursor-copy hover:bg-muted/80 transition-colors truncate"
+                                  title={`Klikněte pro zkopírování: ${contest.first_20_positions || 'No bonuses'}`}
+                                  onClick={(e) => {
+                                    navigator.clipboard.writeText(contest.first_20_positions || 'No bonuses');
+                                    toast({
+                                      title: "Zkopírováno",
+                                      description: "Pozice byly zkopírovány do schránky."
+                                    });
+                                  }}
+                                >
+                                  {contest.first_20_positions || 'No bonuses'}
+                                </div>
+                              </TableCell>
+                              <TableCell>{new Date(contest.created_at).toLocaleDateString('cs-CZ')}</TableCell>
                             <TableCell>
                               <div className="flex space-x-2">
                                 <Button 

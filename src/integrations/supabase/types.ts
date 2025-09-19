@@ -511,6 +511,19 @@ export type Database = {
           won_bonuses: number
         }[]
       }
+      get_contest_bonus_stats_enhanced: {
+        Args: { contest_id: string }
+        Returns: {
+          first_20_positions: string
+          max_position: number
+          min_position: number
+          pending_count: number
+          physical_items: number
+          total_miocoins: number
+          total_positions: number
+          won_count: number
+        }[]
+      }
       notify_sofinity_event: {
         Args: {
           p_contest_id?: string
