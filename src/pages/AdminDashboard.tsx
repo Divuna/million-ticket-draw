@@ -71,6 +71,7 @@ interface AIRequest {
 }
 
 const AdminDashboard: React.FC = () => {
+  console.log('AdminDashboard component rendering');
   const { user, session } = useAuth();
   const { testUser, isTestMode, testSignOut } = useTestAuth();
   const [searchParams] = useSearchParams();
