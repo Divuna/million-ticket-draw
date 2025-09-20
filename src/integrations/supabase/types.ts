@@ -533,6 +533,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      redeem_miocoin: {
+        Args: {
+          p_contest_id: string
+          p_ticket_position: number
+          p_user_id: string
+        }
+        Returns: {
+          message: string
+          new_status: string
+          success: boolean
+        }[]
+      }
       unlock_ticket: {
         Args: { contest_id: string; user_id: string }
         Returns: Json
