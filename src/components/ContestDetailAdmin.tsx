@@ -58,6 +58,62 @@ const ContestDetailAdmin: React.FC = () => {
       fetchContestData();
       fetchBonusPrizes();
       fetchTickets();
+      
+      // Setup realtime subscriptions for this specific contest
+      const bonusChannel = supabase
+        .channel(`contest-detail-bonus-${contestId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'bonus_prizes',
+          filter: `contest_id=eq.${contestId}`
+        }, (payload) => {
+          console.log('Contest detail bonus change:', payload);
+          fetchBonusPrizes();
+          
+          let message = '';
+          if (payload.eventType === 'INSERT' && payload.new && 'ticket_position' in payload.new) {
+            message = `Nová bonusová cena přidána na pozici #${payload.new.ticket_position}`;
+          } else if (payload.eventType === 'UPDATE' && payload.new && 'ticket_position' in payload.new) {
+            message = `Bonusová cena aktualizována na pozici #${payload.new.ticket_position}`;
+          } else if (payload.eventType === 'DELETE' && payload.old && 'ticket_position' in payload.old) {
+            message = `Bonusová cena odstraněna z pozice #${payload.old.ticket_position}`;
+          }
+          
+          if (message) {
+            toast({
+              title: "Změna bonusové ceny",
+              description: message,
+            });
+          }
+        })
+        .subscribe();
+
+      const ticketsChannel = supabase
+        .channel(`contest-detail-tickets-${contestId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'tickets',
+          filter: `contest_id=eq.${contestId}`
+        }, (payload) => {
+          console.log('Contest detail ticket change:', payload);
+          fetchTickets();
+          fetchContestData(); // Update contest data to reflect new ticket count
+          
+          if (payload.eventType === 'INSERT' && payload.new && 'number' in payload.new) {
+            toast({
+              title: "Nový tiket",
+              description: `Tiket #${payload.new.number} byl zakoupen`,
+            });
+          }
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(bonusChannel);
+        supabase.removeChannel(ticketsChannel);
+      };
     }
   }, [contestId]);
 

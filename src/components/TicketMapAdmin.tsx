@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,8 @@ interface TicketMapAdminProps {}
 export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
   const [contests, setContests] = useState<ContestData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [highlightedMarkers, setHighlightedMarkers] = useState<Set<string>>(new Set());
+  const highlightTimeoutRef = useRef<{ [key: string]: NodeJS.Timeout }>({});
 
   const fetchContests = async () => {
     try {
@@ -50,6 +52,77 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
 
   useEffect(() => {
     fetchContests();
+    
+    // Setup realtime subscriptions
+    const bonusChannel = supabase
+      .channel('ticket-map-bonus-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'bonus_prizes'
+      }, (payload) => {
+        console.log('Bonus prize change detected:', payload);
+        
+        // Highlight the affected contest's bonus markers
+        if (payload.new && 'contest_id' in payload.new && 'ticket_position' in payload.new) {
+          highlightMarker(`bonus-${payload.new.contest_id}-${payload.new.ticket_position}`);
+        } else if (payload.old && 'contest_id' in payload.old && 'ticket_position' in payload.old) {
+          highlightMarker(`bonus-${payload.old.contest_id}-${payload.old.ticket_position}`);
+        }
+        
+        // Refresh contest data
+        fetchContests();
+        
+        // Show toast message
+        let message = '';
+        if (payload.eventType === 'INSERT' && payload.new && 'ticket_position' in payload.new) {
+          message = `Nová bonusová cena přidána na pozici #${payload.new.ticket_position}`;
+        } else if (payload.eventType === 'UPDATE' && payload.new && 'ticket_position' in payload.new) {
+          message = `Bonusová cena aktualizována na pozici #${payload.new.ticket_position}`;
+        } else if (payload.eventType === 'DELETE' && payload.old && 'ticket_position' in payload.old) {
+          message = `Bonusová cena odstraněna z pozice #${payload.old.ticket_position}`;
+        }
+        
+        if (message) {
+          toast({
+            title: "Změna bonusové ceny",
+            description: message,
+          });
+        }
+      })
+      .subscribe();
+
+    const ticketsChannel = supabase
+      .channel('ticket-map-tickets-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tickets'
+      }, (payload) => {
+        console.log('Ticket change detected:', payload);
+        
+        // Refresh contest data to update tickets_played count
+        fetchContests();
+        
+        // Show toast for new tickets
+        if (payload.eventType === 'INSERT' && payload.new && 'number' in payload.new) {
+          toast({
+            title: "Nový tiket",
+            description: `Tiket #${payload.new.number} byl zakoupen`,
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bonusChannel);
+      supabase.removeChannel(ticketsChannel);
+      
+      // Clean up highlight timeouts
+      Object.values(highlightTimeoutRef.current).forEach(timeout => {
+        clearTimeout(timeout);
+      });
+    };
   }, []);
 
   const getProgressPercentage = (played: number, total: number) => {
@@ -58,6 +131,25 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
 
   const getMarkerPosition = (ticketNumber: number, totalTickets: number) => {
     return (ticketNumber / totalTickets) * 100;
+  };
+
+  const highlightMarker = (markerId: string) => {
+    setHighlightedMarkers(prev => new Set(prev).add(markerId));
+    
+    // Clear existing timeout for this marker
+    if (highlightTimeoutRef.current[markerId]) {
+      clearTimeout(highlightTimeoutRef.current[markerId]);
+    }
+    
+    // Set new timeout to remove highlight after 3 seconds
+    highlightTimeoutRef.current[markerId] = setTimeout(() => {
+      setHighlightedMarkers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(markerId);
+        return newSet;
+      });
+      delete highlightTimeoutRef.current[markerId];
+    }, 3000);
   };
 
   return (
@@ -111,13 +203,17 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div
-                            className="absolute top-0 w-1 h-full bg-yellow-500 cursor-pointer hover:bg-yellow-400 transition-colors z-10"
+                            className={`absolute top-0 w-1 h-full bg-yellow-500 cursor-pointer hover:bg-yellow-400 transition-all duration-300 z-10 ${
+                              highlightedMarkers.has(`main-${contest.id}`) ? 'animate-pulse shadow-lg shadow-yellow-400' : ''
+                            }`}
                             style={{
                               left: `${getMarkerPosition(contest.main_prize_ticket, contest.total_tickets)}%`,
                               transform: 'translateX(-50%)'
                             }}
                           >
-                            <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-yellow-500 rotate-45 border border-yellow-600" />
+                            <div className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-yellow-500 rotate-45 border border-yellow-600 ${
+                              highlightedMarkers.has(`main-${contest.id}`) ? 'shadow-lg shadow-yellow-400' : ''
+                            }`} />
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -128,26 +224,35 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
                   )}
                   
                   {/* Bonus tickets markers */}
-                  {contest.bonus_tickets.map((ticketNumber, bonusIndex) => (
-                    <TooltipProvider key={bonusIndex}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div
-                            className="absolute top-0 w-1 h-full bg-orange-500 cursor-pointer hover:bg-orange-400 transition-colors z-10"
-                            style={{
-                              left: `${getMarkerPosition(ticketNumber, contest.total_tickets)}%`,
-                              transform: 'translateX(-50%)'
-                            }}
-                          >
-                            <div className="absolute -top-1.5 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-orange-500 rounded-full border border-orange-600" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Bonus: tiket #{ticketNumber}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  ))}
+                  {contest.bonus_tickets.map((ticketNumber, bonusIndex) => {
+                    const markerId = `bonus-${contest.id}-${ticketNumber}`;
+                    const isHighlighted = highlightedMarkers.has(markerId);
+                    
+                    return (
+                      <TooltipProvider key={bonusIndex}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div
+                              className={`absolute top-0 w-1 h-full bg-orange-500 cursor-pointer hover:bg-orange-400 transition-all duration-300 z-10 ${
+                                isHighlighted ? 'animate-pulse shadow-lg shadow-orange-400' : ''
+                              }`}
+                              style={{
+                                left: `${getMarkerPosition(ticketNumber, contest.total_tickets)}%`,
+                                transform: 'translateX(-50%)'
+                              }}
+                            >
+                              <div className={`absolute -top-1.5 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-orange-500 rounded-full border border-orange-600 ${
+                                isHighlighted ? 'shadow-lg shadow-orange-400' : ''
+                              }`} />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Bonus: tiket #{ticketNumber}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  })}
                 </div>
                 
                 {/* Progress percentage label */}
