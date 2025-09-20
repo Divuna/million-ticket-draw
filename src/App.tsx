@@ -18,7 +18,6 @@ import Messages from "./pages/Messages";
 import Vouchers from "./pages/Vouchers";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminWinners from "./pages/AdminWinners";
-import ContestDetailAdmin from "./components/ContestDetailAdmin";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
 import NotFound from "./pages/NotFound";
@@ -45,7 +44,6 @@ const App = () => (
             <Route path="/contest/:id/bonus" element={<BonusDetail />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/contest/:contestId" element={<ContestDetailAdmin />} />
             <Route path="/admin/winners" element={<AdminWinners />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/payment-cancel" element={<PaymentCancel />} />

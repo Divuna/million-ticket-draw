@@ -71,7 +71,6 @@ interface AIRequest {
 }
 
 const AdminDashboard: React.FC = () => {
-  console.log('AdminDashboard component rendering');
   const { user, session } = useAuth();
   const { testUser, isTestMode, testSignOut } = useTestAuth();
   const [searchParams] = useSearchParams();
@@ -88,6 +87,14 @@ const AdminDashboard: React.FC = () => {
   const [duplicateWarnings, setDuplicateWarnings] = useState<string[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   
+  // Ticket map data state
+  const [ticketMapData, setTicketMapData] = useState<Array<{
+    title: string;
+    tickets_played: number;
+    total_tickets: number;
+    main_prize_ticket: number | null;
+    bonus_tickets: number[];
+  }>>([]);
   
   // Form states
   const [contestForm, setContestForm] = useState({
@@ -119,6 +126,7 @@ const AdminDashboard: React.FC = () => {
     if (user || (isTestMode && testUser)) {
       checkAdminRole();
       fetchContests();
+      fetchTicketMapData();
     }
   }, [user, isTestMode, testUser]);
 
@@ -128,6 +136,7 @@ const AdminDashboard: React.FC = () => {
     if (isTestMode && testUser) {
       checkAdminRole();
       fetchContests();
+      fetchTicketMapData();
     }
   }, [isTestMode, testUser]);
 
@@ -277,7 +286,59 @@ const AdminDashboard: React.FC = () => {
   };
 
   const fetchTicketMapData = async () => {
-    // This function is no longer needed as TicketMapAdmin now fetches its own data
+    try {
+      const { data: contestsData, error } = await supabase
+        .from('contests')
+        .select('id, title, ticket_count')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const ticketMapDataPromises = (contestsData || []).map(async (contest) => {
+        // Fetch sold tickets count
+        const { count: ticketsPlayed, error: ticketsError } = await supabase
+          .from('tickets')
+          .select('*', { count: 'exact', head: true })
+          .eq('contest_id', contest.id);
+
+        if (ticketsError) {
+          console.error('Error fetching tickets count:', ticketsError);
+        }
+
+        // Fetch bonus prizes positions
+        const { data: bonusPrizes, error: bonusError } = await supabase
+          .from('bonus_prizes')
+          .select('ticket_position')
+          .eq('contest_id', contest.id)
+          .order('ticket_position', { ascending: true });
+
+        if (bonusError) {
+          console.error('Error fetching bonus prizes:', bonusError);
+        }
+
+        // For main prize ticket, we'll assume it's the last ticket for demo purposes
+        // In a real implementation, this should come from contest configuration
+        const mainPrizeTicket = contest.ticket_count;
+
+        return {
+          title: contest.title,
+          tickets_played: ticketsPlayed || 0,
+          total_tickets: contest.ticket_count,
+          main_prize_ticket: mainPrizeTicket,
+          bonus_tickets: (bonusPrizes || []).map(p => p.ticket_position)
+        };
+      });
+
+      const ticketMapData = await Promise.all(ticketMapDataPromises);
+      setTicketMapData(ticketMapData);
+    } catch (error) {
+      console.error('Error fetching ticket map data:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se načíst data pro mapu tiketů.",
+        variant: "destructive"
+      });
+    }
   };
 
   const createContest = async () => {
@@ -922,7 +983,7 @@ const AdminDashboard: React.FC = () => {
 
             {/* Ticket Map */}
             <TabsContent value="ticketmap">
-              <TicketMapAdmin />
+              <TicketMapAdmin contests={ticketMapData} />
             </TabsContent>
 
             {/* Create Contest */}
