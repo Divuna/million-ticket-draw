@@ -1,21 +1,34 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { Progress } from '@/components/ui/progress';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { Eye, Loader2 } from 'lucide-react';
 
 interface ContestData {
+  id: string;
   title: string;
+  description: string;
+  main_prize: string;
+  main_image: string;
+  status: string;
   tickets_played: number;
   total_tickets: number;
   main_prize_ticket: number | null;
   bonus_tickets: number[];
+  created_at: string;
+  ticket_price: number;
 }
 
-interface TicketMapAdminProps {
-  contests: ContestData[];
-}
+interface TicketMapAdminProps {}
 
-export const TicketMapAdmin: React.FC<TicketMapAdminProps> = ({ contests }) => {
+export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
+  const navigate = useNavigate();
+  const [contests, setContests] = useState<ContestData[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const getProgressPercentage = (played: number, total: number) => {
     return Math.min((played / total) * 100, 100);
   };
@@ -23,6 +36,84 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = ({ contests }) => {
   const getMarkerPosition = (ticketNumber: number, totalTickets: number) => {
     return (ticketNumber / totalTickets) * 100;
   };
+
+  useEffect(() => {
+    fetchContestsData();
+  }, []);
+
+  const fetchContestsData = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('contests')
+        .select(`
+          id, title, description, main_prize, main_image, status, 
+          ticket_count, ticket_price, created_at
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Fetch additional data for each contest
+      const contestsWithData = await Promise.all(
+        (data || []).map(async (contest: any) => {
+          // Get tickets played count
+          const { count: ticketsPlayed } = await supabase
+            .from('tickets')
+            .select('*', { count: 'exact', head: true })
+            .eq('contest_id', contest.id);
+          
+          // Get bonus tickets positions (limited to 50)
+          const { data: bonusPrizes } = await supabase
+            .from('bonus_prizes')
+            .select('ticket_position')
+            .eq('contest_id', contest.id)
+            .order('ticket_position', { ascending: true })
+            .limit(50);
+          
+          return {
+            ...contest,
+            tickets_played: ticketsPlayed || 0,
+            total_tickets: contest.ticket_count,
+            main_prize_ticket: contest.ticket_count, // Assuming last ticket wins main prize
+            bonus_tickets: (bonusPrizes || []).map(bp => bp.ticket_position)
+          };
+        })
+      );
+      
+      setContests(contestsWithData);
+    } catch (error) {
+      console.error('Error fetching contests data:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se načíst data soutěží.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleContestDetail = (contestId: string) => {
+    navigate(`/admin/contest/${contestId}`);
+  };
+
+  if (loading) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Mapa tiketů</CardTitle>
+          <CardDescription>
+            Přehled prodaných tiketů a pozic cen pro všechny soutěže
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span className="text-muted-foreground">Načítání dat...</span>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">
@@ -39,11 +130,22 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = ({ contests }) => {
           </div>
         ) : (
           contests.map((contest, index) => (
-            <div key={index} className="space-y-3">
+            <div key={contest.id} className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h3 className="font-semibold text-base">{contest.title}</h3>
-                <div className="text-sm text-muted-foreground">
-                  {contest.tickets_played.toLocaleString()} / {contest.total_tickets.toLocaleString()} tiketů
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-muted-foreground">
+                    {contest.tickets_played.toLocaleString()} / {contest.total_tickets.toLocaleString()} tiketů
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleContestDetail(contest.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Detail soutěže
+                  </Button>
                 </div>
               </div>
               
