@@ -1,21 +1,58 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { Progress } from '@/components/ui/progress';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface ContestData {
+  id: string;
   title: string;
+  description: string;
+  main_prize: string;
+  main_image: string;
+  status: string;
   tickets_played: number;
   total_tickets: number;
   main_prize_ticket: number | null;
   bonus_tickets: number[];
+  created_at: string;
+  ticket_price: number;
 }
 
-interface TicketMapAdminProps {
-  contests: ContestData[];
-}
+interface TicketMapAdminProps {}
 
-export const TicketMapAdmin: React.FC<TicketMapAdminProps> = ({ contests }) => {
+export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
+  const [contests, setContests] = useState<ContestData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchContests = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.rpc('get_contests_json');
+      
+      if (error) throw error;
+      
+      // Parse the JSON response
+      const contestsData = Array.isArray(data) ? data : [];
+      setContests(contestsData as any);
+    } catch (error) {
+      console.error('Error fetching contests:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se načíst data soutěží.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchContests();
+  }, []);
+
   const getProgressPercentage = (played: number, total: number) => {
     return Math.min((played / total) * 100, 100);
   };
@@ -33,17 +70,28 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = ({ contests }) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {contests.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Načítání...
+          </div>
+        ) : contests.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             Žádná data k zobrazení
           </div>
         ) : (
           contests.map((contest, index) => (
-            <div key={index} className="space-y-3">
+            <div key={contest.id} className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h3 className="font-semibold text-base">{contest.title}</h3>
-                <div className="text-sm text-muted-foreground">
-                  {contest.tickets_played.toLocaleString()} / {contest.total_tickets.toLocaleString()} tiketů
+                <div className="flex items-center gap-3">
+                  <div className="text-sm text-muted-foreground">
+                    {contest.tickets_played.toLocaleString()} / {contest.total_tickets.toLocaleString()} tiketů
+                  </div>
+                  <Link to={`/admin/contest/${contest.id}`}>
+                    <Button variant="outline" size="sm">
+                      Detail soutěže
+                    </Button>
+                  </Link>
                 </div>
               </div>
               

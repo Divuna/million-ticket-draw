@@ -524,6 +524,10 @@ export type Database = {
           won_count: number
         }[]
       }
+      get_contests_json: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       notify_sofinity_event: {
         Args: {
           p_contest_id?: string
