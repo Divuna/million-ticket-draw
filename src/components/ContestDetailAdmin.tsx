@@ -1,3 +1,4 @@
+console.log('ContestDetailAdmin module loading');
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,6 +44,7 @@ interface Ticket {
 }
 
 const ContestDetailAdmin: React.FC = () => {
+  console.log('ContestDetailAdmin component is loading');
   const { contestId } = useParams<{ contestId: string }>();
   const { user } = useAuth();
   const [contest, setContest] = useState<ContestData | null>(null);
@@ -438,4 +440,5 @@ const ContestDetailAdmin: React.FC = () => {
   );
 };
 
+console.log('Exporting ContestDetailAdmin component');
 export default ContestDetailAdmin;

@@ -1,3 +1,4 @@
+console.log('App module loading');
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 
@@ -18,7 +19,7 @@ import Messages from "./pages/Messages";
 import Vouchers from "./pages/Vouchers";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminWinners from "./pages/AdminWinners";
-import ContestDetailAdmin from "./components/ContestDetailAdmin";
+import ContestDetailAdmin from "@/components/ContestDetailAdmin";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
 import NotFound from "./pages/NotFound";
