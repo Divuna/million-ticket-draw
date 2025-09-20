@@ -719,7 +719,7 @@ const AdminDashboard: React.FC = () => {
             </Button>
           </div>
           
-          <Tabs defaultValue="contests" className="space-y-6">
+          <Tabs defaultValue="ticketmap" className="space-y-6">
             <TabsList>
               <TabsTrigger value="contests">Soutěže</TabsTrigger>
               <TabsTrigger value="ticketmap">Mapa tiketů</TabsTrigger>

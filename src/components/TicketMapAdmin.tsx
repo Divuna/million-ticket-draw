@@ -34,9 +34,8 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
       
       if (error) throw error;
       
-      // Parse the JSON response
-      const contestsData = Array.isArray(data) ? data : [];
-      setContests(contestsData as any);
+      // The RPC function returns JSON data directly
+      setContests((data as unknown as ContestData[]) || []);
     } catch (error) {
       console.error('Error fetching contests:', error);
       toast({
