@@ -71,6 +71,13 @@ export type Database = {
             foreignKeyName: "bonus_prizes_contest_id_fkey"
             columns: ["contest_id"]
             isOneToOne: false
+            referencedRelation: "admin_contest_status"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "bonus_prizes_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
             referencedRelation: "contests"
             referencedColumns: ["id"]
           },
@@ -118,12 +125,41 @@ export type Database = {
         }
         Relationships: []
       }
+      event_logs: {
+        Row: {
+          contest_id: string | null
+          event_name: string | null
+          id: number
+          metadata: Json | null
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          contest_id?: string | null
+          event_name?: string | null
+          id?: never
+          metadata?: Json | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          contest_id?: string | null
+          event_name?: string | null
+          id?: never
+          metadata?: Json | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
           id: string
           message: string
+          sent_at: string | null
           status: string
+          title: string | null
           type: string
           user_id: string
         }
@@ -131,7 +167,9 @@ export type Database = {
           created_at?: string
           id?: string
           message: string
+          sent_at?: string | null
           status?: string
+          title?: string | null
           type: string
           user_id: string
         }
@@ -139,7 +177,9 @@ export type Database = {
           created_at?: string
           id?: string
           message?: string
+          sent_at?: string | null
           status?: string
+          title?: string | null
           type?: string
           user_id?: string
         }
@@ -241,6 +281,13 @@ export type Database = {
             foreignKeyName: "prizes_contest_id_fkey"
             columns: ["contest_id"]
             isOneToOne: false
+            referencedRelation: "admin_contest_status"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "prizes_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
             referencedRelation: "contests"
             referencedColumns: ["id"]
           },
@@ -269,6 +316,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tickets_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "admin_contest_status"
+            referencedColumns: ["contest_id"]
+          },
           {
             foreignKeyName: "tickets_contest_id_fkey"
             columns: ["contest_id"]
@@ -463,6 +517,13 @@ export type Database = {
             foreignKeyName: "winners_contest_id_fkey"
             columns: ["contest_id"]
             isOneToOne: false
+            referencedRelation: "admin_contest_status"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "winners_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
             referencedRelation: "contests"
             referencedColumns: ["id"]
           },
@@ -484,6 +545,46 @@ export type Database = {
       }
     }
     Views: {
+      admin_bonus_delivery_status: {
+        Row: {
+          bonus_positions: string | null
+          contest_name: string | null
+          delivered_bonus_count: number | null
+          total_bonus_count: number | null
+          undelivered_bonus_count: number | null
+          won_bonus_count: number | null
+        }
+        Relationships: []
+      }
+      admin_bonus_overview: {
+        Row: {
+          assigned_bonus_count: number | null
+          bonus_positions: string | null
+          contest_name: string | null
+          total_bonus_count: number | null
+          unassigned_bonus_count: number | null
+        }
+        Relationships: []
+      }
+      admin_bonus_overview_limited_string: {
+        Row: {
+          assigned_bonus_count: number | null
+          contest_name: string | null
+          limited_bonus_positions: string | null
+          total_bonus_count: number | null
+          unassigned_bonus_count: number | null
+        }
+        Relationships: []
+      }
+      admin_contest_status: {
+        Row: {
+          contest_id: string | null
+          contest_name: string | null
+          ticket_ids: string | null
+          total_tickets: number | null
+        }
+        Relationships: []
+      }
       v_user_wallets: {
         Row: {
           balance_coins: number | null
@@ -527,6 +628,16 @@ export type Database = {
       get_contests_json: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      log_admin_action: {
+        Args: {
+          action_name: string
+          entity_id?: string
+          entity_type: string
+          new_data?: Json
+          old_data?: Json
+        }
+        Returns: undefined
       }
       notify_sofinity_event: {
         Args: {
