@@ -689,6 +689,16 @@ export type Database = {
         }
         Returns: Json
       }
+      create_test_result: {
+        Args: {
+          p_details?: Json
+          p_execution_time_ms?: number
+          p_message?: string
+          p_status: string
+          p_test_name: string
+        }
+        Returns: Json
+      }
       fn_close_contest: {
         Args: { p_contest: string }
         Returns: undefined
@@ -811,6 +821,26 @@ export type Database = {
           new_status: string
           success: boolean
         }[]
+      }
+      run_complete_admin_test_suite: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      test_admin_crud_operations: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      test_admin_security_rls: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      test_audit_logging: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      test_sofinity_integration: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       unlock_ticket: {
         Args: { contest_id: string; user_id: string }
