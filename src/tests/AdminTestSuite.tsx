@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, XCircle, Clock, AlertTriangle, Play, RefreshCw, Timer } from 'lucide-react'; // Fixed cache issue
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle, XCircle, Clock, AlertTriangle, Play, RefreshCw, Timer, Database, Shield, FileText, Zap } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/integrations/supabase/client';
@@ -47,11 +48,30 @@ interface ComprehensiveTestResult {
   };
 }
 
+interface DataIntegrityResult {
+  table_name: string;
+  status: 'passed' | 'failed' | 'warning';
+  message: string;
+  details?: any;
+  orphaned_count?: number;
+  missing_relationships?: string[];
+}
+
+interface SofinityEventSummary {
+  event_name: string;
+  count: number;
+  latest_timestamp: string;
+  sample_metadata: any;
+}
+
 export const AdminTestSuite: React.FC = () => {
   const [testResults, setTestResults] = useState<ComprehensiveTestResult | null>(null);
   const [individualSuites, setIndividualSuites] = useState<{[key: string]: TestSuite}>({});
+  const [dataIntegrityResults, setDataIntegrityResults] = useState<DataIntegrityResult[]>([]);
+  const [sofinityEvents, setSofinityEvents] = useState<SofinityEventSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [performanceMetrics, setPerformanceMetrics] = useState<{[key: string]: number}>({});
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -88,20 +108,36 @@ export const AdminTestSuite: React.FC = () => {
 
   const runCompleteTestSuite = async () => {
     setLoading(true);
+    const startTime = Date.now();
+    
     try {
+      // Run complete test suite
       const { data, error } = await supabase.rpc('run_complete_admin_test_suite');
       
       if (error) throw error;
       
       const testData = data as unknown as ComprehensiveTestResult;
       setTestResults(testData);
+      
+      // Run data integrity checks in parallel
+      await Promise.all([
+        runDataIntegrityChecks(),
+        validateSofinityEvents()
+      ]);
+      
+      const executionTime = Date.now() - startTime;
+      setPerformanceMetrics(prev => ({
+        ...prev,
+        complete_suite: executionTime
+      }));
+
       toast({
-        title: "Test suite dokončen",
-        description: `${testData.summary.passed_tests}/${testData.summary.total_tests} testů prošlo (${testData.summary.success_rate}%)`,
+        title: "Kompletní test suite dokončen",
+        description: `${testData.summary.passed_tests}/${testData.summary.total_tests} testů prošlo (${testData.summary.success_rate}%) za ${executionTime}ms`,
       });
     } catch (error: any) {
       toast({
-        title: "Chyba při spuštění testů",
+        title: "Chyba při spuštění kompletních testů",
         description: error.message,
         variant: "destructive"
       });
@@ -110,23 +146,172 @@ export const AdminTestSuite: React.FC = () => {
     }
   };
 
+  const runDataIntegrityChecks = async () => {
+    try {
+      // Check table relationships and orphaned records
+      const integrityChecks = [
+        checkContestBonusPrizeRelationships(),
+        checkVoucherUserRelationships(),
+        checkPaymentUserRelationships(),
+        checkAuditLogConsistency(),
+        checkEventLogCompleteness()
+      ];
+      
+      const results = await Promise.all(integrityChecks);
+      setDataIntegrityResults(results.flat());
+    } catch (error) {
+      console.error('Data integrity check failed:', error);
+    }
+  };
+
+  const checkContestBonusPrizeRelationships = async (): Promise<DataIntegrityResult[]> => {
+    const { data: orphanedBonuses } = await supabase
+      .from('bonus_prizes')
+      .select('id, contest_id')
+      .not('contest_id', 'in', 
+        supabase.from('contests').select('id'));
+
+    return [{
+      table_name: 'bonus_prizes -> contests',
+      status: orphanedBonuses && orphanedBonuses.length > 0 ? 'warning' : 'passed',
+      message: orphanedBonuses && orphanedBonuses.length > 0 
+        ? `Nalezeno ${orphanedBonuses.length} bonusových výher bez odpovídající soutěže`
+        : 'Všechny bonusové výhry mají správnou vazbu na soutěže',
+      orphaned_count: orphanedBonuses?.length || 0
+    }];
+  };
+
+  const checkVoucherUserRelationships = async (): Promise<DataIntegrityResult[]> => {
+    const { data: orphanedVouchers } = await supabase
+      .from('vouchers')
+      .select('id, user_id')
+      .not('user_id', 'in', 
+        supabase.from('users').select('id'));
+
+    return [{
+      table_name: 'vouchers -> users',
+      status: orphanedVouchers && orphanedVouchers.length > 0 ? 'warning' : 'passed',
+      message: orphanedVouchers && orphanedVouchers.length > 0
+        ? `Nalezeno ${orphanedVouchers.length} voucherů bez odpovídajícího uživatele`
+        : 'Všechny vouchery mají správnou vazbu na uživatele',
+      orphaned_count: orphanedVouchers?.length || 0
+    }];
+  };
+
+  const checkPaymentUserRelationships = async (): Promise<DataIntegrityResult[]> => {
+    const { data: orphanedPayments } = await supabase
+      .from('payments')
+      .select('id, user_id')
+      .not('user_id', 'in', 
+        supabase.from('users').select('id'));
+
+    return [{
+      table_name: 'payments -> users',
+      status: orphanedPayments && orphanedPayments.length > 0 ? 'warning' : 'passed',
+      message: orphanedPayments && orphanedPayments.length > 0
+        ? `Nalezeno ${orphanedPayments.length} plateb bez odpovídajícího uživatele`
+        : 'Všechny platby mají správnou vazbu na uživatele',
+      orphaned_count: orphanedPayments?.length || 0
+    }];
+  };
+
+  const checkAuditLogConsistency = async (): Promise<DataIntegrityResult[]> => {
+    const { data: recentAdminActions } = await supabase
+      .from('admin_actions')
+      .select('*')
+      .gte('timestamp', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .limit(100);
+
+    const hasMetadata = recentAdminActions?.every(action => 
+      action.metadata && typeof action.metadata === 'object');
+
+    return [{
+      table_name: 'admin_actions audit consistency',
+      status: hasMetadata ? 'passed' : 'warning',
+      message: hasMetadata 
+        ? `Všechny admin akce (${recentAdminActions?.length || 0}) mají správná metadata`
+        : 'Některé admin akce nemají správná metadata',
+      details: { recent_count: recentAdminActions?.length || 0 }
+    }];
+  };
+
+  const checkEventLogCompleteness = async (): Promise<DataIntegrityResult[]> => {
+    const { data: recentEvents } = await supabase
+      .from('event_logs')
+      .select('*')
+      .gte('timestamp', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .limit(50);
+
+    const hasRequiredFields = recentEvents?.every(event => 
+      event.event_name && event.timestamp && event.metadata);
+
+    return [{
+      table_name: 'event_logs completeness',
+      status: hasRequiredFields ? 'passed' : 'warning',
+      message: hasRequiredFields
+        ? `Všechny event logy (${recentEvents?.length || 0}) mají povinná pole`
+        : 'Některé event logy nemají všechna povinná pole',
+      details: { recent_count: recentEvents?.length || 0 }
+    }];
+  };
+
+  const validateSofinityEvents = async () => {
+    try {
+      const { data, error } = await supabase.rpc('validate_sofinity_events', { p_hours_back: 24 });
+      
+      if (error) throw error;
+      
+      setSofinityEvents(data || []);
+    } catch (error) {
+      console.error('Sofinity validation failed:', error);
+    }
+  };
+
   const runIndividualTestSuite = async (testType: string) => {
     setLoading(true);
+    const startTime = Date.now();
+    
     try {
       let rpcFunction: any = '';
+      let displayName = '';
+      
       switch (testType) {
         case 'crud':
           rpcFunction = 'test_admin_crud_operations';
+          displayName = 'CRUD Operace';
           break;
         case 'security':
           rpcFunction = 'test_admin_security_rls';
+          displayName = 'Bezpečnost & RLS';
           break;
         case 'audit':
           rpcFunction = 'test_audit_logging';
+          displayName = 'Audit Logging';
           break;
         case 'sofinity':
           rpcFunction = 'test_sofinity_integration';
+          displayName = 'Sofinity Integrace';
           break;
+        case 'integrity':
+          await runDataIntegrityChecks();
+          displayName = 'Integrita dat';
+          const executionTime = Date.now() - startTime;
+          setPerformanceMetrics(prev => ({ ...prev, [testType]: executionTime }));
+          toast({
+            title: `${displayName} dokončen`,
+            description: `Kontrola integrity dat dokončena za ${executionTime}ms`,
+          });
+          return;
+        case 'events':
+          await validateSofinityEvents();
+          displayName = 'Sofinity události';
+          const eventsTime = Date.now() - startTime;
+          setPerformanceMetrics(prev => ({ ...prev, [testType]: eventsTime }));
+          toast({
+            title: `${displayName} dokončeno`,
+            description: `Validace Sofinity událostí dokončena za ${eventsTime}ms`,
+          });
+          return;
         default:
           throw new Error(`Neznámý typ testu: ${testType}`);
       }
@@ -141,9 +326,12 @@ export const AdminTestSuite: React.FC = () => {
         [testType]: suiteData
       }));
 
+      const executionTime = Date.now() - startTime;
+      setPerformanceMetrics(prev => ({ ...prev, [testType]: executionTime }));
+
       toast({
-        title: `${suiteData.suite_name} dokončen`,
-        description: `${suiteData.passed_tests}/${suiteData.total_tests} testů prošlo`,
+        title: `${displayName} dokončen`,
+        description: `${suiteData.passed_tests}/${suiteData.total_tests} testů prošlo za ${executionTime}ms`,
       });
     } catch (error: any) {
       toast({
@@ -253,21 +441,23 @@ export const AdminTestSuite: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview">Přehled</TabsTrigger>
           <TabsTrigger value="crud">CRUD Testy</TabsTrigger>
           <TabsTrigger value="security">Bezpečnost</TabsTrigger>
           <TabsTrigger value="audit">Audit</TabsTrigger>
           <TabsTrigger value="sofinity">Sofinity</TabsTrigger>
+          <TabsTrigger value="integrity">Integrita dat</TabsTrigger>
+          <TabsTrigger value="performance">Výkonnost</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
-                  <Play className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm font-medium">CRUD Operace</span>
+                  <Database className="h-4 w-4 text-blue-500" />
+                  <span className="text-xs font-medium">CRUD Operace</span>
                 </div>
                 <div className="mt-2">
                   <Button 
@@ -275,18 +465,24 @@ export const AdminTestSuite: React.FC = () => {
                     size="sm" 
                     onClick={() => runIndividualTestSuite('crud')}
                     disabled={loading}
+                    className="w-full text-xs"
                   >
-                    Spustit CRUD testy
+                    Spustit CRUD
                   </Button>
                 </div>
+                {performanceMetrics.crud && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {performanceMetrics.crud}ms
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm font-medium">Bezpečnost & RLS</span>
+                  <Shield className="h-4 w-4 text-green-500" />
+                  <span className="text-xs font-medium">Bezpečnost</span>
                 </div>
                 <div className="mt-2">
                   <Button 
@@ -294,18 +490,24 @@ export const AdminTestSuite: React.FC = () => {
                     size="sm" 
                     onClick={() => runIndividualTestSuite('security')}
                     disabled={loading}
+                    className="w-full text-xs"
                   >
-                    Spustit RLS testy
+                    Spustit RLS
                   </Button>
                 </div>
+                {performanceMetrics.security && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {performanceMetrics.security}ms
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
-                  <Timer className="h-4 w-4 text-purple-500" />
-                  <span className="text-sm font-medium">Audit Logging</span>
+                  <FileText className="h-4 w-4 text-purple-500" />
+                  <span className="text-xs font-medium">Audit</span>
                 </div>
                 <div className="mt-2">
                   <Button 
@@ -313,18 +515,24 @@ export const AdminTestSuite: React.FC = () => {
                     size="sm" 
                     onClick={() => runIndividualTestSuite('audit')}
                     disabled={loading}
+                    className="w-full text-xs"
                   >
-                    Spustit audit testy
+                    Spustit audit
                   </Button>
                 </div>
+                {performanceMetrics.audit && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {performanceMetrics.audit}ms
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
-                  <AlertTriangle className="h-4 w-4 text-orange-500" />
-                  <span className="text-sm font-medium">Sofinity Integrace</span>
+                  <Zap className="h-4 w-4 text-orange-500" />
+                  <span className="text-xs font-medium">Sofinity</span>
                 </div>
                 <div className="mt-2">
                   <Button 
@@ -332,13 +540,128 @@ export const AdminTestSuite: React.FC = () => {
                     size="sm" 
                     onClick={() => runIndividualTestSuite('sofinity')}
                     disabled={loading}
+                    className="w-full text-xs"
                   >
-                    Spustit Sofinity testy
+                    Spustit Sofinity
                   </Button>
                 </div>
+                {performanceMetrics.sofinity && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {performanceMetrics.sofinity}ms
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Database className="h-4 w-4 text-cyan-500" />
+                  <span className="text-xs font-medium">Integrita dat</span>
+                </div>
+                <div className="mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => runIndividualTestSuite('integrity')}
+                    disabled={loading}
+                    className="w-full text-xs"
+                  >
+                    Zkontrolovat data
+                  </Button>
+                </div>
+                {performanceMetrics.integrity && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {performanceMetrics.integrity}ms
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4 text-indigo-500" />
+                  <span className="text-xs font-medium">Události</span>
+                </div>
+                <div className="mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => runIndividualTestSuite('events')}
+                    disabled={loading}
+                    className="w-full text-xs"
+                  >
+                    Validovat události
+                  </Button>
+                </div>
+                {performanceMetrics.events && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {performanceMetrics.events}ms
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
+
+          {/* Data Integrity Summary */}
+          {dataIntegrityResults.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Database className="h-4 w-4" />
+                  <span>Integrita dat - rychlý přehled</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {dataIntegrityResults.filter(r => r.status === 'passed').length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Prošlo</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-600">
+                      {dataIntegrityResults.filter(r => r.status === 'warning').length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Varování</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">
+                      {dataIntegrityResults.filter(r => r.status === 'failed').length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Selhalo</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Sofinity Events Summary */}
+          {sofinityEvents.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Zap className="h-4 w-4" />
+                  <span>Sofinity události (posledních 24h)</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {sofinityEvents.slice(0, 4).map((event, index) => (
+                    <div key={index} className="text-center p-3 border rounded">
+                      <div className="text-lg font-semibold">{event.count}</div>
+                      <div className="text-sm text-muted-foreground">{event.event_name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(event.latest_timestamp).toLocaleString('cs-CZ')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {testResults && (
             <Card>
@@ -488,6 +811,111 @@ export const AdminTestSuite: React.FC = () => {
                   </Button>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="integrity">
+          <Card>
+            <CardHeader>
+              <CardTitle>Integrita dat a vztahy tabulek</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {dataIntegrityResults.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tabulka/Vztah</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Zpráva</TableHead>
+                      <TableHead>Detail</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dataIntegrityResults.map((result, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{result.table_name}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            {getStatusIcon(result.status)}
+                            {getStatusBadge(result.status)}
+                          </div>
+                        </TableCell>
+                        <TableCell>{result.message}</TableCell>
+                        <TableCell>
+                          {result.orphaned_count && result.orphaned_count > 0 && (
+                            <Badge variant="outline">{result.orphaned_count} sirotek</Badge>
+                          )}
+                          {result.details && (
+                            <details className="text-xs">
+                              <summary className="cursor-pointer">Více info</summary>
+                              <pre className="mt-1">{JSON.stringify(result.details, null, 2)}</pre>
+                            </details>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">Ještě nebyla spuštěna kontrola integrity dat</p>
+                  <Button onClick={() => runIndividualTestSuite('integrity')} disabled={loading}>
+                    Zkontrolovat integritu dat
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="performance">
+          <Card>
+            <CardHeader>
+              <CardTitle>Výkonnostní metriky a rychlost testů</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {Object.keys(performanceMetrics).length > 0 ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Object.entries(performanceMetrics).map(([testType, time]) => (
+                        <Card key={testType}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{testType}</span>
+                              <Badge variant="outline">{time}ms</Badge>
+                            </div>
+                            <Progress 
+                              value={Math.min((time / 10000) * 100, 100)} 
+                              className="mt-2" 
+                            />
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {time < 1000 ? 'Velmi rychlé' : 
+                               time < 5000 ? 'Rychlé' : 
+                               time < 10000 ? 'Průměrné' : 'Pomalé'}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                    
+                    <Alert>
+                      <Clock className="h-4 w-4" />
+                      <AlertDescription>
+                        Celkový čas posledního kompletního test suite: {performanceMetrics.complete_suite || 'N/A'}ms
+                      </AlertDescription>
+                    </Alert>
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">Zatím nejsou k dispozici výkonnostní metriky</p>
+                    <Button onClick={runCompleteTestSuite} disabled={loading}>
+                      Spustit kompletní test suite pro metriky
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
