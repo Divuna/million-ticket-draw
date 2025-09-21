@@ -194,27 +194,56 @@ const Homepage = () => {
       <Header />
       
       <div className="container mx-auto px-4 py-8 space-y-12">
-        {/* Main Banner - Hero with Neon Frame */}
-        <section className="w-full">
-          <div className="neon-frame h-64 md:h-80 flex items-center justify-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
-            <div className="text-center space-y-4 z-10">
-              <div className="text-6xl md:text-8xl animate-bounce">🎯</div>
-              <h2 className="text-2xl md:text-4xl font-bold text-neon-cyan">
-                Rotující Výhry
+        {/* Main Hero Display - Retro Style */}
+        <section className="w-full relative">
+          <div className="hero-display flex items-center justify-center relative">
+            {/* Floating mini coupons around hero */}
+            <div className="floating-coupon top-4 left-4 w-20 h-16 border-neon-blue glow-blue flex flex-col items-center justify-center text-xs text-white">
+              <div className="text-lg">🛍️</div>
+              <div className="font-bold">Voucher</div>
+            </div>
+            
+            <div className="floating-coupon top-4 right-4 w-20 h-16 border-neon-orange glow-orange flex flex-col items-center justify-center text-xs text-white">
+              <div className="text-lg">🎁</div>
+              <div className="font-bold">Bonus</div>
+            </div>
+            
+            <div className="floating-coupon bottom-4 left-4 w-20 h-16 border-neon-green glow-green flex flex-col items-center justify-center text-xs text-white">
+              <div className="text-lg">🎮</div>
+              <div className="font-bold">Hraj</div>
+            </div>
+            
+            <div className="floating-coupon bottom-4 right-4 w-20 h-16 border-neon-purple glow-purple flex flex-col items-center justify-center text-xs text-white">
+              <div className="text-lg">📱</div>
+              <div className="font-bold">Sdílej</div>
+            </div>
+
+            {/* Main content area - changeable */}
+            <div className="text-center space-y-6 z-20 px-8">
+              <div className="text-7xl md:text-9xl animate-pulse">🏆</div>
+              <h2 className="text-3xl md:text-5xl font-bold text-neon-gold drop-shadow-2xl">
+                VYHRAJ LUXUSNÍ AUTO
               </h2>
-              <p className="text-lg text-muted-foreground">
-                Placeholder pro rotující zobrazení hlavních cen
+              <p className="text-lg md:text-xl text-white/90 max-w-md mx-auto">
+                Kup tiket a vyhraj fantastické ceny v OneMil soutěžích
               </p>
+              
+              {user && !isAdmin && (
+                <Button variant="neon-pink" size="lg" className="text-lg px-8 py-4">
+                  Koupit Ticket
+                </Button>
+              )}
+              
+              {!user && (
+                <Button variant="neon-cyan" size="lg" className="text-lg px-8 py-4" onClick={() => navigate('/login')}>
+                  Registrovat se
+                </Button>
+              )}
+              
               {/* Role-based messaging */}
               {isAdmin && (
                 <div className="mt-4 px-4 py-2 bg-amber-100/10 border border-amber-400/30 rounded-lg">
-                  <p className="text-sm text-amber-400">Admin zobrazení - všechny sekce jsou pouze pro čtení</p>
-                </div>
-              )}
-              {!user && (
-                <div className="mt-4 px-4 py-2 bg-blue-100/10 border border-blue-400/30 rounded-lg">
-                  <p className="text-sm text-blue-400">Přihlaste se pro plnou interaktivitu</p>
+                  <p className="text-sm text-amber-400">Admin zobrazení - pouze pro čtení</p>
                 </div>
               )}
             </div>
@@ -345,17 +374,14 @@ const Homepage = () => {
               </div>
             ) : contests.length === 0 ? (
               // No contests message - Green for participation
-              <div className="flex-none w-72">
-                <Card className="border-neon-green glow-green bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 relative overflow-hidden h-full">
-                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
-                  <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-bold text-green-800 dark:text-green-400">
+              <div className="flex-none w-80">
+                <Card className="border-neon-green glow-green bg-black/60 relative h-48 flex items-center justify-center">
+                  <CardContent className="text-center">
+                    <div className="text-4xl mb-2">🎮</div>
+                    <CardTitle className="text-lg font-bold text-neon-green mb-2">
                       Žádné aktivní soutěže
                     </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-green-600 dark:text-green-500">
+                    <div className="text-sm text-green-400">
                       Momentálně nejsou k dispozici žádné aktivní soutěže
                     </div>
                   </CardContent>
