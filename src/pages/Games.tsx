@@ -11,6 +11,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { Gamepad2 } from 'lucide-react';
 
 interface Contest {
   id: string;
@@ -35,7 +36,7 @@ interface UnlockTicketResult {
   bonus_prize_id?: string | null;
 }
 
-const Index = () => {
+const Games = () => {
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingContestId, setProcessingContestId] = useState<string | null>(null);
@@ -44,8 +45,6 @@ const Index = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
-
-  // Removed automatic admin redirect to allow admins to view customer page
 
   const fetchContests = async () => {
     try {
@@ -180,21 +179,35 @@ const Index = () => {
       <Header />
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="mb-4 text-4xl font-bold text-neon-green">OneMil</h1>
-          <p className="text-xl text-muted-foreground">Vyberte si soutěž a zkuste štěstí!</p>
+          <h1 className="text-4xl md:text-6xl font-black text-transparent bg-gradient-to-r from-neon-green via-green-400 to-neon-green bg-clip-text animate-pulse mb-4">
+            ⚡ MOJE HRY ⚡
+          </h1>
+          <p className="text-neon-green/80 font-medium text-lg">Vyberte si soutěž a zkuste štěstí!</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {contests.map((contest) => (
-            <Card key={contest.id} className="ticket-game ticket-perforations relative">
+            <div key={contest.id} className="neon-ticket ticket-game ticket-perforations relative">
+              {/* Ticket perforations */}
+              <div className="absolute left-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
+                {Array.from({length: 6}).map((_, i) => (
+                  <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-green/50" />
+                ))}
+              </div>
+              <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
+                {Array.from({length: 6}).map((_, i) => (
+                  <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-green/50" />
+                ))}
+              </div>
+
               {contest.status === 'closed' && (
-                <Badge className="absolute top-4 right-4 bg-destructive text-destructive-foreground">
-                  Hra ukončena – hlavní výhra padla
-                </Badge>
+                <div className="absolute top-4 right-4 z-20 px-3 py-1 bg-red-400/20 text-red-400 border border-red-400/30 rounded-xl font-bold text-xs">
+                  🔴 HRA UKONČENA
+                </div>
               )}
               
-              <CardHeader>
-                <div className="w-full h-48 rounded-md mb-4 overflow-hidden bg-gradient-to-br from-purple-900/20 to-cyan-900/20 flex items-center justify-center">
+              <div className="relative z-10 p-6">
+                <div className="w-full h-48 rounded-xl mb-4 overflow-hidden bg-gradient-to-br from-neon-green/20 via-green-400/10 to-neon-green/5 border-2 border-neon-green/30 flex items-center justify-center">
                   {contest.main_image ? (
                     <img
                       src={contest.main_image.startsWith('http') ? contest.main_image : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`}
@@ -210,80 +223,98 @@ const Index = () => {
                     <div className="text-6xl">🎯</div>
                   )}
                 </div>
-                <CardTitle className="text-neon-green">{contest.title}</CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  {contest.description}
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent>
-                <div className="space-y-2">
+                
+                <h3 className="text-xl font-black text-neon-green mb-2">{contest.title}</h3>
+                <p className="text-neon-green/80 mb-4 text-sm line-clamp-2">{contest.description}</p>
+                
+                <div className="space-y-3 mb-6">
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Hlavní výhra:</span>
-                    <span className="text-sm font-medium text-neon-green">{contest.main_prize}</span>
+                    <span className="text-sm text-neon-green/60 font-bold">🏆 HLAVNÍ VÝHRA:</span>
+                    <span className="text-sm font-black text-neon-green">{contest.main_prize}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Cena tiketu:</span>
-                    <span className="text-sm font-medium text-neon-green">
+                    <span className="text-sm text-neon-green/60 font-bold">💰 CENA TIKETU:</span>
+                    <span className="text-sm font-black text-neon-green">
                       {contest.ticket_price} miocoinů
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Celkem tiketů:</span>
-                    <span className="text-sm font-medium">
+                    <span className="text-sm text-neon-green/60 font-bold">🎫 CELKEM TIKETŮ:</span>
+                    <span className="text-sm font-bold text-neon-green/80">
                       {contest.ticket_count.toLocaleString('cs-CZ')}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Stav:</span>
-                    <span className="text-sm font-medium">
-                      {contest.status}
+                    <span className="text-sm text-neon-green/60 font-bold">📊 STAV:</span>
+                    <span className={`text-sm font-bold ${
+                      contest.status === 'active' ? 'text-green-400' : 'text-gray-400'
+                    }`}>
+                      {contest.status === 'active' ? '🟢 AKTIVNÍ' : '⚫ NEAKTIVNÍ'}
                     </span>
                   </div>
                 </div>
-              </CardContent>
-              
-              <CardFooter>
-                {/* Show interactive button only for logged-in non-admin users */}
-                {user && !isAdmin && (
-                  <Button 
-                    className="w-full bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0 glow-cyan"
-                    onClick={() => handleUnlockTicket(contest.id)}
-                    disabled={contest.status === 'closed' || processingContestId === contest.id}
-                  >
-                    {processingContestId === contest.id 
-                      ? 'Zpracování...' 
-                      : `Uplatnit ${contest.ticket_price} miocoinů`
-                    }
-                  </Button>
-                )}
                 
-                {/* Show login prompt for non-logged-in users */}
-                {!user && (
-                  <Button 
-                    className="w-full bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0 glow-cyan"
-                    onClick={() => navigate('/login')}
-                  >
-                    Přihlásit se pro koupi tiketu
-                  </Button>
-                )}
-                
-                {/* Show read-only message for admin users */}
-                {user && isAdmin && (
-                  <div className="w-full text-center text-sm text-muted-foreground py-3">
-                    Admin zobrazení - pouze pro čtení
-                  </div>
-                )}
-              </CardFooter>
-            </Card>
+                <div className="border-t border-dashed border-neon-green/50 pt-4">
+                  {/* Show interactive button only for logged-in non-admin users */}
+                  {user && !isAdmin && (
+                    <Button 
+                      className="w-full bg-gradient-to-r from-neon-green via-green-400 to-neon-green text-black font-black px-4 py-3 rounded-xl hover:scale-105 transition-all duration-300"
+                      style={{ 
+                        boxShadow: '0 0 30px hsl(var(--neon-green) / 0.6)',
+                        animation: 'neon-pulse 2s ease-in-out infinite'
+                      }}
+                      onClick={() => handleUnlockTicket(contest.id)}
+                      disabled={contest.status === 'closed' || processingContestId === contest.id}
+                    >
+                      {processingContestId === contest.id 
+                        ? '⚡ ZPRACOVÁNÍ...' 
+                        : `⚡ UPLATNIT ${contest.ticket_price} MIOCOINŮ ⚡`
+                      }
+                    </Button>
+                  )}
+                  
+                  {/* Show login prompt for non-logged-in users */}
+                  {!user && (
+                    <Button 
+                      className="w-full bg-gradient-to-r from-neon-cyan via-cyan-400 to-neon-cyan text-black font-black px-4 py-3 rounded-xl hover:scale-105 transition-all duration-300"
+                      style={{ boxShadow: '0 0 30px hsl(var(--neon-cyan) / 0.6)' }}
+                      onClick={() => navigate('/login')}
+                    >
+                      🔐 PŘIHLÁSIT SE PRO KOUPI TIKETU
+                    </Button>
+                  )}
+                  
+                  {/* Show read-only message for admin users */}
+                  {user && isAdmin && (
+                    <div className="w-full text-center text-sm text-amber-400 py-3 font-bold">
+                      👁️ ADMIN ZOBRAZENÍ - POUZE PRO ČTENÍ
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           ))}
         </div>
 
         {contests.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-4">🎯</div>
-            <h3 className="text-xl font-semibold mb-2">Žádné soutěže</h3>
-            <p className="text-muted-foreground">Momentálně nejsou dostupné žádné soutěže.</p>
+          <div className="neon-ticket ticket-game ticket-perforations">
+            {/* Ticket perforations */}
+            <div className="absolute left-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
+              {Array.from({length: 6}).map((_, i) => (
+                <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-green/50" />
+              ))}
+            </div>
+            <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
+              {Array.from({length: 6}).map((_, i) => (
+                <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-green/50" />
+              ))}
+            </div>
+            
+            <div className="relative z-10 p-8 text-center">
+              <div className="text-6xl mb-6">🎯</div>
+              <h3 className="text-2xl font-black text-neon-green mb-4">🚀 ŽÁDNÉ SOUTĚŽE</h3>
+              <p className="text-neon-green/80 font-medium">Momentálně nejsou dostupné žádné soutěže.</p>
+            </div>
           </div>
         )}
       </div>
@@ -306,10 +337,9 @@ const Index = () => {
         }}
       />
 
-      {/* Show bottom navigation only for non-admin users */}
-      {!isAdmin && <BottomNavigation />}
+      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
     </div>
   );
 };
 
-export default Index;
+export default Games;

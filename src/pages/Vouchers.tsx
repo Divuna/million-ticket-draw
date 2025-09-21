@@ -96,7 +96,7 @@ const Vouchers: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
@@ -109,80 +109,109 @@ const Vouchers: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background dark pb-20">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-6">
-            <Gift className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold text-neon-pink">Moje vouchery</h1>
+          <div className="text-center mb-8">
+            <h1 className="text-4xl md:text-6xl font-black text-transparent bg-gradient-to-r from-neon-pink via-pink-400 to-neon-pink bg-clip-text animate-pulse mb-4">
+              ⚡ VOUCHERY ⚡
+            </h1>
+            <p className="text-neon-pink/80 font-medium text-lg">Vaše voucher kolekce</p>
           </div>
 
           {vouchers.length === 0 ? (
-            <Card className="ticket-voucher ticket-perforations">
-              <CardContent className="pt-6">
-                <div className="text-center py-12">
-                  <Gift className="h-12 w-12 mx-auto text-neon-pink mb-4" />
-                  <h3 className="text-lg font-semibold mb-2 text-neon-pink">Žádné vouchery</h3>
-                  <p className="text-muted-foreground">
-                    Zatím nemáte žádné vouchery. Vouchery získáte při nákupu nebo jako výhry.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="neon-ticket ticket-voucher ticket-perforations">
+              {/* Ticket perforations */}
+              <div className="absolute left-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
+                {Array.from({length: 6}).map((_, i) => (
+                  <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-pink/50" />
+                ))}
+              </div>
+              <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
+                {Array.from({length: 6}).map((_, i) => (
+                  <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-pink/50" />
+                ))}
+              </div>
+              
+              <div className="relative z-10 p-8 text-center">
+                <Gift className="h-16 w-16 mx-auto text-neon-pink mb-4 animate-pulse" />
+                <h4 className="text-2xl font-black text-neon-pink mb-4">🎫 ŽÁDNÉ VOUCHERY</h4>
+                <p className="text-neon-pink/80 font-medium">
+                  Zatím nemáte žádné vouchery. Vouchery získáte při nákupu nebo jako výhry.
+                </p>
+              </div>
+            </div>
           ) : (
-            <div className="grid gap-4">
-              {vouchers.map((voucher) => {
-                const status = getVoucherStatus(voucher);
-                const StatusIcon = status.icon;
-                
-                return (
-                  <Card key={voucher.id} className="ticket-voucher ticket-perforations">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg text-neon-pink">
-                          Voucher #{voucher.code}
-                        </CardTitle>
-                        <Badge variant={status.variant}>
-                          <StatusIcon className="h-3 w-3 mr-1" />
-                          {status.label}
-                        </Badge>
+            <div className="space-y-6">
+              {vouchers.map((voucher) => (
+                <div 
+                  key={voucher.id} 
+                  className="neon-ticket ticket-voucher ticket-perforations"
+                >
+                  {/* Ticket perforations */}
+                  <div className="absolute left-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
+                    {Array.from({length: 6}).map((_, i) => (
+                      <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-pink/50" />
+                    ))}
+                  </div>
+                  <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
+                    {Array.from({length: 6}).map((_, i) => (
+                      <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-pink/50" />
+                    ))}
+                  </div>
+                  
+                  <div className="relative z-10 p-8">
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-2xl font-black text-neon-pink">🎫 VOUCHER #{voucher.code}</h3>
+                      <div className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 ${
+                        voucher.redeemed 
+                          ? 'bg-gray-400/20 text-gray-400 border border-gray-400/30' 
+                          : 'bg-green-400/20 text-green-400 border border-green-400/30'
+                      }`}>
+                        {React.createElement(getVoucherStatus(voucher).icon, { className: "w-4 h-4" })}
+                        {getVoucherStatus(voucher).label}
                       </div>
-                      <CardDescription>
-                        Vytvořen: {formatDate(voucher.created_at)}
-                        {voucher.redeemed_at && (
-                          <span className="block">
-                            Použit: {formatDate(voucher.redeemed_at)}
-                          </span>
-                        )}
-                      </CardDescription>
-                    </CardHeader>
+                    </div>
                     
-                    <CardContent>
-                      <div className="flex items-center justify-between">
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-center">
                         <div>
-                          <p className="text-2xl font-bold text-neon-pink">
-                            {voucher.value.toLocaleString('cs-CZ')} CZK
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Hodnota voucheru
-                          </p>
+                          <p className="text-neon-pink/60 font-bold text-sm">💰 HODNOTA</p>
+                          <p className="text-4xl font-black text-neon-pink">{voucher.value} KČ</p>
                         </div>
-                        
-                        {!voucher.redeemed && (
+                        <div className="text-right">
+                          <p className="text-neon-pink/60 font-bold text-sm">📅 VYTVOŘENO</p>
+                          <p className="text-lg font-bold text-neon-pink/80">{formatDate(voucher.created_at)}</p>
+                        </div>
+                      </div>
+                      
+                      {voucher.redeemed_at && (
+                        <div className="border-t border-neon-pink/30 pt-4">
+                          <p className="text-neon-pink/60 font-bold text-sm">✅ UPLATNĚNO</p>
+                          <p className="text-lg font-bold text-neon-pink/80">{formatDate(voucher.redeemed_at)}</p>
+                        </div>
+                      )}
+                      
+                      {!voucher.redeemed && (
+                        <div className="text-center pt-4">
                           <Button 
                             onClick={() => handleRedeem(voucher.id)}
-                            size="sm"
+                            className="bg-gradient-to-r from-neon-pink via-pink-400 to-neon-pink text-white font-bold px-8 py-4 rounded-xl hover:scale-110 transition-all duration-300"
+                            style={{ 
+                              boxShadow: '0 0 30px hsl(var(--neon-pink) / 0.6)',
+                              animation: 'neon-pulse 2s ease-in-out infinite'
+                            }}
                           >
-                            Uplatnit
+                            ⚡ UPLATNIT VOUCHER ⚡
                           </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
