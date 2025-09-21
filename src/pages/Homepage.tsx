@@ -194,86 +194,66 @@ const Homepage = () => {
       <Header />
       
       <div className="container mx-auto px-4 py-8 space-y-12">
-        {/* Hero Section - 3 Column Layout */}
+        {/* Hero Section - Single 3-Column Layout */}
         <section className="w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column - Small Side Cards */}
-            <div className="space-y-4 order-2 lg:order-1">
-              {/* Left Side Card 1 */}
-              <TicketCard variant="purple" className="p-6 h-40 transition-all duration-300 hover:scale-105">
-                <div className="text-center space-y-3">
-                  <div className="w-8 h-8 mx-auto bg-gradient-to-br from-purple-500 to-violet-600 rounded-full flex items-center justify-center mb-2">
-                    <Gift className="w-4 h-4 text-white" />
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* Left Side Card */}
+            <div className="order-2 lg:order-1">
+              <TicketCard variant="purple" className="p-6 h-80 lg:h-96 transition-all duration-300 hover:scale-105">
+                <div className="text-center space-y-4 h-full flex flex-col justify-center">
+                  <div className="w-12 h-12 mx-auto bg-gradient-to-br from-purple-500 to-violet-600 rounded-full flex items-center justify-center mb-3">
+                    <Gift className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-lg font-bold text-white">Voucher Rewards</h3>
-                  <p className="text-sm opacity-80">Získej slevy na produkty</p>
+                  <h3 className="text-xl font-bold text-white">Voucher Rewards</h3>
+                  <p className="text-sm opacity-80 flex-1">Získej slevy na produkty a služby</p>
                   <Button variant="neonPurple" size="sm" onClick={handleVoucherClick}>
                     Získat odměnu
                   </Button>
                 </div>
               </TicketCard>
-              
-              {/* Left Side Card 2 */}
-              <TicketCard variant="green" className="p-6 h-40 transition-all duration-300 hover:scale-105">
-                <div className="text-center space-y-3">
-                  <div className="w-8 h-8 mx-auto bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mb-2">
-                    <Star className="w-4 h-4 text-white" />
+            </div>
+            
+            {/* Center Large Hero Banner */}
+            <div className="lg:col-span-3 order-1 lg:order-2">
+              <TicketCard variant="cyan" className="h-80 lg:h-96 p-8 transition-all duration-300 hover:scale-[1.02]">
+                <div className="h-full flex flex-col">
+                  {/* Image Placeholder */}
+                  <div className="w-full h-32 lg:h-40 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-lg border-2 border-neon-cyan/30 flex items-center justify-center mb-6">
+                    <div className="text-center text-neon-cyan">
+                      <div className="text-4xl mb-2">🎯</div>
+                      <span className="text-sm opacity-70">Obrázek hlavní výhry</span>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-bold text-white">Speciální Akce</h3>
-                  <p className="text-sm opacity-80">Limitované nabídky</p>
-                  <Button variant="neonGreen" size="sm">
-                    Zobrazit akce
-                  </Button>
+                  
+                  {/* Content */}
+                  <div className="flex-1 flex flex-col justify-center text-center space-y-4">
+                    <h1 className="text-3xl lg:text-5xl font-bold text-white leading-tight">
+                      OneMil Jackpot
+                    </h1>
+                    <p className="text-lg text-white/80 max-w-md mx-auto">
+                      Vyhraj hlavní cenu v hodnotě milionů korun. Kup si tiket a staň se dalším milionářem!
+                    </p>
+                    <div className="pt-2">
+                      <Button variant="neonPink" size="lg" onClick={handleGamesClick} className="text-xl px-10 py-4">
+                        Koupit tiket
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </TicketCard>
             </div>
             
-            {/* Center Column - Main Hero Banner */}
-            <div className="order-1 lg:order-2">
-              <TicketCard variant="cyan" className="hero-neon-frame h-80 lg:h-96 p-8 transition-all duration-300 hover:scale-102">
-                <div className="text-center space-y-6 h-full flex flex-col justify-center">
-                  <div className="text-6xl md:text-8xl animate-bounce">🎯</div>
-                  <h1 className="text-3xl md:text-4xl font-bold text-white">
-                    OneMil Jackpot
-                  </h1>
-                  <p className="text-lg text-white/80">
-                    Vyhraj hlavní cenu v hodnotě milionů korun
-                  </p>
-                  <div className="pt-4">
-                    <Button variant="neonPink" size="lg" onClick={handleGamesClick} className="text-lg px-8 py-3">
-                      Koupit tiket
-                    </Button>
+            {/* Right Side Card */}
+            <div className="order-3">
+              <TicketCard variant="orange" className="p-6 h-80 lg:h-96 transition-all duration-300 hover:scale-105">
+                <div className="text-center space-y-4 h-full flex flex-col justify-center">
+                  <div className="w-12 h-12 mx-auto bg-gradient-to-br from-orange-500 to-amber-600 rounded-full flex items-center justify-center mb-3">
+                    <Trophy className="w-6 h-6 text-white" />
                   </div>
-                </div>
-              </TicketCard>
-            </div>
-            
-            {/* Right Column - Small Side Cards */}
-            <div className="space-y-4 order-3">
-              {/* Right Side Card 1 */}
-              <TicketCard variant="orange" className="p-6 h-40 transition-all duration-300 hover:scale-105">
-                <div className="text-center space-y-3">
-                  <div className="w-8 h-8 mx-auto bg-gradient-to-br from-orange-500 to-amber-600 rounded-full flex items-center justify-center mb-2">
-                    <Trophy className="w-4 h-4 text-white" />
-                  </div>
-                  <h3 className="text-lg font-bold text-white">Bonus Ceny</h3>
-                  <p className="text-sm opacity-80">Extra odměny za účast</p>
+                  <h3 className="text-xl font-bold text-white">Bonus Ceny</h3>
+                  <p className="text-sm opacity-80 flex-1">Extra odměny za každou účast v soutěži</p>
                   <Button variant="neonOrange" size="sm">
                     Zjistit více
-                  </Button>
-                </div>
-              </TicketCard>
-              
-              {/* Right Side Card 2 */}
-              <TicketCard variant="pink" className="p-6 h-40 transition-all duration-300 hover:scale-105">
-                <div className="text-center space-y-3">
-                  <div className="w-8 h-8 mx-auto bg-gradient-to-br from-pink-500 to-rose-600 rounded-full flex items-center justify-center mb-2">
-                    <Ticket className="w-4 h-4 text-white" />
-                  </div>
-                  <h3 className="text-lg font-bold text-white">Daily Tickets</h3>
-                  <p className="text-sm opacity-80">Denní šance na výhru</p>
-                  <Button variant="neonPink" size="sm">
-                    Hrát denně
                   </Button>
                 </div>
               </TicketCard>
