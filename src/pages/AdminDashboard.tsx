@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AdminMenu } from '@/components/AdminMenu';
 import { TicketMapAdmin } from '@/components/TicketMapAdmin';
+import { AdminBonusOverview } from '@/components/AdminBonusOverview';
 import { TestTube, AlertTriangle } from 'lucide-react';
 
 interface Contest {
@@ -723,6 +724,7 @@ const AdminDashboard: React.FC = () => {
             <TabsList>
               <TabsTrigger value="contests">Soutěže</TabsTrigger>
               <TabsTrigger value="ticketmap">Mapa tiketů</TabsTrigger>
+              <TabsTrigger value="bonus-overview">Přehled bonusů</TabsTrigger>
               <TabsTrigger value="create">Vytvořit soutěž</TabsTrigger>
             <TabsTrigger value="prizes">Bonusové ceny</TabsTrigger>
             <TabsTrigger value="distribution">Automatické bonusy</TabsTrigger>
@@ -919,6 +921,11 @@ const AdminDashboard: React.FC = () => {
             {/* Ticket Map */}
             <TabsContent value="ticketmap">
               <TicketMapAdmin />
+            </TabsContent>
+
+            {/* Bonus Overview */}
+            <TabsContent value="bonus-overview">
+              <AdminBonusOverview />
             </TabsContent>
 
             {/* Create Contest */}
