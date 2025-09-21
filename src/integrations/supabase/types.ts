@@ -826,6 +826,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      run_deep_sofinity_test_suite: {
+        Args: { p_performance_events?: number }
+        Returns: Json
+      }
       test_admin_crud_operations: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -838,8 +842,20 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      test_deep_data_integrity: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      test_sofinity_edge_cases: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       test_sofinity_integration: {
         Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      test_sofinity_performance: {
+        Args: { p_event_count?: number }
         Returns: Json
       }
       unlock_ticket: {

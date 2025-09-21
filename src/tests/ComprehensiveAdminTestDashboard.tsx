@@ -49,6 +49,25 @@ interface ComprehensiveTestResult {
   };
 }
 
+interface DeepSofinityTestResult {
+  suite_name: string;
+  overall_status: 'all_passed' | 'mostly_passed' | 'failed';
+  summary: {
+    total_tests: number;
+    passed_tests: number;
+    failed_tests: number;
+    success_rate: number;
+  };
+  execution_time_ms: number;
+  timestamp: string;
+  test_categories: {
+    data_integrity: TestSuite;
+    edge_cases: TestSuite;
+    performance: TestSuite;
+  };
+  performance_events_tested: number;
+}
+
 interface DataIntegrityResult {
   table_name: string;
   status: 'passed' | 'failed' | 'warning';
@@ -76,12 +95,14 @@ interface PerformanceMetrics {
 
 export const ComprehensiveAdminTestDashboard: React.FC = () => {
   const [testResults, setTestResults] = useState<ComprehensiveTestResult | null>(null);
+  const [deepSofinityResults, setDeepSofinityResults] = useState<DeepSofinityTestResult | null>(null);
   const [individualSuites, setIndividualSuites] = useState<{[key: string]: TestSuite}>({});
   const [dataIntegrityResults, setDataIntegrityResults] = useState<DataIntegrityResult[]>([]);
   const [sofinityEvents, setSofinityEvents] = useState<SofinityEventSummary[]>([]);
   const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics>({});
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [performanceEventCount, setPerformanceEventCount] = useState(100);
   const [czechUIValidation, setCzechUIValidation] = useState({
     toastMessages: true,
     buttonLabels: true,
@@ -89,6 +110,37 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
     badgeTexts: true,
     validated: false
   });
+  const [realtimeUpdates, setRealtimeUpdates] = useState<any[]>([]);
+
+  // Real-time Sofinity event monitoring
+  useEffect(() => {
+    const channel = supabase
+      .channel('sofinity-events-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'event_logs'
+        },
+        (payload) => {
+          console.log('New Sofinity event:', payload);
+          setRealtimeUpdates(prev => [payload, ...prev.slice(0, 49)]); // Keep last 50 updates
+          
+          // Show toast for new events
+          const eventData = payload.new as any;
+          toast({
+            title: `🔔 Nová Sofinity událost: ${eventData.event_name}`,
+            description: `User: ${eventData.user_id || 'N/A'} • ${new Date(eventData.timestamp).toLocaleTimeString('cs-CZ')}`,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -133,43 +185,17 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
     return 'slow';
   };
 
-  // CSV Export functionality
-  const exportResultsToCSV = () => {
-    if (!testResults) return;
-    
-    const csvContent = [
-      ['Test Suite', 'Test Name', 'Status', 'Message', 'Execution Time (ms)', 'Timestamp'].join(','),
-      ...Object.values(testResults.test_suites).flatMap(suite => 
-        (suite.test_results as any[])?.map(test => [
-          suite.suite_name,
-          test.test_name,
-          test.status,
-          `"${test.message}"`,
-          test.execution_time_ms || 0,
-          test.timestamp || ''
-        ].join(',')) || []
-      )
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `onemil-test-suite-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // JSON Export functionality
-  const exportResultsToJSON = () => {
-    if (!testResults) return;
-    
+  // Enhanced export with deep test results
+  const exportComprehensiveResults = () => {
     const exportData = {
-      ...testResults,
+      basic_tests: testResults,
+      deep_sofinity_tests: deepSofinityResults,
       data_integrity: dataIntegrityResults,
       sofinity_events: sofinityEvents,
       performance_metrics: performanceMetrics,
       ui_validation: czechUIValidation,
+      realtime_updates: realtimeUpdates.slice(0, 10),
+      performance_event_count: performanceEventCount,
       export_timestamp: new Date().toISOString()
     };
 
@@ -177,9 +203,56 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `onemil-test-suite-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `onemil-deep-sofinity-tests-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    
+    toast({
+      title: "📋 Export dokončen",
+      description: "Kompletní výsledky testů byly exportovány do JSON souboru",
+    });
+  };
+
+  // Deep Sofinity Integration Testing
+  const runDeepSofinityTests = async (eventCount: number = 100) => {
+    setLoading(true);
+    const startTime = Date.now();
+    
+    try {
+      toast({
+        title: "🔍 Spouštím hluboké Sofinity testy",
+        description: `Testování integrity dat, edge casů a performance s ${eventCount} událostmi...`,
+      });
+
+      const { data, error } = await supabase.rpc('run_deep_sofinity_test_suite', { 
+        p_performance_events: eventCount 
+      });
+      
+      if (error) throw error;
+      
+      const deepTestData = data as unknown as DeepSofinityTestResult;
+      setDeepSofinityResults(deepTestData);
+      
+      const executionTime = Date.now() - startTime;
+      updatePerformanceMetrics('deep_sofinity_suite', executionTime);
+
+      const statusEmoji = deepTestData.summary.success_rate >= 90 ? '🎉' : 
+                         deepTestData.summary.success_rate >= 70 ? '⚠️' : '❌';
+      
+      toast({
+        title: `${statusEmoji} Hluboké Sofinity testy dokončeny za ${Math.round(executionTime)}ms`,
+        description: `${deepTestData.summary.passed_tests}/${deepTestData.summary.total_tests} testů prošlo (${deepTestData.summary.success_rate}%). Testováno ${eventCount} událostí.`,
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "❌ Chyba při hlubokých Sofinity testech",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const runCompleteTestSuite = async () => {
@@ -532,259 +605,262 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
             variant="outline" 
             onClick={() => {
               setTestResults(null);
+              setDeepSofinityResults(null);
               setIndividualSuites({});
               setDataIntegrityResults([]);
               setSofinityEvents([]);
               setPerformanceMetrics({});
               setCzechUIValidation(prev => ({ ...prev, validated: false }));
+              setRealtimeUpdates([]);
             }}
             disabled={loading}
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
-          {testResults && (
-            <>
-              <Button 
-                variant="outline" 
-                onClick={exportResultsToJSON}
-                className="flex items-center space-x-2"
-              >
-                <Download className="h-4 w-4" />
-                <span>Export JSON</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={exportResultsToCSV}
-                className="flex items-center space-x-2"
-              >
-                <Download className="h-4 w-4" />
-                <span>Export CSV</span>
-              </Button>
-            </>
+          {(testResults || deepSofinityResults) && (
+            <Button 
+              variant="outline" 
+              onClick={exportComprehensiveResults}
+              className="flex items-center space-x-2"
+              disabled={!testResults && !deepSofinityResults}
+            >
+              <Download className="h-4 w-4" />
+              <span>Export výsledků</span>
+            </Button>
           )}
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="overview">Přehled</TabsTrigger>
           <TabsTrigger value="crud">CRUD Testy</TabsTrigger>
           <TabsTrigger value="security">Bezpečnost</TabsTrigger>
           <TabsTrigger value="audit">Audit</TabsTrigger>
           <TabsTrigger value="sofinity">Sofinity</TabsTrigger>
-          <TabsTrigger value="integrity">Integrita dat</TabsTrigger>
+          <TabsTrigger value="deep">Hluboké testy</TabsTrigger>
+          <TabsTrigger value="integrity">Integrita</TabsTrigger>
           <TabsTrigger value="ui">UI Validace</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          {/* Overall Test Results Summary */}
           {testResults && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Výsledky kompletního test suite</span>
-                  <Badge 
-                    variant={testResults.overall_status === 'all_passed' ? 'default' : 
-                             testResults.overall_status === 'mostly_passed' ? 'secondary' : 'destructive'}
-                  >
-                    {testResults.overall_status === 'all_passed' && 'Vše prošlo'}
-                    {testResults.overall_status === 'mostly_passed' && 'Většinou prošlo'}
-                    {testResults.overall_status === 'failed' && 'Selhalo'}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-primary">{testResults.summary.total_tests}</div>
-                    <div className="text-sm text-muted-foreground">Celkem testů</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600">{testResults.summary.passed_tests}</div>
-                    <div className="text-sm text-muted-foreground">Prošlo</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-red-600">{testResults.summary.failed_tests}</div>
-                    <div className="text-sm text-muted-foreground">Selhalo</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-600">{testResults.summary.success_rate}%</div>
-                    <div className="text-sm text-muted-foreground">Úspěšnost</div>
-                  </div>
-                </div>
-
-                <Progress value={testResults.summary.success_rate} className="w-full mb-4" />
-
-                <div className="text-center text-sm text-muted-foreground">
-                  Dokončeno za {testResults.execution_time_ms}ms • {new Date(testResults.timestamp).toLocaleString('cs-CZ')}
-                </div>
-              </CardContent>
-            </Card>
+            <Alert className="border-primary/20 bg-primary/5">
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Základní testy:</strong> {testResults.summary.passed_tests}/{testResults.summary.total_tests} testů prošlo 
+                ({testResults.summary.success_rate}%) za {Math.round(testResults.execution_time_ms)}ms.
+              </AlertDescription>
+            </Alert>
           )}
 
-          {/* Quick Test Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
+          {deepSofinityResults && (
+            <Alert className="border-blue-200 bg-blue-50">
+              <Zap className="h-4 w-4 text-blue-600" />
+              <AlertDescription>
+                <strong>Hluboké Sofinity testy:</strong> {deepSofinityResults.summary.passed_tests}/{deepSofinityResults.summary.total_tests} testů prošlo 
+                ({deepSofinityResults.summary.success_rate}%) • {deepSofinityResults.performance_events_tested} událostí testováno za {Math.round(deepSofinityResults.execution_time_ms)}ms.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {realtimeUpdates.length > 0 && (
+            <Alert className="border-green-200 bg-green-50">
+              <Timer className="h-4 w-4 text-green-600" />
+              <AlertDescription>
+                <strong>Real-time monitoring:</strong> {realtimeUpdates.length} nových Sofinity událostí detekováno. 
+                Poslední: {realtimeUpdates[0]?.new?.event_name} • {new Date(realtimeUpdates[0]?.new?.timestamp).toLocaleTimeString('cs-CZ')}
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            <Card className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
-                <div className="flex items-center space-x-2 mb-2">
+                <div className="flex items-center space-x-2">
                   <Database className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm font-medium">CRUD Operace</span>
+                  <span className="text-xs font-medium">CRUD Operace</span>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => runIndividualTestSuite('crud')}
-                  disabled={loading}
-                  className="w-full"
-                >
-                  Testovat CRUD
-                </Button>
+                <div className="mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => runIndividualTestSuite('crud')}
+                    disabled={loading}
+                    className="w-full text-xs"
+                  >
+                    Spustit CRUD
+                  </Button>
+                </div>
                 {performanceMetrics.crud && (
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {performanceMetrics.crud.execution_time}ms
+                  <div className="flex items-center space-x-1 mt-1">
+                    <Timer className="h-3 w-3" />
+                    <span className="text-xs text-muted-foreground">
+                      {Math.round(performanceMetrics.crud.execution_time)}ms
+                      <Badge variant="outline" className="ml-1 text-xs">
+                        {performanceMetrics.crud.status}
+                      </Badge>
+                    </span>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
-                <div className="flex items-center space-x-2 mb-2">
+                <div className="flex items-center space-x-2">
                   <Shield className="h-4 w-4 text-green-500" />
-                  <span className="text-sm font-medium">Bezpečnost</span>
+                  <span className="text-xs font-medium">Bezpečnost</span>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => runIndividualTestSuite('security')}
-                  disabled={loading}
-                  className="w-full"
-                >
-                  Testovat RLS
-                </Button>
+                <div className="mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => runIndividualTestSuite('security')}
+                    disabled={loading}
+                    className="w-full text-xs"
+                  >
+                    Spustit RLS
+                  </Button>
+                </div>
                 {performanceMetrics.security && (
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {performanceMetrics.security.execution_time}ms
+                  <div className="flex items-center space-x-1 mt-1">
+                    <Timer className="h-3 w-3" />
+                    <span className="text-xs text-muted-foreground">
+                      {Math.round(performanceMetrics.security.execution_time)}ms
+                    </span>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <FileText className="h-4 w-4 text-purple-500" />
-                  <span className="text-sm font-medium">Audit</span>
+                <div className="flex items-center space-x-2">
+                  <FileText className="h-4 w-4 text-orange-500" />
+                  <span className="text-xs font-medium">Audit</span>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => runIndividualTestSuite('audit')}
-                  disabled={loading}
-                  className="w-full"
-                >
-                  Testovat audit
-                </Button>
+                <div className="mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => runIndividualTestSuite('audit')}
+                    disabled={loading}
+                    className="w-full text-xs"
+                  >
+                    Spustit Audit
+                  </Button>
+                </div>
                 {performanceMetrics.audit && (
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {performanceMetrics.audit.execution_time}ms
+                  <div className="flex items-center space-x-1 mt-1">
+                    <Timer className="h-3 w-3" />
+                    <span className="text-xs text-muted-foreground">
+                      {Math.round(performanceMetrics.audit.execution_time)}ms
+                    </span>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Zap className="h-4 w-4 text-orange-500" />
-                  <span className="text-sm font-medium">Sofinity</span>
+                <div className="flex items-center space-x-2">
+                  <Zap className="h-4 w-4 text-purple-500" />
+                  <span className="text-xs font-medium">Sofinity</span>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => runIndividualTestSuite('sofinity')}
-                  disabled={loading}
-                  className="w-full"
-                >
-                  Testovat Sofinity
-                </Button>
+                <div className="mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => runIndividualTestSuite('sofinity')}
+                    disabled={loading}
+                    className="w-full text-xs"
+                  >
+                    Spustit Events
+                  </Button>
+                </div>
                 {performanceMetrics.sofinity && (
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {performanceMetrics.sofinity.execution_time}ms
+                  <div className="flex items-center space-x-1 mt-1">
+                    <Timer className="h-3 w-3" />
+                    <span className="text-xs text-muted-foreground">
+                      {Math.round(performanceMetrics.sofinity.execution_time)}ms
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="h-4 w-4 text-red-500" />
+                  <span className="text-xs font-medium">Hluboké testy</span>
+                </div>
+                <div className="mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => runDeepSofinityTests(performanceEventCount)}
+                    disabled={loading}
+                    className="w-full text-xs"
+                  >
+                    Deep Tests
+                  </Button>
+                </div>
+                {performanceMetrics.deep_sofinity_suite && (
+                  <div className="flex items-center space-x-1 mt-1">
+                    <Timer className="h-3 w-3" />
+                    <span className="text-xs text-muted-foreground">
+                      {Math.round(performanceMetrics.deep_sofinity_suite.execution_time)}ms
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <BarChart3 className="h-4 w-4 text-indigo-500" />
+                  <span className="text-xs font-medium">Integrita</span>
+                </div>
+                <div className="mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => runIndividualTestSuite('integrity')}
+                    disabled={loading}
+                    className="w-full text-xs"
+                  >
+                    Spustit Check
+                  </Button>
+                </div>
+                {performanceMetrics.data_integrity && (
+                  <div className="flex items-center space-x-1 mt-1">
+                    <Timer className="h-3 w-3" />
+                    <span className="text-xs text-muted-foreground">
+                      {Math.round(performanceMetrics.data_integrity.execution_time)}ms
+                    </span>
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
-
-          {/* Czech UI Validation Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>České UI validace</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="flex items-center space-x-2">
-                  {czechUIValidation.toastMessages ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
-                  <span className="text-sm">Toast zprávy</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {czechUIValidation.buttonLabels ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
-                  <span className="text-sm">Popisky tlačítek</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {czechUIValidation.tableHeaders ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
-                  <span className="text-sm">Hlavičky tabulek</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {czechUIValidation.badgeTexts ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
-                  <span className="text-sm">Texty značek</span>
-                </div>
-              </div>
-              {!czechUIValidation.validated && (
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={validateCzechUI}
-                  disabled={loading}
-                >
-                  Validovat české UI
-                </Button>
-              )}
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="crud">
           <Card>
             <CardHeader>
-              <CardTitle>CRUD Operace - Testy správy obsahu</CardTitle>
+              <CardTitle>CRUD Operace - Contests, Vouchers, Notifications</CardTitle>
             </CardHeader>
             <CardContent>
               {individualSuites.crud ? (
                 renderTestResults(individualSuites.crud)
+              ) : testResults?.test_suites.crud_tests ? (
+                renderTestResults(testResults.test_suites.crud_tests)
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">Ještě nebyly spuštěny CRUD testy</p>
+                  <p className="text-muted-foreground mb-4">CRUD testy ještě nebyly spuštěny</p>
                   <Button onClick={() => runIndividualTestSuite('crud')} disabled={loading}>
                     Spustit CRUD testy
                   </Button>
@@ -797,14 +873,16 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
         <TabsContent value="security">
           <Card>
             <CardHeader>
-              <CardTitle>Bezpečnost & RLS - Validace přístupových práv</CardTitle>
+              <CardTitle>Bezpečnost & RLS - Admin role, RLS policies</CardTitle>
             </CardHeader>
             <CardContent>
               {individualSuites.security ? (
                 renderTestResults(individualSuites.security)
+              ) : testResults?.test_suites.security_tests ? (
+                renderTestResults(testResults.test_suites.security_tests)
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">Ještě nebyly spuštěny bezpečnostní testy</p>
+                  <p className="text-muted-foreground mb-4">Bezpečnostní testy ještě nebyly spuštěny</p>
                   <Button onClick={() => runIndividualTestSuite('security')} disabled={loading}>
                     Spustit bezpečnostní testy
                   </Button>
@@ -817,14 +895,16 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
         <TabsContent value="audit">
           <Card>
             <CardHeader>
-              <CardTitle>Audit Logging - Sledování admin akcí</CardTitle>
+              <CardTitle>Audit Logging - Admin actions, Metadata, Timestamps</CardTitle>
             </CardHeader>
             <CardContent>
               {individualSuites.audit ? (
                 renderTestResults(individualSuites.audit)
+              ) : testResults?.test_suites.audit_tests ? (
+                renderTestResults(testResults.test_suites.audit_tests)
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">Ještě nebyly spuštěny audit testy</p>
+                  <p className="text-muted-foreground mb-4">Audit testy ještě nebyly spuštěny</p>
                   <Button onClick={() => runIndividualTestSuite('audit')} disabled={loading}>
                     Spustit audit testy
                   </Button>
@@ -837,14 +917,16 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
         <TabsContent value="sofinity">
           <Card>
             <CardHeader>
-              <CardTitle>Sofinity Integrace - Externí API komunikace</CardTitle>
+              <CardTitle>Sofinity Integrace - Event logs, Payload validation</CardTitle>
             </CardHeader>
             <CardContent>
               {individualSuites.sofinity ? (
                 renderTestResults(individualSuites.sofinity)
+              ) : testResults?.test_suites.sofinity_tests ? (
+                renderTestResults(testResults.test_suites.sofinity_tests)
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">Ještě nebyly spuštěny Sofinity testy</p>
+                  <p className="text-muted-foreground mb-4">Sofinity testy ještě nebyly spuštěny</p>
                   <Button onClick={() => runIndividualTestSuite('sofinity')} disabled={loading}>
                     Spustit Sofinity testy
                   </Button>
@@ -874,10 +956,149 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
           </Card>
         </TabsContent>
 
+        <TabsContent value="deep">
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Zap className="h-5 w-5 text-blue-500" />
+                  <span>OneMil ↔ Sofinity Hluboké integrační testy</span>
+                </CardTitle>
+                <div className="flex items-center space-x-4">
+                  <div>
+                    <label className="text-sm font-medium">Počet událostí pro performance test:</label>
+                    <input
+                      type="number"
+                      value={performanceEventCount}
+                      onChange={(e) => setPerformanceEventCount(parseInt(e.target.value) || 100)}
+                      className="ml-2 w-20 px-2 py-1 border rounded text-sm"
+                      min="10"
+                      max="1000"
+                      step="10"
+                    />
+                  </div>
+                  <Button 
+                    onClick={() => runDeepSofinityTests(performanceEventCount)}
+                    disabled={loading}
+                    className="flex items-center space-x-2"
+                  >
+                    {loading ? <Clock className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                    <span>Spustit hluboké testy</span>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {deepSofinityResults ? (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {Object.keys(deepSofinityResults.test_categories).length}
+                          </div>
+                          <div className="text-sm text-muted-foreground">Test kategorie</div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="text-2xl font-bold text-green-600">
+                            {deepSofinityResults.performance_events_tested}
+                          </div>
+                          <div className="text-sm text-muted-foreground">Událostí testováno</div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="text-2xl font-bold text-purple-600">
+                            {Math.round(deepSofinityResults.execution_time_ms)}ms
+                          </div>
+                          <div className="text-sm text-muted-foreground">Celkový čas</div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Test Categories Results */}
+                    <div className="space-y-4">
+                      {Object.entries(deepSofinityResults.test_categories).map(([category, suite]) => (
+                        <Card key={category}>
+                          <CardHeader>
+                            <CardTitle className="text-lg capitalize">
+                              {category === 'data_integrity' ? 'Integrita dat' :
+                               category === 'edge_cases' ? 'Edge Cases' :
+                               category === 'performance' ? 'Performance' : category}
+                              <Badge className="ml-2" variant={suite.failed_tests === 0 ? 'default' : 'destructive'}>
+                                {suite.passed_tests}/{suite.total_tests}
+                              </Badge>
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            {renderTestResults(suite)}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+
+                    {/* Performance Summary */}
+                    {deepSofinityResults.test_categories.performance && (
+                      <Alert>
+                        <BarChart3 className="h-4 w-4" />
+                        <AlertDescription>
+                          <strong>Performance souhrn:</strong> Testováno {deepSofinityResults.performance_events_tested} událostí. 
+                          Průměrná rychlost: {Math.round(deepSofinityResults.performance_events_tested / (deepSofinityResults.execution_time_ms / 1000))} událostí/s
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">Hluboké integrační testy ještě nebyly spuštěny</p>
+                    <div className="text-sm text-muted-foreground">
+                      <p>Tyto testy zahrnují:</p>
+                      <ul className="list-disc list-inside mt-2 space-y-1">
+                        <li>Kontrolu sirotčích záznamů (vouchers, tickets, events)</li>
+                        <li>Testování edge casů s neplatnými údaji</li>
+                        <li>Performance testy s {performanceEventCount} událostmi</li>
+                        <li>Konzistenci cizích klíčů napříč tabulkami</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Real-time Updates */}
+            {realtimeUpdates.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Timer className="h-5 w-5 text-green-500" />
+                    <span>Real-time Sofinity události</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {realtimeUpdates.slice(0, 10).map((update, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 border rounded text-sm">
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="outline">{update.new?.event_name}</Badge>
+                          <span>User: {update.new?.user_id?.slice(0, 8) || 'N/A'}</span>
+                        </div>
+                        <span className="text-muted-foreground">
+                          {new Date(update.new?.timestamp).toLocaleTimeString('cs-CZ')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
         <TabsContent value="integrity">
           <Card>
             <CardHeader>
-              <CardTitle>Integrita dat - Kontrola vztahů a konzistence</CardTitle>
+              <CardTitle>Základní integrita dat - Rychlá kontrola</CardTitle>
             </CardHeader>
             <CardContent>
               {dataIntegrityResults.length > 0 ? (
@@ -922,10 +1143,13 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
                 </Table>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">Ještě nebyla spuštěna kontrola integrity dat</p>
+                  <p className="text-muted-foreground mb-4">Ještě nebyla spuštěna základní kontrola integrity dat</p>
                   <Button onClick={() => runIndividualTestSuite('integrity')} disabled={loading}>
-                    Zkontrolovat integritu dat
+                    Zkontrolovat základní integritu dat
                   </Button>
+                  <div className="mt-4 text-sm text-muted-foreground">
+                    <p><strong>Pro pokročilejší kontroly použijte "Hluboké testy" tab</strong></p>
+                  </div>
                 </div>
               )}
             </CardContent>
