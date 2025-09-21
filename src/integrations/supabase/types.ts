@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_actions: {
+        Row: {
+          action_type: string
+          admin_id: string
+          id: string
+          metadata: Json | null
+          notes: string | null
+          target_id: string | null
+          target_table: string
+          timestamp: string
+        }
+        Insert: {
+          action_type: string
+          admin_id: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          target_id?: string | null
+          target_table: string
+          timestamp?: string
+        }
+        Update: {
+          action_type?: string
+          admin_id?: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          target_id?: string | null
+          target_table?: string
+          timestamp?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           created_at: string
@@ -601,6 +634,21 @@ export type Database = {
       fn_close_contest: {
         Args: { p_contest: string }
         Returns: undefined
+      }
+      get_admin_actions_summary: {
+        Args: {
+          p_action_type?: string
+          p_date_from?: string
+          p_date_to?: string
+          p_limit?: number
+          p_target_table?: string
+        }
+        Returns: {
+          recent_actions: string
+          summary_line: string
+          total_actions: number
+          unique_admins: number
+        }[]
       }
       get_contest_bonus_stats: {
         Args: { contest_id: string }
