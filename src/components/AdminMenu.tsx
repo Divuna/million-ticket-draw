@@ -32,7 +32,7 @@ export const AdminMenu: React.FC = () => {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
-      <div className="grid grid-cols-4 gap-1 py-2 px-2 max-w-4xl mx-auto">
+      <div className="flex justify-around py-2 px-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -40,15 +40,15 @@ export const AdminMenu: React.FC = () => {
               key={item.path}
               variant="ghost"
               size="sm"
-              className={`flex flex-col items-center gap-1 h-auto py-2 px-1 ${
+              className={`flex flex-col items-center gap-0.5 h-auto py-1.5 px-1 min-w-0 ${
                 isActive(item.path)
                   ? 'text-primary bg-primary/10'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
               onClick={() => navigate(item.path)}
             >
-              <Icon className="h-4 w-4" />
-              <span className="text-xs font-medium">{item.label}</span>
+              <Icon className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-medium leading-tight text-center">{item.label}</span>
             </Button>
           );
         })}
