@@ -634,6 +634,32 @@ export type Database = {
       }
     }
     Functions: {
+      admin_manage_bonus_prize: {
+        Args: {
+          p_amount?: number
+          p_contest_id?: string
+          p_description?: string
+          p_operation?: string
+          p_prize_id?: string
+          p_status?: string
+          p_ticket_position?: number
+        }
+        Returns: Json
+      }
+      admin_manage_contest: {
+        Args: {
+          p_contest_id?: string
+          p_description?: string
+          p_main_image?: string
+          p_main_prize?: string
+          p_operation?: string
+          p_status?: string
+          p_ticket_count?: number
+          p_ticket_price?: number
+          p_title?: string
+        }
+        Returns: Json
+      }
       fn_close_contest: {
         Args: { p_contest: string }
         Returns: undefined
@@ -674,6 +700,25 @@ export type Database = {
           total_miocoins: number
           total_positions: number
           won_count: number
+        }[]
+      }
+      get_contest_management_data: {
+        Args: { p_contest_id?: string }
+        Returns: {
+          bonus_count: number
+          bonus_summary: string
+          contest_id: string
+          created_at: string
+          description: string
+          main_image: string
+          main_prize: string
+          progress_percentage: number
+          status: string
+          ticket_count: number
+          ticket_price: number
+          tickets_sold: number
+          title: string
+          updated_at: string
         }[]
       }
       get_contests_json: {

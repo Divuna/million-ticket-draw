@@ -19,6 +19,7 @@ import { AdminMenu } from '@/components/AdminMenu';
 import { TicketMapAdmin } from '@/components/TicketMapAdmin';
 import { AdminBonusOverview } from '@/components/AdminBonusOverview';
 import { AdminPrizeDelivery } from '@/components/AdminPrizeDelivery';
+import { AdminContestManagement } from '@/components/AdminContestManagement';
 import { TestTube, AlertTriangle } from 'lucide-react';
 
 interface Contest {
@@ -720,8 +721,9 @@ const AdminDashboard: React.FC = () => {
             </Button>
           </div>
           
-          <Tabs defaultValue="ticketmap" className="space-y-6">
+          <Tabs defaultValue="management" className="space-y-6">
             <TabsList>
+              <TabsTrigger value="management">Správa soutěží</TabsTrigger>
               <TabsTrigger value="contests">Soutěže</TabsTrigger>
               <TabsTrigger value="ticketmap">Mapa tiketů</TabsTrigger>
               <TabsTrigger value="bonus-overview">Přehled bonusů</TabsTrigger>
@@ -731,6 +733,11 @@ const AdminDashboard: React.FC = () => {
             <TabsTrigger value="distribution">Automatické bonusy</TabsTrigger>
               <TabsTrigger value="logs">Sofinity Logy</TabsTrigger>
             </TabsList>
+
+            {/* Contest Management */}
+            <TabsContent value="management">
+              <AdminContestManagement />
+            </TabsContent>
 
             {/* Contest List */}
             <TabsContent value="contests">
