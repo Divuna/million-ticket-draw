@@ -105,11 +105,25 @@ All colors MUST be HSL.
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
     
-    /* Neon colors */
-    --neon-cyan: 180 100% 50%;
-    --neon-purple: 280 100% 50%;
-    --neon-pink: 330 100% 50%;
-    --neon-green: 120 100% 50%;
+    /* Comprehensive neon color system for OneMil app */
+    --neon-pink: 320 100% 60%;        /* Main actions */
+    --neon-pink-glow: 320 100% 60%;
+    --neon-orange: 30 100% 60%;       /* Bonuses */
+    --neon-orange-glow: 30 100% 60%;
+    --neon-green: 120 100% 60%;       /* Participation */
+    --neon-green-glow: 120 100% 60%;
+    --neon-blue: 200 100% 60%;        /* Sharing */
+    --neon-blue-glow: 200 100% 60%;
+    --neon-gold: 45 100% 50%;         /* Winning prizes */
+    --neon-gold-glow: 45 100% 50%;
+    --neon-cyan: 180 100% 60%;        /* Secondary accent */
+    --neon-cyan-glow: 180 100% 60%;
+    --neon-purple: 280 100% 60%;      /* Tertiary accent */
+    --neon-purple-glow: 280 100% 60%;
+
+    /* Hero gradient colors */
+    --hero-gradient-start: 200 100% 30%;  /* Deep blue */
+    --hero-gradient-end: 320 100% 30%;    /* Deep pink */
   }
 }
 
@@ -124,35 +138,83 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
+  /* Enhanced glow effects for neon design */
+  .glow-pink {
+    @apply shadow-[0_0_30px_hsl(var(--neon-pink-glow)/0.6),0_0_60px_hsl(var(--neon-pink-glow)/0.3)];
+  }
+
+  .glow-orange {
+    @apply shadow-[0_0_30px_hsl(var(--neon-orange-glow)/0.6),0_0_60px_hsl(var(--neon-orange-glow)/0.3)];
+  }
+
+  .glow-green {
+    @apply shadow-[0_0_30px_hsl(var(--neon-green-glow)/0.6),0_0_60px_hsl(var(--neon-green-glow)/0.3)];
+  }
+
+  .glow-blue {
+    @apply shadow-[0_0_30px_hsl(var(--neon-blue-glow)/0.6),0_0_60px_hsl(var(--neon-blue-glow)/0.3)];
+  }
+
+  .glow-gold {
+    @apply shadow-[0_0_30px_hsl(var(--neon-gold-glow)/0.6),0_0_60px_hsl(var(--neon-gold-glow)/0.3)];
+  }
+
   .glow-cyan {
-    box-shadow: 0 0 20px hsl(var(--neon-cyan) / 0.3), 0 0 40px hsl(var(--neon-cyan) / 0.1);
+    @apply shadow-[0_0_30px_hsl(var(--neon-cyan-glow)/0.6),0_0_60px_hsl(var(--neon-cyan-glow)/0.3)];
   }
-  
+
   .glow-purple {
-    box-shadow: 0 0 20px hsl(var(--neon-purple) / 0.3), 0 0 40px hsl(var(--neon-purple) / 0.1);
+    @apply shadow-[0_0_30px_hsl(var(--neon-purple-glow)/0.6),0_0_60px_hsl(var(--neon-purple-glow)/0.3)];
   }
-  
-  .text-neon-cyan {
-    color: hsl(var(--neon-cyan));
-    text-shadow: 0 0 10px hsl(var(--neon-cyan) / 0.5);
-  }
-  
-  .text-neon-purple {
-    color: hsl(var(--neon-purple));
-    text-shadow: 0 0 10px hsl(var(--neon-purple) / 0.5);
-  }
-  
+
+  /* Enhanced text neon effects */
   .text-neon-pink {
-    color: hsl(var(--neon-pink));
-    text-shadow: 0 0 10px hsl(var(--neon-pink) / 0.5);
+    @apply text-[hsl(var(--neon-pink))] drop-shadow-[0_0_15px_hsl(var(--neon-pink)/0.9)];
   }
-  
-  .border-neon-cyan {
-    border-color: hsl(var(--neon-cyan));
+
+  .text-neon-orange {  
+    @apply text-[hsl(var(--neon-orange))] drop-shadow-[0_0_15px_hsl(var(--neon-orange)/0.9)];
   }
-  
-  .border-neon-purple {
-    border-color: hsl(var(--neon-purple));
+
+  .text-neon-green {
+    @apply text-[hsl(var(--neon-green))] drop-shadow-[0_0_15px_hsl(var(--neon-green)/0.9)];
+  }
+
+  .text-neon-blue {
+    @apply text-[hsl(var(--neon-blue))] drop-shadow-[0_0_15px_hsl(var(--neon-blue)/0.9)];
+  }
+
+  .text-neon-gold {
+    @apply text-[hsl(var(--neon-gold))] drop-shadow-[0_0_15px_hsl(var(--neon-gold)/0.9)];
+  }
+
+  .text-neon-cyan {
+    @apply text-[hsl(var(--neon-cyan))] drop-shadow-[0_0_15px_hsl(var(--neon-cyan)/0.9)];
+  }
+
+  .text-neon-purple {
+    @apply text-[hsl(var(--neon-purple))] drop-shadow-[0_0_15px_hsl(var(--neon-purple)/0.9)];
+  }
+
+  /* Enhanced border neon effects */
+  .border-neon-pink {
+    @apply border-[hsl(var(--neon-pink))];
+  }
+
+  .border-neon-orange {
+    @apply border-[hsl(var(--neon-orange))];
+  }
+
+  .border-neon-green {
+    @apply border-[hsl(var(--neon-green))];
+  }
+
+  .border-neon-blue {
+    @apply border-[hsl(var(--neon-blue))];
+  }
+
+  .border-neon-gold {
+    @apply border-[hsl(var(--neon-gold))];
   }
 
   /* Ticket animation effects */

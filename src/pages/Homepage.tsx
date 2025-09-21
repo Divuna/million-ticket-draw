@@ -194,9 +194,9 @@ const Homepage = () => {
       <Header />
       
       <div className="container mx-auto px-4 py-8 space-y-12">
-        {/* Main Banner */}
+        {/* Main Banner - Hero with Neon Frame */}
         <section className="w-full">
-          <div className="h-64 md:h-80 bg-gradient-to-br from-purple-900/20 to-cyan-900/20 rounded-lg border border-neon-purple glow-purple flex items-center justify-center relative overflow-hidden">
+          <div className="neon-frame h-64 md:h-80 flex items-center justify-center relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
             <div className="text-center space-y-4 z-10">
               <div className="text-6xl md:text-8xl animate-bounce">🎯</div>
@@ -221,17 +221,17 @@ const Homepage = () => {
           </div>
         </section>
 
-        {/* Two Dominant Boxes */}
+        {/* Two Dominant Boxes - Blue for Sharing, Pink for Main Actions */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Voucher Purchase Box */}
-          <Card className={`border-neon-cyan glow-cyan bg-card/50 backdrop-blur-sm transition-all duration-200 ${
+          {/* Voucher Purchase Box - Blue for Sharing */}
+          <Card className={`border-neon-blue glow-blue bg-card/50 backdrop-blur-sm transition-all duration-200 ${
             user && !isAdmin ? 'cursor-pointer hover:scale-105' : ''
           }`} onClick={handleVoucherClick}>
             <CardHeader className="text-center space-y-4">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
+              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full flex items-center justify-center">
                 <Gift className="w-8 h-8 text-white" />
               </div>
-              <CardTitle className="text-2xl font-bold text-neon-cyan">
+              <CardTitle className="text-2xl font-bold text-neon-blue">
                 Kupte Voucher
               </CardTitle>
             </CardHeader>
@@ -240,13 +240,13 @@ const Homepage = () => {
                 Získejte vouchers s okamžitou hodnotou
               </p>
               {user && !isAdmin && (
-                <Button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 glow-cyan">
+                <Button variant="neon-blue" className="w-full">
                   Koupit Voucher
                   <ChevronRight className="ml-2 w-4 h-4" />
                 </Button>
               )}
               {!user && (
-                <Button variant="outline" className="w-full border-cyan-400 text-cyan-400 hover:bg-cyan-400/10">
+                <Button variant="outline" className="w-full border-blue-400 text-blue-400 hover:bg-blue-400/10">
                   Přihlásit se pro nákup
                 </Button>
               )}
@@ -258,15 +258,15 @@ const Homepage = () => {
             </CardContent>
           </Card>
 
-          {/* Games Box */}
-          <Card className={`border-neon-purple glow-purple bg-card/50 backdrop-blur-sm transition-all duration-200 ${
+          {/* Games Box - Pink for Main Actions */}
+          <Card className={`border-neon-pink glow-pink bg-card/50 backdrop-blur-sm transition-all duration-200 ${
             user && !isAdmin ? 'cursor-pointer hover:scale-105' : ''
           }`} onClick={handleGamesClick}>
             <CardHeader className="text-center space-y-4">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center">
+              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
                 <Trophy className="w-8 h-8 text-white" />
               </div>
-              <CardTitle className="text-2xl font-bold text-neon-purple">
+              <CardTitle className="text-2xl font-bold text-neon-pink">
                 Hraj o luxusní ceny
               </CardTitle>
             </CardHeader>
@@ -275,13 +275,13 @@ const Homepage = () => {
                 Připojte se k hlavním hrám a vyhrajte velké ceny
               </p>
               {user && !isAdmin && (
-                <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 glow-purple">
+                <Button variant="neon-pink" className="w-full">
                   Hrát Hry
                   <ChevronRight className="ml-2 w-4 h-4" />
                 </Button>
               )}
               {!user && (
-                <Button variant="outline" className="w-full border-purple-400 text-purple-400 hover:bg-purple-400/10">
+                <Button variant="outline" className="w-full border-pink-400 text-pink-400 hover:bg-pink-400/10">
                   Přihlásit se pro hraní
                 </Button>
               )}
@@ -294,10 +294,10 @@ const Homepage = () => {
           </Card>
         </section>
 
-        {/* Ongoing Contests Carousel */}
+        {/* Ongoing Contests Carousel - Green for Participation */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-neon-cyan flex items-center gap-2">
+            <h3 className="text-2xl font-bold text-neon-green flex items-center gap-2">
               <Ticket className="w-6 h-6" />
               Probíhající Soutěže
             </h3>
@@ -328,34 +328,34 @@ const Homepage = () => {
             }}
           >
             {loading ? (
-              // Loading placeholder
+              // Loading placeholder - Green for participation
               <div className="flex-none w-72">
-                <Card className="coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden h-full">
+                <Card className="border-neon-green glow-green bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 relative overflow-hidden h-full">
                   <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
                   <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
                   <CardHeader className="pb-2">
-                    <div className="h-4 bg-amber-200 dark:bg-amber-800 rounded animate-pulse mb-2" />
-                    <div className="h-3 bg-amber-100 dark:bg-amber-900 rounded animate-pulse w-20" />
+                    <div className="h-4 bg-green-200 dark:bg-green-800 rounded animate-pulse mb-2" />
+                    <div className="h-3 bg-green-100 dark:bg-green-900 rounded animate-pulse w-20" />
                   </CardHeader>
                   <CardContent>
-                    <div className="h-16 bg-amber-100 dark:bg-amber-900 rounded animate-pulse mb-2" />
-                    <div className="h-3 bg-amber-200 dark:bg-amber-800 rounded animate-pulse" />
+                    <div className="h-16 bg-green-100 dark:bg-green-900 rounded animate-pulse mb-2" />
+                    <div className="h-3 bg-green-200 dark:bg-green-800 rounded animate-pulse" />
                   </CardContent>
                 </Card>
               </div>
             ) : contests.length === 0 ? (
-              // No contests message
+              // No contests message - Green for participation
               <div className="flex-none w-72">
-                <Card className="coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden h-full">
+                <Card className="border-neon-green glow-green bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 relative overflow-hidden h-full">
                   <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
                   <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-bold text-amber-800 dark:text-amber-400">
+                    <CardTitle className="text-lg font-bold text-green-800 dark:text-green-400">
                       Žádné aktivní soutěže
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-sm text-amber-600 dark:text-amber-500">
+                    <div className="text-sm text-green-600 dark:text-green-500">
                       Momentálně nejsou k dispozici žádné aktivní soutěže
                     </div>
                   </CardContent>
@@ -369,8 +369,8 @@ const Homepage = () => {
                   style={{ scrollSnapAlign: 'start' }}
                 >
                   <Card 
-                    className={`coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden transition-all duration-300 h-full ${
-                      user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-100 hover:to-yellow-100 dark:hover:from-amber-800/30 dark:hover:to-yellow-800/30' : 
+                    className={`border-neon-green glow-green bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 relative overflow-hidden transition-all duration-300 h-full ${
+                      user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-green-500 hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-800/30 dark:hover:to-emerald-800/30' : 
                       !user ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]' : 
                       'opacity-90'
                     }`}
@@ -382,7 +382,7 @@ const Homepage = () => {
                     
                     <CardHeader className="pb-2">
                       {/* Contest Image */}
-                      <div className="w-full h-32 rounded-lg overflow-hidden mb-3 bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center">
+                      <div className="w-full h-32 rounded-lg overflow-hidden mb-3 bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
                         {contest.main_image ? (
                           <img 
                             src={contest.main_image.startsWith('http') ? contest.main_image : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`}
@@ -400,7 +400,7 @@ const Homepage = () => {
                           />
                         ) : null}
                         <div 
-                          className={`w-full h-full flex items-center justify-center text-amber-600 dark:text-amber-400 ${contest.main_image ? 'hidden' : 'flex'}`}
+                          className={`w-full h-full flex items-center justify-center text-green-600 dark:text-green-400 ${contest.main_image ? 'hidden' : 'flex'}`}
                           style={{ display: contest.main_image ? 'none' : 'flex' }}
                         >
                           <div className="text-center">
