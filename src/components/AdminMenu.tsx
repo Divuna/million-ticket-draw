@@ -26,6 +26,7 @@ export const AdminMenu: React.FC = () => {
     { label: 'Notifikace', icon: Bell, path: '/admin/notifications' },
     { label: 'Statistiky', icon: BarChart3, path: '/admin/statistics' },
     { label: 'Audit', icon: FileText, path: '/admin/audit-logs' },
+    { label: 'Testy', icon: Trophy, path: '/admin/tests' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -40,15 +41,15 @@ export const AdminMenu: React.FC = () => {
               key={item.path}
               variant="ghost"
               size="sm"
-              className={`flex flex-col items-center gap-0.5 h-auto py-1.5 px-1 min-w-0 ${
+              className={`flex flex-col items-center gap-0.5 h-auto py-1.5 px-0.5 min-w-0 text-xs ${
                 isActive(item.path)
                   ? 'text-primary bg-primary/10'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
               onClick={() => navigate(item.path)}
             >
-              <Icon className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-medium leading-tight text-center">{item.label}</span>
+              <Icon className="h-3 w-3" />
+              <span className="text-[9px] font-medium leading-tight text-center">{item.label}</span>
             </Button>
           );
         })}

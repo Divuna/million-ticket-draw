@@ -24,6 +24,7 @@ import AdminVouchers from "./pages/AdminVouchers";
 import AdminNotifications from "./pages/AdminNotifications";
 import AdminStatistics from "./pages/AdminStatistics";
 import AdminAuditLogs from "./pages/AdminAuditLogs";
+import AdminTests from "./pages/AdminTests";
 import ContestDetailAdmin from "@/components/ContestDetailAdmin";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="/admin/notifications" element={<AdminNotifications />} />
             <Route path="/admin/statistics" element={<AdminStatistics />} />
             <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+            <Route path="/admin/tests" element={<AdminTests />} />
             <Route path="/admin/contest/:contestId" element={<ContestDetailAdmin />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/payment-cancel" element={<PaymentCancel />} />
