@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useTestAuth } from '@/hooks/useTestAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
@@ -73,13 +74,13 @@ interface AIRequest {
 
 const AdminDashboard: React.FC = () => {
   const { user, session } = useAuth();
+  const { isAdmin } = useUserRole();
   const { testUser, isTestMode, testSignOut } = useTestAuth();
   const [searchParams] = useSearchParams();
   const [contests, setContests] = useState<Contest[]>([]);
   const [selectedContest, setSelectedContest] = useState<string>('');
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   
   // Log analyzer states
   const [edgeFunctionLogs, setEdgeFunctionLogs] = useState<EdgeFunctionLog[]>([]);
@@ -180,12 +181,10 @@ const AdminDashboard: React.FC = () => {
 
   const checkAdminRole = async () => {
     try {
-      // Temporary admin check - in production this would query the users table
-      // For now, assume first user is admin for demo purposes
-      setIsAdmin(true);
+      // Role check is now handled by useUserRole hook
+      setLoading(false);
     } catch (error) {
       console.error('Error checking admin role:', error);
-    } finally {
       setLoading(false);
     }
   };

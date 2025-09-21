@@ -1,4 +1,3 @@
-console.log('App module loading');
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 
@@ -19,7 +18,12 @@ import Messages from "./pages/Messages";
 import Vouchers from "./pages/Vouchers";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminWinners from "./pages/AdminWinners";
-console.log('ContestDetailAdmin import loading');
+import AdminUsers from "./pages/AdminUsers";
+import AdminPayments from "./pages/AdminPayments";
+import AdminVouchers from "./pages/AdminVouchers";
+import AdminNotifications from "./pages/AdminNotifications";
+import AdminStatistics from "./pages/AdminStatistics";
+import AdminAuditLogs from "./pages/AdminAuditLogs";
 import ContestDetailAdmin from "@/components/ContestDetailAdmin";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
@@ -48,10 +52,15 @@ const App = () => (
             <Route path="/messages" element={<Messages />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/winners" element={<AdminWinners />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/payments" element={<AdminPayments />} />
+            <Route path="/admin/vouchers" element={<AdminVouchers />} />
+            <Route path="/admin/notifications" element={<AdminNotifications />} />
+            <Route path="/admin/statistics" element={<AdminStatistics />} />
+            <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
             <Route path="/admin/contest/:contestId" element={<ContestDetailAdmin />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/payment-cancel" element={<PaymentCancel />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -1,12 +1,48 @@
 import { useAuth } from '@/hooks/useAuth';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
-export type UserRole = 'admin' | 'user';
+export type UserRole = 'admin' | 'superadmin' | 'user';
 
-export const useUserRole = (): { role: UserRole; isAdmin: boolean } => {
+export const useUserRole = (): { role: UserRole; isAdmin: boolean; isSuperAdmin: boolean; loading: boolean } => {
   const { user } = useAuth();
+  const [role, setRole] = useState<UserRole>('user');
+  const [loading, setLoading] = useState(true);
   
-  const isAdmin = user?.email === 'divispavel2@gmail.com';
-  const role: UserRole = isAdmin ? 'admin' : 'user';
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (!user?.id) {
+        setRole('user');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user role:', error);
+          setRole('user');
+        } else {
+          setRole((data?.role as UserRole) || 'user');
+        }
+      } catch (error) {
+        console.error('Error fetching user role:', error);
+        setRole('user');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserRole();
+  }, [user?.id]);
+
+  const isAdmin = role === 'admin' || role === 'superadmin';
+  const isSuperAdmin = role === 'superadmin';
   
-  return { role, isAdmin };
+  return { role, isAdmin, isSuperAdmin, loading };
 };
