@@ -5,6 +5,27 @@ import { cn } from "@/lib/utils";
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
   <div ref={ref} className={cn("rounded-lg border bg-card text-card-foreground shadow-sm", className)} {...props} />
 ));
+
+const TicketCard = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { 
+  variant?: 'pink' | 'cyan' | 'purple' | 'green' | 'orange' | 'gold' 
+}>(({ className, variant = 'pink', ...props }, ref) => {
+  const variantClasses = {
+    pink: "border-neon-pink glow-pink text-neon-pink",
+    cyan: "border-neon-cyan glow-cyan text-neon-cyan", 
+    purple: "border-neon-purple glow-purple text-neon-purple",
+    green: "border-neon-green glow-green text-neon-green",
+    orange: "border-neon-orange glow-orange text-neon-orange",
+    gold: "border-neon-gold glow-gold text-neon-gold",
+  };
+  
+  return (
+    <div 
+      ref={ref} 
+      className={cn("retro-ticket", variantClasses[variant], className)} 
+      {...props} 
+    />
+  );
+});
 Card.displayName = "Card";
 
 const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
@@ -40,4 +61,6 @@ const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 );
 CardFooter.displayName = "CardFooter";
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };
+TicketCard.displayName = "TicketCard";
+
+export { Card, TicketCard, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };
