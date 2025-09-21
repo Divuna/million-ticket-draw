@@ -753,7 +753,7 @@ export type Database = {
         }[]
       }
       get_contest_management_data: {
-        Args: { p_contest_id?: string }
+        Args: { p_contest_id_filter?: string }
         Returns: {
           bonus_count: number
           bonus_summary: string

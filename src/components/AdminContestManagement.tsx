@@ -105,14 +105,34 @@ export const AdminContestManagement: React.FC = () => {
       const { data, error } = await supabase
         .rpc('get_contest_management_data');
 
-      if (error) throw error;
-      setContests(data || []);
-    } catch (error) {
-      console.error('Error fetching contests:', error);
+      if (error) {
+        console.error('Error fetching contests:', error.message, error.details, error.hint);
+        toast({
+          title: "Chyba při načítání soutěží",
+          description: `Nepodařilo se načíst seznam soutěží: ${error.message}. Zkuste to prosím znovu.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!data) {
+        console.warn('No contests data returned');
+        setContests([]);
+        return;
+      }
+
+      console.log('Contests loaded successfully:', data.length);
+      setContests(data);
       toast({
-        title: "Chyba",
-        description: "Nepodařilo se načíst soutěže.",
-        variant: "destructive"
+        title: "Soutěže načteny",
+        description: `Úspěšně načteno ${data.length} soutěží.`,
+      });
+    } catch (error: any) {
+      console.error('Unexpected error fetching contests:', error);
+      toast({
+        title: "Chyba při načítání soutěží",
+        description: `Došlo k neočekávané chybě: ${error?.message || 'Neznámá chyba'}. Zkuste to prosím znovu.`,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
