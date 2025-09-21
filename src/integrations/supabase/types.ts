@@ -73,6 +73,7 @@ export type Database = {
       }
       bonus_prizes: {
         Row: {
+          admin_notes: string | null
           amount: number | null
           contest_id: string
           created_at: string
@@ -82,6 +83,7 @@ export type Database = {
           ticket_position: number
         }
         Insert: {
+          admin_notes?: string | null
           amount?: number | null
           contest_id: string
           created_at?: string
@@ -91,6 +93,7 @@ export type Database = {
           ticket_position: number
         }
         Update: {
+          admin_notes?: string | null
           amount?: number | null
           contest_id?: string
           created_at?: string
@@ -681,6 +684,18 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_prizes_delivery_summary: {
+        Args: { p_contest_id?: string }
+        Returns: {
+          contest_title: string
+          delivered_count: number
+          pending_count: number
+          prize_positions: string
+          summary_text: string
+          total_prizes: number
+          won_count: number
+        }[]
+      }
       log_admin_action: {
         Args: {
           action_name: string
@@ -714,6 +729,10 @@ export type Database = {
       }
       unlock_ticket: {
         Args: { contest_id: string; user_id: string }
+        Returns: Json
+      }
+      update_bonus_prize_delivery_status: {
+        Args: { p_admin_notes?: string; p_prize_id: string; p_status: string }
         Returns: Json
       }
     }
