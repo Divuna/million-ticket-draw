@@ -69,11 +69,11 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
     <div className="max-w-4xl mx-auto space-y-6">
       
       {/* Contest Header */}
-      <Card>
+      <Card className="ticket-contest ticket-perforations">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-3xl">{contest.title}</CardTitle>
+              <CardTitle className="text-3xl text-neon-purple">{contest.title}</CardTitle>
               {contest.description && (
                 <p className="mt-2 text-lg text-muted-foreground">
                   {contest.description}
@@ -101,13 +101,13 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
       </Card>
 
       {/* Main Prize - No specific ticket number shown to customers */}
-      <Card>
+      <Card className="ticket-game ticket-perforations">
         <CardHeader>
-          <CardTitle>Hlavní cena</CardTitle>
+          <CardTitle className="text-neon-green">Hlavní cena</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center p-6 bg-primary/5 rounded-lg">
-            <h3 className="text-2xl font-bold text-primary mb-2">
+          <div className="text-center p-6 bg-gradient-to-r from-neon-green/5 to-neon-cyan/5 rounded-lg border border-neon-green/20">
+            <h3 className="text-2xl font-bold text-neon-green mb-2">
               {contest.main_prize}
             </h3>
             <p className="text-muted-foreground">
@@ -119,11 +119,11 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
 
       {/* Closed Contest Banner */}
       {contest.status === 'closed' && (
-        <Card className="border-red-500 bg-red-50">
+        <Card className="ticket-message ticket-perforations border-red-500 bg-red-50 dark:bg-red-900/20">
           <CardContent className="pt-6">
             <div className="text-center">
-              <h3 className="text-lg font-bold text-red-700 mb-2">Uzavřená – výhra padla</h3>
-              <p className="text-red-600">Tato soutěž byla ukončena a výherci byli určeni.</p>
+              <h3 className="text-lg font-bold text-red-700 dark:text-red-400 mb-2">Uzavřená – výhra padla</h3>
+              <p className="text-red-600 dark:text-red-300">Tato soutěž byla ukončena a výherci byli určeni.</p>
             </div>
           </CardContent>
         </Card>
@@ -131,19 +131,20 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
 
       {/* Purchase Section */}
       {contest.status === 'active' && (
-        <Card>
+        <Card className="ticket-profile ticket-perforations bg-green-50 dark:bg-green-900/20">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold mb-1">Uplatnit miocoiny</h3>
+                <h3 className="text-lg font-semibold mb-1 text-neon-cyan">Uplatnit miocoiny</h3>
                 <p className="text-muted-foreground">
-                  Cena: 1 miocoin | Váš zůstatek: {userWallet.balance_coins.toLocaleString('cs-CZ')} miocoinů
+                  Cena: 1 miocoin | Váš zůstatek: <span className="text-neon-cyan font-bold">{userWallet.balance_coins.toLocaleString('cs-CZ')}</span> miocoinů
                 </p>
               </div>
               <Button 
                 onClick={handleBuyClick}
                 disabled={purchasing || userWallet.balance_coins < 1}
                 size="lg"
+                className="bg-gradient-to-r from-neon-cyan to-neon-green hover:from-neon-cyan/80 hover:to-neon-green/80 text-white border-0"
               >
                 {purchasing ? 'Uplatňuji...' : `Uplatnit ${userWallet.balance_coins >= 1 ? '1' : '0'} miocoinů`}
               </Button>
@@ -154,19 +155,20 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
 
       {/* Paused Contest Section */}
       {contest.status === 'paused' && (
-        <Card>
+        <Card className="ticket-message ticket-perforations bg-yellow-50 dark:bg-yellow-900/20">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold mb-1">Uplatnit miocoiny</h3>
+                <h3 className="text-lg font-semibold mb-1 text-neon-orange">Uplatnit miocoiny</h3>
                 <p className="text-muted-foreground">
-                  Cena: 1 miocoin | Váš zůstatek: {userWallet.balance_coins.toLocaleString('cs-CZ')} miocoinů
+                  Cena: 1 miocoin | Váš zůstatek: <span className="text-neon-orange font-bold">{userWallet.balance_coins.toLocaleString('cs-CZ')}</span> miocoinů
                 </p>
               </div>
               <Button 
                 disabled
                 size="lg"
                 variant="outline"
+                className="border-neon-orange text-neon-orange"
               >
                 Soutěž je pozastavena
               </Button>
@@ -175,9 +177,9 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
         </Card>
       )}
       {/* Bonus Prizes Section */}
-      <Card>
+      <Card className="ticket-voucher ticket-perforations">
         <CardHeader>
-          <CardTitle>Dostupné bonusové ceny</CardTitle>
+          <CardTitle className="text-neon-pink">Dostupné bonusové ceny</CardTitle>
         </CardHeader>
         <CardContent>
           {bonusPrizes && bonusPrizes.filter(p => p.status === 'pending').length > 0 ? (
@@ -213,9 +215,9 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
       />
 
       {/* My Wins Section */}
-      <Card>
+      <Card className="ticket-profile ticket-perforations">
         <CardHeader>
-          <CardTitle>Moje výhry</CardTitle>
+          <CardTitle className="text-neon-cyan">Moje výhry</CardTitle>
         </CardHeader>
         <CardContent>
           {userWins.length > 0 ? (

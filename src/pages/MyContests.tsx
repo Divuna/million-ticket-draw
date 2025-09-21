@@ -139,15 +139,15 @@ const MyContests: React.FC = () => {
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-3 mb-8">
             <Gamepad2 className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold">Moje hry</h1>
+            <h1 className="text-3xl font-bold text-neon-purple">Moje hry</h1>
           </div>
           
           {contests.length === 0 ? (
-            <Card>
+            <Card className="ticket-contest ticket-perforations">
               <CardContent className="pt-6">
                 <div className="text-center py-8">
-                  <Ticket className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Žádné soutěže</h3>
+                  <Ticket className="h-12 w-12 text-neon-purple mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2 text-neon-purple">Žádné soutěže</h3>
                   <p className="text-muted-foreground">
                     Nemáte zatím žádné lístky v soutěžích. Přejděte na hlavní stránku a začněte hrát!
                   </p>
@@ -159,12 +159,12 @@ const MyContests: React.FC = () => {
               {contests.map((contest) => (
                 <Card 
                   key={contest.id} 
-                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  className="ticket-contest ticket-perforations cursor-pointer hover:scale-105 transition-all duration-300"
                   onClick={() => navigate(`/contest/${contest.id}`)}
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg line-clamp-2">{contest.title}</CardTitle>
+                      <CardTitle className="text-lg line-clamp-2 text-neon-purple">{contest.title}</CardTitle>
                       <Badge className={`${getStatusColor(contest.status)} text-white`}>
                         {getStatusText(contest.status)}
                       </Badge>

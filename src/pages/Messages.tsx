@@ -17,17 +17,17 @@ const Messages: React.FC = () => {
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex items-center gap-3 mb-6">
             <MessageCircle className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold">Zprávy</h1>
+            <h1 className="text-3xl font-bold text-neon-orange">Zprávy</h1>
           </div>
 
-          <Card>
+          <Card className="ticket-message ticket-perforations">
             <CardHeader>
-              <CardTitle>Komunikace s administrátorem</CardTitle>
+              <CardTitle className="text-neon-orange">Komunikace s administrátorem</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-center py-12">
-                <MessageCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Žádné zprávy</h3>
+                <MessageCircle className="h-16 w-16 text-neon-orange mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2 text-neon-orange">Žádné zprávy</h3>
                 <p className="text-muted-foreground">
                   Zde se zobrazí komunikace s administrátorem ohledně vašich výher a soutěží.
                 </p>

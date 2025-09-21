@@ -180,13 +180,13 @@ const Index = () => {
       <Header />
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="mb-4 text-4xl font-bold text-neon-cyan">OneMil</h1>
+          <h1 className="mb-4 text-4xl font-bold text-neon-green">OneMil</h1>
           <p className="text-xl text-muted-foreground">Vyberte si soutěž a zkuste štěstí!</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {contests.map((contest) => (
-            <Card key={contest.id} className="border-neon-purple glow-purple bg-card/50 backdrop-blur-sm relative">
+            <Card key={contest.id} className="ticket-game ticket-perforations relative">
               {contest.status === 'closed' && (
                 <Badge className="absolute top-4 right-4 bg-destructive text-destructive-foreground">
                   Hra ukončena – hlavní výhra padla
@@ -210,7 +210,7 @@ const Index = () => {
                     <div className="text-6xl">🎯</div>
                   )}
                 </div>
-                <CardTitle className="text-neon-cyan">{contest.title}</CardTitle>
+                <CardTitle className="text-neon-green">{contest.title}</CardTitle>
                 <CardDescription className="text-muted-foreground">
                   {contest.description}
                 </CardDescription>
@@ -220,11 +220,11 @@ const Index = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Hlavní výhra:</span>
-                    <span className="text-sm font-medium text-neon-pink">{contest.main_prize}</span>
+                    <span className="text-sm font-medium text-neon-green">{contest.main_prize}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Cena tiketu:</span>
-                    <span className="text-sm font-medium text-neon-purple">
+                    <span className="text-sm font-medium text-neon-green">
                       {contest.ticket_price} miocoinů
                     </span>
                   </div>
@@ -247,7 +247,7 @@ const Index = () => {
                 {/* Show interactive button only for logged-in non-admin users */}
                 {user && !isAdmin && (
                   <Button 
-                    className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white border-0 glow-cyan"
+                    className="w-full bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0 glow-cyan"
                     onClick={() => handleUnlockTicket(contest.id)}
                     disabled={contest.status === 'closed' || processingContestId === contest.id}
                   >
@@ -261,7 +261,7 @@ const Index = () => {
                 {/* Show login prompt for non-logged-in users */}
                 {!user && (
                   <Button 
-                    className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white border-0 glow-cyan"
+                    className="w-full bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0 glow-cyan"
                     onClick={() => navigate('/login')}
                   >
                     Přihlásit se pro koupi tiketu

@@ -198,6 +198,85 @@ All colors MUST be HSL.
     clip-path: polygon(0 0, calc(100% - 30px) 0, 100% 30px, 100% calc(100% - 30px), calc(100% - 30px) 100%, 30px 100%, 0 calc(100% - 30px), 0 30px);
     animation: neon-pulse 3s ease-in-out infinite;
   }
+
+  /* Ticket variants for different sections */
+  .ticket-profile {
+    position: relative;
+    background: linear-gradient(135deg, 
+      hsl(var(--background)) 0%, 
+      hsl(var(--neon-cyan) / 0.03) 50%, 
+      hsl(var(--background)) 100%);
+    border: 2px solid hsl(var(--neon-cyan));
+    box-shadow: 0 0 30px hsl(var(--neon-cyan) / 0.3), 0 0 60px hsl(var(--neon-cyan) / 0.1);
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% calc(100% - 20px), calc(100% - 20px) 100%, 20px 100%, 0 calc(100% - 20px), 0 20px);
+  }
+
+  .ticket-contest {
+    position: relative;
+    background: linear-gradient(135deg, 
+      hsl(var(--background)) 0%, 
+      hsl(var(--neon-purple) / 0.03) 50%, 
+      hsl(var(--background)) 100%);
+    border: 2px solid hsl(var(--neon-purple));
+    box-shadow: 0 0 30px hsl(var(--neon-purple) / 0.3), 0 0 60px hsl(var(--neon-purple) / 0.1);
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% calc(100% - 20px), calc(100% - 20px) 100%, 20px 100%, 0 calc(100% - 20px), 0 20px);
+  }
+
+  .ticket-voucher {
+    position: relative;
+    background: linear-gradient(135deg, 
+      hsl(var(--background)) 0%, 
+      hsl(var(--neon-pink) / 0.03) 50%, 
+      hsl(var(--background)) 100%);
+    border: 2px solid hsl(var(--neon-pink));
+    box-shadow: 0 0 30px hsl(var(--neon-pink) / 0.3), 0 0 60px hsl(var(--neon-pink) / 0.1);
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% calc(100% - 20px), calc(100% - 20px) 100%, 20px 100%, 0 calc(100% - 20px), 0 20px);
+  }
+
+  .ticket-game {
+    position: relative;
+    background: linear-gradient(135deg, 
+      hsl(var(--background)) 0%, 
+      hsl(var(--neon-green) / 0.03) 50%, 
+      hsl(var(--background)) 100%);
+    border: 2px solid hsl(var(--neon-green));
+    box-shadow: 0 0 30px hsl(var(--neon-green) / 0.3), 0 0 60px hsl(var(--neon-green) / 0.1);
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% calc(100% - 20px), calc(100% - 20px) 100%, 20px 100%, 0 calc(100% - 20px), 0 20px);
+  }
+
+  .ticket-message {
+    position: relative;
+    background: linear-gradient(135deg, 
+      hsl(var(--background)) 0%, 
+      hsl(var(--neon-orange) / 0.03) 50%, 
+      hsl(var(--background)) 100%);
+    border: 2px solid hsl(var(--neon-orange));
+    box-shadow: 0 0 30px hsl(var(--neon-orange) / 0.3), 0 0 60px hsl(var(--neon-orange) / 0.1);
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% calc(100% - 20px), calc(100% - 20px) 100%, 20px 100%, 0 calc(100% - 20px), 0 20px);
+  }
+
+  /* Ticket perforations */
+  .ticket-perforations::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 80%;
+    background: radial-gradient(circle at center, transparent 40%, hsl(var(--border)) 40%, hsl(var(--border)) 60%, transparent 60%) 0 0/8px 16px repeat-y;
+  }
+  
+  .ticket-perforations::after {
+    content: '';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 80%;
+    background: radial-gradient(circle at center, transparent 40%, hsl(var(--border)) 40%, hsl(var(--border)) 60%, transparent 60%) 0 0/8px 16px repeat-y;
+  }
   
   .neon-ticket::before {
     content: '';

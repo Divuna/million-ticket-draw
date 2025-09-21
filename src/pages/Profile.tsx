@@ -262,9 +262,9 @@ const Profile: React.FC = () => {
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
-          <Card>
+          <Card className="ticket-profile ticket-perforations">
             <CardHeader>
-              <CardTitle>Můj profil</CardTitle>
+              <CardTitle className="text-neon-cyan">Můj profil</CardTitle>
               <CardDescription>
                 Přehled vašeho účtu a peněženky
               </CardDescription>
@@ -420,22 +420,22 @@ const Profile: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <Card>
+                  <Card className="ticket-game ticket-perforations">
                     <CardContent className="pt-6">
                       <div className="text-center">
                         <p className="text-sm font-medium text-muted-foreground">Mince (coins):</p>
-                        <p className="text-3xl font-bold text-primary">
+                        <p className="text-3xl font-bold text-neon-green">
                           {wallet?.balance_coins?.toLocaleString('cs-CZ') || '0'}
                         </p>
                       </div>
                     </CardContent>
                   </Card>
                   
-                  <Card>
+                  <Card className="ticket-voucher ticket-perforations">
                     <CardContent className="pt-6">
                       <div className="text-center">
                         <p className="text-sm font-medium text-muted-foreground">Vouchery:</p>
-                        <p className="text-3xl font-bold text-primary">
+                        <p className="text-3xl font-bold text-neon-pink">
                           {wallet?.balance_vouchers?.toLocaleString('cs-CZ') || '0'}
                         </p>
                       </div>

@@ -417,8 +417,8 @@ const Homepage = () => {
                   style={{ scrollSnapAlign: 'start' }}
                 >
                   <Card 
-                    className={`coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden transition-all duration-300 h-full ${
-                      user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-100 hover:to-yellow-100 dark:hover:from-amber-800/30 dark:hover:to-yellow-800/30' : 
+                    className={`coupon-card border-neon-purple bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 relative overflow-hidden transition-all duration-300 h-full ${
+                      user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-neon-purple hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 dark:hover:from-purple-800/30 dark:hover:to-pink-800/30' : 
                       !user ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]' : 
                       'opacity-90'
                     }`}
@@ -458,31 +458,31 @@ const Homepage = () => {
                         </div>
                       </div>
 
-                      <CardTitle className="text-lg font-bold text-amber-800 dark:text-amber-400">
+                      <CardTitle className="text-lg font-bold text-neon-purple">
                         {contest.title}
                       </CardTitle>
-                      <div className="text-xs text-amber-600 dark:text-amber-500 font-mono">
+                      <div className="text-xs text-purple-600 dark:text-purple-400 font-mono">
                         #{contest.id.slice(0, 8)}
                       </div>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <Star className="w-4 h-4 text-amber-500" />
-                          <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                          <Star className="w-4 h-4 text-neon-purple" />
+                          <span className="text-sm font-medium text-neon-purple">
                             {contest.main_prize}
                           </span>
                         </div>
-                        <div className="flex justify-between text-xs text-amber-600 dark:text-amber-500">
+                        <div className="flex justify-between text-xs text-purple-600 dark:text-purple-400">
                           <span>Tiketů: {contest.ticket_count.toLocaleString('cs-CZ')}</span>
                           <span>Cena: {contest.ticket_price} Miocoin</span>
                         </div>
-                        <div className="border-t border-dashed border-amber-300 pt-2">
-                          <div className="text-xs text-amber-600 dark:text-amber-500">
+                        <div className="border-t border-dashed border-neon-purple pt-2">
+                          <div className="text-xs text-purple-600 dark:text-purple-400">
                             {user && !isAdmin ? 'Klikněte pro hraní her' : !user ? 'Přihlaste se pro hraní' : 'Contest zobrazení'}
                           </div>
                           {isAdmin && (
-                            <div className="text-xs text-amber-500 mt-1">
+                            <div className="text-xs text-purple-500 mt-1">
                               Admin zobrazení - pouze pro čtení
                             </div>
                           )}
@@ -538,11 +538,11 @@ const Homepage = () => {
                 <Card 
                   className={`coupon-card relative overflow-hidden transition-all duration-300 h-full ${
                     voucher.status === 'available' 
-                      ? 'border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' 
+                      ? 'border-neon-pink bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20' 
                       : 'border-gray-400 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 opacity-60'
                   } ${
                     user && !isAdmin && voucher.status === 'available' 
-                      ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-green-500 hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-800/30 dark:hover:to-emerald-800/30' 
+                      ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-neon-pink hover:bg-gradient-to-r hover:from-pink-100 hover:to-rose-100 dark:hover:from-pink-800/30 dark:hover:to-rose-800/30' 
                       : !user && voucher.status === 'available'
                         ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]'
                         : voucher.status === 'available' && isAdmin
@@ -558,14 +558,14 @@ const Homepage = () => {
                   <CardHeader className="pb-2">
                     <CardTitle className={`text-lg font-bold ${
                       voucher.status === 'available' 
-                        ? 'text-green-800 dark:text-green-400' 
+                        ? 'text-neon-pink' 
                         : 'text-gray-800 dark:text-gray-400'
                     }`}>
                       {voucher.name}
                     </CardTitle>
                     <div className={`text-xs font-mono ${
                       voucher.status === 'available' 
-                        ? 'text-green-600 dark:text-green-500' 
+                        ? 'text-pink-600 dark:text-pink-400' 
                         : 'text-gray-600 dark:text-gray-500'
                     }`}>
                       #{voucher.code}
@@ -576,14 +576,14 @@ const Homepage = () => {
                       <div className="flex items-center justify-between">
                         <span className={`text-2xl font-bold ${
                           voucher.status === 'available' 
-                            ? 'text-green-700 dark:text-green-300' 
+                            ? 'text-neon-pink' 
                             : 'text-gray-700 dark:text-gray-300'
                         }`}>
                           {voucher.value}
                         </span>
                         <div className={`px-2 py-1 rounded text-xs font-medium ${
                           voucher.status === 'available' 
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                            ? 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400' 
                             : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
                         }`}>
                           {voucher.status === 'available' ? 'Dostupný' : 'Použitý'}
@@ -591,12 +591,12 @@ const Homepage = () => {
                       </div>
                       <div className={`border-t border-dashed pt-2 ${
                         voucher.status === 'available' 
-                          ? 'border-green-300' 
+                          ? 'border-neon-pink' 
                           : 'border-gray-300'
                       }`}>
                         <div className={`text-xs ${
                           voucher.status === 'available' 
-                            ? 'text-green-600 dark:text-green-500' 
+                            ? 'text-pink-600 dark:text-pink-400' 
                             : 'text-gray-600 dark:text-gray-500'
                         }`}>
                           {voucher.status === 'available' && user && !isAdmin 

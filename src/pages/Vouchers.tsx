@@ -116,15 +116,15 @@ const Vouchers: React.FC = () => {
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-3 mb-6">
             <Gift className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">Moje vouchery</h1>
+            <h1 className="text-2xl font-bold text-neon-pink">Moje vouchery</h1>
           </div>
 
           {vouchers.length === 0 ? (
-            <Card>
+            <Card className="ticket-voucher ticket-perforations">
               <CardContent className="pt-6">
                 <div className="text-center py-12">
-                  <Gift className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Žádné vouchery</h3>
+                  <Gift className="h-12 w-12 mx-auto text-neon-pink mb-4" />
+                  <h3 className="text-lg font-semibold mb-2 text-neon-pink">Žádné vouchery</h3>
                   <p className="text-muted-foreground">
                     Zatím nemáte žádné vouchery. Vouchery získáte při nákupu nebo jako výhry.
                   </p>
@@ -138,10 +138,10 @@ const Vouchers: React.FC = () => {
                 const StatusIcon = status.icon;
                 
                 return (
-                  <Card key={voucher.id}>
+                  <Card key={voucher.id} className="ticket-voucher ticket-perforations">
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">
+                        <CardTitle className="text-lg text-neon-pink">
                           Voucher #{voucher.code}
                         </CardTitle>
                         <Badge variant={status.variant}>
@@ -162,7 +162,7 @@ const Vouchers: React.FC = () => {
                     <CardContent>
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-2xl font-bold text-primary">
+                          <p className="text-2xl font-bold text-neon-pink">
                             {voucher.value.toLocaleString('cs-CZ')} CZK
                           </p>
                           <p className="text-sm text-muted-foreground">
