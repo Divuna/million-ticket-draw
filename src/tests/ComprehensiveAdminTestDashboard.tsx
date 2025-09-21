@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, XCircle, Clock, AlertTriangle, Play, RefreshCw, Timer, Database, Shield, FileText, Zap, BarChart3, TrendingUp } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertTriangle, Play, RefreshCw, Timer, Database, Shield, FileText, Zap, BarChart3, TrendingUp, Download } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -133,14 +133,63 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
     return 'slow';
   };
 
+  // CSV Export functionality
+  const exportResultsToCSV = () => {
+    if (!testResults) return;
+    
+    const csvContent = [
+      ['Test Suite', 'Test Name', 'Status', 'Message', 'Execution Time (ms)', 'Timestamp'].join(','),
+      ...Object.values(testResults.test_suites).flatMap(suite => 
+        (suite.test_results as any[])?.map(test => [
+          suite.suite_name,
+          test.test_name,
+          test.status,
+          `"${test.message}"`,
+          test.execution_time_ms || 0,
+          test.timestamp || ''
+        ].join(',')) || []
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `onemil-test-suite-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // JSON Export functionality
+  const exportResultsToJSON = () => {
+    if (!testResults) return;
+    
+    const exportData = {
+      ...testResults,
+      data_integrity: dataIntegrityResults,
+      sofinity_events: sofinityEvents,
+      performance_metrics: performanceMetrics,
+      ui_validation: czechUIValidation,
+      export_timestamp: new Date().toISOString()
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `onemil-test-suite-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const runCompleteTestSuite = async () => {
     setLoading(true);
     const startTime = Date.now();
     
     try {
       toast({
-        title: "Spouštím kompletní test suite",
-        description: "Provádím všechny testy backend funkcí...",
+        title: "🚀 Spouštím kompletní automatizovaný test suite",
+        description: "Testování CRUD, Bezpečnost, Audit, Sofinity, Integrita dat...",
       });
 
       const { data, error } = await supabase.rpc('run_complete_admin_test_suite');
@@ -160,14 +209,16 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
       const executionTime = Date.now() - startTime;
       updatePerformanceMetrics('complete_suite', executionTime);
 
+      const statusEmoji = testData.summary.success_rate >= 90 ? '🎉' : testData.summary.success_rate >= 70 ? '⚠️' : '❌';
+      
       toast({
-        title: "Kompletní test suite dokončen ✅",
-        description: `${testData.summary.passed_tests}/${testData.summary.total_tests} testů prošlo (${testData.summary.success_rate}%) za ${executionTime}ms`,
+        title: `${statusEmoji} Test suite dokončen za ${Math.round(executionTime)}ms`,
+        description: `${testData.summary.passed_tests}/${testData.summary.total_tests} testů prošlo (${testData.summary.success_rate}%). Test user: test@onemil.cz, Contest: Test Soutěž CRUD, Voucher: 100 Kč`,
       });
 
     } catch (error: any) {
       toast({
-        title: "Chyba při spuštění kompletních testů ❌",
+        title: "❌ Chyba při spuštění kompletních testů",
         description: error.message,
         variant: "destructive"
       });
@@ -485,11 +536,32 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
               setDataIntegrityResults([]);
               setSofinityEvents([]);
               setPerformanceMetrics({});
+              setCzechUIValidation(prev => ({ ...prev, validated: false }));
             }}
             disabled={loading}
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
+          {testResults && (
+            <>
+              <Button 
+                variant="outline" 
+                onClick={exportResultsToJSON}
+                className="flex items-center space-x-2"
+              >
+                <Download className="h-4 w-4" />
+                <span>Export JSON</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={exportResultsToCSV}
+                className="flex items-center space-x-2"
+              >
+                <Download className="h-4 w-4" />
+                <span>Export CSV</span>
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -501,7 +573,7 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
           <TabsTrigger value="audit">Audit</TabsTrigger>
           <TabsTrigger value="sofinity">Sofinity</TabsTrigger>
           <TabsTrigger value="integrity">Integrita dat</TabsTrigger>
-          <TabsTrigger value="performance">Výkonnost</TabsTrigger>
+          <TabsTrigger value="ui">UI Validace</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -860,63 +932,99 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="performance">
+        <TabsContent value="ui">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4" />
-                <span>Výkonnostní metriky a rychlost testů</span>
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <span>České UI Validace</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {Object.keys(performanceMetrics).length > 0 ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {Object.entries(performanceMetrics).map(([testType, metrics]) => (
-                      <Card key={testType}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium capitalize">{testType.replace('_', ' ')}</span>
-                            <Badge variant={
-                              metrics.status === 'fast' ? 'default' :
-                              metrics.status === 'medium' ? 'secondary' :
-                              'destructive'
-                            }>
-                              {metrics.status === 'fast' ? 'Rychlé' :
-                               metrics.status === 'medium' ? 'Průměrné' : 'Pomalé'}
-                            </Badge>
-                          </div>
-                          <div className="text-2xl font-bold">{metrics.execution_time}ms</div>
-                          <Progress 
-                            value={Math.min((metrics.execution_time / 10000) * 100, 100)} 
-                            className="mt-2" 
-                          />
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {new Date(metrics.last_run).toLocaleString('cs-CZ')}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Toast Notifikace</h4>
+                    <div className="flex items-center space-x-2">
+                      {getStatusIcon(czechUIValidation.toastMessages ? 'passed' : 'pending')}
+                      <span className="text-sm">České toast zprávy</span>
+                      {getStatusBadge(czechUIValidation.toastMessages ? 'passed' : 'pending')}
+                    </div>
                   </div>
-
-                  <Alert>
-                    <BarChart3 className="h-4 w-4" />
-                    <AlertDescription>
-                      Průměrný čas testů: {Math.round(
-                        Object.values(performanceMetrics).reduce((acc, m) => acc + m.execution_time, 0) / 
-                        Object.values(performanceMetrics).length
-                      )}ms
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Tlačítka a Labely</h4>
+                    <div className="flex items-center space-x-2">
+                      {getStatusIcon(czechUIValidation.buttonLabels ? 'passed' : 'pending')}
+                      <span className="text-sm">České názvy tlačítek</span>
+                      {getStatusBadge(czechUIValidation.buttonLabels ? 'passed' : 'pending')}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Tabulkové Hlavičky</h4>
+                    <div className="flex items-center space-x-2">
+                      {getStatusIcon(czechUIValidation.tableHeaders ? 'passed' : 'pending')}
+                      <span className="text-sm">České hlavičky tabulek</span>
+                      {getStatusBadge(czechUIValidation.tableHeaders ? 'passed' : 'pending')}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Statusové Štítky</h4>
+                    <div className="flex items-center space-x-2">
+                      {getStatusIcon(czechUIValidation.badgeTexts ? 'passed' : 'pending')}
+                      <span className="text-sm">České statusové štítky</span>
+                      {getStatusBadge(czechUIValidation.badgeTexts ? 'passed' : 'pending')}
+                    </div>
+                  </div>
+                </div>
+                
+                {czechUIValidation.validated && (
+                  <Alert className="border-green-200 bg-green-50">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-800">
+                      Všechny české UI komponenty jsou správně implementovány a zobrazují se v češtině.
+                      Toast zprávy, tlačítka, tabulky a statusové štítky používají správnou českú lokalizaci.
                     </AlertDescription>
                   </Alert>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">Zatím nejsou k dispozici výkonnostní metriky</p>
-                  <Button onClick={runCompleteTestSuite} disabled={loading}>
-                    Spustit kompletní test suite pro metriky
+                )}
+                
+                <div className="mt-4 space-y-4">
+                  <Button 
+                    onClick={validateCzechUI}
+                    variant="outline"
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    Validovat české UI komponenty
                   </Button>
+                  
+                  {Object.keys(performanceMetrics).length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2">Výkonnostní metriky</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {Object.entries(performanceMetrics).map(([testType, metrics]) => (
+                          <div key={testType} className="flex items-center justify-between p-2 border rounded">
+                            <span className="text-sm capitalize">{testType.replace('_', ' ')}</span>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm">{Math.round(metrics.execution_time)}ms</span>
+                              <Badge variant={
+                                metrics.status === 'fast' ? 'default' :
+                                metrics.status === 'medium' ? 'secondary' :
+                                'destructive'
+                              }>
+                                {metrics.status === 'fast' ? 'Rychlé' :
+                                 metrics.status === 'medium' ? 'Průměrné' : 'Pomalé'}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
