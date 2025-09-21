@@ -194,129 +194,73 @@ const Homepage = () => {
       <Header />
       
       <div className="container mx-auto px-4 py-8 space-y-12">
-        {/* Hero Banner - 3 Column Layout */}
-        <section className="w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto lg:h-80">
-            
-            {/* Left Column - 2 Small Banners */}
-            <div className="space-y-4 order-2 lg:order-1">
-              {/* Voucher Banner */}
-              <div className="neon-ticket neon-ticket-voucher glow-blue h-36 lg:h-36 flex flex-col justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-2">Voucher 50 Kč</h3>
-                  <p className="text-sm text-white/80">Okamžitá hodnota</p>
-                </div>
-                <Button 
-                  variant="neonBlue" 
-                  size="sm"
-                  onClick={() => !isAdmin && user && handleVoucherClick()}
-                  className={`w-full ${!user || isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  Uplatnit tiket
-                </Button>
-              </div>
-              
-              {/* Action Banner */}
-              <div className="neon-ticket neon-ticket-action glow-pink h-36 lg:h-36 flex flex-col justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-2">Speciální akce</h3>
-                  <p className="text-sm text-white/80">Omezená nabídka</p>
-                </div>
-                <Button 
-                  variant="neonPink" 
-                  size="sm"
-                  onClick={() => !isAdmin && user && handleGamesClick()}
-                  className={`w-full ${!user || isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  Uplatnit tiket
-                </Button>
-              </div>
-            </div>
-
-            {/* Center Column - Main Hero Banner */}
-            <div className="order-1 lg:order-2">
-              <div className="hero-banner glow-hero h-64 lg:h-full flex flex-col items-center justify-center p-8 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
-                <div className="text-center space-y-4 z-10">
-                  <div className="text-4xl md:text-6xl animate-bounce">🎯</div>
-                  <h2 className="text-xl md:text-3xl font-bold text-white">
-                    Hlavní Výhra
-                  </h2>
-                  <p className="text-sm md:text-base text-white/80">
-                    Dynamický obsah se bude zobrazovat zde
-                  </p>
-                  <Button 
-                    variant="neonPink" 
-                    onClick={() => !isAdmin && user && handleGamesClick()}
-                    className={`mt-4 ${!user || isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    Koupit tiket
-                  </Button>
-                </div>
-                
-                {/* Role-based messaging */}
-                {isAdmin && (
-                  <div className="absolute bottom-4 left-4 right-4 px-3 py-2 bg-amber-100/10 border border-amber-400/30 rounded-lg">
-                    <p className="text-xs text-amber-400 text-center">Admin zobrazení - pouze pro čtení</p>
-                  </div>
-                )}
-                {!user && (
-                  <div className="absolute bottom-4 left-4 right-4 px-3 py-2 bg-blue-100/10 border border-blue-400/30 rounded-lg">
-                    <p className="text-xs text-blue-400 text-center">Přihlaste se pro plnou interaktivitu</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right Column - 2 Small Banners */}
-            <div className="space-y-4 order-3">
-              {/* Bonus Banner */}
-              <div className="neon-ticket neon-ticket-bonus glow-green h-36 lg:h-36 flex flex-col justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-2">Bonus tiket</h3>
-                  <p className="text-sm text-white/80">Extra šance</p>
-                </div>
-                <Button 
-                  variant="neonGreen" 
-                  size="sm"
-                  onClick={() => !isAdmin && user && handleGamesClick()}
-                  className={`w-full ${!user || isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  Uplatnit tiket
-                </Button>
-              </div>
-              
-              {/* Participation Banner */}
-              <div className="neon-ticket neon-ticket-participation glow-orange h-36 lg:h-36 flex flex-col justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-2">Účast zdarma</h3>
-                  <p className="text-sm text-white/80">Denní možnost</p>
-                </div>
-                <Button 
-                  variant="neonOrange" 
-                  size="sm"
-                  onClick={() => !isAdmin && user && handleGamesClick()}
-                  className={`w-full ${!user || isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  Uplatnit tiket
-                </Button>
-              </div>
+        {/* Main Hero Display - Retro Style */}
+        <section className="w-full relative">
+          <div className="hero-display flex items-center justify-center relative">
+            {/* Floating mini coupons around hero */}
+            <div className="floating-coupon top-4 left-4 w-20 h-16 border-neon-blue glow-blue flex flex-col items-center justify-center text-xs text-white">
+              <div className="text-lg">🛍️</div>
+              <div className="font-bold">Voucher</div>
             </div>
             
+            <div className="floating-coupon top-4 right-4 w-20 h-16 border-neon-orange glow-orange flex flex-col items-center justify-center text-xs text-white">
+              <div className="text-lg">🎁</div>
+              <div className="font-bold">Bonus</div>
+            </div>
+            
+            <div className="floating-coupon bottom-4 left-4 w-20 h-16 border-neon-green glow-green flex flex-col items-center justify-center text-xs text-white">
+              <div className="text-lg">🎮</div>
+              <div className="font-bold">Hraj</div>
+            </div>
+            
+            <div className="floating-coupon bottom-4 right-4 w-20 h-16 border-neon-purple glow-purple flex flex-col items-center justify-center text-xs text-white">
+              <div className="text-lg">📱</div>
+              <div className="font-bold">Sdílej</div>
+            </div>
+
+            {/* Main content area - changeable */}
+            <div className="text-center space-y-6 z-20 px-8">
+              <div className="text-7xl md:text-9xl animate-pulse">🏆</div>
+              <h2 className="text-3xl md:text-5xl font-bold text-neon-gold drop-shadow-2xl">
+                VYHRAJ LUXUSNÍ AUTO
+              </h2>
+              <p className="text-lg md:text-xl text-white/90 max-w-md mx-auto">
+                Kup tiket a vyhraj fantastické ceny v OneMil soutěžích
+              </p>
+              
+              {user && !isAdmin && (
+                <Button variant="neon-pink" size="lg" className="text-lg px-8 py-4">
+                  Koupit Ticket
+                </Button>
+              )}
+              
+              {!user && (
+                <Button variant="neon-cyan" size="lg" className="text-lg px-8 py-4" onClick={() => navigate('/login')}>
+                  Registrovat se
+                </Button>
+              )}
+              
+              {/* Role-based messaging */}
+              {isAdmin && (
+                <div className="mt-4 px-4 py-2 bg-amber-100/10 border border-amber-400/30 rounded-lg">
+                  <p className="text-sm text-amber-400">Admin zobrazení - pouze pro čtení</p>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
-        {/* Two Dominant Boxes */}
+        {/* Two Dominant Boxes - Blue for Sharing, Pink for Main Actions */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Voucher Purchase Box */}
-          <Card className={`border-neon-cyan glow-cyan bg-card/50 backdrop-blur-sm transition-all duration-200 ${
+          {/* Voucher Purchase Box - Blue for Sharing */}
+          <Card className={`border-neon-blue glow-blue bg-card/50 backdrop-blur-sm transition-all duration-200 ${
             user && !isAdmin ? 'cursor-pointer hover:scale-105' : ''
           }`} onClick={handleVoucherClick}>
             <CardHeader className="text-center space-y-4">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
+              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full flex items-center justify-center">
                 <Gift className="w-8 h-8 text-white" />
               </div>
-              <CardTitle className="text-2xl font-bold text-neon-cyan">
+              <CardTitle className="text-2xl font-bold text-neon-blue">
                 Kupte Voucher
               </CardTitle>
             </CardHeader>
@@ -325,13 +269,13 @@ const Homepage = () => {
                 Získejte vouchers s okamžitou hodnotou
               </p>
               {user && !isAdmin && (
-                <Button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 glow-cyan">
+                <Button variant="neon-blue" className="w-full">
                   Koupit Voucher
                   <ChevronRight className="ml-2 w-4 h-4" />
                 </Button>
               )}
               {!user && (
-                <Button variant="outline" className="w-full border-cyan-400 text-cyan-400 hover:bg-cyan-400/10">
+                <Button variant="outline" className="w-full border-blue-400 text-blue-400 hover:bg-blue-400/10">
                   Přihlásit se pro nákup
                 </Button>
               )}
@@ -343,15 +287,15 @@ const Homepage = () => {
             </CardContent>
           </Card>
 
-          {/* Games Box */}
-          <Card className={`border-neon-purple glow-purple bg-card/50 backdrop-blur-sm transition-all duration-200 ${
+          {/* Games Box - Pink for Main Actions */}
+          <Card className={`border-neon-pink glow-pink bg-card/50 backdrop-blur-sm transition-all duration-200 ${
             user && !isAdmin ? 'cursor-pointer hover:scale-105' : ''
           }`} onClick={handleGamesClick}>
             <CardHeader className="text-center space-y-4">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center">
+              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
                 <Trophy className="w-8 h-8 text-white" />
               </div>
-              <CardTitle className="text-2xl font-bold text-neon-purple">
+              <CardTitle className="text-2xl font-bold text-neon-pink">
                 Hraj o luxusní ceny
               </CardTitle>
             </CardHeader>
@@ -360,13 +304,13 @@ const Homepage = () => {
                 Připojte se k hlavním hrám a vyhrajte velké ceny
               </p>
               {user && !isAdmin && (
-                <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 glow-purple">
+                <Button variant="neon-pink" className="w-full">
                   Hrát Hry
                   <ChevronRight className="ml-2 w-4 h-4" />
                 </Button>
               )}
               {!user && (
-                <Button variant="outline" className="w-full border-purple-400 text-purple-400 hover:bg-purple-400/10">
+                <Button variant="outline" className="w-full border-pink-400 text-pink-400 hover:bg-pink-400/10">
                   Přihlásit se pro hraní
                 </Button>
               )}
@@ -379,10 +323,10 @@ const Homepage = () => {
           </Card>
         </section>
 
-        {/* Ongoing Contests Carousel */}
+        {/* Ongoing Contests Carousel - Green for Participation */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-neon-cyan flex items-center gap-2">
+            <h3 className="text-2xl font-bold text-neon-green flex items-center gap-2">
               <Ticket className="w-6 h-6" />
               Probíhající Soutěže
             </h3>
@@ -413,34 +357,31 @@ const Homepage = () => {
             }}
           >
             {loading ? (
-              // Loading placeholder
+              // Loading placeholder - Green for participation
               <div className="flex-none w-72">
-                <Card className="coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden h-full">
+                <Card className="border-neon-green glow-green bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 relative overflow-hidden h-full">
                   <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
                   <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
                   <CardHeader className="pb-2">
-                    <div className="h-4 bg-amber-200 dark:bg-amber-800 rounded animate-pulse mb-2" />
-                    <div className="h-3 bg-amber-100 dark:bg-amber-900 rounded animate-pulse w-20" />
+                    <div className="h-4 bg-green-200 dark:bg-green-800 rounded animate-pulse mb-2" />
+                    <div className="h-3 bg-green-100 dark:bg-green-900 rounded animate-pulse w-20" />
                   </CardHeader>
                   <CardContent>
-                    <div className="h-16 bg-amber-100 dark:bg-amber-900 rounded animate-pulse mb-2" />
-                    <div className="h-3 bg-amber-200 dark:bg-amber-800 rounded animate-pulse" />
+                    <div className="h-16 bg-green-100 dark:bg-green-900 rounded animate-pulse mb-2" />
+                    <div className="h-3 bg-green-200 dark:bg-green-800 rounded animate-pulse" />
                   </CardContent>
                 </Card>
               </div>
             ) : contests.length === 0 ? (
-              // No contests message
-              <div className="flex-none w-72">
-                <Card className="coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden h-full">
-                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
-                  <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-bold text-amber-800 dark:text-amber-400">
+              // No contests message - Green for participation
+              <div className="flex-none w-80">
+                <Card className="border-neon-green glow-green bg-black/60 relative h-48 flex items-center justify-center">
+                  <CardContent className="text-center">
+                    <div className="text-4xl mb-2">🎮</div>
+                    <CardTitle className="text-lg font-bold text-neon-green mb-2">
                       Žádné aktivní soutěže
                     </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-amber-600 dark:text-amber-500">
+                    <div className="text-sm text-green-400">
                       Momentálně nejsou k dispozici žádné aktivní soutěže
                     </div>
                   </CardContent>
@@ -454,8 +395,8 @@ const Homepage = () => {
                   style={{ scrollSnapAlign: 'start' }}
                 >
                   <Card 
-                    className={`coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden transition-all duration-300 h-full ${
-                      user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-100 hover:to-yellow-100 dark:hover:from-amber-800/30 dark:hover:to-yellow-800/30' : 
+                    className={`border-neon-green glow-green bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 relative overflow-hidden transition-all duration-300 h-full ${
+                      user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-green-500 hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-800/30 dark:hover:to-emerald-800/30' : 
                       !user ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]' : 
                       'opacity-90'
                     }`}
@@ -467,7 +408,7 @@ const Homepage = () => {
                     
                     <CardHeader className="pb-2">
                       {/* Contest Image */}
-                      <div className="w-full h-32 rounded-lg overflow-hidden mb-3 bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center">
+                      <div className="w-full h-32 rounded-lg overflow-hidden mb-3 bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
                         {contest.main_image ? (
                           <img 
                             src={contest.main_image.startsWith('http') ? contest.main_image : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`}
@@ -485,7 +426,7 @@ const Homepage = () => {
                           />
                         ) : null}
                         <div 
-                          className={`w-full h-full flex items-center justify-center text-amber-600 dark:text-amber-400 ${contest.main_image ? 'hidden' : 'flex'}`}
+                          className={`w-full h-full flex items-center justify-center text-green-600 dark:text-green-400 ${contest.main_image ? 'hidden' : 'flex'}`}
                           style={{ display: contest.main_image ? 'none' : 'flex' }}
                         >
                           <div className="text-center">

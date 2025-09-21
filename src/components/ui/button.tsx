@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -15,10 +15,14 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        neonPink: "bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white border-0 glow-pink hover:from-pink-600 hover:to-fuchsia-700 transition-all duration-300",
-        neonBlue: "bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0 glow-blue hover:from-blue-600 hover:to-purple-700 transition-all duration-300",
-        neonOrange: "bg-gradient-to-r from-orange-500 to-pink-600 text-white border-0 glow-orange hover:from-orange-600 hover:to-pink-700 transition-all duration-300",
-        neonGreen: "bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 glow-green hover:from-green-600 hover:to-emerald-700 transition-all duration-300",
+        // Neon button variants
+        "neon-pink": "bg-gradient-to-r from-pink-600 to-pink-500 text-white border-2 border-[hsl(var(--neon-pink))] shadow-[0_0_20px_hsl(var(--neon-pink)/0.5)] hover:shadow-[0_0_30px_hsl(var(--neon-pink)/0.7)] hover:scale-105",
+        "neon-orange": "bg-gradient-to-r from-orange-600 to-orange-500 text-white border-2 border-[hsl(var(--neon-orange))] shadow-[0_0_20px_hsl(var(--neon-orange)/0.5)] hover:shadow-[0_0_30px_hsl(var(--neon-orange)/0.7)] hover:scale-105",
+        "neon-green": "bg-gradient-to-r from-green-600 to-green-500 text-white border-2 border-[hsl(var(--neon-green))] shadow-[0_0_20px_hsl(var(--neon-green)/0.5)] hover:shadow-[0_0_30px_hsl(var(--neon-green)/0.7)] hover:scale-105",
+        "neon-blue": "bg-gradient-to-r from-blue-600 to-blue-500 text-white border-2 border-[hsl(var(--neon-blue))] shadow-[0_0_20px_hsl(var(--neon-blue)/0.5)] hover:shadow-[0_0_30px_hsl(var(--neon-blue)/0.7)] hover:scale-105",
+        "neon-gold": "bg-gradient-to-r from-yellow-600 to-yellow-500 text-black border-2 border-[hsl(var(--neon-gold))] shadow-[0_0_20px_hsl(var(--neon-gold)/0.5)] hover:shadow-[0_0_30px_hsl(var(--neon-gold)/0.7)] hover:scale-105",
+        "neon-cyan": "bg-gradient-to-r from-cyan-600 to-cyan-500 text-white border-2 border-[hsl(var(--neon-cyan))] shadow-[0_0_20px_hsl(var(--neon-cyan)/0.5)] hover:shadow-[0_0_30px_hsl(var(--neon-cyan)/0.7)] hover:scale-105",
+        "neon-purple": "bg-gradient-to-r from-purple-600 to-purple-500 text-white border-2 border-[hsl(var(--neon-purple))] shadow-[0_0_20px_hsl(var(--neon-purple)/0.5)] hover:shadow-[0_0_30px_hsl(var(--neon-purple)/0.7)] hover:scale-105",
       },
       size: {
         default: "h-10 px-4 py-2",

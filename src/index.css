@@ -105,21 +105,25 @@ All colors MUST be HSL.
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
     
-    /* Neon colors */
-    --neon-cyan: 180 100% 50%;
-    --neon-purple: 280 100% 50%;
-    --neon-pink: 330 100% 50%;
-    --neon-green: 120 100% 50%;
-    --neon-orange: 30 100% 50%;
-    --neon-blue: 220 100% 50%;
-    --neon-gold: 45 100% 50%;
-    
-    /* Neon gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(220 100% 50%), hsl(330 100% 50%));
-    --gradient-voucher: linear-gradient(135deg, hsl(220 100% 50%), hsl(280 100% 50%));
-    --gradient-bonus: linear-gradient(135deg, hsl(120 100% 50%), hsl(30 100% 50%));
-    --gradient-action: linear-gradient(135deg, hsl(30 100% 50%), hsl(330 100% 50%));
-    --gradient-participation: linear-gradient(135deg, hsl(180 100% 50%), hsl(120 100% 50%));
+    /* Comprehensive neon color system for OneMil app */
+    --neon-pink: 320 100% 60%;        /* Main actions */
+    --neon-pink-glow: 320 100% 60%;
+    --neon-orange: 30 100% 60%;       /* Bonuses */
+    --neon-orange-glow: 30 100% 60%;
+    --neon-green: 120 100% 60%;       /* Participation */
+    --neon-green-glow: 120 100% 60%;
+    --neon-blue: 200 100% 60%;        /* Sharing */
+    --neon-blue-glow: 200 100% 60%;
+    --neon-gold: 45 100% 50%;         /* Winning prizes */
+    --neon-gold-glow: 45 100% 50%;
+    --neon-cyan: 180 100% 60%;        /* Secondary accent */
+    --neon-cyan-glow: 180 100% 60%;
+    --neon-purple: 280 100% 60%;      /* Tertiary accent */
+    --neon-purple-glow: 280 100% 60%;
+
+    /* Hero gradient colors */
+    --hero-gradient-start: 200 100% 30%;  /* Deep blue */
+    --hero-gradient-end: 320 100% 30%;    /* Deep pink */
   }
 }
 
@@ -134,86 +138,179 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  .glow-cyan {
-    box-shadow: 0 0 20px hsl(var(--neon-cyan) / 0.3), 0 0 40px hsl(var(--neon-cyan) / 0.1);
-  }
-  
-  .glow-purple {
-    box-shadow: 0 0 20px hsl(var(--neon-purple) / 0.3), 0 0 40px hsl(var(--neon-purple) / 0.1);
-  }
-  
+  /* Enhanced glow effects for neon design */
   .glow-pink {
-    box-shadow: 0 0 20px hsl(var(--neon-pink) / 0.3), 0 0 40px hsl(var(--neon-pink) / 0.1);
+    @apply shadow-[0_0_30px_hsl(var(--neon-pink-glow)/0.6),0_0_60px_hsl(var(--neon-pink-glow)/0.3)];
   }
-  
+
   .glow-orange {
-    box-shadow: 0 0 20px hsl(var(--neon-orange) / 0.3), 0 0 40px hsl(var(--neon-orange) / 0.1);
+    @apply shadow-[0_0_30px_hsl(var(--neon-orange-glow)/0.6),0_0_60px_hsl(var(--neon-orange-glow)/0.3)];
   }
-  
+
   .glow-green {
-    box-shadow: 0 0 20px hsl(var(--neon-green) / 0.3), 0 0 40px hsl(var(--neon-green) / 0.1);
+    @apply shadow-[0_0_30px_hsl(var(--neon-green-glow)/0.6),0_0_60px_hsl(var(--neon-green-glow)/0.3)];
   }
-  
+
   .glow-blue {
-    box-shadow: 0 0 20px hsl(var(--neon-blue) / 0.3), 0 0 40px hsl(var(--neon-blue) / 0.1);
+    @apply shadow-[0_0_30px_hsl(var(--neon-blue-glow)/0.6),0_0_60px_hsl(var(--neon-blue-glow)/0.3)];
   }
-  
-  .glow-hero {
-    box-shadow: 0 0 30px hsl(220 100% 50% / 0.4), 0 0 60px hsl(330 100% 50% / 0.2);
+
+  .glow-gold {
+    @apply shadow-[0_0_30px_hsl(var(--neon-gold-glow)/0.6),0_0_60px_hsl(var(--neon-gold-glow)/0.3)];
   }
-  
-  .text-neon-cyan {
-    color: hsl(var(--neon-cyan));
-    text-shadow: 0 0 10px hsl(var(--neon-cyan) / 0.5);
+
+  .glow-cyan {
+    @apply shadow-[0_0_30px_hsl(var(--neon-cyan-glow)/0.6),0_0_60px_hsl(var(--neon-cyan-glow)/0.3)];
   }
-  
-  .text-neon-purple {
-    color: hsl(var(--neon-purple));
-    text-shadow: 0 0 10px hsl(var(--neon-purple) / 0.5);
+
+  .glow-purple {
+    @apply shadow-[0_0_30px_hsl(var(--neon-purple-glow)/0.6),0_0_60px_hsl(var(--neon-purple-glow)/0.3)];
   }
-  
+
+  /* Enhanced text neon effects */
   .text-neon-pink {
-    color: hsl(var(--neon-pink));
-    text-shadow: 0 0 10px hsl(var(--neon-pink) / 0.5);
+    @apply text-[hsl(var(--neon-pink))] drop-shadow-[0_0_15px_hsl(var(--neon-pink)/0.9)];
   }
-  
-  .border-neon-cyan {
-    border-color: hsl(var(--neon-cyan));
+
+  .text-neon-orange {  
+    @apply text-[hsl(var(--neon-orange))] drop-shadow-[0_0_15px_hsl(var(--neon-orange)/0.9)];
   }
-  
-  .border-neon-purple {
-    border-color: hsl(var(--neon-purple));
-  }
-  
-  .border-neon-pink {
-    border-color: hsl(var(--neon-pink));
-  }
-  
-  .border-neon-orange {
-    border-color: hsl(var(--neon-orange));
-  }
-  
-  .border-neon-green {
-    border-color: hsl(var(--neon-green));
-  }
-  
-  .border-neon-blue {
-    border-color: hsl(var(--neon-blue));
-  }
-  
-  .text-neon-orange {
-    color: hsl(var(--neon-orange));
-    text-shadow: 0 0 10px hsl(var(--neon-orange) / 0.5);
-  }
-  
+
   .text-neon-green {
-    color: hsl(var(--neon-green));
-    text-shadow: 0 0 10px hsl(var(--neon-green) / 0.5);
+    @apply text-[hsl(var(--neon-green))] drop-shadow-[0_0_15px_hsl(var(--neon-green)/0.9)];
   }
-  
+
   .text-neon-blue {
-    color: hsl(var(--neon-blue));
-    text-shadow: 0 0 10px hsl(var(--neon-blue) / 0.5);
+    @apply text-[hsl(var(--neon-blue))] drop-shadow-[0_0_15px_hsl(var(--neon-blue)/0.9)];
+  }
+
+  .text-neon-gold {
+    @apply text-[hsl(var(--neon-gold))] drop-shadow-[0_0_15px_hsl(var(--neon-gold)/0.9)];
+  }
+
+  .text-neon-cyan {
+    @apply text-[hsl(var(--neon-cyan))] drop-shadow-[0_0_15px_hsl(var(--neon-cyan)/0.9)];
+  }
+
+  .text-neon-purple {
+    @apply text-[hsl(var(--neon-purple))] drop-shadow-[0_0_15px_hsl(var(--neon-purple)/0.9)];
+  }
+
+  /* Enhanced border neon effects */
+  .border-neon-pink {
+    @apply border-[hsl(var(--neon-pink))];
+  }
+
+  .border-neon-orange {
+    @apply border-[hsl(var(--neon-orange))];
+  }
+
+  .border-neon-green {
+    @apply border-[hsl(var(--neon-green))];
+  }
+
+  .border-neon-blue {
+    @apply border-[hsl(var(--neon-blue))];
+  }
+
+  .border-neon-gold {
+    @apply border-[hsl(var(--neon-gold))];
+  }
+
+  .border-neon-cyan {
+    @apply border-[hsl(var(--neon-cyan))];
+  }
+
+  .border-neon-purple {
+    @apply border-[hsl(var(--neon-purple))];
+  }
+
+  /* Retro coupon styling with decorative borders */
+  .retro-coupon {
+    @apply relative transition-all duration-300 border-2 rounded-lg overflow-hidden;
+    background: linear-gradient(145deg, rgba(0,0,0,0.8), rgba(0,0,0,0.6));
+    backdrop-filter: blur(15px);
+    border-image: linear-gradient(45deg, currentColor, transparent, currentColor) 2;
+  }
+
+  .retro-coupon::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    background: linear-gradient(45deg, currentColor 0%, transparent 30%, transparent 70%, currentColor 100%);
+    border-radius: inherit;
+    z-index: -1;
+    opacity: 0.6;
+    filter: blur(2px);
+  }
+
+  .retro-coupon::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 8px,
+      currentColor 8px,
+      currentColor 10px
+    );
+    opacity: 0.1;
+    pointer-events: none;
+  }
+
+  .retro-coupon:hover {
+    transform: translateY(-3px) scale(1.03);
+    filter: brightness(1.2);
+  }
+
+  /* Main hero banner styling */
+  .hero-display {
+    @apply relative overflow-hidden rounded-2xl;
+    background: radial-gradient(ellipse at center, rgba(138, 43, 226, 0.3), rgba(0, 0, 0, 0.8));
+    backdrop-filter: blur(20px);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    min-height: 400px;
+  }
+
+  .hero-display::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 3px;
+    background: linear-gradient(135deg, #ff6b35, #f7931e, #00d4ff, #8a2be2, #ff1493);
+    border-radius: inherit;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: xor;
+    z-index: -1;
+    animation: rainbow-glow 3s linear infinite;
+  }
+
+  @keyframes rainbow-glow {
+    0% { filter: hue-rotate(0deg) brightness(1); }
+    25% { filter: hue-rotate(90deg) brightness(1.2); }
+    50% { filter: hue-rotate(180deg) brightness(1); }
+    75% { filter: hue-rotate(270deg) brightness(1.2); }
+    100% { filter: hue-rotate(360deg) brightness(1); }
+  }
+
+  /* Floating elements around hero */
+  .floating-coupon {
+    @apply absolute rounded-lg border-2 backdrop-blur-md;
+    background: rgba(0, 0, 0, 0.7);
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .floating-coupon:nth-child(odd) {
+    animation-delay: -3s;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    25% { transform: translateY(-10px) rotate(1deg); }
+    50% { transform: translateY(-5px) rotate(0deg); }
+    75% { transform: translateY(-15px) rotate(-1deg); }
   }
 
   /* Ticket animation effects */
@@ -354,69 +451,6 @@ All colors MUST be HSL.
   /* Role indicator animations */
   .role-indicator {
     animation: fade-in 0.3s ease-out;
-  }
-
-  /* Neon ticket styling */
-  .neon-ticket {
-    position: relative;
-    border-radius: 8px;
-    padding: 1.5rem;
-    backdrop-filter: blur(10px);
-    border: 2px solid;
-    overflow: hidden;
-  }
-  
-  .neon-ticket::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    background: inherit;
-    z-index: -1;
-    border-radius: inherit;
-  }
-  
-  .neon-ticket-voucher {
-    background: var(--gradient-voucher);
-    border-color: hsl(var(--neon-blue));
-  }
-  
-  .neon-ticket-bonus {
-    background: var(--gradient-bonus);
-    border-color: hsl(var(--neon-orange));
-  }
-  
-  .neon-ticket-action {
-    background: var(--gradient-action);
-    border-color: hsl(var(--neon-pink));
-  }
-  
-  .neon-ticket-participation {
-    background: var(--gradient-participation);
-    border-color: hsl(var(--neon-green));
-  }
-  
-  .hero-banner {
-    background: var(--gradient-hero);
-    border: 3px solid transparent;
-    background-clip: padding-box;
-    position: relative;
-    border-radius: 12px;
-    backdrop-filter: blur(10px);
-  }
-  
-  .hero-banner::before {
-    content: '';
-    position: absolute;
-    top: -3px;
-    left: -3px;
-    right: -3px;
-    bottom: -3px;
-    background: var(--gradient-hero);
-    z-index: -1;
-    border-radius: inherit;
   }
 
   /* Mobile optimizations */
