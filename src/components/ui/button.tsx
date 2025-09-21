@@ -15,6 +15,10 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        neonPink: "bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white border-0 glow-pink hover:from-pink-600 hover:to-fuchsia-700 transition-all duration-300",
+        neonBlue: "bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0 glow-blue hover:from-blue-600 hover:to-purple-700 transition-all duration-300",
+        neonOrange: "bg-gradient-to-r from-orange-500 to-pink-600 text-white border-0 glow-orange hover:from-orange-600 hover:to-pink-700 transition-all duration-300",
+        neonGreen: "bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 glow-green hover:from-green-600 hover:to-emerald-700 transition-all duration-300",
       },
       size: {
         default: "h-10 px-4 py-2",

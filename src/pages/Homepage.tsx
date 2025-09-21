@@ -194,30 +194,115 @@ const Homepage = () => {
       <Header />
       
       <div className="container mx-auto px-4 py-8 space-y-12">
-        {/* Main Banner */}
+        {/* Hero Banner - 3 Column Layout */}
         <section className="w-full">
-          <div className="h-64 md:h-80 bg-gradient-to-br from-purple-900/20 to-cyan-900/20 rounded-lg border border-neon-purple glow-purple flex items-center justify-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
-            <div className="text-center space-y-4 z-10">
-              <div className="text-6xl md:text-8xl animate-bounce">🎯</div>
-              <h2 className="text-2xl md:text-4xl font-bold text-neon-cyan">
-                Rotující Výhry
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Placeholder pro rotující zobrazení hlavních cen
-              </p>
-              {/* Role-based messaging */}
-              {isAdmin && (
-                <div className="mt-4 px-4 py-2 bg-amber-100/10 border border-amber-400/30 rounded-lg">
-                  <p className="text-sm text-amber-400">Admin zobrazení - všechny sekce jsou pouze pro čtení</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto lg:h-80">
+            
+            {/* Left Column - 2 Small Banners */}
+            <div className="space-y-4 order-2 lg:order-1">
+              {/* Voucher Banner */}
+              <div className="neon-ticket neon-ticket-voucher glow-blue h-36 lg:h-36 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-2">Voucher 50 Kč</h3>
+                  <p className="text-sm text-white/80">Okamžitá hodnota</p>
                 </div>
-              )}
-              {!user && (
-                <div className="mt-4 px-4 py-2 bg-blue-100/10 border border-blue-400/30 rounded-lg">
-                  <p className="text-sm text-blue-400">Přihlaste se pro plnou interaktivitu</p>
+                <Button 
+                  variant="neonBlue" 
+                  size="sm"
+                  onClick={() => !isAdmin && user && handleVoucherClick()}
+                  className={`w-full ${!user || isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  Uplatnit tiket
+                </Button>
+              </div>
+              
+              {/* Action Banner */}
+              <div className="neon-ticket neon-ticket-action glow-pink h-36 lg:h-36 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-2">Speciální akce</h3>
+                  <p className="text-sm text-white/80">Omezená nabídka</p>
                 </div>
-              )}
+                <Button 
+                  variant="neonPink" 
+                  size="sm"
+                  onClick={() => !isAdmin && user && handleGamesClick()}
+                  className={`w-full ${!user || isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  Uplatnit tiket
+                </Button>
+              </div>
             </div>
+
+            {/* Center Column - Main Hero Banner */}
+            <div className="order-1 lg:order-2">
+              <div className="hero-banner glow-hero h-64 lg:h-full flex flex-col items-center justify-center p-8 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
+                <div className="text-center space-y-4 z-10">
+                  <div className="text-4xl md:text-6xl animate-bounce">🎯</div>
+                  <h2 className="text-xl md:text-3xl font-bold text-white">
+                    Hlavní Výhra
+                  </h2>
+                  <p className="text-sm md:text-base text-white/80">
+                    Dynamický obsah se bude zobrazovat zde
+                  </p>
+                  <Button 
+                    variant="neonPink" 
+                    onClick={() => !isAdmin && user && handleGamesClick()}
+                    className={`mt-4 ${!user || isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    Koupit tiket
+                  </Button>
+                </div>
+                
+                {/* Role-based messaging */}
+                {isAdmin && (
+                  <div className="absolute bottom-4 left-4 right-4 px-3 py-2 bg-amber-100/10 border border-amber-400/30 rounded-lg">
+                    <p className="text-xs text-amber-400 text-center">Admin zobrazení - pouze pro čtení</p>
+                  </div>
+                )}
+                {!user && (
+                  <div className="absolute bottom-4 left-4 right-4 px-3 py-2 bg-blue-100/10 border border-blue-400/30 rounded-lg">
+                    <p className="text-xs text-blue-400 text-center">Přihlaste se pro plnou interaktivitu</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column - 2 Small Banners */}
+            <div className="space-y-4 order-3">
+              {/* Bonus Banner */}
+              <div className="neon-ticket neon-ticket-bonus glow-green h-36 lg:h-36 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-2">Bonus tiket</h3>
+                  <p className="text-sm text-white/80">Extra šance</p>
+                </div>
+                <Button 
+                  variant="neonGreen" 
+                  size="sm"
+                  onClick={() => !isAdmin && user && handleGamesClick()}
+                  className={`w-full ${!user || isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  Uplatnit tiket
+                </Button>
+              </div>
+              
+              {/* Participation Banner */}
+              <div className="neon-ticket neon-ticket-participation glow-orange h-36 lg:h-36 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-2">Účast zdarma</h3>
+                  <p className="text-sm text-white/80">Denní možnost</p>
+                </div>
+                <Button 
+                  variant="neonOrange" 
+                  size="sm"
+                  onClick={() => !isAdmin && user && handleGamesClick()}
+                  className={`w-full ${!user || isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  Uplatnit tiket
+                </Button>
+              </div>
+            </div>
+            
           </div>
         </section>
 

@@ -110,6 +110,16 @@ All colors MUST be HSL.
     --neon-purple: 280 100% 50%;
     --neon-pink: 330 100% 50%;
     --neon-green: 120 100% 50%;
+    --neon-orange: 30 100% 50%;
+    --neon-blue: 220 100% 50%;
+    --neon-gold: 45 100% 50%;
+    
+    /* Neon gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(220 100% 50%), hsl(330 100% 50%));
+    --gradient-voucher: linear-gradient(135deg, hsl(220 100% 50%), hsl(280 100% 50%));
+    --gradient-bonus: linear-gradient(135deg, hsl(120 100% 50%), hsl(30 100% 50%));
+    --gradient-action: linear-gradient(135deg, hsl(30 100% 50%), hsl(330 100% 50%));
+    --gradient-participation: linear-gradient(135deg, hsl(180 100% 50%), hsl(120 100% 50%));
   }
 }
 
@@ -130,6 +140,26 @@ All colors MUST be HSL.
   
   .glow-purple {
     box-shadow: 0 0 20px hsl(var(--neon-purple) / 0.3), 0 0 40px hsl(var(--neon-purple) / 0.1);
+  }
+  
+  .glow-pink {
+    box-shadow: 0 0 20px hsl(var(--neon-pink) / 0.3), 0 0 40px hsl(var(--neon-pink) / 0.1);
+  }
+  
+  .glow-orange {
+    box-shadow: 0 0 20px hsl(var(--neon-orange) / 0.3), 0 0 40px hsl(var(--neon-orange) / 0.1);
+  }
+  
+  .glow-green {
+    box-shadow: 0 0 20px hsl(var(--neon-green) / 0.3), 0 0 40px hsl(var(--neon-green) / 0.1);
+  }
+  
+  .glow-blue {
+    box-shadow: 0 0 20px hsl(var(--neon-blue) / 0.3), 0 0 40px hsl(var(--neon-blue) / 0.1);
+  }
+  
+  .glow-hero {
+    box-shadow: 0 0 30px hsl(220 100% 50% / 0.4), 0 0 60px hsl(330 100% 50% / 0.2);
   }
   
   .text-neon-cyan {
@@ -153,6 +183,37 @@ All colors MUST be HSL.
   
   .border-neon-purple {
     border-color: hsl(var(--neon-purple));
+  }
+  
+  .border-neon-pink {
+    border-color: hsl(var(--neon-pink));
+  }
+  
+  .border-neon-orange {
+    border-color: hsl(var(--neon-orange));
+  }
+  
+  .border-neon-green {
+    border-color: hsl(var(--neon-green));
+  }
+  
+  .border-neon-blue {
+    border-color: hsl(var(--neon-blue));
+  }
+  
+  .text-neon-orange {
+    color: hsl(var(--neon-orange));
+    text-shadow: 0 0 10px hsl(var(--neon-orange) / 0.5);
+  }
+  
+  .text-neon-green {
+    color: hsl(var(--neon-green));
+    text-shadow: 0 0 10px hsl(var(--neon-green) / 0.5);
+  }
+  
+  .text-neon-blue {
+    color: hsl(var(--neon-blue));
+    text-shadow: 0 0 10px hsl(var(--neon-blue) / 0.5);
   }
 
   /* Ticket animation effects */
@@ -293,6 +354,69 @@ All colors MUST be HSL.
   /* Role indicator animations */
   .role-indicator {
     animation: fade-in 0.3s ease-out;
+  }
+
+  /* Neon ticket styling */
+  .neon-ticket {
+    position: relative;
+    border-radius: 8px;
+    padding: 1.5rem;
+    backdrop-filter: blur(10px);
+    border: 2px solid;
+    overflow: hidden;
+  }
+  
+  .neon-ticket::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: inherit;
+    z-index: -1;
+    border-radius: inherit;
+  }
+  
+  .neon-ticket-voucher {
+    background: var(--gradient-voucher);
+    border-color: hsl(var(--neon-blue));
+  }
+  
+  .neon-ticket-bonus {
+    background: var(--gradient-bonus);
+    border-color: hsl(var(--neon-orange));
+  }
+  
+  .neon-ticket-action {
+    background: var(--gradient-action);
+    border-color: hsl(var(--neon-pink));
+  }
+  
+  .neon-ticket-participation {
+    background: var(--gradient-participation);
+    border-color: hsl(var(--neon-green));
+  }
+  
+  .hero-banner {
+    background: var(--gradient-hero);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    position: relative;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+  }
+  
+  .hero-banner::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: var(--gradient-hero);
+    z-index: -1;
+    border-radius: inherit;
   }
 
   /* Mobile optimizations */
