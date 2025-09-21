@@ -2,10 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Home } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useUserRole();
 
   return (
     <header className="border-b bg-background">
@@ -18,7 +20,7 @@ export const Header: React.FC = () => {
           {user ? (
             <>
               {/* Show different navigation for admin vs regular users */}
-              {user.email === 'divispavel2@gmail.com' ? (
+              {isAdmin ? (
                 <>
                   <Link to="/">
                     <Button variant="ghost">
