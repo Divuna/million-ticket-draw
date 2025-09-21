@@ -4,12 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { RefreshCw, GamepadIcon } from 'lucide-react';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
@@ -36,6 +35,7 @@ const Profile: React.FC = () => {
   const { user, session } = useAuth();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [wallet, setWallet] = useState<UserWallet | null>(null);
   const [profile, setProfile] = useState<UserProfile>({
     nickname: '',
@@ -61,7 +61,7 @@ const Profile: React.FC = () => {
 
   const fetchUserWallet = async () => {
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('wallets')
         .select('*')
         .eq('user_id', user?.id)
@@ -114,9 +114,9 @@ const Profile: React.FC = () => {
   const fetchUserProfile = async () => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user?.id)
+        .from('users')
+        .select('nickname, first_name, last_name, address, phone')
+        .eq('id', user?.id)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
@@ -140,34 +140,24 @@ const Profile: React.FC = () => {
     }
   };
 
-  const fetchUserProfile = async () => {
+  const handleProfileSave = async () => {
+    if (!user) return;
+    
+    setProfileSaving(true);
+    
     try {
-      // Use direct SQL query to avoid type issues
-      const { data, error } = await supabase.rpc('get_user_profile' as any, {
-        p_user_id: user?.id
-      });
+      const { error } = await supabase
+        .from('users')
+        .update({
+          nickname: profile.nickname,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          address: profile.address,
+          phone: profile.phone
+        })
+        .eq('id', user.id);
 
-      if (error) {
-        console.error('Error fetching profile:', error);
-        return;
-      }
-
-      if (data && data.length > 0) {
-        const profileData = data[0];
-        setProfile({
-          nickname: profileData.nickname || '',
-          first_name: profileData.first_name || '',
-          last_name: profileData.last_name || '',
-          address: profileData.address || '',
-          phone: profileData.phone || ''
-        });
-      }
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (error) throw error;
       
       toast({
         title: "Úspěch",
