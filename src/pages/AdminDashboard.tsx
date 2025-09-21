@@ -20,6 +20,9 @@ import { TicketMapAdmin } from '@/components/TicketMapAdmin';
 import { AdminBonusOverview } from '@/components/AdminBonusOverview';
 import { AdminPrizeDelivery } from '@/components/AdminPrizeDelivery';
 import { AdminContestManagement } from '@/components/AdminContestManagement';
+import { AdminVouchers } from '@/components/AdminVouchers';
+import { AdminPayments } from '@/components/AdminPayments';
+import { AdminNotifications } from '@/components/AdminNotifications';
 import { TestTube, AlertTriangle } from 'lucide-react';
 
 interface Contest {
@@ -728,6 +731,9 @@ const AdminDashboard: React.FC = () => {
               <TabsTrigger value="ticketmap">Mapa tiketů</TabsTrigger>
               <TabsTrigger value="bonus-overview">Přehled bonusů</TabsTrigger>
               <TabsTrigger value="prize-delivery">Předání výher</TabsTrigger>
+              <TabsTrigger value="vouchers">Vouchery</TabsTrigger>
+              <TabsTrigger value="payments">Platby</TabsTrigger>
+              <TabsTrigger value="notifications">Notifikace</TabsTrigger>
               <TabsTrigger value="create">Vytvořit soutěž</TabsTrigger>
             <TabsTrigger value="prizes">Bonusové ceny</TabsTrigger>
             <TabsTrigger value="distribution">Automatické bonusy</TabsTrigger>
@@ -939,6 +945,21 @@ const AdminDashboard: React.FC = () => {
             {/* Prize Delivery */}
             <TabsContent value="prize-delivery">
               <AdminPrizeDelivery />
+            </TabsContent>
+
+            {/* Vouchers */}
+            <TabsContent value="vouchers">
+              <AdminVouchers />
+            </TabsContent>
+
+            {/* Payments */}
+            <TabsContent value="payments">
+              <AdminPayments />
+            </TabsContent>
+
+            {/* Notifications */}
+            <TabsContent value="notifications">
+              <AdminNotifications />
             </TabsContent>
 
             {/* Create Contest */}
