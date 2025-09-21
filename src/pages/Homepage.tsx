@@ -194,29 +194,77 @@ const Homepage = () => {
       <Header />
       
       <div className="container mx-auto px-4 py-8 space-y-12">
-        {/* Main Banner */}
+        {/* Neon Retro Ticket Hero Banner */}
         <section className="w-full">
-          <div className="h-64 md:h-80 bg-gradient-to-br from-purple-900/20 to-cyan-900/20 rounded-lg border border-neon-purple glow-purple flex items-center justify-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
-            <div className="text-center space-y-4 z-10">
-              <div className="text-6xl md:text-8xl animate-bounce">🎯</div>
-              <h2 className="text-2xl md:text-4xl font-bold text-neon-cyan">
-                Rotující Výhry
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Placeholder pro rotující zobrazení hlavních cen
-              </p>
-              {/* Role-based messaging */}
-              {isAdmin && (
-                <div className="mt-4 px-4 py-2 bg-amber-100/10 border border-amber-400/30 rounded-lg">
-                  <p className="text-sm text-amber-400">Admin zobrazení - všechny sekce jsou pouze pro čtení</p>
-                </div>
-              )}
-              {!user && (
-                <div className="mt-4 px-4 py-2 bg-blue-100/10 border border-blue-400/30 rounded-lg">
-                  <p className="text-sm text-blue-400">Přihlaste se pro plnou interaktivitu</p>
-                </div>
-              )}
+          <div className="neon-ticket h-80 md:h-96 flex items-center justify-center relative overflow-hidden">
+            {/* Electric background animation */}
+            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-neon-cyan/5 to-neon-purple/5" />
+            
+            {/* Ticket perforations */}
+            <div className="absolute left-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
+              {Array.from({length: 8}).map((_, i) => (
+                <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-cyan/50" />
+              ))}
+            </div>
+            <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
+              {Array.from({length: 8}).map((_, i) => (
+                <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-cyan/50" />
+              ))}
+            </div>
+            
+            {/* Central content */}
+            <div className="text-center space-y-6 z-10 px-8">
+              <div className="flex items-center justify-center gap-4 mb-4">
+                <div className="text-6xl md:text-8xl animate-pulse">🎟️</div>
+                <div className="text-4xl md:text-6xl text-neon-cyan animate-bounce">⚡</div>
+              </div>
+              
+              <h1 className="hero-title text-4xl md:text-7xl font-black leading-tight">
+                MEGA JACKPOT
+              </h1>
+              
+              <div className="space-y-2">
+                <p className="text-xl md:text-2xl text-neon-purple font-bold">
+                  Vyhrajte až 1,000,000 Kč!
+                </p>
+                <p className="text-base md:text-lg text-muted-foreground">
+                  Kupte si lístek a staňte se milionářem ještě dnes
+                </p>
+              </div>
+              
+              {/* CTA Button */}
+              <div className="pt-4">
+                {user && !isAdmin && (
+                  <Button 
+                    size="lg"
+                    className="bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-pink text-white font-black text-lg px-8 py-4 rounded-xl border-2 border-neon-cyan hover:border-neon-purple transition-all duration-300 hover:scale-110 hover:rotate-1 shadow-2xl"
+                    style={{ 
+                      boxShadow: '0 0 30px hsl(var(--neon-cyan) / 0.6), 0 0 60px hsl(var(--neon-purple) / 0.4)',
+                      animation: 'neon-pulse 2s ease-in-out infinite'
+                    }}
+                    onClick={() => navigate('/games')}
+                  >
+                    <Ticket className="mr-3 w-6 h-6" />
+                    KOUPIT LÍSTEK
+                    <Star className="ml-3 w-6 h-6" />
+                  </Button>
+                )}
+                {!user && (
+                  <Button 
+                    size="lg"
+                    variant="outline"
+                    className="border-2 border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 font-bold text-lg px-8 py-4 rounded-xl transition-all duration-300 hover:scale-105"
+                    onClick={() => navigate('/login')}
+                  >
+                    Přihlásit se pro hraní
+                  </Button>
+                )}
+                {isAdmin && (
+                  <div className="px-6 py-3 bg-amber-100/10 border-2 border-amber-400/30 rounded-xl">
+                    <p className="text-amber-400 font-semibold">Admin režim - pouze pro čtení</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </section>
