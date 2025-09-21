@@ -660,6 +660,35 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_manage_notification: {
+        Args: {
+          p_message?: string
+          p_notification_id?: string
+          p_operation?: string
+          p_title?: string
+          p_type?: string
+          p_user_email?: string
+        }
+        Returns: Json
+      }
+      admin_manage_payment: {
+        Args: {
+          p_new_status?: string
+          p_operation?: string
+          p_payment_id?: string
+        }
+        Returns: Json
+      }
+      admin_manage_voucher: {
+        Args: {
+          p_code?: string
+          p_operation?: string
+          p_user_email?: string
+          p_value?: number
+          p_voucher_id?: string
+        }
+        Returns: Json
+      }
       fn_close_contest: {
         Args: { p_contest: string }
         Returns: undefined
@@ -677,6 +706,17 @@ export type Database = {
           summary_line: string
           total_actions: number
           unique_admins: number
+        }[]
+      }
+      get_admin_summary_dashboard: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          bonus_prizes_summary: string
+          contests_summary: string
+          notifications_summary: string
+          payments_summary: string
+          recent_actions: string
+          vouchers_summary: string
         }[]
       }
       get_contest_bonus_stats: {
@@ -779,6 +819,15 @@ export type Database = {
       update_bonus_prize_delivery_status: {
         Args: { p_admin_notes?: string; p_prize_id: string; p_status: string }
         Returns: Json
+      }
+      validate_sofinity_events: {
+        Args: { p_hours_back?: number }
+        Returns: {
+          count: number
+          event_name: string
+          latest_timestamp: string
+          sample_metadata: Json
+        }[]
       }
     }
     Enums: {
