@@ -23,6 +23,8 @@ import { AdminContestManagement } from '@/components/AdminContestManagement';
 import { AdminVouchers } from '@/components/AdminVouchers';
 import { AdminPayments } from '@/components/AdminPayments';
 import { AdminNotifications } from '@/components/AdminNotifications';
+import { AdminTestSuite } from '@/tests/AdminTestSuite';
+import { AdminValidationWorkflows } from '@/tests/AdminValidationWorkflows';
 import { TestTube, AlertTriangle } from 'lucide-react';
 
 interface Contest {
@@ -735,10 +737,20 @@ const AdminDashboard: React.FC = () => {
               <TabsTrigger value="payments">Platby</TabsTrigger>
               <TabsTrigger value="notifications">Notifikace</TabsTrigger>
               <TabsTrigger value="create">Vytvořit soutěž</TabsTrigger>
-            <TabsTrigger value="prizes">Bonusové ceny</TabsTrigger>
-            <TabsTrigger value="distribution">Automatické bonusy</TabsTrigger>
+              <TabsTrigger value="tests">Test Suite</TabsTrigger>
+              <TabsTrigger value="validations">Validace</TabsTrigger>
               <TabsTrigger value="logs">Sofinity Logy</TabsTrigger>
             </TabsList>
+
+            {/* Test Suite */}
+            <TabsContent value="tests">
+              <AdminTestSuite />
+            </TabsContent>
+
+            {/* Validation Workflows */}
+            <TabsContent value="validations">
+              <AdminValidationWorkflows />
+            </TabsContent>
 
             {/* Contest Management */}
             <TabsContent value="management">
