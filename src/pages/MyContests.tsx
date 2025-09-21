@@ -132,91 +132,68 @@ const MyContests: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background dark pb-20">
+    <div className="min-h-screen bg-background pb-20">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl md:text-6xl font-black text-transparent bg-gradient-to-r from-neon-purple via-purple-400 to-neon-purple bg-clip-text animate-pulse mb-4">
-              ⚡ MOJE SOUTĚŽE ⚡
-            </h1>
-            <p className="text-neon-purple/80 font-medium text-lg">Vaše účast v soutěžích</p>
+          <div className="flex items-center gap-3 mb-8">
+            <Gamepad2 className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold text-neon-purple">Moje hry</h1>
           </div>
           
           {contests.length === 0 ? (
-            <div className="neon-ticket ticket-contest ticket-perforations">
-              {/* Ticket perforations */}
-              <div className="absolute left-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
-                {Array.from({length: 6}).map((_, i) => (
-                  <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-purple/50" />
-                ))}
-              </div>
-              <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
-                {Array.from({length: 6}).map((_, i) => (
-                  <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-purple/50" />
-                ))}
-              </div>
-              
-              <div className="relative z-10 p-8 text-center">
-                <Ticket className="w-16 h-16 mx-auto mb-4 text-neon-purple animate-pulse" />
-                <h4 className="text-2xl font-black text-neon-purple mb-4">🏆 ŽÁDNÉ SOUTĚŽE</h4>
-                <p className="text-neon-purple/80 font-medium">
-                  Nemáte zatím žádné lístky v soutěžích. Přejděte na hlavní stránku a začněte hrát!
-                </p>
-              </div>
-            </div>
+            <Card className="ticket-contest ticket-perforations">
+              <CardContent className="pt-6">
+                <div className="text-center py-8">
+                  <Ticket className="h-12 w-12 text-neon-purple mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2 text-neon-purple">Žádné soutěže</h3>
+                  <p className="text-muted-foreground">
+                    Nemáte zatím žádné lístky v soutěžích. Přejděte na hlavní stránku a začněte hrát!
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {contests.map((contest) => (
-                <div 
+                <Card 
                   key={contest.id} 
-                  className="neon-ticket ticket-contest ticket-perforations cursor-pointer hover:scale-[1.02] transition-all duration-300"
+                  className="ticket-contest ticket-perforations cursor-pointer hover:scale-105 transition-all duration-300"
                   onClick={() => navigate(`/contest/${contest.id}`)}
                 >
-                  {/* Ticket perforations */}
-                  <div className="absolute left-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
-                    {Array.from({length: 6}).map((_, i) => (
-                      <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-purple/50" />
-                    ))}
-                  </div>
-                  <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
-                    {Array.from({length: 6}).map((_, i) => (
-                      <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-purple/50" />
-                    ))}
-                  </div>
-                  
-                  <div className="relative z-10 p-8">
-                    <div className="flex justify-between items-start mb-4">
-                      <h3 className="text-2xl font-black text-neon-purple">{contest.title}</h3>
-                      <div className={`px-4 py-2 rounded-xl font-bold text-sm ${
-                        contest.status === 'active' 
-                          ? 'bg-green-400/20 text-green-400 border border-green-400/30' 
-                          : contest.status === 'closed'
-                            ? 'bg-gray-400/20 text-gray-400 border border-gray-400/30'
-                            : 'bg-yellow-400/20 text-yellow-400 border border-yellow-400/30'
-                      }`}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="text-lg line-clamp-2 text-neon-purple">{contest.title}</CardTitle>
+                      <Badge className={`${getStatusColor(contest.status)} text-white`}>
                         {getStatusText(contest.status)}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium">Hlavní cena:</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-2 ml-6">
+                        {contest.main_prize}
+                      </p>
+                      
+                      <div className="flex items-center gap-2 pt-2">
+                        <Ticket className="h-4 w-4 text-primary" />
+                        <span className="text-sm">
+                          Moje lístky: <span className="font-semibold">{contest.user_tickets}</span>
+                        </span>
+                      </div>
+                      
+                      <div className="text-xs text-muted-foreground">
+                        Celkem lístků: {contest.ticket_count?.toLocaleString('cs-CZ')}
                       </div>
                     </div>
-                    
-                    <p className="text-neon-purple/80 mb-6 text-lg">{contest.description}</p>
-                    
-                    <div className="flex justify-between items-center">
-                      <div className="space-y-2">
-                        <p className="text-neon-purple/60 font-bold">🏆 HLAVNÍ CENA:</p>
-                        <p className="font-black text-2xl text-neon-purple">{contest.main_prize}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-neon-purple/60 font-bold">🎫 MOJE LÍSTKY:</p>
-                        <div className="flex items-center gap-3 justify-end">
-                          <Ticket className="h-8 w-8 text-neon-purple animate-pulse" />
-                          <span className="font-black text-3xl text-neon-purple">{contest.user_tickets}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}
