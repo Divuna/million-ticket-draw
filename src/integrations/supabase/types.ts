@@ -491,7 +491,7 @@ export type Database = {
           redeemed_count: number | null
           start_date: string | null
           updated_at: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           banner_url?: string | null
@@ -506,7 +506,7 @@ export type Database = {
           redeemed_count?: number | null
           start_date?: string | null
           updated_at?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           banner_url?: string | null
@@ -521,7 +521,7 @@ export type Database = {
           redeemed_count?: number | null
           start_date?: string | null
           updated_at?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {

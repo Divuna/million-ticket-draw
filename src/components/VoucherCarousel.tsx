@@ -59,10 +59,13 @@ export const VoucherCarousel: React.FC = () => {
     }
 
     try {
-      // Update voucher redemption count
+      // Update voucher: assign to user and increment redeemed count
       const { error: voucherError } = await supabase
         .from('vouchers')
-        .update({ redeemed_count: voucher.redeemed_count + 1 })
+        .update({ 
+          user_id: user.id,
+          redeemed_count: voucher.redeemed_count + 1 
+        })
         .eq('id', voucherId);
 
       if (voucherError) throw voucherError;
