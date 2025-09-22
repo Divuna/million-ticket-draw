@@ -394,6 +394,41 @@ export type Database = {
           },
         ]
       }
+      user_vouchers: {
+        Row: {
+          created_at: string
+          id: string
+          redeemed: boolean
+          updated_at: string
+          user_id: string
+          voucher_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          redeemed?: boolean
+          updated_at?: string
+          user_id: string
+          voucher_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          redeemed?: boolean
+          updated_at?: string
+          user_id?: string
+          voucher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_vouchers_voucher_id_fkey"
+            columns: ["voucher_id"]
+            isOneToOne: false
+            referencedRelation: "vouchers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           address: string | null
@@ -444,29 +479,50 @@ export type Database = {
       }
       vouchers: {
         Row: {
+          banner_url: string | null
           code: string
           created_at: string
+          end_date: string | null
           id: string
+          image_url: string | null
+          max_quantity: number | null
           redeemed: boolean
           redeemed_at: string | null
+          redeemed_count: number | null
+          start_date: string | null
+          updated_at: string | null
           user_id: string
           value: number
         }
         Insert: {
+          banner_url?: string | null
           code: string
           created_at?: string
+          end_date?: string | null
           id?: string
+          image_url?: string | null
+          max_quantity?: number | null
           redeemed?: boolean
           redeemed_at?: string | null
+          redeemed_count?: number | null
+          start_date?: string | null
+          updated_at?: string | null
           user_id: string
           value: number
         }
         Update: {
+          banner_url?: string | null
           code?: string
           created_at?: string
+          end_date?: string | null
           id?: string
+          image_url?: string | null
+          max_quantity?: number | null
           redeemed?: boolean
           redeemed_at?: string | null
+          redeemed_count?: number | null
+          start_date?: string | null
+          updated_at?: string | null
           user_id?: string
           value?: number
         }
@@ -741,6 +797,23 @@ export type Database = {
           vouchers_summary: string
         }[]
       }
+      get_available_vouchers: {
+        Args: { p_user_id?: string }
+        Returns: {
+          banner_url: string
+          code: string
+          end_date: string
+          id: string
+          image_url: string
+          is_active: boolean
+          max_quantity: number
+          redeemed_count: number
+          remaining_vouchers: number
+          start_date: string
+          user_already_redeemed: boolean
+          value: number
+        }[]
+      }
       get_contest_bonus_stats: {
         Args: { contest_id: string }
         Returns: {
@@ -833,6 +906,10 @@ export type Database = {
           new_status: string
           success: boolean
         }[]
+      }
+      redeem_voucher: {
+        Args: { p_voucher_id: string }
+        Returns: Json
       }
       run_complete_admin_test_suite: {
         Args: Record<PropertyKey, never>
