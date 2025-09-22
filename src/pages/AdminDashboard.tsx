@@ -732,7 +732,7 @@ const AdminDashboard: React.FC = () => {
               <TabsTrigger value="ticketmap">Mapa tiketů</TabsTrigger>
               <TabsTrigger value="bonus-overview">Přehled bonusů</TabsTrigger>
               <TabsTrigger value="prize-delivery">Předání výher</TabsTrigger>
-              <TabsTrigger value="vouchers">Vouchery</TabsTrigger>
+              
               <TabsTrigger value="payments">Platby</TabsTrigger>
               <TabsTrigger value="notifications">Notifikace</TabsTrigger>
               <TabsTrigger value="create">Vytvořit soutěž</TabsTrigger>
@@ -958,29 +958,6 @@ const AdminDashboard: React.FC = () => {
               <AdminPrizeDelivery />
             </TabsContent>
 
-            {/* Vouchers */}
-            <TabsContent value="vouchers">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Gift className="w-5 h-5" />
-                    Správa voucherů
-                  </CardTitle>
-                  <CardDescription>
-                    Veškerá správa voucherů byla přesunuta na dedikovanou stránku pro lepší přehlednost a kontrolu.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button 
-                    onClick={() => window.location.href = '/admin/vouchers'}
-                    className="w-full"
-                  >
-                    <Gift className="w-4 h-4 mr-2" />
-                    Přejít na správu voucherů
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
 
             {/* Payments */}
             <TabsContent value="payments">
