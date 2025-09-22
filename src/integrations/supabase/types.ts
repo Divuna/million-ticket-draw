@@ -486,9 +486,7 @@ export type Database = {
           image_url: string | null
           max_quantity: number | null
           name: string
-          redeemed: boolean
-          redeemed_at: string | null
-          redeemed_count: number | null
+          redeemed_count: number
           start_date: string | null
           updated_at: string | null
           user_id: string | null
@@ -501,9 +499,7 @@ export type Database = {
           image_url?: string | null
           max_quantity?: number | null
           name?: string
-          redeemed?: boolean
-          redeemed_at?: string | null
-          redeemed_count?: number | null
+          redeemed_count?: number
           start_date?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -516,9 +512,7 @@ export type Database = {
           image_url?: string | null
           max_quantity?: number | null
           name?: string
-          redeemed?: boolean
-          redeemed_at?: string | null
-          redeemed_count?: number | null
+          redeemed_count?: number
           start_date?: string | null
           updated_at?: string | null
           user_id?: string | null
