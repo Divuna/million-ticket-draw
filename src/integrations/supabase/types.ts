@@ -842,6 +842,10 @@ export type Database = {
         Args: { p_performance_events?: number }
         Returns: Json
       }
+      setup_crud_test_data: {
+        Args: { p_user_email?: string }
+        Returns: Json
+      }
       test_admin_crud_operations: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -876,6 +880,10 @@ export type Database = {
       }
       update_bonus_prize_delivery_status: {
         Args: { p_admin_notes?: string; p_prize_id: string; p_status: string }
+        Returns: Json
+      }
+      validate_crud_test_data: {
+        Args: { p_user_email?: string }
         Returns: Json
       }
       validate_sofinity_events: {
