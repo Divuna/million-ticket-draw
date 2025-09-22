@@ -6,15 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Upload, Calendar as CalendarIcon, Infinity, Hash, Image as ImageIcon } from 'lucide-react';
+import { Plus, Upload, Calendar as CalendarIcon, Infinity, Hash, Image as ImageIcon, Search, Edit, Trash2, Eye, Gift } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -48,8 +49,11 @@ const AdminVouchers: React.FC = () => {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
   const [createLoading, setCreateLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   
   const [voucherForm, setVoucherForm] = useState<VoucherForm>({
     name: '',
@@ -160,9 +164,49 @@ const AdminVouchers: React.FC = () => {
     });
   };
 
-  const filteredVouchers = vouchers.filter(voucher =>
-    voucher.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleDeleteVoucher = async (voucherId: string) => {
+    try {
+      setDeleteLoading(true);
+      
+      const { error } = await supabase
+        .from('vouchers')
+        .delete()
+        .eq('id', voucherId);
+
+      if (error) throw error;
+      
+      toast.success('Voucher byl úspěšně smazán');
+      fetchVouchers();
+    } catch (error: any) {
+      console.error('Error deleting voucher:', error);
+      toast.error('Chyba při mazání voucheru');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const filteredVouchers = vouchers.filter(voucher => {
+    const matchesSearch = voucher.name.toLowerCase().includes(searchTerm.toLowerCase());
+    if (statusFilter === 'all') return matchesSearch;
+    
+    const now = new Date();
+    const startDate = voucher.start_date ? new Date(voucher.start_date) : null;
+    const endDate = voucher.end_date ? new Date(voucher.end_date) : null;
+    const remainingQuantity = voucher.max_quantity ? voucher.max_quantity - voucher.redeemed_count : null;
+    
+    let voucherStatus = 'active';
+    if (startDate && now < startDate) voucherStatus = 'scheduled';
+    else if (endDate && now > endDate) voucherStatus = 'expired';
+    else if (remainingQuantity !== null && remainingQuantity <= 0) voucherStatus = 'exhausted';
+    
+    return matchesSearch && voucherStatus === statusFilter;
+  });
+
+  const getRemainingText = (voucher: Voucher) => {
+    if (!voucher.max_quantity) return 'Neomezené';
+    const remaining = voucher.max_quantity - voucher.redeemed_count;
+    return `${remaining} / ${voucher.max_quantity}`;
+  };
 
   const getStatusBadge = (voucher: Voucher) => {
     const now = new Date();
@@ -196,11 +240,12 @@ const AdminVouchers: React.FC = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-4 py-8 space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Správa Voucherů</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Přehled voucherů</h1>
             <p className="text-muted-foreground">
-              Vytvářejte a spravujte vouchery s obrázky a bannery
+              Správa všech voucherů v systému
             </p>
           </div>
 
@@ -366,82 +411,240 @@ const AdminVouchers: React.FC = () => {
           </Dialog>
         </div>
 
-        <div className="space-y-4">
-          <Input
-            placeholder="Hledat vouchery..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Celkem voucherů</CardTitle>
+              <Gift className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{vouchers.length}</div>
+            </CardContent>
+          </Card>
 
-          <div className="grid gap-4">
-            {filteredVouchers.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">
-                    {searchTerm ? 'Žádné vouchery nebyly nalezeny.' : 'Zatím nebyly vytvořeny žádné vouchery.'}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredVouchers.map((voucher) => (
-                <Card key={voucher.id} className="overflow-hidden">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col md:flex-row gap-4">
-                      <div className="flex gap-4 flex-1">
-                        {voucher.image_url && (
-                          <img 
-                            src={voucher.image_url} 
-                            alt={voucher.name}
-                            className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                          />
-                        )}
-                        
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-lg">{voucher.name}</h3>
-                            {getStatusBadge(voucher)}
-                          </div>
-                          
-                          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                            <span>
-                              Uplatněno: {voucher.redeemed_count}
-                              {voucher.max_quantity && ` / ${voucher.max_quantity}`}
-                            </span>
-                            {voucher.max_quantity && (
-                              <span>
-                                Zbývá: {voucher.max_quantity - voucher.redeemed_count}
-                              </span>
-                            )}
-                          </div>
-                          
-                          {(voucher.start_date || voucher.end_date) && (
-                            <div className="text-sm text-muted-foreground">
-                              {voucher.start_date && (
-                                <span>Od: {format(new Date(voucher.start_date), 'dd.MM.yyyy')} </span>
-                              )}
-                              {voucher.end_date && (
-                                <span>Do: {format(new Date(voucher.end_date), 'dd.MM.yyyy')}</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {voucher.banner_url && (
-                        <img 
-                          src={voucher.banner_url} 
-                          alt={`${voucher.name} banner`}
-                          className="w-32 h-20 object-cover rounded-lg"
-                        />
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Aktivní vouchery</CardTitle>
+              <Gift className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {vouchers.filter(v => {
+                  const now = new Date();
+                  const startDate = v.start_date ? new Date(v.start_date) : null;
+                  const endDate = v.end_date ? new Date(v.end_date) : null;
+                  const remainingQuantity = v.max_quantity ? v.max_quantity - v.redeemed_count : null;
+
+                  if (startDate && now < startDate) return false;
+                  if (endDate && now > endDate) return false;
+                  if (remainingQuantity !== null && remainingQuantity <= 0) return false;
+                  return true;
+                }).length}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Celkem uplatněno</CardTitle>
+              <Hash className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {vouchers.reduce((sum, v) => sum + v.redeemed_count, 0)}
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Main Voucher Table */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Hledat podle názvu..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-sm"
+                  />
+                </div>
+                
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filtrovat stav" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Všechny</SelectItem>
+                    <SelectItem value="active">Aktivní</SelectItem>
+                    <SelectItem value="scheduled">Naplánované</SelectItem>
+                    <SelectItem value="expired">Vypršelé</SelectItem>
+                    <SelectItem value="exhausted">Vyčerpané</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+          
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-2 text-muted-foreground">Načítání...</p>
+              </div>
+            ) : filteredVouchers.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  {searchTerm || statusFilter !== 'all' ? 'Žádné vouchery nenalezeny.' : 'Zatím nebyly vytvořeny žádné vouchery.'}
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Voucher</TableHead>
+                    <TableHead>Zbývající množství</TableHead>
+                    <TableHead>Stav</TableHead>
+                    <TableHead>Platnost</TableHead>
+                    <TableHead>Vytvořen</TableHead>
+                    <TableHead className="text-right">Akce</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredVouchers.map((voucher) => (
+                    <TableRow key={voucher.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {voucher.image_url && (
+                            <img 
+                              src={voucher.image_url} 
+                              alt={voucher.name}
+                              className="w-10 h-10 object-cover rounded"
+                            />
+                          )}
+                          <div>
+                            <div className="font-medium">{voucher.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              Uplatněno: {voucher.redeemed_count}x
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {voucher.max_quantity ? (
+                            <Hash className="h-3 w-3" />
+                          ) : (
+                            <Infinity className="h-3 w-3" />
+                          )}
+                          {getRemainingText(voucher)}
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(voucher)}</TableCell>
+                      <TableCell className="text-sm">
+                        {voucher.start_date && voucher.end_date ? (
+                          <div className="flex items-center gap-1">
+                            <CalendarIcon className="h-3 w-3" />
+                            {format(new Date(voucher.start_date), 'dd.MM.yy')} - {format(new Date(voucher.end_date), 'dd.MM.yy')}
+                          </div>
+                        ) : voucher.end_date ? (
+                          <div className="flex items-center gap-1">
+                            <CalendarIcon className="h-3 w-3" />
+                            Do {format(new Date(voucher.end_date), 'dd.MM.yyyy')}
+                          </div>
+                        ) : voucher.start_date ? (
+                          <div className="flex items-center gap-1">
+                            <CalendarIcon className="h-3 w-3" />
+                            Od {format(new Date(voucher.start_date), 'dd.MM.yyyy')}
+                          </div>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {format(new Date(voucher.created_at), 'dd.MM.yyyy')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setSelectedVoucher(voucher)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Smazat voucher</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Opravdu chcete smazat voucher "{voucher.name}"? Tato akce je nevratná.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteVoucher(voucher.id)}
+                                  disabled={deleteLoading}
+                                >
+                                  {deleteLoading ? 'Mazání...' : 'Smazat'}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Voucher Preview Dialog */}
+        {selectedVoucher && (
+          <Dialog open={!!selectedVoucher} onOpenChange={() => setSelectedVoucher(null)}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Náhled voucheru</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex gap-4">
+                  {selectedVoucher.image_url && (
+                    <img 
+                      src={selectedVoucher.image_url} 
+                      alt={selectedVoucher.name}
+                      className="w-32 h-32 object-cover rounded-lg"
+                    />
+                  )}
+                  {selectedVoucher.banner_url && (
+                    <img 
+                      src={selectedVoucher.banner_url} 
+                      alt={`${selectedVoucher.name} banner`}
+                      className="w-48 h-32 object-cover rounded-lg"
+                    />
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><strong>Název:</strong> {selectedVoucher.name}</div>
+                  <div><strong>Stav:</strong> {getStatusBadge(selectedVoucher)}</div>
+                  <div><strong>Zbývající:</strong> {getRemainingText(selectedVoucher)}</div>
+                  <div><strong>Uplatněno:</strong> {selectedVoucher.redeemed_count}x</div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <AdminMenu />

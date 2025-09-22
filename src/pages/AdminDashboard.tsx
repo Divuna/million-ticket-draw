@@ -20,12 +20,11 @@ import { TicketMapAdmin } from '@/components/TicketMapAdmin';
 import { AdminBonusOverview } from '@/components/AdminBonusOverview';
 import { AdminPrizeDelivery } from '@/components/AdminPrizeDelivery';
 import { AdminContestManagement } from '@/components/AdminContestManagement';
-import { AdminVouchers } from '@/components/AdminVouchers';
 import { AdminPayments } from '@/components/AdminPayments';
 import { AdminNotifications } from '@/components/AdminNotifications';
 import { AdminTestSuite } from '@/tests/AdminTestSuite';
 import { AdminValidationWorkflows } from '@/tests/AdminValidationWorkflows';
-import { TestTube, AlertTriangle } from 'lucide-react';
+import { TestTube, AlertTriangle, Gift } from 'lucide-react';
 
 interface Contest {
   id: string;
@@ -961,7 +960,26 @@ const AdminDashboard: React.FC = () => {
 
             {/* Vouchers */}
             <TabsContent value="vouchers">
-              <AdminVouchers />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Gift className="w-5 h-5" />
+                    Správa voucherů
+                  </CardTitle>
+                  <CardDescription>
+                    Veškerá správa voucherů byla přesunuta na dedikovanou stránku pro lepší přehlednost a kontrolu.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    onClick={() => window.location.href = '/admin/vouchers'}
+                    className="w-full"
+                  >
+                    <Gift className="w-4 h-4 mr-2" />
+                    Přejít na správu voucherů
+                  </Button>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Payments */}
