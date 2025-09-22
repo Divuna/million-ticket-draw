@@ -28,6 +28,7 @@ interface TestSuite {
   execution_time_ms: number;
   timestamp: string;
   test_results: TestResult[];
+  requires_test_user?: boolean;
 }
 
 interface ComprehensiveTestResult {
@@ -498,6 +499,45 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
     });
   };
 
+  const createTestUser = async () => {
+    setLoading(true);
+    const startTime = Date.now();
+    
+    try {
+      toast({
+        title: "👤 Vytvářím test uživatele",
+        description: "Vytváření auth uživatele a všech závislých dat...",
+      });
+
+      const { data, error } = await supabase.functions.invoke('admin-create-test-user');
+      
+      if (error) throw error;
+      
+      const response = data as { success: boolean; message: string; user_id?: string; email?: string };
+      
+      if (!response.success) {
+        throw new Error(response.message);
+      }
+      
+      const executionTime = Date.now() - startTime;
+      updatePerformanceMetrics('create_test_user', executionTime);
+
+      toast({
+        title: "👤 Test uživatel vytvořen ✅",
+        description: `Email: ${response.email} • ID: ${response.user_id?.substring(0, 8)}... • Za ${executionTime}ms`,
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "❌ Chyba při vytváření test uživatele",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updatePerformanceMetrics = (testType: string, executionTime: number) => {
     setPerformanceMetrics(prev => ({
       ...prev,
@@ -675,6 +715,34 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
           )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            <Card className="hover:shadow-md transition-shadow border-yellow-200 bg-yellow-50">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Play className="h-4 w-4 text-yellow-600" />
+                  <span className="text-xs font-medium">Test User</span>
+                </div>
+                <div className="mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={createTestUser}
+                    disabled={loading}
+                    className="w-full text-xs bg-yellow-100 border-yellow-300 hover:bg-yellow-200"
+                  >
+                    Vytvořit Test User
+                  </Button>
+                </div>
+                {performanceMetrics.create_test_user && (
+                  <div className="flex items-center space-x-1 mt-1">
+                    <Timer className="h-3 w-3" />
+                    <span className="text-xs text-muted-foreground">
+                      {Math.round(performanceMetrics.create_test_user.execution_time)}ms
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
             <Card className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
@@ -854,14 +922,49 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
               <CardTitle>CRUD Operace - Contests, Vouchers, Notifications</CardTitle>
             </CardHeader>
             <CardContent>
-              {individualSuites.crud ? (
+              {individualSuites.crud && individualSuites.crud.requires_test_user ? (
+                <div className="text-center py-8">
+                  <Alert className="border-yellow-200 bg-yellow-50 mb-4">
+                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                    <AlertDescription>
+                      <strong>Test uživatel je potřebný:</strong> CRUD testy vyžadují test uživatele "crud-test-user@onemil.cz". 
+                      Klikněte na "Vytvořit Test User" v přehledu nejprve.
+                    </AlertDescription>
+                  </Alert>
+                  <Button 
+                    onClick={createTestUser} 
+                    disabled={loading}
+                    className="mr-2 bg-yellow-500 hover:bg-yellow-600"
+                  >
+                    Vytvořit Test User
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => runIndividualTestSuite('crud')} 
+                    disabled={loading}
+                  >
+                    Spustit CRUD testy
+                  </Button>
+                </div>
+              ) : individualSuites.crud ? (
                 renderTestResults(individualSuites.crud)
               ) : testResults?.test_suites.crud_tests ? (
                 renderTestResults(testResults.test_suites.crud_tests)
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">CRUD testy ještě nebyly spuštěny</p>
-                  <Button onClick={() => runIndividualTestSuite('crud')} disabled={loading}>
+                  <p className="text-muted-foreground mb-4">CRUD testy ještě nebyly spuštěny. Pro správný běh testů je potřebný test uživatel.</p>
+                  <Button 
+                    onClick={createTestUser} 
+                    disabled={loading}
+                    className="mr-2 bg-yellow-500 hover:bg-yellow-600"
+                  >
+                    Vytvořit Test User
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => runIndividualTestSuite('crud')} 
+                    disabled={loading}
+                  >
                     Spustit CRUD testy
                   </Button>
                 </div>
