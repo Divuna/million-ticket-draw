@@ -164,6 +164,66 @@ const AdminVouchers: React.FC = () => {
     });
   };
 
+  const generateTestVouchers = async () => {
+    try {
+      setCreateLoading(true);
+      
+      const testVouchers = [
+        {
+          name: "Test Voucher 1 - Sleva 20%",
+          image_url: "/placeholder.svg",
+          banner_url: "/placeholder.svg",
+          max_quantity: 5,
+          start_date: new Date().toISOString(),
+          end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+        },
+        {
+          name: "Test Voucher 2 - Doprava zdarma",
+          image_url: "/placeholder.svg",
+          banner_url: "/placeholder.svg",
+          max_quantity: 10,
+          start_date: new Date().toISOString(),
+          end_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days from now
+        },
+        {
+          name: "Test Voucher 3 - Unlimited",
+          image_url: "/placeholder.svg",
+          banner_url: "/placeholder.svg",
+          max_quantity: null, // unlimited
+          start_date: new Date().toISOString(),
+          end_date: null, // no end date
+        },
+        {
+          name: "Test Voucher 4 - Exkluzivní nabídka",
+          image_url: "/placeholder.svg",
+          banner_url: "/placeholder.svg",
+          max_quantity: 3,
+          start_date: new Date().toISOString(),
+          end_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days from now
+        }
+      ];
+
+      const { data, error } = await supabase
+        .from('vouchers')
+        .insert(testVouchers.map(voucher => ({
+          ...voucher,
+          redeemed_count: 0,
+          user_id: null,
+        })))
+        .select();
+
+      if (error) throw error;
+
+      toast.success(`Vytvořeno ${testVouchers.length} test voucherů`);
+      fetchVouchers();
+    } catch (error: any) {
+      console.error('Error generating test vouchers:', error);
+      toast.error('Chyba při generování test voucherů');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   const handleDeleteVoucher = async (voucherId: string) => {
     try {
       setDeleteLoading(true);
@@ -249,13 +309,23 @@ const AdminVouchers: React.FC = () => {
             </p>
           </div>
 
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Nový Voucher
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button 
+              onClick={generateTestVouchers}
+              variant="outline"
+              disabled={createLoading}
+            >
+              <Gift className="mr-2 h-4 w-4" />
+              Generovat Test Vouchery
+            </Button>
+            
+            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nový Voucher
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Vytvořit Nový Voucher</DialogTitle>
@@ -409,6 +479,7 @@ const AdminVouchers: React.FC = () => {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Summary Cards */}
