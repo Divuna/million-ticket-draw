@@ -1,40 +1,40 @@
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Infinity, Clock, Gift } from 'lucide-react';
 
-interface VoucherData {
+interface Voucher {
   id: string;
-  code: string;
-  value: number;
+  name: string;
   image_url: string | null;
   banner_url: string | null;
   max_quantity: number | null;
   redeemed_count: number;
-  remaining_vouchers: number | null;
   start_date: string | null;
   end_date: string | null;
-  is_active: boolean;
-  user_already_redeemed: boolean;
+  created_at: string;
 }
 
 export const VoucherCarousel: React.FC = () => {
-  const [vouchers, setVouchers] = useState<VoucherData[]>([]);
+  const { user } = useAuth();
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
-  const [redeeming, setRedeeming] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchAvailableVouchers();
+    fetchVouchers();
   }, []);
 
-  const fetchAvailableVouchers = async () => {
+  const fetchVouchers = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .rpc('get_available_vouchers');
+        .from('vouchers')
+        .select('id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, created_at')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setVouchers(data || []);
@@ -46,203 +46,164 @@ export const VoucherCarousel: React.FC = () => {
     }
   };
 
-  const handleRedeemVoucher = async (voucherId: string) => {
+  const redeemVoucher = async (voucherId: string) => {
+    if (!user) return;
+
+    const voucher = vouchers.find(v => v.id === voucherId);
+    if (!voucher) return;
+
+    // Check if limited voucher is exhausted
+    if (voucher.max_quantity && voucher.redeemed_count >= voucher.max_quantity) {
+      toast.error('Tento voucher již není dostupný');
+      return;
+    }
+
     try {
-      setRedeeming(voucherId);
-      
-      const { data, error } = await supabase
-        .rpc('redeem_voucher', { p_voucher_id: voucherId });
+      // Update voucher redemption count
+      const { error: voucherError } = await supabase
+        .from('vouchers')
+        .update({ redeemed_count: voucher.redeemed_count + 1 })
+        .eq('id', voucherId);
 
-      if (error) throw error;
+      if (voucherError) throw voucherError;
 
-      const result = data as { success: boolean; message: string; redeemed_value?: number };
-      
-      if (result.success) {
-        toast.success(`${result.message} (${result.redeemed_value} Kč)`);
-        // Refresh voucher list to update remaining counts
-        await fetchAvailableVouchers();
-      } else {
-        toast.error(result.message);
-      }
+      // Update user wallet balance (subtract 1 voucher from balance)
+      const { data: walletData, error: walletError } = await supabase
+        .from('wallets')
+        .select('balance_vouchers')
+        .eq('user_id', user.id)
+        .single();
+
+      if (walletError) throw walletError;
+
+      const { error: updateWalletError } = await supabase
+        .from('wallets')
+        .update({ balance_vouchers: walletData.balance_vouchers - 1 })
+        .eq('user_id', user.id);
+
+      if (updateWalletError) throw updateWalletError;
+
+      // Create redemption record
+      const { error: redemptionError } = await supabase
+        .from('user_vouchers')
+        .insert({
+          user_id: user.id,
+          voucher_id: voucherId,
+          redeemed: true
+        });
+
+      if (redemptionError) throw redemptionError;
+
+      toast.success('Voucher byl úspěšně uplatněn!');
+      fetchVouchers(); // Refresh the list
     } catch (error: any) {
       console.error('Error redeeming voucher:', error);
       toast.error('Chyba při uplatnění voucheru');
-    } finally {
-      setRedeeming(null);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('cs-CZ');
+  const getRemainingCount = (voucher: Voucher) => {
+    if (!voucher.max_quantity) return 'Neomezeně';
+    const remaining = voucher.max_quantity - voucher.redeemed_count;
+    return remaining > 0 ? remaining : 0;
   };
 
-  const getVoucherStatus = (voucher: VoucherData) => {
-    if (voucher.user_already_redeemed) {
-      return { label: 'Uplatněno', variant: 'secondary' as const, disabled: true };
-    }
-    if (!voucher.is_active) {
-      return { label: 'Neaktivní', variant: 'destructive' as const, disabled: true };
-    }
-    return { label: 'Dostupný', variant: 'default' as const, disabled: false };
+  const isVoucherAvailable = (voucher: Voucher) => {
+    const now = new Date();
+    const startDate = voucher.start_date ? new Date(voucher.start_date) : null;
+    const endDate = voucher.end_date ? new Date(voucher.end_date) : null;
+    
+    // Check date validity
+    if (startDate && now < startDate) return false;
+    if (endDate && now > endDate) return false;
+    
+    // Check quantity availability
+    if (voucher.max_quantity && voucher.redeemed_count >= voucher.max_quantity) return false;
+    
+    return true;
   };
+
+  // Filter vouchers: show unlimited vouchers always, limited ones only if available
+  const availableVouchers = vouchers.filter(voucher => {
+    if (!voucher.max_quantity) return true; // Unlimited vouchers always shown
+    return voucher.redeemed_count < voucher.max_quantity; // Limited vouchers only if remaining
+  });
 
   if (loading) {
     return (
-      <div className="w-full p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Gift className="h-5 w-5" />
-          <h2 className="text-xl font-semibold">Dostupné Vouchery</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="animate-pulse">
-                  <div className="h-48 bg-muted"></div>
-                  <div className="p-4 space-y-3">
-                    <div className="h-4 bg-muted rounded w-3/4"></div>
-                    <div className="h-4 bg-muted rounded w-1/2"></div>
-                    <div className="h-8 bg-muted rounded"></div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        <p className="mt-2 text-muted-foreground">Načítání voucherů...</p>
       </div>
     );
   }
 
-  if (vouchers.length === 0) {
+  if (availableVouchers.length === 0) {
     return (
-      <div className="w-full p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Gift className="h-5 w-5" />
-          <h2 className="text-xl font-semibold">Dostupné Vouchery</h2>
-        </div>
-        <Card>
-          <CardContent className="p-8 text-center">
-            <div className="flex flex-col items-center gap-2">
-              <Gift className="h-12 w-12 text-muted-foreground" />
-              <h3 className="text-lg font-semibold">Žádné vouchery</h3>
-              <p className="text-muted-foreground">
-                Momentálně nejsou k dispozici žádné vouchery.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Momentálně nejsou dostupné žádné vouchery.</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full p-6">
-      <div className="flex items-center gap-2 mb-6">
-        <Gift className="h-5 w-5" />
-        <h2 className="text-xl font-semibold">Dostupné Vouchery</h2>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {vouchers.map((voucher) => {
-          const status = getVoucherStatus(voucher);
-          
-          return (
-            <Card key={voucher.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <CardContent className="p-0">
-                {/* Main Voucher Image */}
-                {voucher.image_url && (
-                  <div className="relative">
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold">Dostupné Vouchery</h2>
+      
+      <Carousel className="w-full">
+        <CarouselContent>
+          {availableVouchers.map((voucher) => (
+            <CarouselItem key={voucher.id} className="md:basis-1/2 lg:basis-1/3">
+              <Card className="overflow-hidden">
+                <CardContent className="p-0">
+                  {voucher.banner_url && (
                     <img 
-                      src={voucher.image_url} 
-                      alt={voucher.code}
-                      className="w-full h-48 object-cover"
+                      src={voucher.banner_url} 
+                      alt={`${voucher.name} banner`}
+                      className="w-full h-32 object-cover"
                     />
-                    
-                    {/* Banner Overlay */}
-                    {voucher.banner_url && (
-                      <div className="absolute top-2 right-2">
+                  )}
+                  
+                  <div className="p-4 space-y-4">
+                    <div className="flex items-center gap-3">
+                      {voucher.image_url && (
                         <img 
-                          src={voucher.banner_url} 
-                          alt={`${voucher.code} banner`}
-                          className="w-20 h-12 object-cover rounded shadow-lg"
+                          src={voucher.image_url} 
+                          alt={voucher.name}
+                          className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
                         />
-                      </div>
-                    )}
-
-                    {/* Status Badge */}
-                    <div className="absolute top-2 left-2">
-                      <Badge variant={status.variant}>{status.label}</Badge>
-                    </div>
-                  </div>
-                )}
-
-                <div className="p-4 space-y-4">
-                  {/* Voucher Info */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-lg">{voucher.code}</h3>
-                      <span className="text-lg font-bold text-primary">
-                        {voucher.value} Kč
-                      </span>
-                    </div>
-
-                    {/* Remaining Count */}
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      {voucher.max_quantity === null ? (
-                        <div className="flex items-center gap-1">
-                          <Infinity className="h-4 w-4" />
-                          <span>Neomezené množství</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium text-foreground">
-                            {voucher.remaining_vouchers}
-                          </span>
-                          <span>zbývá z {voucher.max_quantity}</span>
-                        </div>
                       )}
-                    </div>
-
-                    {/* Validity Period */}
-                    {(voucher.start_date || voucher.end_date) && (
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        {voucher.start_date && voucher.end_date ? (
-                          <span>
-                            Platné {formatDate(voucher.start_date)} - {formatDate(voucher.end_date)}
-                          </span>
-                        ) : voucher.end_date ? (
-                          <span>Platné do {formatDate(voucher.end_date)}</span>
-                        ) : voucher.start_date ? (
-                          <span>Platné od {formatDate(voucher.start_date)}</span>
-                        ) : null}
+                      
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{voucher.name}</h3>
+                        {!isVoucherAvailable(voucher) && (
+                          <Badge variant="destructive" className="mt-1">Nedostupný</Badge>
+                        )}
                       </div>
-                    )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-muted-foreground">
+                        Zbývá: {getRemainingCount(voucher)}
+                      </div>
+                      
+                      <Button
+                        onClick={() => redeemVoucher(voucher.id)}
+                        disabled={!isVoucherAvailable(voucher)}
+                        size="sm"
+                      >
+                        Uplatnit
+                      </Button>
+                    </div>
                   </div>
-
-                  {/* Redeem Button */}
-                  <Button
-                    onClick={() => handleRedeemVoucher(voucher.id)}
-                    disabled={status.disabled || redeeming === voucher.id || !voucher.is_active}
-                    className="w-full"
-                    variant={status.disabled ? "secondary" : "default"}
-                  >
-                    {redeeming === voucher.id ? (
-                      'Uplatňuji...'
-                    ) : voucher.user_already_redeemed ? (
-                      'Již uplatněno'
-                    ) : !voucher.is_active ? (
-                      'Nedostupný'
-                    ) : (
-                      `Uplatnit voucher (${voucher.value} Kč)`
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                </CardContent>
+              </Card>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <CarouselPrevious />
+        <CarouselNext />
+      </Carousel>
     </div>
   );
 };

@@ -8,39 +8,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Gift, Plus, CheckCircle, Clock, Search } from 'lucide-react';
+import { Gift, Plus, Calendar, Search, Infinity, Hash } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface Voucher {
   id: string;
-  code: string;
-  value: number;
-  user_id: string;
-  redeemed: boolean;
-  redeemed_at: string | null;
+  name: string;
+  image_url: string | null;
+  banner_url: string | null;
+  max_quantity: number | null;
+  redeemed_count: number;
+  start_date: string | null;
+  end_date: string | null;
   created_at: string;
-  user: {
-    email: string;
-    name?: string;
-  };
-}
-
-interface VoucherForm {
-  code: string;
-  value: number;
-  user_email: string;
 }
 
 export const AdminVouchers: React.FC = () => {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-
-  const [voucherForm, setVoucherForm] = useState<VoucherForm>({
-    code: '',
-    value: 0,
-    user_email: ''
-  });
 
   useEffect(() => {
     fetchVouchers();
@@ -51,10 +37,7 @@ export const AdminVouchers: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('vouchers')
-        .select(`
-          *,
-          user:users(email, name)
-        `)
+        .select('id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, created_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -71,95 +54,38 @@ export const AdminVouchers: React.FC = () => {
     }
   };
 
-  const generateVoucherCode = () => {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 8; i++) {
-      result += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-    return result;
-  };
-
-  const handleCreateVoucher = async () => {
-    if (!voucherForm.user_email || voucherForm.value <= 0) {
-      toast({
-        title: "Chyba",
-        description: "Vyplňte všechna povinná pole.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      // Find user by email
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', voucherForm.user_email)
-        .single();
-
-      if (userError || !userData) {
-        toast({
-          title: "Chyba",
-          description: "Uživatel s tímto emailem nebyl nalezen.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const voucherCode = voucherForm.code || generateVoucherCode();
-      
-      const { error } = await supabase
-        .from('vouchers')
-        .insert({
-          code: voucherCode,
-          value: voucherForm.value,
-          user_id: userData.id
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Úspěch",
-        description: "Voucher byl úspěšně vytvořen.",
-      });
-
-      // Reset form and refresh data
-      setVoucherForm({ code: '', value: 0, user_email: '' });
-      setShowCreateDialog(false);
-      fetchVouchers();
-
-    } catch (error: any) {
-      console.error('Error creating voucher:', error);
-      toast({
-        title: "Chyba",
-        description: error.message || "Nepodařilo se vytvořit voucher.",
-        variant: "destructive"
-      });
-    }
-  };
-
   const getStatusBadge = (voucher: Voucher) => {
-    if (voucher.redeemed) {
-      return <Badge variant="default" className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Uplatněn</Badge>;
+    const now = new Date();
+    const startDate = voucher.start_date ? new Date(voucher.start_date) : null;
+    const endDate = voucher.end_date ? new Date(voucher.end_date) : null;
+    const remainingQuantity = voucher.max_quantity ? voucher.max_quantity - voucher.redeemed_count : null;
+
+    if (startDate && now < startDate) {
+      return <Badge variant="secondary">Naplánováno</Badge>;
     }
-    return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Čeká</Badge>;
+    if (endDate && now > endDate) {
+      return <Badge variant="destructive">Vypršelo</Badge>;
+    }
+    if (remainingQuantity !== null && remainingQuantity <= 0) {
+      return <Badge variant="destructive">Vyčerpáno</Badge>;
+    }
+    return <Badge variant="default">Aktivní</Badge>;
+  };
+
+  const getRemainingText = (voucher: Voucher) => {
+    if (!voucher.max_quantity) return 'Neomezené';
+    const remaining = voucher.max_quantity - voucher.redeemed_count;
+    return `${remaining} / ${voucher.max_quantity}`;
   };
 
   const filteredVouchers = vouchers.filter(voucher =>
-    voucher.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    voucher.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (voucher.user.name && voucher.user.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    voucher.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const totalValue = vouchers.reduce((sum, v) => sum + v.value, 0);
-  const redeemedValue = vouchers.filter(v => v.redeemed).reduce((sum, v) => sum + v.value, 0);
-  const pendingValue = totalValue - redeemedValue;
 
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Celkem voucherů</CardTitle>
@@ -172,37 +98,35 @@ export const AdminVouchers: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Celková hodnota</CardTitle>
-            <Gift className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Aktivní vouchery</CardTitle>
+            <Gift className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalValue.toFixed(2)} MC</div>
+            <div className="text-2xl font-bold text-green-600">
+              {vouchers.filter(v => {
+                const now = new Date();
+                const startDate = v.start_date ? new Date(v.start_date) : null;
+                const endDate = v.end_date ? new Date(v.end_date) : null;
+                const remainingQuantity = v.max_quantity ? v.max_quantity - v.redeemed_count : null;
+
+                if (startDate && now < startDate) return false;
+                if (endDate && now > endDate) return false;
+                if (remainingQuantity !== null && remainingQuantity <= 0) return false;
+                return true;
+              }).length}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Uplatněno</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-sm font-medium">Celkem uplatněno</CardTitle>
+            <Hash className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{redeemedValue.toFixed(2)} MC</div>
-            <p className="text-xs text-muted-foreground">
-              {vouchers.filter(v => v.redeemed).length} voucherů
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Čeká na uplatnění</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{pendingValue.toFixed(2)} MC</div>
-            <p className="text-xs text-muted-foreground">
-              {vouchers.filter(v => !v.redeemed).length} voucherů
-            </p>
+            <div className="text-2xl font-bold text-blue-600">
+              {vouchers.reduce((sum, v) => sum + v.redeemed_count, 0)}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -214,76 +138,16 @@ export const AdminVouchers: React.FC = () => {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Gift className="w-5 h-5" />
-                Správa voucherů
+                Přehled voucherů
               </CardTitle>
               <CardDescription>
-                Vytvářejte a spravujte vouchery pro uživatele
+                Zobrazení všech vytvořených voucherů a jejich statistik
               </CardDescription>
             </div>
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nový voucher
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Vytvořit nový voucher</DialogTitle>
-                  <DialogDescription>
-                    Vyplňte údaje pro vytvoření nového voucheru
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="user_email">Email uživatele *</Label>
-                    <Input
-                      id="user_email"
-                      type="email"
-                      value={voucherForm.user_email}
-                      onChange={(e) => setVoucherForm({...voucherForm, user_email: e.target.value})}
-                      placeholder="uzivatel@example.com"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="value">Hodnota (MioCoins) *</Label>
-                    <Input
-                      id="value"
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      value={voucherForm.value}
-                      onChange={(e) => setVoucherForm({...voucherForm, value: parseFloat(e.target.value) || 0})}
-                      placeholder="10.00"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="code">Kód voucheru (volitelné)</Label>
-                    <Input
-                      id="code"
-                      value={voucherForm.code}
-                      onChange={(e) => setVoucherForm({...voucherForm, code: e.target.value.toUpperCase()})}
-                      placeholder="Nechte prázdné pro automatické generování"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Pokud nevyplníte, bude vygenerován automaticky
-                    </p>
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                    Zrušit
-                  </Button>
-                  <Button onClick={handleCreateVoucher}>
-                    Vytvořit voucher
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button onClick={() => window.location.href = '/admin/vouchers'}>
+              <Plus className="w-4 h-4 mr-2" />
+              Správa voucherů
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -291,7 +155,7 @@ export const AdminVouchers: React.FC = () => {
           <div className="flex items-center space-x-2 mb-4">
             <Search className="w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Hledat podle kódu, emailu nebo jména..."
+              placeholder="Hledat podle názvu..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-sm"
@@ -312,36 +176,64 @@ export const AdminVouchers: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Kód</TableHead>
-                  <TableHead>Uživatel</TableHead>
-                  <TableHead className="text-right">Hodnota</TableHead>
+                  <TableHead>Voucher</TableHead>
+                  <TableHead>Zbývající</TableHead>
                   <TableHead>Stav</TableHead>
+                  <TableHead>Platnost</TableHead>
                   <TableHead>Vytvořen</TableHead>
-                  <TableHead>Uplatněn</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredVouchers.map((voucher) => (
                   <TableRow key={voucher.id}>
-                    <TableCell className="font-mono font-medium">{voucher.code}</TableCell>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{voucher.user.name || 'Bez jména'}</div>
-                        <div className="text-sm text-muted-foreground">{voucher.user.email}</div>
+                      <div className="flex items-center gap-3">
+                        {voucher.image_url && (
+                          <img 
+                            src={voucher.image_url} 
+                            alt={voucher.name}
+                            className="w-10 h-10 object-cover rounded"
+                          />
+                        )}
+                        <div>
+                          <div className="font-medium">{voucher.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Uplatněno: {voucher.redeemed_count}x
+                          </div>
+                        </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {voucher.value.toFixed(2)} MC
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        {voucher.max_quantity ? (
+                          <Hash className="h-3 w-3" />
+                        ) : (
+                          <Infinity className="h-3 w-3" />
+                        )}
+                        {getRemainingText(voucher)}
+                      </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(voucher)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(voucher.created_at).toLocaleDateString('cs-CZ')}
+                      {voucher.start_date && voucher.end_date ? (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(voucher.start_date), 'dd.MM.yy')} - {format(new Date(voucher.end_date), 'dd.MM.yy')}
+                        </div>
+                      ) : voucher.end_date ? (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          Do {format(new Date(voucher.end_date), 'dd.MM.yyyy')}
+                        </div>
+                      ) : voucher.start_date ? (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          Od {format(new Date(voucher.start_date), 'dd.MM.yyyy')}
+                        </div>
+                      ) : '-'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {voucher.redeemed_at 
-                        ? new Date(voucher.redeemed_at).toLocaleDateString('cs-CZ')
-                        : '-'
-                      }
+                      {format(new Date(voucher.created_at), 'dd.MM.yyyy')}
                     </TableCell>
                   </TableRow>
                 ))}

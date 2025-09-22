@@ -20,8 +20,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface VoucherForm {
-  code: string;
-  value: number;
+  name: string;
   imageFile: File | null;
   bannerFile: File | null;
   maxQuantity: number | null;
@@ -31,8 +30,7 @@ interface VoucherForm {
 
 interface Voucher {
   id: string;
-  code: string;
-  value: number;
+  name: string;
   image_url: string | null;
   banner_url: string | null;
   max_quantity: number | null;
@@ -54,8 +52,7 @@ const AdminVouchers: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   
   const [voucherForm, setVoucherForm] = useState<VoucherForm>({
-    code: '',
-    value: 0,
+    name: '',
     imageFile: null,
     bannerFile: null,
     maxQuantity: null,
@@ -78,7 +75,7 @@ const AdminVouchers: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('vouchers')
-        .select('*')
+        .select('id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -107,7 +104,7 @@ const AdminVouchers: React.FC = () => {
   };
 
   const handleCreateVoucher = async () => {
-    if (!voucherForm.code || !voucherForm.imageFile || voucherForm.value <= 0) {
+    if (!voucherForm.name || !voucherForm.imageFile) {
       toast.error('Vyplňte všechna povinná pole');
       return;
     }
@@ -126,8 +123,7 @@ const AdminVouchers: React.FC = () => {
       const { data, error } = await supabase
         .from('vouchers')
         .insert({
-          code: voucherForm.code,
-          value: voucherForm.value,
+          name: voucherForm.name,
           image_url: imageUrl,
           banner_url: bannerUrl,
           max_quantity: voucherForm.maxQuantity,
@@ -155,8 +151,7 @@ const AdminVouchers: React.FC = () => {
 
   const resetForm = () => {
     setVoucherForm({
-      code: '',
-      value: 0,
+      name: '',
       imageFile: null,
       bannerFile: null,
       maxQuantity: null,
@@ -166,7 +161,7 @@ const AdminVouchers: React.FC = () => {
   };
 
   const filteredVouchers = vouchers.filter(voucher =>
-    voucher.code.toLowerCase().includes(searchTerm.toLowerCase())
+    voucher.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusBadge = (voucher: Voucher) => {
@@ -222,28 +217,14 @@ const AdminVouchers: React.FC = () => {
               </DialogHeader>
               
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="code">Kód voucheru *</Label>
-                    <Input
-                      id="code"
-                      value={voucherForm.code}
-                      onChange={(e) => setVoucherForm({...voucherForm, code: e.target.value})}
-                      placeholder="Např. SAVE20"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="value">Hodnota *</Label>
-                    <Input
-                      id="value"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={voucherForm.value}
-                      onChange={(e) => setVoucherForm({...voucherForm, value: parseFloat(e.target.value) || 0})}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Název voucheru *</Label>
+                  <Input
+                    id="name"
+                    value={voucherForm.name}
+                    onChange={(e) => setVoucherForm({...voucherForm, name: e.target.value})}
+                    placeholder="Např. Sleva 20% na celý nákup"
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -411,19 +392,18 @@ const AdminVouchers: React.FC = () => {
                         {voucher.image_url && (
                           <img 
                             src={voucher.image_url} 
-                            alt={voucher.code}
+                            alt={voucher.name}
                             className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
                           />
                         )}
                         
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-lg">{voucher.code}</h3>
+                            <h3 className="font-semibold text-lg">{voucher.name}</h3>
                             {getStatusBadge(voucher)}
                           </div>
                           
                           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                            <span>Hodnota: {voucher.value} Kč</span>
                             <span>
                               Uplatněno: {voucher.redeemed_count}
                               {voucher.max_quantity && ` / ${voucher.max_quantity}`}
@@ -451,7 +431,7 @@ const AdminVouchers: React.FC = () => {
                       {voucher.banner_url && (
                         <img 
                           src={voucher.banner_url} 
-                          alt={`${voucher.code} banner`}
+                          alt={`${voucher.name} banner`}
                           className="w-32 h-20 object-cover rounded-lg"
                         />
                       )}

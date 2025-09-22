@@ -480,51 +480,48 @@ export type Database = {
       vouchers: {
         Row: {
           banner_url: string | null
-          code: string
           created_at: string
           end_date: string | null
           id: string
           image_url: string | null
           max_quantity: number | null
+          name: string
           redeemed: boolean
           redeemed_at: string | null
           redeemed_count: number | null
           start_date: string | null
           updated_at: string | null
           user_id: string
-          value: number
         }
         Insert: {
           banner_url?: string | null
-          code: string
           created_at?: string
           end_date?: string | null
           id?: string
           image_url?: string | null
           max_quantity?: number | null
+          name?: string
           redeemed?: boolean
           redeemed_at?: string | null
           redeemed_count?: number | null
           start_date?: string | null
           updated_at?: string | null
           user_id: string
-          value: number
         }
         Update: {
           banner_url?: string | null
-          code?: string
           created_at?: string
           end_date?: string | null
           id?: string
           image_url?: string | null
           max_quantity?: number | null
+          name?: string
           redeemed?: boolean
           redeemed_at?: string | null
           redeemed_count?: number | null
           start_date?: string | null
           updated_at?: string | null
           user_id?: string
-          value?: number
         }
         Relationships: [
           {
