@@ -10,10 +10,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Gift } from 'lucide-react';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
+import { VoucherCarousel } from '@/components/VoucherCarousel';
 interface UserWallet {
   user_id: string;
   email: string;
@@ -564,6 +565,22 @@ const Profile: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* My Vouchers Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5" />
+              Mé vouchery
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Zde najdete všechny dostupné vouchery k uplatnění
+            </p>
+          </CardHeader>
+          <CardContent>
+            <VoucherCarousel />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Voucher Purchase Dialog */}
