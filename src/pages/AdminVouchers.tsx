@@ -134,6 +134,7 @@ const AdminVouchers: React.FC = () => {
           redeemed_count: 0,
           start_date: voucherForm.startDate?.toISOString(),
           end_date: voucherForm.endDate?.toISOString(),
+          user_id: null,
         })
         .select()
         .single();
@@ -243,16 +244,6 @@ const AdminVouchers: React.FC = () => {
                       onChange={(e) => setVoucherForm({...voucherForm, value: parseFloat(e.target.value) || 0})}
                     />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Popis</Label>
-                  <Textarea
-                    id="description"
-                    value={voucherForm.description}
-                    onChange={(e) => setVoucherForm({...voucherForm, description: e.target.value})}
-                    placeholder="Popis voucheru..."
-                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -430,10 +421,6 @@ const AdminVouchers: React.FC = () => {
                             <h3 className="font-semibold text-lg">{voucher.code}</h3>
                             {getStatusBadge(voucher)}
                           </div>
-                          
-                          {voucher.description && (
-                            <p className="text-muted-foreground text-sm">{voucher.description}</p>
-                          )}
                           
                           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                             <span>Hodnota: {voucher.value} Kč</span>
