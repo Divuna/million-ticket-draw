@@ -224,6 +224,35 @@ const AdminVouchers: React.FC = () => {
     }
   };
 
+  const testVoucherTrigger = async () => {
+    try {
+      setCreateLoading(true);
+      
+      // Test the trigger with a real user
+      const testUserId = '3ed40e96-20b9-4a3a-97a7-f937af688a1a'; // test@opravo.cz
+      
+      const { data, error } = await supabase.functions.invoke('test-voucher-trigger', {
+        body: { testUserId }
+      });
+
+      if (error) throw error;
+
+      console.log('Trigger test results:', data);
+      
+      if (data.success) {
+        toast.success(`Trigger test completed! Test voucher should NOT trigger: ${data.triggerTest.testVoucherShouldNotTrigger}, Real voucher should trigger: ${data.triggerTest.realVoucherShouldTrigger}`);
+        fetchVouchers();
+      } else {
+        toast.error('Trigger test failed');
+      }
+    } catch (error: any) {
+      console.error('Error testing trigger:', error);
+      toast.error('Chyba při testování triggeru');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   const handleDeleteVoucher = async (voucherId: string) => {
     try {
       setDeleteLoading(true);
@@ -317,6 +346,15 @@ const AdminVouchers: React.FC = () => {
             >
               <Gift className="mr-2 h-4 w-4" />
               Generovat Test Vouchery
+            </Button>
+            
+            <Button 
+              onClick={testVoucherTrigger}
+              variant="secondary"
+              disabled={createLoading}
+            >
+              <Gift className="mr-2 h-4 w-4" />
+              Test Trigger
             </Button>
             
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>

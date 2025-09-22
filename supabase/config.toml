@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.sofinity-integration-test]
 verify_jwt = false
+
+[functions.test-voucher-trigger]
+verify_jwt = false
