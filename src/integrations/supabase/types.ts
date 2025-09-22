@@ -483,7 +483,7 @@ export type Database = {
           created_at: string
           end_date: string | null
           id: string
-          image_url: string | null
+          image_url: string
           max_quantity: number | null
           name: string
           redeemed_count: number
@@ -496,7 +496,7 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
-          image_url?: string | null
+          image_url: string
           max_quantity?: number | null
           name?: string
           redeemed_count?: number
@@ -509,7 +509,7 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
-          image_url?: string | null
+          image_url?: string
           max_quantity?: number | null
           name?: string
           redeemed_count?: number
