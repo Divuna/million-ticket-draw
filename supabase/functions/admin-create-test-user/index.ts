@@ -19,34 +19,20 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Create auth user first
-    const testEmail = 'crud-test-user@onemil.cz'
-    const testPassword = 'TestPassword123!'
+    // Use existing admin user for testing
+    const testEmail = 'divispavel2@gmail.com'
     
-    console.log('Creating auth user...')
+    console.log('Finding existing admin user...')
     
-    // Try to create the auth user
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: testEmail,
-      password: testPassword,
-      email_confirm: true
-    })
-
-    let userId: string
+    // Find the existing user by email
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
+    const existingUser = existingUsers.users.find(u => u.email === testEmail)
     
-    if (authError && authError.message.includes('already been registered')) {
-      console.log('User already exists, getting existing user...')
-      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
-      const existingUser = existingUsers.users.find(u => u.email === testEmail)
-      if (!existingUser) {
-        throw new Error('Could not find or create test user')
-      }
-      userId = existingUser.id
-    } else if (authError) {
-      throw authError
-    } else {
-      userId = authUser.user.id
+    if (!existingUser) {
+      throw new Error('Admin user with email divispavel2@gmail.com not found')
     }
+    
+    const userId = existingUser.id
 
     console.log(`Using user ID: ${userId}`)
 
