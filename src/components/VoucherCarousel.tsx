@@ -58,34 +58,21 @@ export const VoucherCarousel: React.FC = () => {
       return;
     }
 
+    // Check if user already redeemed this voucher
+    const { data: existingRedemption } = await supabase
+      .from('user_vouchers')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('voucher_id', voucherId)
+      .eq('redeemed', true)
+      .maybeSingle();
+
+    if (existingRedemption) {
+      toast.error('Tento voucher jste již uplatnili');
+      return;
+    }
+
     try {
-      // Update voucher: assign to user and increment redeemed count
-      const { error: voucherError } = await supabase
-        .from('vouchers')
-        .update({ 
-          user_id: user.id,
-          redeemed_count: voucher.redeemed_count + 1 
-        })
-        .eq('id', voucherId);
-
-      if (voucherError) throw voucherError;
-
-      // Update user wallet balance (subtract 1 voucher from balance)
-      const { data: walletData, error: walletError } = await supabase
-        .from('wallets')
-        .select('balance_vouchers')
-        .eq('user_id', user.id)
-        .single();
-
-      if (walletError) throw walletError;
-
-      const { error: updateWalletError } = await supabase
-        .from('wallets')
-        .update({ balance_vouchers: walletData.balance_vouchers - 1 })
-        .eq('user_id', user.id);
-
-      if (updateWalletError) throw updateWalletError;
-
       // Create redemption record
       const { error: redemptionError } = await supabase
         .from('user_vouchers')
@@ -96,6 +83,16 @@ export const VoucherCarousel: React.FC = () => {
         });
 
       if (redemptionError) throw redemptionError;
+
+      // Increment redeemed count
+      const { error: voucherError } = await supabase
+        .from('vouchers')
+        .update({ 
+          redeemed_count: voucher.redeemed_count + 1 
+        })
+        .eq('id', voucherId);
+
+      if (voucherError) throw voucherError;
 
       toast.success('Voucher byl úspěšně uplatněn!');
       fetchVouchers(); // Refresh the list

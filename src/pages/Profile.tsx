@@ -29,6 +29,21 @@ interface UserProfile {
   address: string;
   phone: string;
 }
+
+interface UserVoucher {
+  id: string;
+  voucher_id: string;
+  redeemed: boolean;
+  created_at: string;
+  voucher: {
+    id: string;
+    name: string;
+    image_url: string;
+    banner_url: string | null;
+    max_quantity: number | null;
+    redeemed_count: number;
+  };
+}
 const Profile: React.FC = () => {
   const {
     user,
@@ -51,10 +66,12 @@ const Profile: React.FC = () => {
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [userVouchers, setUserVouchers] = useState<UserVoucher[]>([]);
   useEffect(() => {
     if (user) {
       fetchUserWallet();
       fetchUserProfile();
+      fetchUserVouchers();
     }
   }, [user]);
   const fetchUserWallet = async () => {
@@ -126,6 +143,39 @@ const Profile: React.FC = () => {
           phone: data.phone || ''
         });
       }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const fetchUserVouchers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_vouchers')
+        .select(`
+          id,
+          voucher_id,
+          redeemed,
+          created_at,
+          voucher:voucher_id (
+            id,
+            name,
+            image_url,
+            banner_url,
+            max_quantity,
+            redeemed_count
+          )
+        `)
+        .eq('user_id', user?.id)
+        .eq('redeemed', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching user vouchers:', error);
+        return;
+      }
+
+      setUserVouchers(data || []);
     } catch (error) {
       console.error('Error:', error);
     }
@@ -406,6 +456,63 @@ const Profile: React.FC = () => {
                         <p className="text-sm">Klikněte na "Upravit profil" pro jejich zadání.</p>
                       </div>
                     )}
+                  </div>
+                )}
+              </div>
+
+              {/* My Vouchers Section */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold mb-4">Moje Vouchery</h3>
+                
+                {userVouchers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Zatím nemáte žádné uplatněné vouchery.</p>
+                    <p className="text-sm">Navštivte sekci Vouchery pro dostupné nabídky.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {userVouchers.map((userVoucher) => (
+                      <Card key={userVoucher.id} className="overflow-hidden">
+                        <CardContent className="p-0">
+                          {userVoucher.voucher.banner_url && (
+                            <img 
+                              src={userVoucher.voucher.banner_url} 
+                              alt={`${userVoucher.voucher.name} banner`}
+                              className="w-full h-32 object-cover"
+                            />
+                          )}
+                          
+                          <div className="p-4 space-y-3">
+                            <div className="flex items-center gap-3">
+                              {userVoucher.voucher.image_url && (
+                                <img 
+                                  src={userVoucher.voucher.image_url} 
+                                  alt={userVoucher.voucher.name}
+                                  className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+                                />
+                              )}
+                              
+                              <div className="flex-1">
+                                <h4 className="font-semibold">{userVoucher.voucher.name}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  Uplatněno: {new Date(userVoucher.created_at).toLocaleDateString('cs-CZ')}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="text-sm text-muted-foreground">
+                              {userVoucher.voucher.max_quantity ? (
+                                <>
+                                  Zbývá: {userVoucher.voucher.max_quantity - userVoucher.voucher.redeemed_count} / {userVoucher.voucher.max_quantity}
+                                </>
+                              ) : (
+                                'Neomezené množství'
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
                 )}
               </div>
