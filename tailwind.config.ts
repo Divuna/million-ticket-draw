@@ -13,6 +13,11 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        'orbitron': ['Orbitron', 'monospace'],
+        'rajdhani': ['Rajdhani', 'sans-serif'],
+        'sans': ['Rajdhani', 'system-ui', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -57,6 +62,14 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Badboys Neon Colors
+        "neon-blue": "hsl(var(--neon-blue))",
+        "neon-gold": "hsl(var(--neon-gold))",
+        "neon-red": "hsl(var(--neon-red))",
+        "neon-purple": "hsl(var(--neon-purple))",
+        "neon-cyan": "hsl(var(--neon-cyan))",
+        "neon-green": "hsl(var(--neon-green))",
+        "neon-pink": "hsl(var(--neon-pink))",
       },
       borderRadius: {
         lg: "var(--radius)",
