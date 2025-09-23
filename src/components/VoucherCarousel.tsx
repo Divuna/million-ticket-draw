@@ -73,7 +73,7 @@ export const VoucherCarousel: React.FC = () => {
     }
 
     try {
-      // Create redemption record
+      // Create redemption record - the database trigger will handle redeemed_count update automatically
       const { error: redemptionError } = await supabase
         .from('user_vouchers')
         .insert({
@@ -83,16 +83,6 @@ export const VoucherCarousel: React.FC = () => {
         });
 
       if (redemptionError) throw redemptionError;
-
-      // Increment redeemed count
-      const { error: voucherError } = await supabase
-        .from('vouchers')
-        .update({ 
-          redeemed_count: voucher.redeemed_count + 1 
-        })
-        .eq('id', voucherId);
-
-      if (voucherError) throw voucherError;
 
       toast.success('Voucher byl úspěšně uplatněn!');
       fetchVouchers(); // Refresh the list
