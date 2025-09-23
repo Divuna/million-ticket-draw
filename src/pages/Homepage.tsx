@@ -8,6 +8,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
+import { useHomepageVouchers } from '@/hooks/useHomepageVouchers';
 import { Gift, Trophy, ChevronRight, Ticket, Star } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -26,6 +27,7 @@ const Homepage = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
+  const { vouchers: homepageVouchers, loading: vouchersLoading, getRemainingCount } = useHomepageVouchers();
   const contestsCarouselRef = useRef<HTMLDivElement>(null);
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
   const [contests, setContests] = useState<Contest[]>([]);
@@ -178,16 +180,7 @@ const Homepage = () => {
     
     // Link to voucher redemption
     navigate('/vouchers');
-    toast.success(`Uplatnění voucheru ${voucherId}`);
   };
-
-  // Placeholder data for vouchers (keeping existing voucher data)
-  const userVouchers = [
-    { id: '1', name: 'Voucher 50 Kč', value: '50 Kč', status: 'available', code: 'V50-2024' },
-    { id: '2', name: 'Voucher 100 Kč', value: '100 Kč', status: 'available', code: 'V100-2024' },
-    { id: '3', name: 'Voucher 200 Kč', value: '200 Kč', status: 'used', code: 'V200-2024' },
-    { id: '4', name: 'Voucher 500 Kč', value: '500 Kč', status: 'available', code: 'V500-2024' },
-  ];
 
   return (
     <div className="min-h-screen bg-background dark pb-20">
@@ -529,98 +522,119 @@ const Homepage = () => {
               WebkitOverflowScrolling: 'touch'
             }}
           >
-            {userVouchers.map((voucher) => (
-              <div 
-                key={voucher.id} 
-                className="flex-none w-64"
-                style={{ scrollSnapAlign: 'start' }}
-              >
-                <Card 
-                  className={`coupon-card relative overflow-hidden transition-all duration-300 h-full ${
-                    voucher.status === 'available' 
-                      ? 'border-neon-pink bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20' 
-                      : 'border-gray-400 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 opacity-60'
-                  } ${
-                    user && !isAdmin && voucher.status === 'available' 
-                      ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-neon-pink hover:bg-gradient-to-r hover:from-pink-100 hover:to-rose-100 dark:hover:from-pink-800/30 dark:hover:to-rose-800/30' 
-                      : !user && voucher.status === 'available'
-                        ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]'
-                        : voucher.status === 'available' && isAdmin
-                          ? 'opacity-90'
-                          : ''
-                  }`}
-                  onClick={() => !isAdmin && voucher.status === 'available' && handleVoucherRedeem(voucher.id)}
-                >
-                  {/* Coupon notches */}
+            {vouchersLoading ? (
+              // Loading placeholder
+              <div className="flex-none w-64">
+                <Card className="coupon-card border-pink-400 bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 relative overflow-hidden h-full">
                   <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
                   <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
-                  
                   <CardHeader className="pb-2">
-                    <CardTitle className={`text-lg font-bold ${
-                      voucher.status === 'available' 
-                        ? 'text-neon-pink' 
-                        : 'text-gray-800 dark:text-gray-400'
-                    }`}>
-                      {voucher.name}
-                    </CardTitle>
-                    <div className={`text-xs font-mono ${
-                      voucher.status === 'available' 
-                        ? 'text-pink-600 dark:text-pink-400' 
-                        : 'text-gray-600 dark:text-gray-500'
-                    }`}>
-                      #{voucher.code}
-                    </div>
+                    <div className="h-4 bg-pink-200 dark:bg-pink-800 rounded animate-pulse mb-2" />
+                    <div className="h-3 bg-pink-100 dark:bg-pink-900 rounded animate-pulse w-20" />
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className={`text-2xl font-bold ${
-                          voucher.status === 'available' 
-                            ? 'text-neon-pink' 
-                            : 'text-gray-700 dark:text-gray-300'
-                        }`}>
-                          {voucher.value}
-                        </span>
-                        <div className={`px-2 py-1 rounded text-xs font-medium ${
-                          voucher.status === 'available' 
-                            ? 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400' 
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-                        }`}>
-                          {voucher.status === 'available' ? 'Dostupný' : 'Použitý'}
-                        </div>
-                      </div>
-                      <div className={`border-t border-dashed pt-2 ${
-                        voucher.status === 'available' 
-                          ? 'border-neon-pink' 
-                          : 'border-gray-300'
-                      }`}>
-                        <div className={`text-xs ${
-                          voucher.status === 'available' 
-                            ? 'text-pink-600 dark:text-pink-400' 
-                            : 'text-gray-600 dark:text-gray-500'
-                        }`}>
-                          {voucher.status === 'available' && user && !isAdmin 
-                            ? 'Klikněte pro uplatnění' 
-                            : voucher.status === 'used' 
-                              ? 'Voucher již použit' 
-                              : 'Placeholder obsah'
-                          }
-                        </div>
-                        {isAdmin && (
-                          <div className={`text-xs mt-1 ${
-                            voucher.status === 'available' 
-                              ? 'text-green-500' 
-                              : 'text-gray-500'
-                          }`}>
-                            Admin zobrazení - pouze pro čtení
-                          </div>
-                        )}
-                      </div>
+                    <div className="h-16 bg-pink-100 dark:bg-pink-900 rounded animate-pulse mb-2" />
+                    <div className="h-3 bg-pink-200 dark:bg-pink-800 rounded animate-pulse" />
+                  </CardContent>
+                </Card>
+              </div>
+            ) : homepageVouchers.length === 0 ? (
+              // No vouchers message
+              <div className="flex-none w-64">
+                <Card className="coupon-card border-pink-400 bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 relative overflow-hidden h-full">
+                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
+                  <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-bold text-pink-800 dark:text-pink-400">
+                      Žádné aktivní vouchery
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-pink-600 dark:text-pink-500">
+                      Momentálně nejsou k dispozici žádné aktivní vouchery
                     </div>
                   </CardContent>
                 </Card>
               </div>
-            ))}
+            ) : (
+              homepageVouchers.map((voucher) => (
+                <div 
+                  key={voucher.id} 
+                  className="flex-none w-64"
+                  style={{ scrollSnapAlign: 'start' }}
+                >
+                  <Card 
+                    className={`coupon-card relative overflow-hidden transition-all duration-300 h-full border-neon-pink bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 ${
+                      user && !isAdmin 
+                        ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-neon-pink hover:bg-gradient-to-r hover:from-pink-100 hover:to-rose-100 dark:hover:from-pink-800/30 dark:hover:to-rose-800/30' 
+                        : !user
+                          ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]'
+                          : isAdmin
+                            ? 'opacity-90'
+                            : ''
+                    }`}
+                    onClick={() => !isAdmin && handleVoucherRedeem(voucher.id)}
+                  >
+                    {/* Banner image if available */}
+                    {voucher.banner_url && (
+                      <div className="h-24 overflow-hidden">
+                        <img 
+                          src={voucher.banner_url} 
+                          alt={`${voucher.name} banner`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+
+                    {/* Coupon notches */}
+                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
+                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
+                    
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-3">
+                        {voucher.image_url && (
+                          <img 
+                            src={voucher.image_url} 
+                            alt={voucher.name}
+                            className="w-8 h-8 object-cover rounded-lg flex-shrink-0"
+                          />
+                        )}
+                        <CardTitle className="text-lg font-bold text-neon-pink">
+                          {voucher.name}
+                        </CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-bold text-neon-pink">
+                            Zbývá: {getRemainingCount(voucher)}
+                          </span>
+                          <div className="px-2 py-1 rounded text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400">
+                            Dostupný
+                          </div>
+                        </div>
+                        <div className="border-t border-dashed border-neon-pink pt-2">
+                          <div className="text-xs text-pink-600 dark:text-pink-400">
+                            {user && !isAdmin 
+                              ? 'Klikněte pro uplatnění' 
+                              : !user
+                                ? 'Přihlaste se pro uplatnění'
+                                : 'Admin zobrazení - pouze pro čtení'
+                            }
+                          </div>
+                          {isAdmin && (
+                            <div className="text-xs mt-1 text-green-500">
+                              Admin zobrazení - pouze pro čtení
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ))
+            )}
           </div>
         </section>
 
