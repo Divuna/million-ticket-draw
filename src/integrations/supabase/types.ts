@@ -738,16 +738,6 @@ export type Database = {
         }
         Returns: Json
       }
-      admin_manage_voucher: {
-        Args: {
-          p_code?: string
-          p_operation?: string
-          p_user_email?: string
-          p_value?: number
-          p_voucher_id?: string
-        }
-        Returns: Json
-      }
       create_test_result: {
         Args: {
           p_details?: Json
