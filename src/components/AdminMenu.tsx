@@ -9,7 +9,8 @@ import {
   Bell,
   CreditCard,
   FileText,
-  Award
+  Award,
+  Image
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -23,7 +24,7 @@ export const AdminMenu: React.FC = () => {
     { label: 'Uživatelé', icon: Users, path: '/admin/users' },
     { label: 'Platby', icon: CreditCard, path: '/admin/payments' },
     { label: 'Vouchery', icon: Gift, path: '/admin/vouchers' },
-    { label: 'Bannery', icon: LayoutDashboard, path: '/admin/banners' },
+    { label: 'Bannery', icon: Image, path: '/admin/banners' },
     { label: 'Notifikace', icon: Bell, path: '/admin/notifications' },
     { label: 'Statistiky', icon: BarChart3, path: '/admin/statistics' },
     { label: 'Audit', icon: FileText, path: '/admin/audit-logs' },
