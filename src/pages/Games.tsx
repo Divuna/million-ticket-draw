@@ -249,11 +249,15 @@ const Index = () => {
                   <Button 
                     className="w-full bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0 glow-cyan"
                     onClick={() => handleUnlockTicket(contest.id)}
-                    disabled={contest.status === 'closed' || processingContestId === contest.id}
+                    disabled={contest.status !== 'active' || processingContestId === contest.id}
                   >
                     {processingContestId === contest.id 
                       ? 'Zpracování...' 
-                      : `Uplatnit ${contest.ticket_price} miocoinů`
+                      : contest.status === 'pending'
+                        ? 'Připravuje se...'
+                        : contest.status === 'closed'
+                        ? 'Ukončena'
+                        : `Uplatnit ${contest.ticket_price} miocoinů`
                     }
                   </Button>
                 )}

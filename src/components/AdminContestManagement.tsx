@@ -468,9 +468,8 @@ export const AdminContestManagement: React.FC = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="draft">Návrh</SelectItem>
+                      <SelectItem value="pending">Připravena</SelectItem>
                       <SelectItem value="active">Aktivní</SelectItem>
-                      <SelectItem value="paused">Pozastavena</SelectItem>
                       <SelectItem value="closed">Ukončena</SelectItem>
                     </SelectContent>
                   </Select>
