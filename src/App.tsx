@@ -12,7 +12,7 @@ import TestLogin from "./pages/TestLogin";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import MyContests from "./pages/MyContests";
-import ContestDetail from "./pages/ContestDetail";
+import MyContestDetail from "@/pages/MyContestDetail";
 import BonusDetail from "./pages/BonusDetail";
 import Messages from "./pages/Messages";
 import Vouchers from "./pages/Vouchers";
@@ -49,7 +49,7 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/vouchers" element={<Vouchers />} />
             <Route path="/my-contests" element={<MyContests />} />
-            <Route path="/contest/:id" element={<ContestDetail />} />
+            <Route path="/contest/:id" element={<MyContestDetail />} />
             <Route path="/contest/:id/bonus" element={<BonusDetail />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/admin" element={<AdminDashboard />} />
