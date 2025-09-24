@@ -39,7 +39,7 @@ const Homepage = () => {
       const { data, error } = await supabase
         .from('contests')
         .select('id, title, main_prize, main_image, status, ticket_count, ticket_price, created_at')
-        .eq('status', 'active')
+        .in('status', ['active', 'pending'])
         .order('created_at', { ascending: false })
         .limit(10);
 
