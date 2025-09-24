@@ -75,7 +75,7 @@ export const AdminContestManagement: React.FC = () => {
     description: '',
     main_prize: '',
     main_image: '',
-    status: 'draft',
+      status: 'pending',
     ticket_count: 1000000,
     ticket_price: 1
   });
@@ -292,7 +292,7 @@ export const AdminContestManagement: React.FC = () => {
       description: '',
       main_prize: '',
       main_image: '',
-      status: 'draft',
+      status: 'pending',
       ticket_count: 1000000,
       ticket_price: 1
     });
@@ -314,14 +314,40 @@ export const AdminContestManagement: React.FC = () => {
     switch (status) {
       case 'active':
         return <Badge className="bg-green-500"><Target className="w-3 h-3 mr-1" />Aktivní</Badge>;
-      case 'draft':
-        return <Badge variant="secondary"><Settings className="w-3 h-3 mr-1" />Návrh</Badge>;
+      case 'pending':
+        return <Badge variant="secondary"><Settings className="w-3 h-3 mr-1" />Připravena</Badge>;
       case 'closed':
         return <Badge variant="destructive"><Trophy className="w-3 h-3 mr-1" />Ukončena</Badge>;
-      case 'paused':
-        return <Badge variant="outline"><TrendingUp className="w-3 h-3 mr-1" />Pozastavena</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const handleStatusChange = async (contestId: string, newStatus: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('contests')
+        .update({ status: newStatus })
+        .eq('id', contestId)
+        .select();
+
+      if (error) throw error;
+
+      toast({
+        title: "Úspěch",
+        description: `Status soutěže byl změněn na: ${newStatus === 'pending' ? 'Připravena' : newStatus === 'active' ? 'Aktivní' : 'Ukončena'}`,
+      });
+
+      // Refresh contests list
+      fetchContests();
+
+    } catch (error: any) {
+      console.error('Error updating contest status:', error);
+      toast({
+        title: "Chyba",
+        description: error.message || "Nepodařilo se změnit status soutěže.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -549,14 +575,27 @@ export const AdminContestManagement: React.FC = () => {
                     </TableCell>
                     <TableCell>{contest.ticket_price} MioCoins</TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-center">
+                        <Select
+                          value={contest.status}
+                          onValueChange={(value) => handleStatusChange(contest.contest_id, value)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Připravena</SelectItem>
+                            <SelectItem value="active">Aktivní</SelectItem>
+                            <SelectItem value="closed">Ukončena</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditContest(contest)}
                         >
                           <Edit2 className="w-3 h-3 mr-1" />
-                          Upravit
+                          Editovat
                         </Button>
                         <Button
                           variant="outline"
