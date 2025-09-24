@@ -484,68 +484,6 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const pauseResumeContest = async (contestId: string, newStatus: 'active' | 'paused') => {
-    try {
-      const { error } = await supabase
-        .from('contests')
-        .update({ status: newStatus })
-        .eq('id', contestId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Úspěch",
-        description: newStatus === 'active' ? "Soutěž byla obnovena." : "Soutěž byla pozastavena."
-      });
-
-      fetchContests();
-
-    } catch (error) {
-      console.error('Error updating contest status:', error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se změnit stav soutěže.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const closeContest = async (contestId: string) => {
-    const pin = prompt("Zadejte PIN pro uzavření soutěže:");
-    if (pin !== "1978") {
-      toast({
-        title: "Chyba",
-        description: "Nesprávný PIN kód.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('contests')
-        .update({ status: 'closed' })
-        .eq('id', contestId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Úspěch",
-        description: "Soutěž byla uzavřena."
-      });
-
-      fetchContests();
-
-    } catch (error) {
-      console.error('Error closing contest:', error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se uzavřít soutěž.",
-        variant: "destructive"
-      });
-    }
-  };
-
   const fetchSofinityLogs = async () => {
     setLogsLoading(true);
     try {
@@ -807,8 +745,7 @@ const AdminDashboard: React.FC = () => {
                              >
                                První 20 pozic
                              </TableHead>
-                             <TableHead>Vytvořeno</TableHead>
-                             <TableHead>Akce</TableHead>
+                              <TableHead>Vytvořeno</TableHead>
                            </TableRow>
                          </TableHeader>
                       <TableBody>
@@ -897,43 +834,7 @@ const AdminDashboard: React.FC = () => {
                                   {contest.first_20_positions || 'No bonuses'}
                                 </div>
                               </TableCell>
-                              <TableCell>{new Date(contest.created_at).toLocaleDateString('cs-CZ')}</TableCell>
-                            <TableCell>
-                              <div className="flex space-x-2">
-                                <Button 
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => pauseResumeContest(
-                                    contest.id, 
-                                    'paused'
-                                  )}
-                                  className="border-orange-500 text-orange-600 hover:bg-orange-50"
-                                >
-                                  Pozastavit
-                                </Button>
-                                <Button 
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => closeContest(contest.id)}
-                                  className="border-red-500 text-red-600 hover:bg-red-50"
-                                >
-                                  Uzavřít
-                                </Button>
-                                <Button 
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    toast({
-                                      title: "Editace soutěže",
-                                      description: "Funkce editace bude implementována později."
-                                    });
-                                  }}
-                                  className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                                >
-                                  Editovat
-                                </Button>
-                              </div>
-                            </TableCell>
+                               <TableCell>{new Date(contest.created_at).toLocaleDateString('cs-CZ')}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
