@@ -22,6 +22,7 @@ import AdminUsers from "./pages/AdminUsers";
 import AdminPayments from "./pages/AdminPayments";
 import AdminVouchers from "./pages/AdminVouchers";
 import AdminNotifications from "./pages/AdminNotifications";
+import AdminBanners from "./pages/AdminBanners";
 import AdminStatistics from "./pages/AdminStatistics";
 import AdminAuditLogs from "./pages/AdminAuditLogs";
 import AdminTests from "./pages/AdminTests";
@@ -56,6 +57,7 @@ const App = () => (
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/payments" element={<AdminPayments />} />
             <Route path="/admin/vouchers" element={<AdminVouchers />} />
+            <Route path="/admin/banners" element={<AdminBanners />} />
             <Route path="/admin/notifications" element={<AdminNotifications />} />
             <Route path="/admin/statistics" element={<AdminStatistics />} />
             <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />

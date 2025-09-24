@@ -71,6 +71,42 @@ export type Database = {
         }
         Relationships: []
       }
+      banners: {
+        Row: {
+          active: boolean
+          created_at: string
+          end_date: string | null
+          id: string
+          image_url: string
+          start_date: string | null
+          target_page: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          image_url: string
+          start_date?: string | null
+          target_page?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          image_url?: string
+          start_date?: string | null
+          target_page?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bonus_prizes: {
         Row: {
           admin_notes: string | null
@@ -751,6 +787,10 @@ export type Database = {
       fn_close_contest: {
         Args: { p_contest: string }
         Returns: undefined
+      }
+      get_active_banners_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_admin_actions_summary: {
         Args: {

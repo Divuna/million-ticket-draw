@@ -1,3 +1,4 @@
+import { BannerCarousel } from '@/components/BannerCarousel';
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
@@ -187,6 +188,15 @@ const Homepage = () => {
       <Header />
       
       <div className="container mx-auto px-4 py-8 space-y-12">
+        {/* Banner Carousel */}
+        <section className="w-full">
+          <BannerCarousel 
+            targetPage="homepage_customer"
+            autoplay={!isAdmin}
+            className="shadow-2xl"
+          />
+        </section>
+
         {/* Neon Retro Ticket Hero Banner */}
         <section className="w-full">
           <div className="neon-ticket h-80 md:h-96 flex items-center justify-center relative overflow-hidden">
