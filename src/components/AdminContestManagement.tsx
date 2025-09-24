@@ -323,6 +323,19 @@ export const AdminContestManagement: React.FC = () => {
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Připravena';
+      case 'active':
+        return 'Aktivní';
+      case 'closed':
+        return 'Ukončena';
+      default:
+        return status;
+    }
+  };
+
   const handleStatusChange = async (contestId: string, newStatus: string) => {
     try {
       const { data, error } = await supabase
@@ -581,7 +594,9 @@ export const AdminContestManagement: React.FC = () => {
                           onValueChange={(value) => handleStatusChange(contest.contest_id, value)}
                         >
                           <SelectTrigger className="w-32">
-                            <SelectValue />
+                            <SelectValue>
+                              {getStatusLabel(contest.status)}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="pending">Připravena</SelectItem>
