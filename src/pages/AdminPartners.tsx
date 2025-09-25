@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, ExternalLink } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, Upload } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
 
 interface Partner {
@@ -28,6 +28,8 @@ const AdminPartners = () => {
     logo_url: '',
     website_url: ''
   });
+  const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     fetchPartners();
@@ -50,19 +52,58 @@ const AdminPartners = () => {
     }
   };
 
+  const uploadLogo = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('partner-logos')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data } = supabase.storage
+      .from('partner-logos')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.logo_url || !formData.website_url) {
-      toast.error('Všechna pole jsou povinná');
+    if (!formData.name || !formData.website_url) {
+      toast.error('Název partnera a URL webu jsou povinné');
+      return;
+    }
+
+    if (!editingPartner && !selectedFile) {
+      toast.error('Logo je povinné pro nového partnera');
       return;
     }
 
     try {
+      setUploading(true);
+      let logoUrl = formData.logo_url;
+
+      // Upload new logo if file is selected
+      if (selectedFile) {
+        logoUrl = await uploadLogo(selectedFile);
+      }
+
+      const partnerData = {
+        name: formData.name,
+        logo_url: logoUrl,
+        website_url: formData.website_url
+      };
+
       if (editingPartner) {
         const { error } = await supabase
           .from('partners')
-          .update(formData)
+          .update(partnerData)
           .eq('id', editingPartner.id);
 
         if (error) throw error;
@@ -70,7 +111,7 @@ const AdminPartners = () => {
       } else {
         const { error } = await supabase
           .from('partners')
-          .insert([formData]);
+          .insert([partnerData]);
 
         if (error) throw error;
         toast.success('Partner byl úspěšně přidán');
@@ -79,10 +120,13 @@ const AdminPartners = () => {
       setDialogOpen(false);
       setEditingPartner(null);
       setFormData({ name: '', logo_url: '', website_url: '' });
+      setSelectedFile(null);
       fetchPartners();
     } catch (error) {
       console.error('Error saving partner:', error);
       toast.error('Nepodařilo se uložit partnera');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -93,6 +137,7 @@ const AdminPartners = () => {
       logo_url: partner.logo_url,
       website_url: partner.website_url
     });
+    setSelectedFile(null);
     setDialogOpen(true);
   };
 
@@ -114,9 +159,30 @@ const AdminPartners = () => {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Povolené formáty: PNG, JPG, SVG');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Maximální velikost souboru je 5MB');
+        return;
+      }
+      
+      setSelectedFile(file);
+    }
+  };
+
   const openDialog = () => {
     setEditingPartner(null);
     setFormData({ name: '', logo_url: '', website_url: '' });
+    setSelectedFile(null);
     setDialogOpen(true);
   };
 
@@ -166,14 +232,30 @@ const AdminPartners = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="logo_url">URL loga</Label>
-                  <Input
-                    id="logo_url"
-                    value={formData.logo_url}
-                    onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
-                    placeholder="https://example.com/logo.png"
-                    required
-                  />
+                  <Label htmlFor="logo">Logo partnera</Label>
+                  <div className="space-y-2">
+                    <Input
+                      id="logo"
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                      onChange={handleFileSelect}
+                      className="cursor-pointer"
+                    />
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Upload className="w-4 h-4" />
+                      <span>PNG, JPG, SVG (max 5MB)</span>
+                    </div>
+                    {selectedFile && (
+                      <p className="text-sm text-green-600">
+                        Vybrán soubor: {selectedFile.name}
+                      </p>
+                    )}
+                    {editingPartner && !selectedFile && (
+                      <p className="text-sm text-muted-foreground">
+                        Aktuálně: {editingPartner.name} logo
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="website_url">URL webu</Label>
@@ -186,13 +268,21 @@ const AdminPartners = () => {
                   />
                 </div>
                 <div className="flex gap-2 pt-4">
-                  <Button type="submit" className="flex-1">
-                    {editingPartner ? 'Uložit změny' : 'Přidat partnera'}
+                  <Button type="submit" className="flex-1" disabled={uploading}>
+                    {uploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                        Nahrávání...
+                      </>
+                    ) : (
+                      editingPartner ? 'Uložit změny' : 'Přidat partnera'
+                    )}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setDialogOpen(false)}
+                    disabled={uploading}
                   >
                     Zrušit
                   </Button>
