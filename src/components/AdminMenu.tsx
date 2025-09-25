@@ -10,7 +10,8 @@ import {
   CreditCard,
   FileText,
   Award,
-  Image
+  Image,
+  Handshake
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -25,6 +26,7 @@ export const AdminMenu: React.FC = () => {
     { label: 'Platby', icon: CreditCard, path: '/admin/payments' },
     { label: 'Vouchery', icon: Gift, path: '/admin/vouchers' },
     { label: 'Bannery', icon: Image, path: '/admin/banners' },
+    { label: 'Partneři', icon: Handshake, path: '/admin/partners' },
     { label: 'Notifikace', icon: Bell, path: '/admin/notifications' },
     { label: 'Statistiky', icon: BarChart3, path: '/admin/statistics' },
     { label: 'Audit', icon: FileText, path: '/admin/audit-logs' },

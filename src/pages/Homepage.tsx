@@ -10,7 +10,8 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
 import { useHomepageVouchers } from '@/hooks/useHomepageVouchers';
 import { useMegajackpotBanners } from '@/hooks/useMegajackpotBanners';
-import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft } from 'lucide-react';
+import { usePartners } from '@/hooks/usePartners';
+import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Contest {
@@ -30,6 +31,7 @@ const Homepage = () => {
   const navigate = useNavigate();
   const { vouchers: homepageVouchers, loading: vouchersLoading, getRemainingCount } = useHomepageVouchers();
   const { banners: megajackpotBanners, loading: bannersLoading } = useMegajackpotBanners();
+  const { partners, loading: partnersLoading } = usePartners();
   const contestsCarouselRef = useRef<HTMLDivElement>(null);
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
   const megajackpotCarouselRef = useRef<HTMLDivElement>(null);
@@ -769,6 +771,61 @@ const Homepage = () => {
                       </div>
                     </CardContent>
                   </Card>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        {/* Partners Section */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-bold text-neon-cyan flex items-center gap-2">
+              <Handshake className="w-6 h-6" />
+              Naši partneři, kde můžete získat MioCoiny za nákup
+            </h3>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+            {partnersLoading ? (
+              // Loading placeholder
+              Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="aspect-square bg-muted rounded-lg animate-pulse" />
+              ))
+            ) : partners.length === 0 ? (
+              // No partners message
+              <div className="col-span-full text-center py-12">
+                <div className="text-muted-foreground">
+                  Momentálně nejsou k dispozici žádní partneři
+                </div>
+              </div>
+            ) : (
+              partners.map((partner) => (
+                <div
+                  key={partner.id}
+                  className="aspect-square bg-card border border-border rounded-lg overflow-hidden cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-neon-cyan group"
+                  onClick={() => window.open(partner.website_url, '_blank')}
+                >
+                  <div className="w-full h-full p-4 flex items-center justify-center relative">
+                    <img
+                      src={partner.logo_url}
+                      alt={partner.name}
+                      className="max-w-full max-h-full object-contain transition-all duration-300 group-hover:scale-110"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        if (target.nextElementSibling) {
+                          (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                        }
+                      }}
+                    />
+                    <div className="hidden w-full h-full flex-col items-center justify-center text-muted-foreground">
+                      <span className="text-xs text-center">{partner.name}</span>
+                    </div>
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <ExternalLink className="w-4 h-4 text-neon-cyan" />
+                    </div>
+                  </div>
                 </div>
               ))
             )}
