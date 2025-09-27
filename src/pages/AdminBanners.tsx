@@ -294,6 +294,9 @@ const AdminBanners: React.FC = () => {
                     />
                     <ImageIcon className="h-4 w-4 text-muted-foreground" />
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Doporučené rozměry: Plná šířka × 320px (mobil), 384px (desktop)
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -307,8 +310,8 @@ const AdminBanners: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="homepage_customer">Domovská stránka</SelectItem>
-                      <SelectItem value="games">Hry</SelectItem>
-                      <SelectItem value="vouchers">Vouchery</SelectItem>
+                      <SelectItem value="vouchers">Kupte Voucher</SelectItem>
+                      <SelectItem value="games">Hraj o luxusní ceny</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

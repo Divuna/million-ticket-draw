@@ -393,6 +393,9 @@ const AdminVouchers: React.FC = () => {
                       />
                       <ImageIcon className="h-4 w-4 text-muted-foreground" />
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      Doporučené rozměry: 64px × 64px (ikona voucheru)
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -407,6 +410,9 @@ const AdminVouchers: React.FC = () => {
                       />
                       <Upload className="h-4 w-4 text-muted-foreground" />
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      Doporučené rozměry: Plná šířka × 128px (banner voucheru)
+                    </p>
                   </div>
                 </div>
 

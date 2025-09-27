@@ -245,6 +245,9 @@ const AdminPartners = () => {
                       <Upload className="w-4 h-4" />
                       <span>PNG, JPG, SVG (max 5MB)</span>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      Doporučené rozměry: 16:9 poměr stran (např. 320×180px nebo 640×360px)
+                    </p>
                     {selectedFile && (
                       <p className="text-sm text-green-600">
                         Vybrán soubor: {selectedFile.name}
