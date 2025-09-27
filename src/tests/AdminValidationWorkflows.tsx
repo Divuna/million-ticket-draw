@@ -44,11 +44,20 @@ interface UIValidationResult {
   czech_text_validated: boolean;
 }
 
+interface PerformanceMetrics {
+  totalExecutionTime: number;
+  averageTestTime: number;
+  slowestTest: { name: string; time: number; category: string } | null;
+  fastestTest: { name: string; time: number; category: string } | null;
+  suiteBreakdown: { suite: string; totalTime: number; testCount: number; averageTime: number }[];
+}
+
 export const AdminValidationWorkflows: React.FC = () => {
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
   const [adminSummary, setAdminSummary] = useState<AdminSummary | null>(null);
   const [sofinityEvents, setSofinityEvents] = useState<SofinityEventSummary[]>([]);
   const [uiValidations, setUiValidations] = useState<UIValidationResult[]>([]);
+  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('summary');
   const [overallStats, setOverallStats] = useState({
@@ -91,6 +100,67 @@ export const AdminValidationWorkflows: React.FC = () => {
     );
   };
 
+  const calculatePerformanceMetrics = (results: ValidationResult[]): PerformanceMetrics => {
+    const testsWithTime = results.filter(r => r.execution_time && r.execution_time > 0);
+    
+    if (testsWithTime.length === 0) {
+      return {
+        totalExecutionTime: 0,
+        averageTestTime: 0,
+        slowestTest: null,
+        fastestTest: null,
+        suiteBreakdown: []
+      };
+    }
+
+    const totalTime = testsWithTime.reduce((sum, r) => sum + (r.execution_time || 0), 0);
+    const averageTime = totalTime / testsWithTime.length;
+
+    // Find slowest and fastest tests
+    const slowest = testsWithTime.reduce((prev, current) => 
+      (current.execution_time || 0) > (prev.execution_time || 0) ? current : prev
+    );
+    
+    const fastest = testsWithTime.reduce((prev, current) => 
+      (current.execution_time || 0) < (prev.execution_time || 0) ? current : prev
+    );
+
+    // Calculate suite breakdown
+    const suiteMap = new Map<string, { totalTime: number; testCount: number }>();
+    
+    testsWithTime.forEach(result => {
+      const suite = result.category;
+      const current = suiteMap.get(suite) || { totalTime: 0, testCount: 0 };
+      suiteMap.set(suite, {
+        totalTime: current.totalTime + (result.execution_time || 0),
+        testCount: current.testCount + 1
+      });
+    });
+
+    const suiteBreakdown = Array.from(suiteMap.entries()).map(([suite, data]) => ({
+      suite,
+      totalTime: data.totalTime,
+      testCount: data.testCount,
+      averageTime: data.totalTime / data.testCount
+    })).sort((a, b) => b.totalTime - a.totalTime);
+
+    return {
+      totalExecutionTime: totalTime,
+      averageTestTime: averageTime,
+      slowestTest: {
+        name: slowest.test,
+        time: slowest.execution_time || 0,
+        category: slowest.category
+      },
+      fastestTest: {
+        name: fastest.test,
+        time: fastest.execution_time || 0,
+        category: fastest.category
+      },
+      suiteBreakdown
+    };
+  };
+
   const runCompleteValidation = async () => {
     setLoading(true);
     try {
@@ -124,6 +194,10 @@ export const AdminValidationWorkflows: React.FC = () => {
       }
       
       setValidationResults(allResults);
+      
+      // Calculate performance metrics
+      const metrics = calculatePerformanceMetrics(allResults);
+      setPerformanceMetrics(metrics);
       
       // Also run admin summary and sofinity events
       await Promise.all([
@@ -353,16 +427,102 @@ export const AdminValidationWorkflows: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="performance">
-          <Card>
-            <CardHeader>
-              <CardTitle>Výkonnostní metriky</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Výkonnostní metriky budou k dispozici po spuštění testů</p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            {performanceMetrics ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="text-2xl font-bold text-primary">
+                        {performanceMetrics.totalExecutionTime.toFixed(0)}ms
+                      </div>
+                      <div className="text-sm text-muted-foreground">Celkový čas</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {performanceMetrics.averageTestTime.toFixed(1)}ms
+                      </div>
+                      <div className="text-sm text-muted-foreground">Průměr na test</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="text-2xl font-bold text-red-600">
+                        {performanceMetrics.slowestTest?.time.toFixed(0) || 0}ms
+                      </div>
+                      <div className="text-sm text-muted-foreground">Nejpomalejší</div>
+                      {performanceMetrics.slowestTest && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {performanceMetrics.slowestTest.name}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="text-2xl font-bold text-green-600">
+                        {performanceMetrics.fastestTest?.time.toFixed(0) || 0}ms
+                      </div>
+                      <div className="text-sm text-muted-foreground">Nejrychlejší</div>
+                      {performanceMetrics.fastestTest && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {performanceMetrics.fastestTest.name}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Breakdown podle test suites</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Test Suite</TableHead>
+                          <TableHead>Počet testů</TableHead>
+                          <TableHead>Celkový čas</TableHead>
+                          <TableHead>Průměrný čas</TableHead>
+                          <TableHead>Výkon</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {performanceMetrics.suiteBreakdown.map((suite, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{suite.suite}</TableCell>
+                            <TableCell>{suite.testCount}</TableCell>
+                            <TableCell>{suite.totalTime.toFixed(0)}ms</TableCell>
+                            <TableCell>{suite.averageTime.toFixed(1)}ms</TableCell>
+                            <TableCell>
+                              <Progress 
+                                value={(suite.totalTime / performanceMetrics.totalExecutionTime) * 100} 
+                                className="w-16"
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Výkonnostní metriky</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">Výkonnostní metriky budou k dispozici po spuštění testů</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
