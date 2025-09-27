@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.test-voucher-trigger]
 verify_jwt = false
+
+[functions.repair-missing-events]
+verify_jwt = false
