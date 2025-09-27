@@ -28,6 +28,7 @@ import AdminStatistics from "./pages/AdminStatistics";
 import AdminAuditLogs from "./pages/AdminAuditLogs";
 import AdminTests from "./pages/AdminTests";
 import OneMilAudit from "./pages/OneMilAudit";
+import AdminAuditRepair from "./pages/AdminAuditRepair";
 import ContestDetailAdmin from "@/components/ContestDetailAdmin";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
             <Route path="/admin/tests" element={<AdminTests />} />
             <Route path="/onemil-audit" element={<OneMilAudit />} />
+            <Route path="/admin/audit-repair" element={<AdminAuditRepair />} />
             <Route path="/admin/contest/:contestId" element={<ContestDetailAdmin />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/payment-cancel" element={<PaymentCancel />} />
