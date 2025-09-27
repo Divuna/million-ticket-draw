@@ -272,11 +272,11 @@ const AdminAuditRepair = () => {
                 {events.slice(0, 50).map((event) => (
                   <TableRow key={event.id}>
                     <TableCell className="font-mono text-xs">
-                      {event.id.slice(0, 8)}...
+                      {String(event.id).slice(0, 8)}...
                     </TableCell>
                     <TableCell className="font-medium">{event.event_name}</TableCell>
                     <TableCell className="font-mono text-xs">
-                      {event.user_id ? `${event.user_id.slice(0, 8)}...` : 'N/A'}
+                      {event.user_id ? `${String(event.user_id).slice(0, 8)}...` : 'N/A'}
                     </TableCell>
                     <TableCell>{formatDate(event.timestamp)}</TableCell>
                     <TableCell>
