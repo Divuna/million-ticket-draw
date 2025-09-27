@@ -209,6 +209,71 @@ const AdminAuditRepair = () => {
     }
   };
 
+  const generateFullAuditReport = async () => {
+    setLoadingState('runAudit', true);
+    const startTime = Date.now();
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-audit-report');
+      
+      if (error) throw error;
+      
+      // Create a comprehensive audit event for the table
+      const auditReportEvent = {
+        id: `audit_report_${Date.now()}`,
+        event_name: 'comprehensive_audit_generated',
+        user_id: null,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          pages_analyzed: data.summary?.total_pages_analyzed || 0,
+          functions_analyzed: data.summary?.total_edge_functions || 0,
+          events_analyzed: data.summary?.total_events_analyzed || 0,
+          health_score: data.summary?.overall_integration_health || 0,
+          critical_issues: data.summary?.critical_issues || 0,
+          execution_time_ms: data.report_metadata?.execution_time_ms || 0,
+          report_version: data.report_metadata?.report_version || '1.0.0'
+        },
+        generation_type: 'existing' as const
+      };
+      
+      setEvents(prev => [auditReportEvent, ...prev]);
+      
+      // Update stats
+      const runtime = Date.now() - startTime;
+      setStats(prev => ({
+        ...prev,
+        total_validations: prev.total_validations + (data.summary?.total_events_analyzed || 0),
+        runtime_ms: runtime,
+        last_check: new Date().toISOString()
+      }));
+      
+      // Download the full report as JSON
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `onemil-sofinity-audit-report-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Kompletní audit report vygenerován",
+        description: `Analýza ${data.summary?.total_pages_analyzed || 0} stránek, ${data.summary?.total_edge_functions || 0} funkcí, ${data.summary?.total_events_analyzed || 0} eventů. Health score: ${data.summary?.overall_integration_health || 0}%`,
+        variant: "default"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Chyba",
+        description: error.message || "Nepodarilo se vygenerovat kompletní audit report",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingState('runAudit', false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('cs-CZ');
   };
@@ -270,6 +335,30 @@ const AdminAuditRepair = () => {
           Spustit audit
         </Button>
       </div>
+
+      {/* Full Audit Report Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Kompletní OneMil/Sofinity Audit Report</CardTitle>
+          <CardDescription>
+            Vygeneruje detailní report celé integrace včetně analýzy stránek, edge funkcí a event logů
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            onClick={generateFullAuditReport}
+            disabled={loading.runAudit}
+            className="w-full h-16 bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            {loading.runAudit ? (
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+            ) : (
+              <Zap className="w-5 h-5 mr-2" />
+            )}
+            Vygenerovat kompletní audit report (JSON download)
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Results Table */}
       <Card>
