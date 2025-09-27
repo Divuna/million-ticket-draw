@@ -29,7 +29,7 @@ interface AuditStats {
 
 const AdminAuditRepair = () => {
   const { user } = useAuth();
-  const { role } = useUserRole();
+  const { role, loading: roleLoading } = useUserRole();
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [stats, setStats] = useState<AuditStats>({
     total_repairs: 0,
@@ -42,6 +42,20 @@ const AdminAuditRepair = () => {
     repairEvents: false,
     runAudit: false
   });
+
+  // Show loading while checking user role
+  if (roleLoading) {
+    return (
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Načítám...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Redirect if not admin
   if (!user || (role !== 'admin' && role !== 'superadmin')) {
