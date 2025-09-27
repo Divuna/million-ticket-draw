@@ -94,6 +94,38 @@ export const AdminValidationWorkflows: React.FC = () => {
   const runCompleteValidation = async () => {
     setLoading(true);
     try {
+      // Run the complete test suite and extract results
+      const { data: testSuiteData, error: testError } = await supabase.rpc('run_complete_admin_test_suite');
+      
+      if (testError) throw testError;
+      
+      // Extract validation results from all test suites
+      const allResults: ValidationResult[] = [];
+      
+      if (testSuiteData && typeof testSuiteData === 'object' && 'test_suites' in testSuiteData) {
+        const suites = (testSuiteData as any).test_suites;
+        
+        // Process each test suite
+        Object.entries(suites).forEach(([suiteName, suiteData]: [string, any]) => {
+          if (suiteData?.test_results) {
+            suiteData.test_results.forEach((test: any) => {
+              allResults.push({
+                category: suiteData.suite_name || suiteName,
+                test: test.test_name,
+                status: test.status === 'passed' ? 'passed' : 
+                       test.status === 'warning' ? 'warning' : 'failed',
+                message: test.message,
+                timestamp: new Date().toISOString(),
+                execution_time: test.execution_time_ms
+              });
+            });
+          }
+        });
+      }
+      
+      setValidationResults(allResults);
+      
+      // Also run admin summary and sofinity events
       await Promise.all([
         getAdminSummary(),
         getSofinityEvents()
@@ -101,7 +133,7 @@ export const AdminValidationWorkflows: React.FC = () => {
       
       toast({
         title: "Kompletní validace dokončena",
-        description: "Všechny kontroly byly úspěšně dokončeny",
+        description: `Dokončeno ${allResults.length} testů, ${allResults.filter(r => r.status === 'passed').length} prošlo`,
       });
     } catch (error: any) {
       toast({
