@@ -255,57 +255,62 @@ const Homepage = () => {
                 
                 {/* Central content */}
                 <div className="text-center space-y-6 z-10 px-8">
-                  <div className="flex items-center justify-center gap-4 mb-4">
-                    <div className="text-6xl md:text-8xl animate-pulse">🎟️</div>
-                    <div className="text-4xl md:text-6xl text-neon-cyan animate-bounce">⚡</div>
-                  </div>
-                  
-                  <h1 className="hero-title text-4xl md:text-7xl font-black leading-tight">
-                    {megajackpotBanners[currentBannerIndex]?.title || 'MEGA JACKPOT'}
-                  </h1>
-                  
-                  <div className="space-y-2">
-                    <p className="text-xl md:text-2xl text-neon-purple font-bold">
-                      Vyhrajte až 1,000,000 Kč!
-                    </p>
-                    <p className="text-base md:text-lg text-muted-foreground">
-                      Kupte si lístek a staňte se milionářem ještě dnes
-                    </p>
-                  </div>
-                  
-                  {/* CTA Button */}
-                  <div className="pt-4">
-                    {user && !isAdmin && (
-                      <Button 
-                        size="lg"
-                        className="bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-pink text-white font-black text-lg px-8 py-4 rounded-xl border-2 border-neon-cyan hover:border-neon-purple transition-all duration-300 hover:scale-110 hover:rotate-1 shadow-2xl"
-                        style={{ 
-                          boxShadow: '0 0 30px hsl(var(--neon-cyan) / 0.6), 0 0 60px hsl(var(--neon-purple) / 0.4)',
-                          animation: 'neon-pulse 2s ease-in-out infinite'
-                        }}
-                        onClick={() => navigate('/games')}
-                      >
-                        <Ticket className="mr-3 w-6 h-6" />
-                        KOUPIT LÍSTEK
-                        <Star className="ml-3 w-6 h-6" />
-                      </Button>
-                    )}
-                    {!user && (
-                      <Button 
-                        size="lg"
-                        variant="outline"
-                        className="border-2 border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 font-bold text-lg px-8 py-4 rounded-xl transition-all duration-300 hover:scale-105"
-                        onClick={() => navigate('/login')}
-                      >
-                        Přihlásit se pro hraní
-                      </Button>
-                    )}
-                    {isAdmin && (
-                      <div className="px-6 py-3 bg-amber-100/10 border-2 border-amber-400/30 rounded-xl">
-                        <p className="text-amber-400 font-semibold">Admin režim - pouze pro čtení</p>
+                  {!isAdmin && (
+                    <>
+                      <div className="flex items-center justify-center gap-4 mb-4">
+                        <div className="text-6xl md:text-8xl animate-pulse">🎟️</div>
+                        <div className="text-4xl md:text-6xl text-neon-cyan animate-bounce">⚡</div>
                       </div>
-                    )}
-                  </div>
+                      
+                      <h1 className="hero-title text-4xl md:text-7xl font-black leading-tight">
+                        {megajackpotBanners[currentBannerIndex]?.title || 'MEGA JACKPOT'}
+                      </h1>
+                      
+                      <div className="space-y-2">
+                        <p className="text-xl md:text-2xl text-neon-purple font-bold">
+                          Vyhrajte až 1,000,000 Kč!
+                        </p>
+                        <p className="text-base md:text-lg text-muted-foreground">
+                          Kupte si lístek a staňte se milionářem ještě dnes
+                        </p>
+                      </div>
+                      
+                      {/* CTA Button */}
+                      <div className="pt-4">
+                        {user && (
+                          <Button 
+                            size="lg"
+                            className="bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-pink text-white font-black text-lg px-8 py-4 rounded-xl border-2 border-neon-cyan hover:border-neon-purple transition-all duration-300 hover:scale-110 hover:rotate-1 shadow-2xl"
+                            style={{ 
+                              boxShadow: '0 0 30px hsl(var(--neon-cyan) / 0.6), 0 0 60px hsl(var(--neon-purple) / 0.4)',
+                              animation: 'neon-pulse 2s ease-in-out infinite'
+                            }}
+                            onClick={() => navigate('/games')}
+                          >
+                            <Ticket className="mr-3 w-6 h-6" />
+                            KOUPIT LÍSTEK
+                            <Star className="ml-3 w-6 h-6" />
+                          </Button>
+                        )}
+                        {!user && (
+                          <Button 
+                            size="lg"
+                            variant="outline"
+                            className="border-2 border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 font-bold text-lg px-8 py-4 rounded-xl transition-all duration-300 hover:scale-105"
+                            onClick={() => navigate('/login')}
+                          >
+                            Přihlásit se pro hraní
+                          </Button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  
+                  {isAdmin && (
+                    <div className="px-6 py-3 bg-amber-100/10 border-2 border-amber-400/30 rounded-xl">
+                      <p className="text-amber-400 font-semibold">Admin režim – pouze pro čtení</p>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -345,57 +350,62 @@ const Homepage = () => {
               
               {/* Central content */}
               <div className="text-center space-y-6 z-10 px-8">
-                <div className="flex items-center justify-center gap-4 mb-4">
-                  <div className="text-6xl md:text-8xl animate-pulse">🎟️</div>
-                  <div className="text-4xl md:text-6xl text-neon-cyan animate-bounce">⚡</div>
-                </div>
-                
-                <h1 className="hero-title text-4xl md:text-7xl font-black leading-tight">
-                  MEGA JACKPOT
-                </h1>
-                
-                <div className="space-y-2">
-                  <p className="text-xl md:text-2xl text-neon-purple font-bold">
-                    Vyhrajte až 1,000,000 Kč!
-                  </p>
-                  <p className="text-base md:text-lg text-muted-foreground">
-                    Kupte si lístek a staňte se milionářem ještě dnes
-                  </p>
-                </div>
-                
-                {/* CTA Button */}
-                <div className="pt-4">
-                  {user && !isAdmin && (
-                    <Button 
-                      size="lg"
-                      className="bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-pink text-white font-black text-lg px-8 py-4 rounded-xl border-2 border-neon-cyan hover:border-neon-purple transition-all duration-300 hover:scale-110 hover:rotate-1 shadow-2xl"
-                      style={{ 
-                        boxShadow: '0 0 30px hsl(var(--neon-cyan) / 0.6), 0 0 60px hsl(var(--neon-purple) / 0.4)',
-                        animation: 'neon-pulse 2s ease-in-out infinite'
-                      }}
-                      onClick={() => navigate('/games')}
-                    >
-                      <Ticket className="mr-3 w-6 h-6" />
-                      KOUPIT LÍSTEK
-                      <Star className="ml-3 w-6 h-6" />
-                    </Button>
-                  )}
-                  {!user && (
-                    <Button 
-                      size="lg"
-                      variant="outline"
-                      className="border-2 border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 font-bold text-lg px-8 py-4 rounded-xl transition-all duration-300 hover:scale-105"
-                      onClick={() => navigate('/login')}
-                    >
-                      Přihlásit se pro hraní
-                    </Button>
-                  )}
-                  {isAdmin && (
-                    <div className="px-6 py-3 bg-amber-100/10 border-2 border-amber-400/30 rounded-xl">
-                      <p className="text-amber-400 font-semibold">Admin režim - pouze pro čtení</p>
+                {!isAdmin && (
+                  <>
+                    <div className="flex items-center justify-center gap-4 mb-4">
+                      <div className="text-6xl md:text-8xl animate-pulse">🎟️</div>
+                      <div className="text-4xl md:text-6xl text-neon-cyan animate-bounce">⚡</div>
                     </div>
-                  )}
-                </div>
+                    
+                    <h1 className="hero-title text-4xl md:text-7xl font-black leading-tight">
+                      MEGA JACKPOT
+                    </h1>
+                    
+                    <div className="space-y-2">
+                      <p className="text-xl md:text-2xl text-neon-purple font-bold">
+                        Vyhrajte až 1,000,000 Kč!
+                      </p>
+                      <p className="text-base md:text-lg text-muted-foreground">
+                        Kupte si lístek a staňte se milionářem ještě dnes
+                      </p>
+                    </div>
+                    
+                    {/* CTA Button */}
+                    <div className="pt-4">
+                      {user && (
+                        <Button 
+                          size="lg"
+                          className="bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-pink text-white font-black text-lg px-8 py-4 rounded-xl border-2 border-neon-cyan hover:border-neon-purple transition-all duration-300 hover:scale-110 hover:rotate-1 shadow-2xl"
+                          style={{ 
+                            boxShadow: '0 0 30px hsl(var(--neon-cyan) / 0.6), 0 0 60px hsl(var(--neon-purple) / 0.4)',
+                            animation: 'neon-pulse 2s ease-in-out infinite'
+                          }}
+                          onClick={() => navigate('/games')}
+                        >
+                          <Ticket className="mr-3 w-6 h-6" />
+                          KOUPIT LÍSTEK
+                          <Star className="ml-3 w-6 h-6" />
+                        </Button>
+                      )}
+                      {!user && (
+                        <Button 
+                          size="lg"
+                          variant="outline"
+                          className="border-2 border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 font-bold text-lg px-8 py-4 rounded-xl transition-all duration-300 hover:scale-105"
+                          onClick={() => navigate('/login')}
+                        >
+                          Přihlásit se pro hraní
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                )}
+                
+                {isAdmin && (
+                  <div className="px-6 py-3 bg-amber-100/10 border-2 border-amber-400/30 rounded-xl">
+                    <p className="text-amber-400 font-semibold">Admin režim – pouze pro čtení</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
