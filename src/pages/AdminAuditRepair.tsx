@@ -9,6 +9,7 @@ import { CheckCircle, Wrench, Zap, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Navigate } from 'react-router-dom';
+import { AdminMenu } from '@/components/AdminMenu';
 
 interface AuditEvent {
   id: string;
@@ -307,6 +308,9 @@ const AdminAuditRepair = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Admin Menu */}
+      <AdminMenu />
     </div>
   );
 };
