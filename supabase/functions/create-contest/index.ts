@@ -1,32 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import type { Database } from '../_shared/database.types.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-interface Database {
-  public: {
-    Tables: {
-      contests: {
-        Insert: {
-          title: string
-          description?: string | null
-          main_prize: string
-          main_image: string
-          status?: string
-          ticket_count?: number
-        }
-      }
-      users: {
-        Row: {
-          id: string
-          role: string
-        }
-      }
-    }
-  }
 }
 
 serve(async (req) => {
@@ -56,7 +34,7 @@ serve(async (req) => {
       throw new Error('Admin access required')
     }
 
-    const { title, description, main_prize, main_image, status, ticket_count } = await req.json()
+    const { title, description, main_prize, main_image, status, ticket_count, ticket_price, name } = await req.json()
 
     if (!title || !main_prize || !main_image) {
       throw new Error('Title, main prize and main image are required')
@@ -66,7 +44,11 @@ serve(async (req) => {
       throw new Error('Ticket count must be at least 1')
     }
 
-    const validStatuses = ['pending', 'won', 'delivered']
+    if (ticket_price && ticket_price < 0) {
+      throw new Error('Ticket price must be positive')
+    }
+
+    const validStatuses = ['draft', 'active', 'closed', 'pending']
     if (status && !validStatuses.includes(status)) {
       throw new Error('Invalid status')
     }
@@ -76,17 +58,20 @@ serve(async (req) => {
       .from('contests')
       .insert({
         title,
+        name: name || title,
         description: description || null,
         main_prize,
         main_image,
-        status: status || 'pending',
-        ticket_count: ticket_count || 1000000
+        status: status || 'draft',
+        ticket_count: ticket_count || 1000000,
+        ticket_price: ticket_price || 1
       })
       .select()
       .single()
 
     if (contestError) {
-      throw new Error('Failed to create contest')
+      console.error('Database error:', contestError)
+      throw new Error(`Failed to create contest: ${contestError.message}`)
     }
 
     return new Response(
@@ -99,8 +84,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
