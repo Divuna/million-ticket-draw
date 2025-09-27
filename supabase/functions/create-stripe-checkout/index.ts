@@ -7,19 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface Database {
-  public: {
-    Tables: {
-      users: {
-        Row: {
-          id: string
-          email: string
-        }
-      }
-    }
-  }
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -30,7 +17,7 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     })
 
-    const supabaseClient = createClient<Database>(
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
@@ -97,8 +84,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error creating checkout session:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,

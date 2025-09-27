@@ -166,10 +166,12 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in admin-create-test-user function:', error)
     
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    
     return new Response(
       JSON.stringify({
         success: false,
-        message: `Chyba při vytváření test uživatele: ${error.message}`
+        message: `Chyba při vytváření test uživatele: ${errorMessage}`
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

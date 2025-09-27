@@ -6,76 +6,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface Database {
-  public: {
-    Tables: {
-      contests: {
-        Row: {
-          id: string
-          title: string
-          description: string | null
-          main_prize: string
-          status: string
-          ticket_count: number
-          created_at: string
-        }
-      }
-      tickets: {
-        Row: {
-          id: string
-          contest_id: string
-          user_id: string
-          number: number
-          created_at: string
-        }
-        Insert: {
-          contest_id: string
-          user_id: string
-          number: number
-        }
-      }
-      wallets: {
-        Row: {
-          id: string
-          user_id: string
-          balance_coins: number
-          balance_vouchers: number
-          created_at: string
-        }
-        Update: {
-          balance_coins?: number
-        }
-      }
-      winners: {
-        Insert: {
-          contest_id: string
-          user_id: string
-          prize_id?: string | null
-          type: string
-          notes?: string | null
-        }
-      }
-      bonus_prizes: {
-        Row: {
-          id: string
-          contest_id: string
-          description: string
-          ticket_position: number
-          status: string
-          created_at: string
-        }
-      }
-    }
-  }
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const supabaseClient = createClient<Database>(
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
@@ -216,8 +153,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,

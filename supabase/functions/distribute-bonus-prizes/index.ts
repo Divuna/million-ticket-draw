@@ -6,40 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface Database {
-  public: {
-    Tables: {
-      contests: {
-        Row: {
-          id: string
-          ticket_count: number
-          title: string
-        }
-      }
-      bonus_prizes: {
-        Insert: {
-          contest_id: string
-          description: string
-          ticket_position: number
-          status?: string
-          amount?: number
-        }
-        Row: {
-          id: string
-          contest_id: string
-          ticket_position: number
-        }
-      }
-      users: {
-        Row: {
-          id: string
-          role: string
-        }
-      }
-    }
-  }
-}
-
 interface DistributeBonusRequest {
   contest_id: string
   bonus_type: 'MioCoin' | 'Physical Item'
@@ -160,7 +126,7 @@ serve(async (req) => {
   let warnings: string[] = []
 
   try {
-    const supabaseClient = createClient<Database>(
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
@@ -179,9 +145,9 @@ serve(async (req) => {
       .from('users')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (userError || userData?.role !== 'admin') {
+    if (userError || !userData || userData.role !== 'admin') {
       throw new Error('Admin access required')
     }
 
@@ -318,7 +284,8 @@ serve(async (req) => {
 
       } catch (error) {
         console.error(`Error processing batch ${batchIndex + 1}:`, error)
-        warnings.push(`Failed to process batch ${batchIndex + 1}: ${error.message}`)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+        warnings.push(`Failed to process batch ${batchIndex + 1}: ${errorMessage}`)
         // Continue with next batch instead of failing completely
       }
     }
@@ -351,9 +318,11 @@ serve(async (req) => {
     const elapsedMs = Date.now() - startTime
     console.error('Error in distribute-bonus-prizes:', error)
     
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    
     return new Response(
       JSON.stringify({ 
-        error: error.message,
+        error: errorMessage,
         elapsed_ms: elapsedMs,
         warnings: warnings.length > 0 ? warnings : undefined 
       }),

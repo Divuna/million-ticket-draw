@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import type { Database } from '../_shared/database.types.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient<Database>(
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
@@ -32,9 +31,9 @@ serve(async (req) => {
       .from('users')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (userError || userData?.role !== 'admin') {
+    if (userError || !userData || userData.role !== 'admin') {
       throw new Error('Admin access required')
     }
 
