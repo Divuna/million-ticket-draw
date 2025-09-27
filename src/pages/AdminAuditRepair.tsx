@@ -73,12 +73,36 @@ const AdminAuditRepair = () => {
       
       if (error) throw error;
       
+      // Add test connection result to events table
+      const newEvent = {
+        id: `test_${Date.now()}`,
+        event_name: 'test_connection',
+        user_id: null,
+        timestamp: new Date().toISOString(),
+        metadata: data,
+        generation_type: 'existing' as const
+      };
+      
+      setEvents(prev => [newEvent, ...prev]);
+      
       toast({
         title: "Test spojení",
         description: data.message,
         variant: data.success ? "default" : "destructive"
       });
     } catch (error: any) {
+      // Add failed test connection to events table
+      const newEvent = {
+        id: `test_${Date.now()}`,
+        event_name: 'test_connection',
+        user_id: null,
+        timestamp: new Date().toISOString(),
+        metadata: { error: error.message || "Connection test failed" },
+        generation_type: 'existing' as const
+      };
+      
+      setEvents(prev => [newEvent, ...prev]);
+      
       toast({
         title: "Chyba",
         description: error.message || "Nepodarilo se otestovat spojení",
