@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import type { Database } from '../_shared/database.types.ts'
 import Stripe from 'https://esm.sh/stripe@14.21.0'
 
 const corsHeaders = {
@@ -17,7 +18,7 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     })
 
-    const supabaseClient = createClient(
+    const supabaseClient = createClient<Database>(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )

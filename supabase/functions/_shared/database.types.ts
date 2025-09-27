@@ -330,6 +330,30 @@ export interface Database {
           created_at?: string
         }
       }
+      ,
+      wallets: {
+        Row: {
+          id: string
+          user_id: string
+          balance_coins: number
+          balance_vouchers: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          balance_coins?: number
+          balance_vouchers?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          balance_coins?: number
+          balance_vouchers?: number
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
