@@ -197,35 +197,17 @@ const Homepage = () => {
         <section className="w-full">
           {bannersLoading ? (
             // Loading placeholder
-            <div className="neon-ticket h-80 md:h-96 flex items-center justify-center relative overflow-hidden animate-pulse">
-              <div className="absolute inset-0 bg-gradient-to-br from-transparent via-neon-cyan/5 to-neon-purple/5" />
-              <div className="text-center space-y-6 z-10 px-8">
-                <div className="w-32 h-12 bg-neon-cyan/20 rounded-xl mx-auto" />
-                <div className="w-48 h-8 bg-neon-purple/20 rounded-lg mx-auto" />
-              </div>
-            </div>
+            <div className="h-80 md:h-96 bg-muted/30 animate-pulse rounded-lg" />
           ) : megajackpotBanners.length > 0 ? (
             // Banner display with carousel for multiple banners
             <div className="relative">
-              <div className="neon-ticket h-80 md:h-96 flex items-center justify-center relative overflow-hidden">
-                {/* Background image from current banner */}
-                <div 
-                  className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
-                  style={{ backgroundImage: `url(${megajackpotBanners[currentBannerIndex]?.image_url})` }}
+              <div className="h-80 md:h-96 relative overflow-hidden rounded-lg">
+                {/* Banner image */}
+                <img 
+                  src={megajackpotBanners[currentBannerIndex]?.image_url}
+                  alt={megajackpotBanners[currentBannerIndex]?.title || 'Banner'}
+                  className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-neon-cyan/5 to-neon-purple/5" />
-                
-                {/* Ticket perforations */}
-                <div className="absolute left-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
-                  {Array.from({length: 8}).map((_, i) => (
-                    <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-cyan/50" />
-                  ))}
-                </div>
-                <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
-                  {Array.from({length: 8}).map((_, i) => (
-                    <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-cyan/50" />
-                  ))}
-                </div>
                 
                 {/* Navigation arrows for multiple banners */}
                 {megajackpotBanners.length > 1 && (
@@ -252,66 +234,6 @@ const Homepage = () => {
                     </Button>
                   </>
                 )}
-                
-                {/* Central content */}
-                <div className="text-center space-y-6 z-10 px-8">
-                  {!isAdmin && (
-                    <>
-                      <div className="flex items-center justify-center gap-4 mb-4">
-                        <div className="text-6xl md:text-8xl animate-pulse">🎟️</div>
-                        <div className="text-4xl md:text-6xl text-neon-cyan animate-bounce">⚡</div>
-                      </div>
-                      
-                      <h1 className="hero-title text-4xl md:text-7xl font-black leading-tight">
-                        {megajackpotBanners[currentBannerIndex]?.title || 'MEGA JACKPOT'}
-                      </h1>
-                      
-                      <div className="space-y-2">
-                        <p className="text-xl md:text-2xl text-neon-purple font-bold">
-                          Vyhrajte až 1,000,000 Kč!
-                        </p>
-                        <p className="text-base md:text-lg text-muted-foreground">
-                          Kupte si lístek a staňte se milionářem ještě dnes
-                        </p>
-                      </div>
-                      
-                      {/* CTA Button */}
-                      <div className="pt-4">
-                        {user && (
-                          <Button 
-                            size="lg"
-                            className="bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-pink text-white font-black text-lg px-8 py-4 rounded-xl border-2 border-neon-cyan hover:border-neon-purple transition-all duration-300 hover:scale-110 hover:rotate-1 shadow-2xl"
-                            style={{ 
-                              boxShadow: '0 0 30px hsl(var(--neon-cyan) / 0.6), 0 0 60px hsl(var(--neon-purple) / 0.4)',
-                              animation: 'neon-pulse 2s ease-in-out infinite'
-                            }}
-                            onClick={() => navigate('/games')}
-                          >
-                            <Ticket className="mr-3 w-6 h-6" />
-                            KOUPIT LÍSTEK
-                            <Star className="ml-3 w-6 h-6" />
-                          </Button>
-                        )}
-                        {!user && (
-                          <Button 
-                            size="lg"
-                            variant="outline"
-                            className="border-2 border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 font-bold text-lg px-8 py-4 rounded-xl transition-all duration-300 hover:scale-105"
-                            onClick={() => navigate('/login')}
-                          >
-                            Přihlásit se pro hraní
-                          </Button>
-                        )}
-                      </div>
-                    </>
-                  )}
-                  
-                  {isAdmin && (
-                    <div className="px-6 py-3 bg-amber-100/10 border-2 border-amber-400/30 rounded-xl">
-                      <p className="text-amber-400 font-semibold">Admin režim – pouze pro čtení</p>
-                    </div>
-                  )}
-                </div>
               </div>
               
               {/* Dot indicators for multiple banners */}
@@ -331,84 +253,7 @@ const Homepage = () => {
                 </div>
               )}
             </div>
-          ) : (
-            // Fallback to default Megajackpot when no banners
-            <div className="neon-ticket h-80 md:h-96 flex items-center justify-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-transparent via-neon-cyan/5 to-neon-purple/5" />
-              
-              {/* Ticket perforations */}
-              <div className="absolute left-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
-                {Array.from({length: 8}).map((_, i) => (
-                  <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-cyan/50" />
-                ))}
-              </div>
-              <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex flex-col gap-3">
-                {Array.from({length: 8}).map((_, i) => (
-                  <div key={i} className="w-2 h-2 rounded-full bg-background border border-neon-cyan/50" />
-                ))}
-              </div>
-              
-              {/* Central content */}
-              <div className="text-center space-y-6 z-10 px-8">
-                {!isAdmin && (
-                  <>
-                    <div className="flex items-center justify-center gap-4 mb-4">
-                      <div className="text-6xl md:text-8xl animate-pulse">🎟️</div>
-                      <div className="text-4xl md:text-6xl text-neon-cyan animate-bounce">⚡</div>
-                    </div>
-                    
-                    <h1 className="hero-title text-4xl md:text-7xl font-black leading-tight">
-                      MEGA JACKPOT
-                    </h1>
-                    
-                    <div className="space-y-2">
-                      <p className="text-xl md:text-2xl text-neon-purple font-bold">
-                        Vyhrajte až 1,000,000 Kč!
-                      </p>
-                      <p className="text-base md:text-lg text-muted-foreground">
-                        Kupte si lístek a staňte se milionářem ještě dnes
-                      </p>
-                    </div>
-                    
-                    {/* CTA Button */}
-                    <div className="pt-4">
-                      {user && (
-                        <Button 
-                          size="lg"
-                          className="bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-pink text-white font-black text-lg px-8 py-4 rounded-xl border-2 border-neon-cyan hover:border-neon-purple transition-all duration-300 hover:scale-110 hover:rotate-1 shadow-2xl"
-                          style={{ 
-                            boxShadow: '0 0 30px hsl(var(--neon-cyan) / 0.6), 0 0 60px hsl(var(--neon-purple) / 0.4)',
-                            animation: 'neon-pulse 2s ease-in-out infinite'
-                          }}
-                          onClick={() => navigate('/games')}
-                        >
-                          <Ticket className="mr-3 w-6 h-6" />
-                          KOUPIT LÍSTEK
-                          <Star className="ml-3 w-6 h-6" />
-                        </Button>
-                      )}
-                      {!user && (
-                        <Button 
-                          size="lg"
-                          variant="outline"
-                          className="border-2 border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 font-bold text-lg px-8 py-4 rounded-xl transition-all duration-300 hover:scale-105"
-                          onClick={() => navigate('/login')}
-                        >
-                          Přihlásit se pro hraní
-                        </Button>
-                      )}
-                    </div>
-                  </>
-                )}
-                
-                {isAdmin && (
-                  <div className="px-6 py-3 bg-amber-100/10 border-2 border-amber-400/30 rounded-xl">
-                    <p className="text-amber-400 font-semibold">Admin režim – pouze pro čtení</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          ) : null}
         </section>
 
         {/* Two Dominant Boxes */}
