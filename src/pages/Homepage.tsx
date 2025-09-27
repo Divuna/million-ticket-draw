@@ -10,6 +10,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
 import { useHomepageVouchers } from '@/hooks/useHomepageVouchers';
 import { useMegajackpotBanners } from '@/hooks/useMegajackpotBanners';
+import { useHomepageBanners } from '@/hooks/useHomepageBanners';
 import { usePartners } from '@/hooks/usePartners';
 import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
@@ -31,6 +32,7 @@ const Homepage = () => {
   const navigate = useNavigate();
   const { vouchers: homepageVouchers, loading: vouchersLoading, getRemainingCount } = useHomepageVouchers();
   const { banners: megajackpotBanners, loading: bannersLoading } = useMegajackpotBanners();
+  const { voucherBanner, gamesBanner, loading: homepageBannersLoading } = useHomepageBanners();
   const { partners, loading: partnersLoading } = usePartners();
   const contestsCarouselRef = useRef<HTMLDivElement>(null);
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
@@ -127,36 +129,6 @@ const Homepage = () => {
       clearInterval(voucherInterval);
     };
   }, [isAdmin, user]);
-
-  const handleVoucherClick = () => {
-    if (!user) {
-      toast.error('Pro nákup voucheru se musíte přihlásit');
-      navigate('/login');
-      return;
-    }
-    
-    if (isAdmin) {
-      return; // Read-only for admin
-    }
-    
-    // Link to voucher purchase - using vouchers page for now
-    navigate('/vouchers');
-  };
-
-  const handleGamesClick = () => {
-    if (!user) {
-      toast.error('Pro hraní her se musíte přihlásit');
-      navigate('/login');
-      return;
-    }
-    
-    if (isAdmin) {
-      return; // Read-only for admin
-    }
-    
-    // Link to existing main games page
-    navigate('/games');
-  };
 
   const handleContestClick = (contestId: string) => {
     if (!user) {
@@ -256,78 +228,52 @@ const Homepage = () => {
           ) : null}
         </section>
 
-        {/* Two Dominant Boxes */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Voucher Purchase Box */}
-          <Card className={`border-neon-cyan glow-cyan bg-card/50 backdrop-blur-sm transition-all duration-200 ${
-            user && !isAdmin ? 'cursor-pointer hover:scale-105' : ''
-          }`} onClick={handleVoucherClick}>
-            <CardHeader className="text-center space-y-4">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
-                <Gift className="w-8 h-8 text-white" />
+        {/* Dynamic Banners */}
+        {(voucherBanner || gamesBanner) && (
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Voucher Banner */}
+            {voucherBanner && (
+              <div 
+                className={`relative rounded-lg overflow-hidden transition-all duration-200 ${
+                  user && !isAdmin ? 'cursor-pointer hover:scale-105' : ''
+                }`} 
+                onClick={() => !isAdmin && navigate('/vouchers')}
+              >
+                <img 
+                  src={voucherBanner.image_url} 
+                  alt={voucherBanner.title}
+                  className="w-full h-64 md:h-80 object-cover"
+                />
+                {isAdmin && (
+                  <div className="absolute top-2 right-2 px-2 py-1 bg-amber-100/10 border border-amber-400/30 rounded text-xs text-amber-400">
+                    Pouze čtení
+                  </div>
+                )}
               </div>
-              <CardTitle className="text-2xl font-bold text-neon-cyan">
-                Kupte Voucher
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <p className="text-muted-foreground">
-                Získejte vouchers s okamžitou hodnotou
-              </p>
-              {user && !isAdmin && (
-                <Button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 glow-cyan">
-                  Koupit Voucher
-                  <ChevronRight className="ml-2 w-4 h-4" />
-                </Button>
-              )}
-              {!user && (
-                <Button variant="outline" className="w-full border-cyan-400 text-cyan-400 hover:bg-cyan-400/10">
-                  Přihlásit se pro nákup
-                </Button>
-              )}
-              {isAdmin && (
-                <div className="text-sm text-muted-foreground py-2">
-                  Admin zobrazení - pouze pro čtení
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            )}
 
-          {/* Games Box */}
-          <Card className={`border-neon-purple glow-purple bg-card/50 backdrop-blur-sm transition-all duration-200 ${
-            user && !isAdmin ? 'cursor-pointer hover:scale-105' : ''
-          }`} onClick={handleGamesClick}>
-            <CardHeader className="text-center space-y-4">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center">
-                <Trophy className="w-8 h-8 text-white" />
+            {/* Games Banner */}
+            {gamesBanner && (
+              <div 
+                className={`relative rounded-lg overflow-hidden transition-all duration-200 ${
+                  user && !isAdmin ? 'cursor-pointer hover:scale-105' : ''
+                }`} 
+                onClick={() => !isAdmin && navigate('/games')}
+              >
+                <img 
+                  src={gamesBanner.image_url} 
+                  alt={gamesBanner.title}
+                  className="w-full h-64 md:h-80 object-cover"
+                />
+                {isAdmin && (
+                  <div className="absolute top-2 right-2 px-2 py-1 bg-amber-100/10 border border-amber-400/30 rounded text-xs text-amber-400">
+                    Pouze čtení
+                  </div>
+                )}
               </div>
-              <CardTitle className="text-2xl font-bold text-neon-purple">
-                Hraj o luxusní ceny
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <p className="text-muted-foreground">
-                Připojte se k hlavním hrám a vyhrajte velké ceny
-              </p>
-              {user && !isAdmin && (
-                <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 glow-purple">
-                  Hrát Hry
-                  <ChevronRight className="ml-2 w-4 h-4" />
-                </Button>
-              )}
-              {!user && (
-                <Button variant="outline" className="w-full border-purple-400 text-purple-400 hover:bg-purple-400/10">
-                  Přihlásit se pro hraní
-                </Button>
-              )}
-              {isAdmin && (
-                <div className="text-sm text-muted-foreground py-2">
-                  Admin zobrazení - pouze pro čtení
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </section>
+            )}
+          </section>
+        )}
 
         {/* Ongoing Contests Carousel */}
         <section className="space-y-6">
