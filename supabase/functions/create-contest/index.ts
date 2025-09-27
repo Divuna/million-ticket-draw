@@ -13,15 +13,29 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
+    // Create admin client for auth verification
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    )
+
+    // Create user-scoped client for DB writes (auth.uid propagation)  
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: {
+            Authorization: req.headers.get('Authorization') ?? ''
+          }
+        }
+      }
     )
 
     // Get user from JWT
     const authHeader = req.headers.get('Authorization')!
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user } } = await supabaseClient.auth.getUser(token)
+    const { data: { user } } = await supabaseAdmin.auth.getUser(token)
 
     if (!user) {
       throw new Error('Unauthorized')
@@ -53,8 +67,8 @@ serve(async (req) => {
       throw new Error('Invalid status')
     }
 
-    // Create new contest
-    const { data: contest, error: contestError } = await supabaseClient
+    // Create new contest using user-scoped client for auth.uid() propagation
+    const { data: contest, error: contestError } = await supabase
       .from('contests')
       .insert({
         title,

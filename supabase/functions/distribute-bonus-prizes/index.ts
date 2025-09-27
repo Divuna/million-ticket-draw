@@ -89,9 +89,9 @@ function generateStepPositions(count: number, maxPosition: number, excludeSet: S
   return positions.sort((a, b) => a - b)
 }
 
-// Process bonus prizes in batches
+// Process bonus prizes in batches using user-scoped client for auth.uid() propagation
 async function processBonusBatch(
-  supabaseClient: any,
+  supabase: any,
   contestId: string,
   positions: number[],
   bonusType: string,
@@ -106,7 +106,7 @@ async function processBonusBatch(
     amount: bonusType === 'MioCoin' ? amountPerUnit : 1
   }))
 
-  const { data: insertedBonuses, error: insertError } = await supabaseClient
+  const { data: insertedBonuses, error: insertError } = await supabase
     .from('bonus_prizes')
     .insert(bonusesToInsert)
     .select()
@@ -127,22 +127,36 @@ serve(async (req) => {
   let warnings: string[] = []
 
   try {
-    const supabaseClient = createClient(
+    // Create admin client for auth verification
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    )
+
+    // Create user-scoped client for DB writes (auth.uid propagation)
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: {
+            Authorization: req.headers.get('Authorization') ?? ''
+          }
+        }
+      }
     )
 
     // Get user from JWT
     const authHeader = req.headers.get('Authorization')!
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user } } = await supabaseClient.auth.getUser(token)
+    const { data: { user } } = await supabaseAdmin.auth.getUser(token)
 
     if (!user) {
       throw new Error('Unauthorized')
     }
 
-    // Check if user is admin
-    const { data: userData, error: userError } = await supabaseClient
+    // Check if user is admin using admin client
+    const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select('role')
       .eq('id', user.id)
@@ -173,8 +187,8 @@ serve(async (req) => {
       throw new Error('Batch size must be between 1 and 10000')
     }
 
-    // Get contest details
-    const { data: contest, error: contestError } = await supabaseClient
+    // Get contest details using admin client
+    const { data: contest, error: contestError } = await supabaseAdmin
       .from('contests')
       .select('id, ticket_count, title')
       .eq('id', contest_id)
@@ -187,8 +201,8 @@ serve(async (req) => {
     // Calculate number of bonuses to create
     const maxBonuses = Math.floor(total_value / amount_per_unit)
     
-    // Get existing bonus positions for this contest
-    const { data: existingBonuses } = await supabaseClient
+    // Get existing bonus positions for this contest using admin client
+    const { data: existingBonuses } = await supabaseAdmin
       .from('bonus_prizes')
       .select('ticket_position')
       .eq('contest_id', contest_id)
@@ -237,9 +251,9 @@ serve(async (req) => {
       console.log(`Processing batch ${batchIndex + 1}/${totalBatches} with ${batchPositions.length} positions`)
 
       try {
-        // Insert batch
+        // Insert batch using user-scoped client for auth.uid() propagation
         const batchBonuses = await processBonusBatch(
-          supabaseClient,
+          supabase,
           contest_id,
           batchPositions,
           bonus_type,
@@ -252,7 +266,7 @@ serve(async (req) => {
 
         // Send aggregated Sofinity event for this batch
         try {
-          const { error: sofinityError } = await supabaseClient.functions.invoke('send_event_to_sofinity', {
+          const { error: sofinityError } = await supabaseAdmin.functions.invoke('send_event_to_sofinity', {
             body: {
               event_name: 'bonus_prizes_batch_added',
               user_id: user.id,
