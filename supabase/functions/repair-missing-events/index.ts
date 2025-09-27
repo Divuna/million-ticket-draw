@@ -23,7 +23,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const { days = 7 } = await req.json().catch(() => ({}));
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -95,7 +95,7 @@ serve(async (req) => {
 
     // Step 3: Generate missing events with realistic data
     let generatedCount = 0;
-    const generatedEvents: Database['public']['Tables']['event_logs']['Insert'][] = [];
+    const generatedEvents: any[] = [];
 
     for (const analysis of eventAnalysis) {
       if (!analysis.needsGeneration) continue;
@@ -103,7 +103,7 @@ serve(async (req) => {
       const eventsToGenerate = analysis.expectedMinimum - analysis.existingCount;
       
       for (let i = 0; i < eventsToGenerate; i++) {
-        const baseEventData: Database['public']['Tables']['event_logs']['Insert'] = {
+        const baseEventData: any = {
           event_name: analysis.eventType,
           timestamp: new Date(startDate.getTime() + Math.random() * (Date.now() - startDate.getTime())).toISOString(),
           metadata: {
@@ -117,7 +117,7 @@ serve(async (req) => {
         switch (analysis.eventType) {
           case 'user_registered':
             if (users && users[i % users.length]) {
-              const user = users[i % users.length];
+              const user = users[i % users.length] as any;
               baseEventData.user_id = user.id;
               baseEventData.metadata = {
                 ...baseEventData.metadata,
@@ -130,8 +130,8 @@ serve(async (req) => {
 
           case 'voucher_purchased':
             if (vouchers && vouchers[i % vouchers.length] && users) {
-              const voucher = vouchers[i % vouchers.length];
-              const user = users[i % users.length];
+              const voucher = vouchers[i % vouchers.length] as any;
+              const user = users[i % users.length] as any;
               baseEventData.user_id = voucher.user_id || user?.id;
               baseEventData.metadata = {
                 ...baseEventData.metadata,
@@ -144,7 +144,7 @@ serve(async (req) => {
 
           case 'coin_redeemed':
             if (tickets && tickets[i % tickets.length]) {
-              const ticket = tickets[i % tickets.length];
+              const ticket = tickets[i % tickets.length] as any;
               baseEventData.user_id = ticket.user_id;
               baseEventData.contest_id = ticket.contest_id;
               baseEventData.metadata = {
@@ -158,7 +158,7 @@ serve(async (req) => {
 
           case 'contest_closed':
             if (contests && contests[i % contests.length]) {
-              const contest = contests[i % contests.length];
+              const contest = contests[i % contests.length] as any;
               baseEventData.contest_id = contest.id;
               baseEventData.metadata = {
                 ...baseEventData.metadata,
@@ -171,7 +171,7 @@ serve(async (req) => {
 
           case 'prize_won':
             if (tickets && tickets[i % tickets.length]) {
-              const ticket = tickets[i % tickets.length];
+              const ticket = tickets[i % tickets.length] as any;
               baseEventData.user_id = ticket.user_id;
               baseEventData.contest_id = ticket.contest_id;
               baseEventData.metadata = {
@@ -186,7 +186,7 @@ serve(async (req) => {
 
           case 'notification_sent':
             if (notifications && notifications[i % notifications.length]) {
-              const notification = notifications[i % notifications.length];
+              const notification = notifications[i % notifications.length] as any;
               baseEventData.user_id = notification.user_id;
               baseEventData.metadata = {
                 ...baseEventData.metadata,

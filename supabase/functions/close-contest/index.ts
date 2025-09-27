@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient<Database>(
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
@@ -66,7 +66,7 @@ serve(async (req) => {
       .eq('contest_id', contest_id)
       .order('number', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
     if (!highestTicket) {
       throw new Error('No tickets sold for this contest')

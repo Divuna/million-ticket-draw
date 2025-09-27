@@ -18,7 +18,7 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     })
 
-    const supabaseClient = createClient<Database>(
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
@@ -43,7 +43,7 @@ serve(async (req) => {
       .from('users')
       .select('email')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
     const userEmail = userData?.email || user.email
 

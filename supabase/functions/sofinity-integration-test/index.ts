@@ -24,7 +24,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get test payload or use default
     const body = await req.json().catch(() => ({}));
@@ -198,28 +198,41 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('🔧 Some verifications failed, attempting auto-adjustment...');
       
       // Try with different header combinations
-      const alternativeHeaders = [
-        { 'Authorization': `Bearer ${sofinityServiceKey}`, 'apikey': sofinityServiceKey },
-        { 'x-api-key': sofinityServiceKey },
-        { 'Authorization': `Bearer ${sofinityServiceKey}` }
-      ];
-
-      for (let i = 0; i < alternativeHeaders.length && !eventLogsCheck.found; i++) {
+      for (let i = 0; i < 3 && !eventLogsCheck.found; i++) {
         try {
           console.log(`Trying alternative headers set ${i + 1}...`);
+          
+          let headers: Record<string, string>;
+          if (i === 0) {
+            headers = {
+              'Authorization': `Bearer ${sofinityServiceKey}`,
+              'apikey': sofinityServiceKey,
+              'Content-Type': 'application/json',
+              'select': '*'
+            };
+          } else if (i === 1) {
+            headers = {
+              'x-api-key': sofinityServiceKey,
+              'Content-Type': 'application/json',
+              'select': '*'
+            };
+          } else {
+            headers = {
+              'Authorization': `Bearer ${sofinityServiceKey}`,
+              'Content-Type': 'application/json',
+              'select': '*'
+            };
+          }
+          
           const testResponse = await fetch(`${sofinityUrl}/rest/v1/EventLogs`, {
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              ...alternativeHeaders[i],
-              'select': '*'
-            }
+            headers
           });
           
           if (testResponse.ok) {
             adjustmentAttempts.push({
               attempt: i + 1,
-              headers: alternativeHeaders[i],
+              headers,
               status: 'success',
               message: 'Alternative headers worked'
             });
@@ -227,7 +240,7 @@ const handler = async (req: Request): Promise<Response> => {
           } else {
             adjustmentAttempts.push({
               attempt: i + 1,
-              headers: alternativeHeaders[i],
+              headers,
               status: 'failed',
               error: `Status: ${testResponse.status}`
             });
@@ -235,7 +248,7 @@ const handler = async (req: Request): Promise<Response> => {
         } catch (error: any) {
           adjustmentAttempts.push({
             attempt: i + 1,
-            headers: alternativeHeaders[i],
+            headers: {},
             status: 'error',
             error: error.message
           });

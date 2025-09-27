@@ -1,37 +1,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import type { Database } from '../_shared/database.types.ts'
 import Stripe from 'https://esm.sh/stripe@14.21.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-interface Database {
-  public: {
-    Tables: {
-      payments: {
-        Insert: {
-          user_id: string
-          amount: number
-          method: string
-          status: string
-          stripe_session_id?: string
-        }
-      }
-      wallets: {
-        Row: {
-          user_id: string
-          balance_coins: number
-          balance_vouchers: number
-        }
-        Update: {
-          balance_coins?: number
-          balance_vouchers?: number
-        }
-      }
-    }
-  }
 }
 
 serve(async (req) => {
@@ -44,7 +18,7 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     })
 
-    const supabaseClient = createClient<Database>(
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
@@ -66,7 +40,8 @@ serve(async (req) => {
     try {
       event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret)
     } catch (err) {
-      console.error('Webhook signature verification failed:', err.message)
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      console.error('Webhook signature verification failed:', errorMessage)
       return new Response(
         JSON.stringify({ error: 'Webhook signature verification failed' }),
         {
@@ -138,8 +113,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Webhook error:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,

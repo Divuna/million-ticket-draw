@@ -127,7 +127,7 @@ serve(async (req) => {
   let warnings: string[] = []
 
   try {
-    const supabaseClient = createClient<Database>(
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
@@ -193,7 +193,7 @@ serve(async (req) => {
       .select('ticket_position')
       .eq('contest_id', contest_id)
 
-    const existingPositions = new Set(existingBonuses?.map(b => b.ticket_position) || [])
+    const existingPositions = new Set(existingBonuses?.map((b: any) => b.ticket_position) || [])
     const availablePositions = contest.ticket_count - existingPositions.size
     
     // Calculate actual number of bonuses we can create
@@ -283,12 +283,12 @@ serve(async (req) => {
           await new Promise(resolve => setTimeout(resolve, 50))
         }
 
-      } catch (error) {
-        console.error(`Error processing batch ${batchIndex + 1}:`, error)
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-        warnings.push(`Failed to process batch ${batchIndex + 1}: ${errorMessage}`)
-        // Continue with next batch instead of failing completely
-      }
+        } catch (error) {
+          console.error(`Error processing batch ${batchIndex + 1}:`, error)
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+          warnings.push(`Failed to process batch ${batchIndex + 1}: ${errorMessage}`)
+          // Continue with next batch instead of failing completely
+        }
     }
 
     const elapsedMs = Date.now() - startTime
