@@ -21,7 +21,7 @@ interface AuditResult {
 
 const OneMilAudit = () => {
   const { user } = useAuth();
-  const { userRole } = useUserRole();
+  const { role } = useUserRole();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isTestingConnection, setIsTestingConnection] = useState(false);
@@ -30,7 +30,7 @@ const OneMilAudit = () => {
   const [auditResults, setAuditResults] = useState<AuditResult | null>(null);
 
   // Redirect if not admin
-  if (!user || (userRole !== 'admin' && userRole !== 'superadmin')) {
+  if (!user || (role !== 'admin' && role !== 'superadmin')) {
     navigate('/login');
     return null;
   }
@@ -40,15 +40,14 @@ const OneMilAudit = () => {
     try {
       const { data, error } = await supabase
         .from('event_logs')
-        .select('count(*)')
-        .gte('timestamp', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-        .single();
+        .select('*')
+        .gte('timestamp', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
       if (error) throw error;
 
       toast({
         title: "✅ Spojení úspěšné",
-        description: `Nalezeno ${data?.count || 0} událostí za posledních 24 hodin`,
+        description: `Nalezeno ${data?.length || 0} událostí za posledních 24 hodin`,
         variant: "default",
       });
     } catch (error) {

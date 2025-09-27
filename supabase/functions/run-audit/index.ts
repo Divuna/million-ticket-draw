@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
+import type { Database } from '../_shared/database.types.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,7 +16,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
 
     console.log('Starting comprehensive audit...');
 
@@ -43,7 +44,7 @@ serve(async (req) => {
       'contest_closed',
       'prize_won',
       'notification_sent'
-    ];
+    ] as const;
 
     const eventTypeCounts: Record<string, number> = {};
     let validJsonCount = 0;
@@ -140,13 +141,16 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in run-audit function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    const errorMessage = error instanceof Error ? error.message : String(error);
     
     return new Response(
       JSON.stringify({ 
         success: false, 
         error: 'Audit failed',
         message: `Chyba při auditu: ${errorMessage}`,
+        validated_count: 0,
+        generated_count: 0,
+        events_summary: {},
         timestamp: new Date().toISOString()
       }),
       {

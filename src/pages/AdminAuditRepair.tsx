@@ -28,7 +28,7 @@ interface AuditStats {
 
 const AdminAuditRepair = () => {
   const { user } = useAuth();
-  const { userRole } = useUserRole();
+  const { role } = useUserRole();
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [stats, setStats] = useState<AuditStats>({
     total_repairs: 0,
@@ -43,7 +43,7 @@ const AdminAuditRepair = () => {
   });
 
   // Redirect if not admin
-  if (!user || (userRole !== 'admin' && userRole !== 'superadmin')) {
+  if (!user || (role !== 'admin' && role !== 'superadmin')) {
     return <Navigate to="/login" replace />;
   }
 

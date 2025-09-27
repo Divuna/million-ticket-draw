@@ -1,30 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import type { Database } from '../_shared/database.types.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-interface Database {
-  public: {
-    Tables: {
-      bonus_prizes: {
-        Insert: {
-          contest_id: string
-          description: string
-          ticket_position: number
-          status?: string
-        }
-      }
-      users: {
-        Row: {
-          id: string
-          role: string
-        }
-      }
-    }
-  }
 }
 
 serve(async (req) => {
@@ -107,8 +87,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
