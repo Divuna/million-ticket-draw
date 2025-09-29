@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import AutoScroll from 'embla-carousel-auto-scroll';
 
 interface Voucher {
   id: string;
@@ -141,90 +139,73 @@ export const VoucherCarousel: React.FC = () => {
     <div className="space-y-6">
       <h2 className="text-3xl font-bold hero-title text-center">Vaše Vouchery</h2>
       
-      <Carousel 
-        className="w-full" 
-        opts={{ loop: true, align: 'start' }}
-        plugins={[
-          AutoScroll({
-            speed: 1,
-            stopOnInteraction: false,
-            stopOnMouseEnter: false,
-            stopOnFocusIn: false,
-          }),
-        ]}
-      >
-        <CarouselContent>
-          {availableVouchers.map((voucher) => (
-            <CarouselItem key={voucher.id} className="md:basis-1/2 lg:basis-1/3">
-              <div className="coupon-card neon-ticket relative overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 border-2 border-neon-blue/30 rounded-xl shadow-lg shadow-primary/20 p-6">
-                {/* Perforated edges */}
-                <div className="ticket-perforations"></div>
-                
-                {/* Banner image if available */}
-                {voucher.banner_url && (
-                  <div className="mb-4 -mx-6 -mt-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4">
+        {availableVouchers.map((voucher) => (
+          <div key={voucher.id} className="coupon-card neon-ticket relative overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 border-2 border-neon-blue/30 rounded-xl shadow-lg shadow-primary/20 p-6">
+            {/* Perforated edges */}
+            <div className="ticket-perforations"></div>
+            
+            {/* Banner image if available */}
+            {voucher.banner_url && (
+              <div className="mb-4 -mx-6 -mt-6">
+                <img 
+                  src={voucher.banner_url} 
+                  alt={`${voucher.name} banner`}
+                  className="w-full h-24 object-cover"
+                />
+              </div>
+            )}
+            
+            {/* Main content */}
+            <div className="space-y-4">
+              {/* Header with logo and title */}
+              <div className="flex items-center gap-4">
+                {voucher.image_url && (
+                  <div className="flex-shrink-0">
                     <img 
-                      src={voucher.banner_url} 
-                      alt={`${voucher.name} banner`}
-                      className="w-full h-24 object-cover"
+                      src={voucher.image_url} 
+                      alt={voucher.name}
+                      className="w-12 h-12 object-cover rounded-lg border border-neon-blue/30"
                     />
                   </div>
                 )}
                 
-                {/* Main content */}
-                <div className="space-y-4">
-                  {/* Header with logo and title */}
-                  <div className="flex items-center gap-4">
-                    {voucher.image_url && (
-                      <div className="flex-shrink-0">
-                        <img 
-                          src={voucher.image_url} 
-                          alt={voucher.name}
-                          className="w-12 h-12 object-cover rounded-lg border border-neon-blue/30"
-                        />
-                      </div>
-                    )}
-                    
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-neon-blue">{voucher.name}</h3>
-                      {!isVoucherAvailable(voucher) && (
-                        <Badge variant="destructive" className="mt-1">Nedostupný</Badge>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Value/remaining count */}
-                  <div className="text-center py-2">
-                    <div className="text-lg font-semibold text-neon-gold">
-                      Zbývá: {getRemainingCount(voucher)}
-                    </div>
-                  </div>
-                  
-                  {/* Action button */}
-                  <div className="pt-2">
-                    <Button
-                      onClick={() => redeemVoucher(voucher.id)}
-                      disabled={!isVoucherAvailable(voucher)}
-                      className="w-full h-12 text-lg font-bold bg-gradient-to-r from-neon-blue to-neon-purple hover:from-neon-purple hover:to-neon-blue border border-neon-blue/50 shadow-lg shadow-neon-blue/25 transition-all duration-300"
-                      variant="outline"
-                    >
-                      POUŽÍT VOUCHER
-                    </Button>
-                  </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-neon-blue">{voucher.name}</h3>
+                  {!isVoucherAvailable(voucher) && (
+                    <Badge variant="destructive" className="mt-1">Nedostupný</Badge>
+                  )}
                 </div>
-                
-                {/* Decorative corner cuts */}
-                <div className="absolute top-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 -translate-y-2"></div>
-                <div className="absolute top-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 -translate-y-2"></div>
-                <div className="absolute bottom-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 translate-y-2"></div>
-                <div className="absolute bottom-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 translate-y-2"></div>
               </div>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-        <CarouselPrevious />
-        <CarouselNext />
-      </Carousel>
+              
+              {/* Value/remaining count */}
+              <div className="text-center py-2">
+                <div className="text-lg font-semibold text-neon-gold">
+                  Zbývá: {getRemainingCount(voucher)}
+                </div>
+              </div>
+              
+              {/* Action button */}
+              <div className="pt-2">
+                <Button
+                  onClick={() => redeemVoucher(voucher.id)}
+                  disabled={!isVoucherAvailable(voucher)}
+                  className="w-full h-12 text-lg font-bold bg-gradient-to-r from-neon-blue to-neon-purple hover:from-neon-purple hover:to-neon-blue border border-neon-blue/50 shadow-lg shadow-neon-blue/25 transition-all duration-300"
+                  variant="outline"
+                >
+                  POUŽÍT VOUCHER
+                </Button>
+              </div>
+            </div>
+            
+            {/* Decorative corner cuts */}
+            <div className="absolute top-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 -translate-y-2"></div>
+            <div className="absolute top-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 -translate-y-2"></div>
+            <div className="absolute bottom-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 translate-y-2"></div>
+            <div className="absolute bottom-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 translate-y-2"></div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
