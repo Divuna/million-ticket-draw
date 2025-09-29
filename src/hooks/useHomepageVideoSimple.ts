@@ -57,20 +57,42 @@ export const useHomepageVideoSimple = () => {
 
       if (deactivateError) throw deactivateError;
 
-      // Then update or insert the new settings
-      const { error: upsertError } = await supabase
+      // Check if we have any existing banner with homepage video settings
+      const { data: existingBanner, error: findError } = await supabase
         .from('banners')
-        .upsert({
-          id: 'homepage-video-settings',
-          title: 'Homepage Video Settings',
-          image_url: '/placeholder.svg',
-          target_page: 'homepage_video_settings',
-          active: true,
-          homepage_youtube_url: url,
-          homepage_video_active: active
-        });
+        .select('id')
+        .not('homepage_youtube_url', 'is', null)
+        .limit(1)
+        .maybeSingle();
 
-      if (upsertError) throw upsertError;
+      if (findError) throw findError;
+
+      if (existingBanner) {
+        // Update existing banner
+        const { error: updateError } = await supabase
+          .from('banners')
+          .update({
+            homepage_youtube_url: url,
+            homepage_video_active: active
+          })
+          .eq('id', existingBanner.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Create new banner for homepage video
+        const { error: insertError } = await supabase
+          .from('banners')
+          .insert({
+            title: 'Homepage Video Settings',
+            image_url: '/placeholder.svg',
+            target_page: 'homepage_video_settings',
+            active: true,
+            homepage_youtube_url: url,
+            homepage_video_active: active
+          });
+
+        if (insertError) throw insertError;
+      }
 
       // Update local state
       setVideoUrl(active ? url : null);
