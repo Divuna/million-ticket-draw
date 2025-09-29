@@ -352,80 +352,95 @@ const Homepage = () => {
                   className="flex-none w-72"
                   style={{ scrollSnapAlign: 'start' }}
                 >
-                  <Card 
-                    className={`coupon-card border-neon-purple bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 relative overflow-hidden transition-all duration-300 h-full ${
-                      user && !isAdmin ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-neon-purple hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 dark:hover:from-purple-800/30 dark:hover:to-pink-800/30' : 
-                      !user ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]' : 
-                      'opacity-90'
+                  <div 
+                    className={`neon-ticket ticket-perforations relative overflow-hidden bg-gradient-to-br from-red-600/90 to-red-800/95 border-2 border-red-400/40 rounded-xl shadow-lg shadow-red-500/30 transition-all duration-300 h-96 ${
+                      user && !isAdmin 
+                        ? 'cursor-pointer hover-scale hover:shadow-xl hover:shadow-red-500/40 hover:border-red-400/60' 
+                        : !user
+                          ? 'cursor-pointer hover:opacity-80 hover:scale-[1.02]'
+                          : isAdmin
+                            ? 'opacity-90'
+                            : ''
                     }`}
                     onClick={() => !isAdmin && handleContestClick(contest.id)}
                   >
-                    {/* Coupon notches */}
-                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
-                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
+                    {/* Ticket perforations on sides */}
+                    <div className="absolute top-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 -translate-y-2"></div>
+                    <div className="absolute top-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 -translate-y-2"></div>
+                    <div className="absolute bottom-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 translate-y-2"></div>
+                    <div className="absolute bottom-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 translate-y-2"></div>
                     
-                    <CardHeader className="pb-2">
-                      {/* Contest Image */}
-                      <div className="w-full h-32 rounded-lg overflow-hidden mb-3 bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center">
-                        {contest.main_image ? (
-                          <img 
-                            src={contest.main_image.startsWith('http') ? contest.main_image : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`}
-                            alt={contest.title}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              console.log('Contest image loading error:', contest.main_image);
-                              toast.error('Obrázek soutěže se nepodařilo načíst');
-                              // Replace with fallback
-                              e.currentTarget.style.display = 'none';
-                              if (e.currentTarget.nextSibling) {
-                                (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
-                              }
-                            }}
-                          />
-                        ) : null}
-                        <div 
-                          className={`w-full h-full flex items-center justify-center text-amber-600 dark:text-amber-400 ${contest.main_image ? 'hidden' : 'flex'}`}
-                          style={{ display: contest.main_image ? 'none' : 'flex' }}
-                        >
-                          <div className="text-center">
-                            <Trophy className="w-8 h-8 mx-auto mb-2" />
-                            <span className="text-xs">Bez obrázku</span>
-                          </div>
+                    {/* Top 60% - Contest Image */}
+                    <div className="h-[60%] relative overflow-hidden">
+                      {contest.main_image ? (
+                        <img 
+                          src={contest.main_image.startsWith('http') ? contest.main_image : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`}
+                          alt={contest.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            console.log('Contest image loading error:', contest.main_image);
+                            toast.error('Obrázek soutěže se nepodařilo načíst');
+                            // Replace with fallback
+                            e.currentTarget.style.display = 'none';
+                            if (e.currentTarget.nextSibling) {
+                              (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <div 
+                        className={`w-full h-full flex items-center justify-center text-red-200 ${contest.main_image ? 'hidden' : 'flex'} bg-red-700/50`}
+                        style={{ display: contest.main_image ? 'none' : 'flex' }}
+                      >
+                        <div className="text-center">
+                          <Trophy className="w-12 h-12 mx-auto mb-2" />
+                          <span className="text-sm">Bez obrázku</span>
                         </div>
                       </div>
-
-                      <CardTitle className="text-lg font-bold text-neon-purple">
-                        {contest.title}
-                      </CardTitle>
-                      <div className="text-xs text-purple-600 dark:text-purple-400 font-mono">
+                      
+                      {/* Contest ID overlay */}
+                      <div className="absolute top-3 right-3 bg-red-900/80 text-red-100 text-xs px-2 py-1 rounded border border-red-400/30">
                         #{contest.id.slice(0, 8)}
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Star className="w-4 h-4 text-neon-purple" />
-                          <span className="text-sm font-medium text-neon-purple">
+                    </div>
+
+                    {/* Bottom 40% - Contest Information */}
+                    <div className="h-[40%] p-4 flex flex-col justify-between bg-gradient-to-b from-red-800/20 to-red-900/40">
+                      {/* Contest title */}
+                      <div>
+                        <h3 className="text-white font-bold text-lg mb-1 line-clamp-2">
+                          {contest.title}
+                        </h3>
+                        
+                        {/* Main prize */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <Star className="w-4 h-4 text-yellow-300" />
+                          <span className="text-sm font-medium text-yellow-300 line-clamp-1">
                             {contest.main_prize}
                           </span>
                         </div>
-                        <div className="flex justify-between text-xs text-purple-600 dark:text-purple-400">
+                      </div>
+
+                      {/* Contest details and action */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs text-red-200">
                           <span>Tiketů: {contest.ticket_count.toLocaleString('cs-CZ')}</span>
                           <span>Cena: {contest.ticket_price} Miocoin</span>
                         </div>
-                        <div className="border-t border-dashed border-neon-purple pt-2">
-                          <div className="text-xs text-purple-600 dark:text-purple-400">
+                        
+                        <div className="border-t border-dashed border-red-300/40 pt-2">
+                          <div className="text-xs text-red-200">
                             {user && !isAdmin ? 'Klikněte pro hraní her' : !user ? 'Přihlaste se pro hraní' : 'Contest zobrazení'}
                           </div>
                           {isAdmin && (
-                            <div className="text-xs text-purple-500 mt-1">
+                            <div className="text-xs text-red-300 mt-1">
                               Admin zobrazení - pouze pro čtení
                             </div>
                           )}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </div>
               ))
             )}
