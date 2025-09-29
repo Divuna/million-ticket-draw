@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Upload, Calendar as CalendarIcon, Image as ImageIcon, Search, Edit, Trash2, Eye, LayoutTemplate } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
+import { useHomepageVideoSimple } from '@/hooks/useHomepageVideoSimple';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -55,6 +56,9 @@ const AdminBanners: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedBanner, setSelectedBanner] = useState<Banner | null>(null);
+  const [homepageVideoUrl, setHomepageVideoUrl] = useState('');
+  const [videoSaveLoading, setVideoSaveLoading] = useState(false);
+  const { videoUrl, isActive: isVideoActive, loading: videoSettingsLoading, updateVideoSettings } = useHomepageVideoSimple();
   
   const [bannerForm, setBannerForm] = useState<BannerForm>({
     title: '',
@@ -75,6 +79,13 @@ const AdminBanners: React.FC = () => {
       fetchBanners();
     }
   }, [user, isAdmin, roleLoading, navigate]);
+
+  // Load existing video URL when component mounts
+  useEffect(() => {
+    if (videoUrl) {
+      setHomepageVideoUrl(videoUrl);
+    }
+  }, [videoUrl]);
 
   const fetchBanners = async () => {
     try {
@@ -256,6 +267,29 @@ const AdminBanners: React.FC = () => {
     const startDate = banner.start_date ? new Date(banner.start_date).toLocaleDateString('cs-CZ') : 'Neurčeno';
     const endDate = banner.end_date ? new Date(banner.end_date).toLocaleDateString('cs-CZ') : 'Neurčeno';
     return `${startDate} - ${endDate}`;
+  };
+
+  const handleSaveVideoSettings = async () => {
+    if (!homepageVideoUrl.trim()) {
+      toast.error('YouTube URL je povinná');
+      return;
+    }
+
+    try {
+      setVideoSaveLoading(true);
+      const result = await updateVideoSettings(homepageVideoUrl, true);
+      
+      if (result.success) {
+        toast.success('Nastavení videa bylo úspěšně uloženo');
+      } else {
+        toast.error('Chyba při ukládání nastavení: ' + result.error);
+      }
+    } catch (error: any) {
+      toast.error('Chyba při ukládání nastavení videa');
+      console.error('Error saving video settings:', error);
+    } finally {
+      setVideoSaveLoading(false);
+    }
   };
 
   if (roleLoading || loading) {
@@ -471,6 +505,54 @@ const AdminBanners: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Homepage Video Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              🎬 YouTube URL úvodní stránka
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="homepageVideoUrl">YouTube URL pro úvodní video</Label>
+              <Input
+                id="homepageVideoUrl"
+                type="url"
+                value={homepageVideoUrl}
+                onChange={(e) => setHomepageVideoUrl(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=..."
+                className="w-full"
+                disabled={videoSettingsLoading}
+              />
+              <p className="text-xs text-muted-foreground">
+                Zadejte URL YouTube videa, které se zobrazí na úvodní stránce pod sekcí partnerů
+              </p>
+              {videoUrl && (
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  Aktuální URL: {videoUrl}
+                </p>
+              )}
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch 
+                id="homepageVideoActive" 
+                checked={isVideoActive}
+                disabled={videoSettingsLoading}
+              />
+              <Label htmlFor="homepageVideoActive">Aktivní video na úvodní stránce</Label>
+            </div>
+            
+            <Button 
+              className="w-full"
+              onClick={handleSaveVideoSettings}
+              disabled={videoSaveLoading || videoSettingsLoading}
+            >
+              {videoSaveLoading ? 'Ukládá se...' : 'Uložit nastavení videa'}
+            </Button>
           </CardContent>
         </Card>
 

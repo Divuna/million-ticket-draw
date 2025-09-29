@@ -12,7 +12,7 @@ import { useHomepageVouchers } from '@/hooks/useHomepageVouchers';
 import { useMegajackpotBanners } from '@/hooks/useMegajackpotBanners';
 import { useHomepageBanners } from '@/hooks/useHomepageBanners';
 import { usePartners } from '@/hooks/usePartners';
-import { useHomepageVideo } from '@/hooks/useHomepageVideo';
+import { useHomepageVideoSimple } from '@/hooks/useHomepageVideoSimple';
 import YouTubeEmbed from '@/components/YouTubeEmbed';
 import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
@@ -36,7 +36,7 @@ const Homepage = () => {
   const { banners: megajackpotBanners, loading: bannersLoading } = useMegajackpotBanners();
   const { voucherBanner, gamesBanner, loading: homepageBannersLoading } = useHomepageBanners();
   const { partners, loading: partnersLoading } = usePartners();
-  const { videoBanner, loading: videoLoading } = useHomepageVideo();
+  const { videoUrl, isActive: isVideoActive, loading: videoLoading } = useHomepageVideoSimple();
   const contestsCarouselRef = useRef<HTMLDivElement>(null);
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
   const megajackpotCarouselRef = useRef<HTMLDivElement>(null);
@@ -637,8 +637,8 @@ const Homepage = () => {
         </section>
 
         {/* Instructional Video Section */}
-        {!videoLoading && videoBanner && (
-          <section className="space-y-6">
+        {!videoLoading && videoUrl && isVideoActive && (
+          <section className="space-y-6 mt-16">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-bold text-neon-cyan flex items-center gap-2">
                 <span className="w-6 h-6 text-neon-cyan">🎬</span>
@@ -648,13 +648,13 @@ const Homepage = () => {
             
             <div className="max-w-4xl mx-auto space-y-6">
               <YouTubeEmbed 
-                url={videoBanner.image_url} 
+                url={videoUrl} 
                 className="rounded-lg shadow-lg" 
               />
               
               <div className="text-center space-y-4 px-4">
                 <h4 className="text-xl font-semibold text-foreground">
-                  Objevte svět výher s OneMil
+                  Jak hra funguje, co se vyhrává a jak probíhá nákup voucherů
                 </h4>
                 <div className="text-muted-foreground leading-relaxed max-w-2xl mx-auto">
                   <p className="mb-3">

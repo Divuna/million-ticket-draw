@@ -76,6 +76,8 @@ export type Database = {
           active: boolean
           created_at: string
           end_date: string | null
+          homepage_video_active: boolean | null
+          homepage_youtube_url: string | null
           id: string
           image_url: string
           start_date: string | null
@@ -87,6 +89,8 @@ export type Database = {
           active?: boolean
           created_at?: string
           end_date?: string | null
+          homepage_video_active?: boolean | null
+          homepage_youtube_url?: string | null
           id?: string
           image_url: string
           start_date?: string | null
@@ -98,6 +102,8 @@ export type Database = {
           active?: boolean
           created_at?: string
           end_date?: string | null
+          homepage_video_active?: boolean | null
+          homepage_youtube_url?: string | null
           id?: string
           image_url?: string
           start_date?: string | null
