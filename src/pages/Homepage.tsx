@@ -12,6 +12,8 @@ import { useHomepageVouchers } from '@/hooks/useHomepageVouchers';
 import { useMegajackpotBanners } from '@/hooks/useMegajackpotBanners';
 import { useHomepageBanners } from '@/hooks/useHomepageBanners';
 import { usePartners } from '@/hooks/usePartners';
+import { useHomepageVideo } from '@/hooks/useHomepageVideo';
+import YouTubeEmbed from '@/components/YouTubeEmbed';
 import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -34,6 +36,7 @@ const Homepage = () => {
   const { banners: megajackpotBanners, loading: bannersLoading } = useMegajackpotBanners();
   const { voucherBanner, gamesBanner, loading: homepageBannersLoading } = useHomepageBanners();
   const { partners, loading: partnersLoading } = usePartners();
+  const { videoBanner, loading: videoLoading } = useHomepageVideo();
   const contestsCarouselRef = useRef<HTMLDivElement>(null);
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
   const megajackpotCarouselRef = useRef<HTMLDivElement>(null);
@@ -632,6 +635,43 @@ const Homepage = () => {
             )}
           </div>
         </section>
+
+        {/* How It Works Video Section */}
+        {videoBanner && videoBanner.image_url && (
+          <section className="space-y-6">
+            <div className="flex items-center justify-center">
+              <h3 className="text-3xl font-bold text-neon-pink text-center flex items-center gap-2">
+                <Trophy className="w-8 h-8" />
+                Jak to funguje
+              </h3>
+            </div>
+            
+            <div className="max-w-4xl mx-auto space-y-6">
+              {videoLoading ? (
+                <div className="aspect-video bg-muted rounded-lg animate-pulse" />
+              ) : (
+                <YouTubeEmbed 
+                  url={videoBanner.image_url} 
+                  title={videoBanner.title}
+                  className="drop-shadow-2xl"
+                />
+              )}
+              
+              <div className="text-center space-y-4 bg-gradient-to-r from-card/80 to-muted/40 backdrop-blur-sm rounded-lg p-6 border border-white/10">
+                <p className="text-lg text-muted-foreground leading-relaxed">
+                  Objevte náš svět soutěží a výher! Sledujte video a dozvíte se, jak snadno můžete vyhrát luxusní ceny, 
+                  získat MioCoiny za nákupy u našich partnerů a využívat výhodné vouchery.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 text-sm">
+                  <span className="px-3 py-1 bg-neon-cyan/20 text-neon-cyan rounded-full">🎯 Snadné hraní</span>
+                  <span className="px-3 py-1 bg-neon-purple/20 text-neon-purple rounded-full">🏆 Luxusní ceny</span>
+                  <span className="px-3 py-1 bg-neon-pink/20 text-neon-pink rounded-full">💰 MioCoiny</span>
+                  <span className="px-3 py-1 bg-yellow-500/20 text-yellow-500 rounded-full">🎫 Výhodné vouchery</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Enhanced Footer */}
         <footer className="border-t border-border pt-12 mt-20 bg-gradient-to-br from-background to-muted/20">
