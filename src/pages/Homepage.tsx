@@ -636,37 +636,39 @@ const Homepage = () => {
           </div>
         </section>
 
-        {/* How It Works Video Section */}
-        {videoBanner && videoBanner.image_url && (
+        {/* Instructional Video Section */}
+        {!videoLoading && videoBanner && (
           <section className="space-y-6">
-            <div className="flex items-center justify-center">
-              <h3 className="text-3xl font-bold text-neon-pink text-center flex items-center gap-2">
-                <Trophy className="w-8 h-8" />
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-neon-cyan flex items-center gap-2">
+                <span className="w-6 h-6 text-neon-cyan">🎬</span>
                 Jak to funguje
               </h3>
             </div>
             
             <div className="max-w-4xl mx-auto space-y-6">
-              {videoLoading ? (
-                <div className="aspect-video bg-muted rounded-lg animate-pulse" />
-              ) : (
-                <YouTubeEmbed 
-                  url={videoBanner.image_url} 
-                  title={videoBanner.title}
-                  className="drop-shadow-2xl"
-                />
-              )}
+              <YouTubeEmbed 
+                url={videoBanner.image_url} 
+                className="rounded-lg shadow-lg" 
+              />
               
-              <div className="text-center space-y-4 bg-gradient-to-r from-card/80 to-muted/40 backdrop-blur-sm rounded-lg p-6 border border-white/10">
-                <p className="text-lg text-muted-foreground leading-relaxed">
-                  Objevte náš svět soutěží a výher! Sledujte video a dozvíte se, jak snadno můžete vyhrát luxusní ceny, 
-                  získat MioCoiny za nákupy u našich partnerů a využívat výhodné vouchery.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 text-sm">
-                  <span className="px-3 py-1 bg-neon-cyan/20 text-neon-cyan rounded-full">🎯 Snadné hraní</span>
-                  <span className="px-3 py-1 bg-neon-purple/20 text-neon-purple rounded-full">🏆 Luxusní ceny</span>
-                  <span className="px-3 py-1 bg-neon-pink/20 text-neon-pink rounded-full">💰 MioCoiny</span>
-                  <span className="px-3 py-1 bg-yellow-500/20 text-yellow-500 rounded-full">🎫 Výhodné vouchery</span>
+              <div className="text-center space-y-4 px-4">
+                <h4 className="text-xl font-semibold text-foreground">
+                  Objevte svět výher s OneMil
+                </h4>
+                <div className="text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+                  <p className="mb-3">
+                    🎯 <strong>Kupte tikety</strong> do soutěží o luxusní ceny za pouhý 1 MioCoin
+                  </p>
+                  <p className="mb-3">
+                    🏆 <strong>Vyhrajte hlavní ceny</strong> jako jsou auta, dovolené nebo elektronika
+                  </p>
+                  <p className="mb-3">
+                    🎁 <strong>Získejte bonusové výhry</strong> na každé 100. pozici tiketu
+                  </p>
+                  <p>
+                    💳 <strong>Nakupte vouchery</strong> u našich partnerů a získejte MioCoiny za každý nákup
+                  </p>
                 </div>
               </div>
             </div>

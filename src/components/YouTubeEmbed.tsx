@@ -2,39 +2,46 @@ import React from 'react';
 
 interface YouTubeEmbedProps {
   url: string;
-  title?: string;
   className?: string;
 }
 
-const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ url, title = "YouTube video", className = "" }) => {
-  // Extract video ID from various YouTube URL formats
-  const getYouTubeVideoId = (url: string): string | null => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
+const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ url, className = "" }) => {
+  // Extract video ID from YouTube URL
+  const getVideoId = (url: string) => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([^&\n?#]+)/,
+      /^([a-zA-Z0-9_-]{11})$/ // Direct video ID
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
   };
 
-  const videoId = getYouTubeVideoId(url);
-
+  const videoId = getVideoId(url);
+  
   if (!videoId) {
     return (
-      <div className={`bg-muted rounded-lg p-8 text-center ${className}`}>
+      <div className="w-full h-64 bg-muted/30 rounded-lg flex items-center justify-center">
         <p className="text-muted-foreground">Neplatná YouTube URL</p>
       </div>
     );
   }
 
-  const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&controls=1`;
+  const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&showinfo=0`;
 
   return (
     <div className={`relative w-full ${className}`}>
-      <div className="relative aspect-video rounded-lg overflow-hidden bg-black/10 backdrop-blur-sm border border-white/10">
+      <div className="aspect-video rounded-lg overflow-hidden shadow-lg">
         <iframe
           src={embedUrl}
-          title={title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          title="YouTube video"
+          className="w-full h-full"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
-          className="absolute inset-0 w-full h-full rounded-lg"
         />
       </div>
     </div>

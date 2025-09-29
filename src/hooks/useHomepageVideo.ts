@@ -1,40 +1,56 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface HomepageVideoBanner {
+interface VideoBanner {
   id: string;
   title: string;
   image_url: string; // This will contain the YouTube URL for video banners
   active: boolean;
+  target_page: string;
   start_date: string | null;
   end_date: string | null;
 }
 
 export const useHomepageVideo = () => {
-  const [videoBanner, setVideoBanner] = useState<HomepageVideoBanner | null>(null);
+  const [videoBanner, setVideoBanner] = useState<VideoBanner | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchHomepageVideo = async () => {
+  const fetchVideoBanner = async () => {
     try {
       setLoading(true);
-      const now = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+      setError(null);
       
       const { data, error } = await supabase
         .from('banners')
-        .select('id, title, image_url, active, start_date, end_date')
-        .eq('active', true)
+        .select('id, title, image_url, active, target_page, start_date, end_date')
         .eq('target_page', 'homepage_video')
-        .or(`start_date.is.null,start_date.lte.${now}`)
-        .or(`end_date.is.null,end_date.gte.${now}`)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .eq('active', true)
+        .single();
 
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+        throw error;
+      }
 
-      setVideoBanner(data);
-    } catch (error) {
-      console.error('Error fetching homepage video:', error);
+      // Check if banner is within date range
+      if (data) {
+        const now = new Date();
+        const startDate = data.start_date ? new Date(data.start_date) : null;
+        const endDate = data.end_date ? new Date(data.end_date) : null;
+
+        const isValid = (!startDate || now >= startDate) && (!endDate || now <= endDate);
+        
+        if (isValid) {
+          setVideoBanner(data);
+        } else {
+          setVideoBanner(null);
+        }
+      } else {
+        setVideoBanner(null);
+      }
+    } catch (error: any) {
+      console.error('Error fetching video banner:', error);
+      setError(error.message);
       setVideoBanner(null);
     } finally {
       setLoading(false);
@@ -42,17 +58,20 @@ export const useHomepageVideo = () => {
   };
 
   useEffect(() => {
-    fetchHomepageVideo();
-  }, []);
+    fetchVideoBanner();
 
-  // Subscribe to banner changes for real-time updates
-  useEffect(() => {
+    // Subscribe to banner changes
     const channel = supabase
-      .channel('homepage-video-changes')
+      .channel('video-banner-changes')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'banners' }, 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'banners',
+          filter: 'target_page=eq.homepage_video'
+        }, 
         () => {
-          fetchHomepageVideo(); // Refresh video when any banner changes
+          fetchVideoBanner();
         }
       )
       .subscribe();
@@ -65,6 +84,7 @@ export const useHomepageVideo = () => {
   return {
     videoBanner,
     loading,
-    refetch: fetchHomepageVideo
+    error,
+    refetch: fetchVideoBanner
   };
 };
