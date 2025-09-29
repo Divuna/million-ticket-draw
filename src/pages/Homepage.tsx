@@ -467,51 +467,53 @@ const Homepage = () => {
           >
             {vouchersLoading ? (
               // Loading placeholder
-              <div className="flex-none w-64">
-                <Card className="coupon-card border-pink-400 bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 relative overflow-hidden h-full">
-                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
-                  <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
-                  <CardHeader className="pb-2">
-                    <div className="h-4 bg-pink-200 dark:bg-pink-800 rounded animate-pulse mb-2" />
-                    <div className="h-3 bg-pink-100 dark:bg-pink-900 rounded animate-pulse w-20" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-16 bg-pink-100 dark:bg-pink-900 rounded animate-pulse mb-2" />
-                    <div className="h-3 bg-pink-200 dark:bg-pink-800 rounded animate-pulse" />
-                  </CardContent>
-                </Card>
+              <div className="flex-none w-80">
+                <div className="neon-ticket ticket-perforations relative overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 border-2 border-neon-pink/30 rounded-xl shadow-lg shadow-primary/20 p-6 h-full">
+                  <div className="space-y-4">
+                    <div className="h-6 bg-neon-pink/20 rounded animate-pulse mb-2" />
+                    <div className="h-4 bg-neon-pink/10 rounded animate-pulse w-24" />
+                    <div className="h-12 bg-neon-pink/20 rounded animate-pulse mb-4" />
+                    <div className="h-10 bg-neon-pink/30 rounded animate-pulse" />
+                  </div>
+                  
+                  {/* Decorative corner cuts */}
+                  <div className="absolute top-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 -translate-y-2"></div>
+                  <div className="absolute top-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 -translate-y-2"></div>
+                  <div className="absolute bottom-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 translate-y-2"></div>
+                  <div className="absolute bottom-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 translate-y-2"></div>
+                </div>
               </div>
             ) : homepageVouchers.length === 0 ? (
               // No vouchers message
-              <div className="flex-none w-64">
-                <Card className="coupon-card border-pink-400 bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 relative overflow-hidden h-full">
-                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
-                  <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-bold text-pink-800 dark:text-pink-400">
-                      Žádné aktivní vouchery
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-pink-600 dark:text-pink-500">
+              <div className="flex-none w-80">
+                <div className="neon-ticket ticket-perforations relative overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 border-2 border-neon-pink/30 rounded-xl shadow-lg shadow-primary/20 p-6 h-full">
+                  <div className="space-y-4 text-center">
+                    <h3 className="text-xl font-bold text-neon-pink">Žádné aktivní vouchery</h3>
+                    <div className="text-sm text-muted-foreground">
                       Momentálně nejsou k dispozici žádné aktivní vouchery
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                  
+                  {/* Decorative corner cuts */}
+                  <div className="absolute top-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 -translate-y-2"></div>
+                  <div className="absolute top-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 -translate-y-2"></div>
+                  <div className="absolute bottom-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 translate-y-2"></div>
+                  <div className="absolute bottom-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 translate-y-2"></div>
+                </div>
               </div>
             ) : (
               homepageVouchers.map((voucher) => (
                 <div 
                   key={voucher.id} 
-                  className="flex-none w-64"
+                  className="flex-none w-80"
                   style={{ scrollSnapAlign: 'start' }}
                 >
-                  <Card 
-                    className={`coupon-card relative overflow-hidden transition-all duration-300 h-full border-neon-pink bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 ${
+                  <div 
+                    className={`neon-ticket ticket-perforations relative overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 border-2 border-neon-pink/30 rounded-xl shadow-lg shadow-primary/20 p-6 transition-all duration-300 ${
                       user && !isAdmin 
-                        ? 'cursor-pointer hover-scale hover:shadow-lg hover:border-neon-pink hover:bg-gradient-to-r hover:from-pink-100 hover:to-rose-100 dark:hover:from-pink-800/30 dark:hover:to-rose-800/30' 
+                        ? 'cursor-pointer hover-scale hover:shadow-xl hover:shadow-neon-pink/30 hover:border-neon-pink/50' 
                         : !user
-                          ? 'cursor-pointer hover:opacity-80 hover:scale-[1.01]'
+                          ? 'cursor-pointer hover:opacity-80 hover:scale-[1.02]'
                           : isAdmin
                             ? 'opacity-90'
                             : ''
@@ -520,61 +522,76 @@ const Homepage = () => {
                   >
                     {/* Banner image if available */}
                     {voucher.banner_url && (
-                      <div className="h-24 overflow-hidden">
+                      <div className="mb-4 -mx-6 -mt-6">
                         <img 
                           src={voucher.banner_url} 
                           alt={`${voucher.name} banner`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-24 object-cover"
                         />
                       </div>
                     )}
-
-                    {/* Coupon notches */}
-                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
-                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
                     
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-3">
+                    {/* Main content */}
+                    <div className="space-y-4">
+                      {/* Header with logo and title */}
+                      <div className="flex items-center gap-4">
                         {voucher.image_url && (
-                          <img 
-                            src={voucher.image_url} 
-                            alt={voucher.name}
-                            className="w-8 h-8 object-cover rounded-lg flex-shrink-0"
-                          />
+                          <div className="flex-shrink-0">
+                            <img 
+                              src={voucher.image_url} 
+                              alt={voucher.name}
+                              className="w-12 h-12 object-cover rounded-lg border border-neon-pink/30"
+                            />
+                          </div>
                         )}
-                        <CardTitle className="text-lg font-bold text-neon-pink">
-                          {voucher.name}
-                        </CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold text-neon-pink">
-                            Zbývá: {getRemainingCount(voucher)}
-                          </span>
-                          <div className="px-2 py-1 rounded text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400">
-                            Dostupný
-                          </div>
-                        </div>
-                        <div className="border-t border-dashed border-neon-pink pt-2">
-                          <div className="text-xs text-pink-600 dark:text-pink-400">
-                            {user && !isAdmin 
-                              ? 'Klikněte pro uplatnění' 
-                              : !user
-                                ? 'Přihlaste se pro uplatnění'
-                                : 'Admin zobrazení - pouze pro čtení'
-                            }
-                          </div>
-                          {isAdmin && (
-                            <div className="text-xs mt-1 text-green-500">
-                              Admin zobrazení - pouze pro čtení
-                            </div>
-                          )}
+                        
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold text-neon-pink">{voucher.name}</h3>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                      
+                      {/* Value/remaining count */}
+                      <div className="text-center py-2">
+                        <div className="text-lg font-semibold text-neon-gold">
+                          Zbývá: {getRemainingCount(voucher)}
+                        </div>
+                      </div>
+                      
+                      {/* Action button */}
+                      <div className="pt-2">
+                        <Button
+                          className="w-full h-12 text-lg font-bold bg-gradient-to-r from-neon-pink to-neon-purple hover:from-neon-purple hover:to-neon-pink border border-neon-pink/50 shadow-lg shadow-neon-pink/25 transition-all duration-300"
+                          variant="outline"
+                          disabled={isAdmin}
+                        >
+                          POUŽÍT VOUCHER
+                        </Button>
+                      </div>
+                      
+                      {/* Status indicator */}
+                      <div className="text-center">
+                        <div className="text-xs text-muted-foreground">
+                          {user && !isAdmin 
+                            ? 'Klikněte pro uplatnění' 
+                            : !user
+                              ? 'Přihlaste se pro uplatnění'
+                              : 'Admin zobrazení - pouze pro čtení'
+                          }
+                        </div>
+                        {isAdmin && (
+                          <div className="text-xs mt-1 text-green-500">
+                            Admin zobrazení - pouze pro čtení
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Decorative corner cuts */}
+                    <div className="absolute top-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 -translate-y-2"></div>
+                    <div className="absolute top-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 -translate-y-2"></div>
+                    <div className="absolute bottom-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 translate-y-2"></div>
+                    <div className="absolute bottom-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 translate-y-2"></div>
+                  </div>
                 </div>
               ))
             )}
