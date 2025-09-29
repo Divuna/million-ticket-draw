@@ -87,9 +87,9 @@ const Homepage = () => {
     };
   }, []);
 
-  // Auto-scroll functionality for carousels (disabled for admin)
+  // Auto-scroll functionality for carousels with infinite loop (disabled for admin)
   useEffect(() => {
-    if (isAdmin || !user) return; // No auto-scroll for admin or non-logged-in users
+    if (isAdmin || !user || contests.length === 0) return; // No auto-scroll for admin, non-logged-in users, or empty contests
 
     const scrollCarousel = (ref: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
       if (!ref.current) return;
@@ -99,14 +99,15 @@ const Homepage = () => {
       const scrollAmount = 280; // Width of one card approximately
       const currentScroll = container.scrollLeft;
       const maxScroll = container.scrollWidth - container.clientWidth;
+      const halfWidth = container.scrollWidth / 2;
 
       if (direction === 'right') {
-        // Scroll right, reset to start when reaching end
-        if (currentScroll >= maxScroll - 10) { // Small buffer for precision
-          container.scrollTo({ left: 0, behavior: 'smooth' });
-        } else {
-          container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        // For contests with infinite loop - reset position seamlessly
+        if (currentScroll >= halfWidth - scrollAmount) {
+          // Reset to beginning of duplicated content without visual jump
+          container.scrollLeft = currentScroll - halfWidth;
         }
+        container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
       } else {
         // Scroll left, reset to end when reaching start
         if (currentScroll <= 10) { // Small buffer for precision
@@ -131,7 +132,7 @@ const Homepage = () => {
       clearInterval(contestInterval);
       clearInterval(voucherInterval);
     };
-  }, [isAdmin, user]);
+  }, [isAdmin, user, contests.length]);
 
   const handleContestClick = (contestId: string) => {
     if (!user) {
@@ -346,9 +347,10 @@ const Homepage = () => {
                 </Card>
               </div>
             ) : (
-              contests.map((contest) => (
+              // Duplicate content for infinite loop
+              [...contests, ...contests].map((contest, index) => (
                 <div 
-                  key={contest.id} 
+                  key={`${contest.id}-${index}`} 
                   className="flex-none w-72"
                   style={{ scrollSnapAlign: 'start' }}
                 >

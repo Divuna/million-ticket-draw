@@ -140,7 +140,7 @@ export const VoucherCarousel: React.FC = () => {
     <div className="space-y-6">
       <h2 className="text-3xl font-bold hero-title text-center">Vaše Vouchery</h2>
       
-      <Carousel className="w-full">
+      <Carousel className="w-full" opts={{ loop: true }}>
         <CarouselContent>
           {availableVouchers.map((voucher) => (
             <CarouselItem key={voucher.id} className="md:basis-1/2 lg:basis-1/3">
