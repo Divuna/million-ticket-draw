@@ -98,20 +98,23 @@ const Homepage = () => {
       const container = ref.current;
       const scrollAmount = 280; // Width of one card approximately
       const currentScroll = container.scrollLeft;
-      const maxScroll = container.scrollWidth - container.clientWidth;
-      const halfWidth = container.scrollWidth / 2;
+      const containerWidth = container.clientWidth;
+      const scrollWidth = container.scrollWidth;
+      const halfWidth = scrollWidth / 2;
 
       if (direction === 'right') {
-        // For contests with infinite loop - reset position seamlessly
-        if (currentScroll >= halfWidth - scrollAmount) {
-          // Reset to beginning of duplicated content without visual jump
-          container.scrollLeft = currentScroll - halfWidth;
+        // Check if we've reached the end of the first set of content
+        if (currentScroll + containerWidth >= halfWidth) {
+          // Seamlessly reset to beginning
+          container.scrollLeft = 0;
+        } else {
+          // Continue scrolling
+          container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
         }
-        container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
       } else {
         // Scroll left, reset to end when reaching start
         if (currentScroll <= 10) { // Small buffer for precision
-          container.scrollTo({ left: maxScroll, behavior: 'smooth' });
+          container.scrollLeft = halfWidth - containerWidth;
         } else {
           container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
         }

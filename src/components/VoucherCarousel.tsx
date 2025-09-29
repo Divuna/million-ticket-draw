@@ -6,6 +6,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import Autoplay from 'embla-carousel-autoplay';
 
 interface Voucher {
   id: string;
@@ -140,7 +141,16 @@ export const VoucherCarousel: React.FC = () => {
     <div className="space-y-6">
       <h2 className="text-3xl font-bold hero-title text-center">Vaše Vouchery</h2>
       
-      <Carousel className="w-full" opts={{ loop: true }}>
+      <Carousel 
+        className="w-full" 
+        opts={{ loop: true }}
+        plugins={[
+          Autoplay({
+            delay: 3000,
+            stopOnInteraction: true,
+          }),
+        ]}
+      >
         <CarouselContent>
           {availableVouchers.map((voucher) => (
             <CarouselItem key={voucher.id} className="md:basis-1/2 lg:basis-1/3">
