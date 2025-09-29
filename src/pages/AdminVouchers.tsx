@@ -51,6 +51,8 @@ const AdminVouchers: React.FC = () => {
   const [createLoading, setCreateLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingVoucher, setEditingVoucher] = useState<Voucher | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
@@ -162,6 +164,69 @@ const AdminVouchers: React.FC = () => {
       startDate: undefined,
       endDate: undefined,
     });
+  };
+
+  const openEditDialog = (voucher: Voucher) => {
+    setEditingVoucher(voucher);
+    setVoucherForm({
+      name: voucher.name,
+      imageFile: null,
+      bannerFile: null,
+      maxQuantity: voucher.max_quantity,
+      startDate: voucher.start_date ? new Date(voucher.start_date) : undefined,
+      endDate: voucher.end_date ? new Date(voucher.end_date) : undefined,
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleEditVoucher = async () => {
+    if (!voucherForm.name || !editingVoucher) {
+      toast.error('Vyplňte všechna povinná pole');
+      return;
+    }
+
+    try {
+      setCreateLoading(true);
+
+      let imageUrl = editingVoucher.image_url;
+      let bannerUrl = editingVoucher.banner_url;
+
+      // Upload new images if provided
+      if (voucherForm.imageFile) {
+        imageUrl = await uploadImage(voucherForm.imageFile);
+      }
+      if (voucherForm.bannerFile) {
+        bannerUrl = await uploadImage(voucherForm.bannerFile);
+      }
+
+      // Update voucher
+      const { data, error } = await supabase
+        .from('vouchers')
+        .update({
+          name: voucherForm.name,
+          image_url: imageUrl,
+          banner_url: bannerUrl,
+          max_quantity: voucherForm.maxQuantity,
+          start_date: voucherForm.startDate?.toISOString(),
+          end_date: voucherForm.endDate?.toISOString(),
+        })
+        .eq('id', editingVoucher.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success('Voucher byl úspěšně aktualizován');
+      setShowEditDialog(false);
+      setEditingVoucher(null);
+      resetForm();
+      fetchVouchers();
+    } catch (error: any) {
+      console.error('Error updating voucher:', error);
+      toast.error('Chyba při aktualizaci voucheru');
+    } finally {
+      setCreateLoading(false);
+    }
   };
 
   const generateTestVouchers = async () => {
@@ -689,7 +754,11 @@ const AdminVouchers: React.FC = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => openEditDialog(voucher)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <AlertDialog>
@@ -760,6 +829,180 @@ const AdminVouchers: React.FC = () => {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Edit Voucher Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Upravit Voucher</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Název voucheru *</Label>
+                <Input
+                  id="edit-name"
+                  value={voucherForm.name}
+                  onChange={(e) => setVoucherForm({...voucherForm, name: e.target.value})}
+                  placeholder="Např. Sleva 20% na celý nákup"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-mainImage">Hlavní obrázek voucheru</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="edit-mainImage"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setVoucherForm({...voucherForm, imageFile: e.target.files?.[0] || null})}
+                      className="flex-1"
+                    />
+                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Nechte prázdné pro zachování současného obrázku
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-bannerImage">Banner obrázek</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="edit-bannerImage"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setVoucherForm({...voucherForm, bannerFile: e.target.files?.[0] || null})}
+                      className="flex-1"
+                    />
+                    <Upload className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Nechte prázdné pro zachování současného banneru
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Množství</Label>
+                <Select
+                  value={voucherForm.maxQuantity === null ? 'unlimited' : 'limited'}
+                  onValueChange={(value) => setVoucherForm({
+                    ...voucherForm, 
+                    maxQuantity: value === 'unlimited' ? null : (voucherForm.maxQuantity || 100)
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unlimited">
+                      <div className="flex items-center gap-2">
+                        <Infinity className="h-4 w-4" />
+                        Neomezené
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="limited">
+                      <div className="flex items-center gap-2">
+                        <Hash className="h-4 w-4" />
+                        Omezené
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {voucherForm.maxQuantity !== null && (
+                  <Input
+                    type="number"
+                    min="1"
+                    value={voucherForm.maxQuantity}
+                    onChange={(e) => setVoucherForm({
+                      ...voucherForm, 
+                      maxQuantity: parseInt(e.target.value) || 1
+                    })}
+                    placeholder="Počet dostupných voucherů"
+                  />
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Datum začátku</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn("w-full justify-start text-left font-normal", 
+                          !voucherForm.startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {voucherForm.startDate ? format(voucherForm.startDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={voucherForm.startDate}
+                        onSelect={(date) => setVoucherForm({...voucherForm, startDate: date})}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Datum konce</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn("w-full justify-start text-left font-normal", 
+                          !voucherForm.endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {voucherForm.endDate ? format(voucherForm.endDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={voucherForm.endDate}
+                        onSelect={(date) => setVoucherForm({...voucherForm, endDate: date})}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowEditDialog(false);
+                    setEditingVoucher(null);
+                    resetForm();
+                  }}
+                  className="flex-1"
+                >
+                  Zrušit
+                </Button>
+                <Button 
+                  onClick={handleEditVoucher}
+                  disabled={createLoading}
+                  className="flex-1"
+                >
+                  {createLoading ? 'Ukládání...' : 'Uložit změny'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <AdminMenu />
