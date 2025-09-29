@@ -345,59 +345,6 @@
     }
   }
 
-  /* Marquee Animations for Homepage Carousels */
-  @keyframes marqueeLeft {
-    0% {
-      transform: translateX(0);
-    }
-    100% {
-      transform: translateX(-33.333%);
-    }
-  }
-
-  @keyframes marqueeRight {
-    0% {
-      transform: translateX(-33.333%);
-    }
-    100% {
-      transform: translateX(0);
-    }
-  }
-
-  /* Marquee Container and Track */
-  .marquee-container {
-    overflow: hidden;
-    white-space: nowrap;
-  }
-
-  .marquee-track {
-    display: flex;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-    animation-play-state: running;
-  }
-
-  .marquee-left {
-    animation-name: marqueeLeft;
-  }
-
-  .marquee-right {
-    animation-name: marqueeRight;
-  }
-
-  /* Responsive marquee speeds */
-  @media (max-width: 768px) {
-    .marquee-track {
-      animation-duration: 60s; /* Faster on mobile */
-    }
-  }
-
-  @media (min-width: 769px) {
-    .marquee-track {
-      animation-duration: 120s; /* Slower on desktop */
-    }
-  }
-
   /* Badboys Luxury Car Ticket Styles */
   .neon-ticket {
     background: linear-gradient(135deg, 
