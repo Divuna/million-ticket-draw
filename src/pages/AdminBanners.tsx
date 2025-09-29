@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 interface BannerForm {
   title: string;
   imageFile: File | null;
-  videoUrl: string;
+  videoUrl?: string;
   active: boolean;
   targetPage: string;
   startDate: Date | undefined;
@@ -110,6 +110,7 @@ const AdminBanners: React.FC = () => {
   };
 
   const handleCreateBanner = async () => {
+    // Validate based on banner type
     if (!bannerForm.title) {
       toast.error('Název banneru je povinný');
       return;
@@ -122,7 +123,7 @@ const AdminBanners: React.FC = () => {
       }
     } else {
       if (!bannerForm.imageFile) {
-        toast.error('Obrázek je povinný pro běžný banner');
+        toast.error('Obrázek banneru je povinný');
         return;
       }
     }
@@ -132,11 +133,11 @@ const AdminBanners: React.FC = () => {
 
       let imageUrl = '';
       
+      // For video banners, use the YouTube URL directly
       if (bannerForm.targetPage === 'homepage_video') {
-        // For video banners, store the YouTube URL in image_url field
-        imageUrl = bannerForm.videoUrl;
+        imageUrl = bannerForm.videoUrl!;
       } else {
-        // For regular banners, upload the image file
+        // Upload image for regular banners
         imageUrl = await uploadImage(bannerForm.imageFile!);
       }
 
@@ -309,14 +310,12 @@ const AdminBanners: React.FC = () => {
                     <Label htmlFor="videoUrl">YouTube URL *</Label>
                     <Input
                       id="videoUrl"
-                      type="url"
-                      value={bannerForm.videoUrl}
+                      value={bannerForm.videoUrl || ''}
                       onChange={(e) => setBannerForm({...bannerForm, videoUrl: e.target.value})}
                       placeholder="https://www.youtube.com/watch?v=..."
-                      className="w-full"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Zadejte URL YouTube videa, které bude zobrazeno na domovské stránce
+                      Vložte úplnou YouTube URL videa
                     </p>
                   </div>
                 ) : (
