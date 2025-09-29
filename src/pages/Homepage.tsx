@@ -509,9 +509,9 @@ const Homepage = () => {
                   style={{ scrollSnapAlign: 'start' }}
                 >
                   <div 
-                    className={`neon-ticket ticket-perforations relative overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 border-2 border-neon-pink/30 rounded-xl shadow-lg shadow-primary/20 p-6 transition-all duration-300 ${
+                    className={`neon-ticket ticket-perforations relative overflow-hidden bg-gradient-to-br from-red-600/90 to-red-800/95 border-2 border-red-400/40 rounded-xl shadow-lg shadow-red-500/30 transition-all duration-300 ${
                       user && !isAdmin 
-                        ? 'cursor-pointer hover-scale hover:shadow-xl hover:shadow-neon-pink/30 hover:border-neon-pink/50' 
+                        ? 'cursor-pointer hover-scale hover:shadow-xl hover:shadow-red-500/40 hover:border-red-400/60' 
                         : !user
                           ? 'cursor-pointer hover:opacity-80 hover:scale-[1.02]'
                           : isAdmin
@@ -520,77 +520,64 @@ const Homepage = () => {
                     }`}
                     onClick={() => !isAdmin && handleVoucherRedeem(voucher.id)}
                   >
-                    {/* Banner image if available */}
-                    {voucher.banner_url && (
-                      <div className="mb-4 -mx-6 -mt-6">
-                        <img 
-                          src={voucher.banner_url} 
-                          alt={`${voucher.name} banner`}
-                          className="w-full h-24 object-cover"
-                        />
+                    <div className="flex h-48 relative">
+                      {/* Left side - Content */}
+                      <div className="flex-1 p-6 flex flex-col justify-between">
+                        {/* Header */}
+                        <div>
+                          <h2 className="text-white font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
+                          <p className="text-red-200 text-sm font-medium">HRAJ O CENY</p>
+                        </div>
+
+                        {/* Voucher name and value */}
+                        <div className="my-3">
+                          <h3 className="text-white font-bold text-lg mb-2">{voucher.name}</h3>
+                          <div className="text-yellow-300 font-bold text-3xl">
+                            BONUS VOUCHER
+                          </div>
+                        </div>
+
+                        {/* Button and status */}
+                        <div className="space-y-2">
+                          <Button
+                            className="bg-white text-red-600 font-bold py-2 px-6 rounded-md hover:bg-red-50 transition-colors duration-200 w-fit disabled:bg-gray-300 disabled:text-gray-500"
+                            disabled={isAdmin}
+                          >
+                            POUŽÍT VOUCHER
+                          </Button>
+                          
+                          {/* Status indicator */}
+                          <div className="text-xs text-red-200">
+                            {user && !isAdmin 
+                              ? 'Klikněte pro uplatnění' 
+                              : !user
+                                ? 'Přihlaste se pro uplatnění'
+                                : 'Admin zobrazení - pouze pro čtení'
+                            }
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    
-                    {/* Main content */}
-                    <div className="space-y-4">
-                      {/* Header with logo and title */}
-                      <div className="flex items-center gap-4">
-                        {voucher.image_url && (
-                          <div className="flex-shrink-0">
-                            <img 
-                              src={voucher.image_url} 
-                              alt={voucher.name}
-                              className="w-12 h-12 object-cover rounded-lg border border-neon-pink/30"
-                            />
+
+                      {/* Right side - Image */}
+                      <div className="w-32 relative border-l-2 border-dashed border-red-300/40">
+                        {voucher.image_url ? (
+                          <img 
+                            src={voucher.image_url} 
+                            alt={voucher.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-red-700/50 flex items-center justify-center">
+                            <span className="text-red-200 text-sm text-center px-2">VOUCHER</span>
                           </div>
                         )}
-                        
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-neon-pink">{voucher.name}</h3>
-                        </div>
                       </div>
-                      
-                      {/* Value/remaining count */}
-                      <div className="text-center py-2">
-                        <div className="text-lg font-semibold text-neon-gold">
-                          Zbývá: {getRemainingCount(voucher)}
-                        </div>
-                      </div>
-                      
-                      {/* Action button */}
-                      <div className="pt-2">
-                        <Button
-                          className="w-full h-12 text-lg font-bold bg-gradient-to-r from-neon-pink to-neon-purple hover:from-neon-purple hover:to-neon-pink border border-neon-pink/50 shadow-lg shadow-neon-pink/25 transition-all duration-300"
-                          variant="outline"
-                          disabled={isAdmin}
-                        >
-                          POUŽÍT VOUCHER
-                        </Button>
-                      </div>
-                      
-                      {/* Status indicator */}
-                      <div className="text-center">
-                        <div className="text-xs text-muted-foreground">
-                          {user && !isAdmin 
-                            ? 'Klikněte pro uplatnění' 
-                            : !user
-                              ? 'Přihlaste se pro uplatnění'
-                              : 'Admin zobrazení - pouze pro čtení'
-                          }
-                        </div>
-                        {isAdmin && (
-                          <div className="text-xs mt-1 text-green-500">
-                            Admin zobrazení - pouze pro čtení
-                          </div>
-                        )}
+
+                      {/* Remaining count indicator */}
+                      <div className="absolute top-3 right-3 bg-red-900/80 text-red-100 text-xs px-2 py-1 rounded border border-red-400/30">
+                        Zbývá: {getRemainingCount(voucher)}
                       </div>
                     </div>
-                    
-                    {/* Decorative corner cuts */}
-                    <div className="absolute top-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 -translate-y-2"></div>
-                    <div className="absolute top-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 -translate-y-2"></div>
-                    <div className="absolute bottom-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 translate-y-2"></div>
-                    <div className="absolute bottom-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 translate-y-2"></div>
                   </div>
                 </div>
               ))
