@@ -87,55 +87,37 @@ const Homepage = () => {
     };
   }, []);
 
-  // Auto-scroll functionality for carousels with infinite loop (disabled for admin)
+  // Continuous auto-scroll for contests and vouchers (infinite loop)
   useEffect(() => {
-    if (isAdmin || !user || contests.length === 0) return; // No auto-scroll for admin, non-logged-in users, or empty contests
+    const startAutoScroll = (ref: React.RefObject<HTMLDivElement>, speed: number) => {
+      const el = ref.current;
+      if (!el) return;
+      // Only start if there is something to scroll
+      if (el.scrollWidth <= el.clientWidth + 8) return;
 
-    const scrollCarousel = (ref: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
-      if (!ref.current) return;
-      
-      // The ref points directly to the scrollable container
-      const container = ref.current;
-      const scrollAmount = 280; // Width of one card approximately
-      const currentScroll = container.scrollLeft;
-      const containerWidth = container.clientWidth;
-      const scrollWidth = container.scrollWidth;
-      const halfWidth = scrollWidth / 2;
+      let rafId = 0;
+      const step = () => {
+        el.scrollLeft += speed;
+        const half = el.scrollWidth / 2;
+        if (half > 0 && el.scrollLeft >= half) {
+          // Seamlessly wrap without visible jump
+          el.scrollLeft -= half;
+        }
+        rafId = requestAnimationFrame(step);
+      };
 
-      if (direction === 'right') {
-        // Check if we've reached the end of the first set of content
-        if (currentScroll + containerWidth >= halfWidth) {
-          // Seamlessly reset to beginning
-          container.scrollLeft = 0;
-        } else {
-          // Continue scrolling
-          container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-        }
-      } else {
-        // Scroll left, reset to end when reaching start
-        if (currentScroll <= 10) { // Small buffer for precision
-          container.scrollLeft = halfWidth - containerWidth;
-        } else {
-          container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-        }
-      }
+      rafId = requestAnimationFrame(step);
+      return () => cancelAnimationFrame(rafId);
     };
 
-    // Auto-scroll contests to the right every 4 seconds (only for logged-in non-admin users)
-    const contestInterval = setInterval(() => {
-      scrollCarousel(contestsCarouselRef, 'right');
-    }, 4000);
-
-    // Auto-scroll vouchers to the left every 5 seconds (only for logged-in non-admin users)
-    const voucherInterval = setInterval(() => {
-      scrollCarousel(vouchersCarouselRef, 'left');
-    }, 5000);
+    const stopContests = startAutoScroll(contestsCarouselRef, 0.8);
+    const stopVouchers = startAutoScroll(vouchersCarouselRef, 0.8);
 
     return () => {
-      clearInterval(contestInterval);
-      clearInterval(voucherInterval);
+      stopContests && stopContests();
+      stopVouchers && stopVouchers();
     };
-  }, [isAdmin, user, contests.length]);
+  }, [contests.length, homepageVouchers.length]);
 
   const handleContestClick = (contestId: string) => {
     if (!user) {
@@ -311,7 +293,7 @@ const Homepage = () => {
             className={`flex overflow-x-auto scroll-smooth gap-4 pb-4 ${isAdmin ? 'carousel-disabled' : ''}`}
             style={{ 
               scrollBehavior: 'smooth', 
-              scrollSnapType: 'x mandatory',
+              scrollSnapType: 'none',
               WebkitOverflowScrolling: 'touch'
             }}
           >
@@ -481,7 +463,7 @@ const Homepage = () => {
             className={`flex overflow-x-auto scroll-smooth gap-4 pb-4 ${isAdmin ? 'carousel-disabled' : ''}`}
             style={{ 
               scrollBehavior: 'smooth', 
-              scrollSnapType: 'x mandatory',
+              scrollSnapType: 'none',
               WebkitOverflowScrolling: 'touch'
             }}
           >
@@ -522,9 +504,9 @@ const Homepage = () => {
                 </div>
               </div>
             ) : (
-              homepageVouchers.map((voucher) => (
+              [...homepageVouchers, ...homepageVouchers].map((voucher, index) => (
                 <div 
-                  key={voucher.id} 
+                  key={`${voucher.id}-${index}`} 
                   className="flex-none w-80"
                   style={{ scrollSnapAlign: 'start' }}
                 >

@@ -6,7 +6,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import Autoplay from 'embla-carousel-autoplay';
+import AutoScroll from 'embla-carousel-auto-scroll';
 
 interface Voucher {
   id: string;
@@ -143,11 +143,13 @@ export const VoucherCarousel: React.FC = () => {
       
       <Carousel 
         className="w-full" 
-        opts={{ loop: true }}
+        opts={{ loop: true, align: 'start' }}
         plugins={[
-          Autoplay({
-            delay: 3000,
-            stopOnInteraction: true,
+          AutoScroll({
+            speed: 1,
+            stopOnInteraction: false,
+            stopOnMouseEnter: false,
+            stopOnFocusIn: false,
           }),
         ]}
       >
