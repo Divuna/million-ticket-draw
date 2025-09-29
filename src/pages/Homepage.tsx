@@ -87,36 +87,35 @@ const Homepage = () => {
     };
   }, []);
 
-  // Continuous auto-scroll for contests and vouchers (infinite loop)
+  // Dynamic animation duration calculation for marquee
   useEffect(() => {
-    const startAutoScroll = (ref: React.RefObject<HTMLDivElement>, speed: number) => {
-      const el = ref.current;
-      if (!el) return;
-      // Only start if there is something to scroll
-      if (el.scrollWidth <= el.clientWidth + 8) return;
-
-      let rafId = 0;
-      const step = () => {
-        el.scrollLeft += speed;
-        const half = el.scrollWidth / 2;
-        if (half > 0 && el.scrollLeft >= half) {
-          // Seamlessly wrap without visible jump
-          el.scrollLeft -= half;
-        }
-        rafId = requestAnimationFrame(step);
-      };
-
-      rafId = requestAnimationFrame(step);
-      return () => cancelAnimationFrame(rafId);
+    const updateMarqueeDuration = () => {
+      const contestTrack = document.querySelector('[data-marquee="contests"]') as HTMLElement;
+      const voucherTrack = document.querySelector('[data-marquee="vouchers"]') as HTMLElement;
+      
+      if (contestTrack && contests.length > 0) {
+        const cardWidth = 288; // w-72 = 18rem = 288px
+        const gap = 16; // gap-4 = 1rem = 16px
+        const totalWidth = contests.length * (cardWidth + gap);
+        const duration = Math.max(60, totalWidth / 2); // Minimum 60s, scale with content
+        contestTrack.style.animationDuration = `${duration}s`;
+      }
+      
+      if (voucherTrack && homepageVouchers.length > 0) {
+        const cardWidth = 288;
+        const gap = 16;
+        const totalWidth = homepageVouchers.length * (cardWidth + gap);
+        const duration = Math.max(60, totalWidth / 2);
+        voucherTrack.style.animationDuration = `${duration}s`;
+      }
     };
 
-    const stopContests = startAutoScroll(contestsCarouselRef, 0.8);
-    const stopVouchers = startAutoScroll(vouchersCarouselRef, 0.8);
-
-    return () => {
-      stopContests && stopContests();
-      stopVouchers && stopVouchers();
-    };
+    // Update duration when content changes
+    updateMarqueeDuration();
+    
+    // Update on window resize
+    window.addEventListener('resize', updateMarqueeDuration);
+    return () => window.removeEventListener('resize', updateMarqueeDuration);
   }, [contests.length, homepageVouchers.length]);
 
   const handleContestClick = (contestId: string) => {
@@ -287,16 +286,11 @@ const Homepage = () => {
             </div>
           </div>
           
-          <div 
-            ref={contestsCarouselRef}
-            data-carousel-content
-            className={`flex overflow-x-auto scroll-smooth gap-4 pb-4 ${isAdmin ? 'carousel-disabled' : ''}`}
-            style={{ 
-              scrollBehavior: 'smooth', 
-              scrollSnapType: 'none',
-              WebkitOverflowScrolling: 'touch'
-            }}
-          >
+          <div className="marquee-container">
+            <div 
+              data-marquee="contests"
+              className="marquee-track marquee-left flex gap-4 pb-4"
+            >
             {loading ? (
               // Loading placeholder
               <div className="flex-none w-72">
@@ -332,8 +326,8 @@ const Homepage = () => {
                 </Card>
               </div>
             ) : (
-              // Duplicate content for infinite loop
-              [...contests, ...contests].map((contest, index) => (
+              // Triple content for smooth infinite loop
+              [...contests, ...contests, ...contests].map((contest, index) => (
                 <div 
                   key={`${contest.id}-${index}`} 
                   className="flex-none w-72"
@@ -431,6 +425,7 @@ const Homepage = () => {
                 </div>
               ))
             )}
+            </div>
           </div>
         </section>
 
@@ -457,16 +452,11 @@ const Homepage = () => {
             </div>
           </div>
           
-          <div 
-            ref={vouchersCarouselRef}
-            data-carousel-content
-            className={`flex overflow-x-auto scroll-smooth gap-4 pb-4 ${isAdmin ? 'carousel-disabled' : ''}`}
-            style={{ 
-              scrollBehavior: 'smooth', 
-              scrollSnapType: 'none',
-              WebkitOverflowScrolling: 'touch'
-            }}
-          >
+          <div className="marquee-container">
+            <div 
+              data-marquee="vouchers"
+              className="marquee-track marquee-right flex gap-4 pb-4"
+            >
             {vouchersLoading ? (
               // Loading placeholder
               <div className="flex-none w-80">
@@ -504,7 +494,8 @@ const Homepage = () => {
                 </div>
               </div>
             ) : (
-              [...homepageVouchers, ...homepageVouchers].map((voucher, index) => (
+              // Triple content for smooth infinite loop
+              [...homepageVouchers, ...homepageVouchers, ...homepageVouchers].map((voucher, index) => (
                 <div 
                   key={`${voucher.id}-${index}`} 
                   className="flex-none w-80"
@@ -584,6 +575,7 @@ const Homepage = () => {
                 </div>
               ))
             )}
+            </div>
           </div>
         </section>
 
