@@ -99,9 +99,12 @@ const Homepage = () => {
       const step = () => {
         el.scrollLeft += speed;
         const half = el.scrollWidth / 2;
-        if (half > 0 && el.scrollLeft >= half) {
-          // Seamlessly wrap without visible jump
+        if (speed > 0 && half > 0 && el.scrollLeft >= half) {
+          // Seamlessly wrap without visible jump for forward movement
           el.scrollLeft -= half;
+        } else if (speed < 0 && el.scrollLeft <= 0) {
+          // Seamlessly wrap without visible jump for backward movement
+          el.scrollLeft += half;
         }
         rafId = requestAnimationFrame(step);
       };
@@ -111,7 +114,7 @@ const Homepage = () => {
     };
 
     const stopContests = startAutoScroll(contestsCarouselRef, 0.8);
-    const stopVouchers = startAutoScroll(vouchersCarouselRef, 0.8);
+    const stopVouchers = startAutoScroll(vouchersCarouselRef, -0.8);
 
     return () => {
       stopContests && stopContests();
