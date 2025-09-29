@@ -95,11 +95,6 @@ const Homepage = () => {
       // Only start if there is something to scroll
       if (el.scrollWidth <= el.clientWidth + 8) return;
 
-      // For rightward movement, start from middle to allow immediate movement
-      if (speed < 0) {
-        el.scrollLeft = el.scrollWidth / 2 - 1;
-      }
-
       let rafId = 0;
       const step = () => {
         el.scrollLeft += speed;
