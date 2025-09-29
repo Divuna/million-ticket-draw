@@ -99,12 +99,14 @@ const Homepage = () => {
       const step = () => {
         el.scrollLeft += speed;
         const half = el.scrollWidth / 2;
-        if (speed > 0 && half > 0 && el.scrollLeft >= half) {
-          // Seamlessly wrap without visible jump for forward movement
-          el.scrollLeft -= half;
-        } else if (speed < 0 && el.scrollLeft <= 0) {
-          // Seamlessly wrap without visible jump for backward movement
-          el.scrollLeft += half;
+        if (half > 0) {
+          if (speed > 0 && el.scrollLeft >= half) {
+            // Seamlessly wrap forward without visible jump
+            el.scrollLeft -= half;
+          } else if (speed < 0 && el.scrollLeft <= 0) {
+            // Seamlessly wrap backward without visible jump
+            el.scrollLeft += half;
+          }
         }
         rafId = requestAnimationFrame(step);
       };
