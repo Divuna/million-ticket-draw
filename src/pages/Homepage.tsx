@@ -12,6 +12,8 @@ import { useHomepageVouchers } from '@/hooks/useHomepageVouchers';
 import { useMegajackpotBanners } from '@/hooks/useMegajackpotBanners';
 import { useHomepageBanners } from '@/hooks/useHomepageBanners';
 import { usePartners } from '@/hooks/usePartners';
+import { useHomepageVideo } from '@/hooks/useHomepageVideo';
+import YouTubeEmbed from '@/components/YouTubeEmbed';
 import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -34,6 +36,7 @@ const Homepage = () => {
   const { banners: megajackpotBanners, loading: bannersLoading } = useMegajackpotBanners();
   const { voucherBanner, gamesBanner, loading: homepageBannersLoading } = useHomepageBanners();
   const { partners, loading: partnersLoading } = usePartners();
+  const { videoBanner, loading: videoLoading } = useHomepageVideo();
   const contestsCarouselRef = useRef<HTMLDivElement>(null);
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
   const megajackpotCarouselRef = useRef<HTMLDivElement>(null);
@@ -632,6 +635,45 @@ const Homepage = () => {
             )}
           </div>
         </section>
+
+        {/* Instructional Video Section */}
+        {!videoLoading && videoBanner && (
+          <section className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-neon-cyan flex items-center gap-2">
+                <span className="w-6 h-6 text-neon-cyan">🎬</span>
+                Jak to funguje
+              </h3>
+            </div>
+            
+            <div className="max-w-4xl mx-auto space-y-6">
+              <YouTubeEmbed 
+                url={videoBanner.image_url} 
+                className="rounded-lg shadow-lg" 
+              />
+              
+              <div className="text-center space-y-4 px-4">
+                <h4 className="text-xl font-semibold text-foreground">
+                  Objevte svět výher s OneMil
+                </h4>
+                <div className="text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+                  <p className="mb-3">
+                    🎯 <strong>Kupte tikety</strong> do soutěží o luxusní ceny za pouhý 1 MioCoin
+                  </p>
+                  <p className="mb-3">
+                    🏆 <strong>Vyhrajte hlavní ceny</strong> jako jsou auta, dovolené nebo elektronika
+                  </p>
+                  <p className="mb-3">
+                    🎁 <strong>Získejte bonusové výhry</strong> na každé 100. pozici tiketu
+                  </p>
+                  <p>
+                    💳 <strong>Nakupte vouchery</strong> u našich partnerů a získejte MioCoiny za každý nákup
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Enhanced Footer */}
         <footer className="border-t border-border pt-12 mt-20 bg-gradient-to-br from-background to-muted/20">

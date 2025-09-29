@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 interface BannerForm {
   title: string;
   imageFile: File | null;
+  videoUrl: string;
   active: boolean;
   targetPage: string;
   startDate: Date | undefined;
@@ -58,6 +59,7 @@ const AdminBanners: React.FC = () => {
   const [bannerForm, setBannerForm] = useState<BannerForm>({
     title: '',
     imageFile: null,
+    videoUrl: '',
     active: true,
     targetPage: 'homepage_customer',
     startDate: undefined,
@@ -108,16 +110,35 @@ const AdminBanners: React.FC = () => {
   };
 
   const handleCreateBanner = async () => {
-    if (!bannerForm.title || !bannerForm.imageFile) {
-      toast.error('Vyplňte všechna povinná pole');
+    if (!bannerForm.title) {
+      toast.error('Název banneru je povinný');
       return;
+    }
+
+    if (bannerForm.targetPage === 'homepage_video') {
+      if (!bannerForm.videoUrl) {
+        toast.error('YouTube URL je povinná pro video banner');
+        return;
+      }
+    } else {
+      if (!bannerForm.imageFile) {
+        toast.error('Obrázek je povinný pro běžný banner');
+        return;
+      }
     }
 
     try {
       setCreateLoading(true);
 
-      // Upload image
-      const imageUrl = await uploadImage(bannerForm.imageFile);
+      let imageUrl = '';
+      
+      if (bannerForm.targetPage === 'homepage_video') {
+        // For video banners, store the YouTube URL in image_url field
+        imageUrl = bannerForm.videoUrl;
+      } else {
+        // For regular banners, upload the image file
+        imageUrl = await uploadImage(bannerForm.imageFile!);
+      }
 
       // Create banner
       const { data, error } = await supabase
@@ -151,6 +172,7 @@ const AdminBanners: React.FC = () => {
     setBannerForm({
       title: '',
       imageFile: null,
+      videoUrl: '',
       active: true,
       targetPage: 'homepage_customer',
       startDate: undefined,
@@ -282,22 +304,39 @@ const AdminBanners: React.FC = () => {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="bannerImage">Obrázek banneru *</Label>
-                  <div className="flex items-center gap-2">
+                {bannerForm.targetPage === 'homepage_video' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="videoUrl">YouTube URL *</Label>
                     <Input
-                      id="bannerImage"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setBannerForm({...bannerForm, imageFile: e.target.files?.[0] || null})}
-                      className="flex-1"
+                      id="videoUrl"
+                      type="url"
+                      value={bannerForm.videoUrl}
+                      onChange={(e) => setBannerForm({...bannerForm, videoUrl: e.target.value})}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      className="w-full"
                     />
-                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">
+                      Zadejte URL YouTube videa, které bude zobrazeno na domovské stránce
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Doporučené rozměry: Plná šířka × 320px (mobil), 384px (desktop)
-                  </p>
-                </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="bannerImage">Obrázek banneru *</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="bannerImage"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setBannerForm({...bannerForm, imageFile: e.target.files?.[0] || null})}
+                        className="flex-1"
+                      />
+                      <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Doporučené rozměry: Plná šířka × 320px (mobil), 384px (desktop)
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label>Cílová stránka</Label>
@@ -312,6 +351,7 @@ const AdminBanners: React.FC = () => {
                       <SelectItem value="homepage_customer">Domovská stránka</SelectItem>
                       <SelectItem value="vouchers">Kupte Voucher</SelectItem>
                       <SelectItem value="games">Hraj o luxusní ceny</SelectItem>
+                      <SelectItem value="homepage_video">Jak to funguje (Video)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
