@@ -95,6 +95,11 @@ const Homepage = () => {
       // Only start if there is something to scroll
       if (el.scrollWidth <= el.clientWidth + 8) return;
 
+      // For rightward movement, start from middle to allow immediate movement
+      if (speed < 0) {
+        el.scrollLeft = el.scrollWidth / 2;
+      }
+
       let rafId = 0;
       const step = () => {
         el.scrollLeft += speed;
@@ -507,7 +512,7 @@ const Homepage = () => {
                 </div>
               </div>
             ) : (
-              [...homepageVouchers, ...homepageVouchers].map((voucher, index) => (
+              [...homepageVouchers, ...homepageVouchers, ...homepageVouchers].map((voucher, index) => (
                 <div 
                   key={`${voucher.id}-${index}`} 
                   className="flex-none w-80"
