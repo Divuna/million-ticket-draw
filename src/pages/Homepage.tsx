@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { BottomNavigation } from '@/components/BottomNavigation';
@@ -205,7 +206,7 @@ const Homepage = () => {
                       key={index}
                       className={`w-3 h-3 rounded-full transition-all duration-200 ${
                         index === currentBannerIndex 
-                          ? 'bg-neon-cyan shadow-lg' 
+                          ? 'bg-primary shadow-lg' 
                           : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
                       }`}
                       onClick={() => setCurrentBannerIndex(index)}
@@ -267,7 +268,7 @@ const Homepage = () => {
         {/* Ongoing Contests Carousel */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-neon-cyan flex items-center gap-2">
+            <h3 className="text-2xl font-bold text-primary flex items-center gap-2">
               <Ticket className="w-6 h-6" />
               Probíhající Soutěže
             </h3>
@@ -334,101 +335,72 @@ const Homepage = () => {
             ) : (
               // Duplicate content for infinite loop
               [...contests, ...contests].map((contest, index) => (
-                <div 
-                  key={`${contest.id}-${index}`} 
-                  className="flex-none w-72"
-                  style={{ scrollSnapAlign: 'start' }}
+                <Card 
+                  key={`${contest.id}-${index}`}
+                  className={`flex-shrink-0 w-[280px] md:w-[320px] rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm transition-all duration-300 shadow-lg ${
+                    user && !isAdmin 
+                      ? 'cursor-pointer hover:scale-105 hover:border-primary/40 hover:shadow-primary/20' 
+                      : !user
+                        ? 'cursor-pointer hover:opacity-80 hover:scale-[1.02]'
+                        : isAdmin
+                          ? 'opacity-90'
+                          : ''
+                  }`}
+                  onClick={() => !isAdmin && handleContestClick(contest.id)}
                 >
-                  <div 
-                    className={`neon-ticket ticket-perforations relative overflow-hidden bg-gradient-to-br from-red-600/90 to-red-800/95 border-2 border-red-400/40 rounded-xl shadow-lg shadow-red-500/30 transition-all duration-300 h-96 ${
-                      user && !isAdmin 
-                        ? 'cursor-pointer hover-scale hover:shadow-xl hover:shadow-red-500/40 hover:border-red-400/60' 
-                        : !user
-                          ? 'cursor-pointer hover:opacity-80 hover:scale-[1.02]'
-                          : isAdmin
-                            ? 'opacity-90'
-                            : ''
-                    }`}
-                    onClick={() => !isAdmin && handleContestClick(contest.id)}
-                  >
-                    {/* Ticket perforations on sides */}
-                    <div className="absolute top-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 -translate-y-2"></div>
-                    <div className="absolute top-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 -translate-y-2"></div>
-                    <div className="absolute bottom-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 translate-y-2"></div>
-                    <div className="absolute bottom-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 translate-y-2"></div>
-                    
-                    {/* Top 60% - Contest Image */}
-                    <div className="h-[60%] relative overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="relative">
                       {contest.main_image ? (
                         <img 
                           src={contest.main_image.startsWith('http') ? contest.main_image : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`}
                           alt={contest.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            console.log('Contest image loading error:', contest.main_image);
-                            toast.error('Obrázek soutěže se nepodařilo načíst');
-                            // Replace with fallback
-                            e.currentTarget.style.display = 'none';
-                            if (e.currentTarget.nextSibling) {
-                              (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
-                            }
-                          }}
+                          className="w-full h-48 object-cover"
+                          loading="lazy"
                         />
-                      ) : null}
-                      <div 
-                        className={`w-full h-full flex items-center justify-center text-red-200 ${contest.main_image ? 'hidden' : 'flex'} bg-red-700/50`}
-                        style={{ display: contest.main_image ? 'none' : 'flex' }}
-                      >
-                        <div className="text-center">
-                          <Trophy className="w-12 h-12 mx-auto mb-2" />
-                          <span className="text-sm">Bez obrázku</span>
+                      ) : (
+                        <div className="w-full h-48 bg-muted/40 flex items-center justify-center">
+                          <div className="text-center text-muted-foreground">
+                            <Trophy className="w-12 h-12 mx-auto mb-2" />
+                            <span className="text-sm">Bez obrázku</span>
+                          </div>
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2">
+                        <Badge variant="secondary" className="bg-primary/90 text-primary-foreground border-0">
+                          {contest.status === 'active' ? 'Aktivní' : 'Připravuje se'}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 space-y-3">
+                      <h3 className="font-bold text-lg line-clamp-2 group-hover:text-primary transition-colors">
+                        {contest.title}
+                      </h3>
+                      
+                      <div className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-semibold text-primary line-clamp-1">
+                          {contest.main_prize}
+                        </span>
+                      </div>
+                      
+                      <div className="pt-2 border-t border-border/50 space-y-2">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Celkem tiketů</span>
+                          <span className="font-bold text-foreground">{contest.ticket_count?.toLocaleString('cs-CZ')}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Cena tiketu</span>
+                          <span className="font-bold text-foreground">{contest.ticket_price} Kč</span>
                         </div>
                       </div>
                       
-                      {/* Contest ID overlay */}
-                      <div className="absolute top-3 right-3 bg-red-900/80 text-red-100 text-xs px-2 py-1 rounded border border-red-400/30">
-                        #{contest.id.slice(0, 8)}
+                      <div className="text-xs text-muted-foreground pt-2 border-t border-border/30">
+                        {user && !isAdmin ? 'Klikněte pro hraní her' : !user ? 'Přihlaste se pro hraní' : 'Admin zobrazení - pouze pro čtení'}
                       </div>
                     </div>
-
-                    {/* Bottom 40% - Contest Information */}
-                    <div className="h-[40%] p-4 flex flex-col justify-between bg-gradient-to-b from-red-800/20 to-red-900/40">
-                      {/* Contest title */}
-                      <div>
-                        <h3 className="text-white font-bold text-lg mb-1 line-clamp-2">
-                          {contest.title}
-                        </h3>
-                        
-                        {/* Main prize */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <Star className="w-4 h-4 text-yellow-300" />
-                          <span className="text-sm font-medium text-yellow-300 line-clamp-1">
-                            {contest.main_prize}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Contest details and action */}
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-xs text-red-200">
-                          <span>Tiketů: {contest.ticket_count.toLocaleString('cs-CZ')}</span>
-                          <span>Cena: {contest.ticket_price} Miocoin</span>
-                        </div>
-                        
-                        <div className="border-t border-dashed border-red-300/40 pt-2">
-                          <div className="text-xs text-red-200">
-                            {user && !isAdmin ? 'Klikněte pro hraní her' : !user ? 'Přihlaste se pro hraní' : 'Contest zobrazení'}
-                          </div>
-                          {isAdmin && (
-                            <div className="text-xs text-red-300 mt-1">
-                              Admin zobrazení - pouze pro čtení
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               ))
             )}
           </div>
@@ -437,7 +409,7 @@ const Homepage = () => {
         {/* User Vouchers Carousel */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-neon-pink flex items-center gap-2">
+            <h3 className="text-2xl font-bold text-primary flex items-center gap-2">
               <Gift className="w-6 h-6" />
               Vaše Vouchery
             </h3>
@@ -578,7 +550,7 @@ const Homepage = () => {
         {/* Partners Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-neon-cyan flex items-center gap-2">
+            <h3 className="text-2xl font-bold text-primary flex items-center gap-2">
               <Handshake className="w-6 h-6" />
               Naši partneři, kde můžete získat MioCoiny za nákup
             </h3>
@@ -601,7 +573,7 @@ const Homepage = () => {
               partners.map((partner) => (
                 <div
                   key={partner.id}
-                  className="aspect-square bg-card border border-border rounded-lg overflow-hidden cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-neon-cyan group"
+                  className="aspect-square bg-card border border-border rounded-lg overflow-hidden cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary group"
                   onClick={() => window.open(partner.website_url, '_blank')}
                 >
                   <div className="w-full h-full p-4 flex items-center justify-center relative">
@@ -621,7 +593,7 @@ const Homepage = () => {
                       <span className="text-xs text-center">{partner.name}</span>
                     </div>
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <ExternalLink className="w-4 h-4 text-neon-cyan" />
+                      <ExternalLink className="w-4 h-4 text-primary" />
                     </div>
                   </div>
                 </div>
@@ -634,8 +606,8 @@ const Homepage = () => {
         {!videoLoading && videoUrl && isVideoActive && (
           <section className="space-y-6 mt-16">
             <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-bold text-neon-cyan flex items-center gap-2">
-                <span className="w-6 h-6 text-neon-cyan">🎬</span>
+              <h3 className="text-2xl font-bold text-primary flex items-center gap-2">
+                <span className="w-6 h-6 text-primary">🎬</span>
                 Jak to funguje
               </h3>
             </div>
@@ -674,49 +646,49 @@ const Homepage = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
             {/* Company Info */}
             <div className="space-y-4">
-              <h4 className="font-bold text-xl text-neon-cyan mb-6">OneMil</h4>
+              <h4 className="font-bold text-xl text-primary mb-6">OneMil</h4>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Vaše platforma pro soutěže a výhry. Získejte šanci vyhrát luxusní ceny a vouchery.
               </p>
               <div className="flex space-x-4 pt-4">
-                <div className="w-8 h-8 bg-neon-cyan/20 rounded-full flex items-center justify-center">
-                  <span className="text-xs text-neon-cyan">FB</span>
+                <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
+                  <span className="text-xs text-primary">FB</span>
                 </div>
-                <div className="w-8 h-8 bg-neon-purple/20 rounded-full flex items-center justify-center">
-                  <span className="text-xs text-neon-purple">TW</span>
+                <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
+                  <span className="text-xs text-primary">TW</span>
                 </div>
-                <div className="w-8 h-8 bg-neon-pink/20 rounded-full flex items-center justify-center">
-                  <span className="text-xs text-neon-pink">IG</span>
+                <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
+                  <span className="text-xs text-primary">IG</span>
                 </div>
               </div>
             </div>
 
             {/* Information Links */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-lg text-neon-purple mb-6">Informace</h4>
+              <h4 className="font-semibold text-lg text-primary mb-6">Informace</h4>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li>
-                  <a href="#" className="hover:text-neon-purple transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     O společnosti
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-neon-purple transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     Jak to funguje
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-neon-purple transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     Naše mise
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-neon-purple transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     Kariéra
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-neon-purple transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     Tiskové zprávy
                   </a>
                 </li>
@@ -725,30 +697,30 @@ const Homepage = () => {
 
             {/* FAQ & Support */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-lg text-neon-cyan mb-6">Podpora</h4>
+              <h4 className="font-semibold text-lg text-primary mb-6">Podpora</h4>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li>
-                  <a href="#" className="hover:text-neon-cyan transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     Často kladené otázky
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-neon-cyan transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     Centrum nápovědy
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-neon-cyan transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     Kontaktujte nás
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-neon-cyan transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     Nahlásit problém
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-neon-cyan transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     Živý chat
                   </a>
                 </li>
@@ -757,30 +729,30 @@ const Homepage = () => {
 
             {/* Legal Terms */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-lg text-neon-pink mb-6">Právní podmínky</h4>
+              <h4 className="font-semibold text-lg text-primary mb-6">Právní podmínky</h4>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li>
-                  <a href="#" className="hover:text-neon-pink transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     Všeobecné obchodní podmínky
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-neon-pink transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     Ochrana osobních údajů
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-neon-pink transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     Pravidla soutěží
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-neon-pink transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     Zásady použití cookies
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-neon-pink transition-colors duration-200 story-link">
+                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
                     Autorská práva
                   </a>
                 </li>
