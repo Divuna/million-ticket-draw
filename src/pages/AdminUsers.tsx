@@ -122,10 +122,10 @@ const AdminUsers: React.FC = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto px-4 py-6 pb-20">
-        <Card>
+        <Card className="luxury-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCheck className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-primary">
+              <UserCheck className="h-5 w-5 text-neon-gold" />
               Správa uživatelů
             </CardTitle>
             <CardDescription>
@@ -159,20 +159,20 @@ const AdminUsers: React.FC = () => {
             {loading ? (
               <div className="text-center py-8">Načítání uživatelů...</div>
             ) : (
-              <div className="rounded-md border">
+              <div className="rounded-md border border-neon-blue/20">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Jméno</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Vytvořeno</TableHead>
-                      <TableHead>Akce</TableHead>
+                    <TableRow className="border-b border-neon-blue/20 bg-gradient-to-r from-background to-background/80">
+                      <TableHead className="text-primary">Email</TableHead>
+                      <TableHead className="text-primary">Jméno</TableHead>
+                      <TableHead className="text-primary">Role</TableHead>
+                      <TableHead className="text-primary">Vytvořeno</TableHead>
+                      <TableHead className="text-primary">Akce</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredUsers.map((user) => (
-                      <TableRow key={user.id}>
+                      <TableRow key={user.id} className="luxury-table-row border-b border-border/50">
                         <TableCell className="font-medium">{user.email}</TableCell>
                         <TableCell>
                           {user.first_name && user.last_name 

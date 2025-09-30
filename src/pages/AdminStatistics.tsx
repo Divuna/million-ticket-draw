@@ -155,10 +155,10 @@ const AdminStatistics: React.FC = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto px-4 py-6 pb-20">
-        <Card className="mb-6">
+        <Card className="mb-6 luxury-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-primary">
+              <BarChart3 className="h-5 w-5 text-neon-gold" />
               Statistiky aplikace
             </CardTitle>
             <CardDescription>
@@ -174,15 +174,18 @@ const AdminStatistics: React.FC = () => {
             {statsCards.map((card, index) => {
               const Icon = card.icon;
               return (
-                <Card key={index}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Card key={index} className="luxury-card admin-card-hover overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 luxury-gradient-bg opacity-30 blur-2xl rounded-full"></div>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
                     <CardTitle className="text-sm font-medium">
                       {card.title}
                     </CardTitle>
-                    <Icon className="h-4 w-4 text-muted-foreground" />
+                    <div className="luxury-stat-icon p-2 rounded-lg">
+                      <Icon className="h-4 w-4 text-neon-gold" />
+                    </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{card.value}</div>
+                  <CardContent className="relative z-10">
+                    <div className="text-2xl font-bold text-primary">{card.value}</div>
                     <p className="text-xs text-muted-foreground">
                       {card.description}
                     </p>
@@ -193,20 +196,20 @@ const AdminStatistics: React.FC = () => {
           </div>
         )}
 
-        <Card className="mt-6">
+        <Card className="mt-6 luxury-card">
           <CardHeader>
-            <CardTitle>Rychlé akce</CardTitle>
+            <CardTitle className="text-primary">Rychlé akce</CardTitle>
             <CardDescription>
               Přístup k nejčastějším admin funkcím
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card className="cursor-pointer hover:bg-muted/50 transition-colors" 
+              <Card className="luxury-card cursor-pointer admin-card-hover" 
                     onClick={() => window.location.href = '/admin/users'}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
+                    <Users className="h-4 w-4 text-neon-gold" />
                     <span className="text-sm font-medium">Správa uživatelů</span>
                   </div>
                 </CardHeader>
@@ -217,11 +220,11 @@ const AdminStatistics: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer hover:bg-muted/50 transition-colors"
+              <Card className="luxury-card cursor-pointer admin-card-hover"
                     onClick={() => window.location.href = '/admin/payments'}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" />
+                    <CreditCard className="h-4 w-4 text-neon-gold" />
                     <span className="text-sm font-medium">Správa plateb</span>
                   </div>
                 </CardHeader>
@@ -232,11 +235,11 @@ const AdminStatistics: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer hover:bg-muted/50 transition-colors"
+              <Card className="luxury-card cursor-pointer admin-card-hover"
                     onClick={() => window.location.href = '/admin/vouchers'}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
-                    <Gift className="h-4 w-4" />
+                    <Gift className="h-4 w-4 text-neon-gold" />
                     <span className="text-sm font-medium">Správa voucherů</span>
                   </div>
                 </CardHeader>
@@ -247,11 +250,11 @@ const AdminStatistics: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="cursor-pointer hover:bg-muted/50 transition-colors"
+              <Card className="luxury-card cursor-pointer admin-card-hover"
                     onClick={() => window.location.href = '/admin/notifications'}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4" />
+                    <BarChart3 className="h-4 w-4 text-neon-gold" />
                     <span className="text-sm font-medium">Notifikace</span>
                   </div>
                 </CardHeader>
