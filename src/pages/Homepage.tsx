@@ -470,118 +470,106 @@ const Homepage = () => {
             {vouchersLoading ? (
               // Loading placeholder
               <div className="flex-none w-80">
-                <div className="neon-ticket ticket-perforations relative overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 border-2 border-neon-pink/30 rounded-xl shadow-lg shadow-primary/20 p-6 h-full">
-                  <div className="space-y-4">
-                    <div className="h-6 bg-neon-pink/20 rounded animate-pulse mb-2" />
-                    <div className="h-4 bg-neon-pink/10 rounded animate-pulse w-24" />
-                    <div className="h-12 bg-neon-pink/20 rounded animate-pulse mb-4" />
-                    <div className="h-10 bg-neon-pink/30 rounded animate-pulse" />
-                  </div>
-                  
-                  {/* Decorative corner cuts */}
-                  <div className="absolute top-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 -translate-y-2"></div>
-                  <div className="absolute top-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 -translate-y-2"></div>
-                  <div className="absolute bottom-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 translate-y-2"></div>
-                  <div className="absolute bottom-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 translate-y-2"></div>
-                </div>
+                <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40 h-full">
+                  <CardContent className="p-6 space-y-4">
+                    <div className="h-6 bg-muted rounded animate-pulse mb-2" />
+                    <div className="h-4 bg-muted/70 rounded animate-pulse w-24" />
+                    <div className="h-12 bg-muted rounded animate-pulse mb-4" />
+                    <div className="h-10 bg-muted/80 rounded animate-pulse" />
+                  </CardContent>
+                </Card>
               </div>
             ) : homepageVouchers.length === 0 ? (
               // No vouchers message
               <div className="flex-none w-80">
-                <div className="neon-ticket ticket-perforations relative overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 border-2 border-neon-pink/30 rounded-xl shadow-lg shadow-primary/20 p-6 h-full">
-                  <div className="space-y-4 text-center">
-                    <h3 className="text-xl font-bold text-neon-pink">Žádné aktivní vouchery</h3>
+                <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40 h-full">
+                  <CardContent className="p-6 space-y-2 text-center">
+                    <h3 className="text-xl font-bold text-primary">Žádné aktivní vouchery</h3>
                     <div className="text-sm text-muted-foreground">
                       Momentálně nejsou k dispozici žádné aktivní vouchery
                     </div>
-                  </div>
-                  
-                  {/* Decorative corner cuts */}
-                  <div className="absolute top-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 -translate-y-2"></div>
-                  <div className="absolute top-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 -translate-y-2"></div>
-                  <div className="absolute bottom-0 left-0 w-4 h-4 bg-background transform rotate-45 -translate-x-2 translate-y-2"></div>
-                  <div className="absolute bottom-0 right-0 w-4 h-4 bg-background transform rotate-45 translate-x-2 translate-y-2"></div>
-                </div>
+                  </CardContent>
+                </Card>
               </div>
             ) : (
               [...homepageVouchers, ...homepageVouchers].map((voucher, index) => (
-                <div 
-                  key={`${voucher.id}-${index}`} 
-                  className="flex-none w-80"
-                  style={{ scrollSnapAlign: 'start' }}
-                >
                   <div 
-                    className={`neon-ticket ticket-perforations relative overflow-hidden bg-gradient-to-br from-red-600/90 to-red-800/95 border-2 border-red-400/40 rounded-xl shadow-lg shadow-red-500/30 transition-all duration-300 ${
-                      user && !isAdmin 
-                        ? 'cursor-pointer hover-scale hover:shadow-xl hover:shadow-red-500/40 hover:border-red-400/60' 
-                        : !user
-                          ? 'cursor-pointer hover:opacity-80 hover:scale-[1.02]'
-                          : isAdmin
-                            ? 'opacity-90'
-                            : ''
-                    }`}
-                    onClick={() => !isAdmin && handleVoucherRedeem(voucher.id)}
+                    className="flex-none w-80"
+                    style={{ scrollSnapAlign: 'start' }}
                   >
-                    <div className="flex h-48 relative">
-                      {/* Left side - Content */}
-                      <div className="flex-1 p-6 flex flex-col justify-between">
-                        {/* Header */}
-                        <div>
-                          <h2 className="text-white font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
-                          <p className="text-red-200 text-sm font-medium">HRAJ O CENY</p>
-                        </div>
+                    <Card 
+                      className={`relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30 transition-all duration-300 ${
+                        user && !isAdmin 
+                          ? 'cursor-pointer hover-scale hover:shadow-lg' 
+                          : !user
+                            ? 'cursor-pointer hover:opacity-80 hover:scale-[1.02]'
+                            : isAdmin
+                              ? 'opacity-90'
+                              : ''
+                      }`}
+                      onClick={() => !isAdmin && handleVoucherRedeem(voucher.id)}
+                    >
+                      <div className="flex h-48 relative">
+                        {/* Left side - Content */}
+                        <div className="flex-1 p-6 flex flex-col justify-between">
+                          {/* Header */}
+                          <div>
+                            <h2 className="text-foreground font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
+                            <p className="text-muted-foreground text-sm font-medium">HRAJ O CENY</p>
+                          </div>
 
-                        {/* Voucher name and value */}
-                        <div className="my-3">
-                          <h3 className="text-white font-bold text-lg mb-2">{voucher.name}</h3>
-                          <div className="text-yellow-300 font-bold text-3xl">
-                            BONUS VOUCHER
+                          {/* Voucher name and value */}
+                          <div className="my-3">
+                            <h3 className="text-foreground font-bold text-lg mb-2">{voucher.name}</h3>
+                            <div className="text-primary font-bold text-3xl">
+                              BONUS VOUCHER
+                            </div>
+                          </div>
+
+                          {/* Button and status */}
+                          <div className="space-y-2">
+                            <Button
+                              className="w-fit"
+                              disabled={isAdmin}
+                            >
+                              POUŽÍT VOUCHER
+                            </Button>
+                            
+                            {/* Status indicator */}
+                            <div className="text-xs text-muted-foreground">
+                              {user && !isAdmin 
+                                ? 'Klikněte pro uplatnění' 
+                                : !user
+                                  ? 'Přihlaste se pro uplatnění'
+                                  : 'Admin zobrazení - pouze pro čtení'
+                              }
+                            </div>
                           </div>
                         </div>
 
-                        {/* Button and status */}
-                        <div className="space-y-2">
-                          <Button
-                            className="bg-white text-red-600 font-bold py-2 px-6 rounded-md hover:bg-red-50 transition-colors duration-200 w-fit disabled:bg-gray-300 disabled:text-gray-500"
-                            disabled={isAdmin}
-                          >
-                            POUŽÍT VOUCHER
-                          </Button>
-                          
-                          {/* Status indicator */}
-                          <div className="text-xs text-red-200">
-                            {user && !isAdmin 
-                              ? 'Klikněte pro uplatnění' 
-                              : !user
-                                ? 'Přihlaste se pro uplatnění'
-                                : 'Admin zobrazení - pouze pro čtení'
-                            }
-                          </div>
+                        {/* Right side - Image */}
+                        <div className="w-32 relative border-l border-dashed border-border/50">
+                          {voucher.image_url ? (
+                            <img 
+                              src={voucher.image_url} 
+                              alt={voucher.name}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-muted/40 flex items-center justify-center">
+                              <span className="text-muted-foreground text-sm text-center px-2">VOUCHER</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Remaining count indicator */}
+                        <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded border border-border">
+                          Zbývá: {getRemainingCount(voucher)}
                         </div>
                       </div>
-
-                      {/* Right side - Image */}
-                      <div className="w-32 relative border-l-2 border-dashed border-red-300/40">
-                        {voucher.image_url ? (
-                          <img 
-                            src={voucher.image_url} 
-                            alt={voucher.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-red-700/50 flex items-center justify-center">
-                            <span className="text-red-200 text-sm text-center px-2">VOUCHER</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Remaining count indicator */}
-                      <div className="absolute top-3 right-3 bg-red-900/80 text-red-100 text-xs px-2 py-1 rounded border border-red-400/30">
-                        Zbývá: {getRemainingCount(voucher)}
-                      </div>
-                    </div>
+                    </Card>
                   </div>
-                </div>
               ))
             )}
           </div>
