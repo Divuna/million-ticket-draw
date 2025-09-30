@@ -19,87 +19,87 @@
 
 @layer base {
   :root {
-    /* Dark Badboys Theme Colors */
-    --background: 220 25% 8%;
-    --foreground: 210 40% 95%;
-    --card: 222 25% 12%;
-    --card-foreground: 210 40% 95%;
-    --popover: 222 25% 12%;
-    --popover-foreground: 210 40% 95%;
-    --primary: 195 100% 50%;
-    --primary-foreground: 220 25% 8%;
-    --secondary: 45 100% 55%;
-    --secondary-foreground: 220 25% 8%;
-    --muted: 220 20% 20%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 0 100% 60%;
-    --accent-foreground: 210 40% 95%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 220 20% 25%;
-    --input: 220 20% 18%;
-    --ring: 195 100% 50%;
+    /* Luxury Modern Theme Colors */
+    --background: 220 45% 8%;
+    --foreground: 210 20% 98%;
+    --card: 220 40% 12%;
+    --card-foreground: 210 20% 98%;
+    --popover: 220 40% 12%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 220 80% 45%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 43 90% 55%;
+    --secondary-foreground: 220 45% 8%;
+    --muted: 220 30% 18%;
+    --muted-foreground: 215 15% 70%;
+    --accent: 43 90% 55%;
+    --accent-foreground: 220 45% 8%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 25% 22%;
+    --input: 220 30% 16%;
+    --ring: 220 80% 45%;
     --radius: 0.75rem;
 
     /* Sidebar */
-    --sidebar-background: 220 25% 10%;
-    --sidebar-foreground: 210 40% 90%;
-    --sidebar-primary: 195 100% 50%;
-    --sidebar-primary-foreground: 220 25% 8%;
-    --sidebar-accent: 220 20% 15%;
-    --sidebar-accent-foreground: 210 40% 90%;
-    --sidebar-border: 220 20% 20%;
-    --sidebar-ring: 195 100% 50%;
+    --sidebar-background: 220 40% 10%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 220 80% 45%;
+    --sidebar-primary-foreground: 210 20% 98%;
+    --sidebar-accent: 220 30% 15%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 220 25% 20%;
+    --sidebar-ring: 220 80% 45%;
 
-    /* Badboys Neon Colors */
-    --neon-blue: 195 100% 50%;
-    --neon-gold: 45 100% 55%;
-    --neon-red: 0 100% 60%;
-    --neon-purple: 280 100% 70%;
-    --neon-cyan: 180 100% 50%;
-    --neon-green: 120 100% 50%;
-    --neon-pink: 320 100% 70%;
+    /* Luxury Colors - Dark Blue, Gold, Silver */
+    --neon-blue: 220 80% 45%;
+    --neon-gold: 43 90% 55%;
+    --neon-red: 0 72% 51%;
+    --neon-purple: 270 50% 60%;
+    --neon-cyan: 220 80% 55%;
+    --neon-green: 140 50% 50%;
+    --neon-pink: 330 60% 60%;
 
-    /* Urban Gradients */
+    /* Luxury Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--neon-blue)), hsl(var(--neon-gold)));
-    --gradient-hero: linear-gradient(135deg, hsl(var(--neon-gold)), hsl(var(--neon-red)));
-    --gradient-urban: linear-gradient(180deg, hsl(220 25% 8%), hsl(220 30% 12%));
-    --gradient-mystery: linear-gradient(45deg, hsl(var(--neon-blue) / 0.1), hsl(var(--neon-red) / 0.1));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--neon-gold)), hsl(var(--neon-blue)));
+    --gradient-urban: linear-gradient(180deg, hsl(220 45% 8%), hsl(220 40% 12%));
+    --gradient-mystery: linear-gradient(45deg, hsl(var(--neon-blue) / 0.1), hsl(var(--neon-gold) / 0.1));
 
-    /* Luxury Car Shadows */
-    --glow-blue: 0 0 20px hsl(var(--neon-blue) / 0.5), 0 0 40px hsl(var(--neon-blue) / 0.3);
-    --glow-gold: 0 0 20px hsl(var(--neon-gold) / 0.5), 0 0 40px hsl(var(--neon-gold) / 0.3);
-    --glow-red: 0 0 20px hsl(var(--neon-red) / 0.5), 0 0 40px hsl(var(--neon-red) / 0.3);
-    --mystery-shadow: 0 0 30px hsl(var(--neon-blue) / 0.2), inset 0 0 20px hsl(var(--background) / 0.1);
+    /* Luxury Shadows */
+    --glow-blue: 0 0 16px hsl(var(--neon-blue) / 0.4), 0 0 32px hsl(var(--neon-blue) / 0.2);
+    --glow-gold: 0 0 16px hsl(var(--neon-gold) / 0.4), 0 0 32px hsl(var(--neon-gold) / 0.2);
+    --glow-red: 0 0 16px hsl(var(--neon-red) / 0.3), 0 0 32px hsl(var(--neon-red) / 0.15);
+    --mystery-shadow: 0 0 24px hsl(var(--neon-blue) / 0.15), inset 0 0 16px hsl(var(--background) / 0.1);
   }
 
   .dark {
-    /* Enhanced Dark Badboys Theme */
-    --background: 220 30% 6%;
-    --foreground: 210 40% 98%;
-    --card: 222 30% 10%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 30% 10%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 195 100% 55%;
-    --primary-foreground: 220 30% 6%;
-    --secondary: 45 100% 60%;
-    --secondary-foreground: 220 30% 6%;
-    --muted: 220 25% 18%;
-    --muted-foreground: 215 25% 70%;
-    --accent: 0 100% 65%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 220 25% 22%;
-    --input: 220 25% 15%;
-    --ring: 195 100% 55%;
+    /* Enhanced Luxury Dark Theme */
+    --background: 220 50% 6%;
+    --foreground: 210 20% 98%;
+    --card: 220 45% 10%;
+    --card-foreground: 210 20% 98%;
+    --popover: 220 45% 10%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 220 85% 50%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 43 95% 60%;
+    --secondary-foreground: 220 50% 6%;
+    --muted: 220 35% 16%;
+    --muted-foreground: 215 15% 75%;
+    --accent: 43 95% 60%;
+    --accent-foreground: 220 50% 6%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 30% 20%;
+    --input: 220 35% 14%;
+    --ring: 220 85% 50%;
 
-    /* Enhanced Urban Glow Effects */
-    --glow-blue: 0 0 25px hsl(var(--neon-blue) / 0.6), 0 0 50px hsl(var(--neon-blue) / 0.4);
-    --glow-gold: 0 0 25px hsl(var(--neon-gold) / 0.6), 0 0 50px hsl(var(--neon-gold) / 0.4);
-    --glow-red: 0 0 25px hsl(var(--neon-red) / 0.6), 0 0 50px hsl(var(--neon-red) / 0.4);
-    --mystery-shadow: 0 0 40px hsl(var(--neon-blue) / 0.3), inset 0 0 30px hsl(var(--background) / 0.2);
+    /* Enhanced Luxury Glow Effects */
+    --glow-blue: 0 0 20px hsl(var(--neon-blue) / 0.5), 0 0 40px hsl(var(--neon-blue) / 0.25);
+    --glow-gold: 0 0 20px hsl(var(--neon-gold) / 0.5), 0 0 40px hsl(var(--neon-gold) / 0.25);
+    --glow-red: 0 0 20px hsl(var(--neon-red) / 0.4), 0 0 40px hsl(var(--neon-red) / 0.2);
+    --mystery-shadow: 0 0 32px hsl(var(--neon-blue) / 0.2), inset 0 0 24px hsl(var(--background) / 0.15);
   }
 }
 
@@ -116,7 +116,7 @@
     position: relative;
   }
 
-  /* Urban City Background */
+  /* Luxury Background Effects */
   body::before {
     content: '';
     position: fixed;
@@ -125,14 +125,14 @@
     right: 0;
     bottom: 0;
     background-image: 
-      radial-gradient(circle at 20% 20%, hsl(var(--neon-blue) / 0.03) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, hsl(var(--neon-gold) / 0.03) 0%, transparent 50%),
-      radial-gradient(circle at 40% 60%, hsl(var(--neon-red) / 0.02) 0%, transparent 50%);
+      radial-gradient(circle at 20% 20%, hsl(var(--neon-blue) / 0.05) 0%, transparent 60%),
+      radial-gradient(circle at 80% 80%, hsl(var(--neon-gold) / 0.04) 0%, transparent 60%),
+      radial-gradient(circle at 50% 50%, hsl(220 40% 15% / 0.5) 0%, transparent 80%);
     pointer-events: none;
     z-index: -1;
   }
 
-  /* Urban graffiti texture overlay */
+  /* Elegant texture overlay */
   body::after {
     content: '';
     position: fixed;
@@ -141,18 +141,18 @@
     right: 0;
     bottom: 0;
     background: repeating-linear-gradient(
-      45deg,
+      0deg,
       transparent,
-      transparent 2px,
-      hsl(var(--border) / 0.02) 2px,
-      hsl(var(--border) / 0.02) 4px
+      transparent 1px,
+      hsl(var(--border) / 0.03) 1px,
+      hsl(var(--border) / 0.03) 2px
     );
     pointer-events: none;
     z-index: -1;
   }
 }
 
-/* Badboys Glow Effects */
+/* Luxury Glow Effects */
 @layer utilities {
   .glow-blue {
     box-shadow: var(--glow-blue);
@@ -167,54 +167,54 @@
   }
 
   .glow-cyan {
-    box-shadow: 0 0 20px hsl(var(--neon-cyan) / 0.5), 0 0 40px hsl(var(--neon-cyan) / 0.3);
+    box-shadow: 0 0 16px hsl(var(--neon-cyan) / 0.4), 0 0 32px hsl(var(--neon-cyan) / 0.2);
   }
 
   .glow-purple {
-    box-shadow: 0 0 20px hsl(var(--neon-purple) / 0.5), 0 0 40px hsl(var(--neon-purple) / 0.3);
+    box-shadow: 0 0 16px hsl(var(--neon-purple) / 0.4), 0 0 32px hsl(var(--neon-purple) / 0.2);
   }
 
   .mystery-glow {
     box-shadow: var(--mystery-shadow);
   }
 
-  /* Badboys Text Effects */
+  /* Luxury Text Effects */
   .text-neon-blue {
     color: hsl(var(--neon-blue));
-    text-shadow: 0 0 15px hsl(var(--neon-blue) / 0.7), 0 0 30px hsl(var(--neon-blue) / 0.4);
+    text-shadow: 0 0 12px hsl(var(--neon-blue) / 0.5), 0 0 24px hsl(var(--neon-blue) / 0.25);
   }
 
   .text-neon-gold {
     color: hsl(var(--neon-gold));
-    text-shadow: 0 0 15px hsl(var(--neon-gold) / 0.7), 0 0 30px hsl(var(--neon-gold) / 0.4);
+    text-shadow: 0 0 12px hsl(var(--neon-gold) / 0.5), 0 0 24px hsl(var(--neon-gold) / 0.25);
   }
 
   .text-neon-red {
     color: hsl(var(--neon-red));
-    text-shadow: 0 0 15px hsl(var(--neon-red) / 0.7), 0 0 30px hsl(var(--neon-red) / 0.4);
+    text-shadow: 0 0 10px hsl(var(--neon-red) / 0.4), 0 0 20px hsl(var(--neon-red) / 0.2);
   }
 
   .text-neon-cyan {
     color: hsl(var(--neon-cyan));
-    text-shadow: 0 0 10px hsl(var(--neon-cyan) / 0.5);
+    text-shadow: 0 0 8px hsl(var(--neon-cyan) / 0.4);
   }
 
   .text-neon-purple {
     color: hsl(var(--neon-purple));
-    text-shadow: 0 0 10px hsl(var(--neon-purple) / 0.5);
+    text-shadow: 0 0 8px hsl(var(--neon-purple) / 0.4);
   }
 
   .text-neon-pink {
     color: hsl(var(--neon-pink));
-    text-shadow: 0 0 10px hsl(var(--neon-pink) / 0.5);
+    text-shadow: 0 0 8px hsl(var(--neon-pink) / 0.4);
   }
 
   .text-neon-green {
     color: hsl(var(--neon-green));
-    text-shadow: 0 0 10px hsl(var(--neon-green) / 0.5);
+    text-shadow: 0 0 8px hsl(var(--neon-green) / 0.4);
   }
 
-  /* Badboys Border Effects */
+  /* Luxury Border Effects */
   .border-neon-blue {
     border-color: hsl(var(--neon-blue));
   }
@@ -243,7 +243,7 @@
     border-color: hsl(var(--neon-green));
   }
 
-  /* Badboys Animation Keyframes */
+  /* Luxury Animation Keyframes */
   @keyframes scale-in {
     0% {
       transform: scale(0.95);
@@ -255,57 +255,50 @@
     }
   }
 
-  @keyframes badboys-pulse {
+  @keyframes luxury-pulse {
     0%, 100% {
       text-shadow: 
-        0 0 15px hsl(var(--neon-blue) / 0.8),
-        0 0 30px hsl(var(--neon-blue) / 0.6),
-        0 0 45px hsl(var(--neon-blue) / 0.4);
+        0 0 12px hsl(var(--neon-blue) / 0.6),
+        0 0 24px hsl(var(--neon-blue) / 0.4),
+        0 0 36px hsl(var(--neon-blue) / 0.2);
       box-shadow: var(--glow-blue);
     }
-    33% {
+    50% {
       text-shadow: 
-        0 0 15px hsl(var(--neon-gold) / 0.8),
-        0 0 30px hsl(var(--neon-gold) / 0.6),
-        0 0 45px hsl(var(--neon-gold) / 0.4);
+        0 0 12px hsl(var(--neon-gold) / 0.6),
+        0 0 24px hsl(var(--neon-gold) / 0.4),
+        0 0 36px hsl(var(--neon-gold) / 0.2);
       box-shadow: var(--glow-gold);
-    }
-    66% {
-      text-shadow: 
-        0 0 15px hsl(var(--neon-red) / 0.8),
-        0 0 30px hsl(var(--neon-red) / 0.6),
-        0 0 45px hsl(var(--neon-red) / 0.4);
-      box-shadow: var(--glow-red);
     }
   }
 
   @keyframes luxury-glow {
     0%, 100% {
       box-shadow: 
-        0 0 20px hsl(var(--neon-blue) / 0.5),
-        0 0 40px hsl(var(--neon-blue) / 0.3),
-        0 0 60px hsl(var(--neon-blue) / 0.1);
+        0 0 16px hsl(var(--neon-blue) / 0.4),
+        0 0 32px hsl(var(--neon-blue) / 0.2),
+        0 0 48px hsl(var(--neon-blue) / 0.1);
     }
     50% {
       box-shadow: 
-        0 0 30px hsl(var(--neon-gold) / 0.6),
-        0 0 60px hsl(var(--neon-gold) / 0.4),
-        0 0 90px hsl(var(--neon-gold) / 0.2);
+        0 0 20px hsl(var(--neon-gold) / 0.5),
+        0 0 40px hsl(var(--neon-gold) / 0.3),
+        0 0 60px hsl(var(--neon-gold) / 0.15);
     }
   }
 
-  @keyframes mystery-hover {
+  @keyframes elegant-hover {
     0% {
       filter: brightness(1) contrast(1);
       transform: scale(1);
     }
     100% {
-      filter: brightness(1.1) contrast(1.1);
-      transform: scale(1.02);
+      filter: brightness(1.08) contrast(1.05);
+      transform: scale(1.015);
     }
   }
 
-  @keyframes urban-scan {
+  @keyframes luxury-scan {
     0% {
       background-position: -200% 0;
     }
@@ -317,48 +310,32 @@
   @keyframes title-glow {
     0%, 100% {
       text-shadow: 
-        0 0 15px hsl(var(--neon-blue) / 0.9),
-        0 0 30px hsl(var(--neon-blue) / 0.7),
-        0 0 45px hsl(var(--neon-blue) / 0.5),
-        0 0 60px hsl(var(--neon-gold) / 0.3);
-    }
-    25% {
-      text-shadow: 
-        0 0 15px hsl(var(--neon-gold) / 0.9),
-        0 0 30px hsl(var(--neon-gold) / 0.7),
-        0 0 45px hsl(var(--neon-gold) / 0.5),
-        0 0 60px hsl(var(--neon-red) / 0.3);
+        0 0 12px hsl(var(--neon-blue) / 0.7),
+        0 0 24px hsl(var(--neon-blue) / 0.5),
+        0 0 36px hsl(var(--neon-blue) / 0.3),
+        0 0 48px hsl(var(--neon-gold) / 0.2);
     }
     50% {
       text-shadow: 
-        0 0 15px hsl(var(--neon-red) / 0.9),
-        0 0 30px hsl(var(--neon-red) / 0.7),
-        0 0 45px hsl(var(--neon-red) / 0.5),
-        0 0 60px hsl(var(--neon-blue) / 0.3);
-    }
-    75% {
-      text-shadow: 
-        0 0 15px hsl(var(--neon-blue) / 0.9),
-        0 0 30px hsl(var(--neon-blue) / 0.7),
-        0 0 45px hsl(var(--neon-blue) / 0.5),
-        0 0 60px hsl(var(--neon-gold) / 0.3);
+        0 0 12px hsl(var(--neon-gold) / 0.7),
+        0 0 24px hsl(var(--neon-gold) / 0.5),
+        0 0 36px hsl(var(--neon-gold) / 0.3),
+        0 0 48px hsl(var(--neon-blue) / 0.2);
     }
   }
 
-  /* Badboys Luxury Car Ticket Styles */
+  /* Luxury Ticket Styles */
   .neon-ticket {
     background: linear-gradient(135deg, 
       hsl(var(--card)) 0%, 
-      hsl(var(--card) / 0.9) 25%,
-      hsl(var(--muted) / 0.6) 50%, 
-      hsl(var(--card) / 0.9) 75%,
+      hsl(220 38% 14%) 50%,
       hsl(var(--card)) 100%
     );
-    border: 3px solid hsl(var(--neon-blue));
+    border: 2px solid hsl(var(--neon-blue) / 0.5);
     border-radius: 16px;
     box-shadow: 
       var(--glow-blue),
-      inset 0 1px 0 hsl(var(--neon-gold) / 0.2);
+      inset 0 1px 0 hsl(var(--neon-gold) / 0.15);
     position: relative;
     overflow: hidden;
     clip-path: polygon(
@@ -371,7 +348,7 @@
       0% calc(100% - 16px), 
       0% 16px
     );
-    animation: luxury-glow 4s ease-in-out infinite;
+    animation: luxury-glow 5s ease-in-out infinite;
   }
 
   .neon-ticket::before {
@@ -383,14 +360,14 @@
     bottom: 0;
     background: linear-gradient(
       45deg,
-      hsl(var(--neon-blue) / 0.1) 0%,
-      transparent 25%,
-      hsl(var(--neon-gold) / 0.1) 50%,
-      transparent 75%,
-      hsl(var(--neon-red) / 0.1) 100%
+      hsl(var(--neon-blue) / 0.08) 0%,
+      transparent 30%,
+      hsl(var(--neon-gold) / 0.08) 50%,
+      transparent 70%,
+      hsl(var(--neon-blue) / 0.08) 100%
     );
-    opacity: 0.8;
-    animation: urban-scan 5s linear infinite;
+    opacity: 0.6;
+    animation: luxury-scan 6s linear infinite;
   }
 
   .neon-ticket::after {

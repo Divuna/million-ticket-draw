@@ -62,7 +62,7 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        // Badboys Neon Colors
+        // Luxury Colors - Dark Blue, Gold, Silver
         "neon-blue": "hsl(var(--neon-blue))",
         "neon-gold": "hsl(var(--neon-gold))",
         "neon-red": "hsl(var(--neon-red))",
