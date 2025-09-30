@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Upload, Calendar as CalendarIcon, Image as ImageIcon, Search, Edit, Trash2, Eye, LayoutTemplate } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
+import YouTubeEmbed from '@/components/YouTubeEmbed';
 import { useHomepageVideoSimple } from '@/hooks/useHomepageVideoSimple';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -53,10 +54,15 @@ const AdminBanners: React.FC = () => {
   const [createLoading, setCreateLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [previewBanner, setPreviewBanner] = useState<Banner | null>(null);
+  const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedBanner, setSelectedBanner] = useState<Banner | null>(null);
   const [homepageVideoUrl, setHomepageVideoUrl] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
   const [videoSaveLoading, setVideoSaveLoading] = useState(false);
   const { videoUrl, isActive: isVideoActive, loading: videoSettingsLoading, updateVideoSettings } = useHomepageVideoSimple();
   
@@ -267,6 +273,70 @@ const AdminBanners: React.FC = () => {
     const startDate = banner.start_date ? new Date(banner.start_date).toLocaleDateString('cs-CZ') : 'Neurčeno';
     const endDate = banner.end_date ? new Date(banner.end_date).toLocaleDateString('cs-CZ') : 'Neurčeno';
     return `${startDate} - ${endDate}`;
+  };
+
+  const handleUpdateBanner = async () => {
+    if (!bannerForm.title || !editingBanner) {
+      toast.error('Název banneru je povinný');
+      return;
+    }
+
+    try {
+      setEditLoading(true);
+
+      let imageUrl = editingBanner.image_url;
+      
+      // If new image/video was provided
+      if (bannerForm.targetPage === 'homepage_video' && bannerForm.videoUrl) {
+        imageUrl = bannerForm.videoUrl;
+      } else if (bannerForm.imageFile) {
+        imageUrl = await uploadImage(bannerForm.imageFile);
+      }
+
+      const { error } = await supabase
+        .from('banners')
+        .update({
+          title: bannerForm.title,
+          image_url: imageUrl,
+          active: bannerForm.active,
+          target_page: bannerForm.targetPage,
+          start_date: bannerForm.startDate?.toISOString().split('T')[0],
+          end_date: bannerForm.endDate?.toISOString().split('T')[0],
+        })
+        .eq('id', editingBanner.id);
+
+      if (error) throw error;
+
+      toast.success('Banner byl úspěšně aktualizován');
+      setShowEditDialog(false);
+      setEditingBanner(null);
+      resetForm();
+      fetchBanners();
+    } catch (error: any) {
+      console.error('Error updating banner:', error);
+      toast.error('Chyba při aktualizaci banneru');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleEditClick = (banner: Banner) => {
+    setEditingBanner(banner);
+    setBannerForm({
+      title: banner.title,
+      imageFile: null,
+      videoUrl: banner.target_page === 'homepage_video' ? banner.image_url : '',
+      active: banner.active,
+      targetPage: banner.target_page,
+      startDate: banner.start_date ? new Date(banner.start_date) : undefined,
+      endDate: banner.end_date ? new Date(banner.end_date) : undefined,
+    });
+    setShowEditDialog(true);
+  };
+
+  const handlePreviewClick = (banner: Banner) => {
+    setPreviewBanner(banner);
+    setShowPreviewDialog(true);
   };
 
   const handleSaveVideoSettings = async () => {
@@ -619,15 +689,15 @@ const AdminBanners: React.FC = () => {
                       <TableCell>
                         {new Date(banner.created_at).toLocaleDateString('cs-CZ')}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
+                       <TableCell>
+                         <div className="flex space-x-2">
+                           <Button variant="outline" size="sm" onClick={() => handlePreviewClick(banner)}>
+                             <Eye className="h-4 w-4" />
+                           </Button>
+                           <Button variant="outline" size="sm" onClick={() => handleEditClick(banner)}>
+                             <Edit className="h-4 w-4" />
+                           </Button>
+                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
                                 <Trash2 className="h-4 w-4" />
@@ -662,6 +732,208 @@ const AdminBanners: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Preview Dialog */}
+      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Náhled banneru</DialogTitle>
+          </DialogHeader>
+          {previewBanner && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h3 className="font-semibold text-lg">{previewBanner.title}</h3>
+                <div className="flex gap-2 items-center">
+                  {getStatusBadge(previewBanner)}
+                  <Badge variant="outline">{previewBanner.target_page}</Badge>
+                </div>
+              </div>
+              
+              {previewBanner.target_page === 'homepage_video' ? (
+                <YouTubeEmbed url={previewBanner.image_url} className="w-full" />
+              ) : (
+                <img 
+                  src={previewBanner.image_url} 
+                  alt={previewBanner.title}
+                  className="w-full h-auto rounded-lg border"
+                />
+              )}
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-semibold">Platnost:</span>
+                  <p className="text-muted-foreground">{getValidityText(previewBanner)}</p>
+                </div>
+                <div>
+                  <span className="font-semibold">Vytvořeno:</span>
+                  <p className="text-muted-foreground">
+                    {new Date(previewBanner.created_at).toLocaleDateString('cs-CZ')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={(open) => {
+        setShowEditDialog(open);
+        if (!open) {
+          setEditingBanner(null);
+          resetForm();
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Upravit Banner</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Název banneru *</Label>
+              <Input
+                id="edit-title"
+                value={bannerForm.title}
+                onChange={(e) => setBannerForm({...bannerForm, title: e.target.value})}
+                placeholder="Např. Mega Jackpot - Vyhrajte až 1 milion!"
+              />
+            </div>
+
+            {bannerForm.targetPage === 'homepage_video' ? (
+              <div className="space-y-2">
+                <Label htmlFor="edit-videoUrl">YouTube URL *</Label>
+                <Input
+                  id="edit-videoUrl"
+                  type="url"
+                  value={bannerForm.videoUrl}
+                  onChange={(e) => setBannerForm({...bannerForm, videoUrl: e.target.value})}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ponechejte prázdné pro zachování stávajícího videa
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="edit-bannerImage">Nový obrázek banneru</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="edit-bannerImage"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setBannerForm({...bannerForm, imageFile: e.target.files?.[0] || null})}
+                    className="flex-1"
+                  />
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ponechejte prázdné pro zachování stávajícího obrázku
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Cílová stránka</Label>
+              <Select
+                value={bannerForm.targetPage}
+                onValueChange={(value) => setBannerForm({...bannerForm, targetPage: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="homepage_customer">Domovská stránka</SelectItem>
+                  <SelectItem value="vouchers">Kupte Voucher</SelectItem>
+                  <SelectItem value="games">Hraj o luxusní ceny</SelectItem>
+                  <SelectItem value="homepage_video">Jak to funguje (Video)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="edit-active"
+                checked={bannerForm.active}
+                onCheckedChange={(checked) => setBannerForm({...bannerForm, active: checked})}
+              />
+              <Label htmlFor="edit-active">Aktivní</Label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Datum začátku</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn("w-full justify-start text-left font-normal", 
+                        !bannerForm.startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {bannerForm.startDate ? format(bannerForm.startDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={bannerForm.startDate}
+                      onSelect={(date) => setBannerForm({...bannerForm, startDate: date})}
+                      initialFocus
+                      className="p-3"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Datum konce</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn("w-full justify-start text-left font-normal", 
+                        !bannerForm.endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {bannerForm.endDate ? format(bannerForm.endDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={bannerForm.endDate}
+                      onSelect={(date) => setBannerForm({...bannerForm, endDate: date})}
+                      initialFocus
+                      className="p-3"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="flex gap-4 pt-4">
+              <Button 
+                onClick={handleUpdateBanner}
+                disabled={editLoading}
+                className="flex-1"
+              >
+                {editLoading ? 'Aktualizuje se...' : 'Uložit změny'}
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setShowEditDialog(false)}
+                disabled={editLoading}
+              >
+                Zrušit
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Admin Menu */}
       <AdminMenu />
