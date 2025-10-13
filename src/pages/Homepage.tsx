@@ -218,40 +218,25 @@ const Homepage = () => {
           ) : null}
         </section>
 
-        {/* Voucher CTA Section - Kupte si vouchery / Získejte MioCoiny */}
-        <section className="space-y-6">
-          <Card className="rounded-2xl overflow-hidden bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-primary/10 transition-all duration-300">
-            <CardContent className="p-8 md:p-12">
-              <div className="grid md:grid-cols-2 gap-8 items-center">
-                <div className="space-y-6">
-                  <div className="space-y-3">
-                    <h2 className="text-3xl md:text-4xl font-bold text-primary flex items-center gap-3">
-                      <Gift className="w-10 h-10" />
-                      Kupte si vouchery
-                    </h2>
-                    <p className="text-xl text-muted-foreground">
-                      Získejte MioCoiny za každý nákup
-                    </p>
-                  </div>
-                  <p className="text-base text-muted-foreground leading-relaxed">
-                    Nakupujte u našich partnerů a získejte MioCoiny, které můžete použít pro nákup tiketů do soutěží o luxusní ceny. Každý nákup vám přinese bonusové body!
+        {/* Two-Column Banner Section - Vouchers & Contests */}
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Column - Kupte si vouchery */}
+          <Card className="rounded-2xl overflow-hidden bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-primary/10 transition-all duration-300 h-full">
+            <CardContent className="p-8 h-full flex flex-col">
+              <div className="space-y-6 flex-1 flex flex-col">
+                <div className="space-y-3">
+                  <h2 className="text-2xl md:text-3xl font-bold text-primary flex items-center gap-3">
+                    <Gift className="w-8 h-8" />
+                    Kupte si vouchery
+                  </h2>
+                  <p className="text-lg text-muted-foreground">
+                    Získejte MioCoiny za každý nákup
                   </p>
-                  <Button 
-                    size="lg" 
-                    className="w-full md:w-auto"
-                    onClick={() => !isAdmin && navigate('/vouchers')}
-                    disabled={isAdmin}
-                  >
-                    <Gift className="w-5 h-5 mr-2" />
-                    Prozkoumat vouchery
-                  </Button>
-                  {isAdmin && (
-                    <div className="text-xs text-amber-400">
-                      Admin zobrazení - pouze pro čtení
-                    </div>
-                  )}
                 </div>
-                <div className="relative h-64 md:h-80 rounded-xl overflow-hidden">
+                <p className="text-sm text-muted-foreground leading-relaxed flex-1">
+                  Nakupujte u našich partnerů a získejte MioCoiny, které můžete použít pro nákup tiketů do soutěží o luxusní ceny. Každý nákup vám přinese bonusové body!
+                </p>
+                <div className="relative h-48 rounded-xl overflow-hidden mb-4">
                   <img 
                     src="/src/assets/luxury-brands-banner.jpg"
                     alt="Luxury brands vouchers"
@@ -263,122 +248,125 @@ const Homepage = () => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
                 </div>
+                <Button 
+                  size="lg" 
+                  className="w-full"
+                  onClick={() => !isAdmin && navigate('/vouchers')}
+                  disabled={isAdmin}
+                >
+                  <Gift className="w-5 h-5 mr-2" />
+                  Přehled voucherů
+                </Button>
+                {isAdmin && (
+                  <div className="text-xs text-amber-400 text-center">
+                    Admin zobrazení - pouze pro čtení
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
-        </section>
 
-        {/* Contests List Section - Seznam her / soutěží */}
-        <section className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-3xl font-bold text-primary flex items-center gap-3">
-              <Trophy className="w-8 h-8" />
-              Probíhající hry
-            </h2>
-            <Button 
-              variant="outline" 
-              className="gap-2"
-              onClick={() => !isAdmin && navigate('/games')}
-              disabled={isAdmin}
-            >
-              Zobrazit všechny
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+          {/* Right Column - Probíhající hry */}
+          <Card className="rounded-2xl overflow-hidden bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-primary/10 transition-all duration-300 h-full">
+            <CardContent className="p-8 h-full flex flex-col">
+              <div className="space-y-6 flex-1 flex flex-col">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl md:text-3xl font-bold text-primary flex items-center gap-3">
+                    <Trophy className="w-8 h-8" />
+                    Probíhající hry
+                  </h2>
+                </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {loading ? (
-              // Loading placeholders
-              Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className="rounded-2xl overflow-hidden bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm border-primary/20 shadow-lg">
-                  <CardContent className="p-0">
-                    <div className="h-48 bg-muted/40 animate-pulse" />
-                    <div className="p-4 space-y-3">
-                      <div className="h-6 bg-muted/60 rounded animate-pulse" />
-                      <div className="h-4 bg-muted/40 rounded animate-pulse w-3/4" />
-                      <div className="h-10 bg-muted/50 rounded animate-pulse mt-4" />
+                <div className="space-y-4 flex-1 overflow-y-auto">
+                  {loading ? (
+                    // Loading placeholders
+                    Array.from({ length: 3 }).map((_, index) => (
+                      <div key={index} className="rounded-xl overflow-hidden bg-card/60 border border-border/50">
+                        <div className="flex gap-4 p-4">
+                          <div className="w-24 h-24 bg-muted/40 animate-pulse rounded-lg flex-shrink-0" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-5 bg-muted/60 rounded animate-pulse" />
+                            <div className="h-4 bg-muted/40 rounded animate-pulse w-3/4" />
+                            <div className="h-3 bg-muted/30 rounded animate-pulse w-1/2" />
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : contests.length === 0 ? (
+                    <div className="text-center py-12 space-y-3">
+                      <Trophy className="w-12 h-12 mx-auto text-muted-foreground/50" />
+                      <h3 className="text-lg font-bold text-foreground">Žádné aktivní soutěže</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Momentálně nejsou k dispozici žádné aktivní soutěže
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : contests.length === 0 ? (
-              <div className="col-span-full">
-                <Card className="rounded-2xl overflow-hidden bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm border-primary/20">
-                  <CardContent className="p-12 text-center space-y-4">
-                    <Trophy className="w-16 h-16 mx-auto text-muted-foreground/50" />
-                    <h3 className="text-xl font-bold text-foreground">Žádné aktivní soutěže</h3>
-                    <p className="text-muted-foreground">
-                      Momentálně nejsou k dispozici žádné aktivní soutěže
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              contests.slice(0, 3).map((contest) => (
-                <Card 
-                  key={contest.id}
-                  className={`rounded-2xl overflow-hidden bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm border-primary/20 shadow-lg transition-all duration-300 ${
-                    user && !isAdmin 
-                      ? 'cursor-pointer hover:scale-105 hover:shadow-primary/20 hover:border-primary/40' 
-                      : !user
-                        ? 'cursor-pointer hover:opacity-80'
-                        : 'opacity-90'
-                  }`}
-                  onClick={() => !isAdmin && handleContestClick(contest.id)}
+                  ) : (
+                    contests.slice(0, 3).map((contest) => (
+                      <div 
+                        key={contest.id}
+                        className={`rounded-xl overflow-hidden bg-card/60 border border-border/50 transition-all duration-300 ${
+                          user && !isAdmin 
+                            ? 'cursor-pointer hover:bg-card hover:border-primary/40 hover:shadow-md' 
+                            : !user
+                              ? 'cursor-pointer hover:opacity-80'
+                              : 'opacity-90'
+                        }`}
+                        onClick={() => !isAdmin && handleContestClick(contest.id)}
+                      >
+                        <div className="flex gap-4 p-4">
+                          <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
+                            {contest.main_image ? (
+                              <img 
+                                src={contest.main_image.startsWith('http') ? contest.main_image : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`}
+                                alt={contest.title}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-muted/40 flex items-center justify-center">
+                                <Trophy className="w-8 h-8 text-muted-foreground/50" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <h3 className="font-bold text-base text-foreground line-clamp-1">
+                              {contest.title}
+                            </h3>
+                            <div className="flex items-center gap-2">
+                              <Star className="w-4 h-4 text-primary flex-shrink-0" />
+                              <span className="text-xs font-semibold text-primary line-clamp-1">
+                                {contest.main_prize}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>{contest.ticket_count?.toLocaleString('cs-CZ')} tiketů</span>
+                              <span className="font-bold text-foreground">{contest.ticket_price} Kč</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <Button 
+                  variant="outline"
+                  size="lg" 
+                  className="w-full gap-2"
+                  onClick={() => !isAdmin && navigate('/games')}
+                  disabled={isAdmin}
                 >
-                  <CardContent className="p-0">
-                    <div className="relative">
-                      {contest.main_image ? (
-                        <img 
-                          src={contest.main_image.startsWith('http') ? contest.main_image : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`}
-                          alt={contest.title}
-                          className="w-full h-48 object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-48 bg-muted/40 flex items-center justify-center">
-                          <Trophy className="w-16 h-16 text-muted-foreground/50" />
-                        </div>
-                      )}
-                      <div className="absolute top-3 right-3">
-                        <Badge className="bg-primary/90 text-primary-foreground border-0">
-                          {contest.status === 'active' ? 'Aktivní' : 'Připravuje se'}
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <div className="p-6 space-y-4">
-                      <h3 className="font-bold text-xl text-foreground line-clamp-2">
-                        {contest.title}
-                      </h3>
-                      
-                      <div className="flex items-center gap-2">
-                        <Star className="w-5 h-5 text-primary" />
-                        <span className="text-sm font-semibold text-primary line-clamp-1">
-                          {contest.main_prize}
-                        </span>
-                      </div>
-                      
-                      <div className="pt-3 border-t border-border/50 space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Celkem tiketů</span>
-                          <span className="font-bold text-foreground">{contest.ticket_count?.toLocaleString('cs-CZ')}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Cena tiketu</span>
-                          <span className="font-bold text-foreground">{contest.ticket_price} Kč</span>
-                        </div>
-                      </div>
-                      
-                      <div className="text-xs text-muted-foreground pt-2 text-center border-t border-border/30">
-                        {user && !isAdmin ? 'Klikněte pro detail hry' : !user ? 'Přihlaste se pro hraní' : 'Admin zobrazení'}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+                  Zobrazit všechny
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                {isAdmin && (
+                  <div className="text-xs text-amber-400 text-center">
+                    Admin zobrazení - pouze pro čtení
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </section>
 
         {/* Dynamic Banners */}
