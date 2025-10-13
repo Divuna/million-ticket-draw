@@ -248,10 +248,10 @@ const MyContestDetail: React.FC = () => {
           </button>
 
           {/* Contest Header */}
-          <Card className="ticket-contest ticket-perforations">
+          <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
             <CardHeader>
               <div className="flex items-start justify-between">
-                <CardTitle className="text-2xl text-neon-purple">{contest.title}</CardTitle>
+                <CardTitle className="text-2xl text-primary">{contest.title}</CardTitle>
                 <Badge className={`${getStatusColor(contest.status)} text-white`}>
                   {getStatusText(contest.status)}
                 </Badge>
@@ -263,9 +263,9 @@ const MyContestDetail: React.FC = () => {
           </Card>
 
           {/* Main Prize */}
-          <Card className="ticket-contest ticket-perforations">
+          <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-neon-purple">
+              <CardTitle className="flex items-center gap-2 text-primary">
                 <Trophy className="h-5 w-5" />
                 Hlavní cena / Megajackpot
               </CardTitle>
@@ -275,80 +275,8 @@ const MyContestDetail: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Ticket Progress */}
-          <Card className="ticket-contest ticket-perforations">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-neon-purple">
-                <Ticket className="h-5 w-5" />
-                Mapa tiketů / Progres
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingTickets ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-6 w-48" />
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <Progress value={progressPercentage} className="h-3" />
-                  <div className="flex justify-between text-sm">
-                    <span>Prodaných tiketů: {ticketCount.toLocaleString('cs-CZ')}</span>
-                    <span>Celkem: {contest.ticket_count.toLocaleString('cs-CZ')}</span>
-                  </div>
-                  <div className="flex items-center gap-2 pt-2">
-                    <Star className="h-4 w-4 text-primary" />
-                    <span className="font-medium">Moje lístky: {userTickets}</span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Bonus Prizes */}
-          <Card className="ticket-contest ticket-perforations">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-neon-purple">
-                <Gift className="h-5 w-5" />
-                Dostupné bonusové ceny
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingBonuses ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-16 w-full" />
-                  <Skeleton className="h-16 w-full" />
-                </div>
-              ) : bonusPrizes.length === 0 ? (
-                <p className="text-muted-foreground">Žádné bonusové ceny</p>
-              ) : (
-                <div className="space-y-3">
-                  {bonusPrizes.slice(0, 10).map((bonus) => (
-                    <div key={bonus.id} className="flex justify-between items-center p-3 bg-secondary/20 rounded-lg">
-                      <div>
-                        <p className="font-medium">{bonus.description}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Pozice: {bonus.ticket_position}
-                          {bonus.amount && ` • ${bonus.amount} MioCoins`}
-                        </p>
-                      </div>
-                      <Badge variant={bonus.status === 'won' ? 'default' : 'secondary'}>
-                        {bonus.status === 'won' ? 'Vyhráno' : 'Dostupné'}
-                      </Badge>
-                    </div>
-                  ))}
-                  {bonusPrizes.length > 10 && (
-                    <p className="text-sm text-muted-foreground text-center">
-                      ... a dalších {bonusPrizes.length - 10} bonusů
-                    </p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           {/* My Wins */}
-          <Card className="ticket-contest ticket-perforations">
+          <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-neon-purple">
                 <Trophy className="h-5 w-5" />

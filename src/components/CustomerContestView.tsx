@@ -69,11 +69,11 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
     <div className="max-w-4xl mx-auto space-y-6">
       
       {/* Contest Header */}
-      <Card className="ticket-contest ticket-perforations">
+      <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-3xl text-neon-purple">{contest.title}</CardTitle>
+              <CardTitle className="text-3xl text-primary">{contest.title}</CardTitle>
               {contest.description && (
                 <p className="mt-2 text-lg text-muted-foreground">
                   {contest.description}
@@ -101,13 +101,13 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
       </Card>
 
       {/* Main Prize - No specific ticket number shown to customers */}
-      <Card className="ticket-game ticket-perforations">
+      <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
         <CardHeader>
-          <CardTitle className="text-neon-green">Hlavní cena</CardTitle>
+          <CardTitle className="text-primary">Hlavní cena</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center p-6 bg-gradient-to-r from-neon-green/5 to-neon-cyan/5 rounded-lg border border-neon-green/20">
-            <h3 className="text-2xl font-bold text-neon-green mb-2">
+          <div className="text-center p-6 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
+            <h3 className="text-2xl font-bold text-primary mb-2">
               {contest.main_prize}
             </h3>
             <p className="text-muted-foreground">
@@ -119,7 +119,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
 
       {/* Closed Contest Banner */}
       {contest.status === 'closed' && (
-        <Card className="ticket-message ticket-perforations border-red-500 bg-red-50 dark:bg-red-900/20">
+        <Card className="rounded-2xl overflow-hidden border-red-500 bg-red-50 dark:bg-red-900/20">
           <CardContent className="pt-6">
             <div className="text-center">
               <h3 className="text-lg font-bold text-red-700 dark:text-red-400 mb-2">Uzavřená – výhra padla</h3>
@@ -131,20 +131,20 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
 
       {/* Purchase Section */}
       {contest.status === 'active' && (
-        <Card className="ticket-profile ticket-perforations bg-green-50 dark:bg-green-900/20">
+        <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold mb-1 text-neon-cyan">Uplatnit miocoiny</h3>
+                <h3 className="text-lg font-semibold mb-1 text-primary">Uplatnit miocoiny</h3>
                 <p className="text-muted-foreground">
-                  Cena: 1 miocoin | Váš zůstatek: <span className="text-neon-cyan font-bold">{userWallet.balance_coins.toLocaleString('cs-CZ')}</span> miocoinů
+                  Cena: 1 miocoin | Váš zůstatek: <span className="text-primary font-bold">{userWallet.balance_coins.toLocaleString('cs-CZ')}</span> miocoinů
                 </p>
               </div>
               <Button 
                 onClick={handleBuyClick}
                 disabled={purchasing || userWallet.balance_coins < 1}
                 size="lg"
-                className="bg-gradient-to-r from-neon-cyan to-neon-green hover:from-neon-cyan/80 hover:to-neon-green/80 text-white border-0"
+                className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white border-0"
               >
                 {purchasing ? 'Uplatňuji...' : `Uplatnit ${userWallet.balance_coins >= 1 ? '1' : '0'} miocoinů`}
               </Button>
@@ -155,7 +155,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
 
       {/* Paused Contest Section */}
       {contest.status === 'paused' && (
-        <Card className="ticket-message ticket-perforations bg-yellow-50 dark:bg-yellow-900/20">
+        <Card className="rounded-2xl overflow-hidden border-orange-500/20 bg-yellow-50 dark:bg-yellow-900/20">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -176,48 +176,11 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
           </CardContent>
         </Card>
       )}
-      {/* Bonus Prizes Section */}
-      <Card className="ticket-voucher ticket-perforations">
-        <CardHeader>
-          <CardTitle className="text-neon-pink">Dostupné bonusové ceny</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {bonusPrizes && bonusPrizes.filter(p => p.status === 'pending').length > 0 ? (
-            <div className="space-y-2">
-              {(() => {
-                // Group bonus prizes by description and count them
-                const grouped = bonusPrizes
-                  .filter(p => p.status === 'pending')
-                  .reduce((acc, prize) => {
-                    acc[prize.description] = (acc[prize.description] || 0) + 1;
-                    return acc;
-                  }, {} as Record<string, number>);
-
-                return Object.entries(grouped).map(([description, count]) => (
-                  <div key={description} className="py-2 border-b last:border-0">
-                    <p className="font-medium">{description} – {count}×</p>
-                  </div>
-                ));
-              })()}
-            </div>
-          ) : (
-            <p className="text-muted-foreground">Žádné dostupné bonusové ceny.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Ticket Map Section */}
-      <TicketMap
-        contestId={contest.id}
-        contestTitle={contest.title}
-        ticketCount={contest.ticket_count}
-        ticketPrice={contest.ticket_price}
-      />
 
       {/* My Wins Section */}
-      <Card className="ticket-profile ticket-perforations">
+      <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
         <CardHeader>
-          <CardTitle className="text-neon-cyan">Moje výhry</CardTitle>
+          <CardTitle className="text-primary">Moje výhry</CardTitle>
         </CardHeader>
         <CardContent>
           {userWins.length > 0 ? (
