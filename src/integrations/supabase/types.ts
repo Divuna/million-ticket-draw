@@ -203,6 +203,48 @@ export type Database = {
         }
         Relationships: []
       }
+      event_forward_log: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          event_name: string
+          id: string
+          payload: Json
+          record_id: string
+          response_data: Json | null
+          retry_count: number | null
+          status: string
+          table_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          event_name: string
+          id?: string
+          payload: Json
+          record_id: string
+          response_data?: Json | null
+          retry_count?: number | null
+          status?: string
+          table_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          event_name?: string
+          id?: string
+          payload?: Json
+          record_id?: string
+          response_data?: Json | null
+          retry_count?: number | null
+          status?: string
+          table_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       event_logs: {
         Row: {
           contest_id: string | null
