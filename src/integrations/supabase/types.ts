@@ -277,6 +277,8 @@ export type Database = {
           created_at: string
           id: string
           message: string
+          push_delivered: boolean | null
+          push_response: Json | null
           sent_at: string | null
           status: string
           title: string | null
@@ -287,6 +289,8 @@ export type Database = {
           created_at?: string
           id?: string
           message: string
+          push_delivered?: boolean | null
+          push_response?: Json | null
           sent_at?: string | null
           status?: string
           title?: string | null
@@ -297,6 +301,8 @@ export type Database = {
           created_at?: string
           id?: string
           message?: string
+          push_delivered?: boolean | null
+          push_response?: Json | null
           sent_at?: string | null
           status?: string
           title?: string | null
