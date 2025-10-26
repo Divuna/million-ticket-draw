@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthProvider";
 import TestAuthProvider from "@/components/TestAuthProvider";
+import { useOneSignal } from "@/hooks/useOneSignal";
 import Homepage from "./pages/Homepage";
 import Games from "./pages/Games";
 import Login from "./pages/Login";
@@ -36,10 +37,16 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const AppContent = () => {
+  useOneSignal();
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TestAuthProvider>
+        <AppContent />
         <Toaster />
         <Sonner />
         <BrowserRouter>
