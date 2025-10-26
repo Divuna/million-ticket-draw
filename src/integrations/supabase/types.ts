@@ -859,14 +859,8 @@ export type Database = {
         }
         Returns: Json
       }
-      fn_close_contest: {
-        Args: { p_contest: string }
-        Returns: undefined
-      }
-      get_active_banners_summary: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      fn_close_contest: { Args: { p_contest: string }; Returns: undefined }
+      get_active_banners_summary: { Args: never; Returns: string }
       get_admin_actions_summary: {
         Args: {
           p_action_type?: string
@@ -883,7 +877,7 @@ export type Database = {
         }[]
       }
       get_admin_summary_dashboard: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           bonus_prizes_summary: string
           contests_summary: string
@@ -952,14 +946,8 @@ export type Database = {
           updated_at: string
         }[]
       }
-      get_contests_json: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_contests_json: { Args: never; Returns: Json }
+      get_current_user_role: { Args: never; Returns: string }
       get_prizes_delivery_summary: {
         Args: { p_contest_id?: string }
         Returns: {
@@ -1003,46 +991,19 @@ export type Database = {
           success: boolean
         }[]
       }
-      redeem_voucher: {
-        Args: { p_voucher_id: string }
-        Returns: Json
-      }
-      run_complete_admin_test_suite: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      redeem_voucher: { Args: { p_voucher_id: string }; Returns: Json }
+      run_complete_admin_test_suite: { Args: never; Returns: Json }
       run_deep_sofinity_test_suite: {
         Args: { p_performance_events?: number }
         Returns: Json
       }
-      setup_crud_test_data: {
-        Args: { p_user_email?: string }
-        Returns: Json
-      }
-      test_admin_crud_operations: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      test_admin_security_rls: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      test_audit_logging: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      test_deep_data_integrity: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      test_sofinity_edge_cases: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      test_sofinity_integration: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      setup_crud_test_data: { Args: { p_user_email?: string }; Returns: Json }
+      test_admin_crud_operations: { Args: never; Returns: Json }
+      test_admin_security_rls: { Args: never; Returns: Json }
+      test_audit_logging: { Args: never; Returns: Json }
+      test_deep_data_integrity: { Args: never; Returns: Json }
+      test_sofinity_edge_cases: { Args: never; Returns: Json }
+      test_sofinity_integration: { Args: never; Returns: Json }
       test_sofinity_performance: {
         Args: { p_event_count?: number }
         Returns: Json
