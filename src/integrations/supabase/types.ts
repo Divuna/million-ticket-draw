@@ -458,6 +458,24 @@ export type Database = {
         }
         Relationships: []
       }
+      settings: {
+        Row: {
+          key: string
+          updated_at: string | null
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string | null
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       tickets: {
         Row: {
           contest_id: string
@@ -558,6 +576,7 @@ export type Database = {
           last_name: string | null
           name: string | null
           nickname: string | null
+          onesignal_player_id: string | null
           phone: string | null
           role: string
           show_user_menu: boolean | null
@@ -573,6 +592,7 @@ export type Database = {
           last_name?: string | null
           name?: string | null
           nickname?: string | null
+          onesignal_player_id?: string | null
           phone?: string | null
           role?: string
           show_user_menu?: boolean | null
@@ -588,6 +608,7 @@ export type Database = {
           last_name?: string | null
           name?: string | null
           nickname?: string | null
+          onesignal_player_id?: string | null
           phone?: string | null
           role?: string
           show_user_menu?: boolean | null
@@ -1003,6 +1024,10 @@ export type Database = {
         Args: { p_performance_events?: number }
         Returns: Json
       }
+      send_push_via_onesignal: {
+        Args: { p_message: string; p_player_id: string; p_title: string }
+        Returns: undefined
+      }
       setup_crud_test_data: { Args: { p_user_email?: string }; Returns: Json }
       test_admin_crud_operations: { Args: never; Returns: Json }
       test_admin_security_rls: { Args: never; Returns: Json }
@@ -1020,6 +1045,10 @@ export type Database = {
       }
       update_bonus_prize_delivery_status: {
         Args: { p_admin_notes?: string; p_prize_id: string; p_status: string }
+        Returns: Json
+      }
+      update_onesignal_id: {
+        Args: { p_player_id: string; p_user_id: string }
         Returns: Json
       }
       validate_crud_test_data: {

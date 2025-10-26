@@ -48,19 +48,18 @@ export const useOneSignal = () => {
           if (event.current.id) {
             console.log('✅ Player ID registered:', event.current.id);
             
-            toast({
-              title: "Notifikace povoleny",
-              description: "Budete dostávat důležitá oznámení."
+            // Save player ID to Supabase and send to Sofinity via RPC
+            const { data, error } = await supabase.rpc('update_onesignal_id', {
+              p_user_id: user.id,
+              p_player_id: event.current.id
             });
-
-            // Save player ID to Supabase
-            const { error } = await supabase
-              .from('users')
-              .update({ onesignal_player_id: event.current.id } as any)
-              .eq('id', user.id);
 
             if (error) {
               console.error('Error saving OneSignal player ID:', error);
+            } else if (data && typeof data === 'object' && 'success' in data && data.success) {
+              toast({
+                title: "✅ Notifikace aktivní – připojení k Sofinity bylo úspěšně ověřeno."
+              });
             }
           }
         });
