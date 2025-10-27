@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 const ONESIGNAL_APP_ID = '357be038-dbaf-4551-9a16-96d9897197a3';
-const SOFINITY_SYNC_URL = 'https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/sofinity-player-sync';
+const SOFINITY_SYNC_URL = 'https://rrmvxsldrjgbdxluklka.supabase.co/functions/v1/sofinity-player-sync';
 const MAX_RETRIES = 3;
 const SESSION_KEY = 'onesignal_synced_players';
 
@@ -56,6 +56,7 @@ const syncPlayerToSofinity = async (
     }
 
     // 2. Sync to Sofinity endpoint
+    console.log('🔄 Sending player_id to Sofinity:', { email, player_id: playerId, device_type: 'web' });
     const response = await fetch(SOFINITY_SYNC_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -66,13 +67,20 @@ const syncPlayerToSofinity = async (
       })
     });
 
+    const responseBody = await response.text();
+    console.log('📡 Sofinity response:', { 
+      status: response.status, 
+      statusText: response.statusText, 
+      body: responseBody 
+    });
+
     if (response.ok) {
       console.log('✅ Player ID synced to Sofinity:', playerId);
       markPlayerSynced(playerId);
       toast({ title: '✅ Zařízení zaregistrováno pro notifikace' });
       return true;
     } else {
-      throw new Error(`HTTP ${response.status}`);
+      throw new Error(`HTTP ${response.status}: ${responseBody}`);
     }
   } catch (error) {
     console.error(`❌ Sofinity sync failed (attempt ${retryCount + 1}/${MAX_RETRIES}):`, error);
