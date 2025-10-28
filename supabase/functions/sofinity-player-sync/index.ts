@@ -77,19 +77,39 @@ serve(async (req) => {
       );
     }
 
-    console.log('[sofinity-player-sync] OneMil user updated successfully:', updateData[0]);
+    const userId = updateData[0].id;
+    console.log('[sofinity-player-sync] OneMil user updated successfully:', {
+      userId,
+      email: updateData[0].email,
+      onesignal_player_id: updateData[0].onesignal_player_id
+    });
 
-    // Step 2: Forward to Sofinity endpoint
+    // Validate user_id exists before forwarding
+    if (!userId) {
+      console.error('[sofinity-player-sync] Missing user_id from database update');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Failed to retrieve user_id from database' 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Step 2: Forward to Sofinity endpoint with user_id
     const sofinityUrl = 'https://rrmvxsldrjgbdxluklka.supabase.co/functions/v1/player-sync-receiver';
     const sofinityPayload = {
       email,
       player_id,
       device_type,
-      user_id: updateData[0].id,
+      user_id: userId,
       timestamp: new Date().toISOString(),
     };
 
-    console.log('[sofinity-player-sync] Forwarding to Sofinity:', sofinityPayload);
+    console.log('[sofinity-player-sync] Forwarding to Sofinity with user_id:', {
+      ...sofinityPayload,
+      user_id_confirmed: !!userId
+    });
 
     const sofinityResponse = await fetch(sofinityUrl, {
       method: 'POST',
