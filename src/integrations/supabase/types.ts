@@ -1039,6 +1039,7 @@ export type Database = {
         Args: { p_event_count?: number }
         Returns: Json
       }
+      test_sofinity_player_sync: { Args: never; Returns: Json }
       unlock_ticket: {
         Args: { contest_id: string; user_id: string }
         Returns: Json
