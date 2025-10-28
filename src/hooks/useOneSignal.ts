@@ -42,27 +42,13 @@ const syncPlayerToSofinity = async (
   retryCount = 0
 ): Promise<boolean> => {
   try {
-    // 1. Store in Supabase users table - HARD FAIL if this fails
-    const { error: dbError } = await supabase
-      .from('users')
-      .update({ onesignal_player_id: playerId })
-      .eq('id', userId);
-
-    if (dbError) {
-      console.error('❌ CRITICAL: Chyba při ukládání player_id do Supabase:', dbError);
-      toast({ title: '⚠️ Nepodařilo se uložit nastavení notifikací' });
-      return false; // Hard fail - don't continue to Sofinity
-    }
-    console.log('✅ Player ID uložen do Supabase:', playerId);
-
-    // 2. Sync to Sofinity endpoint with authentication
-    console.log('📡 Sofinity sync started...', { 
-      identifier: emailOrIdentifier, 
+    console.log('📡 Zahajuji synchronizaci player ID...', { 
+      email: emailOrIdentifier, 
       player_id: playerId, 
       device_type: 'web' 
     });
 
-    // Use supabase.functions.invoke for proper authentication
+    // Call edge function - it handles both Supabase update AND Sofinity forwarding
     const { data, error: functionError } = await supabase.functions.invoke('sofinity-player-sync', {
       body: {
         email: emailOrIdentifier,
@@ -71,31 +57,31 @@ const syncPlayerToSofinity = async (
       }
     });
 
-    console.log('📡 Odpověď ze Sofinity:', { 
+    console.log('📡 Odpověď z edge funkce:', { 
       success: !functionError,
       data,
       error: functionError
     });
 
-    if (!functionError) {
-      console.log('✅ Sofinity sync success');
+    if (!functionError && data?.success) {
+      console.log('✅ Player ID úspěšně synchronizován do OneMil i Sofinity');
       markPlayerSynced(playerId);
       toast({ title: '✅ Zařízení zaregistrováno pro notifikace' });
       return true;
     } else {
-      throw new Error(`Sofinity error: ${functionError.message}`);
+      throw new Error(`Sync error: ${functionError?.message || data?.error || 'Unknown error'}`);
     }
   } catch (error) {
-    console.error(`❌ Sofinity sync failed (pokus ${retryCount + 1}/${MAX_RETRIES}):`, error);
+    console.error(`❌ Synchronizace selhala (pokus ${retryCount + 1}/${MAX_RETRIES}):`, error);
     
     if (retryCount < MAX_RETRIES - 1) {
       // Exponential backoff: 1s, 2s, 4s
       const delay = Math.pow(2, retryCount) * 1000;
-      console.log(`🔄 Opakování synchronizace za ${delay}ms (exponenciální backoff)...`);
+      console.log(`🔄 Opakování synchronizace za ${delay}ms...`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return syncPlayerToSofinity(userId, emailOrIdentifier, playerId, retryCount + 1);
     } else {
-      console.error('❌ Sofinity sync failed - všechny pokusy vyčerpány');
+      console.error('❌ Synchronizace selhala - všechny pokusy vyčerpány');
       toast({ title: '⚠️ Registrace notifikací selhala, zkuste to prosím znovu' });
       return false;
     }
