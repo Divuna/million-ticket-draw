@@ -5,7 +5,7 @@ import { toast } from '@/hooks/use-toast';
 
 const ONESIGNAL_APP_ID = '357be038-dbaf-4551-9a16-96d9897197a3';
 const SOFINITY_SYNC_URL = 'https://rrmvxsldrjgbdxluklka.supabase.co/functions/v1/sofinity-player-sync';
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 2; // First attempt + 1 retry = 2 total attempts
 const SESSION_KEY = 'onesignal_synced_players';
 
 // Global flag to prevent duplicate initialization across all hook instances
@@ -56,7 +56,7 @@ const syncPlayerToSofinity = async (
     }
 
     // 2. Sync to Sofinity endpoint
-    console.log('🔄 Odesílání player_id do Sofinity:', { email, player_id: playerId, device_type: 'web' });
+    console.log('📡 Sofinity sync started...', { email, player_id: playerId, device_type: 'web' });
     const response = await fetch(SOFINITY_SYNC_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -75,7 +75,7 @@ const syncPlayerToSofinity = async (
     });
 
     if (response.ok) {
-      console.log('✅ Player ID odeslán do Sofinity:', playerId);
+      console.log('✅ Sofinity sync success');
       markPlayerSynced(playerId);
       toast({ title: '✅ Zařízení zaregistrováno pro notifikace' });
       return true;
@@ -83,13 +83,15 @@ const syncPlayerToSofinity = async (
       throw new Error(`HTTP ${response.status}: ${responseBody}`);
     }
   } catch (error) {
-    console.error(`❌ Chyba při synchronizaci se Sofinity (pokus ${retryCount + 1}/${MAX_RETRIES}):`, error);
+    console.error(`❌ Sofinity sync failed (pokus ${retryCount + 1}/${MAX_RETRIES}):`, error);
     
     if (retryCount < MAX_RETRIES - 1) {
       const delay = 1000; // Fixed 1s delay
+      console.log(`🔄 Opakování synchronizace za ${delay}ms...`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return syncPlayerToSofinity(userId, email, playerId, retryCount + 1);
     } else {
+      console.error('❌ Sofinity sync failed - všechny pokusy vyčerpány');
       toast({ title: '⚠️ Registrace notifikací selhala, zkuste to prosím znovu' });
       return false;
     }
