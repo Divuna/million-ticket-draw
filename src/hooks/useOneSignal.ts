@@ -50,13 +50,13 @@ const syncPlayerToSofinity = async (
       .eq('id', userId);
 
     if (dbError) {
-      console.error('❌ Failed to store player_id in Supabase:', dbError);
+      console.error('❌ Chyba při ukládání player_id do Supabase:', dbError);
     } else {
-      console.log('✅ Player ID stored in Supabase users table:', playerId);
+      console.log('✅ Player ID uložen do Supabase:', playerId);
     }
 
     // 2. Sync to Sofinity endpoint
-    console.log('🔄 Sending player_id to Sofinity:', { email, player_id: playerId, device_type: 'web' });
+    console.log('🔄 Odesílání player_id do Sofinity:', { email, player_id: playerId, device_type: 'web' });
     const response = await fetch(SOFINITY_SYNC_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -68,14 +68,14 @@ const syncPlayerToSofinity = async (
     });
 
     const responseBody = await response.text();
-    console.log('📡 Sofinity response:', { 
+    console.log('📡 Odpověď ze Sofinity:', { 
       status: response.status, 
       statusText: response.statusText, 
       body: responseBody 
     });
 
     if (response.ok) {
-      console.log('✅ Player ID synced to Sofinity:', playerId);
+      console.log('✅ Player ID odeslán do Sofinity:', playerId);
       markPlayerSynced(playerId);
       toast({ title: '✅ Zařízení zaregistrováno pro notifikace' });
       return true;
@@ -83,10 +83,10 @@ const syncPlayerToSofinity = async (
       throw new Error(`HTTP ${response.status}: ${responseBody}`);
     }
   } catch (error) {
-    console.error(`❌ Sofinity sync failed (attempt ${retryCount + 1}/${MAX_RETRIES}):`, error);
+    console.error(`❌ Chyba při synchronizaci se Sofinity (pokus ${retryCount + 1}/${MAX_RETRIES}):`, error);
     
     if (retryCount < MAX_RETRIES - 1) {
-      const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+      const delay = 1000; // Fixed 1s delay
       await new Promise(resolve => setTimeout(resolve, delay));
       return syncPlayerToSofinity(userId, email, playerId, retryCount + 1);
     } else {
@@ -104,14 +104,14 @@ export const useOneSignal = () => {
     if (!user || isOneSignalInitialized || isOneSignalInitializing) return;
 
     isOneSignalInitializing = true;
-    console.log('🔄 Starting OneSignal initialization...');
+    console.log('🔄 Spouštění inicializace OneSignal...');
 
     // Initialize OneSignal
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async (OneSignal: any) => {
       // Double-check to prevent duplicate initialization
       if (isOneSignalInitialized) {
-        console.log('⚠️ OneSignal already initialized, skipping duplicate init');
+        console.log('⚠️ OneSignal již byl inicializován, přeskakuji duplicitní inicializaci');
         return;
       }
       
@@ -123,17 +123,17 @@ export const useOneSignal = () => {
         
         isOneSignalInitialized = true;
         isOneSignalInitializing = false;
-        console.log('✅ OneSignal SDK initialized successfully');
+        console.log('✅ OneSignal SDK úspěšně inicializován');
 
         // Request notification permission using new SDK v16 API
         const permission = await OneSignal.Notifications.requestPermission();
-        console.log('📬 Notification permission status:', permission);
+        console.log('📬 Stav povolení notifikací:', permission);
 
         // Listen for subscription changes
         OneSignal.User.PushSubscription.addEventListener('change', async (event: any) => {
           const playerId = event.current.id;
           if (playerId && user.email && !wasPlayerSynced(playerId)) {
-            console.log('✅ Player ID registered:', playerId);
+            console.log('✅ Player ID zaregistrován:', playerId);
             await syncPlayerToSofinity(user.id, user.email, playerId);
           }
         });
@@ -141,7 +141,7 @@ export const useOneSignal = () => {
         // Check for existing subscription immediately after init
         const currentPlayerId = await OneSignal.User.PushSubscription.id;
         if (currentPlayerId && user.email && !wasPlayerSynced(currentPlayerId)) {
-          console.log('✅ Found existing Player ID:', currentPlayerId);
+          console.log('✅ Nalezen existující Player ID:', currentPlayerId);
           await syncPlayerToSofinity(user.id, user.email, currentPlayerId);
         }
 
@@ -152,7 +152,7 @@ export const useOneSignal = () => {
           focusDebounceRef.current = setTimeout(async () => {
             const playerId = await OneSignal.User.PushSubscription.id;
             if (playerId && user.email && !wasPlayerSynced(playerId)) {
-              console.log('🔄 Re-syncing player ID on focus:', playerId);
+              console.log('🔄 Opětovná synchronizace player ID při fokusu:', playerId);
               await syncPlayerToSofinity(user.id, user.email, playerId);
             }
           }, 2000); // 2s debounce
@@ -166,7 +166,7 @@ export const useOneSignal = () => {
           if (focusDebounceRef.current) clearTimeout(focusDebounceRef.current);
         };
       } catch (error) {
-        console.error('❌ OneSignal initialization error:', error);
+        console.error('❌ Chyba při inicializaci OneSignal:', error);
         isOneSignalInitializing = false;
       }
     });
