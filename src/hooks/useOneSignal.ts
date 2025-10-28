@@ -42,12 +42,16 @@ const syncPlayerToSofinity = async (
   retryCount = 0
 ): Promise<boolean> => {
   try {
-    console.log('📡 Zahajuji synchronizaci player ID...', { 
+    console.log('📡 [syncPlayerToSofinity] Zahajuji synchronizaci player ID...', { 
+      userId,
       email: emailOrIdentifier, 
       player_id: playerId, 
-      device_type: 'web' 
+      device_type: 'web',
+      retryCount
     });
 
+    console.log('🚀 [syncPlayerToSofinity] Calling supabase.functions.invoke BEFORE...');
+    
     // Call edge function - it handles both Supabase update AND Sofinity forwarding
     const { data, error: functionError } = await supabase.functions.invoke('sofinity-player-sync', {
       body: {
@@ -57,10 +61,12 @@ const syncPlayerToSofinity = async (
       }
     });
 
-    console.log('📡 Odpověď z edge funkce:', { 
+    console.log('✅ [syncPlayerToSofinity] Calling supabase.functions.invoke AFTER');
+    console.log('📡 [syncPlayerToSofinity] Odpověď z edge funkce:', { 
       success: !functionError,
       data,
-      error: functionError
+      error: functionError,
+      dataDetails: data ? JSON.stringify(data) : 'null'
     });
 
     if (!functionError && data?.success) {
@@ -93,6 +99,12 @@ export const useOneSignal = () => {
   const focusDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    console.log('🔍 [useOneSignal] Hook triggered, user state:', { 
+      hasUser: !!user, 
+      userId: user?.id,
+      userEmail: user?.email 
+    });
+
     // Cleanup on logout
     if (!user) {
       console.log('🔄 User logged out - clearing OneSignal sync markers');
@@ -100,7 +112,15 @@ export const useOneSignal = () => {
       return;
     }
 
-    if (isOneSignalInitialized || isOneSignalInitializing) return;
+    console.log('🚀 [useOneSignal] User is logged in, checking initialization state:', {
+      isOneSignalInitialized,
+      isOneSignalInitializing
+    });
+
+    if (isOneSignalInitialized || isOneSignalInitializing) {
+      console.log('⚠️ [useOneSignal] OneSignal already initialized/initializing, skipping');
+      return;
+    }
 
     isOneSignalInitializing = true;
     console.log('🔄 Spouštění inicializace OneSignal...');
@@ -133,18 +153,35 @@ export const useOneSignal = () => {
 
         // Listen for subscription changes
         OneSignal.User.PushSubscription.addEventListener('change', async (event: any) => {
+          console.log('🔔 [OneSignal] Subscription change event:', {
+            hasPlayerId: !!event.current.id,
+            playerId: event.current.id
+          });
           const playerId = event.current.id;
           if (playerId && !wasPlayerSynced(playerId)) {
-            console.log('✅ Player ID zaregistrován:', playerId);
+            console.log('✅ Player ID zaregistrován z subscription change:', playerId);
             await syncPlayerToSofinity(user.id, getUserIdentifier(), playerId);
+          } else if (playerId) {
+            console.log('ℹ️ Player ID již byl synchronizován:', playerId);
           }
         });
 
         // Check for existing subscription immediately after init
+        console.log('🔍 [OneSignal] Checking for existing player ID...');
         const currentPlayerId = await OneSignal.User.PushSubscription.id;
+        console.log('🔍 [OneSignal] Existing player ID check result:', { 
+          hasPlayerId: !!currentPlayerId,
+          playerId: currentPlayerId,
+          alreadySynced: currentPlayerId ? wasPlayerSynced(currentPlayerId) : false
+        });
+        
         if (currentPlayerId && !wasPlayerSynced(currentPlayerId)) {
-          console.log('✅ Nalezen existující Player ID:', currentPlayerId);
+          console.log('✅ Nalezen existující Player ID, spouštím synchronizaci:', currentPlayerId);
           await syncPlayerToSofinity(user.id, getUserIdentifier(), currentPlayerId);
+        } else if (currentPlayerId) {
+          console.log('ℹ️ Player ID již byl synchronizován, přeskakuji');
+        } else {
+          console.log('⚠️ Žádný player ID nenalezen po inicializaci');
         }
 
         // Page focus re-sync handler with debounce
