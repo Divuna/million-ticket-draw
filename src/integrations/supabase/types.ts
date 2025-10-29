@@ -207,11 +207,15 @@ export type Database = {
         Row: {
           created_at: string | null
           error_message: string | null
+          event_id: number | null
           event_name: string
           id: string
           payload: Json
-          record_id: string
+          record_id: string | null
+          request_body: Json | null
+          response_body: Json | null
           response_data: Json | null
+          response_status: number | null
           retry_count: number | null
           status: string
           table_name: string
@@ -220,11 +224,15 @@ export type Database = {
         Insert: {
           created_at?: string | null
           error_message?: string | null
+          event_id?: number | null
           event_name: string
           id?: string
           payload: Json
-          record_id: string
+          record_id?: string | null
+          request_body?: Json | null
+          response_body?: Json | null
           response_data?: Json | null
+          response_status?: number | null
           retry_count?: number | null
           status?: string
           table_name: string
@@ -233,11 +241,15 @@ export type Database = {
         Update: {
           created_at?: string | null
           error_message?: string | null
+          event_id?: number | null
           event_name?: string
           id?: string
           payload?: Json
-          record_id?: string
+          record_id?: string | null
+          request_body?: Json | null
+          response_body?: Json | null
           response_data?: Json | null
+          response_status?: number | null
           retry_count?: number | null
           status?: string
           table_name?: string
@@ -251,6 +263,7 @@ export type Database = {
           event_name: string | null
           id: number
           metadata: Json | null
+          project_id: string | null
           timestamp: string | null
           user_id: string | null
         }
@@ -259,6 +272,7 @@ export type Database = {
           event_name?: string | null
           id?: never
           metadata?: Json | null
+          project_id?: string | null
           timestamp?: string | null
           user_id?: string | null
         }
@@ -267,6 +281,7 @@ export type Database = {
           event_name?: string | null
           id?: never
           metadata?: Json | null
+          project_id?: string | null
           timestamp?: string | null
           user_id?: string | null
         }
