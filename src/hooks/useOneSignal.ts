@@ -138,6 +138,9 @@ export const useOneSignal = () => {
         await OneSignal.init({
           appId: ONESIGNAL_APP_ID,
           allowLocalhostAsSecureOrigin: true,
+          notifyButton: {
+            enable: true,
+          },
         });
         
         isOneSignalInitialized = true;
