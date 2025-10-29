@@ -147,9 +147,25 @@ export const useOneSignal = () => {
         isOneSignalInitializing = false;
         console.log('✅ OneSignal SDK úspěšně inicializován');
 
-        // Request notification permission using new SDK v16 API
-        const permission = await OneSignal.Notifications.requestPermission();
-        console.log('📬 Stav povolení notifikací:', permission);
+        // Check if notifications are already enabled
+        const isPushEnabled = await OneSignal.Notifications.isPushSupported();
+        const permission = await OneSignal.Notifications.permission;
+        console.log('📬 Stav povolení notifikací:', { isPushEnabled, permission });
+
+        // Show Czech localized slidedown only if notifications not yet enabled
+        if (isPushEnabled && permission !== 'granted') {
+          console.log('🔔 Zobrazuji českou výzvu k povolení notifikací...');
+          await OneSignal.Slidedown.promptPush({
+            force: true,
+            text: {
+              actionMessage: "Chcete dostávat upozornění na nové soutěže, výhry a bonusy?",
+              acceptButton: "Povolit",
+              cancelButton: "Ne, děkuji"
+            }
+          });
+        } else if (permission === 'granted') {
+          console.log('✅ Notifikace již jsou povoleny');
+        }
 
         // Helper to get user identifier (email or user.id for anonymous)
         const getUserIdentifier = () => user.email || user.id || 'anonymous';
