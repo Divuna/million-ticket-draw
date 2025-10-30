@@ -67,6 +67,8 @@ const handler = async (req: Request): Promise<Response> => {
       metadata: metadata || {}
     };
 
+    console.log('Sofinity payload:', JSON.stringify(sofinityPayload, null, 2));
+
     // Get Sofinity API key from settings
     const { data: settingsData, error: settingsError } = await supabase
       .from('settings')
