@@ -290,6 +290,48 @@ export type Database = {
         }
         Relationships: []
       }
+      event_queue: {
+        Row: {
+          contest_id: string | null
+          created_at: string | null
+          event_name: string
+          id: string
+          last_error: string | null
+          metadata: Json | null
+          processed_at: string | null
+          retry_count: number | null
+          source_system: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          contest_id?: string | null
+          created_at?: string | null
+          event_name: string
+          id?: string
+          last_error?: string | null
+          metadata?: Json | null
+          processed_at?: string | null
+          retry_count?: number | null
+          source_system?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          contest_id?: string | null
+          created_at?: string | null
+          event_name?: string
+          id?: string
+          last_error?: string | null
+          metadata?: Json | null
+          processed_at?: string | null
+          retry_count?: number | null
+          source_system?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -1026,7 +1068,7 @@ export type Database = {
           p_metadata?: Json
           p_user_id?: string
         }
-        Returns: undefined
+        Returns: string
       }
       redeem_miocoin: {
         Args: {

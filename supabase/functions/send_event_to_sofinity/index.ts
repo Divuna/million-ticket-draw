@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 interface EventRequest {
+  queue_id?: string;
   event_name: string;
   user_id?: string;
   contest_id?: string;
@@ -25,12 +26,24 @@ const handler = async (req: Request): Promise<Response> => {
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
     // Get request data
-    const { event_name, user_id, contest_id, metadata, timestamp }: EventRequest = await req.json();
+    const { queue_id, event_name, user_id, contest_id, metadata, timestamp }: EventRequest = await req.json();
 
-    console.log('Processing event:', { event_name, user_id, contest_id, metadata });
+    console.log('Processing event:', { queue_id, event_name, user_id, contest_id, metadata });
+
+    // If queue_id provided, update status to processing
+    if (queue_id) {
+      const { error: updateError } = await supabase
+        .from('event_queue')
+        .update({ status: 'processing' })
+        .eq('id', queue_id);
+
+      if (updateError) {
+        console.error('Error updating queue status to processing:', updateError);
+      }
+    }
 
     // Prepare audit log data
     const auditData = {
@@ -145,10 +158,22 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Event sent to Sofinity successfully:', sofinityData);
 
+    // Update queue status to completed if queue_id provided
+    if (queue_id) {
+      await supabase
+        .from('event_queue')
+        .update({ 
+          status: 'completed',
+          processed_at: new Date().toISOString()
+        })
+        .eq('id', queue_id);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       audit_log_id: auditLog.id,
-      sofinity_response: sofinityData
+      sofinity_response: sofinityData,
+      queue_id
     }), {
       status: 200,
       headers: {
@@ -159,10 +184,37 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: any) {
     console.error('Error in send_event_to_sofinity function:', error);
+    
+    // Try to extract queue_id from request if available
+    let queue_id: string | undefined;
+    try {
+      const body = await req.clone().json();
+      queue_id = body.queue_id;
+    } catch {
+      // Ignore parse errors
+    }
+
+    // Update queue status to failed if queue_id provided
+    if (queue_id) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
+      
+      await supabase
+        .from('event_queue')
+        .update({ 
+          status: 'failed',
+          last_error: error.message,
+          retry_count: supabase.from('event_queue').select('retry_count').eq('id', queue_id).single().then(d => (d.data?.retry_count || 0) + 1)
+        })
+        .eq('id', queue_id);
+    }
+
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message 
+        error: error.message,
+        queue_id
       }),
       {
         status: 500,
