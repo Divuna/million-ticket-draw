@@ -87,12 +87,12 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Sofinity URL not found');
     }
 
-    // Send to Sofinity API with x-api-key header
+    // Send to Sofinity API with apikey header
     const sofinityResponse = await fetch(`${sofinityUrl}/rest/v1/EventLogs`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': sofinityApiKey,
+        'apikey': sofinityApiKey,
         'Prefer': 'return=representation'
       },
       body: JSON.stringify(sofinityPayload)
