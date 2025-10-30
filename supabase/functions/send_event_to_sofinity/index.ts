@@ -67,21 +67,32 @@ const handler = async (req: Request): Promise<Response> => {
       metadata: metadata || {}
     };
 
-    // Send to Sofinity API
-    const sofinityUrl = Deno.env.get('SOFINITY_URL');
-    const sofinityServiceKey = Deno.env.get('SOFINITY_SERVICE_KEY');
+    // Get Sofinity API key from settings
+    const { data: settingsData, error: settingsError } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'sofinity_api_key')
+      .single();
 
-    if (!sofinityUrl || !sofinityServiceKey) {
-      console.error('Missing Sofinity configuration');
-      throw new Error('Sofinity configuration not found');
+    if (settingsError || !settingsData?.value) {
+      console.error('Failed to retrieve Sofinity API key from settings:', settingsError);
+      throw new Error('Sofinity API key not configured in settings');
     }
 
+    const sofinityApiKey = settingsData.value;
+    const sofinityUrl = Deno.env.get('SOFINITY_URL');
+
+    if (!sofinityUrl) {
+      console.error('Missing Sofinity URL configuration');
+      throw new Error('Sofinity URL not found');
+    }
+
+    // Send to Sofinity API with x-api-key header
     const sofinityResponse = await fetch(`${sofinityUrl}/rest/v1/EventLogs`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sofinityServiceKey}`,
-        'apikey': sofinityServiceKey,
+        'x-api-key': sofinityApiKey,
         'Prefer': 'return=representation'
       },
       body: JSON.stringify(sofinityPayload)
