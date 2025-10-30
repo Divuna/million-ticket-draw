@@ -87,15 +87,47 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Sofinity URL not found');
     }
 
-    // Send to Sofinity API with apikey header
+    // Generate security headers
+    const requestTimestamp = new Date().toISOString();
+    const idempotencyKey = crypto.randomUUID();
+    const bodyString = JSON.stringify(sofinityPayload);
+
+    // Generate HMAC-SHA256 signature
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(sofinityApiKey);
+    const messageData = encoder.encode(bodyString + requestTimestamp);
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    
+    const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+    const signatureArray = Array.from(new Uint8Array(signatureBuffer));
+    const signature = signatureArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    console.log('Security headers:', {
+      timestamp: requestTimestamp,
+      idempotencyKey,
+      signatureLength: signature.length
+    });
+
+    // Send to Sofinity API with all security headers
     const sofinityResponse = await fetch(`${sofinityUrl}/rest/v1/EventLogs`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': sofinityApiKey,
+        'x-api-key': sofinityApiKey,
+        'x-signature': signature,
+        'x-timestamp': requestTimestamp,
+        'x-idempotency-key': idempotencyKey,
         'Prefer': 'return=representation'
       },
-      body: JSON.stringify(sofinityPayload)
+      body: bodyString
     });
 
     const sofinityData = await sofinityResponse.json().catch(() => null);
