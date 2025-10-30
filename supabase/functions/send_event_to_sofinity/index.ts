@@ -115,8 +115,8 @@ const handler = async (req: Request): Promise<Response> => {
       signatureLength: signature.length
     });
 
-    // Send to Sofinity API with all security headers
-    const sofinityResponse = await fetch(`${sofinityUrl}/rest/v1/EventLogs`, {
+    // Send to Sofinity edge function endpoint
+    const sofinityResponse = await fetch(`${sofinityUrl}/functions/v1/sofinity-event`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
