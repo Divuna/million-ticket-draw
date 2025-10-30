@@ -63,6 +63,7 @@ const handler = async (req: Request): Promise<Response> => {
       event_name,
       user_id,
       contest_id: contest_id || null,
+      source_system: 'onemil',
       metadata: metadata || {}
     };
 

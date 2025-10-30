@@ -264,6 +264,7 @@ export type Database = {
           id: number
           metadata: Json | null
           project_id: string | null
+          source_system: string
           timestamp: string | null
           user_id: string | null
         }
@@ -273,6 +274,7 @@ export type Database = {
           id?: never
           metadata?: Json | null
           project_id?: string | null
+          source_system?: string
           timestamp?: string | null
           user_id?: string | null
         }
@@ -282,6 +284,7 @@ export type Database = {
           id?: never
           metadata?: Json | null
           project_id?: string | null
+          source_system?: string
           timestamp?: string | null
           user_id?: string | null
         }
@@ -902,6 +905,10 @@ export type Database = {
         Returns: Json
       }
       fn_close_contest: { Args: { p_contest: string }; Returns: undefined }
+      forward_event_to_sofinity: {
+        Args: { v_payload: Json }
+        Returns: undefined
+      }
       get_active_banners_summary: { Args: never; Returns: string }
       get_admin_actions_summary: {
         Args: {
