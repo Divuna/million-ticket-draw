@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { decode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,10 +19,9 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase clients
+    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
     // Get JWT from Authorization header
     const authHeader = req.headers.get('Authorization');
@@ -33,33 +33,51 @@ serve(async (req) => {
       );
     }
 
-    // Create client with JWT to get authenticated user
+    // Extract and decode JWT to get user_id and email
     const token = authHeader.replace('Bearer ', '');
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    // Get authenticated user from JWT
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
     
-    if (authError || !user) {
-      console.error('[sofinity-player-sync] Authentication failed:', authError);
+    let userId: string;
+    let userEmail: string;
+    
+    try {
+      // JWT structure: header.payload.signature
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        throw new Error('Invalid JWT format');
+      }
+      
+      // Decode the payload (second part)
+      const payload = parts[1];
+      // Add padding if needed for base64 decoding
+      const paddedPayload = payload + '='.repeat((4 - payload.length % 4) % 4);
+      const decodedBytes = decode(paddedPayload);
+      const decodedPayload = JSON.parse(new TextDecoder().decode(decodedBytes));
+      
+      console.log('[sofinity-player-sync] Decoded JWT payload:', {
+        sub: decodedPayload.sub,
+        email: decodedPayload.email,
+        hasOtherClaims: Object.keys(decodedPayload).length
+      });
+      
+      // Extract user_id (sub claim) and email
+      userId = decodedPayload.sub;
+      userEmail = decodedPayload.email;
+      
+      if (!userId || !userEmail) {
+        throw new Error('Missing sub or email in JWT payload');
+      }
+    } catch (decodeError) {
+      console.error('[sofinity-player-sync] JWT decode error:', decodeError);
       return new Response(
-        JSON.stringify({ error: 'Authentication failed', details: authError?.message }),
+        JSON.stringify({ 
+          error: 'Invalid JWT token', 
+          details: decodeError instanceof Error ? decodeError.message : String(decodeError)
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = user.id;
-    const userEmail = user.email;
-
-    if (!userEmail) {
-      console.error('[sofinity-player-sync] User email not found in JWT');
-      return new Response(
-        JSON.stringify({ error: 'User email not found' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log(`[sofinity-player-sync] Authenticated user from JWT: user_id=${userId}, email=${userEmail}`);
 
     // Parse request body
     const { player_id, device_type = 'web' } = await req.json() as PlayerSyncRequest;
