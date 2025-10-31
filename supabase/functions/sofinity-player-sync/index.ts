@@ -63,6 +63,10 @@ serve(async (req) => {
       userId = decodedPayload.sub;
       userEmail = decodedPayload.email;
       
+      if (!userId) {
+        console.error('[sofinity-player-sync] CRITICAL: user_id (sub claim) is missing from JWT payload');
+      }
+      
       if (!userId || !userEmail) {
         throw new Error('Missing sub or email in JWT payload');
       }
