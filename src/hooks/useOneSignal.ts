@@ -59,31 +59,32 @@ const syncPlayerToSofinity = async (
 
     const userEmail = userData.user.email || emailOrIdentifier;
     
-    console.log('🚀 [syncPlayerToSofinity] Calling save_player_id RPC...');
+    console.log('🚀 [syncPlayerToSofinity] Calling sofinity-player-sync edge function...');
     
-    // Call RPC to save player ID
-    const { data, error: rpcError } = await supabase.rpc('save_player_id', {
-      p_user_id: userId,
-      p_player_id: playerId,
-      p_device_type: 'web',
-      p_email: userEmail
+    // Call edge function - it handles both Supabase update AND Sofinity forwarding
+    const { data, error: functionError } = await supabase.functions.invoke('sofinity-player-sync', {
+      body: {
+        email: userEmail,
+        player_id: playerId,
+        device_type: 'web'
+      }
     });
 
-    console.log('✅ [syncPlayerToSofinity] RPC call completed');
-    console.log('📡 [syncPlayerToSofinity] Odpověď z RPC:', { 
-      success: !rpcError,
+    console.log('✅ [syncPlayerToSofinity] Edge function call completed');
+    console.log('📡 [syncPlayerToSofinity] Odpověď z edge funkce:', { 
+      success: !functionError,
       data,
-      error: rpcError,
+      error: functionError,
       dataDetails: data ? JSON.stringify(data) : 'null'
     });
 
-    if (!rpcError) {
+    if (!functionError && data?.success) {
       console.log('✅ Player ID úspěšně synchronizován do OneMil i Sofinity');
       markPlayerSynced(playerId);
       toast({ title: '✅ Zařízení zaregistrováno pro notifikace' });
       return true;
     } else {
-      throw new Error(`RPC error: ${rpcError?.message || 'Unknown error'}`);
+      throw new Error(`Sync error: ${functionError?.message || data?.error || 'Unknown error'}`);
     }
   } catch (error) {
     console.error(`❌ Synchronizace selhala (pokus ${retryCount + 1}/${MAX_RETRIES}):`, error);
