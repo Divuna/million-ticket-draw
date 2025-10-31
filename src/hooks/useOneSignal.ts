@@ -140,17 +140,12 @@ export const useOneSignal = () => {
             enable: true,
           },
           slidedown: {
-            prompts: [
-              {
-                type: 'push',
-                autoPrompt: true,
-                text: {
-                  actionMessage: 'Chceš dostávat upozornění?',
-                  acceptButton: 'Ano',
-                  cancelButton: 'Ne'
-                }
-              }
-            ]
+            prompts: [{ type: 'push', autoPrompt: true }],
+            text: {
+              actionMessage: 'Chceš dostávat upozornění o soutěžích a výhrách?',
+              acceptButton: 'Ano',
+              cancelButton: 'Ne'
+            }
           }
         });
         
