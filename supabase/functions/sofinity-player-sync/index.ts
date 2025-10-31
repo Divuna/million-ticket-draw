@@ -136,12 +136,29 @@ serve(async (req) => {
     });
 
     // Step 2: Forward to Sofinity endpoint with user_id and email from JWT
-    const sofinityUrl = 'https://rrmvxsldrjgbdxluklka.supabase.co/functions/v1/player-sync-receiver';
+    const sofinityUrl = Deno.env.get('SOFINITY_URL');
+    const sofinityApiKey = Deno.env.get('SOFINITY_API_KEY');
+
+    if (!sofinityUrl || !sofinityApiKey) {
+      console.error('[sofinity-player-sync] Missing SOFINITY_URL or SOFINITY_API_KEY');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          onemil_updated: true,
+          sofinity_updated: false,
+          error: 'Sofinity configuration missing',
+          message: 'Player ID uložen v OneMil, ale konfigurace Sofinity chybí'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const sofinityPayload = {
       email: userEmail,
       player_id,
       device_type,
       user_id: userId,
+      userId: userId, // camelCase alias for compatibility
       timestamp: new Date().toISOString(),
     };
 
@@ -154,7 +171,7 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseServiceKey}`,
+        'Authorization': `Bearer ${sofinityApiKey}`,
       },
       body: JSON.stringify(sofinityPayload),
     });
