@@ -50,32 +50,40 @@ const syncPlayerToSofinity = async (
       retryCount
     });
 
-    console.log('🚀 [syncPlayerToSofinity] Calling supabase.functions.invoke BEFORE...');
+    // Fetch current user to get their email
+    const { data: userData, error: userError } = await supabase.auth.getUser();
     
-    // Call edge function - it handles both Supabase update AND Sofinity forwarding
-    const { data, error: functionError } = await supabase.functions.invoke('sofinity-player-sync', {
-      body: {
-        email: emailOrIdentifier,
-        player_id: playerId,
-        device_type: 'web'
-      }
+    if (userError || !userData?.user) {
+      throw new Error(`Failed to fetch user: ${userError?.message || 'User not found'}`);
+    }
+
+    const userEmail = userData.user.email || emailOrIdentifier;
+    
+    console.log('🚀 [syncPlayerToSofinity] Calling save_player_id RPC...');
+    
+    // Call RPC to save player ID
+    const { data, error: rpcError } = await supabase.rpc('save_player_id', {
+      p_user_id: userId,
+      p_player_id: playerId,
+      p_device_type: 'web',
+      p_email: userEmail
     });
 
-    console.log('✅ [syncPlayerToSofinity] Calling supabase.functions.invoke AFTER');
-    console.log('📡 [syncPlayerToSofinity] Odpověď z edge funkce:', { 
-      success: !functionError,
+    console.log('✅ [syncPlayerToSofinity] RPC call completed');
+    console.log('📡 [syncPlayerToSofinity] Odpověď z RPC:', { 
+      success: !rpcError,
       data,
-      error: functionError,
+      error: rpcError,
       dataDetails: data ? JSON.stringify(data) : 'null'
     });
 
-    if (!functionError && data?.success) {
+    if (!rpcError) {
       console.log('✅ Player ID úspěšně synchronizován do OneMil i Sofinity');
       markPlayerSynced(playerId);
       toast({ title: '✅ Zařízení zaregistrováno pro notifikace' });
       return true;
     } else {
-      throw new Error(`Sync error: ${functionError?.message || data?.error || 'Unknown error'}`);
+      throw new Error(`RPC error: ${rpcError?.message || 'Unknown error'}`);
     }
   } catch (error) {
     console.error(`❌ Synchronizace selhala (pokus ${retryCount + 1}/${MAX_RETRIES}):`, error);
