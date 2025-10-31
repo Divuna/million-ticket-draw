@@ -54,6 +54,8 @@ const syncPlayerToSofinity = async (
     // and handle both Supabase update AND Sofinity forwarding
     const { data, error: functionError } = await supabase.functions.invoke('sofinity-player-sync', {
       body: {
+        email: emailOrIdentifier,
+        user_id: userId,
         player_id: playerId,
         device_type: 'web'
       }
