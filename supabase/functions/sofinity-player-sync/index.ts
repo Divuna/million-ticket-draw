@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { decode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+import { crypto } from "https://deno.land/std@0.224.0/crypto/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -138,9 +139,10 @@ serve(async (req) => {
     // Step 2: Forward to Sofinity endpoint with user_id and email from JWT
     const sofinityUrl = Deno.env.get('SOFINITY_URL');
     const sofinityApiKey = Deno.env.get('SOFINITY_API_KEY');
+    const sofinitySharedKey = Deno.env.get('SOFINITY_SHARED_KEY');
 
-    if (!sofinityUrl || !sofinityApiKey) {
-      console.error('[sofinity-player-sync] Missing SOFINITY_URL or SOFINITY_API_KEY');
+    if (!sofinityUrl || !sofinityApiKey || !sofinitySharedKey) {
+      console.error('[sofinity-player-sync] Missing SOFINITY_URL, SOFINITY_API_KEY, or SOFINITY_SHARED_KEY');
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -167,13 +169,42 @@ serve(async (req) => {
       user_id_confirmed: !!userId
     });
 
-    const sofinityResponse = await fetch(sofinityUrl, {
+    // Generate HMAC signature for Sofinity
+    const requestTimestamp = new Date().toISOString();
+    const idempotencyKey = crypto.randomUUID();
+    const rawBody = JSON.stringify(sofinityPayload);
+    
+    // Create HMAC signature: HMAC_SHA256(timestamp + rawBody, SOFINITY_SHARED_KEY)
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(sofinitySharedKey),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    
+    const signatureData = encoder.encode(requestTimestamp + rawBody);
+    const signatureBuffer = await crypto.subtle.sign('HMAC', key, signatureData);
+    const signatureArray = Array.from(new Uint8Array(signatureBuffer));
+    const signature = signatureArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    console.log('[sofinity-player-sync] Generated HMAC signature:', {
+      timestamp: requestTimestamp,
+      idempotencyKey,
+      signatureLength: signature.length
+    });
+
+    const sofinityResponse = await fetch(`${sofinityUrl}/sofinity-event`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${sofinityApiKey}`,
+        'x-signature': signature,
+        'x-timestamp': requestTimestamp,
+        'x-idempotency-key': idempotencyKey,
       },
-      body: JSON.stringify(sofinityPayload),
+      body: rawBody,
     });
 
     const sofinityData = await sofinityResponse.json();
