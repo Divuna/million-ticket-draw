@@ -50,21 +50,12 @@ const syncPlayerToSofinity = async (
       retryCount
     });
 
-    // Fetch current user to get their email
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !userData?.user) {
-      throw new Error(`Failed to fetch user: ${userError?.message || 'User not found'}`);
-    }
-
-    const userEmail = userData.user.email || emailOrIdentifier;
-    
     console.log('🚀 [syncPlayerToSofinity] Calling sofinity-player-sync edge function...');
     
-    // Call edge function - it handles both Supabase update AND Sofinity forwarding
+    // Call edge function - it will extract user_id and email from JWT
+    // and handle both Supabase update AND Sofinity forwarding
     const { data, error: functionError } = await supabase.functions.invoke('sofinity-player-sync', {
       body: {
-        email: userEmail,
         player_id: playerId,
         device_type: 'web'
       }

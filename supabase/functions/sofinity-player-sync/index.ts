@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 interface PlayerSyncRequest {
-  email: string;
   player_id: string;
   device_type?: string;
 }
@@ -19,10 +18,10 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client
+    // Initialize Supabase clients
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
     // Get JWT from Authorization header
     const authHeader = req.headers.get('Authorization');
@@ -34,24 +33,55 @@ serve(async (req) => {
       );
     }
 
-    // Parse request body
-    const { email, player_id, device_type = 'web' } = await req.json() as PlayerSyncRequest;
+    // Create client with JWT to get authenticated user
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
 
-    if (!email || !player_id) {
-      console.error('[sofinity-player-sync] Missing required fields:', { email, player_id });
+    // Get authenticated user from JWT
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('[sofinity-player-sync] Authentication failed:', authError);
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: email, player_id' }),
+        JSON.stringify({ error: 'Authentication failed', details: authError?.message }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = user.id;
+    const userEmail = user.email;
+
+    if (!userEmail) {
+      console.error('[sofinity-player-sync] User email not found in JWT');
+      return new Response(
+        JSON.stringify({ error: 'User email not found' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[sofinity-player-sync] Syncing player for email: ${email}, player_id: ${player_id}`);
+    // Parse request body
+    const { player_id, device_type = 'web' } = await req.json() as PlayerSyncRequest;
+
+    if (!player_id) {
+      console.error('[sofinity-player-sync] Missing required field: player_id');
+      return new Response(
+        JSON.stringify({ error: 'Missing required field: player_id' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[sofinity-player-sync] Syncing player for user_id: ${userId}, email: ${userEmail}, player_id: ${player_id}`);
+
+    // Use service role client for database operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Step 1: Save player_id to OneMil users table
     const { data: updateData, error: updateError } = await supabase
       .from('users')
       .update({ onesignal_player_id: player_id })
-      .eq('email', email)
+      .eq('id', userId)
       .select('id, email, onesignal_player_id');
 
     if (updateError) {
@@ -67,7 +97,7 @@ serve(async (req) => {
     }
 
     if (!updateData || updateData.length === 0) {
-      console.warn(`[sofinity-player-sync] No user found with email: ${email}`);
+      console.warn(`[sofinity-player-sync] No user found with id: ${userId}`);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -77,29 +107,16 @@ serve(async (req) => {
       );
     }
 
-    const userId = updateData[0].id;
     console.log('[sofinity-player-sync] OneMil user updated successfully:', {
       userId,
       email: updateData[0].email,
       onesignal_player_id: updateData[0].onesignal_player_id
     });
 
-    // Validate user_id exists before forwarding
-    if (!userId) {
-      console.error('[sofinity-player-sync] Missing user_id from database update');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Failed to retrieve user_id from database' 
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Step 2: Forward to Sofinity endpoint with user_id
+    // Step 2: Forward to Sofinity endpoint with user_id and email from JWT
     const sofinityUrl = 'https://rrmvxsldrjgbdxluklka.supabase.co/functions/v1/player-sync-receiver';
     const sofinityPayload = {
-      email,
+      email: userEmail,
       player_id,
       device_type,
       user_id: userId,
