@@ -195,6 +195,20 @@ serve(async (req) => {
       signatureLength: signature.length
     });
 
+    // Log full request details before sending to Sofinity
+    console.log('[sofinity-player-sync] 📤 Sending request to Sofinity:', {
+      url: `${sofinityUrl}/sofinity-event`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sofinityApiKey.substring(0, 10)}...`, // Masked for security
+        'x-signature': signature,
+        'x-timestamp': requestTimestamp,
+        'x-idempotency-key': idempotencyKey,
+      },
+      body: JSON.parse(rawBody) // Pretty print the JSON body
+    });
+
     const sofinityResponse = await fetch(`${sofinityUrl}/sofinity-event`, {
       method: 'POST',
       headers: {
