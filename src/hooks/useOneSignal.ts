@@ -141,31 +141,24 @@ export const useOneSignal = () => {
           notifyButton: {
             enable: true,
           },
+          slidedown: {
+            prompts: [
+              {
+                type: 'push',
+                autoPrompt: true,
+                text: {
+                  actionMessage: 'Chceš dostávat upozornění?',
+                  acceptButton: 'Ano',
+                  cancelButton: 'Ne'
+                }
+              }
+            ]
+          }
         });
         
         isOneSignalInitialized = true;
         isOneSignalInitializing = false;
-        console.log('✅ OneSignal SDK úspěšně inicializován');
-
-        // Check if notifications are already enabled
-        const isPushEnabled = await OneSignal.Notifications.isPushSupported();
-        const permission = await OneSignal.Notifications.permission;
-        console.log('📬 Stav povolení notifikací:', { isPushEnabled, permission });
-
-        // Show Czech localized slidedown only if notifications not yet enabled
-        if (isPushEnabled && permission !== 'granted') {
-          console.log('🔔 Zobrazuji českou výzvu k povolení notifikací...');
-          await OneSignal.Slidedown.promptPush({
-            force: true,
-            text: {
-              actionMessage: "Chcete dostávat upozornění na nové soutěže, výhry a bonusy?",
-              acceptButton: "Povolit",
-              cancelButton: "Ne, děkuji"
-            }
-          });
-        } else if (permission === 'granted') {
-          console.log('✅ Notifikace již jsou povoleny');
-        }
+        console.log('✅ OneSignal SDK úspěšně inicializován se slidedown konfigurací');
 
         // Helper to get user identifier (email or user.id for anonymous)
         const getUserIdentifier = () => user.email || user.id || 'anonymous';
