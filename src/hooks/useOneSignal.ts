@@ -7,14 +7,12 @@ const ONESIGNAL_APP_ID = '357be038-dbaf-4551-9a16-96d9897197a3';
 const MAX_RETRIES = 3; // First attempt + 2 retries = 3 total attempts
 const SESSION_KEY = 'onesignal_synced_players';
 
-// Global flag to prevent duplicate initialization across all hook instances
-let isOneSignalInitialized = false;
-let isOneSignalInitializing = false;
-
 declare global {
   interface Window {
     OneSignalDeferred?: Array<(OneSignal: any) => void>;
     OneSignal?: any;
+    OneSignalInitialized?: boolean;
+    OneSignalInitializing?: boolean;
   }
 }
 
@@ -113,23 +111,23 @@ export const useOneSignal = () => {
     }
 
     console.log('🚀 [useOneSignal] User is logged in, checking initialization state:', {
-      isOneSignalInitialized,
-      isOneSignalInitializing
+      isOneSignalInitialized: window.OneSignalInitialized,
+      isOneSignalInitializing: window.OneSignalInitializing
     });
 
-    if (isOneSignalInitialized || isOneSignalInitializing) {
+    if (window.OneSignalInitialized || window.OneSignalInitializing) {
       console.log('⚠️ [useOneSignal] OneSignal already initialized/initializing, skipping');
       return;
     }
 
-    isOneSignalInitializing = true;
+    window.OneSignalInitializing = true;
     console.log('🔄 Spouštění inicializace OneSignal...');
 
     // Initialize OneSignal
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async (OneSignal: any) => {
       // Double-check to prevent duplicate initialization
-      if (isOneSignalInitialized) {
+      if (window.OneSignalInitialized) {
         console.log('⚠️ OneSignal již byl inicializován, přeskakuji duplicitní inicializaci');
         return;
       }
@@ -156,8 +154,8 @@ export const useOneSignal = () => {
           }
         });
         
-        isOneSignalInitialized = true;
-        isOneSignalInitializing = false;
+        window.OneSignalInitialized = true;
+        window.OneSignalInitializing = false;
         console.log('✅ OneSignal SDK úspěšně inicializován se slidedown konfigurací');
 
         // Helper to get user identifier (email or user.id for anonymous)
@@ -218,7 +216,7 @@ export const useOneSignal = () => {
         };
       } catch (error) {
         console.error('❌ Chyba při inicializaci OneSignal:', error);
-        isOneSignalInitializing = false;
+        window.OneSignalInitializing = false;
       }
     });
   }, [user]);
