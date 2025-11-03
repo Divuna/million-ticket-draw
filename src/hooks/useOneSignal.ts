@@ -32,6 +32,29 @@ const markPlayerSynced = (playerId: string) => {
   }
 };
 
+// Helper: Save player ID to database
+const savePlayerIdToDatabase = async (userId: string, playerId: string): Promise<boolean> => {
+  try {
+    console.log('💾 [savePlayerIdToDatabase] Ukládám player ID do databáze...', { userId, playerId });
+    
+    const { error } = await supabase
+      .from('users')
+      .update({ onesignal_player_id: playerId })
+      .eq('id', userId);
+
+    if (error) {
+      console.error('❌ Chyba při ukládání player ID do databáze:', error);
+      return false;
+    }
+
+    console.log('✅ Player ID úspěšně uložen do databáze');
+    return true;
+  } catch (error) {
+    console.error('❌ Výjimka při ukládání player ID:', error);
+    return false;
+  }
+};
+
 // Helper: Sync player ID to Sofinity and Supabase with retry logic
 const syncPlayerToSofinity = async (
   userId: string,
@@ -47,6 +70,12 @@ const syncPlayerToSofinity = async (
       device_type: 'web',
       retryCount
     });
+
+    // First, save player ID to database
+    const dbSaved = await savePlayerIdToDatabase(userId, playerId);
+    if (!dbSaved) {
+      throw new Error('Failed to save player ID to database');
+    }
 
     console.log('🚀 [syncPlayerToSofinity] Calling sofinity-player-sync edge function...');
     
@@ -72,7 +101,7 @@ const syncPlayerToSofinity = async (
     if (!functionError && data?.success) {
       console.log('✅ Player ID úspěšně synchronizován do OneMil i Sofinity');
       markPlayerSynced(playerId);
-      toast({ title: '✅ Zařízení zaregistrováno pro notifikace' });
+      toast({ title: 'Push notifikace aktivní' });
       return true;
     } else {
       throw new Error(`Sync error: ${functionError?.message || data?.error || 'Unknown error'}`);
@@ -88,7 +117,7 @@ const syncPlayerToSofinity = async (
       return syncPlayerToSofinity(userId, emailOrIdentifier, playerId, retryCount + 1);
     } else {
       console.error('❌ Synchronizace selhala - všechny pokusy vyčerpány');
-      toast({ title: '⚠️ Registrace notifikací selhala, zkuste to prosím znovu' });
+      toast({ title: 'Nelze aktivovat push' });
       return false;
     }
   }
