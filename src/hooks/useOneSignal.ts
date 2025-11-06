@@ -1,9 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
-const ONESIGNAL_APP_ID = '357be038-dbaf-4551-9a16-96d9897197a3';
 const MAX_RETRIES = 3; // First attempt + 2 retries = 3 total attempts
 const SESSION_KEY = 'onesignal_synced_players';
 
@@ -32,15 +31,21 @@ const markPlayerSynced = (playerId: string) => {
   }
 };
 
-// Helper: Save player ID to database
+// Helper: Save player ID to user_devices table
 const savePlayerIdToDatabase = async (userId: string, playerId: string): Promise<boolean> => {
   try {
     console.log('💾 [savePlayerIdToDatabase] Ukládám player ID do databáze...', { userId, playerId });
     
     const { error } = await supabase
-      .from('users')
-      .update({ onesignal_player_id: playerId })
-      .eq('id', userId);
+      .from('user_devices')
+      .upsert({ 
+        user_id: userId, 
+        player_id: playerId, 
+        device_type: 'web',
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,player_id'
+      });
 
     if (error) {
       console.error('❌ Chyba při ukládání player ID do databáze:', error);
@@ -101,7 +106,7 @@ const syncPlayerToSofinity = async (
     if (!functionError && data?.success) {
       console.log('✅ Player ID úspěšně synchronizován do OneMil i Sofinity');
       markPlayerSynced(playerId);
-      toast({ title: 'Push notifikace aktivní' });
+      toast({ title: 'Zařízení úspěšně zaregistrováno pro notifikace.' });
       return true;
     } else {
       throw new Error(`Sync error: ${functionError?.message || data?.error || 'Unknown error'}`);
@@ -126,8 +131,36 @@ const syncPlayerToSofinity = async (
 export const useOneSignal = () => {
   const { user } = useAuth();
   const focusDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const [appId, setAppId] = useState<string | null>(null);
+
+  // Fetch OneSignal App ID from settings
+  useEffect(() => {
+    const fetchAppId = async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'onesignal_app_id')
+        .single();
+      
+      if (error) {
+        console.error('❌ Chyba při načítání OneSignal App ID:', error);
+        return;
+      }
+      
+      if (data?.value) {
+        setAppId(data.value);
+        console.log('✅ OneSignal App ID načteno ze settings');
+      }
+    };
+    
+    fetchAppId();
+  }, []);
 
   useEffect(() => {
+    if (!appId) {
+      console.log('⚠️ OneSignal App ID ještě není k dispozici');
+      return;
+    }
     console.log('🔍 [useOneSignal] Hook triggered, user state:', { 
       hasUser: !!user, 
       userId: user?.id,
@@ -165,7 +198,7 @@ export const useOneSignal = () => {
       
       try {
         await OneSignal.init({
-          appId: ONESIGNAL_APP_ID,
+          appId: appId,
           allowLocalhostAsSecureOrigin: true,
           notifyButton: {
             enable: true,
@@ -250,5 +283,5 @@ export const useOneSignal = () => {
         window.OneSignalInitializing = false;
       }
     });
-  }, [user]);
+  }, [user, appId]);
 };

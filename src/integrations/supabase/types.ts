@@ -47,30 +47,6 @@ export type Database = {
         }
         Relationships: []
       }
-      audit_logs: {
-        Row: {
-          created_at: string
-          event: string
-          id: number
-          metadata: Json | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          event: string
-          id?: number
-          metadata?: Json | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          event?: string
-          id?: number
-          metadata?: Json | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       banners: {
         Row: {
           active: boolean
@@ -506,6 +482,33 @@ export type Database = {
           },
         ]
       }
+      push_retry: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: string
+          next_try: string
+          raw_id: number
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id: string
+          next_try?: string
+          raw_id: number
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          next_try?: string
+          raw_id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       roles: {
         Row: {
           name: string
@@ -588,6 +591,33 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      user_devices: {
+        Row: {
+          created_at: string | null
+          device_type: string
+          id: string
+          player_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_type?: string
+          id?: string
+          player_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          device_type?: string
+          id?: string
+          player_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_vouchers: {
         Row: {
@@ -1039,6 +1069,18 @@ export type Database = {
       }
       get_contests_json: { Args: never; Returns: Json }
       get_current_user_role: { Args: never; Returns: string }
+      get_pending_event_forward_log: {
+        Args: { _limit: number }
+        Returns: {
+          created_at: string
+          event_name: string
+          id: string
+          payload: Json
+          request_body: Json
+          status: string
+          table_name: string
+        }[]
+      }
       get_prizes_delivery_summary: {
         Args: { p_contest_id?: string }
         Returns: {
@@ -1070,6 +1112,20 @@ export type Database = {
         }
         Returns: string
       }
+      process_push_retries: { Args: never; Returns: undefined }
+      proxy_post_to_onesignal: {
+        Args: {
+          event_name: string
+          external_id: string
+          message: string
+          player_id: string
+          title: string
+        }
+        Returns: {
+          response_body: Json
+          status_code: number
+        }[]
+      }
       redeem_miocoin: {
         Args: {
           p_contest_id: string
@@ -1088,10 +1144,24 @@ export type Database = {
         Args: { p_performance_events?: number }
         Returns: Json
       }
-      send_push_via_onesignal: {
-        Args: { p_message: string; p_player_id: string; p_title: string }
-        Returns: undefined
-      }
+      send_push_via_onesignal:
+        | {
+            Args: { p_message: string; p_player_id: string; p_title: string }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              event_name: string
+              external_id: string
+              message: string
+              player_id: string
+              title: string
+            }
+            Returns: {
+              response_body: Json
+              status_code: number
+            }[]
+          }
       setup_crud_test_data: { Args: { p_user_email?: string }; Returns: Json }
       test_admin_crud_operations: { Args: never; Returns: Json }
       test_admin_security_rls: { Args: never; Returns: Json }
