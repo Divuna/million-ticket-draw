@@ -17,10 +17,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 
 interface AuditLog {
   id: number;
-  event: string;
+  event_name: string;
   user_id?: string;
   metadata?: any;
-  created_at: string;
+  timestamp: string;
   users?: {
     email: string;
     name?: string;
@@ -45,9 +45,9 @@ const AdminAuditLogs: React.FC = () => {
   const fetchAuditLogs = async () => {
     try {
       const { data: logs, error } = await supabase
-        .from('audit_logs')
+        .from('event_logs')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('timestamp', { ascending: false })
         .limit(1000);
 
       if (error) throw error;
@@ -84,9 +84,9 @@ const AdminAuditLogs: React.FC = () => {
         ['ID', 'Event', 'User', 'Created At', 'Metadata'].join(','),
         ...filteredLogs.map(log => [
           log.id,
-          log.event,
+          log.event_name,
           log.users?.email || 'System',
-          new Date(log.created_at).toLocaleString('cs-CZ'),
+          new Date(log.timestamp).toLocaleString('cs-CZ'),
           JSON.stringify(log.metadata || {}).replace(/,/g, ';')
         ].join(','))
       ].join('\n');
@@ -116,9 +116,9 @@ const AdminAuditLogs: React.FC = () => {
   };
 
   const filteredLogs = auditLogs.filter(log => {
-    const matchesSearch = log.event.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = log.event_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          log.users?.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesEvent = eventFilter === 'všechny' || log.event.includes(eventFilter);
+    const matchesEvent = eventFilter === 'všechny' || log.event_name.includes(eventFilter);
     return matchesSearch && matchesEvent;
   });
 
@@ -131,7 +131,7 @@ const AdminAuditLogs: React.FC = () => {
   };
 
   const getUniqueEvents = () => {
-    const events = [...new Set(auditLogs.map(log => log.event))];
+    const events = [...new Set(auditLogs.map(log => log.event_name))];
     return events.sort();
   };
 
@@ -208,10 +208,10 @@ const AdminAuditLogs: React.FC = () => {
                     {filteredLogs.map((log) => (
                       <TableRow key={log.id}>
                         <TableCell className="font-mono text-xs">{log.id}</TableCell>
-                        <TableCell>{getEventBadge(log.event)}</TableCell>
+                        <TableCell>{getEventBadge(log.event_name)}</TableCell>
                         <TableCell>{log.users?.email || 'System'}</TableCell>
                         <TableCell>
-                          {new Date(log.created_at).toLocaleString('cs-CZ')}
+                          {new Date(log.timestamp).toLocaleString('cs-CZ')}
                         </TableCell>
                         <TableCell className="max-w-xs">
                           {log.metadata ? (
@@ -234,7 +234,7 @@ const AdminAuditLogs: React.FC = () => {
                                 <DialogHeader>
                                   <DialogTitle>Detail audit logu #{log.id}</DialogTitle>
                                   <DialogDescription>
-                                    Událost: {log.event} | Uživatel: {log.users?.email || 'System'}
+                                    Událost: {log.event_name} | Uživatel: {log.users?.email || 'System'}
                                   </DialogDescription>
                                 </DialogHeader>
                                 <div className="mt-4">
