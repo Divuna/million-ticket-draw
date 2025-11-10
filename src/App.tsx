@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthProvider";
 import TestAuthProvider from "@/components/TestAuthProvider";
 import { useOneSignal } from "@/hooks/useOneSignal";
+import { useAuth } from "@/hooks/useAuth";
 
 import Homepage from "@/pages/Homepage";
 import Login from "@/pages/Login";
@@ -39,7 +40,8 @@ import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
 function AppContent() {
-  useOneSignal();
+  const { user } = useAuth();
+  const { playerId, isInitialized, error } = useOneSignal(user?.id);
 
   return (
     <Routes>
