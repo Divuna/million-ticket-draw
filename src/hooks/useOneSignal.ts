@@ -65,7 +65,7 @@ export const useOneSignal = () => {
               if (error) {
                 console.error('❌ Chyba při ukládání Player ID do Supabase:', error);
               } else {
-                console.log('✅ Player ID úspěšně uloženo do Supabase pro uživatele:', user.email);
+                console.log('✅ OneSignal player_id uložen:', playerId);
               }
             } catch (err) {
               console.error('❌ Výjimka při ukládání Player ID:', err);
@@ -87,7 +87,7 @@ export const useOneSignal = () => {
             if (error) {
               console.error('❌ Chyba při ukládání existujícího Player ID do Supabase:', error);
             } else {
-              console.log('✅ Existující Player ID úspěšně uloženo do Supabase pro uživatele:', user.email);
+              console.log('✅ OneSignal player_id uložen:', existingPlayerId);
             }
           } catch (err) {
             console.error('❌ Výjimka při ukládání existujícího Player ID:', err);
