@@ -60,12 +60,12 @@ export const useOneSignal = () => {
               const { error } = await supabase
                 .from('users')
                 .update({ onesignal_player_id: playerId })
-                .eq('email', user.email);
+                .eq('id', user.id);
 
               if (error) {
                 console.error('❌ Chyba při ukládání Player ID do Supabase:', error);
               } else {
-                console.log('✅ Player ID úspěšně uloženo do Supabase pro email:', user.email);
+                console.log('✅ Player ID úspěšně uloženo do Supabase pro uživatele:', user.email);
               }
             } catch (err) {
               console.error('❌ Výjimka při ukládání Player ID:', err);
@@ -82,12 +82,12 @@ export const useOneSignal = () => {
             const { error } = await supabase
               .from('users')
               .update({ onesignal_player_id: existingPlayerId })
-              .eq('email', user.email);
+              .eq('id', user.id);
 
             if (error) {
               console.error('❌ Chyba při ukládání existujícího Player ID do Supabase:', error);
             } else {
-              console.log('✅ Existující Player ID úspěšně uloženo do Supabase pro email:', user.email);
+              console.log('✅ Existující Player ID úspěšně uloženo do Supabase pro uživatele:', user.email);
             }
           } catch (err) {
             console.error('❌ Výjimka při ukládání existujícího Player ID:', err);
