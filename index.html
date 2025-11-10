@@ -16,17 +16,50 @@
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
+    <!-- ✅ OneSignal SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async function(OneSignal) {
+      OneSignalDeferred.push(async function (OneSignal) {
         await OneSignal.init({
           appId: "5e5539e1-fc71-4c4d-9fef-414293d83dbb",
           allowLocalhostAsSecureOrigin: true,
-          notifyButton: {
-            enable: false
-          }
+          notifyButton: { enable: false }
         });
+
+        console.log("✅ OneSignal inicializován");
+
+        try {
+          // 🧩 Získání přihlášeného uživatele ze Supabase
+          const user = window.supabase?.auth?.getUser
+            ? await window.supabase.auth.getUser()
+            : null;
+
+          // 🧩 Získání player_id z OneSignal SDK
+          const playerId = await OneSignal.User.PushSubscription.id;
+
+          if (user?.data?.user?.id && playerId) {
+            const { error } = await window.supabase
+              .from("user_devices")
+              .upsert({
+                user_id: user.data.user.id,
+                player_id: playerId,
+                platform: "web",
+                updated_at: new Date().toISOString()
+              });
+
+            if (error) {
+              console.error("❌ Nepodařilo se zapsat player_id:", error);
+            } else {
+              console.log("✅ Player ID uložen do Supabase:", playerId);
+            }
+          } else {
+            console.warn("⚠️ Player ID nebo user_id nebyl nalezen.");
+          }
+        } catch (e) {
+          console.error("❌ Chyba při inicializaci OneSignal:", e);
+        }
       });
     </script>
   </head>
