@@ -38,7 +38,7 @@ import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const AppContent = () => {
+function AppContent() {
   useOneSignal();
 
   return (
@@ -73,9 +73,9 @@ const AppContent = () => {
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
-};
+}
 
-const App = () => {
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -91,6 +91,6 @@ const App = () => {
       </AuthProvider>
     </QueryClientProvider>
   );
-};
+}
 
 export default App;
