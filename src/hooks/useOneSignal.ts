@@ -2,13 +2,10 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
-const ONESIGNAL_APP_ID = '5e5539e1-fc71-4c4d-9fef-414293d83dbb';
-
 declare global {
   interface Window {
     OneSignalDeferred?: Array<(OneSignal: any) => void>;
     OneSignal?: any;
-    OneSignalInitialized?: boolean;
   }
 }
 
@@ -17,45 +14,22 @@ export const useOneSignal = () => {
   const initializedRef = useRef(false);
 
   useEffect(() => {
-    // Spustit pouze pokud je uživatel přihlášen a ještě nebylo inicializováno
     if (!user || initializedRef.current) {
       return;
     }
 
     initializedRef.current = true;
-    console.log('🚀 Inicializace OneSignal pro uživatele:', user.email);
+    console.log('🚀 Inicializace OneSignal SDK...');
 
-    // Inicializace OneSignal SDK
+    // Čekání na načtení OneSignal SDK
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async (OneSignal: any) => {
-      if (window.OneSignalInitialized) {
-        console.log('⚠️ OneSignal již byl inicializován');
-        return;
-      }
-
       try {
-        await OneSignal.init({
-          appId: ONESIGNAL_APP_ID,
-          allowLocalhostAsSecureOrigin: true,
-          notifyButton: {
-            enable: true,
-          },
-        });
-
-        window.OneSignalInitialized = true;
-        console.log('✅ OneSignal SDK úspěšně inicializován');
-
-        // Po inicializaci vyžádat oprávnění
-        console.log('🔔 Žádám o oprávnění k push notifikacím...');
-        
         // Posluchač změn v push subscription
         OneSignal.User.PushSubscription.addEventListener('change', async (event: any) => {
           const playerId = event.current.id;
           
-          if (playerId) {
-            console.log('✅ OneSignal Player ID získáno:', playerId);
-            
-            // Uložit do Supabase users.onesignal_player_id
+          if (playerId && user) {
             try {
               const { error } = await supabase
                 .from('users')
@@ -70,14 +44,14 @@ export const useOneSignal = () => {
             } catch (err) {
               console.error('❌ Výjimka při ukládání Player ID:', err);
             }
+          } else if (!user) {
+            console.log('⚠️ Uživatel není přihlášen nebo player_id chybí');
           }
         });
 
         // Zkontrolovat existující player ID
         const existingPlayerId = await OneSignal.User.PushSubscription.id;
-        if (existingPlayerId) {
-          console.log('✅ Nalezeno existující OneSignal Player ID:', existingPlayerId);
-          
+        if (existingPlayerId && user) {
           try {
             const { error } = await supabase
               .from('users')
@@ -92,14 +66,15 @@ export const useOneSignal = () => {
           } catch (err) {
             console.error('❌ Výjimka při ukládání existujícího Player ID:', err);
           }
+        } else if (!user) {
+          console.log('⚠️ Uživatel není přihlášen nebo player_id chybí');
         }
 
       } catch (error) {
-        console.error('❌ Chyba při inicializaci OneSignal:', error);
+        console.error('💥 Chyba při inicializaci OneSignal:', error);
       }
     });
 
-    // Reset při odhlášení
     return () => {
       if (!user) {
         initializedRef.current = false;
