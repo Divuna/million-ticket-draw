@@ -22,6 +22,7 @@ import { AdminPrizeDelivery } from '@/components/AdminPrizeDelivery';
 import { AdminContestManagement } from '@/components/AdminContestManagement';
 import { AdminPayments } from '@/components/AdminPayments';
 import { AdminNotifications } from '@/components/AdminNotifications';
+import { OneSignalDebug } from '@/components/OneSignalDebug';
 import { AdminTestSuite } from '@/tests/AdminTestSuite';
 import { AdminValidationWorkflows } from '@/tests/AdminValidationWorkflows';
 import { TestTube, AlertTriangle, Gift } from 'lucide-react';
@@ -868,6 +869,9 @@ const AdminDashboard: React.FC = () => {
             {/* Notifications */}
             <TabsContent value="notifications">
               <AdminNotifications />
+              <div className="mt-6">
+                <OneSignalDebug />
+              </div>
             </TabsContent>
 
             {/* Create Contest */}
