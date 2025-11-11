@@ -2,40 +2,23 @@
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function (OneSignal) {
-    if (window.OneSignalInitialized) return; // 🧩 Zabrání duplicitní inicializaci
+    if (window.OneSignalInitialized) return;
     window.OneSignalInitialized = true;
 
-    await OneSignal.init({
-      appId: "5e5539e1-fc71-4c4d-9fef-414293d83dbb",
-      allowLocalhostAsSecureOrigin: true,
-      notifyButton: { enable: false },
-      slidedown: { enabled: false } // 🚫 vypne SlideDown prompt
-    });
-
-    console.log("✅ OneSignal SDK inicializován");
+    console.log("🚀 Inicializace OneSignal SDK...");
 
     try {
-      const user = window.supabase?.auth?.getUser
-        ? await window.supabase.auth.getUser()
-        : null;
+      await OneSignal.init({
+        appId: "5e5539e1-fc71-4c4d-9fef-414293d83dbb",
+        allowLocalhostAsSecureOrigin: true,
+        notifyButton: { enable: false },
+        slidedown: { enabled: false }
+      });
 
-      const playerId = await OneSignal.User.PushSubscription.id;
-      if (user?.data?.user?.id && playerId) {
-        const { error } = await window.supabase
-          .from("user_devices")
-          .upsert({
-            user_id: user.data.user.id,
-            player_id: playerId,
-            platform: "web",
-            updated_at: new Date().toISOString()
-          });
-        if (error) console.error("❌ Nepodařilo se zapsat player_id:", error);
-        else console.log("✅ Player ID uložen:", playerId);
-      } else {
-        console.warn("⚠️ Player ID nebo user_id nebyl nalezen.");
-      }
+      console.log("✅ OneSignal SDK úspěšně inicializován");
+      console.log("📊 Stav subscription:", OneSignal.User.PushSubscription.optedIn);
     } catch (e) {
-      console.error("❌ Chyba při inicializaci OneSignal:", e);
+      console.error("💥 Chyba při inicializaci OneSignal:", e);
     }
   });
 </script>

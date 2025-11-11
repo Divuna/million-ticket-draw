@@ -15,7 +15,8 @@ export const useOneSignal = (userId?: string) => {
     if (!userId) return;
 
     const waitForOneSignal = async () => {
-      // Počkej na OneSignal (už je inicializované v index.html)
+      console.log('🔄 Čekám na OneSignal SDK...');
+      
       let attempts = 0;
       while (!window.OneSignal && attempts < 20) {
         await new Promise(resolve => setTimeout(resolve, 300));
@@ -23,7 +24,7 @@ export const useOneSignal = (userId?: string) => {
       }
 
       if (!window.OneSignal) {
-        console.error('❌ OneSignal SDK nedostupné');
+        console.error('❌ OneSignal SDK nedostupné po 20 pokusech');
         return;
       }
 
@@ -31,34 +32,66 @@ export const useOneSignal = (userId?: string) => {
       console.log('✅ OneSignal připojeno');
       setIsInitialized(true);
 
-      // Získej player ID
-      const currentPlayerId = OneSignal.User.PushSubscription.id;
-      
-      if (currentPlayerId) {
-        console.log('✅ Player ID:', currentPlayerId);
-        setPlayerId(currentPlayerId);
+      try {
+        // Získej player ID
+        const currentPlayerId = OneSignal.User.PushSubscription.id;
+        
+        if (currentPlayerId) {
+          console.log('✅ Player ID získán:', currentPlayerId);
+          setPlayerId(currentPlayerId);
 
-        // Ulož do Supabase
-        await supabase
-          .from('users')
-          .update({ onesignal_player_id: currentPlayerId })
-          .eq('id', userId);
+          // Ulož do user_devices
+          const { error } = await supabase
+            .from('user_devices')
+            .upsert({
+              user_id: userId,
+              player_id: currentPlayerId,
+              device_type: 'web',
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'user_id,player_id'
+            });
 
-        // Nastav external user ID
-        await OneSignal.login(userId);
-        console.log('✅ User ID nastaven');
-      }
+          if (error) {
+            console.error('❌ Chyba při ukládání player_id:', error);
+          } else {
+            console.log('✅ Player ID uložen do Supabase');
+          }
 
-      // Listener pro změny
-      OneSignal.User.PushSubscription.addEventListener('change', async (event: any) => {
-        if (event.current.id) {
-          setPlayerId(event.current.id);
-          await supabase
-            .from('users')
-            .update({ onesignal_player_id: event.current.id })
-            .eq('id', userId);
+          // Nastav external user ID
+          await OneSignal.login(userId);
+          console.log('✅ External User ID nastaven');
+        } else {
+          console.warn('⚠️ Player ID zatím není dostupný');
         }
-      });
+
+        // Listener pro změny subscription
+        OneSignal.User.PushSubscription.addEventListener('change', async (event: any) => {
+          if (event.current.id) {
+            console.log('🔔 Změna subscription, nový player ID:', event.current.id);
+            setPlayerId(event.current.id);
+            
+            const { error } = await supabase
+              .from('user_devices')
+              .upsert({
+                user_id: userId,
+                player_id: event.current.id,
+                device_type: 'web',
+                updated_at: new Date().toISOString()
+              }, {
+                onConflict: 'user_id,player_id'
+              });
+
+            if (error) {
+              console.error('❌ Chyba při aktualizaci player_id:', error);
+            } else {
+              console.log('✅ Player ID aktualizován v Supabase');
+            }
+          }
+        });
+      } catch (error) {
+        console.error('💥 Chyba při inicializaci OneSignal:', error);
+      }
     };
 
     waitForOneSignal();

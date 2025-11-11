@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Bell } from 'lucide-react';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -53,6 +53,7 @@ const Profile: React.FC = () => {
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [testingNotification, setTestingNotification] = useState(false);
   useEffect(() => {
     if (user) {
       fetchUserWallet();
@@ -186,6 +187,31 @@ const Profile: React.FC = () => {
       setRefreshing(false);
     }
   };
+  const handleTestNotification = async () => {
+    setTestingNotification(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-test-notification');
+      
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Notifikace odeslána",
+        description: "Testovací notifikace byla úspěšně odeslána. Zkontrolujte svá zařízení.",
+      });
+    } catch (error: any) {
+      console.error('Error sending test notification:', error);
+      toast({
+        title: "Chyba při odeslání",
+        description: error.message || "Nepodařilo se odeslat testovací notifikaci.",
+        variant: "destructive"
+      });
+    } finally {
+      setTestingNotification(false);
+    }
+  };
+
   const handleVoucherPurchase = async () => {
     const amount = parseInt(voucherAmount);
     if (!amount || amount < 50) {
@@ -455,6 +481,24 @@ const Profile: React.FC = () => {
                   <Button onClick={() => navigate('/my-contests')} variant="outline" size="lg">
                     <GamepadIcon className="h-5 w-5 mr-2" />
                     Moje hry
+                  </Button>
+                </div>
+              </div>
+
+              {/* OneSignal Test Section */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold mb-4">Notifikace</h3>
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Otestujte si funkčnost push notifikací na vašem zařízení.
+                  </p>
+                  <Button 
+                    onClick={handleTestNotification} 
+                    variant="outline" 
+                    disabled={testingNotification}
+                  >
+                    <Bell className={`h-4 w-4 mr-2 ${testingNotification ? 'animate-pulse' : ''}`} />
+                    {testingNotification ? 'Odesílám...' : 'Otestovat notifikaci'}
                   </Button>
                 </div>
               </div>

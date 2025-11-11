@@ -41,7 +41,7 @@ const queryClient = new QueryClient();
 
 function AppContent() {
   const { user } = useAuth();
-  const { playerId, isInitialized, error } = useOneSignal(user?.id);
+  const { playerId, isInitialized } = useOneSignal(user?.id);
 
   return (
     <Routes>
