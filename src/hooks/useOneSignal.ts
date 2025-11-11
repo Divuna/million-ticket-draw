@@ -62,12 +62,18 @@ export function useOneSignal(userId?: string) {
 
         console.log("✅ OneSignal SDK načteno");
 
-        // 🔑 Načti App ID ze Supabase
-        const { data, error } = await supabase.from("settings").select("value").eq("key", "onesignal_app_id").single();
-        if (error || !data?.value) throw new Error("App ID nenalezeno");
+        // 🔑 Načti App ID ze Supabase (podle domény)
+        const isDevelopment = window.location.hostname.includes("lovableproject.com");
+        const settingKey = isDevelopment ? "onesignal_app_id_dev" : "onesignal_app_id";
+        
+        console.log(`🌍 Doména: ${window.location.hostname} → ${isDevelopment ? "DEV" : "PROD"}`);
+        console.log(`🔑 Načítám: ${settingKey}`);
+
+        const { data, error } = await supabase.from("settings").select("value").eq("key", settingKey).single();
+        if (error || !data?.value) throw new Error(`App ID (${settingKey}) nenalezeno v settings`);
 
         const appId = data.value;
-        console.log("🔑 OneSignal App ID:", appId);
+        console.log("✅ OneSignal App ID:", appId);
 
         // ✅ Inicializace jen jednou
         if (!oneSignalInitialized) {
