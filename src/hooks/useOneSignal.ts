@@ -82,21 +82,15 @@ export const useOneSignal = (userId?: string) => {
             appId: appId,
             serviceWorkerPath: "/OneSignalSDKWorker.js",
             allowLocalhostAsSecureOrigin: true,
-            notifyButton: { enable: false },
-            promptOptions: {
-              slidedown: {
-                enabled: true,
-                actionMessage: "Chcete dostávat oznámení o soutěžích a výhrách?",
-                acceptButtonText: "Ano, chci oznámení",
-                cancelButtonText: "Ne, děkuji",
-              },
+            notifyButton: {
+              enable: false,
             },
           });
 
           console.log("✅ OneSignal SDK úspěšně inicializován");
           setIsInitialized(true);
 
-          // Listen for subscription changes (pro všechny případy)
+          // Listen for subscription changes
           OneSignal.User.PushSubscription.addEventListener("change", async (event: any) => {
             if (event.current.id) {
               console.log("🔔 Změna subscription, nový player ID:", event.current.id);
@@ -105,13 +99,13 @@ export const useOneSignal = (userId?: string) => {
           });
         } catch (error) {
           console.error("💥 Chyba při inicializaci OneSignal:", error);
-          registrationAttempted.current = false; // Povolit další pokus
+          registrationAttempted.current = false;
         }
       });
     };
 
     initializeOneSignal();
-  }, []); // Spustí se pouze jednou
+  }, []);
 
   // USER REGISTRATION - Spustí se když se změní userId
   useEffect(() => {
@@ -130,7 +124,7 @@ export const useOneSignal = (userId?: string) => {
           return;
         }
 
-        // Pokus o opt-in (pokud ještě nepovolil)
+        // Pokus o opt-in (zobrazí nativní prohlížečový prompt)
         try {
           await window.OneSignal.User.PushSubscription.optIn();
           console.log("✅ Push notifikace povoleny");
@@ -139,7 +133,7 @@ export const useOneSignal = (userId?: string) => {
         }
 
         // Počkej chvíli na vygenerování player_id
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1500));
 
         // Get player ID
         const currentPlayerId = window.OneSignal.User.PushSubscription.id;
@@ -179,7 +173,7 @@ export const useOneSignal = (userId?: string) => {
     };
 
     registerUser();
-  }, [userId, isInitialized]); // Reaguje na změny userId a isInitialized
+  }, [userId, isInitialized]);
 
   return { playerId, isInitialized, requestPermission };
 };
