@@ -166,19 +166,30 @@ export const useOneSignal = (userId?: string): UseOneSignalReturn => {
 
         // Check and request permission if needed
         const permission = typeof Notification !== 'undefined' ? Notification.permission : 'default';
+        console.log('🔔 Aktuální stav oprávnění:', permission);
         
         if (permission === 'default') {
           console.log('❓ Oprávnění není rozhodnuto, žádám o souhlas...');
-          await window.OneSignal.User.PushSubscription.optIn();
+          try {
+            await window.OneSignal.User.PushSubscription.optIn();
+            console.log('✅ Oprávnění vyžádáno');
+          } catch (error) {
+            console.warn('⚠️ Chyba při žádání o oprávnění:', error);
+          }
         } else if (permission === 'denied') {
-          console.warn('⛔ Oprávnění k notifikacím odepřeno. Player ID nebude dostupné.');
-          return;
+          console.warn('⛔ Oprávnění odepřeno. Pokuste se povolit v nastavení prohlížeče.');
+          // Continue anyway - user might have enabled it manually
         } else {
           console.log('✅ Oprávnění již uděleno');
         }
 
-        // Wait for subscription to be ready
-        await window.OneSignal.User.PushSubscription.optedIn();
+        // Try to get player ID - wait for subscription to be ready
+        try {
+          const isOptedIn = await window.OneSignal.User.PushSubscription.optedIn();
+          console.log('🎯 OptedIn status:', isOptedIn);
+        } catch (error) {
+          console.log('⚠️ Subscription není připravena:', error);
+        }
 
         // Get player ID after ensuring subscription is ready
         let currentPlayerId = window.OneSignal.User.PushSubscription.id;
@@ -209,13 +220,18 @@ export const useOneSignal = (userId?: string): UseOneSignalReturn => {
           if (!isSubscribed) return;
 
           const newPlayerId = subscription?.current?.id;
-          console.log('🔄 OneSignal subscription změna, nové Player ID:', newPlayerId);
+          const newPermission = typeof Notification !== 'undefined' ? Notification.permission : 'default';
+          
+          console.log('🔄 OneSignal subscription změna');
+          console.log('📱 Nové Player ID:', newPlayerId);
+          console.log('🔔 Nové oprávnění:', newPermission);
           
           if (newPlayerId) {
             setPlayerId(newPlayerId);
 
             if (userId) {
               await saveDevice(userId, newPlayerId);
+              console.log('✅ Zařízení automaticky uloženo po změně subscription');
             }
           }
         });

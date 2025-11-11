@@ -13,12 +13,26 @@ export const OneSignalDebug: React.FC = () => {
   const [deviceCount, setDeviceCount] = useState<number>(0);
   const [appId, setAppId] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermission>('default');
+
+  // Check permission state
+  const updatePermission = () => {
+    const currentPermission = typeof Notification !== 'undefined' ? Notification.permission : 'default';
+    setPermission(currentPermission);
+  };
 
   useEffect(() => {
     fetchAppId();
+    updatePermission();
+    
+    // Check permission every 2 seconds to detect changes
+    const interval = setInterval(updatePermission, 2000);
+    
     if (user?.id) {
       fetchDeviceCount();
     }
+
+    return () => clearInterval(interval);
   }, [user?.id]);
 
   const fetchAppId = async () => {
@@ -90,7 +104,6 @@ export const OneSignalDebug: React.FC = () => {
   };
 
   const getPermissionBadge = () => {
-    const permission = typeof Notification !== 'undefined' ? Notification.permission : 'unknown';
     const variants: Record<string, 'default' | 'destructive' | 'outline' | 'secondary'> = {
       granted: 'default',
       denied: 'destructive',
@@ -172,7 +185,7 @@ export const OneSignalDebug: React.FC = () => {
         <div className="flex gap-2 pt-2">
           <Button
             onClick={requestPermission}
-            disabled={!isInitialized || Notification.permission === 'granted'}
+            disabled={!isInitialized || permission === 'granted'}
             size="sm"
             variant="outline"
           >
@@ -189,7 +202,10 @@ export const OneSignalDebug: React.FC = () => {
             Uložit do DB ručně
           </Button>
           <Button
-            onClick={fetchDeviceCount}
+            onClick={() => {
+              fetchDeviceCount();
+              updatePermission();
+            }}
             disabled={!user}
             size="sm"
             variant="ghost"
