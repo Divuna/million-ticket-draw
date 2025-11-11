@@ -11,6 +11,22 @@ export const useOneSignal = (userId?: string) => {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  const requestPermission = async () => {
+    if (!window.OneSignal) {
+      console.error('❌ OneSignal není dostupné');
+      return false;
+    }
+    
+    try {
+      await window.OneSignal.User.PushSubscription.optIn();
+      console.log('✅ Uživatel povolil notifikace');
+      return true;
+    } catch (error) {
+      console.error('❌ Chyba při žádosti o povolení:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (!userId) return;
 
@@ -99,5 +115,5 @@ export const useOneSignal = (userId?: string) => {
     waitForOneSignal();
   }, [userId]);
 
-  return { playerId, isInitialized };
+  return { playerId, isInitialized, requestPermission };
 };

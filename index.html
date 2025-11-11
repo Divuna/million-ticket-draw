@@ -25,7 +25,14 @@
             appId: "357be038-dbaf-4551-9a16-96d9897197a3",
             allowLocalhostAsSecureOrigin: true,
             notifyButton: { enable: false },
-            slidedown: { enabled: false }
+            promptOptions: {
+              slidedown: {
+                enabled: true,
+                actionMessage: "Chcete dostávat oznámení o soutěžích a výhrách?",
+                acceptButtonText: "Ano, chci oznámení",
+                cancelButtonText: "Ne, děkuji"
+              }
+            }
           });
 
           console.log("✅ OneSignal SDK úspěšně inicializován");
