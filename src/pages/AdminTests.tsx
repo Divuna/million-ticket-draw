@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { AdminMenu } from '@/components/AdminMenu';
 import { ComprehensiveAdminTestDashboard } from '@/tests/ComprehensiveAdminTestDashboard';
+import { OneSignalDebug } from '@/components/OneSignalDebug';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -37,6 +38,7 @@ const AdminTests: React.FC = () => {
     <div className="min-h-screen bg-background pb-20">
       <Header />
       <div className="container mx-auto p-4">
+        <OneSignalDebug />
         <ComprehensiveAdminTestDashboard />
       </div>
       <AdminMenu />
