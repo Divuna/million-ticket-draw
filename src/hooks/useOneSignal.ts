@@ -1,15 +1,21 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { toast } from "@/components/ui/use-toast";
 
-// ✅ Globální ochrana proti vícenásobné inicializaci
+declare global {
+  interface Window {
+    OneSignal?: any;
+    OneSignalDeferred?: any[];
+  }
+}
+
+// ✅ Zajišťuje, že se OneSignal inicializuje jen jednou
 let oneSignalInitialized = false;
 
 export function useOneSignal(userId?: string) {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // 💾 Uložení nebo aktualizace zařízení v tabulce user_devices
   const saveDevice = async (userId: string, playerId: string) => {
     try {
       const { data: existing, error: selectError } = await supabase
@@ -22,8 +28,8 @@ export function useOneSignal(userId?: string) {
       if (selectError) console.error("❌ Chyba při SELECT:", selectError);
 
       if (existing) {
-        await supabase.from("user_devices").update({ updated_at: new Date().toISOString() }).eq("id", existing.id);
-        console.log("🔁 Aktualizováno updated_at pro zařízení:", playerId);
+        await supabase.from("user_devices").update({ last_active: new Date().toISOString() }).eq("id", existing.id);
+        console.log("🔁 Aktualizováno last_active pro zařízení:", playerId);
       } else {
         await supabase.from("user_devices").insert({
           user_id: userId,
@@ -37,17 +43,17 @@ export function useOneSignal(userId?: string) {
     }
   };
 
-  // 🧩 Hlavní efekt inicializace OneSignal
+  // 🧩 Hlavní inicializační efekt
   useEffect(() => {
     let isSubscribed = true;
 
     const initializeOneSignal = async () => {
       try {
-        console.log("🔧 Spuštěna funkce useOneSignal()");
+        console.log("🔧 useOneSignal spuštěn");
         console.log("👤 userId:", userId || "nepřihlášen");
         console.log("🔔 Permission:", typeof Notification !== "undefined" ? Notification.permission : "unknown");
 
-        // ✅ Načtení OneSignal App ID ze Supabase
+        // ✅ Načtení App ID ze Supabase
         const { data: settingsData, error: settingsError } = await supabase
           .from("settings")
           .select("value")
@@ -62,7 +68,7 @@ export function useOneSignal(userId?: string) {
         const appId = settingsData.value;
         console.log("🔑 OneSignal App ID:", appId);
 
-        // 🧩 Počkej, dokud se nenačte SDK
+        // 🧩 Nová část – počkej na načtení SDK
         console.log("⏳ Čekám na načtení OneSignal SDK...");
         await new Promise<void>((resolve, reject) => {
           const maxWait = 10000;
@@ -70,9 +76,9 @@ export function useOneSignal(userId?: string) {
           let waited = 0;
 
           const interval = setInterval(() => {
-            if (typeof window !== "undefined" && window.OneSignal) {
+            if (typeof window !== "undefined" && window.OneSignal && window.OneSignal.User) {
               clearInterval(interval);
-              console.log("✅ OneSignal SDK načteno");
+              console.log("✅ OneSignal SDK načteno a připraveno");
               resolve();
             } else if (waited >= maxWait) {
               clearInterval(interval);
@@ -83,50 +89,30 @@ export function useOneSignal(userId?: string) {
           }, checkInterval);
         });
 
-        // ✅ Inicializace OneSignal jen jednou
-        if (!oneSignalInitialized) {
+        if (oneSignalInitialized) {
+          console.log("ℹ️ OneSignal již inicializován, přeskočeno");
+        } else {
           await window.OneSignal.init({
             appId,
+            safari_web_id: undefined,
             promptOptions: {
               slidedown: {
                 enabled: true,
                 autoPrompt: true,
-                actionMessage: "Chcete dostávat upozornění o nových soutěžích, výhrách a bonusech?",
-                acceptButtonText: "Ano, povolit",
+                actionMessage: "Chcete dostávat oznámení o nových soutěžích a výhrách?",
+                acceptButtonText: "Ano, chci",
                 cancelButtonText: "Ne, děkuji",
               },
             },
           });
+
           oneSignalInitialized = true;
-        } else {
-          console.log("ℹ️ OneSignal již inicializován");
         }
 
-        // 🧩 Počkej na načtení User API
-        console.log("⏳ Čekám na inicializaci OneSignal User API...");
-        await new Promise<void>((resolve, reject) => {
-          const maxWait = 8000;
-          const checkInterval = 200;
-          let waited = 0;
-
-          const interval = setInterval(() => {
-            if (window.OneSignal && window.OneSignal.User && window.OneSignal.User.PushSubscription) {
-              clearInterval(interval);
-              console.log("✅ OneSignal User API připraveno");
-              resolve();
-            } else if (waited >= maxWait) {
-              clearInterval(interval);
-              console.error("❌ OneSignal User API se nenačetlo do 8 sekund");
-              reject(new Error("User API not ready"));
-            }
-            waited += checkInterval;
-          }, checkInterval);
-        });
-
         setIsInitialized(true);
-        console.log("✅ OneSignal inicializován a připraven");
+        console.log("✅ OneSignal inicializován");
 
-        // 🔔 Zkontroluj oprávnění
+        // 🔔 Požádej o oprávnění pokud chybí
         if (Notification.permission === "default") {
           console.log("❓ Žádám o oprávnění...");
           await window.OneSignal.User.PushSubscription.optIn();
@@ -144,7 +130,7 @@ export function useOneSignal(userId?: string) {
         // 📱 Získání Player ID
         let currentPlayerId = window.OneSignal.User.PushSubscription.id;
         if (!currentPlayerId) {
-          console.log("⏳ Čekám na vytvoření Player ID...");
+          console.log("⏳ Čekám na vytvoření player_id...");
           await new Promise((resolve) => setTimeout(resolve, 1000));
           currentPlayerId = window.OneSignal.User.PushSubscription.id;
         }
@@ -152,9 +138,10 @@ export function useOneSignal(userId?: string) {
         if (currentPlayerId) {
           console.log("📱 Player ID získáno:", currentPlayerId);
           setPlayerId(currentPlayerId);
+
           if (userId) await saveDevice(userId, currentPlayerId);
         } else {
-          console.warn("⚠️ Player ID stále není dostupné po inicializaci");
+          console.warn("⚠️ Player ID stále není dostupné");
         }
 
         // 🌀 Sleduj změny v subscription
@@ -170,12 +157,6 @@ export function useOneSignal(userId?: string) {
         });
       } catch (error) {
         console.error("❌ Chyba při inicializaci OneSignal:", error);
-        toast({
-          title: "❌ Chyba při inicializaci OneSignal",
-          description: error instanceof Error ? error.message : "Neznámá chyba při načítání OneSignal SDK",
-          variant: "destructive",
-          duration: 4000,
-        });
       }
     };
 

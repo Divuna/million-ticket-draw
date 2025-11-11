@@ -10,7 +10,7 @@ import { toast } from '@/hooks/use-toast';
 
 export const OneSignalDebug: React.FC = () => {
   const { user } = useAuth();
-  const { playerId, isInitialized } = useOneSignal(user?.id);
+  const { playerId, isInitialized, requestPermission } = useOneSignal(user?.id);
   const [deviceCount, setDeviceCount] = useState<number>(0);
   const [appId, setAppId] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -208,11 +208,7 @@ export const OneSignalDebug: React.FC = () => {
         {/* Action Buttons */}
         <div className="flex gap-2 pt-2">
           <Button
-            onClick={() => {
-              if (window.OneSignal) {
-                window.OneSignal.User.PushSubscription.optIn();
-              }
-            }}
+            onClick={requestPermission}
             disabled={!isInitialized || permission === 'granted'}
             size="sm"
             variant="outline"
