@@ -521,6 +521,57 @@ export type Database = {
           },
         ]
       }
+      push_log: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string | null
+          player_id: string | null
+          response: Json | null
+          sent_at: string | null
+          status: string | null
+          title: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          player_id?: string | null
+          response?: Json | null
+          sent_at?: string | null
+          status?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          player_id?: string | null
+          response?: Json | null
+          sent_at?: string | null
+          status?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_wallets"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       push_retry: {
         Row: {
           attempts: number
@@ -1186,6 +1237,15 @@ export type Database = {
       send_push_via_onesignal:
         | {
             Args: { p_message: string; p_player_id: string; p_title: string }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_message: string
+              p_player_id: string
+              p_push_log_id: string
+              p_title: string
+            }
             Returns: undefined
           }
         | {
