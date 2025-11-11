@@ -6,12 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OneMil</title>
 
-    <!-- OneSignal SDK - Loaded, but initialized dynamically in React -->
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <!-- Define OneSignalDeferred BEFORE loading SDK -->
     <script>
-      // Prevent auto-initialization
       window.OneSignalDeferred = window.OneSignalDeferred || [];
     </script>
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   </head>
   <body>
     <div id="root"></div>
