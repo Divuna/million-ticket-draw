@@ -6,42 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OneMil</title>
     
-    <!-- OneSignal SDK - Initialized ONCE here -->
+    <!-- OneSignal SDK - Loaded, but initialized dynamically in React -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    <script>
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async function (OneSignal) {
-        // Prevent duplicate initialization
-        if (window.OneSignalInitialized) {
-          console.log("⚠️ OneSignal již inicializován, přeskakuji...");
-          return;
-        }
-        window.OneSignalInitialized = true;
-
-        console.log("🚀 Inicializace OneSignal SDK...");
-
-        try {
-          await OneSignal.init({
-            appId: "357be038-dbaf-4551-9a16-96d9897197a3",
-            allowLocalhostAsSecureOrigin: true,
-            notifyButton: { enable: false },
-            promptOptions: {
-              slidedown: {
-                enabled: true,
-                actionMessage: "Chcete dostávat oznámení o soutěžích a výhrách?",
-                acceptButtonText: "Ano, chci oznámení",
-                cancelButtonText: "Ne, děkuji"
-              }
-            }
-          });
-
-          console.log("✅ OneSignal SDK úspěšně inicializován");
-          console.log("📊 Stav subscription:", OneSignal.User.PushSubscription.optedIn);
-        } catch (e) {
-          console.error("💥 Chyba při inicializaci OneSignal:", e);
-        }
-      });
-    </script>
   </head>
   <body>
     <div id="root"></div>
