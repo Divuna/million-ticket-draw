@@ -95,17 +95,7 @@ export function useOneSignal(userId?: string) {
           await window.OneSignal.init({
             appId,
             safari_web_id: undefined,
-            promptOptions: {
-              slidedown: {
-                enabled: true,
-                autoPrompt: true,
-                actionMessage: "Chcete dostávat oznámení o nových soutěžích a výhrách?",
-                acceptButtonText: "Ano, chci",
-                cancelButtonText: "Ne, děkuji",
-              },
-            },
           });
-
           oneSignalInitialized = true;
         }
 
