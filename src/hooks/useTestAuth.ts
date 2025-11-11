@@ -18,9 +18,7 @@ interface TestAuthContextType {
 export const TestAuthContext = createContext<TestAuthContextType | undefined>(undefined);
 
 export const useTestAuth = () => {
-  console.log('useTestAuth called, context:', TestAuthContext);
   const context = useContext(TestAuthContext);
-  console.log('useTestAuth context value:', context);
   
   // Return a default object if context is not available (for safety)
   if (context === undefined) {
@@ -36,8 +34,14 @@ export const useTestAuth = () => {
 };
 
 export const useTestAuthState = () => {
-  const [testUser, setTestUser] = useState<TestUser | null>(null);
-  const [isTestMode, setIsTestMode] = useState(false);
+  const [testUser, setTestUser] = useState<TestUser | null>(() => {
+    const stored = localStorage.getItem('testUser');
+    return stored ? JSON.parse(stored) : null;
+  });
+  const [isTestMode, setIsTestMode] = useState(() => {
+    const stored = localStorage.getItem('isTestMode');
+    return stored === 'true';
+  });
 
   const testSignIn = async (email: string) => {
     try {
@@ -57,12 +61,17 @@ export const useTestAuthState = () => {
       }
 
       // Set test user state
-      setTestUser({
+      const user = {
         id: userData.id,
         email: userData.email,
         name: userData.name || undefined
-      });
+      };
+      setTestUser(user);
       setIsTestMode(true);
+      
+      // Persist to localStorage
+      localStorage.setItem('testUser', JSON.stringify(user));
+      localStorage.setItem('isTestMode', 'true');
 
       toast({
         title: "🧪 TEST REŽIM",
@@ -85,6 +94,11 @@ export const useTestAuthState = () => {
   const testSignOut = () => {
     setTestUser(null);
     setIsTestMode(false);
+    
+    // Clear from localStorage
+    localStorage.removeItem('testUser');
+    localStorage.removeItem('isTestMode');
+    
     toast({
       title: "🧪 TEST REŽIM",
       description: "Odhlášen z test režimu",
