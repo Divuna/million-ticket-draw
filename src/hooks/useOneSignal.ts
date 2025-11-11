@@ -1,13 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
-
-declare global {
-  interface Window {
-    OneSignal?: any;
-    OneSignalDeferred?: any[];
-  }
-}
 
 // ✅ Zajišťuje, že se OneSignal inicializuje jen jednou
 let oneSignalInitialized = false;
@@ -28,8 +21,8 @@ export function useOneSignal(userId?: string) {
       if (selectError) console.error("❌ Chyba při SELECT:", selectError);
 
       if (existing) {
-        await supabase.from("user_devices").update({ last_active: new Date().toISOString() }).eq("id", existing.id);
-        console.log("🔁 Aktualizováno last_active pro zařízení:", playerId);
+        await supabase.from("user_devices").update({ updated_at: new Date().toISOString() }).eq("id", existing.id);
+        console.log("🔁 Aktualizováno updated_at pro zařízení:", playerId);
       } else {
         await supabase.from("user_devices").insert({
           user_id: userId,
