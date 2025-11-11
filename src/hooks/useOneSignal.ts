@@ -131,7 +131,13 @@ export const useOneSignal = (userId?: string): UseOneSignalReturn => {
       try {
         console.log('🔧 useOneSignal effect spuštěn');
         console.log('👤 userId:', userId || 'nepřihlášen');
-        console.log('🔔 Notification.permission:', Notification.permission);
+        console.log('🔔 Notification.permission:', typeof Notification !== 'undefined' ? Notification.permission : 'unknown');
+
+        // Check if OneSignal SDK is available
+        if (typeof window === 'undefined' || !window.OneSignalDeferred) {
+          console.error('❌ OneSignal SDK není dostupný');
+          return;
+        }
 
         // Fetch OneSignal App ID from settings
         const { data: settingsData, error: settingsError } = await supabase
@@ -156,19 +162,20 @@ export const useOneSignal = (userId?: string): UseOneSignalReturn => {
         if (!isSubscribed) return;
 
         setIsInitialized(true);
+        console.log('✅ useOneSignal: isInitialized = true');
 
-        // Request permission if not already decided
-        if (Notification.permission === 'default') {
-          console.log('❓ Oprávnění není rozhodnuto, žádám o souhlas...');
-          await window.OneSignal.User.PushSubscription.optIn();
-        } else if (Notification.permission === 'denied') {
-          console.warn('⛔ Oprávnění k notifikacím odepřeno. Uživatel musí povolit v nastavení prohlížeče.');
-        } else {
-          console.log('✅ Oprávnění k notifikacím již uděleno');
+        // Wait for OneSignal to be fully ready
+        await window.OneSignal.User.PushSubscription.optedIn();
+
+        // Get player ID after ensuring subscription is ready
+        let currentPlayerId = window.OneSignal.User.PushSubscription.id;
+        
+        // If player ID is not immediately available, try getting it after a short delay
+        if (!currentPlayerId) {
+          console.log('⏳ Player ID není okamžitě dostupné, čekám...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          currentPlayerId = window.OneSignal.User.PushSubscription.id;
         }
-
-        // Get player ID
-        const currentPlayerId = window.OneSignal.User.PushSubscription.id;
         
         if (currentPlayerId && isSubscribed) {
           setPlayerId(currentPlayerId);
@@ -202,6 +209,9 @@ export const useOneSignal = (userId?: string): UseOneSignalReturn => {
 
       } catch (error) {
         console.error('❌ Chyba v useOneSignal inicializaci:', error);
+        if (error instanceof Error) {
+          console.error('❌ Error details:', error.message, error.stack);
+        }
       }
     };
 
