@@ -164,7 +164,20 @@ export const useOneSignal = (userId?: string): UseOneSignalReturn => {
         setIsInitialized(true);
         console.log('✅ useOneSignal: isInitialized = true');
 
-        // Wait for OneSignal to be fully ready
+        // Check and request permission if needed
+        const permission = typeof Notification !== 'undefined' ? Notification.permission : 'default';
+        
+        if (permission === 'default') {
+          console.log('❓ Oprávnění není rozhodnuto, žádám o souhlas...');
+          await window.OneSignal.User.PushSubscription.optIn();
+        } else if (permission === 'denied') {
+          console.warn('⛔ Oprávnění k notifikacím odepřeno. Player ID nebude dostupné.');
+          return;
+        } else {
+          console.log('✅ Oprávnění již uděleno');
+        }
+
+        // Wait for subscription to be ready
         await window.OneSignal.User.PushSubscription.optedIn();
 
         // Get player ID after ensuring subscription is ready
