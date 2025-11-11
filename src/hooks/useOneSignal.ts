@@ -17,6 +17,7 @@ export const useOneSignal = (userId?: string) => {
     const waitForOneSignal = async () => {
       console.log('🔄 Čekám na OneSignal SDK...');
       
+      // Wait for OneSignal to be initialized (in index.html)
       let attempts = 0;
       while (!window.OneSignal && attempts < 20) {
         await new Promise(resolve => setTimeout(resolve, 300));
@@ -28,8 +29,9 @@ export const useOneSignal = (userId?: string) => {
         return;
       }
 
+      // DO NOT call init() here - it's already initialized in index.html
       const OneSignal = window.OneSignal;
-      console.log('✅ OneSignal připojeno');
+      console.log('✅ OneSignal připojeno (už inicializováno v index.html)');
       setIsInitialized(true);
 
       try {

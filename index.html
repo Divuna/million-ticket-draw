@@ -6,22 +6,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OneMil</title>
     
-    <!-- OneSignal SDK -->
+    <!-- OneSignal SDK - Initialized ONCE here -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function (OneSignal) {
-        if (window.OneSignalInitialized) return;
+        // Prevent duplicate initialization
+        if (window.OneSignalInitialized) {
+          console.log("⚠️ OneSignal již inicializován, přeskakuji...");
+          return;
+        }
         window.OneSignalInitialized = true;
 
         console.log("🚀 Inicializace OneSignal SDK...");
 
         try {
           await OneSignal.init({
-            appId: "357be038-dbaf-4551-9a16-96d9897197a3", // ✅ správný OneMil App ID
-allowLocalhostAsSecureOrigin: true,
-notifyButton: { enable: false },
-slidedown: { enabled: false }
+            appId: "357be038-dbaf-4551-9a16-96d9897197a3",
+            allowLocalhostAsSecureOrigin: true,
+            notifyButton: { enable: false },
+            slidedown: { enabled: false }
           });
 
           console.log("✅ OneSignal SDK úspěšně inicializován");
