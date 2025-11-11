@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,7 @@ import { useOneSignal } from '@/hooks/useOneSignal';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { RefreshCw, Bell, Database } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 export const OneSignalDebug: React.FC = () => {
   const { user } = useAuth();
@@ -14,12 +15,35 @@ export const OneSignalDebug: React.FC = () => {
   const [appId, setAppId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
+  const previousPermission = useRef<NotificationPermission>('default');
 
   // Check permission state
   const updatePermission = () => {
     const currentPermission = typeof Notification !== 'undefined' ? Notification.permission : 'default';
     setPermission(currentPermission);
   };
+
+  // Show toast when permission changes
+  useEffect(() => {
+    if (previousPermission.current === permission) return;
+
+    if (permission === 'granted' && previousPermission.current !== 'default') {
+      toast({
+        title: '🔔 Oprávnění k notifikacím povoleno',
+        description: 'Push notifikace jsou nyní aktivní',
+        duration: 3000,
+      });
+    } else if (permission === 'denied') {
+      toast({
+        title: '⚠️ Oprávnění odmítnuto – povolte v nastavení prohlížeče',
+        description: 'Bez oprávnění nelze přijímat push notifikace',
+        variant: 'destructive',
+        duration: 3000,
+      });
+    }
+
+    previousPermission.current = permission;
+  }, [permission]);
 
   useEffect(() => {
     fetchAppId();
