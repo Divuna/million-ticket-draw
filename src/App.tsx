@@ -41,7 +41,14 @@ const queryClient = new QueryClient();
 
 function AppContent() {
   const { user } = useAuth();
+
+  // 🔥 KLÍČOVÁ ZMĚNA: Přidej debug log
+  console.log("🔍 AppContent - user:", user?.id);
+
+  // 🔥 Zavolej OneSignal hook
   const { playerId, isInitialized } = useOneSignal(user?.id);
+
+  console.log("📱 OneSignal stav - playerId:", playerId, "isInitialized:", isInitialized);
 
   return (
     <Routes>
