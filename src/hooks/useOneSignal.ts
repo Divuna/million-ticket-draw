@@ -9,6 +9,7 @@ let deniedToastShown = false;
 export function useOneSignal(userId?: string) {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [permissionState, setPermissionState] = useState<'granted' | 'denied' | 'default' | 'unknown'>('unknown');
 
   // 💾 Ulož nebo aktualizuj zařízení v user_devices
   const saveDevice = async (userId: string, playerId: string) => {
@@ -45,9 +46,9 @@ export function useOneSignal(userId?: string) {
 
     // 🧩 Načti userId automaticky, pokud nebyl předán
     const loadUserId = async () => {
-      if (!userId && window.supabase?.auth) {
+      if (!userId) {
         try {
-          const { data } = await window.supabase.auth.getUser();
+          const { data } = await supabase.auth.getUser();
           if (data?.user?.id) {
             console.log("👤 Automaticky nalezený userId:", data.user.id);
             userId = data.user.id;
@@ -127,10 +128,11 @@ export function useOneSignal(userId?: string) {
         console.log("🔎 OneSignal.initialized:", alreadyInit);
         console.log("🔎 Podpora push:", supportsPush);
 
-        const isDevelopment = window.location.hostname.includes("lovableproject.com");
-        const settingKey = isDevelopment ? "onesignal_app_id_dev" : "onesignal_app_id";
+        const host = window.location.hostname;
+        const isProd = host === "app.onemil.cz";
+        const settingKey = isProd ? "onesignal_app_id" : "onesignal_app_id_dev";
 
-        console.log(`🌍 Doména: ${window.location.hostname} → ${isDevelopment ? "DEV" : "PROD"}`);
+        console.log(`🌍 Doména: ${host} → ${isProd ? "PROD" : "DEV"}`);
         console.log(`🔑 Načítám: ${settingKey}`);
 
         const { data, error } = await supabase.from("settings").select("value").eq("key", settingKey).single();
@@ -161,6 +163,18 @@ export function useOneSignal(userId?: string) {
             if (err?.message?.includes("already initialized")) {
               console.log("ℹ️ OneSignal už byl inicializován (tolerováno)");
               oneSignalInitialized = true;
+            } else if (err?.message?.includes("Can only be used on:")) {
+              console.error("🚨 CHYBA: Používáte PROD App ID mimo produkční doménu!", err.message);
+              toast({
+                title: "⚠️ Chyba konfigurace OneSignal",
+                description: `OneSignal App ID je platné pouze pro produkční doménu. Na ${host} použijte DEV App ID.`,
+                variant: "destructive",
+                duration: 6000,
+              });
+              if (!isProd) {
+                console.log("💡 TIP: Pro preview/dev použijte onesignal_app_id_dev v settings");
+              }
+              throw err;
             } else {
               throw err;
             }
@@ -174,6 +188,7 @@ export function useOneSignal(userId?: string) {
 
         const permission = await window.OneSignal.Notifications.permission;
         console.log("🔎 OneSignal.Notifications.permission:", permission);
+        setPermissionState(permission);
 
         const pushSub = window.OneSignal.User.PushSubscription;
         const isOptedIn = pushSub?.optedIn ?? false;
@@ -184,6 +199,11 @@ export function useOneSignal(userId?: string) {
           await pushSub.optIn();
           console.log("✅ optIn() úspěšný");
           await new Promise((r) => setTimeout(r, 1000));
+          
+          // Aktualizuj permission po optIn
+          const newPermission = await window.OneSignal.Notifications.permission;
+          setPermissionState(newPermission);
+          console.log("🔎 Permission po optIn:", newPermission);
         }
 
         pushSub.addEventListener("change", async (sub: any) => {
@@ -198,6 +218,11 @@ export function useOneSignal(userId?: string) {
               console.log("💾 Player ID aktualizováno v Supabase");
             }
           }
+          
+          // Aktualizuj permission při změně subscription
+          const currentPermission = await window.OneSignal.Notifications.permission;
+          setPermissionState(currentPermission);
+          console.log("🔎 Permission po změně subscription:", currentPermission);
         });
 
         if (permission === "denied") {
@@ -249,5 +274,5 @@ export function useOneSignal(userId?: string) {
     };
   }, [userId]);
 
-  return { playerId, isInitialized };
+  return { playerId, isInitialized, permissionState };
 }

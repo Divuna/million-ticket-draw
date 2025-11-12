@@ -10,30 +10,24 @@ import { toast } from '@/hooks/use-toast';
 
 export const OneSignalDebug: React.FC = () => {
   const { user } = useAuth();
-  const { playerId, isInitialized } = useOneSignal(user?.id);
+  const { playerId, isInitialized, permissionState } = useOneSignal(user?.id);
   const [deviceCount, setDeviceCount] = useState<number>(0);
   const [appId, setAppId] = useState<string>('');
+  const [settingKey, setSettingKey] = useState<string>('');
   const [loading, setLoading] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission>('default');
-  const previousPermission = useRef<NotificationPermission>('default');
-
-  // Check permission state
-  const updatePermission = () => {
-    const currentPermission = typeof Notification !== 'undefined' ? Notification.permission : 'default';
-    setPermission(currentPermission);
-  };
+  const previousPermission = useRef<string>('unknown');
 
   // Show toast when permission changes
   useEffect(() => {
-    if (previousPermission.current === permission) return;
+    if (previousPermission.current === permissionState) return;
 
-    if (permission === 'granted' && previousPermission.current !== 'default') {
+    if (permissionState === 'granted' && previousPermission.current !== 'unknown') {
       toast({
         title: '🔔 Oprávnění k notifikacím povoleno',
         description: 'Push notifikace jsou nyní aktivní',
         duration: 3000,
       });
-    } else if (permission === 'denied') {
+    } else if (permissionState === 'denied') {
       toast({
         title: '⚠️ Oprávnění odmítnuto – povolte v nastavení prohlížeče',
         description: 'Bez oprávnění nelze přijímat push notifikace',
@@ -42,28 +36,27 @@ export const OneSignalDebug: React.FC = () => {
       });
     }
 
-    previousPermission.current = permission;
-  }, [permission]);
+    previousPermission.current = permissionState;
+  }, [permissionState]);
 
   useEffect(() => {
     fetchAppId();
-    updatePermission();
-    
-    // Check permission every 2 seconds to detect changes
-    const interval = setInterval(updatePermission, 2000);
     
     if (user?.id) {
       fetchDeviceCount();
     }
-
-    return () => clearInterval(interval);
   }, [user?.id]);
 
   const fetchAppId = async () => {
+    const host = window.location.hostname;
+    const isProd = host === "app.onemil.cz";
+    const key = isProd ? "onesignal_app_id" : "onesignal_app_id_dev";
+    setSettingKey(key);
+    
     const { data } = await supabase
       .from('settings')
       .select('value')
-      .eq('key', 'onesignal_app_id')
+      .eq('key', key)
       .single();
     
     if (data?.value) {
@@ -136,14 +129,78 @@ export const OneSignalDebug: React.FC = () => {
     };
 
     return (
-      <Badge variant={variants[permission] || 'outline'}>
-        {permission === 'granted' && '✅'}
-        {permission === 'denied' && '⛔'}
-        {permission === 'default' && '❓'}
+      <Badge variant={variants[permissionState] || 'outline'}>
+        {permissionState === 'granted' && '✅'}
+        {permissionState === 'denied' && '⛔'}
+        {permissionState === 'default' && '❓'}
+        {permissionState === 'unknown' && '⏳'}
         {' '}
-        {permission}
+        {permissionState}
       </Badge>
     );
+  };
+
+  const handleResetOneSignal = async () => {
+    try {
+      console.log("🔄 Resetuji OneSignal...");
+      
+      // 1. OptOut
+      try {
+        await window.OneSignal?.User?.PushSubscription?.optOut?.();
+      } catch (e) {
+        console.warn("⚠️ OptOut selhalo:", e);
+      }
+      
+      // 2. Unregister SW
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(
+          regs
+            .filter(r => /OneSignalSDK/.test(r.active?.scriptURL || ''))
+            .map(r => r.unregister())
+        );
+      } catch (e) {
+        console.warn("⚠️ SW unregister selhalo:", e);
+      }
+      
+      // 3. Clear cache
+      try {
+        const keys = await caches.keys();
+        await Promise.all(
+          keys
+            .filter(k => k.toLowerCase().includes('onesignal'))
+            .map(k => caches.delete(k))
+        );
+      } catch (e) {
+        console.warn("⚠️ Cache clear selhalo:", e);
+      }
+      
+      // 4. Clear localStorage & IndexedDB
+      try {
+        Object.keys(localStorage).forEach(k => {
+          if (k.toLowerCase().includes('onesignal') || k.toLowerCase().startsWith('os_')) {
+            localStorage.removeItem(k);
+          }
+        });
+        indexedDB?.deleteDatabase('OneSignalSDKStore');
+        indexedDB?.deleteDatabase('OneSignalIndexedDB');
+      } catch (e) {
+        console.warn("⚠️ Storage clear selhalo:", e);
+      }
+      
+      toast({
+        title: '✅ OneSignal resetován',
+        description: 'Obnovte stránku (F5) a znovu potvrďte oprávnění k notifikacím.',
+        duration: 5000,
+      });
+    } catch (e) {
+      console.error("❌ Reset selhal:", e);
+      toast({
+        title: '❌ Chyba při resetu',
+        description: String(e),
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -186,7 +243,10 @@ export const OneSignalDebug: React.FC = () => {
 
         {/* App ID */}
         <div>
-          <p className="text-sm text-muted-foreground mb-1">OneSignal App ID</p>
+          <p className="text-sm text-muted-foreground mb-1">
+            OneSignal App ID 
+            {settingKey && <span className="ml-2 text-xs">({settingKey})</span>}
+          </p>
           <code className="text-xs bg-muted px-2 py-1 rounded block overflow-x-auto">
             {appId || 'nenačteno'}
           </code>
@@ -206,25 +266,25 @@ export const OneSignalDebug: React.FC = () => {
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-2 pt-2">
+        <div className="flex gap-2 pt-2 flex-wrap">
           <Button
             onClick={async () => {
-              console.log("🖱️ Žádám o oprávnění...");
-              console.log("🔎 Aktuální permission:", Notification.permission);
+              console.log("🖱️ Žádám o oprávnění přes OneSignal...");
+              console.log("🔎 Aktuální permissionState:", permissionState);
               
-              // Zkus OneSignal optIn
-              await window.OneSignal?.User?.PushSubscription?.optIn();
-              
-              // Pokud je stále default, zkus i native API
-              if (Notification.permission === 'default') {
-                const result = await Notification.requestPermission();
-                console.log("🔎 Native permission result:", result);
+              try {
+                await window.OneSignal?.User?.PushSubscription?.optIn();
+                console.log("✅ optIn() zavolán");
+                
+                // Počkej chvíli a zkontroluj výsledek
+                await new Promise(r => setTimeout(r, 1000));
+                const newPerm = await window.OneSignal?.Notifications?.permission;
+                console.log("🔎 Permission po optIn:", newPerm);
+              } catch (e) {
+                console.error("❌ optIn() selhal:", e);
               }
-              
-              // Aktualizuj UI
-              updatePermission();
             }}
-            disabled={!isInitialized || permission === 'granted'}
+            disabled={!isInitialized || permissionState === 'granted'}
             size="sm"
             variant="outline"
           >
@@ -243,13 +303,21 @@ export const OneSignalDebug: React.FC = () => {
           <Button
             onClick={() => {
               fetchDeviceCount();
-              updatePermission();
+              fetchAppId();
             }}
             disabled={!user}
             size="sm"
             variant="ghost"
           >
             <RefreshCw className="w-4 h-4" />
+          </Button>
+          <Button
+            onClick={handleResetOneSignal}
+            size="sm"
+            variant="destructive"
+            className="ml-auto"
+          >
+            Reset OneSignal
           </Button>
         </div>
 
@@ -258,6 +326,8 @@ export const OneSignalDebug: React.FC = () => {
           <p>💡 Pokud je Player ID "není dostupné", zkontrolujte konzoli prohlížeče.</p>
           <p>💡 Pokud je oprávnění "denied", povolte notifikace v nastavení prohlížeče.</p>
           <p>💡 Pokud je počet zařízení 0 i přes Player ID, zkontrolujte RLS policies v Supabase.</p>
+          <p>💡 Pokud vidíte chybu "AppID doesn't match" nebo "Can only be used on", klikněte na Reset OneSignal.</p>
+          <p>💡 Na <strong>app.onemil.cz</strong> se používá PROD App ID, jinde DEV App ID.</p>
         </div>
       </CardContent>
     </Card>
