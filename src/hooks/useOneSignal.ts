@@ -39,6 +39,63 @@ export function useOneSignal(userId?: string) {
 
   useEffect(() => {
     let active = true;
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+
+    const waitForOneSignal = async (): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        const start = Date.now();
+        const timer = setInterval(() => {
+          if (window.OneSignal && window.OneSignal.User) {
+            clearInterval(timer);
+            console.log("✅ OneSignal SDK načteno");
+            resolve();
+          }
+          if (Date.now() - start > 5000) {
+            clearInterval(timer);
+            reject(new Error("OneSignal SDK se nenačetlo do 5 s"));
+          }
+        }, 100);
+      });
+    };
+
+    const waitForUserAPI = async (): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        const start = Date.now();
+        const timer = setInterval(() => {
+          if (window.OneSignal?.User?.PushSubscription) {
+            clearInterval(timer);
+            console.log("✅ OneSignal User API připraveno");
+            resolve();
+          }
+          if (Date.now() - start > 5000) {
+            clearInterval(timer);
+            reject(new Error("OneSignal User API se nenačetlo do 5 s"));
+          }
+        }, 100);
+      });
+    };
+
+    const fetchAndStorePlayerId = async (): Promise<string | null> => {
+      let attempts = 0;
+      while (attempts < 5) {
+        const pid = window.OneSignal?.User?.PushSubscription?.id;
+        if (pid) {
+          console.log("📱 Player ID získáno:", pid);
+          setPlayerId(pid);
+          if (userId) {
+            await saveDevice(userId, pid);
+            console.log("💾 Player ID uloženo do Supabase");
+          }
+          return pid;
+        }
+        console.log(`⏳ Čekám na Player ID (pokus ${attempts + 1}/5)...`);
+        await new Promise((r) => setTimeout(r, 1000));
+        attempts++;
+      }
+      console.warn("⚠️ Player ID není dostupné ani po 5 pokusech");
+      return null;
+    };
 
     const initOneSignal = async () => {
       try {
@@ -46,21 +103,7 @@ export function useOneSignal(userId?: string) {
         console.log("👤 userId:", userId || "nepřihlášen");
 
         // ⏳ Počkej na načtení SDK
-        await new Promise<void>((resolve, reject) => {
-          const start = Date.now();
-          const timer = setInterval(() => {
-            if (window.OneSignal && window.OneSignal.User) {
-              clearInterval(timer);
-              resolve();
-            }
-            if (Date.now() - start > 10000) {
-              clearInterval(timer);
-              reject("❌ OneSignal SDK se nenačetlo do 10 s");
-            }
-          }, 200);
-        });
-
-        console.log("✅ OneSignal SDK načteno");
+        await waitForOneSignal();
 
         // 🔑 Načti App ID ze Supabase (podle domény)
         const isDevelopment = window.location.hostname.includes("lovableproject.com");
@@ -97,24 +140,10 @@ export function useOneSignal(userId?: string) {
         }
 
         // 🧩 Počkej na OneSignal User API
-        await new Promise<void>((resolve, reject) => {
-          const start = Date.now();
-          const timer = setInterval(() => {
-            if (window.OneSignal?.User?.PushSubscription && window.OneSignal.User.PushSubscription.id !== undefined) {
-              clearInterval(timer);
-              resolve();
-            }
-            if (Date.now() - start > 8000) {
-              clearInterval(timer);
-              reject("❌ OneSignal User API se nenačetlo do 8 s");
-            }
-          }, 200);
-        });
-
+        await waitForUserAPI();
         setIsInitialized(true);
-        console.log("✅ OneSignal User API připraveno");
 
-        // 🔔 Požádej o oprávnění, pokud je „default“
+        // 🔔 Požádej o oprávnění, pokud je „default"
         if (Notification.permission === "default") {
           console.log("❓ Žádám uživatele o povolení notifikací…");
           await window.OneSignal.User.PushSubscription.optIn();
@@ -129,20 +158,9 @@ export function useOneSignal(userId?: string) {
           return;
         }
 
-        // 📱 Získej Player ID (s retry)
-        let pid = window.OneSignal.User.PushSubscription.id;
+        // 📱 Získej a ulož Player ID
+        const pid = await fetchAndStorePlayerId();
         if (!pid) {
-          console.log("⏳ Čekám na Player ID…");
-          await new Promise((r) => setTimeout(r, 1000));
-          pid = window.OneSignal.User.PushSubscription.id;
-        }
-
-        if (pid) {
-          console.log("📱 Player ID získáno:", pid);
-          setPlayerId(pid);
-          if (userId) await saveDevice(userId, pid);
-        } else {
-          console.warn("⚠️ Player ID není dostupné ani po čekání");
           toast({
             title: "⚠️ Player ID není dostupné",
             description: "Zkuste znovu po povolení notifikací.",
@@ -155,13 +173,26 @@ export function useOneSignal(userId?: string) {
           if (!active) return;
           const newId = sub?.current?.id;
           console.log("🔄 Subscription změna →", newId);
-          if (newId && userId) {
-            await saveDevice(userId, newId);
+          if (newId) {
             setPlayerId(newId);
+            if (userId) {
+              await saveDevice(userId, newId);
+              console.log("💾 Player ID aktualizováno v Supabase");
+            }
           }
         });
       } catch (err) {
         console.error("💥 Chyba OneSignal:", err);
+        
+        // 🔄 Retry logic
+        if (retryCount < MAX_RETRIES && active) {
+          retryCount++;
+          console.log(`🔄 Zkouším znovu (pokus ${retryCount}/${MAX_RETRIES})...`);
+          await new Promise((r) => setTimeout(r, 2000));
+          if (active) initOneSignal();
+          return;
+        }
+
         toast({
           title: "❌ Chyba při inicializaci OneSignal",
           description: String(err),
