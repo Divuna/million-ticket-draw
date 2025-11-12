@@ -150,28 +150,9 @@ export function useOneSignal(userId?: string) {
         if (Notification.permission === "default") {
           console.log("❓ Žádám uživatele o povolení notifikací…");
           await window.OneSignal.User.PushSubscription.optIn();
-        } else if (Notification.permission === "denied") {
-          console.warn("⚠️ Oprávnění odepřeno – nelze registrovat player ID");
-          toast({
-            title: "⚠️ Oprávnění odmítnuto",
-            description: "Povolte notifikace v nastavení prohlížeče.",
-            variant: "destructive",
-            duration: 4000,
-          });
-          return;
         }
 
-        // 📱 Získej a ulož Player ID
-        const pid = await fetchAndStorePlayerId();
-        if (!pid) {
-          toast({
-            title: "⚠️ Player ID není dostupné",
-            description: "Zkuste znovu po povolení notifikací.",
-            variant: "destructive",
-          });
-        }
-
-        // 🌀 Sleduj změny subscription
+        // 🌀 Nastavit event listener VŽDY (i když je denied)
         window.OneSignal.User.PushSubscription.addEventListener("change", async (sub: any) => {
           if (!active) return;
           const newId = sub?.current?.id;
@@ -184,6 +165,28 @@ export function useOneSignal(userId?: string) {
             }
           }
         });
+
+        // 📱 Získej Player ID pouze když není denied
+        if (Notification.permission === "denied") {
+          console.warn("⚠️ Oprávnění odepřeno – nelze registrovat player ID");
+          toast({
+            title: "⚠️ Oprávnění odmítnuto",
+            description: "Povolte notifikace v nastavení prohlížeče.",
+            variant: "destructive",
+            duration: 4000,
+          });
+          // NEUKONČOVAT funkci, jen nepokračovat s fetchem
+        } else {
+          // Pokud je granted nebo default (po optIn), zkus získat Player ID
+          const pid = await fetchAndStorePlayerId();
+          if (!pid) {
+            toast({
+              title: "⚠️ Player ID není dostupné",
+              description: "Zkuste znovu po povolení notifikací.",
+              variant: "destructive",
+            });
+          }
+        }
       } catch (err) {
         console.error("💥 Chyba OneSignal:", err);
         
