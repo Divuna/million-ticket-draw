@@ -1,4 +1,4 @@
-// useOneSignal.ts – plně opravená verze
+// ✅ useOneSignal.ts – finální verze pro OneMil
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -7,7 +7,7 @@ export function useOneSignal(userId?: string) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [permissionState, setPermissionState] = useState<"granted" | "denied" | "default" | "unknown">("unknown");
 
-  // Načti userId, pokud nebyl předán
+  // 🧩 Načti userId, pokud nebyl předán
   const loadUserId = async () => {
     if (!userId) {
       try {
@@ -22,7 +22,7 @@ export function useOneSignal(userId?: string) {
     }
   };
 
-  // Ulož Player ID do Supabase
+  // 💾 Ulož Player ID do Supabase
   const savePlayerId = async (pid: string) => {
     try {
       await loadUserId();
@@ -53,20 +53,18 @@ export function useOneSignal(userId?: string) {
           return;
         }
 
-        if (window.OneSignal.isPushNotificationsEnabled) {
-          console.log("✅ OneSignal SDK už inicializováno.");
-        } else {
-          console.log("🚀 Spouštím OneSignal.init()…");
-          await window.OneSignal.init();
-        }
+        // 🚫 Nepoužíváme žádný init – SDK se načítá z HTML
+        console.log("⚙️ OneSignal SDK načteno z HTML – přeskočuji init()");
 
         await loadUserId();
         setIsInitialized(true);
 
+        // 🔎 Získej oprávnění
         const perm = await window.OneSignal.Notifications.permission;
         setPermissionState(perm);
         console.log("🔎 Permission:", perm);
 
+        // 📲 Získej subscription a Player ID
         const pushSub = window.OneSignal.User.PushSubscription;
         const pid = pushSub?.id;
         const optedIn = pushSub?.optedIn ?? false;
@@ -77,6 +75,7 @@ export function useOneSignal(userId?: string) {
           await savePlayerId(pid);
         }
 
+        // 🧠 Pokud není optedIn a permission povolené → optIn
         if (!optedIn && perm !== "denied") {
           console.log("📲 Volám optIn()");
           await pushSub.optIn();
@@ -85,6 +84,7 @@ export function useOneSignal(userId?: string) {
           setPermissionState(newPerm);
         }
 
+        // 🎧 Listener změny subscription
         pushSub.addEventListener("change", async (sub: any) => {
           if (!active) return;
           const newId = sub?.current?.id;
@@ -101,7 +101,6 @@ export function useOneSignal(userId?: string) {
     };
 
     initOneSignal();
-
     return () => {
       active = false;
     };
