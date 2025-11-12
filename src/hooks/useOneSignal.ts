@@ -4,6 +4,7 @@ import { toast } from "@/components/ui/use-toast";
 
 // 🧩 Ochrana proti dvojité inicializaci
 let oneSignalInitialized = false;
+let deniedToastShown = false;
 
 export function useOneSignal(userId?: string) {
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -104,6 +105,13 @@ export function useOneSignal(userId?: string) {
 
         // ⏳ Počkej na načtení SDK
         await waitForOneSignal();
+        console.log("✅ OneSignal SDK načteno");
+        
+        // 🔍 Diagnostika podpory a stavu inicializace
+        const supportsPush = window.OneSignal?.Notifications?.isPushSupported?.() ?? false;
+        const alreadyInit = window.OneSignal?.initialized === true;
+        console.log("🔎 OneSignal.initialized:", alreadyInit);
+        console.log("🔎 Podpora push:", supportsPush);
 
         // 🔑 Načti App ID ze Supabase (podle domény)
         const isDevelopment = window.location.hostname.includes("lovableproject.com");
@@ -118,13 +126,12 @@ export function useOneSignal(userId?: string) {
         const appId = data.value;
         console.log("✅ OneSignal App ID:", appId);
 
-        // ✅ Inicializace jen jednou - kontrola stavu SDK
-        const isAlreadyInitialized = window.OneSignal?.User?.PushSubscription !== undefined;
-        
-        if (isAlreadyInitialized) {
-          console.log("ℹ️ OneSignal už byl inicializován");
+        // ✅ Inicializace jen jednou - kontrola skutečného stavu SDK
+        if (alreadyInit) {
+          console.log("ℹ️ OneSignal už byl inicializován (SKIP init)");
           oneSignalInitialized = true;
         } else if (!oneSignalInitialized) {
+          console.log("🔧 Spouštím OneSignal.init()...");
           await window.OneSignal.init({
             appId,
             allowLocalhostAsSecureOrigin: true,
@@ -145,6 +152,7 @@ export function useOneSignal(userId?: string) {
         // 🧩 Počkej na OneSignal User API
         await waitForUserAPI();
         setIsInitialized(true);
+        console.log("🔎 Notification.permission:", Notification.permission);
 
         // 🔔 Požádej o oprávnění, pokud je „default"
         if (Notification.permission === "default") {
@@ -156,7 +164,8 @@ export function useOneSignal(userId?: string) {
         window.OneSignal.User.PushSubscription.addEventListener("change", async (sub: any) => {
           if (!active) return;
           const newId = sub?.current?.id;
-          console.log("🔄 Subscription změna →", newId);
+          const optedIn = sub?.current?.optedIn;
+          console.log("🔄 Subscription změna → id:", newId, "optedIn:", optedIn);
           if (newId) {
             setPlayerId(newId);
             if (userId) {
@@ -169,12 +178,16 @@ export function useOneSignal(userId?: string) {
         // 📱 Získej Player ID pouze když není denied
         if (Notification.permission === "denied") {
           console.warn("⚠️ Oprávnění odepřeno – nelze registrovat player ID");
-          toast({
-            title: "⚠️ Oprávnění odmítnuto",
-            description: "Povolte notifikace v nastavení prohlížeče.",
-            variant: "destructive",
-            duration: 4000,
-          });
+          // Zobraz toast jen jednou za session
+          if (!deniedToastShown) {
+            toast({
+              title: "⚠️ Oprávnění odmítnuto",
+              description: "Povolte notifikace v nastavení prohlížeče.",
+              variant: "destructive",
+              duration: 4000,
+            });
+            deniedToastShown = true;
+          }
           // NEUKONČOVAT funkci, jen nepokračovat s fetchem
         } else {
           // Pokud je granted nebo default (po optIn), zkus získat Player ID

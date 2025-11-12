@@ -208,7 +208,22 @@ export const OneSignalDebug: React.FC = () => {
         {/* Action Buttons */}
         <div className="flex gap-2 pt-2">
           <Button
-            onClick={() => window.OneSignal?.User.PushSubscription.optIn()}
+            onClick={async () => {
+              console.log("🖱️ Žádám o oprávnění...");
+              console.log("🔎 Aktuální permission:", Notification.permission);
+              
+              // Zkus OneSignal optIn
+              await window.OneSignal?.User?.PushSubscription?.optIn();
+              
+              // Pokud je stále default, zkus i native API
+              if (Notification.permission === 'default') {
+                const result = await Notification.requestPermission();
+                console.log("🔎 Native permission result:", result);
+              }
+              
+              // Aktualizuj UI
+              updatePermission();
+            }}
             disabled={!isInitialized || permission === 'granted'}
             size="sm"
             variant="outline"
