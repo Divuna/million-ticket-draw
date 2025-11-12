@@ -118,8 +118,13 @@ export function useOneSignal(userId?: string) {
         const appId = data.value;
         console.log("✅ OneSignal App ID:", appId);
 
-        // ✅ Inicializace jen jednou
-        if (!oneSignalInitialized) {
+        // ✅ Inicializace jen jednou - kontrola stavu SDK
+        const isAlreadyInitialized = window.OneSignal?.User?.PushSubscription !== undefined;
+        
+        if (isAlreadyInitialized) {
+          console.log("ℹ️ OneSignal už byl inicializován");
+          oneSignalInitialized = true;
+        } else if (!oneSignalInitialized) {
           await window.OneSignal.init({
             appId,
             allowLocalhostAsSecureOrigin: true,
@@ -135,8 +140,6 @@ export function useOneSignal(userId?: string) {
           });
           oneSignalInitialized = true;
           console.log("✅ OneSignal inicializován");
-        } else {
-          console.log("ℹ️ OneSignal už byl inicializován");
         }
 
         // 🧩 Počkej na OneSignal User API
