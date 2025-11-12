@@ -126,27 +126,35 @@ export function useOneSignal(userId?: string) {
         const appId = data.value;
         console.log("✅ OneSignal App ID:", appId);
 
-        // ✅ Inicializace jen jednou - kontrola skutečného stavu SDK
-        if (alreadyInit) {
-          console.log("ℹ️ OneSignal už byl inicializován (SKIP init)");
-          oneSignalInitialized = true;
-        } else if (!oneSignalInitialized) {
+        // ✅ Inicializace jen jednou pomocí module-level flagu
+        if (!oneSignalInitialized) {
           console.log("🔧 Spouštím OneSignal.init()...");
-          await window.OneSignal.init({
-            appId,
-            allowLocalhostAsSecureOrigin: true,
-            promptOptions: {
-              slidedown: {
-                enabled: true,
-                autoPrompt: true,
-                actionMessage: "Chcete dostávat upozornění o nových soutěžích a výhrách?",
-                acceptButtonText: "Ano, chci",
-                cancelButtonText: "Ne, děkuji",
+          try {
+            await window.OneSignal.init({
+              appId,
+              allowLocalhostAsSecureOrigin: true,
+              promptOptions: {
+                slidedown: {
+                  enabled: true,
+                  autoPrompt: true,
+                  actionMessage: "Chcete dostávat upozornění o nových soutěžích a výhrách?",
+                  acceptButtonText: "Ano, chci",
+                  cancelButtonText: "Ne, děkuji",
+                },
               },
-            },
-          });
-          oneSignalInitialized = true;
-          console.log("✅ OneSignal inicializován");
+            });
+            oneSignalInitialized = true;
+            console.log("✅ OneSignal inicializován");
+          } catch (err: any) {
+            if (err?.message?.includes("already initialized")) {
+              console.log("ℹ️ OneSignal už byl inicializován (tolerováno)");
+              oneSignalInitialized = true;
+            } else {
+              throw err; // Re-throw jiné chyby
+            }
+          }
+        } else {
+          console.log("ℹ️ OneSignal už byl inicializován (SKIP init)");
         }
 
         // 🧩 Počkej na OneSignal User API
