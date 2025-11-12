@@ -162,14 +162,23 @@ export function useOneSignal(userId?: string) {
         setIsInitialized(true);
         console.log("🔎 Notification.permission:", Notification.permission);
 
-        // 🔔 Požádej o oprávnění, pokud je „default"
-        if (Notification.permission === "default") {
-          console.log("❓ Žádám uživatele o povolení notifikací…");
-          await window.OneSignal.User.PushSubscription.optIn();
+        // 🔍 Kontrola opt-in stavu
+        const pushSub = window.OneSignal.User.PushSubscription;
+        const isOptedIn = pushSub?.optedIn ?? false;
+        console.log("🔎 PushSubscription.optedIn:", isOptedIn);
+
+        // 🔔 Pokud není opted in, zavolej optIn()
+        if (!isOptedIn && Notification.permission !== "denied") {
+          console.log("📲 Volám PushSubscription.optIn()...");
+          await pushSub.optIn();
+          console.log("✅ optIn() úspěšný");
+          
+          // Počkej chvíli na propagaci Player ID
+          await new Promise(r => setTimeout(r, 1000));
         }
 
         // 🌀 Nastavit event listener VŽDY (i když je denied)
-        window.OneSignal.User.PushSubscription.addEventListener("change", async (sub: any) => {
+        pushSub.addEventListener("change", async (sub: any) => {
           if (!active) return;
           const newId = sub?.current?.id;
           const optedIn = sub?.current?.optedIn;
@@ -183,10 +192,9 @@ export function useOneSignal(userId?: string) {
           }
         });
 
-        // 📱 Získej Player ID pouze když není denied
+        // 📱 Získej Player ID
         if (Notification.permission === "denied") {
           console.warn("⚠️ Oprávnění odepřeno – nelze registrovat player ID");
-          // Zobraz toast jen jednou za session
           if (!deniedToastShown) {
             toast({
               title: "⚠️ Oprávnění odmítnuto",
@@ -196,11 +204,13 @@ export function useOneSignal(userId?: string) {
             });
             deniedToastShown = true;
           }
-          // NEUKONČOVAT funkci, jen nepokračovat s fetchem
         } else {
-          // Pokud je granted nebo default (po optIn), zkus získat Player ID
+          // Získej a ulož Player ID
           const pid = await fetchAndStorePlayerId();
-          if (!pid) {
+          if (pid) {
+            console.log("✅ Player ID úspěšně získáno a uloženo");
+          } else {
+            console.warn("⚠️ Player ID není k dispozici");
             toast({
               title: "⚠️ Player ID není dostupné",
               description: "Zkuste znovu po povolení notifikací.",
