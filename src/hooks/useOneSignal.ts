@@ -186,24 +186,30 @@ export function useOneSignal(userId?: string) {
         await waitForUserAPI();
         setIsInitialized(true);
 
-        const permission = await window.OneSignal.Notifications.permission;
+        const rawPermission = await window.OneSignal.Notifications.permission;
+        const permission = rawPermission === true
+          ? 'granted'
+          : rawPermission === false
+          ? 'default'
+          : (rawPermission === 'prompt' ? 'default' : rawPermission);
         console.log("🔎 OneSignal.Notifications.permission:", permission);
-        setPermissionState(permission);
+        setPermissionState(permission as any);
 
         const pushSub = window.OneSignal.User.PushSubscription;
         const isOptedIn = pushSub?.optedIn ?? false;
         console.log("🔎 PushSubscription.optedIn:", isOptedIn);
 
-        if (!isOptedIn && permission !== "denied") {
+        if (!isOptedIn && permission !== 'denied') {
           console.log("📲 Volám PushSubscription.optIn()...");
           await pushSub.optIn();
           console.log("✅ optIn() úspěšný");
           await new Promise((r) => setTimeout(r, 1000));
           
           // Aktualizuj permission po optIn
-          const newPermission = await window.OneSignal.Notifications.permission;
-          setPermissionState(newPermission);
-          console.log("🔎 Permission po optIn:", newPermission);
+          const rp = await window.OneSignal.Notifications.permission;
+          const mapped = rp === true ? 'granted' : rp === false ? 'default' : (rp === 'prompt' ? 'default' : rp);
+          setPermissionState(mapped as any);
+          console.log("🔎 Permission po optIn:", mapped);
         }
 
         pushSub.addEventListener("change", async (sub: any) => {
@@ -220,9 +226,10 @@ export function useOneSignal(userId?: string) {
           }
           
           // Aktualizuj permission při změně subscription
-          const currentPermission = await window.OneSignal.Notifications.permission;
-          setPermissionState(currentPermission);
-          console.log("🔎 Permission po změně subscription:", currentPermission);
+          const rp = await window.OneSignal.Notifications.permission;
+          const mapped = rp === true ? 'granted' : rp === false ? 'default' : (rp === 'prompt' ? 'default' : rp);
+          setPermissionState(mapped as any);
+          console.log("🔎 Permission po změně subscription:", mapped);
         });
 
         if (permission === "denied") {

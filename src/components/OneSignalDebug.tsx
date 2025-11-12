@@ -6,7 +6,7 @@ import { useOneSignal } from '@/hooks/useOneSignal';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { RefreshCw, Bell, Database } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 export const OneSignalDebug: React.FC = () => {
   const { user } = useAuth();
@@ -271,17 +271,18 @@ export const OneSignalDebug: React.FC = () => {
             onClick={async () => {
               console.log("🖱️ Žádám o oprávnění přes OneSignal...");
               console.log("🔎 Aktuální permissionState:", permissionState);
-              
               try {
+                toast({ title: 'Žádost o oprávnění', description: 'Otevírám systémové dialogy...', duration: 2000 });
                 await window.OneSignal?.User?.PushSubscription?.optIn();
                 console.log("✅ optIn() zavolán");
-                
-                // Počkej chvíli a zkontroluj výsledek
                 await new Promise(r => setTimeout(r, 1000));
-                const newPerm = await window.OneSignal?.Notifications?.permission;
-                console.log("🔎 Permission po optIn:", newPerm);
+                const rp = await window.OneSignal?.Notifications?.permission;
+                const mapped = rp === true ? 'granted' : rp === false ? 'default' : (rp === 'prompt' ? 'default' : rp);
+                console.log("🔎 Permission po optIn:", mapped);
+                toast({ title: 'Stav oprávnění', description: String(mapped), duration: 2500 });
               } catch (e) {
                 console.error("❌ optIn() selhal:", e);
+                toast({ title: 'Chyba při žádosti o oprávnění', description: String(e), variant: 'destructive' });
               }
             }}
             disabled={!isInitialized || permissionState === 'granted'}
