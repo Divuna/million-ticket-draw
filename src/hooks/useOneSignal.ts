@@ -160,7 +160,10 @@ export function useOneSignal(userId?: string) {
         // 🧩 Počkej na OneSignal User API
         await waitForUserAPI();
         setIsInitialized(true);
-        console.log("🔎 Notification.permission:", Notification.permission);
+        
+        // 🔍 Získej přesný stav oprávnění z OneSignal
+        const permission = await window.OneSignal.Notifications.permission;
+        console.log("🔎 OneSignal.Notifications.permission:", permission);
 
         // 🔍 Kontrola opt-in stavu
         const pushSub = window.OneSignal.User.PushSubscription;
@@ -168,7 +171,7 @@ export function useOneSignal(userId?: string) {
         console.log("🔎 PushSubscription.optedIn:", isOptedIn);
 
         // 🔔 Pokud není opted in, zavolej optIn()
-        if (!isOptedIn && Notification.permission !== "denied") {
+        if (!isOptedIn && permission !== "denied") {
           console.log("📲 Volám PushSubscription.optIn()...");
           await pushSub.optIn();
           console.log("✅ optIn() úspěšný");
@@ -193,7 +196,7 @@ export function useOneSignal(userId?: string) {
         });
 
         // 📱 Získej Player ID
-        if (Notification.permission === "denied") {
+        if (permission === "denied") {
           console.warn("⚠️ Oprávnění odepřeno – nelze registrovat player ID");
           if (!deniedToastShown) {
             toast({
