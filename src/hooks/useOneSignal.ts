@@ -1,45 +1,51 @@
-// ✅ useOneSignal.ts – finální verze pro OneMil
+// ✅ useOneSignal.ts – Finální verze pro OneMil + Sofinity sync
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export function useOneSignal(userId?: string) {
+export function useOneSignal() {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [permissionState, setPermissionState] = useState<"granted" | "denied" | "default" | "unknown">("unknown");
 
-  // 🧩 Načti userId, pokud nebyl předán
-  const loadUserId = async () => {
-    if (!userId) {
-      try {
-        const { data } = await supabase.auth.getUser();
-        if (data?.user?.id) {
-          console.log("👤 Automaticky nalezený userId:", data.user.id);
-          userId = data.user.id;
-        }
-      } catch (err) {
-        console.warn("⚠️ Nepodařilo se načíst userId:", err);
-      }
-    }
+  // Načtení userId a emailu ze Supabase auth
+  const loadUser = async () => {
+    const { data } = await supabase.auth.getUser();
+    if (!data?.user) return { userId: null, email: null };
+
+    return {
+      userId: data.user.id,
+      email: data.user.email ?? null,
+    };
   };
 
-  // 💾 Ulož Player ID do Supabase
-  const savePlayerId = async (pid: string) => {
+  // Sync player_id → Sofinity
+  const syncPlayerToSofinity = async (
+    userId: string,
+    email: string | null,
+    playerId: string,
+    deviceType: "mobile" | "desktop",
+  ) => {
     try {
-      await loadUserId();
-      if (!userId || !pid) return;
-      const { error } = await supabase.from("user_devices").upsert(
-        {
+      await fetch("https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/sync-player-to-sofinity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           user_id: userId,
-          player_id: pid,
-          device_type: "web",
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "player_id" },
-      );
-      if (error) console.error("❌ Chyba při ukládání Player ID:", error);
-      else console.log("✅ Player ID uložen do Supabase:", pid);
+          email,
+          onesignal_player_id: playerId,
+          device_type: deviceType,
+          source_system: "onemil",
+        }),
+      });
+
+      console.log("✅ [SYNC] Player ID odeslán do Sofinity:", {
+        userId,
+        email,
+        playerId,
+        deviceType,
+      });
     } catch (err) {
-      console.error("❌ savePlayerId selhal:", err);
+      console.error("❌ [SYNC] Nepovedlo se odeslat player_id do Sofinity:", err);
     }
   };
 
@@ -48,59 +54,65 @@ export function useOneSignal(userId?: string) {
 
     const initOneSignal = async () => {
       try {
-        if (!window.OneSignal) {
-          console.warn("⚠️ OneSignal SDK není dostupné.");
+        // Load user data
+        const { userId, email } = await loadUser();
+        if (!userId) {
+          console.warn("⚠️ [ONESIGNAL] Žádný userId – uživatel není přihlášen");
           return;
         }
 
-        // 🚫 Nepoužíváme žádný init – SDK se načítá z HTML
-        console.log("⚙️ OneSignal SDK načteno z HTML – přeskočuji init()");
-
-        await loadUserId();
-        setIsInitialized(true);
-
-        // 🔎 Získej oprávnění
-        const perm = await window.OneSignal.Notifications.permission;
-        setPermissionState(perm);
-        console.log("🔎 Permission:", perm);
-
-        // 📲 Získej subscription a Player ID
-        const pushSub = window.OneSignal.User.PushSubscription;
-        const pid = pushSub?.id;
-        const optedIn = pushSub?.optedIn ?? false;
-        console.log("🔄 PushSubscription:", { pid, optedIn });
-
-        if (pid) {
-          setPlayerId(pid);
-          await savePlayerId(pid);
+        // @ts-ignore
+        const OneSignal = window.OneSignal;
+        if (!OneSignal) {
+          console.error("❌ OneSignal SDK není načten");
+          return;
         }
 
-        // 🧠 Pokud není optedIn a permission povolené → optIn
-        if (!optedIn && perm !== "denied") {
-          console.log("📲 Volám optIn()");
-          await pushSub.optIn();
-          await new Promise((r) => setTimeout(r, 1000));
-          const newPerm = await window.OneSignal.Notifications.permission;
-          setPermissionState(newPerm);
-        }
+        console.log("🚀 Inicializace OneSignal…", { userId });
 
-        // 🎧 Listener změny subscription
-        pushSub.addEventListener("change", async (sub: any) => {
-          if (!active) return;
-          const newId = sub?.current?.id;
-          if (newId) {
-            setPlayerId(newId);
-            await savePlayerId(newId);
-          }
-          const newPerm = await window.OneSignal.Notifications.permission;
-          setPermissionState(newPerm);
+        OneSignal.init({
+          appId: "l4nzh7w4ne4o5zpfvp2i7tpeh", // TVŮJ OneMil APP ID
+          safari_web_id: "",
+          allowLocalhostAsSecureOrigin: true,
+          notifyButton: { enable: false },
         });
+
+        OneSignal.Notifications.requestPermission().then((perm: string) => {
+          setPermissionState(perm as any);
+          console.log("🔐 Permission:", perm);
+        });
+
+        // Listener na změnu stavu subscription (získání player_id)
+        OneSignal.User.PushSubscription.addEventListener("change", async () => {
+          console.log("🔄 OneSignal PushSubscription CHANGE event");
+
+          const newPlayerId = OneSignal.User.PushSubscription.id ?? OneSignal.User.pushSubscription.id;
+
+          if (!newPlayerId) {
+            console.log("⚠️ Player ID zatím není dostupný");
+            return;
+          }
+
+          console.log("🎯 OneSignal player ID:", newPlayerId);
+          setPlayerId(newPlayerId);
+
+          // Určení typu zařízení
+          const isMobile = window.innerWidth < 768;
+          const deviceType = isMobile ? "mobile" : "desktop";
+
+          // SYNC → Sofinity
+          await syncPlayerToSofinity(userId, email, newPlayerId, deviceType);
+        });
+
+        setIsInitialized(true);
+        console.log("✅ OneSignal inicializován");
       } catch (err) {
         console.error("❌ Chyba při inicializaci OneSignal:", err);
       }
     };
 
     initOneSignal();
+
     return () => {
       active = false;
     };
