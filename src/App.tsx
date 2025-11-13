@@ -42,8 +42,7 @@ const queryClient = new QueryClient();
 function AppContent() {
   const { user } = useAuth();
 
-  // Initialize OneSignal with user ID
-  useOneSignal(user?.id);
+  useOneSignal();
 
   return (
     <Routes>
