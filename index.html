@@ -1,33 +1,13 @@
 <!doctype html>
 <html lang="cs">
   <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OneMil</title>
-
-    <!-- 🛡️ ONE SIGNAL: BLOCK AUTO INIT + BLOCK SLIDEDOWN + BLOCK PROMPTS -->
+    <!-- 🛡️ ONE SIGNAL GUARD MUSÍ BÝT ÚPLNĚ NAHOŘE!!! -->
     <script>
-      // Disable auto-start and auto-prompts
       window.OSAutoStart = false;
       window.OSNotificationAutoPrompt = false;
 
-      // Full block of slidedown pipeline
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(function(OS) {
-        try {
-          OS.Notifications.disableAutoPrompt(true);
-          OS.Notifications.disableSlidedownPrompts(true);
-          OS.Notifications.disableSlidedown(true);
-          OS.Notifications.disablePush();
-          console.log("🛑 OneSignal auto-prompt & slidedown disabled");
-        } catch (e) {
-          console.warn("OneSignal disable error:", e);
-        }
-      });
-
-      // Guard that blocks ANY auto-init attempts
       (function () {
+        window.__ONESIGNAL_ALLOW_INIT = false;
         window.__oneSignalInitState = { called: false, blocked: 0, allowed: 0 };
 
         const guardInit = (...args) => {
@@ -36,52 +16,60 @@
             console.warn("⛔ Blocked duplicate OneSignal.init()");
             return Promise.resolve();
           }
+          if (!window.__ONESIGNAL_ALLOW_INIT) {
+            window.__oneSignalInitState.blocked++;
+            console.warn("⛔ Blocked OneSignal auto-init()");
+            return Promise.resolve();
+          }
+
           window.__oneSignalInitState.called = true;
           window.__oneSignalInitState.allowed++;
-          console.log("✅ Allowed OneSignal.init()");
+          console.log("✅ Allowed OneSignal.init() manually");
 
-          if (window.OneSignalSDK?.init) {
+          if (window.OneSignalSDK?.init)
             return window.OneSignalSDK.init(...args);
-          }
 
           return Promise.resolve();
         };
 
         const proxy = new Proxy([], {
-          get(target, prop) {
-            if (prop === "push") {
+          get(t, p) {
+            if (p === "push") {
               return (cmd) => {
-                if (Array.isArray(cmd) && cmd[0] === "init") {
+                if (Array.isArray(cmd) && cmd[0] === "init")
                   return guardInit(...cmd.slice(1));
-                }
-                return target.push(cmd);
+                return t.push(cmd);
               };
             }
-            if (prop === "init") {
-              return (...args) => guardInit(...args);
-            }
-            return target[prop];
+            if (p === "init") return (...a) => guardInit(...a);
+            return t[p];
           },
         });
 
         window.OneSignal = proxy;
 
         window.__OneSignalInitOnce = (config) => {
+          window.__ONESIGNAL_ALLOW_INIT = true;
           return guardInit(config);
         };
 
-        console.log("🛡️ OneSignal Guard aktivní");
+        console.log("🛡️ OneSignal Guard loaded FIRST");
       })();
     </script>
 
-    <!-- ✅ OFICIÁLNÍ ONESIGNAL SDK -->
+    <!-- ORIGINÁL HEAD DÁLE -->
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OneMil</title>
+
+    <!-- OneSignal SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   </head>
 
   <body>
     <div id="root"></div>
 
-    <!-- React aplikace -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
