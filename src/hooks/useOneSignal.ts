@@ -1,25 +1,37 @@
 // src/hooks/useOneSignal.ts nebo tam kde máš hook
 import { useState, useEffect } from "react";
 
-export function useOneSignal() {
+export function useOneSignal(): { playerId: string | null; isInitialized: boolean; permissionState: "granted" | "denied" | "default" | "unknown" } {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [permissionState, setPermissionState] = useState<
+    "granted" | "denied" | "default" | "unknown"
+  >("unknown");
 
   useEffect(() => {
     let mounted = true;
 
+    const mapPermission = (p: any): "granted" | "denied" | "default" | "unknown" => {
+      if (typeof p === "string") {
+        if (p === "granted") return "granted";
+        if (p === "denied") return "denied";
+        return "default"; // prompt / default
+      }
+      if (typeof p === "boolean") {
+        return p ? "granted" : "default";
+      }
+      return "unknown";
+    };
+
     const initOneSignal = async () => {
       try {
-        // KRITICKÉ: Nevoláme OneSignal.init() - už bylo zavoláno z Lovable runtime!
-        // Místo toho jen čekáme až bude SDK ready
-
+        // Nevoláme OneSignal.init() – čekáme pouze na dostupnost SDK
         const checkReady = setInterval(async () => {
           if (window.OneSignal) {
             clearInterval(checkReady);
 
             console.log("[useOneSignal] OneSignal SDK detekováno");
 
-            // Zkontrolujeme zda už je inicializováno
             const state = (window as any).__oneSignalInitState;
             if (state) {
               console.log("[useOneSignal] Init stav:", {
@@ -32,10 +44,19 @@ export function useOneSignal() {
             if (!mounted) return;
             setIsInitialized(true);
 
+            // Permission stav
+            try {
+              const p = await (window as any).OneSignal?.Notifications?.permission;
+              const mapped = mapPermission(p ?? (typeof Notification !== "undefined" ? Notification.permission : undefined));
+              if (mounted) setPermissionState(mapped);
+            } catch {
+              const mapped = mapPermission((typeof Notification !== "undefined" ? Notification.permission : undefined) as any);
+              if (mounted) setPermissionState(mapped);
+            }
+
             // Získáme player_id pokud existuje
             try {
-              const currentPlayerId = await window.OneSignal.User?.PushSubscription?.id;
-
+              const currentPlayerId = await (window as any).OneSignal?.User?.PushSubscription?.id;
               if (currentPlayerId && mounted) {
                 setPlayerId(currentPlayerId);
                 console.log("[useOneSignal] Player ID:", currentPlayerId);
@@ -44,13 +65,20 @@ export function useOneSignal() {
               console.warn("[useOneSignal] Player ID není dostupný:", err);
             }
 
-            // Posloucháme změny subscription
-            window.OneSignal.User?.PushSubscription?.addEventListener("change", (event: any) => {
-              if (mounted && event.current?.id) {
-                console.log("[useOneSignal] Player ID změněn:", event.current.id);
-                setPlayerId(event.current.id);
+            // Posloucháme změny subscription a re-mapujeme permission
+            (window as any).OneSignal?.User?.PushSubscription?.addEventListener(
+              "change",
+              async (event: any) => {
+                if (mounted && event?.current?.id) {
+                  console.log("[useOneSignal] Player ID změněn:", event.current.id);
+                  setPlayerId(event.current.id);
+                }
+                try {
+                  const p2 = await (window as any).OneSignal?.Notifications?.permission;
+                  if (mounted) setPermissionState(mapPermission(p2));
+                } catch {}
               }
-            });
+            );
           }
         }, 100);
 
@@ -76,6 +104,7 @@ export function useOneSignal() {
   return {
     playerId,
     isInitialized,
+    permissionState,
   };
 }
 
