@@ -127,6 +127,67 @@ export const OneSignalDebug: React.FC = () => {
     );
   };
 
+  const handleRequestPermission = async () => {
+    if (!window.__OneSignalInitOnce) {
+      toast({
+        title: "⚠️ OneSignal Guard není připraven",
+        description: "Chybí window.__OneSignalInitOnce",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!appId) {
+      toast({
+        title: "⚠️ App ID není načteno",
+        description: "Počkejte na načtení konfigurace",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log("[OneSignalDebug] Spouštím manual init přes guard s appId:", appId);
+      
+      // Initialize OneSignal once via guard
+      await window.__OneSignalInitOnce({ appId });
+      
+      console.log("[OneSignalDebug] Init dokončen, žádám o permission");
+
+      // Now request permission
+      await (window as any).OneSignal?.User?.PushSubscription?.optIn();
+      
+      toast({
+        title: "✅ Žádost odeslána",
+        description: "Povolte prosím push notifikace v dialogu prohlížeče",
+      });
+
+      // Check permission after a moment
+      setTimeout(async () => {
+        try {
+          const newPerm = await (window as any).OneSignal?.Notifications?.permission;
+          const mapped = newPerm === true ? "granted" : newPerm === "granted" ? "granted" : "default";
+          
+          if (mapped === "granted") {
+            toast({ 
+              title: "✅ Oprávnění povoleno", 
+              description: "Push notifikace jsou aktivní" 
+            });
+          }
+        } catch (e) {
+          console.warn("[OneSignalDebug] Permission check failed:", e);
+        }
+      }, 1500);
+    } catch (error) {
+      console.error("[OneSignalDebug] Init error:", error);
+      toast({
+        title: "❌ Chyba inicializace",
+        description: String(error),
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleResetOneSignal = async () => {
     try {
       console.log("🔄 Resetuji OneSignal...");
@@ -229,6 +290,16 @@ export const OneSignalDebug: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex gap-2 pt-2 flex-wrap">
+          <Button 
+            onClick={handleRequestPermission} 
+            disabled={!appId || permissionState === "granted"} 
+            size="sm" 
+            variant="default"
+          >
+            <Bell className="w-4 h-4 mr-2" />
+            Vyžádat oprávnění
+          </Button>
+
           <Button onClick={handleManualSave} disabled={!user || !playerId || loading} size="sm" variant="outline">
             <Database className="w-4 h-4 mr-2" />
             Uložit do DB ručně

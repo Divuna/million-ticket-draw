@@ -117,5 +117,6 @@ declare global {
       blocked: number;
       allowed: number;
     };
+    __OneSignalInitOnce?: (config: { appId: string }) => Promise<void>;
   }
 }
