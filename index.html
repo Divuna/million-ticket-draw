@@ -7,22 +7,19 @@
     <title>OneMil</title>
 
     <!-- ========================================================= -->
-    <!-- 🛑 HARD BLOCK – ZABLOKUJE VEŠKERÝ AUTOMATICKÝ ONESIGNAL INIT -->
+    <!-- ✔️ OFICIÁLNÍ BLOKACE AUTO-INIT PRO ONESIGNAL SDK v16 -->
     <!-- ========================================================= -->
     <script>
-      // Lovable runtime někde volá OneSignal.init() → Tohle to totálně vypne
-      window.OneSignal = {
-        init: function () {
-          console.log("🛑 BLOCKED: Lovable auto OneSignal.init()");
-        }
-      };
-
-      // Připravíme deferred API pro náš vlastní hook
+      // Tohle je OneSignal oficiální příznak "NEspouštěj auto-init"
+      window.OSNotificationAutoPrompt = false;
+      window.OSAutoStart = false;
+      window.OneSignal = window.OneSignal || [];
       window.OneSignalDeferred = window.OneSignalDeferred || [];
+      console.log("🛑 OneSignal auto-init (SDK v16) disabled");
     </script>
 
     <!-- ========================================================= -->
-    <!-- ✔️ Načtení oficiálního OneSignal SDK v16 BEZ auto-initu -->
+    <!-- ✔️ LOAD OFFICIAL ONESIGNAL SDK v16 (bez auto-initu) -->
     <!-- ========================================================= -->
     <script
       src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
@@ -34,7 +31,7 @@
   <body>
     <div id="root"></div>
 
-    <!-- ✔️ Načtení hlavního React projektu -->
+    <!-- React app -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
