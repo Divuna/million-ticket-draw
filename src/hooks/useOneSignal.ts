@@ -1,126 +1,92 @@
-// ✅ useOneSignal.ts – Lovable auto-init kompatibilní verze (OneMil)
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+// src/hooks/useOneSignal.ts nebo tam kde máš hook
+import { useState, useEffect } from "react";
 
 export function useOneSignal() {
   const [playerId, setPlayerId] = useState<string | null>(null);
-  const [permissionState, setPermissionState] = useState<"granted" | "denied" | "default" | "unknown">("unknown");
-
-  // Načtení userId a emailu ze Supabase
-  const loadUser = async () => {
-    const { data } = await supabase.auth.getUser();
-    if (!data?.user) return { userId: null, email: null };
-
-    return {
-      userId: data.user.id,
-      email: data.user.email ?? null,
-    };
-  };
-
-  // Sync player_id → Sofinity
-  const syncPlayerToSofinity = async (
-    userId: string,
-    email: string | null,
-    playerId: string,
-    deviceType: "mobile" | "desktop",
-  ) => {
-    try {
-      await fetch("https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/sync-player-to-sofinity", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: userId,
-          email,
-          onesignal_player_id: playerId,
-          device_type: deviceType,
-          source_system: "onemil",
-        }),
-      });
-
-      console.log("✅ [SYNC] Player ID odeslán do Sofinity:", {
-        userId,
-        email,
-        playerId,
-        deviceType,
-      });
-    } catch (err) {
-      console.error("❌ [SYNC] Nepovedlo se odeslat player_id do Sofinity:", err);
-    }
-  };
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    let active = true;
+    let mounted = true;
 
-    const attachListeners = async () => {
-      // Počkej na načtení window.OneSignal
-      await new Promise((resolve) => {
-        const check = () => {
-          if (window.OneSignal && window.OneSignal.User) resolve(true);
-          else setTimeout(check, 200);
-        };
-        check();
-      });
-
-      // Získáme user
-      const { userId, email } = await loadUser();
-      if (!userId) {
-        console.warn("⚠️ [ONESIGNAL] Uživatelský účet nenalezen");
-        return;
-      }
-
-      const OneSignal: any = window.OneSignal;
-
-      // Permission
+    const initOneSignal = async () => {
       try {
-        const perm = await OneSignal.Notifications.permissionState();
-        setPermissionState(perm);
-        console.log("🔐 OneSignal permission:", perm);
-      } catch (e) {
-        console.warn("⚠️ Nelze načíst stav oprávnění:", e);
-      }
+        // KRITICKÉ: Nevoláme OneSignal.init() - už bylo zavoláno z Lovable runtime!
+        // Místo toho jen čekáme až bude SDK ready
 
-      // Listener na PlayerID změnu
-      OneSignal.User.PushSubscription.addEventListener("change", async () => {
-        console.log("🔄 OneSignal subscription změna…");
+        const checkReady = setInterval(async () => {
+          if (window.OneSignal) {
+            clearInterval(checkReady);
 
-        const newPlayerId = OneSignal.User.PushSubscription.id ?? OneSignal.User.pushSubscription.id;
+            console.log("[useOneSignal] OneSignal SDK detekováno");
 
-        if (!newPlayerId) {
-          console.log("⚠️ Player ID zatím není dostupný");
-          return;
-        }
+            // Zkontrolujeme zda už je inicializováno
+            const state = (window as any).__oneSignalInitState;
+            if (state) {
+              console.log("[useOneSignal] Init stav:", {
+                povolen: state.allowed,
+                blokován: state.blocked,
+                celkem: state.allowed + state.blocked,
+              });
+            }
 
-        console.log("🎯 OneSignal player ID:", newPlayerId);
-        setPlayerId(newPlayerId);
+            if (!mounted) return;
+            setIsInitialized(true);
 
-        // Desktop / Mobile detect
-        const isMobile = window.innerWidth < 768;
-        const deviceType = isMobile ? "mobile" : "desktop";
+            // Získáme player_id pokud existuje
+            try {
+              const currentPlayerId = await window.OneSignal.User?.PushSubscription?.id;
 
-        // SYNC → Sofinity
-        await syncPlayerToSofinity(userId, email, newPlayerId, deviceType);
-      });
+              if (currentPlayerId && mounted) {
+                setPlayerId(currentPlayerId);
+                console.log("[useOneSignal] Player ID:", currentPlayerId);
+              }
+            } catch (err) {
+              console.warn("[useOneSignal] Player ID není dostupný:", err);
+            }
 
-      // Pokud už existuje player_id → syncni ho
-      const existingId = OneSignal.User.PushSubscription.id ?? OneSignal.User.pushSubscription.id;
+            // Posloucháme změny subscription
+            window.OneSignal.User?.PushSubscription?.addEventListener("change", (event: any) => {
+              if (mounted && event.current?.id) {
+                console.log("[useOneSignal] Player ID změněn:", event.current.id);
+                setPlayerId(event.current.id);
+              }
+            });
+          }
+        }, 100);
 
-      if (existingId) {
-        console.log("🎯 OneSignal existing player ID:", existingId);
-        setPlayerId(existingId);
-
-        const isMobile = window.innerWidth < 768;
-        const deviceType = isMobile ? "mobile" : "desktop";
-
-        await syncPlayerToSofinity(userId, email, existingId, deviceType);
+        // Timeout po 10 sekundách
+        setTimeout(() => {
+          clearInterval(checkReady);
+          if (mounted && !isInitialized) {
+            console.error("[useOneSignal] OneSignal SDK se nenačetlo do 10s");
+          }
+        }, 10000);
+      } catch (error) {
+        console.error("[useOneSignal] Chyba:", error);
       }
     };
 
-    attachListeners();
+    initOneSignal();
 
     return () => {
-      active = false;
+      mounted = false;
     };
   }, []);
 
-  return { playerId, permissionState };
+  return {
+    playerId,
+    isInitialized,
+  };
+}
+
+// TypeScript definice
+declare global {
+  interface Window {
+    OneSignal: any;
+    __oneSignalInitState?: {
+      called: boolean;
+      blocked: number;
+      allowed: number;
+    };
+  }
 }
