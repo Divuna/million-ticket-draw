@@ -6,151 +6,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OneMil</title>
 
-    <!-- ========================================================= -->
-    <!-- 🛡️ KRITICKÁ OCHRANA - MUSÍ BÝT PRVNÍ! -->
-    <!-- ========================================================= -->
+    <!-- ================================================================== -->
+    <!-- 🚫 ABSOLUTNÍ ZÁKAZ JAKÉKOLIV OneSignal INIT (anti-Lovable, anti-SDK) -->
+    <!-- ================================================================== -->
     <script>
-      // OneSignal Guard v2 — blokuje auto-init (vč. Lovable runtime) a umožní ruční init přes __OneSignalInitOnce
       (function () {
-        'use strict';
+        "use strict";
 
-        // Konfigurace: ve výchozím stavu auto-init ZAKÁZÁN
-        window.__ONESIGNAL_DISABLE_AUTO_INIT = true;
-        window.__ONESIGNAL_ALLOW_NEXT_INIT = false; // interní přepínač pro povolení jednoho initu
-
-        // Globální stav inicializace
-        window.__oneSignalInitState = {
-          called: false,
-          blocked: 0,
-          allowed: 0,
-        };
-
-        // Oficiální OneSignal příznaky
-        window.OSNotificationAutoPrompt = false;
+        // Blokujeme úplně vše
+        window.OneSignal = [];
         window.OSAutoStart = false;
+        window.OSNotificationAutoPrompt = false;
 
-        const queue = [];
-        const state = window.__oneSignalInitState;
-        let _sdk = undefined;
-        let _deferredInitArgs = undefined;
-
-        const mapBlocked = (reason) => {
-          state.blocked++;
-          console.warn(`[OneSignal Guard] ⛔ Init zablokován (#${state.blocked + state.allowed})`, reason);
-          return Promise.resolve();
+        // Žádné push() nesmí obsahovat init
+        const block = function (cmd) {
+          if (Array.isArray(cmd) && cmd[0] === "init") {
+            console.warn("🚫 BLOCKED: OneSignal.init() prevented completely");
+            return;
+          }
+          return window.OneSignalQueue.push(cmd);
         };
 
-        const safeInit = (...args) => {
-          if (state.called) {
-            return mapBlocked('Druhé volání init()');
-          }
-          if (window.__ONESIGNAL_DISABLE_AUTO_INIT && !window.__ONESIGNAL_ALLOW_NEXT_INIT) {
-            return mapBlocked('Auto-init zakázán');
-          }
+        window.OneSignalQueue = [];
+        window.OneSignal.push = block;
 
-          // označíme jako povolené
-          state.called = true;
-          state.allowed++;
-          window.__ONESIGNAL_ALLOW_NEXT_INIT = false;
-
-          if (window.OneSignalSDK?.init) {
-            try {
-              console.log('[OneSignal Guard] ✅ Spouštím SDK init (povolený)');
-              return window.OneSignalSDK.init(...args);
-            } catch (e) {
-              console.error('[OneSignal Guard] ❌ Chyba SDK init', e);
-              return Promise.reject(e);
-            }
-          }
-
-          // SDK ještě není dostupné – odložíme
-          _deferredInitArgs = args;
-          console.log('[OneSignal Guard] ⏳ SDK není načteno – init odložen');
-          return Promise.resolve();
-        };
-
-        // Proxy pro OneSignal API
-        const proxy = new Proxy([], {
-          get(target, prop) {
-            if (prop === 'push') {
-              return function (item) {
-                if (Array.isArray(item) && item[0] === 'init') {
-                  return safeInit(...item.slice(1));
-                }
-                return queue.push(item);
-              };
-            }
-            if (prop === 'init') {
-              return (...args) => safeInit(...args);
-            }
-            return target[prop];
+        // Zablokujeme veškerý přístup k OneSignal.init
+        Object.defineProperty(window.OneSignal, "init", {
+          get() {
+            return function () {
+              console.warn("🚫 BLOCKED: init() intercepted");
+            };
+          },
+          set() {
+            console.warn("🚫 BLOCKED: attempt to override init()");
           },
         });
 
-        // Zabráníme přepsání window.OneSignal
-        try {
-          Object.defineProperty(window, 'OneSignal', {
-            configurable: false,
-            enumerable: true,
-            get() {
-              return proxy;
-            },
-            set(value) {
-              console.warn('[OneSignal Guard] Pokus o nahrazení OneSignal ignorován');
-              if (Array.isArray(value)) {
-                for (const cmd of value) queue.push(cmd);
-              }
-            },
-          });
-        } catch (e) {
-          window.OneSignal = proxy;
-        }
-
-        // Patchneme OneSignalSDK.init hned při přiřazení SDK
-        try {
-          Object.defineProperty(window, 'OneSignalSDK', {
-            configurable: true,
-            enumerable: true,
-            get() {
-              return _sdk;
-            },
-            set(sdk) {
-              _sdk = sdk;
-              if (_sdk && typeof _sdk.init === 'function') {
-                const original = _sdk.init.bind(_sdk);
-                _sdk.init = (...args) => safeInit(...args); // veškeré volání init přes náš guard
-
-                // Pokud jsme měli odložený init a byl povolen, proveďme ho jednou přes originál
-                if (state.called && _deferredInitArgs) {
-                  const argsToRun = _deferredInitArgs;
-                  _deferredInitArgs = undefined;
-                  try {
-                    console.log('[OneSignal Guard] ▶️ Spouštím odložený SDK init');
-                    return original(...argsToRun);
-                  } catch (e) {
-                    console.error('[OneSignal Guard] ❌ Chyba odloženého initu', e);
-                  }
-                }
-              }
-            },
-          });
-        } catch (e) {
-          // ignore
-        }
-
-        // Veřejná metoda pro ruční povolení jednoho initu
+        // Definujeme ruční povolení pouze pokud to spustíš ty
         window.__OneSignalInitOnce = (config) => {
-          window.__ONESIGNAL_ALLOW_NEXT_INIT = true;
-          return safeInit(config);
+          console.log("🔓 Manual OneSignal init allowed");
+          return window.OneSignalSDK?.init?.(config);
         };
 
-        console.log('🛡️ OneSignal Guard v2 AKTIVNÍ (auto-init disabled)');
+        console.log("🛡️ HARD BLOCK MODE ACTIVE – OneSignal init is fully locked.");
       })();
     </script>
 
-    <!-- ========================================================= -->
-    <!-- ✔️ LOAD OFFICIAL ONESIGNAL SDK v16 -->
-    <!-- ========================================================= -->
+    <!-- ======================== -->
+    <!-- OFICIÁLNÍ SDK OneSignal -->
+    <!-- ======================== -->
     <script
       src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
       defer
@@ -160,8 +64,6 @@
 
   <body>
     <div id="root"></div>
-
-    <!-- React app -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
