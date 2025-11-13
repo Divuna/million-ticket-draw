@@ -6,64 +6,82 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OneMil</title>
 
-    <!-- ================================================================== -->
-    <!-- 🚫 ABSOLUTNÍ ZÁKAZ JAKÉKOLIV OneSignal INIT (anti-Lovable, anti-SDK) -->
-    <!-- ================================================================== -->
+    <!-- 🛡️ ONE SIGNAL: BLOCK AUTO INIT + BLOCK SLIDEDOWN + BLOCK PROMPTS -->
     <script>
+      // Disable auto-start and auto-prompts
+      window.OSAutoStart = false;
+      window.OSNotificationAutoPrompt = false;
+
+      // Full block of slidedown pipeline
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(function(OS) {
+        try {
+          OS.Notifications.disableAutoPrompt(true);
+          OS.Notifications.disableSlidedownPrompts(true);
+          OS.Notifications.disableSlidedown(true);
+          OS.Notifications.disablePush();
+          console.log("🛑 OneSignal auto-prompt & slidedown disabled");
+        } catch (e) {
+          console.warn("OneSignal disable error:", e);
+        }
+      });
+
+      // Guard that blocks ANY auto-init attempts
       (function () {
-        "use strict";
+        window.__oneSignalInitState = { called: false, blocked: 0, allowed: 0 };
 
-        // Blokujeme úplně vše
-        window.OneSignal = [];
-        window.OSAutoStart = false;
-        window.OSNotificationAutoPrompt = false;
-
-        // Žádné push() nesmí obsahovat init
-        const block = function (cmd) {
-          if (Array.isArray(cmd) && cmd[0] === "init") {
-            console.warn("🚫 BLOCKED: OneSignal.init() prevented completely");
-            return;
+        const guardInit = (...args) => {
+          if (window.__oneSignalInitState.called) {
+            window.__oneSignalInitState.blocked++;
+            console.warn("⛔ Blocked duplicate OneSignal.init()");
+            return Promise.resolve();
           }
-          return window.OneSignalQueue.push(cmd);
+          window.__oneSignalInitState.called = true;
+          window.__oneSignalInitState.allowed++;
+          console.log("✅ Allowed OneSignal.init()");
+
+          if (window.OneSignalSDK?.init) {
+            return window.OneSignalSDK.init(...args);
+          }
+
+          return Promise.resolve();
         };
 
-        window.OneSignalQueue = [];
-        window.OneSignal.push = block;
-
-        // Zablokujeme veškerý přístup k OneSignal.init
-        Object.defineProperty(window.OneSignal, "init", {
-          get() {
-            return function () {
-              console.warn("🚫 BLOCKED: init() intercepted");
-            };
-          },
-          set() {
-            console.warn("🚫 BLOCKED: attempt to override init()");
+        const proxy = new Proxy([], {
+          get(target, prop) {
+            if (prop === "push") {
+              return (cmd) => {
+                if (Array.isArray(cmd) && cmd[0] === "init") {
+                  return guardInit(...cmd.slice(1));
+                }
+                return target.push(cmd);
+              };
+            }
+            if (prop === "init") {
+              return (...args) => guardInit(...args);
+            }
+            return target[prop];
           },
         });
 
-        // Definujeme ruční povolení pouze pokud to spustíš ty
+        window.OneSignal = proxy;
+
         window.__OneSignalInitOnce = (config) => {
-          console.log("🔓 Manual OneSignal init allowed");
-          return window.OneSignalSDK?.init?.(config);
+          return guardInit(config);
         };
 
-        console.log("🛡️ HARD BLOCK MODE ACTIVE – OneSignal init is fully locked.");
+        console.log("🛡️ OneSignal Guard aktivní");
       })();
     </script>
 
-    <!-- ======================== -->
-    <!-- OFICIÁLNÍ SDK OneSignal -->
-    <!-- ======================== -->
-    <script
-      src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
-      defer
-      data-onesignal-no-auto-init="true"
-    ></script>
+    <!-- ✅ OFICIÁLNÍ ONESIGNAL SDK -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   </head>
 
   <body>
     <div id="root"></div>
+
+    <!-- React aplikace -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
