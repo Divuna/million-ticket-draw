@@ -1,142 +1,68 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/hooks/use-toast';
+import { useEffect, useState } from "react";
+import { supabase } from "../supabaseClient";
 
-export interface Message {
-  id: string;
-  user_id: string;
-  title: string | null;
-  content: string;
-  sender: 'user' | 'admin';
-  category: string | null;
-  read: boolean;
-  created_at: string;
-}
-
-export const useMessages = () => {
-  const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
+export function useMessages() {
+  const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<any>(null);
 
-  const fetchMessages = async () => {
-    if (!user) {
-      setMessages([]);
-      setLoading(false);
-      return;
-    }
+  useEffect(() => {
+    loadMessages();
+  }, []);
 
+  async function loadMessages() {
     try {
+      setLoading(true);
+
+      // 🔥 ZÍSKÁNÍ USERA
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setMessages([]);
+        setLoading(false);
+        return;
+      }
+
+      // 🔥 SELECT Z PRAVÉ TABULKY
       const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .from("messages")
+        .select("*")
+        .eq("user_id", user.id) // správná identifikace zpráv
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setMessages((data || []) as Message[]);
-    } catch (error: any) {
-      console.error('Error fetching messages:', error);
-      toast({
-        title: 'Chyba',
-        description: 'Nepodařilo se načíst zprávy',
-        variant: 'destructive',
-      });
+
+      setMessages(data || []);
+    } catch (err: any) {
+      console.error("loadMessages ERROR:", err);
+      setError(err);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const sendMessage = async (content: string, title?: string) => {
-    if (!user) {
-      toast({
-        title: 'Chyba',
-        description: 'Musíte být přihlášeni',
-        variant: 'destructive',
-      });
-      return false;
-    }
+  // 🔥 ODESLÁNÍ ZPRÁVY (jen kdyby UI používalo)
+  async function sendMessage(content: string) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    try {
-      const { error } = await supabase.from('messages').insert({
-        user_id: user.id,
-        content,
-        title: title || null,
-        sender: 'user',
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Úspěch',
-        description: 'Zpráva byla odeslána',
-      });
-
-      await fetchMessages();
-      return true;
-    } catch (error: any) {
-      console.error('Error sending message:', error);
-      toast({
-        title: 'Chyba',
-        description: 'Nepodařilo se odeslat zprávu',
-        variant: 'destructive',
-      });
-      return false;
-    }
-  };
-
-  const markAsRead = async (messageId: string) => {
     if (!user) return;
 
-    try {
-      const { error } = await supabase
-        .from('messages')
-        .update({ read: true })
-        .eq('id', messageId)
-        .eq('user_id', user.id);
+    const { error } = await supabase.from("messages").insert({
+      user_id: user.id,
+      sender: "admin",
+      title: "Zpráva od administrátora",
+      content,
+      category: "system",
+    });
 
-      if (error) throw error;
-      
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === messageId ? { ...msg, read: true } : msg
-        )
-      );
-    } catch (error: any) {
-      console.error('Error marking message as read:', error);
-    }
-  };
+    if (error) throw error;
 
-  useEffect(() => {
-    fetchMessages();
+    loadMessages();
+  }
 
-    // Real-time subscription
-    const channel = supabase
-      .channel('messages-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `user_id=eq.${user?.id}`,
-        },
-        () => {
-          fetchMessages();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [user?.id]);
-
-  return {
-    messages,
-    loading,
-    sendMessage,
-    markAsRead,
-    refetch: fetchMessages,
-  };
-};
+  return { messages, loading, error, sendMessage, reload: loadMessages };
+}
