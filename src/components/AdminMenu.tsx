@@ -12,7 +12,8 @@ import {
   Award,
   Image,
   Handshake,
-  Wrench
+  Wrench,
+  MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -24,6 +25,7 @@ export const AdminMenu: React.FC = () => {
     { label: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
     { label: 'Výhry', icon: Award, path: '/admin/winners' },
     { label: 'Uživatelé', icon: Users, path: '/admin/users' },
+    { label: 'Zprávy', icon: MessageSquare, path: '/admin/messages' },
     { label: 'Platby', icon: CreditCard, path: '/admin/payments' },
     { label: 'Vouchery', icon: Gift, path: '/admin/vouchers' },
     { label: 'Bannery', icon: Image, path: '/admin/banners' },
