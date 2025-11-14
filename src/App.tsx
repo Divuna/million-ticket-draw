@@ -34,6 +34,8 @@ import AdminTests from "@/pages/AdminTests";
 import AdminPartners from "@/pages/AdminPartners";
 import AdminAuditLogs from "@/pages/AdminAuditLogs";
 import AdminAuditRepair from "@/pages/AdminAuditRepair";
+import AdminMessages from "@/pages/AdminMessages";
+import AdminMessageThread from "@/pages/AdminMessageThread";
 import OneMilAudit from "@/pages/OneMilAudit";
 import TestLogin from "@/pages/TestLogin";
 import NotFound from "@/pages/NotFound";
@@ -71,6 +73,8 @@ function AppContent() {
       <Route path="/admin/winners" element={<AdminWinners />} />
       <Route path="/admin/tests" element={<AdminTests />} />
       <Route path="/admin/partners" element={<AdminPartners />} />
+      <Route path="/admin/messages" element={<AdminMessages />} />
+      <Route path="/admin/messages/:userId" element={<AdminMessageThread />} />
       <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
       <Route path="/admin/audit-repair" element={<AdminAuditRepair />} />
       <Route path="/admin/onemil-audit" element={<OneMilAudit />} />
