@@ -19,6 +19,7 @@ import MyContestDetail from "@/pages/MyContestDetail";
 import BonusDetail from "@/pages/BonusDetail";
 import Vouchers from "@/pages/Vouchers";
 import Messages from "@/pages/Messages";
+import MessageDetail from "@/pages/MessageDetail";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import PaymentCancel from "@/pages/PaymentCancel";
 import AdminDashboard from "@/pages/AdminDashboard";
@@ -57,6 +58,7 @@ function AppContent() {
       <Route path="/bonus/:id" element={<BonusDetail />} />
       <Route path="/vouchers" element={<Vouchers />} />
       <Route path="/messages" element={<Messages />} />
+      <Route path="/messages/:id" element={<MessageDetail />} />
       <Route path="/payment/success" element={<PaymentSuccess />} />
       <Route path="/payment/cancel" element={<PaymentCancel />} />
       <Route path="/admin" element={<AdminDashboard />} />

@@ -347,6 +347,39 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string
+          id: string
+          read: boolean
+          sender: string
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          read?: boolean
+          sender: string
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          read?: boolean
+          sender?: string
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -686,24 +719,30 @@ export type Database = {
         Row: {
           created_at: string | null
           device_type: string
+          email: string | null
           id: string
-          player_id: string
+          onesignal_player_id: string | null
+          player_id: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           created_at?: string | null
           device_type?: string
+          email?: string | null
           id?: string
-          player_id: string
+          onesignal_player_id?: string | null
+          player_id?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           created_at?: string | null
           device_type?: string
+          email?: string | null
           id?: string
-          player_id?: string
+          onesignal_player_id?: string | null
+          player_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
