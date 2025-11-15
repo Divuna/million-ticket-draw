@@ -1,3 +1,5 @@
+console.log("🔥🔥🔥 TOTO JE TEN SPRAVNY FILE - Messages.tsx");
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
