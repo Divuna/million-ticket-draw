@@ -173,7 +173,7 @@ const MessageDetail: React.FC = () => {
           </Card>
 
           <MessageForm 
-            onSubmit={handleReply}
+            onSend={handleReply}
             placeholder="Napište odpověď..."
             showTitle={false}
           />
