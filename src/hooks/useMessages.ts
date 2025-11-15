@@ -1,41 +1,35 @@
 import { supabase } from "@/lib/supabaseClient";
 
 export function useMessages() {
-  async function getUserMessages(userId: string) {
+  const getUserMessages = async (userId: string) => {
     const { data, error } = await supabase
       .from("messages")
       .select("*")
-      .eq("user_id", userId)
+      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("load messages error:", error);
+      console.error("getUserMessages error:", error);
       return [];
     }
     return data || [];
-  }
+  };
 
-  async function sendMessageToAdmin(userId: string, title: string, content: string) {
-    const { data, error } = await supabase
-      .from("messages")
-      .insert({
-        user_id: userId,
-        sender: "user",
-        title: title || null,
-        content,
-        category: "system",
-      })
-      .select();
+  const sendMessageToAdmin = async (userId: string, title: string, content: string) => {
+    const { error } = await supabase.from("messages").insert({
+      sender_id: userId,
+      receiver_id: "admin",
+      sender: "user",
+      title,
+      content,
+    });
 
     if (error) {
-      console.error("send message error:", error);
-      return null;
+      console.error("sendMessageToAdmin error:", error);
+      return false;
     }
-    return data?.[0] || null;
-  }
-
-  return {
-    getUserMessages,
-    sendMessageToAdmin,
+    return true;
   };
+
+  return { getUserMessages, sendMessageToAdmin };
 }
