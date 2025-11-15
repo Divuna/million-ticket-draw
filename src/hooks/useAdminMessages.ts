@@ -30,13 +30,10 @@ export const useAdminMessages = () => {
 
   const fetchConversations = async () => {
     if (!isAdmin) {
-      console.log('⚠️ User is not admin, skipping conversation fetch');
       setConversations([]);
       setLoading(false);
       return;
     }
-
-    console.log('📨 Admin: Fetching all conversations...');
 
     try {
       // Fetch all messages with user info
@@ -45,22 +42,14 @@ export const useAdminMessages = () => {
         .select('id, user_id, content, sender, read, created_at')
         .order('created_at', { ascending: false });
 
-      if (messagesError) {
-        console.error('❌ Error fetching messages:', messagesError);
-        throw messagesError;
-      }
+      if (messagesError) throw messagesError;
 
       // Fetch user info
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('id, email, name');
 
-      if (usersError) {
-        console.error('❌ Error fetching users:', usersError);
-        throw usersError;
-      }
-
-      console.log('✅ Loaded', messages?.length || 0, 'messages from', users?.length || 0, 'users');
+      if (usersError) throw usersError;
 
       // Group messages by user_id
       const grouped = new Map<string, UserConversation>();
@@ -86,11 +75,9 @@ export const useAdminMessages = () => {
         }
       });
 
-      const conversations = Array.from(grouped.values());
-      console.log('✅ Grouped into', conversations.length, 'conversations');
-      setConversations(conversations);
+      setConversations(Array.from(grouped.values()));
     } catch (error: any) {
-      console.error('❌ Error in fetchConversations:', error);
+      console.error('Error fetching admin messages:', error);
       toast({
         title: 'Chyba',
         description: 'Nepodařilo se načíst zprávy',
@@ -104,10 +91,6 @@ export const useAdminMessages = () => {
   useEffect(() => {
     fetchConversations();
 
-    if (!isAdmin) return;
-
-    console.log('🔔 Admin: Setting up real-time subscription for all messages...');
-
     // Real-time subscription
     const channel = supabase
       .channel('admin-messages-changes')
@@ -118,15 +101,13 @@ export const useAdminMessages = () => {
           schema: 'public',
           table: 'messages',
         },
-        (payload) => {
-          console.log('📬 Admin: Real-time message update:', payload);
+        () => {
           fetchConversations();
         }
       )
       .subscribe();
 
     return () => {
-      console.log('🧹 Admin: Cleaning up messages subscription');
       channel.unsubscribe();
     };
   }, [isAdmin]);
@@ -145,21 +126,11 @@ export const useAdminMessageThread = (userId: string | undefined) => {
   const [userInfo, setUserInfo] = useState<{ email: string; name: string | null } | null>(null);
 
   const fetchThread = async () => {
-    if (!isAdmin) {
-      console.log('⚠️ User is not admin, skipping thread fetch');
+    if (!isAdmin || !userId) {
       setMessages([]);
       setLoading(false);
       return;
     }
-
-    if (!userId) {
-      console.log('⚠️ No userId provided');
-      setMessages([]);
-      setLoading(false);
-      return;
-    }
-
-    console.log('📨 Admin: Fetching thread for user:', userId);
 
     try {
       const { data, error } = await supabase
@@ -168,12 +139,7 @@ export const useAdminMessageThread = (userId: string | undefined) => {
         .eq('user_id', userId)
         .order('created_at', { ascending: true });
 
-      if (error) {
-        console.error('❌ Error fetching thread:', error);
-        throw error;
-      }
-      
-      console.log('✅ Loaded', data?.length || 0, 'messages for thread');
+      if (error) throw error;
       setMessages((data || []) as ConversationMessage[]);
 
       // Fetch user info
@@ -183,29 +149,18 @@ export const useAdminMessageThread = (userId: string | undefined) => {
         .eq('id', userId)
         .single();
 
-      if (userError) {
-        console.error('❌ Error fetching user info:', userError);
-        throw userError;
-      }
-      
-      console.log('✅ User info loaded:', user);
+      if (userError) throw userError;
       setUserInfo(user);
 
       // Mark user messages as read
-      const { error: updateError } = await supabase
+      await supabase
         .from('messages')
         .update({ read: true })
         .eq('user_id', userId)
         .eq('sender', 'user')
         .eq('read', false);
-        
-      if (updateError) {
-        console.error('❌ Error marking messages as read:', updateError);
-      } else {
-        console.log('✅ Messages marked as read');
-      }
     } catch (error: any) {
-      console.error('❌ Error in fetchThread:', error);
+      console.error('Error fetching thread:', error);
       toast({
         title: 'Chyba',
         description: 'Nepodařilo se načíst konverzaci',
@@ -218,7 +173,6 @@ export const useAdminMessageThread = (userId: string | undefined) => {
 
   const sendAdminReply = async (content: string, title?: string) => {
     if (!isAdmin || !userId) {
-      console.error('❌ Cannot send reply: missing admin status or userId');
       toast({
         title: 'Chyba',
         description: 'Nejste oprávněni odesílat zprávy',
@@ -226,8 +180,6 @@ export const useAdminMessageThread = (userId: string | undefined) => {
       });
       return false;
     }
-
-    console.log('📤 Admin: Sending reply to user:', userId);
 
     try {
       const { error } = await supabase.from('messages').insert({
@@ -237,13 +189,8 @@ export const useAdminMessageThread = (userId: string | undefined) => {
         sender: 'admin',
       });
 
-      if (error) {
-        console.error('❌ Error sending reply:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('✅ Reply sent successfully');
-      
       toast({
         title: 'Úspěch',
         description: 'Odpověď byla odeslána',
@@ -252,7 +199,7 @@ export const useAdminMessageThread = (userId: string | undefined) => {
       await fetchThread();
       return true;
     } catch (error: any) {
-      console.error('❌ Error in sendAdminReply:', error);
+      console.error('Error sending admin reply:', error);
       toast({
         title: 'Chyba',
         description: 'Nepodařilo se odeslat odpověď',
@@ -265,10 +212,6 @@ export const useAdminMessageThread = (userId: string | undefined) => {
   useEffect(() => {
     fetchThread();
 
-    if (!isAdmin || !userId) return;
-
-    console.log('🔔 Admin: Setting up real-time subscription for thread:', userId);
-
     // Real-time subscription
     const channel = supabase
       .channel(`admin-thread-${userId}`)
@@ -280,15 +223,13 @@ export const useAdminMessageThread = (userId: string | undefined) => {
           table: 'messages',
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
-          console.log('📬 Admin: Real-time thread update:', payload);
+        () => {
           fetchThread();
         }
       )
       .subscribe();
 
     return () => {
-      console.log('🧹 Admin: Cleaning up thread subscription');
       channel.unsubscribe();
     };
   }, [userId, isAdmin]);

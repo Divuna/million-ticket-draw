@@ -1,40 +1,28 @@
-import { useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { AuthContext, useAuthState } from "@/hooks/useAuth";
 
-// Initialize Supabase client globally
-if (typeof window !== 'undefined') {
-  (window as any).supabase = supabase;
-  console.log('✅ Supabase client initialized globally');
-}
+const SupabaseContext = createContext(null);
 
-export function SupabaseProvider({ children }: { children: React.ReactNode }) {
+export function SupabaseProvider({ children }: { children: any }) {
+  const [session, setSession] = useState(null);
+
   useEffect(() => {
-    // Verify supabase client is working
-    const checkClient = async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('❌ Supabase client error:', error);
-        } else {
-          console.log('✅ Supabase client working, session:', data.session ? 'active' : 'none');
-        }
-      } catch (err) {
-        console.error('❌ Supabase client check failed:', err);
-      }
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data?.session ?? null);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
     };
-    checkClient();
   }, []);
 
-  return <>{children}</>;
+  return <SupabaseContext.Provider value={{ supabase, session }}>{children}</SupabaseContext.Provider>;
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const authState = useAuthState();
-
-  return (
-    <AuthContext.Provider value={authState}>
-      {children}
-    </AuthContext.Provider>
-  );
+export function useSupabase() {
+  return useContext(SupabaseContext);
 }

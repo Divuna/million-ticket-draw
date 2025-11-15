@@ -23,93 +23,41 @@ export default function MessageDetail() {
 
   useEffect(() => {
     if (!messageId) return;
-    console.log('📨 Loading message detail:', messageId);
     loadMessage(messageId);
   }, [messageId]);
 
-  // Real-time subscription for thread updates
-  useEffect(() => {
-    if (!message?.user_id) return;
-
-    console.log('🔔 Setting up real-time subscription for thread...');
-
-    const channel = supabase
-      .channel(`message-thread-${message.user_id}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'messages',
-        filter: `user_id=eq.${message.user_id}`
-      }, (payload) => {
-        console.log('📬 Real-time thread update:', payload);
-        loadMessage(messageId!);
-      })
-      .subscribe();
-
-    return () => {
-      console.log('🧹 Cleaning up thread subscription');
-      supabase.removeChannel(channel);
-    };
-  }, [message?.user_id, messageId]);
-
   const loadMessage = async (id: string) => {
     setLoading(true);
-    console.log('📥 Loading message:', id);
 
-    const { data: msg, error: msgError } = await supabase
-      .from("messages")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (msgError) {
-      console.error('❌ Error loading message:', msgError);
-      setLoading(false);
-      return;
-    }
+    const { data: msg } = await supabase.from("messages").select("*").eq("id", id).single();
 
     if (msg) {
-      console.log('✅ Message loaded:', msg);
       setMessage(msg);
 
-      const { data: threadData, error: threadError } = await supabase
+      const { data: threadData } = await supabase
         .from("messages")
         .select("*")
         .eq("user_id", msg.user_id)
         .order("created_at", { ascending: true });
 
-      if (threadError) {
-        console.error('❌ Error loading thread:', threadError);
-      } else {
-        console.log('✅ Thread loaded:', threadData?.length, 'messages');
-        if (threadData) setThread(threadData);
-      }
+      if (threadData) setThread(threadData);
     }
 
     setLoading(false);
   };
 
   const handleReply = async (content: string, title?: string) => {
-    if (!message) {
-      console.error('❌ Cannot reply: no message loaded');
-      return false;
-    }
-
-    console.log('📤 Sending reply...');
+    if (!message) return false;
 
     const { error } = await supabase.from("messages").insert({
       user_id: message.user_id,
       sender: "admin",
-      title: title || null,
+      title: title || "",
       content,
     });
 
-    if (error) {
-      console.error('❌ Error sending reply:', error);
-      return false;
-    }
+    if (error) return false;
 
-    console.log('✅ Reply sent successfully');
     await loadMessage(message.id);
     return true;
   };
