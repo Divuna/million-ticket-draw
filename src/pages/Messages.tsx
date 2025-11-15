@@ -1,32 +1,31 @@
 import { useEffect, useState } from "react";
-import { useSupabaseUser } from "@/hooks/useUserRole";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { useMessages } from "@/hooks/useMessages";
 import { MessageForm } from "@/components/MessageForm";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-
-export default function MessagesPage() {
+export default function Messages() {
   const user = useSupabaseUser();
   const { getUserMessages, sendMessageToAdmin } = useMessages();
 
-  const [messages, setMessages] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // 🔵 Nahrávat zprávy po přihlášení
-  useEffect(() => {
-    if (!user?.id) return;
-    loadMessages();
-  }, [user]);
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const loadMessages = async () => {
+    if (!user?.id) return;
     setLoading(true);
-    const msgs = await getUserMessages();
+    const msgs = await getUserMessages(user.id);
     setMessages(msgs);
     setLoading(false);
   };
 
+  useEffect(() => {
+    loadMessages();
+  }, [user]);
+
   const handleSendMessage = async (content: string, title?: string) => {
-    const result = await sendMessageToAdmin(title || "", content);
+    if (!user?.id) return false;
+
+    const result = await sendMessageToAdmin(user.id, title || "", content);
     if (result) {
       await loadMessages();
       return true;
@@ -35,35 +34,18 @@ export default function MessagesPage() {
   };
 
   return (
-    <div className="p-4 max-w-3xl mx-auto">
-      <Card>
-        <CardHeader>
-          <CardTitle>Zprávy</CardTitle>
-        </CardHeader>
-
-        <CardContent>
-          {loading ? (
-            <p>Načítání…</p>
-          ) : messages.length === 0 ? (
-            <p>Žádné zprávy</p>
-          ) : (
-            <div className="space-y-3">
-              {messages.map((msg) => (
-                <div key={msg.id} className="p-3 border rounded-md bg-background/50">
-                  <h3 className="font-semibold">{msg.title}</h3>
-                  <p className="text-sm opacity-80">{msg.content}</p>
-                  <p className="text-xs mt-1 opacity-50">{new Date(msg.created_at).toLocaleString()}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Formulář pro odeslání */}
-          <div className="mt-6">
-            <MessageForm onSend={handleSendMessage} />
+    <div>
+      <MessageForm onSend={handleSendMessage} />
+      {loading ? (
+        <p>Načítám…</p>
+      ) : (
+        messages.map((m) => (
+          <div key={m.id}>
+            <b>{m.title}</b>
+            <p>{m.content}</p>
           </div>
-        </CardContent>
-      </Card>
+        ))
+      )}
     </div>
   );
 }
