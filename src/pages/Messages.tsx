@@ -1,42 +1,37 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Header } from "@/components/Header";
-import { BottomNavigation } from "@/components/BottomNavigation";
-import { AdminMenu } from "@/components/AdminMenu";
+import { useEffect, useState } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useMessages } from "@/hooks/useMessages";
-import { useAuth } from "@/hooks/useAuth";
-import { MessageForm } from "@/components/MessageForm";
+import { useUser } from "@/hooks/useUser";
+
+import MessageForm from "@/components/MessageForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { MessageCircle, User, Calendar, Mail, MailOpen } from "lucide-react";
 
-const Messages: React.FC = () => {
-  const { isAdmin } = useUserRole();
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
+export default function MessagesPage() {
+  const { user } = useUser();
   const { getUserMessages, sendMessageToAdmin } = useMessages();
+  const [messages, setMessages] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // 🚀 TADY SE NAČÍTAJÍ ZPRÁVY PRO UŽIVATELE
-  useEffect(() => {
+  // 🔥 Funkce pro načtení zpráv
+  const loadMessages = async () => {
     if (!user?.id) return;
 
-    loadMessages();
+    setLoading(true);
+    const msgs = await getUserMessages(user.id);
+    setMessages(msgs);
+    setLoading(false);
+  };
 
-    async function loadMessages() {
-      setLoading(true);
-      const msgs = await getUserMessages();
-      setMessages(msgs);
-      setLoading(false);
-    }
+  // 🔥 Načíst zprávy při otevření stránky
+  useEffect(() => {
+    loadMessages();
   }, [user]);
 
+  // 🔥 Odeslání zprávy adminovi
   const handleSendMessage = async (content: string, title?: string) => {
-    const result = await sendMessageToAdmin(title || "", content);
+    if (!user?.id) return false;
+
+    const result = await sendMessageToAdmin(user.id, title || "", content);
     if (result) {
       await loadMessages();
       return true;
@@ -44,94 +39,35 @@ const Messages: React.FC = () => {
     return false;
   };
 
-  const loadMessages = async () => {
-    setLoading(true);
-    const msgs = await getUserMessages();
-    setMessages(msgs);
-    setLoading(false);
-  };
-
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <Header />
+    <div className="p-4 max-w-3xl mx-auto">
+      <Card>
+        <CardHeader>
+          <CardTitle>Zprávy</CardTitle>
+        </CardHeader>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="flex items-center gap-3 mb-6">
-            <MessageCircle className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold text-neon-orange">Zprávy</h1>
+        <CardContent>
+          <MessageForm onSend={handleSendMessage} />
+
+          {loading && <p className="mt-4 text-muted-foreground">Načítám…</p>}
+
+          {!loading && messages.length === 0 && <p className="mt-4 text-center text-muted-foreground">Žádné zprávy</p>}
+
+          <div className="mt-6 space-y-4">
+            {messages.map((msg) => (
+              <Card key={msg.id}>
+                <CardHeader>
+                  <CardTitle>{msg.title || "Bez názvu"}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p>{msg.content}</p>
+                  <div className="text-xs text-muted-foreground mt-2">{new Date(msg.created_at).toLocaleString()}</div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-
-          <MessageForm onSubmit={handleSendMessage} />
-
-          <Card className="ticket-message ticket-perforations">
-            <CardHeader>
-              <CardTitle className="text-neon-orange">Komunikace s administrátorem</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">Načítání zpráv...</p>
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="text-center py-12">
-                  <MessageCircle className="h-16 w-16 text-neon-orange mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2 text-neon-orange">Žádné zprávy</h3>
-                  <p className="text-muted-foreground">Zde se zobrazí komunikace s administrátorem.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      onClick={() => navigate(`/messages/${message.id}`)}
-                      className="p-4 rounded-lg border border-border hover:bg-accent/50 cursor-pointer transition-colors"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            {message.read ? (
-                              <MailOpen className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            ) : (
-                              <Mail className="h-4 w-4 text-primary flex-shrink-0" />
-                            )}
-                            <h3
-                              className={`font-semibold truncate ${!message.read ? "text-primary" : "text-foreground"}`}
-                            >
-                              {message.title || "Zpráva bez předmětu"}
-                            </h3>
-                          </div>
-
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{message.content}</p>
-
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              <span>{message.sender === "admin" ? "Administrátor" : "Já"}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              <span>{new Date(message.created_at).toLocaleString("cs-CZ")}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <Badge variant={message.sender === "admin" ? "default" : "secondary"}>
-                          {message.sender === "admin" ? "Admin" : "Uživatel"}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default Messages;
+}
