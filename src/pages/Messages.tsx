@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { MessageForm } from "@/components/MessageForm";
@@ -10,7 +10,15 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const loadMessages = useCallback(async () => {
+  useEffect(() => {
+    if (!user?.id) return;
+    loadMessages();
+
+    const cleanup = subscribeToMessages(user.id, loadMessages);
+    return cleanup;
+  }, [user]);
+
+  const loadMessages = async () => {
     if (!user?.id) return;
     setLoading(true);
 
@@ -18,15 +26,7 @@ export default function MessagesPage() {
     setMessages(msgs || []);
 
     setLoading(false);
-  }, [user?.id, getUserMessages]);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    loadMessages();
-
-    const cleanup = subscribeToMessages(user.id, loadMessages);
-    return cleanup;
-  }, [user?.id, loadMessages, subscribeToMessages]);
+  };
 
   const handleSend = async (content: string, title?: string) => {
     const ok = await sendMessageToAdmin(user.id, title || "", content);
