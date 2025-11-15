@@ -1,47 +1,29 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 
 export function useMessages() {
-  // ZÍSKÁNÍ PŘIHLÁŠENÉHO UŽIVATELE
-  async function getUserMessages() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      console.error("No logged user found");
-      return [];
-    }
+  async function getUserMessages(userId: string) {
+    if (!userId) return [];
 
     const { data, error } = await supabase
       .from("messages")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("load messages error:", error);
       return [];
     }
-
     return data;
   }
 
-  async function sendMessageToAdmin(title: string, content: string) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      console.error("No logged user found");
-      return null;
-    }
-
+  async function sendMessageToAdmin(userId: string, title: string, content: string) {
     const { data, error } = await supabase
       .from("messages")
       .insert({
-        user_id: user.id,
+        user_id: userId,
         sender: "user",
-        title: title || null,
+        title: title || "",
         content,
         category: "system",
       })
