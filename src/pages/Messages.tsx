@@ -5,7 +5,7 @@ import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminMenu } from "@/components/AdminMenu";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useMessages } from "@/hooks/useMessages";
-import { useUser } from "@/hooks/useUser";
+import { useAuth } from "@/hooks/useAuth";
 import { MessageForm } from "@/components/MessageForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +13,10 @@ import { MessageCircle, User, Calendar, Mail, MailOpen } from "lucide-react";
 
 const Messages: React.FC = () => {
   const { isAdmin } = useUserRole();
-  const { user } = useUser();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
-  const { getUserMessages, sendMessage } = useMessages();
+  const { getUserMessages, sendMessageToAdmin } = useMessages();
 
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,11 +29,27 @@ const Messages: React.FC = () => {
 
     async function loadMessages() {
       setLoading(true);
-      const msgs = await getUserMessages(user.id);
+      const msgs = await getUserMessages();
       setMessages(msgs);
       setLoading(false);
     }
   }, [user]);
+
+  const handleSendMessage = async (content: string, title?: string) => {
+    const result = await sendMessageToAdmin(title || "", content);
+    if (result) {
+      await loadMessages();
+      return true;
+    }
+    return false;
+  };
+
+  const loadMessages = async () => {
+    setLoading(true);
+    const msgs = await getUserMessages();
+    setMessages(msgs);
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -46,7 +62,7 @@ const Messages: React.FC = () => {
             <h1 className="text-3xl font-bold text-neon-orange">Zprávy</h1>
           </div>
 
-          <MessageForm onSubmit={sendMessage} />
+          <MessageForm onSubmit={handleSendMessage} />
 
           <Card className="ticket-message ticket-perforations">
             <CardHeader>
