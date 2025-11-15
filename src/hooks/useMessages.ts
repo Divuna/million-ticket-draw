@@ -2,6 +2,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 export function useMessages() {
   const getUserMessages = async (userId: string) => {
+    if (!userId) {
+      console.warn("⚠️ getUserMessages called without userId");
+      return [];
+    }
+
+    // Load user's messages
     const { data, error } = await supabase
       .from("messages")
       .select("*")
@@ -9,28 +15,82 @@ export function useMessages() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("getUserMessages error:", error);
+      console.error("❌ getUserMessages error:", error);
       return [];
+    }
+
+    // Mark unread admin messages as read
+    const unreadAdmin = data?.filter(
+      (msg) => msg.sender === "admin" && msg.read !== true
+    );
+
+    if (unreadAdmin.length > 0) {
+      const { error: updateError } = await supabase
+        .from("messages")
+        .update({ read: true })
+        .in("id", unreadAdmin.map((m) => m.id));
+
+      if (updateError) {
+        console.error("❌ Failed to mark messages as read:", updateError);
+      }
     }
 
     return data || [];
   };
 
-  const sendMessageToAdmin = async (userId: string, title: string, content: string) => {
+  const sendMessageToAdmin = async (
+    userId: string,
+    title: string,
+    content: string
+  ) => {
+    if (!userId || !content) {
+      console.error("❌ sendMessageToAdmin missing fields");
+      return false;
+    }
+
     const { error } = await supabase.from("messages").insert({
       user_id: userId,
       sender: "user",
-      title,
+      title: title || null,
       content,
+      read: false,
     });
 
     if (error) {
-      console.error("sendMessageToAdmin error:", error);
+      console.error("❌ sendMessageToAdmin error:", error);
       return false;
     }
 
     return true;
   };
 
-  return { getUserMessages, sendMessageToAdmin };
+  const subscribeToMessages = (userId: string, onUpdate: () => void) => {
+    if (!userId) {
+      console.warn("⚠️ subscribeToMessages called without userId");
+      return () => {};
+    }
+
+    const channel = supabase
+      .channel('messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `user_id=eq.${userId}`
+        },
+        () => {
+          console.log("📨 Messages updated, refreshing...");
+          onUpdate();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
+  return { getUserMessages, sendMessageToAdmin, subscribeToMessages };
 }

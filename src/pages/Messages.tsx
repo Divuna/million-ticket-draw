@@ -5,7 +5,7 @@ import { MessageForm } from "@/components/MessageForm";
 
 export default function MessagesPage() {
   const { user } = useAuth();
-  const { getUserMessages, sendMessageToAdmin } = useMessages();
+  const { getUserMessages, sendMessageToAdmin, subscribeToMessages } = useMessages();
 
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -13,6 +13,9 @@ export default function MessagesPage() {
   useEffect(() => {
     if (!user?.id) return;
     loadMessages();
+
+    const cleanup = subscribeToMessages(user.id, loadMessages);
+    return cleanup;
   }, [user]);
 
   const loadMessages = async () => {
