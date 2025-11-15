@@ -10,6 +10,7 @@ export default function MessagesPage() {
   const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
   const [user, setUser] = useState(null);
+  const { sendMessageToAdmin } = useMessages();
 
   const load = async () => {
     console.log("Loading messages...");
@@ -25,20 +26,49 @@ export default function MessagesPage() {
     }
   };
 
+  const handleSend = async () => {
+    console.log("Sending message as user:", user?.id);
+
+    if (!user?.id) {
+      console.error("Cannot send message - user.id is missing");
+      return;
+    }
+
+    setSending(true);
+    try {
+      const { data, error } = await sendMessageToAdmin(user.id, title, content);
+
+      if (error) {
+        console.error("Error sending message:", error);
+      } else {
+        console.log("Message sent successfully!", data);
+        setTitle("");
+        setContent("");
+        await load();
+      }
+    } catch (err) {
+      console.error("Send failed:", err);
+    } finally {
+      setSending(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
+    const loadMessages = async () => {
       console.log("🔥 MessagesPage LOADING…");
 
-      const { data: user, error: authError } = await supabase.auth.getUser();
-      console.log("👤 USER:", user?.user?.id);
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      console.log("👤 USER:", userData?.user?.id);
       console.log("AUTH ERROR:", authError);
 
-      if (!user?.user?.id) {
+      if (!userData?.user?.id) {
         console.log("❌ Žádný user → Nenačítám zprávy.");
         return;
       }
 
-      const { data, error } = await supabase.from("messages").select("*").eq("user_id", user.user.id);
+      setUser(userData.user);
+
+      const { data, error } = await supabase.from("messages").select("*").eq("user_id", userData.user.id);
 
       console.log("📩 ZPRÁVY:", data);
       console.log("⚠️ ERROR:", error);
@@ -46,34 +76,7 @@ export default function MessagesPage() {
       setMessages(data || []);
     };
 
-    const handleSend = async () => {
-      console.log("Sending message as user:", user?.id);
-
-      if (!user?.id) {
-        console.error("Cannot send message - user.id is missing");
-        return;
-      }
-
-      setSending(true);
-      try {
-        const { data, error } = await sendMessageToAdmin(user.id, title, content);
-
-        if (error) {
-          console.error("Error sending message:", error);
-        } else {
-          console.log("Message sent successfully!", data);
-          setTitle("");
-          setContent("");
-          await load();
-        }
-      } catch (err) {
-        console.error("Send failed:", err);
-      } finally {
-        setSending(false);
-      }
-    };
-
-    load();
+    loadMessages();
   }, []);
 
   return (

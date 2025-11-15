@@ -39,42 +39,34 @@ export function useMessages() {
   };
 
   const sendMessageToAdmin = async (
-  userId: string,
-  title: string,
-  content: string
-) => {
-  if (!userId || !content) {
-    console.error("❌ sendMessageToAdmin missing fields");
-    return { data: null, error: "Missing fields" };
-  }
-
-  const { data, error } = await supabase
-    .from("messages")
-    .insert({
-      user_id: userId,
-      sender: "user",
-      title: title || null,
-      content,
-      read: false,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error("❌ Error inserting message:", error);
-  } else {
-    console.log("✅ Message inserted:", data);
-  }
-
-  return { data, error };
-};  });
-
-    if (error) {
-      console.error("❌ sendMessageToAdmin error:", error);
-      return false;
+    userId: string,
+    title: string,
+    content: string
+  ) => {
+    if (!userId || !content) {
+      console.error("❌ sendMessageToAdmin missing fields");
+      return { data: null, error: "Missing fields" };
     }
 
-    return true;
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({
+        user_id: userId,
+        sender: "user",
+        title: title || null,
+        content,
+        read: false,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("❌ Error inserting message:", error);
+      return { data, error };
+    }
+
+    console.log("✅ Message inserted:", data);
+    return { data, error };
   };
 
   const subscribeToMessages = (userId: string, onUpdate: () => void) => {
