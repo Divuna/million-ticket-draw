@@ -1,13 +1,25 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Home } from 'lucide-react';
+import { useTestAuth } from '@/hooks/useTestAuth';
 
 export const Header: React.FC = () => {
   const { user, signOut } = useAuth();
   const { isAdmin } = useUserRole();
+  const { testSignOut } = useTestAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } finally {
+      try { testSignOut(); } catch {}
+      navigate('/login', { replace: true });
+    }
+  };
 
   return (
     <header className="border-b bg-background">
@@ -37,7 +49,7 @@ export const Header: React.FC = () => {
                   <Button variant="ghost">Profil</Button>
                 </Link>
               )}
-              <Button variant="outline" onClick={signOut}>
+              <Button variant="outline" onClick={handleSignOut}>
                 Odhlásit se
               </Button>
             </>
