@@ -1,3 +1,5 @@
+console.log("🔥🔥🔥 MESSAGES.TSX FILE LOADED - OUTSIDE");
+
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
@@ -5,19 +7,25 @@ import { MessageForm } from "@/components/MessageForm";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function MessagesPage() {
+  console.log("🚀🚀🚀 MessagesPage RENDERING START");
+
   const { user } = useAuth();
+  console.log("👤👤👤 User from useAuth:", user);
+
   const { getUserMessages, sendMessageToAdmin, subscribeToMessages } = useMessages();
 
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // 🔥 DEBUG BLOCK – pro cloud, zjistíme proč se zprávy nenačítají
+  // 🔥 DEBUG BLOCK
   useEffect(() => {
+    console.log("🔥 useEffect testMessages TRIGGERED");
     const testMessages = async () => {
       console.log("🔥 DEBUG: Test zpráv");
 
       const { data: authUser, error: authError } = await supabase.auth.getUser();
       console.log("👤 Přihlášený uživatel:", authUser?.user?.id);
+      console.log("📧 Email:", authUser?.user?.email);
       console.log("🔑 Auth error:", authError);
 
       if (!authUser?.user?.id) {
@@ -28,6 +36,7 @@ export default function MessagesPage() {
       const { data, error } = await supabase.from("messages").select("*").eq("user_id", authUser.user.id);
 
       console.log("📨 Zprávy data:", data);
+      console.log("📊 Počet zpráv:", data?.length);
       console.log("❌ Zprávy error:", error);
     };
 
