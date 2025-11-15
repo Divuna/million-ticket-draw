@@ -41,10 +41,15 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    // Check if user is admin (same logic as frontend useUserRole)
-    const isAdmin = user.email === 'divispavel2@gmail.com';
-    
-    if (!isAdmin) {
+    // Check if user is admin using database role validation
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .in('role', ['admin', 'superadmin'])
+      .maybeSingle()
+
+    if (userError || !userData) {
       throw new Error('Admin access required')
     }
 
