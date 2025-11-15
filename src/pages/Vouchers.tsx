@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { AdminMenu } from '@/components/AdminMenu';
 import { BottomNavigation } from '@/components/BottomNavigation';
