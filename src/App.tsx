@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import { AuthProvider } from "@/components/AuthProvider";
+import { AuthContext, useAuthState } from "@/hooks/useAuth";
 import TestAuthProvider from "@/components/TestAuthProvider";
 
 import Homepage from "@/pages/Homepage";
@@ -92,9 +92,11 @@ function AppContent() {
 }
 
 export default function App() {
+  const authState = useAuthState();
+  
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      <AuthContext.Provider value={authState}>
         <TestAuthProvider>
           <TooltipProvider>
             <BrowserRouter>
@@ -104,7 +106,7 @@ export default function App() {
             </BrowserRouter>
           </TooltipProvider>
         </TestAuthProvider>
-      </AuthProvider>
+      </AuthContext.Provider>
     </QueryClientProvider>
   );
 }
