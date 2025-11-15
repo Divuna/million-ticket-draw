@@ -35,8 +35,8 @@ export default function MessagesPage() {
   };
 
   return (
-    <div className="p-6 text-white max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Zprávy</h1>
+    <div className="p-6 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4 text-foreground">Zprávy</h1>
 
       <MessageForm onSubmit={handleSend} />
 
@@ -47,13 +47,24 @@ export default function MessagesPage() {
       ) : (
         <div className="mt-4 space-y-2">
           {messages.map((m) => (
-            <div key={m.id} className="p-3 rounded border border-gray-700 bg-gray-900">
-              <div className="text-xs opacity-60 mb-1">
-                {new Date(m.created_at).toLocaleString()} {" · "}
-                {m.sender}
+            <div key={m.id} className="p-3 rounded border border-border bg-card">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs text-muted-foreground">
+                  {m.sender === "admin" ? "👨‍💼 Admin" : "👤 Vy"}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {new Date(m.created_at).toLocaleString()}
+                </div>
               </div>
-              <div className="font-bold">{m.title}</div>
-              <div>{m.content}</div>
+              {m.title && <div className="font-bold mb-1">{m.title}</div>}
+              <div className="text-foreground">{m.content}</div>
+              {!m.read && m.sender === "user" && (
+                <div className="mt-2">
+                  <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">
+                    Nepřečteno
+                  </span>
+                </div>
+              )}
             </div>
           ))}
         </div>
