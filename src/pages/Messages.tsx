@@ -56,7 +56,6 @@ export default function MessagesPage() {
 
       setSending(true);
       try {
-        const { sendMessageToAdmin } = useMessages();
         const { data, error } = await sendMessageToAdmin(user.id, title, content);
 
         if (error) {
