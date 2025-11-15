@@ -25,9 +25,9 @@ export default function MessagesPage() {
     setLoading(false);
   };
 
-  const handleSubmit = async (content: string, title?: string) => {
+  const handleSend = async (content: string, title?: string) => {
     const ok = await sendMessageToAdmin(user.id, title || "", content);
-    if (ok) loadMessages();
+    if (ok) await loadMessages();
     return ok;
   };
 
@@ -35,7 +35,7 @@ export default function MessagesPage() {
     <div className="p-6 text-white max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Zprávy</h1>
 
-      <MessageForm onSubmit={handleSubmit} />
+      <MessageForm onSend={handleSend} />
 
       {loading ? (
         <p className="opacity-80 mt-4">Načítám...</p>
