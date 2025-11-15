@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import { SupabaseProvider } from "@/components/SupabaseProvider";
 import { AuthProvider } from "@/components/AuthProvider";
 import TestAuthProvider from "@/components/TestAuthProvider";
 
@@ -83,19 +82,17 @@ function AppContent() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <SupabaseProvider>
-        <AuthProvider>
-          <TestAuthProvider>
-            <TooltipProvider>
-              <BrowserRouter>
-                <AppContent />
-                <Toaster />
-                <Sonner />
-              </BrowserRouter>
-            </TooltipProvider>
-          </TestAuthProvider>
-        </AuthProvider>
-      </SupabaseProvider>
+      <AuthProvider>
+        <TestAuthProvider>
+          <TooltipProvider>
+            <BrowserRouter>
+              <AppContent />
+              <Toaster />
+              <Sonner />
+            </BrowserRouter>
+          </TooltipProvider>
+        </TestAuthProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
