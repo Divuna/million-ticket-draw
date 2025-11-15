@@ -58,10 +58,10 @@ export default function MessagesPage() {
               </div>
               {m.title && <div className="font-bold mb-1">{m.title}</div>}
               <div className="text-foreground">{m.content}</div>
-              {!m.read && m.sender === "user" && (
+              {m.sender === "admin" && m.read !== true && (
                 <div className="mt-2">
-                  <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">
-                    Nepřečteno
+                  <span className="text-xs text-muted-foreground">
+                    • Nová zpráva
                   </span>
                 </div>
               )}
