@@ -35,7 +35,7 @@ export default function MessagesPage() {
     <div className="p-6 text-white max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Zprávy</h1>
 
-      <MessageForm onSubmit={handleSend} />
+      <MessageForm onSend={handleSend} />
 
       {loading ? (
         <p className="opacity-80 mt-4">Načítám...</p>
