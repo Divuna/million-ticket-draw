@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,17 +7,43 @@ import { Home } from 'lucide-react';
 import { useTestAuth } from '@/hooks/useTestAuth';
 
 export const Header: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const { isAdmin } = useUserRole();
   const { testSignOut } = useTestAuth();
   const navigate = useNavigate();
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handleSignOut = async () => {
+    if (isSigningOut) {
+      console.log('⚠️ Sign out already in progress');
+      return;
+    }
+
+    console.log('👋 Header: Initiating sign out...');
+    setIsSigningOut(true);
+
     try {
+      // Sign out from main auth
       await signOut();
-    } finally {
-      try { testSignOut(); } catch {}
+      
+      // Also clear test auth if present
+      try {
+        testSignOut();
+        console.log('✅ Test auth cleared');
+      } catch (err) {
+        console.log('ℹ️ No test auth to clear');
+      }
+
+      console.log('✅ Sign out complete, redirecting to login');
+      
+      // Navigate to login page
       navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('❌ Sign out error in Header:', error);
+      // Still redirect even on error
+      navigate('/login', { replace: true });
+    } finally {
+      setIsSigningOut(false);
     }
   };
 
@@ -29,7 +55,9 @@ export const Header: React.FC = () => {
         </Link>
         
         <nav className="flex items-center space-x-4">
-          {user ? (
+          {loading ? (
+            <span className="text-sm text-muted-foreground">Načítám...</span>
+          ) : user ? (
             <>
               {/* Show different navigation for admin vs regular users */}
               {isAdmin ? (
@@ -49,8 +77,12 @@ export const Header: React.FC = () => {
                   <Button variant="ghost">Profil</Button>
                 </Link>
               )}
-              <Button variant="outline" onClick={handleSignOut}>
-                Odhlásit se
+              <Button 
+                variant="outline" 
+                onClick={handleSignOut}
+                disabled={isSigningOut}
+              >
+                {isSigningOut ? 'Odhlašuji...' : 'Odhlásit se'}
               </Button>
             </>
           ) : (

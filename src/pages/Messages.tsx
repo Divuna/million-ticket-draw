@@ -22,10 +22,33 @@ export default function MessagesPage() {
       console.warn('⚠️ Cannot load messages: no user');
       return;
     }
+    
+    console.log('📨 Loading messages for user:', user.id);
     setLoading(true);
 
     const msgs = await getUserMessages(user.id);
+    console.log('✅ Loaded', msgs?.length || 0, 'messages');
     setMessages(msgs || []);
+
+    // Mark unread admin messages as read
+    if (msgs && msgs.length > 0) {
+      const unreadAdminMessages = msgs.filter(m => m.sender === 'admin' && !m.read);
+      
+      if (unreadAdminMessages.length > 0) {
+        console.log('📬 Marking', unreadAdminMessages.length, 'admin messages as read');
+        
+        const { error } = await supabase
+          .from('messages')
+          .update({ read: true })
+          .in('id', unreadAdminMessages.map(m => m.id));
+          
+        if (error) {
+          console.error('❌ Error marking messages as read:', error);
+        } else {
+          console.log('✅ Messages marked as read');
+        }
+      }
+    }
 
     setLoading(false);
   };
@@ -69,25 +92,36 @@ export default function MessagesPage() {
     <div className="p-6 text-white max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Zprávy</h1>
 
-      <MessageForm onSubmit={handleSend} />
-
-      {loading ? (
-        <p className="opacity-80 mt-4">Načítám...</p>
-      ) : messages.length === 0 ? (
-        <p className="opacity-50 mt-4">Žádné zprávy</p>
+      {authLoading ? (
+        <p className="opacity-80 mb-4">Načítám autentizaci...</p>
+      ) : !user ? (
+        <p className="opacity-80 mb-4">Přihlaste se pro zobrazení zpráv</p>
       ) : (
-        <div className="mt-4 space-y-2">
-          {messages.map((m) => (
-            <div key={m.id} className="p-3 rounded border border-gray-700 bg-gray-900">
-              <div className="text-xs opacity-60 mb-1">
-                {new Date(m.created_at).toLocaleString()} {" · "}
-                {m.sender}
-              </div>
-              <div className="font-bold">{m.title}</div>
-              <div>{m.content}</div>
+        <>
+          <MessageForm onSubmit={handleSend} />
+
+          {loading ? (
+            <p className="opacity-80 mt-4">Načítám zprávy...</p>
+          ) : messages.length === 0 ? (
+            <p className="opacity-50 mt-4">Žádné zprávy</p>
+          ) : (
+            <div className="mt-4 space-y-2">
+              {messages.map((m) => (
+                <div key={m.id} className="p-3 rounded border border-gray-700 bg-gray-900">
+                  <div className="text-xs opacity-60 mb-1">
+                    {new Date(m.created_at).toLocaleString()} {" · "}
+                    {m.sender === 'admin' ? '👨‍💼 Admin' : '👤 Vy'}
+                  </div>
+                  {m.title && <div className="font-bold">{m.title}</div>}
+                  <div>{m.content}</div>
+                  {!m.read && m.sender === 'admin' && (
+                    <span className="text-xs text-blue-400 mt-1 block">• Nová zpráva</span>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
