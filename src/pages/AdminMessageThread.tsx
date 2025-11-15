@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { MessageForm } from "@/components/MessageForm";
 
 type Message = {
@@ -31,25 +31,20 @@ export default function AdminMessageThread() {
   const loadLatestMessages = async () => {
     setLoading(true);
 
-    const { data, error } = await supabase.from("messages").select("*").order("created_at", { ascending: false });
+    const { data } = await supabase.from("messages").select("*").order("created_at", { ascending: false });
 
-    if (!error && data) {
-      setMessages(data as Message[]);
-    }
-
+    if (data) setMessages(data as Message[]);
     setLoading(false);
   };
 
   const loadThread = async (userId: string) => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("messages")
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: true });
 
-    if (!error && data) {
-      setThreadMessages(data as Message[]);
-    }
+    if (data) setThreadMessages(data as Message[]);
   };
 
   const handleSelectUser = (userId: string) => {
@@ -91,6 +86,7 @@ export default function AdminMessageThread() {
     <div className="p-6 text-white max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
       <div className="md:col-span-1 border border-gray-700 rounded bg-gray-900">
         <div className="px-4 py-3 border-b border-gray-700 font-bold">Zákazníci</div>
+
         {loading ? (
           <div className="p-4 text-sm opacity-70">Načítám…</div>
         ) : users.length === 0 ? (
@@ -147,7 +143,7 @@ export default function AdminMessageThread() {
 
         {selectedUserId && (
           <div className="border-t border-gray-700 p-4">
-            <MessageForm onSubmit={handleAdminReply} placeholder="Odpověď zákazníkovi…" />
+            <MessageForm onSubmit={handleAdminReply} placeholder="Odpovědět zákazníkovi…" />
           </div>
         )}
       </div>
