@@ -1,10 +1,14 @@
 console.log("🔥🔥🔥 TOTO JE TEN SPRAVNY FILE - Messages.tsx");
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useMessages } from "@/hooks/useMessages";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 export default function MessagesPage() {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -81,7 +85,17 @@ export default function MessagesPage() {
 
   return (
     <div className="p-4 text-white">
-      <h1 className="text-xl font-bold mb-4">📨 Zprávy ({messages.length})</h1>
+      <div className="flex items-center gap-3 mb-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate(-1)}
+          className="text-white hover:bg-white/10"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-xl font-bold">📨 Zprávy ({messages.length})</h1>
+      </div>
 
       {messages.length === 0 && <p className="text-muted-foreground">Žádné zprávy</p>}
 
