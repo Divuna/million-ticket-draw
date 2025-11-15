@@ -17,7 +17,7 @@ import MyContests from "@/pages/MyContests";
 import MyContestDetail from "@/pages/MyContestDetail";
 import BonusDetail from "@/pages/BonusDetail";
 import Vouchers from "@/pages/Vouchers";
-import Messages from "@/pages/Messages";
+import Messages from "./pages/Messages";
 import MessageDetail from "@/pages/MessageDetail";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import PaymentCancel from "@/pages/PaymentCancel";
