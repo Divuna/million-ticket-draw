@@ -1,28 +1,22 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { AuthContext, useAuthState } from "@/hooks/useAuth";
 
-const SupabaseContext = createContext(null);
-
-export function SupabaseProvider({ children }: { children: any }) {
-  const [session, setSession] = useState(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data?.session ?? null);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-    });
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, []);
-
-  return <SupabaseContext.Provider value={{ supabase, session }}>{children}</SupabaseContext.Provider>;
+// Make supabase available globally for debugging
+if (typeof window !== 'undefined') {
+  (window as any).supabase = supabase;
 }
 
-export function useSupabase() {
-  return useContext(SupabaseContext);
+export function SupabaseProvider({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const authState = useAuthState();
+
+  return (
+    <AuthContext.Provider value={authState}>
+      {children}
+    </AuthContext.Provider>
+  );
 }

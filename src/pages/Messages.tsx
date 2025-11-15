@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { MessageForm } from "@/components/MessageForm";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function MessagesPage() {
   const { user } = useAuth();
@@ -26,16 +27,37 @@ export default function MessagesPage() {
   };
 
   const handleSend = async (content: string, title?: string) => {
+    if (!user?.id) return false;
     const ok = await sendMessageToAdmin(user.id, title || "", content);
     if (ok) await loadMessages();
     return ok;
   };
 
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('user-messages-realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'messages',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        loadMessages();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
   return (
     <div className="p-6 text-white max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Zprávy</h1>
 
-      <MessageForm onSend={handleSend} />
+      <MessageForm onSubmit={handleSend} />
 
       {loading ? (
         <p className="opacity-80 mt-4">Načítám...</p>

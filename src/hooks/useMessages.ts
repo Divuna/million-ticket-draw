@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 export function useMessages() {
   const getUserMessages = async (userId: string) => {
+    if (!userId) return [];
+    
     const { data, error } = await supabase
       .from("messages")
       .select("*")
