@@ -1,7 +1,8 @@
+import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export function useMessages() {
-  const getUserMessages = async (userId: string) => {
+  const getUserMessages = useCallback(async (userId: string) => {
     if (!userId) {
       console.warn("⚠️ getUserMessages called without userId");
       return [];
@@ -36,9 +37,9 @@ export function useMessages() {
     }
 
     return data || [];
-  };
+  }, []);
 
-  const sendMessageToAdmin = async (
+  const sendMessageToAdmin = useCallback(async (
     userId: string,
     title: string,
     content: string
@@ -62,9 +63,9 @@ export function useMessages() {
     }
 
     return true;
-  };
+  }, []);
 
-  const subscribeToMessages = (userId: string, onUpdate: () => void) => {
+  const subscribeToMessages = useCallback((userId: string, onUpdate: () => void) => {
     if (!userId) {
       console.warn("⚠️ subscribeToMessages called without userId");
       return () => {};
@@ -90,7 +91,7 @@ export function useMessages() {
     return () => {
       supabase.removeChannel(channel);
     };
-  };
+  }, []);
 
   return { getUserMessages, sendMessageToAdmin, subscribeToMessages };
 }
