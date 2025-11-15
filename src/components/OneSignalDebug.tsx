@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useOneSignal } from "@/hooks/useOneSignal";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { RefreshCw, Bell, Database } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";

@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/components/AuthProvider';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Header } from '@/components/Header';
 import { AdminMenu } from '@/components/AdminMenu';
