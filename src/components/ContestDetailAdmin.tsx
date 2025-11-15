@@ -10,7 +10,7 @@ import { ArrowLeft, Gift, Trophy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/components/AuthProvider';
 
 interface ContestData {
   id: string;

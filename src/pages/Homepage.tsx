@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminMenu } from "@/components/AdminMenu";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/components/AuthProvider";
 import { useHomepageVouchers } from "@/hooks/useHomepageVouchers";
 import { useMegajackpotBanners } from "@/hooks/useMegajackpotBanners";
 import { useHomepageBanners } from "@/hooks/useHomepageBanners";
