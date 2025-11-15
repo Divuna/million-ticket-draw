@@ -1,37 +1,32 @@
 import { useEffect, useState } from "react";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useSupabaseUser } from "@/hooks/useUserRole";
 import { useMessages } from "@/hooks/useMessages";
-import { useUser } from "@/hooks/useUser";
+import { MessageForm } from "@/components/MessageForm";
 
-import MessageForm from "@/components/MessageForm";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export default function MessagesPage() {
-  const { user } = useUser();
+  const user = useSupabaseUser();
   const { getUserMessages, sendMessageToAdmin } = useMessages();
+
   const [messages, setMessages] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
 
-  // 🔥 Funkce pro načtení zpráv
-  const loadMessages = async () => {
+  // 🔵 Nahrávat zprávy po přihlášení
+  useEffect(() => {
     if (!user?.id) return;
+    loadMessages();
+  }, [user]);
 
+  const loadMessages = async () => {
     setLoading(true);
-    const msgs = await getUserMessages(user.id);
+    const msgs = await getUserMessages();
     setMessages(msgs);
     setLoading(false);
   };
 
-  // 🔥 Načíst zprávy při otevření stránky
-  useEffect(() => {
-    loadMessages();
-  }, [user]);
-
-  // 🔥 Odeslání zprávy adminovi
   const handleSendMessage = async (content: string, title?: string) => {
-    if (!user?.id) return false;
-
-    const result = await sendMessageToAdmin(user.id, title || "", content);
+    const result = await sendMessageToAdmin(title || "", content);
     if (result) {
       await loadMessages();
       return true;
@@ -47,24 +42,25 @@ export default function MessagesPage() {
         </CardHeader>
 
         <CardContent>
-          <MessageForm onSend={handleSendMessage} />
+          {loading ? (
+            <p>Načítání…</p>
+          ) : messages.length === 0 ? (
+            <p>Žádné zprávy</p>
+          ) : (
+            <div className="space-y-3">
+              {messages.map((msg) => (
+                <div key={msg.id} className="p-3 border rounded-md bg-background/50">
+                  <h3 className="font-semibold">{msg.title}</h3>
+                  <p className="text-sm opacity-80">{msg.content}</p>
+                  <p className="text-xs mt-1 opacity-50">{new Date(msg.created_at).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
 
-          {loading && <p className="mt-4 text-muted-foreground">Načítám…</p>}
-
-          {!loading && messages.length === 0 && <p className="mt-4 text-center text-muted-foreground">Žádné zprávy</p>}
-
-          <div className="mt-6 space-y-4">
-            {messages.map((msg) => (
-              <Card key={msg.id}>
-                <CardHeader>
-                  <CardTitle>{msg.title || "Bez názvu"}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>{msg.content}</p>
-                  <div className="text-xs text-muted-foreground mt-2">{new Date(msg.created_at).toLocaleString()}</div>
-                </CardContent>
-              </Card>
-            ))}
+          {/* Formulář pro odeslání */}
+          <div className="mt-6">
+            <MessageForm onSend={handleSendMessage} />
           </div>
         </CardContent>
       </Card>
