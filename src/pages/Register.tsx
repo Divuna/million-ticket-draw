@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/components/AuthProvider';
 import { toast } from '@/hooks/use-toast';
 
 const Register: React.FC = () => {
@@ -11,8 +11,15 @@ const Register: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signUp, signInWithOAuth } = useAuth();
+  const { user, signUp } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect authenticated users to homepage
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +54,8 @@ const Register: React.FC = () => {
           variant: "destructive"
         });
       } else {
-        navigate('/profile');
+        // Redirect will happen automatically via useEffect
+        navigate('/', { replace: true });
       }
     } catch (error) {
       toast({
@@ -61,15 +69,11 @@ const Register: React.FC = () => {
   };
 
   const handleOAuthSignIn = async (provider: 'google' | 'apple') => {
-    try {
-      await signInWithOAuth(provider);
-    } catch (error) {
-      toast({
-        title: "Chyba registrace",
-        description: "Registrace se nezdařila. Zkuste to znovu.",
-        variant: "destructive"
-      });
-    }
+    toast({
+      title: "Funkce není dostupná",
+      description: "OAuth přihlášení není aktuálně k dispozici.",
+      variant: "destructive"
+    });
   };
 
   return (
