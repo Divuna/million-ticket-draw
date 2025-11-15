@@ -5,19 +5,23 @@ import { MessageForm } from "@/components/MessageForm";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function MessagesPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { getUserMessages, sendMessageToAdmin } = useMessages();
 
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || authLoading) return;
+    console.log('👤 User logged in, loading messages...');
     loadMessages();
-  }, [user]);
+  }, [user?.id, authLoading]);
 
   const loadMessages = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.warn('⚠️ Cannot load messages: no user');
+      return;
+    }
     setLoading(true);
 
     const msgs = await getUserMessages(user.id);
@@ -27,14 +31,20 @@ export default function MessagesPage() {
   };
 
   const handleSend = async (content: string, title?: string) => {
-    if (!user?.id) return false;
+    if (!user?.id) {
+      console.error('❌ Cannot send message: no user');
+      return false;
+    }
     const ok = await sendMessageToAdmin(user.id, title || "", content);
     if (ok) await loadMessages();
     return ok;
   };
 
+  // Real-time subscription for new messages
   useEffect(() => {
     if (!user?.id) return;
+
+    console.log('🔔 Setting up real-time subscription for messages...');
 
     const channel = supabase
       .channel('user-messages-realtime')
@@ -43,12 +53,14 @@ export default function MessagesPage() {
         schema: 'public',
         table: 'messages',
         filter: `user_id=eq.${user.id}`
-      }, () => {
+      }, (payload) => {
+        console.log('📬 Real-time message update:', payload);
         loadMessages();
       })
       .subscribe();
 
     return () => {
+      console.log('🧹 Cleaning up messages subscription');
       supabase.removeChannel(channel);
     };
   }, [user?.id]);
