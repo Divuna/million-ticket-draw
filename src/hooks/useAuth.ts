@@ -20,22 +20,21 @@ export function useAuthState(): AuthContextValue {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const init = async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session ?? null);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-    };
-
-    init();
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    // Set up auth listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
     });
 
+    // Then fetch the current session
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session ?? null);
+      setUser(data.session?.user ?? null);
+      setLoading(false);
+    });
+
     return () => {
-      listener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -54,7 +53,12 @@ export function useAuthState(): AuthContextValue {
   };
 
   const signOut = async () => {
-    return supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } finally {
+      setSession(null);
+      setUser(null);
+    }
   };
 
   const signInWithOAuth = async (provider: "google" | "apple") => {
