@@ -128,7 +128,7 @@ export default function AdminMessageThread() {
             </div>
 
             <MessageForm
-              onSubmit={sendAdminReply}
+              onSend={sendAdminReply}
               placeholder="Napište odpověď uživateli..."
               showTitle={false}
             />

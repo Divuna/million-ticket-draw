@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { useUser } from "@/hooks/useUser";
+import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { MessageForm } from "@/components/MessageForm";
 
 export default function MessagesPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const { getUserMessages, sendMessageToAdmin } = useMessages();
 
   const [messages, setMessages] = useState<any[]>([]);
@@ -34,7 +34,7 @@ export default function MessagesPage() {
     <div className="p-6 text-white max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Zprávy</h1>
 
-      <MessageForm onSubmit={handleSubmit} />
+      <MessageForm onSend={handleSubmit} />
 
       {loading ? (
         <p className="opacity-80 mt-4">Načítám...</p>

@@ -1,6 +1,12 @@
 import { useState } from "react";
 
-export function MessageForm({ onSend }: { onSend: (content: string, title?: string) => Promise<boolean> }) {
+interface MessageFormProps {
+  onSend: (content: string, title?: string) => Promise<boolean>;
+  placeholder?: string;
+  showTitle?: boolean;
+}
+
+export function MessageForm({ onSend, placeholder = "Napište zprávu…", showTitle = true }: MessageFormProps) {
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
 
@@ -17,17 +23,19 @@ export function MessageForm({ onSend }: { onSend: (content: string, title?: stri
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3 p-3 border border-gray-700 rounded">
-      <input
-        className="w-full p-2 rounded bg-gray-800 border border-gray-600"
-        placeholder="Titulek"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      />
+      {showTitle && (
+        <input
+          className="w-full p-2 rounded bg-gray-800 border border-gray-600"
+          placeholder="Titulek"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+      )}
 
       <textarea
         className="w-full p-2 rounded bg-gray-800 border border-gray-600"
         rows={3}
-        placeholder="Napište zprávu…"
+        placeholder={placeholder}
         value={content}
         onChange={(e) => setContent(e.target.value)}
       />
