@@ -1,74 +1,97 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { MessageForm } from "@/components/MessageForm";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function MessagesPage() {
   const { user } = useAuth();
   const { getUserMessages, sendMessageToAdmin, subscribeToMessages } = useMessages();
 
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // 🔥 DEBUG BLOCK – pro cloud, zjistíme proč se zprávy nenačítají
+  useEffect(() => {
+    const testMessages = async () => {
+      console.log("🔥 DEBUG: Test zpráv");
+
+      const { data: authUser, error: authError } = await supabase.auth.getUser();
+      console.log("👤 Přihlášený uživatel:", authUser?.user?.id);
+      console.log("🔑 Auth error:", authError);
+
+      if (!authUser?.user?.id) {
+        console.log("❌ Žádný user_id – AUTH NEFUNGUJE");
+        return;
+      }
+
+      const { data, error } = await supabase.from("messages").select("*").eq("user_id", authUser.user.id);
+
+      console.log("📨 Zprávy data:", data);
+      console.log("❌ Zprávy error:", error);
+    };
+
+    testMessages();
+  }, []);
+  // 🔥 END DEBUG BLOCK
+
+  // Načtení zpráv
+  const loadMessages = useCallback(async () => {
+    if (!user?.id) return;
+
+    setLoading(true);
+    const msgs = await getUserMessages(user.id);
+    setMessages(msgs || []);
+    setLoading(false);
+  }, [user?.id, getUserMessages]);
 
   useEffect(() => {
     if (!user?.id) return;
-    loadMessages();
 
+    loadMessages();
     const cleanup = subscribeToMessages(user.id, loadMessages);
     return cleanup;
-  }, [user]);
+  }, [user?.id, loadMessages, subscribeToMessages]);
 
-  const loadMessages = async () => {
-    if (!user?.id) return;
-    setLoading(true);
-
-    const msgs = await getUserMessages(user.id);
-    setMessages(msgs || []);
-
-    setLoading(false);
-  };
-
+  // Odeslání zprávy
   const handleSend = async (content: string, title?: string) => {
+    if (!user?.id) return false;
     const ok = await sendMessageToAdmin(user.id, title || "", content);
     if (ok) await loadMessages();
     return ok;
   };
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4 text-foreground">Zprávy</h1>
-
-      <MessageForm onSubmit={handleSend} />
+    <div className="p-4 text-white">
+      <h1 className="text-xl font-bold mb-4">Zprávy</h1>
 
       {loading ? (
-        <p className="opacity-80 mt-4">Načítám...</p>
+        <p>Načítám…</p>
       ) : messages.length === 0 ? (
-        <p className="opacity-50 mt-4">Žádné zprávy</p>
+        <p>Žádné zprávy</p>
       ) : (
-        <div className="mt-4 space-y-2">
+        <div className="space-y-4">
           {messages.map((m) => (
-            <div key={m.id} className="p-3 rounded border border-border bg-card">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-xs text-muted-foreground">
-                  {m.sender === "admin" ? "👨‍💼 Admin" : "👤 Vy"}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {new Date(m.created_at).toLocaleString()}
-                </div>
+            <div key={m.id} className="border border-gray-700 p-3 rounded-md bg-gray-900">
+              <div className="text-xs text-gray-400">
+                {m.sender === "admin" ? "👨‍💼 Admin" : "👤 Vy"} • {new Date(m.created_at).toLocaleString()}
               </div>
-              {m.title && <div className="font-bold mb-1">{m.title}</div>}
-              <div className="text-foreground">{m.content}</div>
+
+              {m.title && <div className="font-bold mt-1">{m.title}</div>}
+
+              <div className="mt-1">{m.content}</div>
+
               {m.sender === "admin" && m.read !== true && (
-                <div className="mt-2">
-                  <span className="text-xs text-muted-foreground">
-                    • Nová zpráva
-                  </span>
-                </div>
+                <div className="text-red-400 text-xs mt-1">• Nová zpráva</div>
               )}
             </div>
           ))}
         </div>
       )}
+
+      <div className="mt-6">
+        <MessageForm onSubmit={handleSend} />
+      </div>
     </div>
   );
 }
