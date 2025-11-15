@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/utils/supabaseClient";
 
 export function useMessages() {
   const getUserMessages = async (userId: string) => {
@@ -8,10 +8,7 @@ export function useMessages() {
       .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("getUserMessages error:", error);
-      return [];
-    }
+    if (error) return [];
     return data || [];
   };
 
@@ -24,10 +21,7 @@ export function useMessages() {
       content,
     });
 
-    if (error) {
-      console.error("sendMessageToAdmin error:", error);
-      return false;
-    }
+    if (error) return false;
     return true;
   };
 
