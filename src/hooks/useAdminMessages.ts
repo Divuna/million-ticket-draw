@@ -23,19 +23,22 @@ export interface ConversationMessage {
   created_at: string;
 }
 
-export const useAdminMessages = () => {
+export const useAdminMessagesList = () => {
   const { isAdmin } = useUserRole();
   const [conversations, setConversations] = useState<UserConversation[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchConversations = async () => {
     if (!isAdmin) {
+      console.log('👤 Not admin, skipping conversation fetch');
       setConversations([]);
       setLoading(false);
       return;
     }
 
     try {
+      console.log('📨 Fetching admin conversations...');
+      
       // Fetch all messages with user info
       const { data: messages, error: messagesError } = await supabase
         .from('messages')
@@ -75,9 +78,11 @@ export const useAdminMessages = () => {
         }
       });
 
-      setConversations(Array.from(grouped.values()));
+      const conversationsList = Array.from(grouped.values());
+      console.log(`✅ Loaded ${conversationsList.length} conversations`);
+      setConversations(conversationsList);
     } catch (error: any) {
-      console.error('Error fetching admin messages:', error);
+      console.error('❌ Error fetching admin messages:', error);
       toast({
         title: 'Chyba',
         description: 'Nepodařilo se načíst zprávy',
@@ -91,7 +96,10 @@ export const useAdminMessages = () => {
   useEffect(() => {
     fetchConversations();
 
+    if (!isAdmin) return;
+
     // Real-time subscription
+    console.log('🔔 Setting up realtime subscription for admin messages list');
     const channel = supabase
       .channel('admin-messages-changes')
       .on(
@@ -101,14 +109,16 @@ export const useAdminMessages = () => {
           schema: 'public',
           table: 'messages',
         },
-        () => {
+        (payload) => {
+          console.log('📨 Messages table changed:', payload.eventType);
           fetchConversations();
         }
       )
       .subscribe();
 
     return () => {
-      channel.unsubscribe();
+      console.log('🔕 Cleaning up admin messages list subscription');
+      supabase.removeChannel(channel);
     };
   }, [isAdmin]);
 
@@ -127,12 +137,15 @@ export const useAdminMessageThread = (userId: string | undefined) => {
 
   const fetchThread = async () => {
     if (!isAdmin || !userId) {
+      console.log('👤 Not admin or no userId, skipping thread fetch');
       setMessages([]);
       setLoading(false);
       return;
     }
 
     try {
+      console.log(`📨 Fetching thread for user ${userId}...`);
+      
       const { data, error } = await supabase
         .from('messages')
         .select('*')
@@ -140,6 +153,8 @@ export const useAdminMessageThread = (userId: string | undefined) => {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
+      
+      console.log(`✅ Loaded ${data?.length || 0} messages for user ${userId}`);
       setMessages((data || []) as ConversationMessage[]);
 
       // Fetch user info
@@ -150,17 +165,28 @@ export const useAdminMessageThread = (userId: string | undefined) => {
         .single();
 
       if (userError) throw userError;
+      
+      console.log(`✅ Loaded user info for ${user.email}`);
       setUserInfo(user);
 
       // Mark user messages as read
-      await supabase
-        .from('messages')
-        .update({ read: true })
-        .eq('user_id', userId)
-        .eq('sender', 'user')
-        .eq('read', false);
+      const unreadUserMessages = data?.filter(
+        (msg) => msg.sender === 'user' && msg.read === false
+      );
+
+      if (unreadUserMessages && unreadUserMessages.length > 0) {
+        console.log(`📖 Marking ${unreadUserMessages.length} messages as read...`);
+        await supabase
+          .from('messages')
+          .update({ read: true })
+          .eq('user_id', userId)
+          .eq('sender', 'user')
+          .eq('read', false);
+        
+        console.log('✅ Messages marked as read');
+      }
     } catch (error: any) {
-      console.error('Error fetching thread:', error);
+      console.error('❌ Error fetching thread:', error);
       toast({
         title: 'Chyba',
         description: 'Nepodařilo se načíst konverzaci',
@@ -182,6 +208,8 @@ export const useAdminMessageThread = (userId: string | undefined) => {
     }
 
     try {
+      console.log(`📤 Sending admin reply to user ${userId}...`);
+      
       const { error } = await supabase.from('messages').insert({
         user_id: userId,
         content,
@@ -191,6 +219,7 @@ export const useAdminMessageThread = (userId: string | undefined) => {
 
       if (error) throw error;
 
+      console.log('✅ Admin reply sent successfully');
       toast({
         title: 'Úspěch',
         description: 'Odpověď byla odeslána',
@@ -199,7 +228,7 @@ export const useAdminMessageThread = (userId: string | undefined) => {
       await fetchThread();
       return true;
     } catch (error: any) {
-      console.error('Error sending admin reply:', error);
+      console.error('❌ Error sending admin reply:', error);
       toast({
         title: 'Chyba',
         description: 'Nepodařilo se odeslat odpověď',
@@ -212,7 +241,10 @@ export const useAdminMessageThread = (userId: string | undefined) => {
   useEffect(() => {
     fetchThread();
 
-    // Real-time subscription
+    if (!isAdmin || !userId) return;
+
+    // Real-time subscription for specific user thread
+    console.log(`🔔 Setting up realtime subscription for thread ${userId}`);
     const channel = supabase
       .channel(`admin-thread-${userId}`)
       .on(
@@ -223,14 +255,16 @@ export const useAdminMessageThread = (userId: string | undefined) => {
           table: 'messages',
           filter: `user_id=eq.${userId}`,
         },
-        () => {
+        (payload) => {
+          console.log(`📨 Thread ${userId} changed:`, payload.eventType);
           fetchThread();
         }
       )
       .subscribe();
 
     return () => {
-      channel.unsubscribe();
+      console.log(`🔕 Cleaning up thread ${userId} subscription`);
+      supabase.removeChannel(channel);
     };
   }, [userId, isAdmin]);
 

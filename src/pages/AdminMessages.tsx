@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAdminMessages } from '@/hooks/useAdminMessages';
+import { useAdminMessagesList } from '@/hooks/useAdminMessages';
 import { useUserRole } from '@/hooks/useUserRole';
 import { MessageSquare, Clock, User } from 'lucide-react';
 import { format } from 'date-fns';
@@ -15,7 +15,7 @@ import { cs } from 'date-fns/locale';
 export default function AdminMessages() {
   const navigate = useNavigate();
   const { isAdmin, loading: roleLoading } = useUserRole();
-  const { conversations, loading } = useAdminMessages();
+  const { conversations, loading } = useAdminMessagesList();
 
   if (roleLoading) {
     return (
