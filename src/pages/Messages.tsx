@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { useUser } from "@/hooks/useUser";
+import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { MessageForm } from "@/components/MessageForm";
 
 export default function MessagesPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const { getUserMessages, sendMessageToAdmin } = useMessages();
 
   const [messages, setMessages] = useState<any[]>([]);
