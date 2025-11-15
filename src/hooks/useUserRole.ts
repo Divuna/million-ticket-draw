@@ -19,10 +19,12 @@ export const useUserRole = (): { role: UserRole; isAdmin: boolean; isSuperAdmin:
 
       try {
         const { data, error } = await supabase
-          .from('users')
+          .from('user_roles')
           .select('role')
-          .eq('id', user.id)
-          .single();
+          .eq('user_id', user.id)
+          .order('role', { ascending: true })
+          .limit(1)
+          .maybeSingle();
 
         if (error) {
           console.error('Error fetching user role:', error);
