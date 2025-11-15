@@ -80,10 +80,14 @@ const Homepage = () => {
   useEffect(() => {
     const channel = supabase
       .channel("contest-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "contests" }, () => fetchContests())
+      .on("postgres_changes", { event: "*", schema: "public", table: "contests" }, () => {
+        fetchContests();
+      })
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // NAVIGACE ---------------------------------------------------------
