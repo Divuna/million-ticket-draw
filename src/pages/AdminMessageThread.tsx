@@ -1,141 +1,156 @@
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Header } from '@/components/Header';
-import { AdminMenu } from '@/components/AdminMenu';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { MessageForm } from '@/components/MessageForm';
-import { useAdminMessageThread } from '@/hooks/useAdminMessages';
-import { useUserRole } from '@/hooks/useUserRole';
-import { ArrowLeft, User, Clock } from 'lucide-react';
-import { format } from 'date-fns';
-import { cs } from 'date-fns/locale';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/supabase";
+import { MessageForm } from "@/components/MessageForm";
+
+type Message = {
+  id: string;
+  user_id: string;
+  sender: string;
+  title: string | null;
+  content: string;
+  created_at: string;
+  read: boolean | null;
+  category: string | null;
+};
 
 export default function AdminMessageThread() {
-  const { userId } = useParams<{ userId: string }>();
-  const navigate = useNavigate();
-  const { isAdmin, loading: roleLoading } = useUserRole();
-  const { messages, loading, userInfo, sendAdminReply } = useAdminMessageThread(userId);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [threadMessages, setThreadMessages] = useState<Message[]>([]);
 
-  if (roleLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8 pb-24">
-          <Skeleton className="h-8 w-48 mb-6" />
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-32 w-full" />
-            ))}
-          </div>
-        </main>
-      </div>
-    );
-  }
+  useEffect(() => {
+    loadLatestMessages();
+  }, []);
 
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8 pb-24">
-          <Card className="border-destructive/50">
-            <CardContent className="pt-6">
-              <p className="text-destructive text-center">Nemáte oprávnění k přístupu.</p>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!selectedUserId) return;
+    loadThread(selectedUserId);
+  }, [selectedUserId]);
+
+  const loadLatestMessages = async () => {
+    setLoading(true);
+
+    const { data, error } = await supabase.from("messages").select("*").order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setMessages(data as Message[]);
+    }
+
+    setLoading(false);
+  };
+
+  const loadThread = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+
+    if (!error && data) {
+      setThreadMessages(data as Message[]);
+    }
+  };
+
+  const handleSelectUser = (userId: string) => {
+    setSelectedUserId(userId);
+  };
+
+  const handleAdminReply = async (content: string, title?: string) => {
+    if (!selectedUserId) return false;
+
+    const { error } = await supabase.from("messages").insert({
+      user_id: selectedUserId,
+      sender: "admin",
+      title: title || "",
+      content,
+    });
+
+    if (error) return false;
+
+    await loadThread(selectedUserId);
+    await loadLatestMessages();
+    return true;
+  };
+
+  const users = Array.from(
+    new Map(
+      messages.map((m) => [
+        m.user_id,
+        {
+          user_id: m.user_id,
+          last_message: m.content,
+          last_sender: m.sender,
+          last_created_at: m.created_at,
+        },
+      ]),
+    ).values(),
+  );
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-8 pb-24">
-        <div className="mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/admin/messages')}
-            className="mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Zpět na seznam
-          </Button>
-
-          {userInfo && (
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">
-                  {userInfo.name || userInfo.email}
-                </h1>
-                <p className="text-sm text-muted-foreground">{userInfo.email}</p>
-              </div>
-            </div>
-          )}
-        </div>
-
+    <div className="p-6 text-white max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="md:col-span-1 border border-gray-700 rounded bg-gray-900">
+        <div className="px-4 py-3 border-b border-gray-700 font-bold">Zákazníci</div>
         {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-32 w-full" />
+          <div className="p-4 text-sm opacity-70">Načítám…</div>
+        ) : users.length === 0 ? (
+          <div className="p-4 text-sm opacity-70">Žádné zprávy</div>
+        ) : (
+          <div className="divide-y divide-gray-800">
+            {users.map((u) => (
+              <button
+                key={u.user_id}
+                onClick={() => handleSelectUser(u.user_id)}
+                className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-800 ${
+                  selectedUserId === u.user_id ? "bg-gray-800" : ""
+                }`}
+              >
+                <div className="font-mono text-xs opacity-70">{u.user_id}</div>
+                <div className="text-xs opacity-60">
+                  {new Date(u.last_created_at).toLocaleString()} · {u.last_sender}
+                </div>
+                <div className="text-sm truncate">{u.last_message}</div>
+              </button>
             ))}
           </div>
-        ) : (
-          <>
-            <div className="space-y-4 mb-6">
-              {messages.length === 0 ? (
-                <Card className="border-border/50">
-                  <CardContent className="pt-6 text-center">
-                    <p className="text-muted-foreground">Zatím nejsou žádné zprávy</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                messages.map((msg) => (
-                  <Card
-                    key={msg.id}
-                    className={`ticket-message ticket-perforations ${
-                      msg.sender === 'admin' ? 'bg-primary/5 border-primary/30' : ''
-                    }`}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <Badge variant={msg.sender === 'admin' ? 'default' : 'secondary'}>
-                            {msg.sender === 'admin' ? 'Admin' : 'Uživatel'}
-                          </Badge>
-                          {msg.title && (
-                            <CardTitle className="text-base">{msg.title}</CardTitle>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock className="h-4 w-4" />
-                          {format(new Date(msg.created_at), 'dd.MM.yyyy HH:mm', { locale: cs })}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-
-            <MessageForm
-              onSend={sendAdminReply}
-              placeholder="Napište odpověď uživateli..."
-              showTitle={false}
-            />
-          </>
         )}
-      </main>
-      <AdminMenu />
+      </div>
+
+      <div className="md:col-span-2 border border-gray-700 rounded bg-gray-900 flex flex-col">
+        <div className="px-4 py-3 border-b border-gray-700 font-bold">
+          {selectedUserId ? "Konverzace se zákazníkem" : "Vyberte zákazníka vlevo"}
+        </div>
+
+        <div className="flex-1 overflow-auto p-4 space-y-3">
+          {selectedUserId && threadMessages.length === 0 && (
+            <div className="text-sm opacity-70">Žádné zprávy v této konverzaci.</div>
+          )}
+
+          {selectedUserId &&
+            threadMessages.map((m) => (
+              <div
+                key={m.id}
+                className={`max-w-xl p-3 rounded border text-sm ${
+                  m.sender === "admin"
+                    ? "ml-auto bg-blue-900/40 border-blue-700"
+                    : "mr-auto bg-gray-800 border-gray-700"
+                }`}
+              >
+                <div className="text-xs opacity-60 mb-1">
+                  {new Date(m.created_at).toLocaleString()} · {m.sender}
+                </div>
+                {m.title && m.title.trim() !== "" && <div className="font-bold mb-1">{m.title}</div>}
+                <div>{m.content}</div>
+              </div>
+            ))}
+        </div>
+
+        {selectedUserId && (
+          <div className="border-t border-gray-700 p-4">
+            <MessageForm onSubmit={handleAdminReply} placeholder="Odpověď zákazníkovi…" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
