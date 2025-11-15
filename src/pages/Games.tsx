@@ -9,7 +9,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 interface Contest {

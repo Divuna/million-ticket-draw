@@ -5,7 +5,7 @@ import { AdminMenu } from '@/components/AdminMenu';
 import { ComprehensiveAdminTestDashboard } from '@/tests/ComprehensiveAdminTestDashboard';
 import { OneSignalDebug } from '@/components/OneSignalDebug';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 const AdminTests: React.FC = () => {
   const { user } = useAuth();
