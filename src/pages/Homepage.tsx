@@ -3,8 +3,7 @@ console.log("🔥 HOMEPAGE RENDERED – OK");
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-// FIX 🔥 – správná verze Auth hooku
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 
 import { Header } from "@/components/Header";
 import { BottomNavigation } from "@/components/BottomNavigation";
