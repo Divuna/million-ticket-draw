@@ -7,11 +7,12 @@ export function useMessages() {
       return [];
     }
 
-    // Load user's messages
+    // Load user's messages (only top-level messages, not replies)
     const { data, error } = await supabase
       .from("messages")
       .select("*")
       .eq("user_id", userId)
+      .is("parent_message_id", null)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -38,10 +39,26 @@ export function useMessages() {
     return data || [];
   };
 
+  const getMessageReplies = async (parentMessageId: string) => {
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("parent_message_id", parentMessageId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("❌ getMessageReplies error:", error);
+      return [];
+    }
+
+    return data || [];
+  };
+
   const sendMessageToAdmin = async (
     userId: string,
     title: string,
-    content: string
+    content: string,
+    parentMessageId: string | null = null
   ) => {
     if (!userId || !content) {
       console.error("❌ sendMessageToAdmin missing fields");
@@ -53,9 +70,10 @@ export function useMessages() {
       .insert({
         user_id: userId,
         sender: "user",
-        title: title || null,
+        title: parentMessageId ? null : (title || null),
         content,
         read: false,
+        parent_message_id: parentMessageId,
       })
       .select()
       .single();
@@ -97,5 +115,5 @@ export function useMessages() {
     };
   };
 
-  return { getUserMessages, sendMessageToAdmin, subscribeToMessages };
+  return { getUserMessages, getMessageReplies, sendMessageToAdmin, subscribeToMessages };
 }

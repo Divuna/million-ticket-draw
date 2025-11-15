@@ -353,6 +353,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          parent_message_id: string | null
           read: boolean
           sender: string
           title: string | null
@@ -363,6 +364,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          parent_message_id?: string | null
           read?: boolean
           sender: string
           title?: string | null
@@ -373,12 +375,21 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          parent_message_id?: string | null
           read?: boolean
           sender?: string
           title?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "messages_parent_message_id_fkey"
+            columns: ["parent_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
