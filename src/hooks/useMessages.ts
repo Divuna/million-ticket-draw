@@ -2,8 +2,6 @@ import { supabase } from "@/lib/supabaseClient";
 
 export function useMessages() {
   async function getUserMessages(userId: string) {
-    if (!userId) return [];
-
     const { data, error } = await supabase
       .from("messages")
       .select("*")
@@ -14,7 +12,7 @@ export function useMessages() {
       console.error("load messages error:", error);
       return [];
     }
-    return data;
+    return data || [];
   }
 
   async function sendMessageToAdmin(userId: string, title: string, content: string) {
@@ -23,7 +21,7 @@ export function useMessages() {
       .insert({
         user_id: userId,
         sender: "user",
-        title: title || "",
+        title: title || null,
         content,
         category: "system",
       })
@@ -33,8 +31,7 @@ export function useMessages() {
       console.error("send message error:", error);
       return null;
     }
-
-    return data[0];
+    return data?.[0] || null;
   }
 
   return {
