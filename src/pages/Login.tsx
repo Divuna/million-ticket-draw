@@ -1,24 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { user, signIn } = useAuth();
+  const { signIn, signInWithOAuth } = useAuth();
   const navigate = useNavigate();
-
-  // Redirect authenticated users to homepage
-  useEffect(() => {
-    if (user) {
-      navigate('/', { replace: true });
-    }
-  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,8 +27,12 @@ const Login: React.FC = () => {
           variant: "destructive"
         });
       } else {
-        // Redirect will happen automatically via useEffect
-        navigate('/', { replace: true });
+        // Check if user is admin based on email
+        if (email === 'divispavel2@gmail.com') {
+          navigate('/admin');
+        } else {
+          navigate('/profile');
+        }
       }
     } catch (error) {
       toast({
@@ -49,11 +46,15 @@ const Login: React.FC = () => {
   };
 
   const handleOAuthSignIn = async (provider: 'google' | 'apple') => {
-    toast({
-      title: "Funkce není dostupná",
-      description: "OAuth přihlášení není aktuálně k dispozici.",
-      variant: "destructive"
-    });
+    try {
+      await signInWithOAuth(provider);
+    } catch (error) {
+      toast({
+        title: "Chyba přihlášení",
+        description: "Přihlášení se nezdařilo. Zkuste to znovu.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
