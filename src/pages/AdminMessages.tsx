@@ -73,6 +73,7 @@ export default function AdminMessages() {
       title: messageTitle || null,
       content: messageContent,
       parent_message_id: null,
+      category: "support",
     });
 
     if (error) {
@@ -124,6 +125,7 @@ export default function AdminMessages() {
       title: messageTitle || null,
       content: messageContent,
       parent_message_id: null,
+      category: "support",
     }));
 
     const { error } = await supabase.from('messages').insert(messages);

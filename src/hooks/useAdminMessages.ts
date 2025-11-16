@@ -181,6 +181,7 @@ export const useAdminMessageThread = (userId: string | undefined) => {
         title: title || null,
         content,
         parent_message_id: null,
+        category: "support",
       });
 
       if (error) throw error;
