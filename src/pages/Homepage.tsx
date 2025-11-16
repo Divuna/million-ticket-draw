@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMegajackpotBanners } from "@/hooks/useMegajackpotBanners";
 import { useHomepageBanners } from "@/hooks/useHomepageBanners";
 import { usePartners } from "@/hooks/usePartners";
-import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { Header } from "@/components/Header";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminMenu } from "@/components/AdminMenu";
@@ -31,16 +30,16 @@ export default function Homepage() {
   const [contests, setContests] = useState<Contest[]>([]);
   const [loadingContests, setLoadingContests] = useState<boolean>(true);
 
-  // 🎥 video URL - placeholder for now since we removed video banner functionality
+  // 🔥 VIDEO DOČASNĚ VYPNUTO (aby se stránka nezalamovala)
   const videoUrl = null;
 
+  // 🔥 Načtení soutěží
   useEffect(() => {
     let isMounted = true;
 
     const loadContests = async () => {
       try {
         setLoadingContests(true);
-        console.log("🔥 Načítám soutěže pro homepage…");
 
         const { data, error } = await supabase
           .from("contests")
@@ -51,37 +50,25 @@ export default function Homepage() {
           .limit(3);
 
         if (error) {
-          console.error("❌ Chyba při načítání contests:", error);
-          if (isMounted) {
-            setContests([]);
-          }
+          if (isMounted) setContests([]);
           return;
         }
 
         if (isMounted && data) {
           setContests(data as Contest[]);
-          console.log("✅ Soutěže načteny:", data);
         }
       } catch (err) {
-        console.error("❌ Neošetřená chyba při načítání contests:", err);
-        if (isMounted) {
-          setContests([]);
-        }
+        if (isMounted) setContests([]);
       } finally {
-        if (isMounted) {
-          setLoadingContests(false);
-        }
+        if (isMounted) setLoadingContests(false);
       }
     };
 
     loadContests();
-
     return () => {
       isMounted = false;
     };
   }, []);
-
-  console.log("🔥 HOMEPAGE RENDERED – OK");
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -96,9 +83,8 @@ export default function Homepage() {
             </div>
           )}
 
-          {/* Horní dvojblok – vouchery + probíhající hry */}
+          {/* 🧧 Voucher box */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* 🧧 Vouchery */}
             <div className="p-6 rounded-xl bg-card">
               <h2 className="text-xl font-semibold mb-2">Kupte si vouchery</h2>
               <p className="text-muted-foreground mb-4">Získejte MioCoiny za každý nákup u partnerů.</p>
@@ -107,7 +93,7 @@ export default function Homepage() {
               </a>
             </div>
 
-            {/* 🏆 Probíhající hry (skutečné soutěže) */}
+            {/* 🏆 Skutečné soutěže */}
             <div className="p-6 rounded-xl bg-card">
               <h2 className="text-xl font-semibold mb-4">Probíhající hry</h2>
 
@@ -151,20 +137,7 @@ export default function Homepage() {
             </div>
           </div>
 
-          {/* 🎥 Jak to funguje – vždy viditelné */}
-          <div className="p-6 rounded-xl bg-card mt-2">
-            <h2 className="text-xl font-semibold mb-4">Jak to funguje?</h2>
-
-            {videoUrl ? (
-              <YouTubeEmbed url={videoUrl} />
-            ) : (
-              <div className="w-full h-48 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
-                Video bude brzy doplněno.
-              </div>
-            )}
-          </div>
-
-          {/* 🤝 Partneři – vždy viditelné */}
+          {/* 🤝 Partneři */}
           <div className="p-6 rounded-xl bg-card mt-2 mb-4">
             <h2 className="text-xl font-semibold mb-4">Naši partneři</h2>
 
