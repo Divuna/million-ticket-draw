@@ -7,12 +7,11 @@ export function useMessages() {
       return [];
     }
 
-    // Load user's messages (only top-level messages, not replies)
+    // Load user's messages
     const { data, error } = await supabase
       .from("messages")
       .select("*")
       .eq("user_id", userId)
-      .is("parent_message_id", null)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -21,16 +20,15 @@ export function useMessages() {
     }
 
     // Mark unread admin messages as read
-    const unreadAdmin = data?.filter((msg) => msg.sender === "admin" && msg.read !== true);
+    const unreadAdmin = data?.filter(
+      (msg) => msg.sender === "admin" && msg.read !== true
+    );
 
     if (unreadAdmin.length > 0) {
       const { error: updateError } = await supabase
         .from("messages")
         .update({ read: true })
-        .in(
-          "id",
-          unreadAdmin.map((m) => m.id),
-        );
+        .in("id", unreadAdmin.map((m) => m.id));
 
       if (updateError) {
         console.error("❌ Failed to mark messages as read:", updateError);
@@ -40,52 +38,30 @@ export function useMessages() {
     return data || [];
   };
 
-  const getMessageReplies = async (parentMessageId: string) => {
-    const { data, error } = await supabase
-      .from("messages")
-      .select("*")
-      .eq("parent_message_id", parentMessageId)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.error("❌ getMessageReplies error:", error);
-      return [];
-    }
-
-    return data || [];
-  };
-
   const sendMessageToAdmin = async (
     userId: string,
     title: string,
-    content: string,
-    parentMessageId: string | null = null,
+    content: string
   ) => {
     if (!userId || !content) {
       console.error("❌ sendMessageToAdmin missing fields");
-      return { data: null, error: "Missing fields" };
+      return false;
     }
 
-    const { data, error } = await supabase
-      .from("messages")
-      .insert({
-        user_id: userId,
-        sender: "user",
-        title: parentMessageId ? null : title || null,
-        content,
-        read: false,
-        parent_message_id: parentMessageId,
-      })
-      .select()
-      .single();
+    const { error } = await supabase.from("messages").insert({
+      user_id: userId,
+      sender: "user",
+      title: title || null,
+      content,
+      read: false,
+    });
 
     if (error) {
-      console.error("❌ Error inserting message:", error);
-      return { data, error };
+      console.error("❌ sendMessageToAdmin error:", error);
+      return false;
     }
 
-    console.log("✅ Message inserted:", data);
-    return { data, error };
+    return true;
   };
 
   const subscribeToMessages = (userId: string, onUpdate: () => void) => {
@@ -95,19 +71,19 @@ export function useMessages() {
     }
 
     const channel = supabase
-      .channel(`messages-channel-${userId}`)
+      .channel('messages-changes')
       .on(
-        "postgres_changes",
+        'postgres_changes',
         {
-          event: "*",
-          schema: "public",
-          table: "messages",
-          filter: `user_id=eq.${userId}`,
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `user_id=eq.${userId}`
         },
         () => {
           console.log("📨 Messages updated, refreshing...");
           onUpdate();
-        },
+        }
       )
       .subscribe();
 
@@ -116,5 +92,5 @@ export function useMessages() {
     };
   };
 
-  return { getUserMessages, getMessageReplies, sendMessageToAdmin, subscribeToMessages };
+  return { getUserMessages, sendMessageToAdmin, subscribeToMessages };
 }
