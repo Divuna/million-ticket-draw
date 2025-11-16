@@ -84,7 +84,9 @@ const Homepage = () => {
       .on("postgres_changes", { event: "*", schema: "public", table: "contests" }, fetchContests)
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Click handlers
