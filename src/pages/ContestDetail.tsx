@@ -159,11 +159,7 @@ const ContestDetail: React.FC = () => {
         let description = '';
         
         if (win.type === 'main') {
-          const contestsValue: any = (win as any).contests;
-          const mainPrize = Array.isArray(contestsValue)
-            ? contestsValue[0]?.main_prize
-            : contestsValue?.main_prize;
-          description = mainPrize || 'Hlavní cena';
+          description = win.contests?.main_prize || 'Hlavní cena';
         } else if (win.type === 'bonus' && win.prize_id) {
           // Fetch bonus prize description separately
           const { data: bonusData } = await supabase
@@ -171,6 +167,7 @@ const ContestDetail: React.FC = () => {
             .select('description')
             .eq('id', win.prize_id)
             .single();
+          
           description = bonusData?.description || 'Bonusová cena';
         }
 

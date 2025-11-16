@@ -1,46 +1,112 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect, createContext, useContext } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
-export const AuthContext = createContext(null);
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
+  signInWithOAuth: (provider: 'google' | 'apple') => Promise<void>;
+}
 
-export function useAuthState() {
-  const [user, setUser] = useState(null);
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export const useAuthState = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data?.session ?? null);
-      setUser(data?.session?.user ?? null);
-      setLoading(false);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-    });
-
-    return () => listener.subscription.unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = (email: string, password: string) => supabase.auth.signInWithPassword({ email, password });
-
-  const signUp = (email: string, password: string) =>
-    supabase.auth.signUp({
+  const signUp = async (email: string, password: string) => {
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/` },
+      options: {
+        emailRedirectTo: redirectUrl
+      }
     });
 
-  const signOut = async () => {
-    await supabase.auth.signOut({ scope: "global" });
-    setSession(null);
-    setUser(null);
+    if (!error) {
+      toast({
+        title: "Registrace úspěšná",
+        description: "Váš účet byl úspěšně vytvořen."
+      });
+    }
+
+    return { error };
   };
 
-  return { user, session, loading, signIn, signUp, signOut };
-}
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+    if (!error) {
+      toast({
+        title: "Přihlášeno",
+        description: "Úspěšně jste se přihlásili."
+      });
+    }
+
+    return { error };
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    toast({
+      title: "Odhlášeno",
+      description: "Úspěšně jste se odhlásili."
+    });
+  };
+
+  const signInWithOAuth = async (provider: 'google' | 'apple') => {
+    // OAuth will redirect to origin, then we handle admin check in auth state change
+    const redirectUrl = `${window.location.origin}/`;
+    
+    await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: redirectUrl
+      }
+    });
+  };
+
+  return {
+    user,
+    session,
+    signUp,
+    signIn,
+    signOut,
+    signInWithOAuth,
+  };
+};

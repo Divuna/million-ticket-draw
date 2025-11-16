@@ -1,66 +1,59 @@
-console.log("🔥 Messages.tsx LOADED");
-
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useMessages } from "@/hooks/useMessages";
+import { MessageForm } from "@/components/MessageForm";
 
 export default function MessagesPage() {
-  const { user, loading: authLoading } = useAuth();
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { getUserMessages, sendMessageToAdmin } = useMessages();
 
-  // Pokud se načítá auth → nic nevykresluj
-  if (authLoading) {
-    return (
-      <div className="p-4 text-white">
-        <p>Načítám…</p>
-      </div>
-    );
-  }
-
-  // Pokud uživatel není přihlášený
-  if (!user) {
-    return (
-      <div className="p-4 text-white">
-        <p>❌ Pro zobrazení zpráv se musíte přihlásit.</p>
-      </div>
-    );
-  }
+  const [messages, setMessages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
-      console.log("🔥 MessagesPage loading messages for:", user.id);
-
-      const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      console.log("📩 ZPRÁVY:", data);
-      console.log("⚠️ ERROR:", error);
-
-      setMessages(data || []);
-      setLoading(false);
-    };
-
-    load();
+    if (!user?.id) return;
+    loadMessages();
   }, [user]);
 
+  const loadMessages = async () => {
+    if (!user?.id) return;
+    setLoading(true);
+
+    const msgs = await getUserMessages(user.id);
+    setMessages(msgs || []);
+
+    setLoading(false);
+  };
+
+  const handleSubmit = async (content: string, title?: string) => {
+    const ok = await sendMessageToAdmin(user.id, title || "", content);
+    return ok;
+  };
+
   return (
-    <div className="p-4 text-white">
-      <h1 className="text-xl font-bold mb-4">📨 Zprávy ({messages.length})</h1>
+    <div className="p-6 text-white max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Zprávy</h1>
 
-      {loading && <p>Načítám zprávy…</p>}
+      <MessageForm onSend={handleSubmit} />
 
-      {!loading && messages.length === 0 && <p className="text-muted-foreground">Žádné zprávy</p>}
-
-      {messages.map((m) => (
-        <div key={m.id} className="border border-white/20 bg-white/10 p-3 rounded mb-2">
-          <div className="font-bold">{m.title}</div>
-          <div>{m.content}</div>
+      {loading ? (
+        <p className="opacity-80 mt-4">Načítám...</p>
+      ) : messages.length === 0 ? (
+        <p className="opacity-50 mt-4">Žádné zprávy</p>
+      ) : (
+        <div className="mt-4 space-y-2">
+          {messages.map((m) => (
+            <div key={m.id} className="p-3 rounded border border-gray-700 bg-gray-900">
+              <div className="text-xs opacity-60 mb-1">
+                {new Date(m.created_at).toLocaleString()} {" · "}
+                {m.sender}
+              </div>
+              <div className="font-bold">{m.title}</div>
+              <div>{m.content}</div>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }

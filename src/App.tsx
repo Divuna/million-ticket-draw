@@ -3,9 +3,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-
 import { AuthProvider } from "@/components/AuthProvider";
 import TestAuthProvider from "@/components/TestAuthProvider";
+import { useOneSignal } from "@/hooks/useOneSignal";
+import { useAuth } from "@/hooks/useAuth";
 
 import Homepage from "@/pages/Homepage";
 import Login from "@/pages/Login";
@@ -17,7 +18,7 @@ import MyContests from "@/pages/MyContests";
 import MyContestDetail from "@/pages/MyContestDetail";
 import BonusDetail from "@/pages/BonusDetail";
 import Vouchers from "@/pages/Vouchers";
-import Messages from "./pages/Messages";
+import Messages from "@/pages/Messages";
 import MessageDetail from "@/pages/MessageDetail";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import PaymentCancel from "@/pages/PaymentCancel";
@@ -42,6 +43,10 @@ import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
 function AppContent() {
+  const { user } = useAuth();
+
+  useOneSignal();
+
   return (
     <Routes>
       <Route path="/" element={<Homepage />} />
@@ -79,7 +84,7 @@ function AppContent() {
   );
 }
 
-export default function App() {
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -96,3 +101,5 @@ export default function App() {
     </QueryClientProvider>
   );
 }
+
+export default App;

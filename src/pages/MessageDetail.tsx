@@ -1,113 +1,188 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { MessageForm } from "@/components/MessageForm";
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Header } from '@/components/Header';
+import { BottomNavigation } from '@/components/BottomNavigation';
+import { AdminMenu } from '@/components/AdminMenu';
+import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/hooks/useAuth';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { MessageForm } from '@/components/MessageForm';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { ArrowLeft, Calendar, User } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
-type Message = {
+interface Message {
   id: string;
   user_id: string;
-  sender: string;
   title: string | null;
   content: string;
-  created_at: string;
-  read: boolean | null;
+  sender: 'user' | 'admin';
   category: string | null;
-};
+  read: boolean;
+  created_at: string;
+}
 
-export default function MessageDetail() {
+const MessageDetail: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { isAdmin } = useUserRole();
+  const { user } = useAuth();
   const [message, setMessage] = useState<Message | null>(null);
-  const [thread, setThread] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const params = new URLSearchParams(window.location.search);
-  const messageId = params.get("id");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!messageId) return;
-    loadMessage(messageId);
-  }, [messageId]);
+    const fetchMessage = async () => {
+      if (!id || !user) return;
 
-  const loadMessage = async (id: string) => {
-    setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('id', id)
+          .eq('user_id', user.id)
+          .single();
 
-    const { data: msg } = await supabase.from("messages").select("*").eq("id", id).single();
+        if (error) throw error;
+        
+        setMessage(data as Message);
 
-    if (msg) {
-      setMessage(msg);
+        // Mark as read
+        if (data && !data.read) {
+          await supabase
+            .from('messages')
+            .update({ read: true })
+            .eq('id', id)
+            .eq('user_id', user.id);
+        }
+      } catch (error: any) {
+        console.error('Error fetching message:', error);
+        toast({
+          title: 'Chyba',
+          description: 'Zpráva nebyla nalezena',
+          variant: 'destructive',
+        });
+        navigate('/messages');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      const { data: threadData } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("user_id", msg.user_id)
-        .order("created_at", { ascending: true });
+    fetchMessage();
+  }, [id, user, navigate]);
 
-      if (threadData) setThread(threadData);
+  const handleReply = async (content: string) => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase.from('messages').insert({
+        user_id: user.id,
+        content,
+        title: message?.title ? `Re: ${message.title}` : null,
+        sender: 'user',
+        category: message?.category,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Úspěch',
+        description: 'Odpověď byla odeslána',
+      });
+
+      return true;
+    } catch (error: any) {
+      console.error('Error sending reply:', error);
+      toast({
+        title: 'Chyba',
+        description: 'Nepodařilo se odeslat odpověď',
+        variant: 'destructive',
+      });
+      return false;
     }
-
-    setLoading(false);
   };
 
-  const handleReply = async (content: string, title?: string) => {
-    if (!message) return false;
-
-    const { error } = await supabase.from("messages").insert({
-      user_id: message.user_id,
-      sender: "admin",
-      title: title || "",
-      content,
-    });
-
-    if (error) return false;
-
-    await loadMessage(message.id);
-    return true;
-  };
-
-  if (!messageId) {
+  if (loading) {
     return (
-      <div className="p-6 text-white">
-        <h1 className="text-xl font-bold">Detail zprávy</h1>
-        <p className="opacity-70 text-sm mt-2">Chybí parametr ID.</p>
+      <div className="min-h-screen bg-background pb-20">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center py-12">
+            <p className="text-muted-foreground">Načítání...</p>
+          </div>
+        </div>
+        {isAdmin ? <AdminMenu /> : <BottomNavigation />}
       </div>
     );
   }
 
+  if (!message) {
+    return null;
+  }
+
   return (
-    <div className="p-6 text-white max-w-3xl mx-auto space-y-6">
-      {loading && <p className="opacity-70">Načítám…</p>}
+    <div className="min-h-screen bg-background pb-20">
+      <Header />
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/messages')}
+            className="mb-4"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Zpět na zprávy
+          </Button>
 
-      {message && (
-        <div className="p-4 rounded border border-gray-700 bg-gray-900">
-          <div className="text-xs opacity-60 mb-1">
-            {new Date(message.created_at).toLocaleString()} · {message.sender}
-          </div>
-          {message.title && <div className="font-bold text-lg mb-2">{message.title}</div>}
-          <div>{message.content}</div>
-        </div>
-      )}
-
-      {thread.length > 0 && (
-        <div className="p-4 rounded border border-gray-700 bg-gray-900 space-y-3">
-          {thread.map((m) => (
-            <div
-              key={m.id}
-              className={`max-w-xl p-3 rounded border text-sm ${
-                m.sender === "admin" ? "ml-auto bg-blue-900/40 border-blue-700" : "mr-auto bg-gray-800 border-gray-700"
-              }`}
-            >
-              <div className="text-xs opacity-60 mb-1">
-                {new Date(m.created_at).toLocaleString()} · {m.sender}
+          <Card className="ticket-message ticket-perforations">
+            <CardHeader>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <CardTitle className="text-neon-orange text-2xl">
+                    {message.title || 'Zpráva bez předmětu'}
+                  </CardTitle>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <User className="h-4 w-4" />
+                      <span>
+                        {message.sender === 'admin' ? 'Administrátor' : 'Já'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      <span>
+                        {new Date(message.created_at).toLocaleString('cs-CZ')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <Badge variant={message.sender === 'admin' ? 'default' : 'secondary'}>
+                  {message.sender === 'admin' ? 'Administrátor' : 'Uživatel'}
+                </Badge>
               </div>
-              {m.title && <div className="font-bold mb-1">{m.title}</div>}
-              <div>{m.content}</div>
-            </div>
-          ))}
-        </div>
-      )}
+            </CardHeader>
+            <CardContent>
+              <div className="prose prose-sm max-w-none">
+                <p className="whitespace-pre-wrap text-foreground">
+                  {message.content}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
-      <div className="border border-gray-700 rounded bg-gray-900 p-4">
-        <h2 className="font-bold mb-3">Odpovědět zákazníkovi</h2>
-        <MessageForm onSubmit={handleReply} placeholder="Odpovědět…" />
+          <MessageForm 
+            onSend={handleReply}
+            placeholder="Napište odpověď..."
+            showTitle={false}
+          />
+        </div>
       </div>
+
+      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
     </div>
   );
-}
+};
+
+export default MessageDetail;
