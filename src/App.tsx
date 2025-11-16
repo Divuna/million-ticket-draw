@@ -17,7 +17,7 @@ import MyContests from "@/pages/MyContests";
 import MyContestDetail from "@/pages/MyContestDetail";
 import BonusDetail from "@/pages/BonusDetail";
 import Vouchers from "@/pages/Vouchers";
-import Messages from "@/pages/Messages"; // ← třeba takto
+import Messages from "./pages/Messages";
 import MessageDetail from "@/pages/MessageDetail";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import PaymentCancel from "@/pages/PaymentCancel";
@@ -54,22 +54,10 @@ function AppContent() {
       <Route path="/my-contest/:id" element={<MyContestDetail />} />
       <Route path="/bonus/:id" element={<BonusDetail />} />
       <Route path="/vouchers" element={<Vouchers />} />
-
-      {/* 🔥 OVERRIDE SYSTEM PAGE — FORCE Messages.tsx */}
-      <Route
-        path="/messages"
-        element={
-          <div>
-            {/* Force override system UI page */}
-            <Messages />
-          </div>
-        }
-      />
-
+      <Route path="/messages" element={<Messages />} />
       <Route path="/messages/:id" element={<MessageDetail />} />
       <Route path="/payment/success" element={<PaymentSuccess />} />
       <Route path="/payment/cancel" element={<PaymentCancel />} />
-
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/users" element={<AdminUsers />} />
       <Route path="/admin/banners" element={<AdminBanners />} />
