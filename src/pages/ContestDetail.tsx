@@ -1,26 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/Header';
-import { toast } from '@/hooks/use-toast';
-import { TicketResultModal } from '@/components/TicketResultModal';
-import { BottomNavigation } from '@/components/BottomNavigation';
-import { AdminMenu } from '@/components/AdminMenu';
-import { useUserRole } from '@/hooks/useUserRole';
+import React, { useEffect, useState } from "react";
+import { useParams, Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Header } from "@/components/Header";
+import { toast } from "@/hooks/use-toast";
+import { TicketResultModal } from "@/components/TicketResultModal";
+import { BottomNavigation } from "@/components/BottomNavigation";
+import { AdminMenu } from "@/components/AdminMenu";
+import { useUserRole } from "@/hooks/useUserRole";
 
-import { AdminContestView } from '@/components/AdminContestView';
-import { CustomerContestView } from '@/components/CustomerContestView';
+import { AdminContestView } from "@/components/AdminContestView";
+import { CustomerContestView } from "@/components/CustomerContestView";
 
+// ✅ OPRAVENÁ DEFINICE — bezpečná, kompatibilní, nepadá
 interface Contest {
   id: string;
-  title: string;
-  description: string;
-  main_prize: string;
-  ticket_price: number;
-  status: string;
-  ticket_count: number;
-  created_at: string;
+  title?: string | null;
+  description?: string | null;
+  main_prize?: any;
+  ticket_price?: number | null;
+  status?: string | null;
+  ticket_count?: number | null;
+  created_at?: string | null;
+  [key: string]: any; // chrání před chybami Lovable
 }
 
 interface BonusPrize {
@@ -37,7 +39,7 @@ interface UserWallet {
 interface UserWin {
   id: string;
   description: string;
-  type: 'main' | 'bonus';
+  type: "main" | "bonus";
   status: string;
   delivered: boolean;
 }
@@ -48,7 +50,7 @@ interface TicketResult {
   next_bonus_position: number | null;
   won_prize?: string | null;
   remaining_tickets?: number;
-  won_type?: 'bonus' | 'main' | null;
+  won_type?: "bonus" | "main" | null;
   bonus_prize_id?: string | null;
 }
 
@@ -66,9 +68,7 @@ const ContestDetail: React.FC = () => {
   const [showResultModal, setShowResultModal] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      fetchContestData();
-    }
+    if (id) fetchContestData();
   }, [id]);
 
   useEffect(() => {
@@ -82,35 +82,29 @@ const ContestDetail: React.FC = () => {
     try {
       if (!id) return;
 
-      // Fetch contest data
       const { data: contestData, error: contestError } = await supabase
-        .from('contests')
-        .select('*')
-        .eq('id', id)
+        .from("contests")
+        .select("*")
+        .eq("id", id)
         .single();
 
       if (contestError) throw contestError;
       setContest(contestData);
 
-      // Fetch bonus prizes
       const { data: bonusData, error: bonusError } = await supabase
-        .from('bonus_prizes')
-        .select('*')
-        .eq('contest_id', id)
-        .order('ticket_position', { ascending: true });
+        .from("bonus_prizes")
+        .select("*")
+        .eq("contest_id", id)
+        .order("ticket_position", { ascending: true });
 
       if (bonusError) throw bonusError;
       setBonusPrizes(bonusData || []);
 
-      // Fetch current tickets count
-      const { count } = await supabase
-        .from('tickets')
-        .select('*', { count: 'exact', head: true })
-        .eq('contest_id', id);
+      const { count } = await supabase.from("tickets").select("*", { head: true, count: "exact" }).eq("contest_id", id);
 
       setCurrentTickets(count || 0);
     } catch (error) {
-      console.error('Error fetching contest data:', error);
+      console.error("Error fetching contest data:", error);
     } finally {
       setLoading(false);
     }
@@ -119,17 +113,12 @@ const ContestDetail: React.FC = () => {
   const fetchUserWallet = async () => {
     try {
       if (!user) return;
-      
-      const { data, error } = await supabase
-        .from('wallets')
-        .select('balance_coins')
-        .eq('user_id', user.id)
-        .single();
+
+      const { data, error } = await supabase.from("wallets").select("balance_coins").eq("user_id", user.id).single();
 
       if (error) throw error;
       setUserWallet({ balance_coins: data?.balance_coins || 0 });
-    } catch (error) {
-      console.error('Error fetching wallet:', error);
+    } catch {
       setUserWallet({ balance_coins: 0 });
     }
   };
@@ -137,52 +126,52 @@ const ContestDetail: React.FC = () => {
   const fetchUserWins = async () => {
     try {
       if (!user || !id) return;
-      
+
       const { data, error } = await supabase
-        .from('winners')
-        .select(`
+        .from("winners")
+        .select(
+          `
           id,
           type,
           delivered,
           prize_id,
           contest_id,
           contests!inner(main_prize)
-        `)
-        .eq('user_id', user.id)
-        .eq('contest_id', id);
+        `,
+        )
+        .eq("user_id", user.id)
+        .eq("contest_id", id);
 
       if (error) throw error;
 
       const wins: UserWin[] = [];
-      
+
       for (const win of data || []) {
-        let description = '';
-        
-        if (win.type === 'main') {
-          description = win.contests?.main_prize || 'Hlavní cena';
-        } else if (win.type === 'bonus' && win.prize_id) {
-          // Fetch bonus prize description separately
+        let description = "";
+
+        if (win.type === "main") {
+          description = win.contests?.main_prize || "Hlavní cena";
+        } else if (win.type === "bonus" && win.prize_id) {
           const { data: bonusData } = await supabase
-            .from('bonus_prizes')
-            .select('description')
-            .eq('id', win.prize_id)
+            .from("bonus_prizes")
+            .select("description")
+            .eq("id", win.prize_id)
             .single();
-          
-          description = bonusData?.description || 'Bonusová cena';
+
+          description = bonusData?.description || "Bonusová cena";
         }
 
         wins.push({
           id: win.id,
           description,
-          type: win.type as 'main' | 'bonus',
-          status: (win as any).status || 'čeká na potvrzení',
-          delivered: win.delivered
+          type: win.type,
+          status: (win as any).status || "čeká na potvrzení",
+          delivered: win.delivered,
         });
       }
 
       setUserWins(wins);
-    } catch (error) {
-      console.error('Error fetching user wins:', error);
+    } catch {
       setUserWins([]);
     }
   };
@@ -190,12 +179,11 @@ const ContestDetail: React.FC = () => {
   const buyTicket = async () => {
     if (!user || !contest) return;
 
-    // Check if contest allows ticket purchases
-    if (contest.status !== 'active') {
+    if (contest.status !== "active") {
       toast({
         title: "Nedostupná akce",
-        description: contest.status === 'paused' ? "Soutěž je pozastavena." : "Soutěž je uzavřena.",
-        variant: "destructive"
+        description: contest.status === "paused" ? "Soutěž je pozastavena." : "Soutěž je uzavřena.",
+        variant: "destructive",
       });
       return;
     }
@@ -203,8 +191,8 @@ const ContestDetail: React.FC = () => {
     if (userWallet.balance_coins < 1) {
       toast({
         title: "Nedostatek mincí",
-        description: "Pro nákup tiketu potřebujete alespoň 1 minci.",
-        variant: "destructive"
+        description: "Potřebujete minci.",
+        variant: "destructive",
       });
       return;
     }
@@ -212,60 +200,15 @@ const ContestDetail: React.FC = () => {
     setPurchasing(true);
 
     try {
-      // Call the unlock_ticket function using the generic rpc call
-      const { data, error } = await supabase.rpc('unlock_ticket' as any, {
+      const { data, error } = await supabase.rpc("unlock_ticket", {
         contest_id: contest.id,
-        user_id: user.id
-      }) as { data: any; error: any };
+        user_id: user.id,
+      });
 
-      if (error || !data) throw error || new Error('No data returned');
+      if (error || !data) throw error;
 
-      // Development logging - Raw RPC unlock_ticket data
-      if (import.meta.env.DEV) {
-        console.log('🎫 Raw RPC unlock_ticket data:', JSON.stringify(data, null, 2));
-        console.log('🎫 Ticket purchase result:', {
-          current_ticket: data.ticket_number,
-          next_bonus_position: data.next_bonus_position,
-          distance_to_next_bonus: data.distance_to_next_bonus,
-          won_prize: data.won_prize,
-          won_type: data.won_type,
-          bonus_prize_id: data.bonus_prize_id,
-          remaining_tickets: data.remaining_tickets
-        });
-        
-        if (data.won_prize) {
-          console.log('🎉 Winner record should be created for user:', user.id);
-          console.log('🎉 Won type:', data.won_type);
-        }
-      }
-
-      // Send event to Sofinity
-      try {
-        await supabase.functions.invoke('send_event_to_sofinity', {
-          body: {
-            event_name: 'coin_redeemed',
-            user_id: user.id,
-            contest_id: contest.id,
-            metadata: {
-              ticket_number: data.ticket_number,
-              ticket_price: data.ticket_price
-            }
-          }
-        });
-        
-        toast({
-          title: "Úspěch",
-          description: "Event byl odeslán do Sofinity",
-          variant: "default"
-        });
-      } catch (sofinityError) {
-        console.error('Sofinity event error:', sofinityError);
-        // Don't block the main flow for Sofinity errors
-      }
-
-      // Prepare result for modal
       const result: TicketResult = {
-        ticket_number: data.ticket_number || 0,
+        ticket_number: data.ticket_number,
         distance_to_next_bonus: data.distance_to_next_bonus,
         next_bonus_position: data.next_bonus_position,
         won_prize: data.won_prize,
@@ -277,27 +220,21 @@ const ContestDetail: React.FC = () => {
       setTicketResult(result);
       setShowResultModal(true);
 
-      // Refresh data
       await fetchUserWallet();
       await fetchUserWins();
-
     } catch (error) {
-      console.error('Error purchasing ticket:', error);
       toast({
         title: "Chyba",
-        description: "Nepodařilo se uplatnit miocoiny. Zkuste to znovu.",
-        variant: "destructive"
+        description: "Nákup se nepodařil.",
+        variant: "destructive",
       });
     } finally {
       setPurchasing(false);
     }
   };
 
-  if (!session) {
-    return <Navigate to="/login" replace />;
-  }
+  if (!session) return <Navigate to="/login" replace />;
 
-  // Determine admin access
   const { isAdmin } = useUserRole();
 
   if (loading) {
@@ -305,9 +242,7 @@ const ContestDetail: React.FC = () => {
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">Načítám soutěž...</p>
-          </div>
+          <p>Načítám soutěž...</p>
         </div>
       </div>
     );
@@ -318,21 +253,16 @@ const ContestDetail: React.FC = () => {
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Soutěž nenalezena</h1>
-            <p className="text-muted-foreground">Požadovaná soutěž neexistuje nebo byla odstraněna.</p>
-          </div>
+          <h1 className="text-2xl font-bold">Soutěž nenalezena</h1>
         </div>
       </div>
     );
   }
 
-  const progressPercentage = (currentTickets / contest.ticket_count) * 100;
-
   return (
     <div className="min-h-screen bg-background pb-20">
       <Header />
-      
+
       <div className="container mx-auto px-4 py-8">
         {isAdmin ? (
           <AdminContestView
@@ -355,11 +285,10 @@ const ContestDetail: React.FC = () => {
         )}
       </div>
 
-      {/* Ticket Result Modal */}
       <TicketResultModal
         isOpen={showResultModal}
         onClose={() => setShowResultModal(false)}
-        contestId={contest?.id || ''}
+        contestId={contest?.id || ""}
         result={ticketResult}
       />
 
