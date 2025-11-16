@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import { AuthProvider } from "@/components/AuthProvider";
-import TestAuthProvider from "@/components/TestAuthProvider";
 
 import Homepage from "@/pages/Homepage";
 import Login from "@/pages/Login";
@@ -17,10 +16,11 @@ import MyContests from "@/pages/MyContests";
 import MyContestDetail from "@/pages/MyContestDetail";
 import BonusDetail from "@/pages/BonusDetail";
 import Vouchers from "@/pages/Vouchers";
-import Messages from "@/pages/Messages"; // ← třeba takto
+import Messages from "@/pages/Messages";
 import MessageDetail from "@/pages/MessageDetail";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import PaymentCancel from "@/pages/PaymentCancel";
+
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminBanners from "@/pages/AdminBanners";
@@ -36,6 +36,7 @@ import AdminAuditRepair from "@/pages/AdminAuditRepair";
 import AdminMessages from "@/pages/AdminMessages";
 import AdminMessageThread from "@/pages/AdminMessageThread";
 import OneMilAudit from "@/pages/OneMilAudit";
+
 import TestLogin from "@/pages/TestLogin";
 import NotFound from "@/pages/NotFound";
 
@@ -55,12 +56,10 @@ function AppContent() {
       <Route path="/bonus/:id" element={<BonusDetail />} />
       <Route path="/vouchers" element={<Vouchers />} />
 
-      {/* 🔥 OVERRIDE SYSTEM PAGE — FORCE Messages.tsx */}
       <Route
         path="/messages"
         element={
           <div>
-            {/* Force override system UI page */}
             <Messages />
           </div>
         }
@@ -85,7 +84,9 @@ function AppContent() {
       <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
       <Route path="/admin/audit-repair" element={<AdminAuditRepair />} />
       <Route path="/admin/onemil-audit" element={<OneMilAudit />} />
+
       <Route path="/test-login" element={<TestLogin />} />
+
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -95,15 +96,13 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TestAuthProvider>
-          <TooltipProvider>
-            <BrowserRouter>
-              <AppContent />
-              <Toaster />
-              <Sonner />
-            </BrowserRouter>
-          </TooltipProvider>
-        </TestAuthProvider>
+        <TooltipProvider>
+          <BrowserRouter>
+            <AppContent />
+            <Toaster />
+            <Sonner />
+          </BrowserRouter>
+        </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
