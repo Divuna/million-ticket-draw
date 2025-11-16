@@ -1,6 +1,6 @@
-import { useHomepageBanners } from "@/hooks/useHomepageBanners";
 import { useHomepageVouchers } from "@/hooks/useHomepageVouchers";
 import { useMegajackpotBanners } from "@/hooks/useMegajackpotBanners";
+import { useHomepageBanners } from "@/hooks/useHomepageBanners";
 import { usePartners } from "@/hooks/usePartners";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { Header } from "@/components/Header";
@@ -10,12 +10,12 @@ import { useUserRole } from "@/hooks/useUserRole";
 
 export default function Homepage() {
   const { vouchers } = useHomepageVouchers();
-  const { megajackpotBanners } = useMegajackpotBanners();
+  const { banners: megajackpotBanners } = useMegajackpotBanners();
   const { banners } = useHomepageBanners();
   const { partners } = usePartners();
   const { isAdmin } = useUserRole();
 
-  // Najdeme případné video info – když není, zobrazíme fallback
+  // Fallback video URL
   const videoBanner = banners?.find((b) => b.homepage_video_active);
   const videoUrl = videoBanner?.homepage_youtube_url || null;
 
@@ -53,7 +53,7 @@ export default function Homepage() {
                   <div key={v.id} className="p-4 mb-3 rounded-lg bg-card-foreground">
                     <h3 className="font-bold">{v.title}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {v.ticket_count} tiketů · {v.price} Kč
+                      {v.remaining_tickets != null ? `Zbývá ${v.remaining_tickets} tiketů` : `${v.price} Kč`}
                     </p>
                   </div>
                 ))
@@ -61,13 +61,13 @@ export default function Homepage() {
                 <p className="text-muted-foreground">Žádné aktivní hry.</p>
               )}
 
-              <a href="/contests" className="block mt-4">
+              <a href="/vouchers" className="block mt-4">
                 <button className="w-full border rounded-lg py-2">Zobrazit všechny</button>
               </a>
             </div>
           </div>
 
-          {/* 🎥 Jak to funguje – VŽDY VIDITELNÉ */}
+          {/* 🎥 Jak to funguje – VŽDY */}
           <div className="p-6 rounded-xl bg-card mt-2">
             <h2 className="text-xl font-semibold mb-4">Jak to funguje?</h2>
 
@@ -80,7 +80,7 @@ export default function Homepage() {
             )}
           </div>
 
-          {/* 🤝 Partneři – VŽDY VIDITELNÉ */}
+          {/* 🤝 Partneři – VŽDY */}
           <div className="p-6 rounded-xl bg-card mt-2">
             <h2 className="text-xl font-semibold mb-4">Naši partneři</h2>
 
