@@ -1,60 +1,111 @@
-import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
-import { MessageForm } from "@/components/MessageForm";
+import { Header } from "@/components/Header";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Send } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { cs } from "date-fns/locale";
 
 export default function MessagesPage() {
   const { user } = useAuth();
-  const { getUserMessages, sendMessageToAdmin } = useMessages();
+  const { messages, loading, sendMessage } = useMessages(user?.id);
+  const [content, setContent] = useState("");
 
-  const [messages, setMessages] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const handleSend = async () => {
+    if (!content.trim()) return;
 
-  useEffect(() => {
-    if (!user?.id) return;
-    loadMessages();
-  }, [user]);
-
-  const loadMessages = async () => {
-    if (!user?.id) return;
-    setLoading(true);
-
-    const msgs = await getUserMessages(user.id);
-    setMessages(msgs || []);
-
-    setLoading(false);
-  };
-
-  const handleSubmit = async (content: string, title?: string) => {
-    const ok = await sendMessageToAdmin(user.id, title || "", content);
-    return ok;
+    const success = await sendMessage(content);
+    if (success) {
+      setContent("");
+      toast({
+        title: "Úspěch",
+        description: "Zpráva byla odeslána",
+      });
+    } else {
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se odeslat zprávu",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
-    <div className="p-6 text-white max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Zprávy</h1>
+    <div className="min-h-screen bg-background flex flex-col">
+      <Header />
+      
+      <main className="flex-1 container mx-auto px-4 py-6 pb-24 flex flex-col">
+        <h1 className="text-3xl font-bold mb-6 text-foreground">Zprávy</h1>
 
-      <MessageForm onSend={handleSubmit} />
-
-      {loading ? (
-        <p className="opacity-80 mt-4">Načítám...</p>
-      ) : messages.length === 0 ? (
-        <p className="opacity-50 mt-4">Žádné zprávy</p>
-      ) : (
-        <div className="mt-4 space-y-2">
-          {messages.map((m) => (
-            <div key={m.id} className="p-3 rounded border border-gray-700 bg-gray-900">
-              <div className="text-xs opacity-60 mb-1">
-                {new Date(m.created_at).toLocaleString()} {" · "}
-                {m.sender}
+        {/* Messages container */}
+        <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+          {loading ? (
+            <p className="text-muted-foreground text-center py-8">Načítám zprávy...</p>
+          ) : messages.length === 0 ? (
+            <Card className="p-8 text-center bg-card/50 border-border/50">
+              <p className="text-muted-foreground">Zatím nemáte žádné zprávy</p>
+            </Card>
+          ) : (
+            messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[75%] rounded-2xl px-4 py-3 ${
+                    msg.sender === 'user'
+                      ? 'bg-primary text-primary-foreground rounded-br-sm'
+                      : 'bg-card border border-border/50 text-card-foreground rounded-bl-sm'
+                  }`}
+                  style={
+                    msg.sender === 'admin'
+                      ? { boxShadow: 'var(--glow-blue)' }
+                      : undefined
+                  }
+                >
+                  <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                  <p className="text-xs opacity-70 mt-1">
+                    {format(new Date(msg.created_at), 'dd.MM.yyyy HH:mm', { locale: cs })}
+                  </p>
+                </div>
               </div>
-              <div className="font-bold">{m.title}</div>
-              <div>{m.content}</div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
-      )}
+
+        {/* Sticky input bar */}
+        <div className="bg-card border border-border/50 rounded-lg p-4 shadow-lg">
+          <div className="flex gap-2">
+            <Textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Napište zprávu..."
+              className="resize-none bg-input border-border/50 focus:border-primary"
+              rows={2}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+            />
+            <Button
+              onClick={handleSend}
+              disabled={!content.trim()}
+              className="self-end bg-primary hover:bg-primary/90"
+              size="icon"
+            >
+              <Send className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      </main>
+
       <BottomNavigation />
     </div>
   );

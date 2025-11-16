@@ -172,37 +172,30 @@ export const useAdminMessageThread = (userId: string | undefined) => {
   };
 
   const sendAdminReply = async (content: string, title?: string) => {
-    if (!isAdmin || !userId) {
-      toast({
-        title: 'Chyba',
-        description: 'Nejste oprávněni odesílat zprávy',
-        variant: 'destructive',
-      });
-      return false;
-    }
+    if (!userId || !content.trim()) return false;
 
     try {
       const { error } = await supabase.from('messages').insert({
         user_id: userId,
-        content,
-        title: title || null,
         sender: 'admin',
+        title: title || null,
+        content,
+        parent_message_id: null,
       });
 
       if (error) throw error;
 
       toast({
         title: 'Úspěch',
-        description: 'Odpověď byla odeslána',
+        description: 'Zpráva byla odeslána',
       });
 
-      await fetchThread();
       return true;
     } catch (error: any) {
-      console.error('Error sending admin reply:', error);
+      console.error('Error sending reply:', error);
       toast({
         title: 'Chyba',
-        description: 'Nepodařilo se odeslat odpověď',
+        description: 'Nepodařilo se odeslat zprávu',
         variant: 'destructive',
       });
       return false;
@@ -212,7 +205,8 @@ export const useAdminMessageThread = (userId: string | undefined) => {
   useEffect(() => {
     fetchThread();
 
-    // Real-time subscription
+    if (!userId) return;
+
     const channel = supabase
       .channel(`admin-thread-${userId}`)
       .on(
@@ -221,7 +215,7 @@ export const useAdminMessageThread = (userId: string | undefined) => {
           event: '*',
           schema: 'public',
           table: 'messages',
-          filter: `user_id=eq.${userId}`,
+          filter: `user_id=eq.${userId}`
         },
         () => {
           fetchThread();
@@ -232,7 +226,7 @@ export const useAdminMessageThread = (userId: string | undefined) => {
     return () => {
       channel.unsubscribe();
     };
-  }, [userId, isAdmin]);
+  }, [isAdmin, userId]);
 
   return {
     messages,

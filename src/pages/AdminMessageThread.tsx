@@ -1,23 +1,33 @@
-import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { AdminMenu } from '@/components/AdminMenu';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageForm } from '@/components/MessageForm';
+import { Textarea } from '@/components/ui/textarea';
 import { useAdminMessageThread } from '@/hooks/useAdminMessages';
 import { useUserRole } from '@/hooks/useUserRole';
-import { ArrowLeft, User, Clock } from 'lucide-react';
+import { ArrowLeft, User, Send } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { useState } from 'react';
+import { toast } from '@/hooks/use-toast';
 
 export default function AdminMessageThread() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const { messages, loading, userInfo, sendAdminReply } = useAdminMessageThread(userId);
+  const [content, setContent] = useState('');
+
+  const handleSend = async () => {
+    if (!content.trim()) return;
+
+    const success = await sendAdminReply(content);
+    if (success) {
+      setContent('');
+    }
+  };
 
   if (roleLoading) {
     return (
@@ -31,6 +41,7 @@ export default function AdminMessageThread() {
             ))}
           </div>
         </main>
+        <AdminMenu />
       </div>
     );
   }
@@ -46,14 +57,15 @@ export default function AdminMessageThread() {
             </CardContent>
           </Card>
         </main>
+        <AdminMenu />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <main className="container mx-auto px-4 py-8 pb-24">
+      <main className="flex-1 container mx-auto px-4 py-6 pb-24 flex flex-col">
         <div className="mb-6">
           <Button
             variant="ghost"
@@ -66,7 +78,7 @@ export default function AdminMessageThread() {
           </Button>
 
           {userInfo && (
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3">
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <User className="h-6 w-6 text-primary" />
               </div>
@@ -88,7 +100,7 @@ export default function AdminMessageThread() {
           </div>
         ) : (
           <>
-            <div className="space-y-4 mb-6">
+            <div className="flex-1 overflow-y-auto space-y-4 mb-4">
               {messages.length === 0 ? (
                 <Card className="border-border/50">
                   <CardContent className="pt-6 text-center">
@@ -97,41 +109,60 @@ export default function AdminMessageThread() {
                 </Card>
               ) : (
                 messages.map((msg) => (
-                  <Card
+                  <div
                     key={msg.id}
-                    className={`ticket-message ticket-perforations ${
-                      msg.sender === 'admin' ? 'bg-primary/5 border-primary/30' : ''
-                    }`}
+                    className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <Badge variant={msg.sender === 'admin' ? 'default' : 'secondary'}>
-                            {msg.sender === 'admin' ? 'Admin' : 'Uživatel'}
-                          </Badge>
-                          {msg.title && (
-                            <CardTitle className="text-base">{msg.title}</CardTitle>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock className="h-4 w-4" />
-                          {format(new Date(msg.created_at), 'dd.MM.yyyy HH:mm', { locale: cs })}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                    </CardContent>
-                  </Card>
+                    <div
+                      className={`max-w-[75%] rounded-2xl px-4 py-3 ${
+                        msg.sender === 'admin'
+                          ? 'bg-primary text-primary-foreground rounded-br-sm'
+                          : 'bg-card border border-border/50 text-card-foreground rounded-bl-sm'
+                      }`}
+                      style={
+                        msg.sender === 'user'
+                          ? { boxShadow: 'var(--glow-gold)' }
+                          : undefined
+                      }
+                    >
+                      {msg.title && (
+                        <p className="text-xs font-semibold mb-1 opacity-80">{msg.title}</p>
+                      )}
+                      <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                      <p className="text-xs opacity-70 mt-1">
+                        {format(new Date(msg.created_at), 'dd.MM.yyyy HH:mm', { locale: cs })}
+                      </p>
+                    </div>
+                  </div>
                 ))
               )}
             </div>
 
-            <MessageForm
-              onSend={sendAdminReply}
-              placeholder="Napište odpověď uživateli..."
-              showTitle={false}
-            />
+            <div className="bg-card border border-border/50 rounded-lg p-4 shadow-lg">
+              <div className="flex gap-2">
+                <Textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Napište odpověď..."
+                  className="resize-none bg-input border-border/50 focus:border-primary"
+                  rows={2}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                />
+                <Button
+                  onClick={handleSend}
+                  disabled={!content.trim()}
+                  className="self-end bg-primary hover:bg-primary/90"
+                  size="icon"
+                >
+                  <Send className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
           </>
         )}
       </main>
