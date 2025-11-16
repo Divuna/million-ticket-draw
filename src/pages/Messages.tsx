@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { MessageForm } from "@/components/MessageForm";
+import { BottomNavigation } from "@/components/BottomNavigation";
 
 export default function MessagesPage() {
   const { user } = useAuth();
@@ -54,6 +55,7 @@ export default function MessagesPage() {
           ))}
         </div>
       )}
+      <BottomNavigation />
     </div>
   );
 }
