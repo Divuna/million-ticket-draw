@@ -6,12 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OneMil</title>
 
-    <!--
-      OneSignal a OneSignal Guard jsou DOČASNĚ VYPNUTÉ,
-      protože způsobovaly chybu:
-      NotificationsNamespace.ts:33 (Cannot read properties of undefined)
-      a tím shazovaly celý React UI.
-    -->
+    <!-- =============================================== -->
+    <!-- 💥 CSP FIX – BLOCK EXTERNAL SCRIPTS (OPTION A)  -->
+    <!-- =============================================== -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        connect-src 'self' https:;
+        img-src 'self' data: https:;
+        style-src 'self' 'unsafe-inline';
+        frame-ancestors 'none';
+        object-src 'none';
+        base-uri 'self';
+      "
+    />
   </head>
 
   <body>
