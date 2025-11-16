@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export function useMessages(userId: string | undefined) {
@@ -12,11 +12,11 @@ export function useMessages(userId: string | undefined) {
     const { data, error } = await supabase
       .from("messages")
       .select("*")
-      .eq('user_id', userId)
+      .eq("user_id", userId)
       .order("created_at", { ascending: true });
 
     if (error) {
-      console.error('Error loading messages:', error);
+      console.error("Error loading messages:", error);
       setMessages([]);
     } else {
       setMessages(data || []);
@@ -27,23 +27,20 @@ export function useMessages(userId: string | undefined) {
 
   useEffect(() => {
     if (!userId) return;
-    
+
     loadMessages();
 
-    // Realtime subscription
     const channel = supabase
-      .channel('user-messages-changes')
+      .channel("user-messages-changes")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `user_id=eq.${userId}`
+          event: "*",
+          schema: "public",
+          table: "messages",
+          filter: `user_id=eq.${userId}`,
         },
-        () => {
-          loadMessages();
-        }
+        () => loadMessages(),
       )
       .subscribe();
 
@@ -65,12 +62,17 @@ export function useMessages(userId: string | undefined) {
     });
 
     if (error) {
-      console.error('Error sending message:', error);
+      console.error("Error sending message:", error);
       return false;
     }
 
     return true;
   };
 
-  return { messages, loading, sendMessage, refetch: loadMessages };
+  return {
+    messages,
+    loading,
+    sendMessage,
+    refetch: loadMessages,
+  };
 }
