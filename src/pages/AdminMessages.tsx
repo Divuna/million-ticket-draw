@@ -1,75 +1,60 @@
-import { Header } from '@/components/Header';
-import { AdminMenu } from '@/components/AdminMenu';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useAdminMessages } from '@/hooks/useAdminMessages';
-import { useUserRole } from '@/hooks/useUserRole';
-import { useNavigate } from 'react-router-dom';
-import { MessageSquare, Plus, Users, User, Clock } from 'lucide-react';
-import { format } from 'date-fns';
-import { cs } from 'date-fns/locale';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Header } from "@/components/Header";
+import { AdminMenu } from "@/components/AdminMenu";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAdminMessages } from "@/hooks/useAdminMessages";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useNavigate } from "react-router-dom";
+import { MessageSquare, User, Clock } from "lucide-react";
+import { format } from "date-fns";
+import { cs } from "date-fns/locale";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 export default function AdminMessages() {
   const { isAdmin, loading: roleLoading } = useUserRole();
   const { conversations, loading } = useAdminMessages();
   const navigate = useNavigate();
+
   const [directOpen, setDirectOpen] = useState(false);
   const [broadcastOpen, setBroadcastOpen] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [messageContent, setMessageContent] = useState('');
-  const [messageTitle, setMessageTitle] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [messageContent, setMessageContent] = useState("");
+  const [messageTitle, setMessageTitle] = useState("");
   const [users, setUsers] = useState<{ id: string; email: string; name: string | null }[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
+  // load list of users for direct message
   const loadUsers = async () => {
     setLoadingUsers(true);
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, email, name')
-      .order('email');
-    
+    const { data, error } = await supabase.from("users").select("id, email, name").order("email");
+
     if (!error && data) {
       setUsers(data);
     }
     setLoadingUsers(false);
   };
 
+  // DIRECT MESSAGE
   const handleDirectMessage = async () => {
     if (!selectedUserId || !messageContent.trim()) {
       toast({
-        title: 'Chyba',
-        description: 'Vyberte uživatele a napište zprávu',
-        variant: 'destructive',
+        title: "Chyba",
+        description: "Vyberte uživatele a napište zprávu",
+        variant: "destructive",
       });
       return;
     }
 
-    const { error } = await supabase.from('messages').insert({
+    const { error } = await supabase.from("messages").insert({
       user_id: selectedUserId,
-      sender: 'admin',
+      sender: "admin",
       title: messageTitle || null,
       content: messageContent,
       parent_message_id: null,
@@ -78,42 +63,41 @@ export default function AdminMessages() {
 
     if (error) {
       toast({
-        title: 'Chyba',
-        description: 'Nepodařilo se odeslat zprávu',
-        variant: 'destructive',
+        title: "Chyba",
+        description: "Nepodařilo se odeslat zprávu",
+        variant: "destructive",
       });
     } else {
       toast({
-        title: 'Úspěch',
-        description: 'Zpráva byla odeslána',
+        title: "Úspěch",
+        description: "Zpráva byla odeslána",
       });
       setDirectOpen(false);
-      setSelectedUserId('');
-      setMessageContent('');
-      setMessageTitle('');
+      setSelectedUserId("");
+      setMessageContent("");
+      setMessageTitle("");
     }
   };
 
+  // BROADCAST MESSAGE
   const handleBroadcastMessage = async () => {
     if (!messageContent.trim()) {
       toast({
-        title: 'Chyba',
-        description: 'Napište zprávu',
-        variant: 'destructive',
+        title: "Chyba",
+        description: "Napište zprávu",
+        variant: "destructive",
       });
       return;
     }
 
     setLoadingUsers(true);
-    const { data: allUsers, error: usersError } = await supabase
-      .from('users')
-      .select('id');
+    const { data: allUsers, error: usersError } = await supabase.from("users").select("id");
 
     if (usersError || !allUsers) {
       toast({
-        title: 'Chyba',
-        description: 'Nepodařilo se načíst uživatele',
-        variant: 'destructive',
+        title: "Chyba",
+        description: "Nepodařilo se načíst uživatele",
+        variant: "destructive",
       });
       setLoadingUsers(false);
       return;
@@ -121,33 +105,34 @@ export default function AdminMessages() {
 
     const messages = allUsers.map((u) => ({
       user_id: u.id,
-      sender: 'admin',
+      sender: "admin",
       title: messageTitle || null,
       content: messageContent,
       parent_message_id: null,
       category: "support",
     }));
 
-    const { error } = await supabase.from('messages').insert(messages);
+    const { error } = await supabase.from("messages").insert(messages);
     setLoadingUsers(false);
 
     if (error) {
       toast({
-        title: 'Chyba',
-        description: 'Nepodařilo se odeslat zprávy',
-        variant: 'destructive',
+        title: "Chyba",
+        description: "Nepodařilo se odeslat zprávy",
+        variant: "destructive",
       });
     } else {
       toast({
-        title: 'Úspěch',
+        title: "Úspěch",
         description: `Zpráva byla odeslána ${allUsers.length} uživatelům`,
       });
       setBroadcastOpen(false);
-      setMessageContent('');
-      setMessageTitle('');
+      setMessageContent("");
+      setMessageTitle("");
     }
   };
 
+  // ROLE LOADING SCREEN
   if (roleLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -164,6 +149,7 @@ export default function AdminMessages() {
     );
   }
 
+  // NOT ADMIN
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-background">
@@ -179,6 +165,7 @@ export default function AdminMessages() {
     );
   }
 
+  // UI
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -227,14 +214,17 @@ export default function AdminMessages() {
                         <p className="text-sm text-muted-foreground truncate">{conv.user_email}</p>
                       </div>
                     </div>
+
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="h-4 w-4" />
-                      {format(new Date(conv.last_message_date), 'dd.MM.yyyy HH:mm', { locale: cs })}
+                      {format(new Date(conv.last_message_date), "dd.MM.yyyy HH:mm", { locale: cs })}
                     </div>
                   </div>
                 </CardHeader>
+
                 <CardContent>
                   <p className="text-sm text-muted-foreground line-clamp-2">{conv.last_message_content}</p>
+
                   <Button variant="ghost" size="sm" className="mt-3 w-full">
                     Zobrazit konverzaci →
                   </Button>
@@ -244,6 +234,7 @@ export default function AdminMessages() {
           </div>
         )}
       </main>
+
       <AdminMenu />
     </div>
   );
