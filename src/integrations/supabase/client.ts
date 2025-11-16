@@ -1,18 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "./types";
 
+// ---------- ENV PROMĚNNÉ ----------
+// Musí být definované v .env souboru v projektu Lovable:
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY!;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+// ---------- VYTVOŘENÍ KLIENTA ----------
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Debug - extend window type
-declare global {
-  interface Window {
-    supabase: typeof supabase;
-  }
-}
-
+// ---------- DEBUG - ZPŘÍSTUPNĚNÍ PRO KONZOLI ----------
 if (typeof window !== "undefined") {
-  window.supabase = supabase;
+  console.log("🔌 Supabase client injected into window");
+  (window as any).supabase = supabase;
 }
