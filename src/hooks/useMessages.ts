@@ -21,15 +21,16 @@ export function useMessages() {
     }
 
     // Mark unread admin messages as read
-    const unreadAdmin = data?.filter(
-      (msg) => msg.sender === "admin" && msg.read !== true
-    );
+    const unreadAdmin = data?.filter((msg) => msg.sender === "admin" && msg.read !== true);
 
     if (unreadAdmin.length > 0) {
       const { error: updateError } = await supabase
         .from("messages")
         .update({ read: true })
-        .in("id", unreadAdmin.map((m) => m.id));
+        .in(
+          "id",
+          unreadAdmin.map((m) => m.id),
+        );
 
       if (updateError) {
         console.error("❌ Failed to mark messages as read:", updateError);
@@ -58,7 +59,7 @@ export function useMessages() {
     userId: string,
     title: string,
     content: string,
-    parentMessageId: string | null = null
+    parentMessageId: string | null = null,
   ) => {
     if (!userId || !content) {
       console.error("❌ sendMessageToAdmin missing fields");
@@ -70,7 +71,7 @@ export function useMessages() {
       .insert({
         user_id: userId,
         sender: "user",
-        title: parentMessageId ? null : (title || null),
+        title: parentMessageId ? null : title || null,
         content,
         read: false,
         parent_message_id: parentMessageId,
@@ -94,19 +95,19 @@ export function useMessages() {
     }
 
     const channel = supabase
-      .channel('messages-changes')
+      .channel(`messages-channel-${userId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `user_id=eq.${userId}`
+          event: "*",
+          schema: "public",
+          table: "messages",
+          filter: `user_id=eq.${userId}`,
         },
         () => {
           console.log("📨 Messages updated, refreshing...");
           onUpdate();
-        }
+        },
       )
       .subscribe();
 
