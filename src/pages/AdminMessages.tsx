@@ -1,119 +1,302 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Header } from '@/components/Header';
-import { AdminMenu } from '@/components/AdminMenu';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useAdminMessagesList } from '@/hooks/useAdminMessages';
-import { useUserRole } from '@/hooks/useUserRole';
-import { MessageSquare, Clock, User } from 'lucide-react';
-import { format } from 'date-fns';
-import { cs } from 'date-fns/locale';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
+import { toast } from "@/hooks/use-toast";
 
-export default function AdminMessages() {
-  const navigate = useNavigate();
-  const { isAdmin, loading: roleLoading } = useUserRole();
-  const { conversations, loading } = useAdminMessagesList();
-
-  if (roleLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8 pb-24">
-          <Skeleton className="h-8 w-48 mb-6" />
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-24 w-full" />
-            ))}
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8 pb-24">
-          <Card className="border-destructive/50">
-            <CardContent className="pt-6">
-              <p className="text-destructive text-center">Nemáte oprávnění k přístupu.</p>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-8 pb-24">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Admin Zprávy</h1>
-          <p className="text-muted-foreground">Správa konverzací s uživateli</p>
-        </div>
-
-        {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-24 w-full" />
-            ))}
-          </div>
-        ) : conversations.length === 0 ? (
-          <Card className="border-border/50">
-            <CardContent className="pt-6 text-center">
-              <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Zatím nejsou žádné zprávy</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {conversations.map((conv) => (
-              <Card
-                key={conv.user_id}
-                className="ticket-message ticket-perforations hover:border-primary/50 transition-all cursor-pointer"
-                onClick={() => navigate(`/admin/messages/${conv.user_id}`)}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          {conv.user_name || conv.user_email}
-                          {conv.unread_count > 0 && (
-                            <Badge variant="destructive" className="ml-2">
-                              {conv.unread_count} nových
-                            </Badge>
-                          )}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground truncate">{conv.user_email}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      {format(new Date(conv.last_message_date), 'dd.MM.yyyy HH:mm', { locale: cs })}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{conv.last_message_content}</p>
-                  <Button variant="ghost" size="sm" className="mt-3 w-full">
-                    Zobrazit konverzaci →
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </main>
-      <AdminMenu />
-    </div>
-  );
+export interface UserConversation {
+  user_id: string;
+  user_email: string;
+  user_name: string | null;
+  last_message_date: string;
+  unread_count: number;
+  last_message_content: string;
 }
+
+export interface ConversationMessage {
+  id: string;
+  user_id: string;
+  title: string | null;
+  content: string;
+  sender: "user" | "admin";
+  category: string | null;
+  read: boolean;
+  created_at: string;
+}
+
+export const useAdminMessagesList = () => {
+  const { isAdmin } = useUserRole();
+  const [conversations, setConversations] = useState<UserConversation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchConversations = async () => {
+    if (!isAdmin) {
+      console.log("👤 Not admin, skipping conversation fetch");
+      setConversations([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      console.log("📨 Fetching admin conversations...");
+
+      // Fetch all messages with user info
+      const { data: messages, error: messagesError } = await supabase
+        .from("messages")
+        .select("id, user_id, content, sender, read, created_at")
+        .order("created_at", { ascending: false });
+
+      if (messagesError) throw messagesError;
+
+      // Fetch user info
+      const { data: users, error: usersError } = await supabase.from("users").select("id, email, name");
+
+      if (usersError) throw usersError;
+
+      // Group messages by user_id
+      const grouped = new Map<string, UserConversation>();
+
+      messages?.forEach((msg) => {
+        const user = users?.find((u) => u.id === msg.user_id);
+        if (!user) return;
+
+        if (!grouped.has(msg.user_id)) {
+          grouped.set(msg.user_id, {
+            user_id: msg.user_id,
+            user_email: user.email,
+            user_name: user.name,
+            last_message_date: msg.created_at,
+            unread_count: msg.sender === "user" && !msg.read ? 1 : 0,
+            last_message_content: msg.content,
+          });
+        } else {
+          const conv = grouped.get(msg.user_id)!;
+          if (msg.sender === "user" && !msg.read) {
+            conv.unread_count += 1;
+          }
+        }
+      });
+
+      const conversationsList = Array.from(grouped.values());
+      console.log(`✅ Loaded ${conversationsList.length} conversations`);
+      setConversations(conversationsList);
+    } catch (error: any) {
+      console.error("❌ Error fetching admin messages:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se načíst zprávy",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Počkáme, až bude isAdmin definované
+    if (isAdmin === undefined) {
+      console.log("⏳ Waiting for admin role check...");
+      return;
+    }
+
+    fetchConversations();
+
+    if (!isAdmin) {
+      console.log("👤 Not admin, skipping realtime subscription");
+      return;
+    }
+
+    // Real-time subscription - POUZE když je admin
+    console.log("🔔 Setting up realtime subscription for admin messages list");
+
+    try {
+      const channel = supabase
+        .channel("admin-messages-changes")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "messages",
+          },
+          (payload) => {
+            console.log("📨 Messages table changed:", payload.eventType);
+            fetchConversations();
+          },
+        )
+        .subscribe();
+
+      return () => {
+        console.log("🔕 Cleaning up admin messages list subscription");
+        supabase.removeChannel(channel);
+      };
+    } catch (error) {
+      console.error("❌ Error setting up subscription:", error);
+    }
+  }, [isAdmin]);
+
+  return {
+    conversations,
+    loading,
+    refetch: fetchConversations,
+  };
+};
+
+export const useAdminMessageThread = (userId: string | undefined) => {
+  const { isAdmin } = useUserRole();
+  const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userInfo, setUserInfo] = useState<{ email: string; name: string | null } | null>(null);
+
+  const fetchThread = async () => {
+    if (!isAdmin || !userId) {
+      console.log("👤 Not admin or no userId, skipping thread fetch");
+      setMessages([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      console.log(`📨 Fetching thread for user ${userId}...`);
+
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      console.log(`✅ Loaded ${data?.length || 0} messages for user ${userId}`);
+      setMessages((data || []) as ConversationMessage[]);
+
+      // Fetch user info
+      const { data: user, error: userError } = await supabase
+        .from("users")
+        .select("email, name")
+        .eq("id", userId)
+        .single();
+
+      if (userError) throw userError;
+
+      console.log(`✅ Loaded user info for ${user.email}`);
+      setUserInfo(user);
+
+      // Mark user messages as read
+      const unreadUserMessages = data?.filter((msg) => msg.sender === "user" && msg.read === false);
+
+      if (unreadUserMessages && unreadUserMessages.length > 0) {
+        console.log(`📖 Marking ${unreadUserMessages.length} messages as read...`);
+        await supabase
+          .from("messages")
+          .update({ read: true })
+          .eq("user_id", userId)
+          .eq("sender", "user")
+          .eq("read", false);
+
+        console.log("✅ Messages marked as read");
+      }
+    } catch (error: any) {
+      console.error("❌ Error fetching thread:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se načíst konverzaci",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendAdminReply = async (content: string, title?: string) => {
+    if (!isAdmin || !userId) {
+      toast({
+        title: "Chyba",
+        description: "Nejste oprávněni odesílat zprávy",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      console.log(`📤 Sending admin reply to user ${userId}...`);
+
+      const { error } = await supabase.from("messages").insert({
+        user_id: userId,
+        content,
+        title: title || null,
+        sender: "admin",
+      });
+
+      if (error) throw error;
+
+      console.log("✅ Admin reply sent successfully");
+      toast({
+        title: "Úspěch",
+        description: "Odpověď byla odeslána",
+      });
+
+      await fetchThread();
+      return true;
+    } catch (error: any) {
+      console.error("❌ Error sending admin reply:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se odeslat odpověď",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    // Počkáme, až bude isAdmin definované
+    if (isAdmin === undefined) {
+      console.log("⏳ Waiting for admin role check...");
+      return;
+    }
+
+    fetchThread();
+
+    if (!isAdmin || !userId) {
+      console.log("👤 Not admin or no userId, skipping thread subscription");
+      return;
+    }
+
+    // Real-time subscription for specific user thread - POUZE když je admin
+    console.log(`🔔 Setting up realtime subscription for thread ${userId}`);
+
+    try {
+      const channel = supabase
+        .channel(`admin-thread-${userId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "messages",
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            console.log(`📨 Thread ${userId} changed:`, payload.eventType);
+            fetchThread();
+          },
+        )
+        .subscribe();
+
+      return () => {
+        console.log(`🔕 Cleaning up thread ${userId} subscription`);
+        supabase.removeChannel(channel);
+      };
+    } catch (error) {
+      console.error("❌ Error setting up thread subscription:", error);
+    }
+  }, [userId, isAdmin]);
+
+  return {
+    messages,
+    loading,
+    userInfo,
+    sendAdminReply,
+    refetch: fetchThread,
+  };
+};
