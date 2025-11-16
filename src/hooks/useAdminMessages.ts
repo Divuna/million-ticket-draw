@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
-import { toast } from '@/hooks/use-toast';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
+import { toast } from "@/hooks/use-toast";
 
 export interface UserConversation {
   user_id: string;
@@ -17,7 +17,7 @@ export interface ConversationMessage {
   user_id: string;
   title: string | null;
   content: string;
-  sender: 'user' | 'admin';
+  sender: "user" | "admin";
   category: string | null;
   read: boolean;
   created_at: string;
@@ -36,22 +36,17 @@ export const useAdminMessages = () => {
     }
 
     try {
-      // Fetch all messages with user info
       const { data: messages, error: messagesError } = await supabase
-        .from('messages')
-        .select('id, user_id, content, sender, read, created_at')
-        .order('created_at', { ascending: false });
+        .from("messages")
+        .select("id, user_id, content, sender, read, created_at")
+        .order("created_at", { ascending: false });
 
       if (messagesError) throw messagesError;
 
-      // Fetch user info
-      const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id, email, name');
+      const { data: users, error: usersError } = await supabase.from("users").select("id, email, name");
 
       if (usersError) throw usersError;
 
-      // Group messages by user_id
       const grouped = new Map<string, UserConversation>();
 
       messages?.forEach((msg) => {
@@ -64,12 +59,12 @@ export const useAdminMessages = () => {
             user_email: user.email,
             user_name: user.name,
             last_message_date: msg.created_at,
-            unread_count: msg.sender === 'user' && !msg.read ? 1 : 0,
+            unread_count: msg.sender === "user" && !msg.read ? 1 : 0,
             last_message_content: msg.content,
           });
         } else {
           const conv = grouped.get(msg.user_id)!;
-          if (msg.sender === 'user' && !msg.read) {
+          if (msg.sender === "user" && !msg.read) {
             conv.unread_count += 1;
           }
         }
@@ -77,11 +72,11 @@ export const useAdminMessages = () => {
 
       setConversations(Array.from(grouped.values()));
     } catch (error: any) {
-      console.error('Error fetching admin messages:', error);
+      console.error("Error fetching admin messages:", error);
       toast({
-        title: 'Chyba',
-        description: 'Nepodařilo se načíst zprávy',
-        variant: 'destructive',
+        title: "Chyba",
+        description: "Nepodařilo se načíst zprávy",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -91,20 +86,9 @@ export const useAdminMessages = () => {
   useEffect(() => {
     fetchConversations();
 
-    // Real-time subscription
     const channel = supabase
-      .channel('admin-messages-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-        },
-        () => {
-          fetchConversations();
-        }
-      )
+      .channel("admin-messages-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => fetchConversations())
       .subscribe();
 
     return () => {
@@ -134,37 +118,35 @@ export const useAdminMessageThread = (userId: string | undefined) => {
 
     try {
       const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true });
+        .from("messages")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true });
 
       if (error) throw error;
       setMessages((data || []) as ConversationMessage[]);
 
-      // Fetch user info
       const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('email, name')
-        .eq('id', userId)
+        .from("users")
+        .select("email, name")
+        .eq("id", userId)
         .single();
 
       if (userError) throw userError;
       setUserInfo(user);
 
-      // Mark user messages as read
       await supabase
-        .from('messages')
+        .from("messages")
         .update({ read: true })
-        .eq('user_id', userId)
-        .eq('sender', 'user')
-        .eq('read', false);
+        .eq("user_id", userId)
+        .eq("sender", "user")
+        .eq("read", false);
     } catch (error: any) {
-      console.error('Error fetching thread:', error);
+      console.error("Error fetching thread:", error);
       toast({
-        title: 'Chyba',
-        description: 'Nepodařilo se načíst konverzaci',
-        variant: 'destructive',
+        title: "Chyba",
+        description: "Nepodařilo se načíst konverzaci",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -175,9 +157,9 @@ export const useAdminMessageThread = (userId: string | undefined) => {
     if (!userId || !content.trim()) return false;
 
     try {
-      const { error } = await supabase.from('messages').insert({
+      const { error } = await supabase.from("messages").insert({
         user_id: userId,
-        sender: 'admin',
+        sender: "admin",
         title: title || null,
         content,
         parent_message_id: null,
@@ -186,18 +168,14 @@ export const useAdminMessageThread = (userId: string | undefined) => {
 
       if (error) throw error;
 
-      toast({
-        title: 'Úspěch',
-        description: 'Zpráva byla odeslána',
-      });
-
+      toast({ title: "Úspěch", description: "Zpráva byla odeslána" });
       return true;
     } catch (error: any) {
-      console.error('Error sending reply:', error);
+      console.error("Error sending reply:", error);
       toast({
-        title: 'Chyba',
-        description: 'Nepodařilo se odeslat zprávu',
-        variant: 'destructive',
+        title: "Chyba",
+        description: "Nepodařilo se odeslat zprávu",
+        variant: "destructive",
       });
       return false;
     }
@@ -211,16 +189,14 @@ export const useAdminMessageThread = (userId: string | undefined) => {
     const channel = supabase
       .channel(`admin-thread-${userId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `user_id=eq.${userId}`
+          event: "*",
+          schema: "public",
+          table: "messages",
+          filter: `user_id=eq.${userId}`,
         },
-        () => {
-          fetchThread();
-        }
+        () => fetchThread(),
       )
       .subscribe();
 
