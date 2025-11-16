@@ -15,29 +15,29 @@ export function useOneSignal() {
         if (p === "denied") return "denied";
         return "default";
       }
-      if (typeof p === "boolean") {
-        return p ? "granted" : "default";
-      }
+      if (typeof p === "boolean") return p ? "granted" : "default";
       return "unknown";
     };
 
     const waitForSDK = setInterval(async () => {
       const OS = (window as any).OneSignal;
-      if (!OS) return;
+
+      // SDK stále není načtené → čekáme dál
+      if (!OS || !OS.User || !OS.User.PushSubscription) return;
 
       clearInterval(waitForSDK);
       if (!mounted) return;
 
       console.log("[useOneSignal] OneSignal SDK detected");
 
-      // Stav guardu
       const guardState = (window as any).__oneSignalInitState;
       console.log("[useOneSignal] Guard state:", guardState);
 
-      // Označíme inicializaci jako OK (SDK ready)
       setIsInitialized(true);
 
-      // Permission
+      // -------------------------
+      // PERMISSION
+      // -------------------------
       try {
         const p =
           (await OS.Notifications?.permission) ??
@@ -48,7 +48,9 @@ export function useOneSignal() {
         setPermissionState(mapPermission(fallback));
       }
 
-      // Player ID
+      // -------------------------
+      // PLAYER ID
+      // -------------------------
       try {
         const currentPlayerId = await OS?.User?.PushSubscription?.id;
         if (currentPlayerId) {
@@ -59,20 +61,25 @@ export function useOneSignal() {
         console.warn("[useOneSignal] Player ID unavailable:", e);
       }
 
-      // Listener
-      OS?.User?.PushSubscription?.addEventListener("change", async (event: any) => {
-        if (!mounted) return;
+      // -------------------------
+      // LISTENER — plně safe
+      // -------------------------
+      if (OS?.User?.PushSubscription?.addEventListener) {
+        OS.User.PushSubscription.addEventListener("change", async (event: any) => {
+          if (!mounted) return;
+          if (event?.current?.id) {
+            console.log("[useOneSignal] Player ID updated:", event.current.id);
+            setPlayerId(event.current.id);
+          }
 
-        if (event?.current?.id) {
-          console.log("[useOneSignal] Player ID updated:", event.current.id);
-          setPlayerId(event.current.id);
-        }
-
-        try {
-          const p2 = await OS.Notifications?.permission;
-          setPermissionState(mapPermission(p2));
-        } catch {}
-      });
+          try {
+            const p2 = await OS.Notifications?.permission;
+            setPermissionState(mapPermission(p2));
+          } catch {}
+        });
+      } else {
+        console.warn("[useOneSignal] addEventListener not available yet");
+      }
     }, 120);
 
     return () => {
