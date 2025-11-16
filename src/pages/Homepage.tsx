@@ -24,16 +24,15 @@ type Contest = {
 
 export default function Homepage() {
   const { banners: megajackpotBanners } = useMegajackpotBanners();
-  const { banners } = useHomepageBanners();
+  const { voucherBanner, gamesBanner } = useHomepageBanners();
   const { partners } = usePartners();
   const { isAdmin } = useUserRole();
 
   const [contests, setContests] = useState<Contest[]>([]);
   const [loadingContests, setLoadingContests] = useState<boolean>(true);
 
-  // 🎥 video z banneru (pokud je aktivní)
-  const videoBanner = banners?.find((b) => b.homepage_video_active);
-  const videoUrl = videoBanner?.homepage_youtube_url || null;
+  // 🎥 video URL - placeholder for now since we removed video banner functionality
+  const videoUrl = null;
 
   useEffect(() => {
     let isMounted = true;
