@@ -150,7 +150,7 @@ const ContestDetail: React.FC = () => {
         let description = "";
 
         if (win.type === "main") {
-          description = win.contests?.main_prize || "Hlavní cena";
+          description = (win.contests as any)?.main_prize || "Hlavní cena";
         } else if (win.type === "bonus" && win.prize_id) {
           const { data: bonusData } = await supabase
             .from("bonus_prizes")
@@ -266,7 +266,7 @@ const ContestDetail: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         {isAdmin ? (
           <AdminContestView
-            contest={contest}
+            contest={contest as any}
             bonusPrizes={bonusPrizes}
             currentTickets={currentTickets}
             userWallet={userWallet}
@@ -275,7 +275,7 @@ const ContestDetail: React.FC = () => {
           />
         ) : (
           <CustomerContestView
-            contest={contest}
+            contest={contest as any}
             bonusPrizes={bonusPrizes}
             userWallet={userWallet}
             userWins={userWins}

@@ -19,16 +19,19 @@ export const useUserRole = (): { role: UserRole; isAdmin: boolean; isSuperAdmin:
 
       try {
         const { data, error } = await supabase
-          .from('users')
+          .from('user_roles')
           .select('role')
-          .eq('id', user.id)
-          .single();
+          .eq('user_id', user.id)
+          .maybeSingle();
 
         if (error) {
           console.error('Error fetching user role:', error);
           setRole('user');
+        } else if (data) {
+          setRole(data.role as UserRole);
         } else {
-          setRole((data?.role as UserRole) || 'user');
+          // No role found in user_roles table, default to 'user'
+          setRole('user');
         }
       } catch (error) {
         console.error('Error fetching user role:', error);
