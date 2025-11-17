@@ -3,44 +3,43 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const useUnreadMessagesCount = () => {
   const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
 
-  const fetchUnreadCount = async () => {
+  const fetchCount = async () => {
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      if (!user) return setUnreadCount(0);
 
-      if (!user) {
-        setUnreadCount(0);
-        setLoading(false);
-        return;
+      // ZJISTÍME ROLE ADMIN / USER
+      const { data: role } = await supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
+
+      const isAdmin = role?.role === "admin";
+
+      const query = supabase.from("messages").select("*", { count: "exact", head: true }).eq("read", false);
+
+      if (isAdmin) {
+        // ADMIN → UNREAD OD UŽIVATELŮ
+        query.eq("sender", "user");
+      } else {
+        // USER → UNREAD OD ADMINA
+        query.eq("sender", "admin").eq("user_id", user.id);
       }
 
-      const { count, error } = await supabase
-        .from("messages")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("read", false)
-        .neq("sender", "user"); // jen admin messages → customer unread
-
-      if (error) throw error;
-
+      const { count } = await query;
       setUnreadCount(count || 0);
-    } catch (error) {
-      console.error("Unread error:", error);
+    } catch (err) {
+      console.error("Unread error:", err);
       setUnreadCount(0);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchUnreadCount();
+    fetchCount();
 
     const channel = supabase
-      .channel("messages-unread-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => fetchUnreadCount())
+      .channel("unread-msgs")
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => fetchCount())
       .subscribe();
 
     return () => {
@@ -48,5 +47,5 @@ export const useUnreadMessagesCount = () => {
     };
   }, []);
 
-  return { unreadCount, loading };
+  return { unreadCount };
 };
