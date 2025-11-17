@@ -10,25 +10,31 @@ import { Send } from "lucide-react";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { toast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export default function Messages() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAdmin } = useUserRole();
   const { messages, loading, sendMessage } = useMessages(user?.id);
   const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // ⛔ FIX: redirect must be in effect, not in render
+  // safe redirect
   useEffect(() => {
     if (!user) navigate("/login");
   }, [user]);
 
   if (!user) return null;
 
+  // scroll down on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // determine input bar position
+  const inputPosition = isAdmin ? "bottom-0" : "bottom-14";
 
   const handleSend = async () => {
     if (!content.trim()) {
@@ -45,10 +51,7 @@ export default function Messages() {
 
     if (success) {
       setContent("");
-      toast({
-        title: "Úspěch",
-        description: "Zpráva byla odeslána.",
-      });
+      toast({ title: "Úspěch", description: "Zpráva byla odeslána." });
     } else {
       toast({
         title: "Chyba",
@@ -60,31 +63,24 @@ export default function Messages() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0B0F19]">
-      <Header />
+      {!isAdmin && <Header />}
 
       {/* CHAT SCROLL AREA */}
       <main className="flex-1 overflow-y-auto px-4 py-6 pb-40 space-y-4">
         {loading && <p className="text-center text-muted-foreground">Načítám…</p>}
 
         {messages.map((msg) => {
-          const isUser = msg.sender === "user";
+          const isUserMsg = msg.sender === "user";
+          const bubbleColor = isUserMsg
+            ? "bg-blue-600 border-blue-700 text-white"
+            : "bg-[#111827] border-yellow-400 shadow-yellow-500/20 text-white";
 
           return (
-            <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>
-              <div
-                className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-lg border
-                  ${
-                    isUser
-                      ? "bg-blue-600 border-blue-700 text-white"
-                      : "bg-[#111827] border-yellow-400 shadow-yellow-500/20 text-white"
-                  }`}
-              >
+            <div key={msg.id} className={`flex ${isUserMsg ? "justify-end" : "justify-start"} w-full`}>
+              <div className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-lg border ${bubbleColor}`}>
                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-
                 <p className="text-[10px] opacity-70 mt-1">
-                  {format(new Date(msg.created_at), "d. M. yyyy HH:mm", {
-                    locale: cs,
-                  })}
+                  {format(new Date(msg.created_at), "d. M. yyyy HH:mm", { locale: cs })}
                 </p>
               </div>
             </div>
@@ -94,13 +90,13 @@ export default function Messages() {
         <div ref={bottomRef} />
       </main>
 
-      {/* FIXED INPUT BAR ABOVE NAVIGATION */}
-      <div className="fixed bottom-14 left-0 right-0 bg-[#0B0F19] border-t border-white/10 px-4 py-3 z-50">
+      {/* FIXED INPUT BOX (same style for admin + user) */}
+      <div className={`fixed ${inputPosition} left-0 right-0 bg-[#0B0F19] border-t border-white/10 px-4 py-3 z-50`}>
         <div className="flex items-center gap-3">
           <Textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Napište odpověď…"
+            placeholder="Napište zprávu…"
             className="flex-1 bg-[#111827] text-white border border-white/10 rounded-xl resize-none h-12"
           />
 
@@ -114,8 +110,8 @@ export default function Messages() {
         </div>
       </div>
 
-      {/* BOTTOM NAV */}
-      <BottomNavigation />
+      {/* user only navigation */}
+      {!isAdmin && <BottomNavigation />}
     </div>
   );
 }
