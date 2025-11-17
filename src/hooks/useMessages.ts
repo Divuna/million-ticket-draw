@@ -30,8 +30,9 @@ export function useMessages(userId: string | undefined) {
 
     loadMessages();
 
+    // 🔥 FIX: každý uživatel musí mít vlastní kanál
     const channel = supabase
-      .channel("user-messages-changes")
+      .channel(`user-thread-${userId}`)
       .on(
         "postgres_changes",
         {
