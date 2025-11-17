@@ -7,7 +7,10 @@ export const useUnreadMessagesCount = () => {
 
   const fetchUnreadCount = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         setUnreadCount(0);
         setLoading(false);
@@ -18,13 +21,14 @@ export const useUnreadMessagesCount = () => {
         .from("messages")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .eq("sender", "admin")
-        .eq("read", false);
+        .eq("read", false)
+        .neq("sender", "user"); // jen admin messages → customer unread
 
       if (error) throw error;
+
       setUnreadCount(count || 0);
     } catch (error) {
-      console.error("Error fetching unread count:", error);
+      console.error("Unread error:", error);
       setUnreadCount(0);
     } finally {
       setLoading(false);
@@ -34,25 +38,12 @@ export const useUnreadMessagesCount = () => {
   useEffect(() => {
     fetchUnreadCount();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      fetchUnreadCount();
-    });
-
     const channel = supabase
-      .channel("user-unread-messages")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "messages",
-        },
-        () => fetchUnreadCount()
-      )
+      .channel("messages-unread-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => fetchUnreadCount())
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
       channel.unsubscribe();
     };
   }, []);
