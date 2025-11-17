@@ -1,34 +1,57 @@
-/* eslint-disable */
-type Contest = any;
-type BonusPrize = any;
-type UserWin = any;
+import React, { useEffect, useState } from 'react';
+import { useParams, Navigate, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { Header } from '@/components/Header';
+import { BottomNavigation } from '@/components/BottomNavigation';
+import { AdminMenu } from '@/components/AdminMenu';
+import { useUserRole } from '@/hooks/useUserRole';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { ArrowLeft, Trophy, Gift, Ticket, Star } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
-import React, { useEffect, useState } from "react";
-import { useParams, Navigate, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { Header } from "@/components/Header";
-import { BottomNavigation } from "@/components/BottomNavigation";
-import { AdminMenu } from "@/components/AdminMenu";
-import { useUserRole } from "@/hooks/useUserRole";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Trophy } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+interface Contest {
+  id: string;
+  title: string;
+  description: string;
+  main_prize: string;
+  status: string;
+  ticket_count: number;
+  created_at: string;
+}
+
+interface BonusPrize {
+  id: string;
+  description: string;
+  ticket_position: number;
+  status: string;
+  amount?: number;
+}
+
+interface UserWin {
+  id: string;
+  type: 'main' | 'bonus';
+  created_at: string;
+  delivered: boolean;
+  status?: string;
+  contest_title?: string;
+  description?: string;
+}
 
 const MyContestDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user, session } = useAuth();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
-
+  
   const [contest, setContest] = useState<Contest | null>(null);
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [userWins, setUserWins] = useState<UserWin[]>([]);
   const [ticketCount, setTicketCount] = useState(0);
   const [userTickets, setUserTickets] = useState(0);
-
+  
   const [loadingContest, setLoadingContest] = useState(true);
   const [loadingBonuses, setLoadingBonuses] = useState(true);
   const [loadingWins, setLoadingWins] = useState(true);
@@ -46,13 +69,17 @@ const MyContestDetail: React.FC = () => {
   const fetchContestData = async () => {
     try {
       if (!id) return;
-
-      const { data, error } = await supabase.from("contests").select("*").eq("id", id).single();
+      
+      const { data, error } = await supabase
+        .from('contests')
+        .select('id, title, description, main_prize, status, ticket_count, created_at')
+        .eq('id', id)
+        .single();
 
       if (error) throw error;
       setContest(data);
     } catch (error) {
-      console.error("Error fetching contest:", error);
+      console.error('Error fetching contest:', error);
     } finally {
       setLoadingContest(false);
     }
@@ -61,17 +88,17 @@ const MyContestDetail: React.FC = () => {
   const fetchBonusPrizes = async () => {
     try {
       if (!id) return;
-
+      
       const { data, error } = await supabase
-        .from("bonus_prizes")
-        .select("*")
-        .eq("contest_id", id)
-        .order("ticket_position", { ascending: true });
+        .from('bonus_prizes')
+        .select('id, description, ticket_position, status, amount')
+        .eq('contest_id', id)
+        .order('ticket_position', { ascending: true });
 
       if (error) throw error;
       setBonusPrizes(data || []);
     } catch (error) {
-      console.error("Error fetching bonus prizes:", error);
+      console.error('Error fetching bonus prizes:', error);
     } finally {
       setLoadingBonuses(false);
     }
@@ -80,33 +107,48 @@ const MyContestDetail: React.FC = () => {
   const fetchUserWins = async () => {
     try {
       if (!user || !id) return;
-
-      const { data, error } = await supabase.from("winners").select("*").eq("user_id", user.id).eq("contest_id", id);
+      
+      const { data, error } = await supabase
+        .from('winners')
+        .select(`
+          id,
+          type,
+          created_at,
+          delivered,
+          status
+        `)
+        .eq('user_id', user.id)
+        .eq('contest_id', id);
 
       if (error) throw error;
 
+      // Fetch bonus prize descriptions separately for bonus wins
       const wins: UserWin[] = [];
-
       for (const win of data || []) {
-        let description = "";
-
-        if (win.type === "main") {
-          description = contest?.main_prize || "Hlavní cena";
-        } else {
-          const bonusPrize = bonusPrizes.find((bp) => bp.status === "won");
-          description = bonusPrize?.description || "Bonusová cena";
+        let description = '';
+        
+        if (win.type === 'main') {
+          description = contest?.main_prize || 'Hlavní cena';
+        } else if (win.type === 'bonus') {
+          // Try to find matching bonus prize
+          const bonusPrize = bonusPrizes.find(bp => bp.status === 'won');
+          description = bonusPrize?.description || 'Bonusová cena';
         }
 
         wins.push({
-          ...win,
+          id: win.id,
+          type: win.type as 'main' | 'bonus',
+          created_at: win.created_at,
+          delivered: win.delivered,
+          status: win.status,
           contest_title: contest?.title,
-          description,
+          description
         });
       }
 
       setUserWins(wins);
     } catch (error) {
-      console.error("Error fetching user wins:", error);
+      console.error('Error fetching user wins:', error);
     } finally {
       setLoadingWins(false);
     }
@@ -115,22 +157,24 @@ const MyContestDetail: React.FC = () => {
   const fetchTicketData = async () => {
     try {
       if (!id || !user) return;
-
+      
+      // Get total tickets count
       const { count: totalCount } = await supabase
-        .from("tickets")
-        .select("*", { count: "exact", head: true })
-        .eq("contest_id", id);
+        .from('tickets')
+        .select('*', { count: 'exact', head: true })
+        .eq('contest_id', id);
 
+      // Get user tickets count
       const { count: userCount } = await supabase
-        .from("tickets")
-        .select("*", { count: "exact", head: true })
-        .eq("contest_id", id)
-        .eq("user_id", user.id);
+        .from('tickets')
+        .select('*', { count: 'exact', head: true })
+        .eq('contest_id', id)
+        .eq('user_id', user.id);
 
       setTicketCount(totalCount || 0);
       setUserTickets(userCount || 0);
     } catch (error) {
-      console.error("Error fetching ticket data:", error);
+      console.error('Error fetching ticket data:', error);
     } finally {
       setLoadingTickets(false);
     }
@@ -138,27 +182,19 @@ const MyContestDetail: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active":
-        return "bg-green-500";
-      case "closed":
-        return "bg-gray-500";
-      case "draft":
-        return "bg-yellow-500";
-      default:
-        return "bg-gray-500";
+      case 'active': return 'bg-green-500';
+      case 'closed': return 'bg-gray-500';
+      case 'draft': return 'bg-yellow-500';
+      default: return 'bg-gray-500';
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "active":
-        return "Aktivní";
-      case "closed":
-        return "Ukončená";
-      case "draft":
-        return "Příprava";
-      default:
-        return status;
+      case 'active': return 'Aktivní';
+      case 'closed': return 'Ukončená';
+      case 'draft': return 'Příprava';
+      default: return status;
     }
   };
 
@@ -198,17 +234,20 @@ const MyContestDetail: React.FC = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <Header />
-
+      
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-6">
+          
+          {/* Back Button */}
           <button
-            onClick={() => navigate("/my-contests")}
+            onClick={() => navigate('/my-contests')}
             className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Zpět na Moje hry
           </button>
 
+          {/* Contest Header */}
           <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -217,10 +256,13 @@ const MyContestDetail: React.FC = () => {
                   {getStatusText(contest.status)}
                 </Badge>
               </div>
-              {contest.description && <p className="text-muted-foreground mt-2">{contest.description}</p>}
+              {contest.description && (
+                <p className="text-muted-foreground mt-2">{contest.description}</p>
+              )}
             </CardHeader>
           </Card>
 
+          {/* Main Prize */}
           <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-primary">
@@ -233,6 +275,7 @@ const MyContestDetail: React.FC = () => {
             </CardContent>
           </Card>
 
+          {/* My Wins */}
           <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-neon-purple">
@@ -242,22 +285,26 @@ const MyContestDetail: React.FC = () => {
             </CardHeader>
             <CardContent>
               {loadingWins ? (
-                <Skeleton className="h-16 w-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-16 w-full" />
+                </div>
               ) : userWins.length === 0 ? (
                 <p className="text-muted-foreground">Žádné výhry</p>
               ) : (
                 <div className="space-y-3">
-                  {userWins.map((win: any) => (
+                  {userWins.map((win) => (
                     <div key={win.id} className="flex justify-between items-center p-3 bg-secondary/20 rounded-lg">
                       <div>
-                        <p className="font-medium">{win.type === "main" ? "Hlavní cena" : "Bonusová cena"}</p>
+                        <p className="font-medium">
+                          {win.type === 'main' ? 'Hlavní cena' : 'Bonusová cena'}
+                        </p>
                         <p className="text-sm text-muted-foreground">{win.description}</p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(win.created_at).toLocaleDateString("cs-CZ")}
+                          {new Date(win.created_at).toLocaleDateString('cs-CZ')}
                         </p>
                       </div>
-                      <Badge variant={win.delivered ? "default" : "secondary"}>
-                        {win.delivered ? "Předáno" : win.status || "Čeká na potvrzení"}
+                      <Badge variant={win.delivered ? 'default' : 'secondary'}>
+                        {win.delivered ? 'Předáno' : win.status || 'Čeká na potvrzení'}
                       </Badge>
                     </div>
                   ))}
@@ -265,6 +312,7 @@ const MyContestDetail: React.FC = () => {
               )}
             </CardContent>
           </Card>
+
         </div>
       </div>
 
