@@ -19,10 +19,12 @@ export default function Messages() {
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  if (!user) {
-    navigate("/login");
-    return null;
-  }
+  // ⛔ FIX: redirect must be in effect, not in render
+  useEffect(() => {
+    if (!user) navigate("/login");
+  }, [user]);
+
+  if (!user) return null;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
