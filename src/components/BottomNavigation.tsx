@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
+import { useUserRole } from "@/hooks/useUserRole";
 
 import { Home, User, Ticket, Gamepad2, MessageCircle } from "lucide-react";
 
@@ -7,6 +8,10 @@ export const BottomNavigation: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { unreadCount } = useUnreadMessagesCount();
+  const { isAdmin } = useUserRole();
+
+  // ❗ ADMIN NESMÍ VIDĚT ZÁKAZNICKOU NAVIGACI
+  if (isAdmin) return null;
 
   const navItems = [
     { path: "/", label: "Domů", icon: Home },
