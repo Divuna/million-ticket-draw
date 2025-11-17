@@ -9,6 +9,7 @@ export function useMessages(userId: string | undefined) {
     if (!userId) return;
     setLoading(true);
 
+    // načteme zprávy
     const { data, error } = await supabase
       .from("messages")
       .select("*")
@@ -18,11 +19,20 @@ export function useMessages(userId: string | undefined) {
     if (error) {
       console.error("Error loading messages:", error);
       setMessages([]);
-    } else {
-      setMessages(data || []);
+      setLoading(false);
+      return;
     }
 
+    setMessages(data || []);
     setLoading(false);
+
+    // OZNAČIT ADMIN ZPRÁVY JAKO PŘEČTENÉ
+    await supabase
+      .from("messages")
+      .update({ read: true })
+      .eq("user_id", userId)
+      .eq("sender", "admin")
+      .eq("read", false);
   };
 
   useEffect(() => {
@@ -30,7 +40,7 @@ export function useMessages(userId: string | undefined) {
 
     loadMessages();
 
-    // 🔥 FIX: každý uživatel musí mít vlastní kanál
+    // unikátní realtime kanál
     const channel = supabase
       .channel(`user-thread-${userId}`)
       .on(
@@ -60,6 +70,7 @@ export function useMessages(userId: string | undefined) {
       content,
       parent_message_id: null,
       category: "support",
+      read: false,
     });
 
     if (error) {
