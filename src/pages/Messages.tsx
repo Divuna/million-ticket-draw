@@ -60,9 +60,9 @@ export default function Messages() {
     <div className="min-h-screen flex flex-col bg-[#0B0F19]">
       <Header />
 
-      {/* Chat messages */}
-      <main className="flex-1 overflow-y-auto px-4 py-6 pb-32 space-y-4">
-        {loading && <p className="text-center text-muted-foreground">Načítám...</p>}
+      {/* CHAT SCROLL AREA */}
+      <main className="flex-1 overflow-y-auto px-4 py-6 pb-40 space-y-4">
+        {loading && <p className="text-center text-muted-foreground">Načítám…</p>}
 
         {messages.map((msg) => {
           const isUser = msg.sender === "user";
@@ -92,8 +92,8 @@ export default function Messages() {
         <div ref={bottomRef} />
       </main>
 
-      {/* Message input */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#0B0F19] border-t border-white/10 px-4 py-3">
+      {/* FIXED INPUT BAR ABOVE NAVIGATION */}
+      <div className="fixed bottom-14 left-0 right-0 bg-[#0B0F19] border-t border-white/10 px-4 py-3 z-50">
         <div className="flex items-center gap-3">
           <Textarea
             value={content}
@@ -112,6 +112,7 @@ export default function Messages() {
         </div>
       </div>
 
+      {/* BOTTOM NAV */}
       <BottomNavigation />
     </div>
   );
