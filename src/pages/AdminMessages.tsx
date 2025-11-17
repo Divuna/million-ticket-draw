@@ -1,84 +1,101 @@
-import React, { useState } from "react";
-import useAdminMessages from "@/hooks/useAdminMessages";
+import { useNavigate } from 'react-router-dom';
+import { AdminMenu } from '@/components/AdminMenu';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { useAdminMessages } from '@/hooks/useAdminMessages';
+import { useUserRole } from '@/hooks/useUserRole';
+import { MessageCircle, User } from 'lucide-react';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
 
 export default function AdminMessages() {
-  const { messages, loading, error, deleteMessage, updateMessage } = useAdminMessages();
+  const navigate = useNavigate();
+  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { conversations, loading } = useAdminMessages();
 
-  const [editing, setEditing] = useState<{ id: string; content: string } | null>(null);
+  if (roleLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Skeleton className="h-8 w-32" />
+      </div>
+    );
+  }
 
-  const startEdit = (m: any) => setEditing({ id: m.id, content: m.content });
-  const cancelEdit = () => setEditing(null);
-
-  const saveEdit = async () => {
-    if (!editing) return;
-    await updateMessage(editing.id, editing.content);
-    setEditing(null);
-  };
+  if (!isAdmin) {
+    navigate('/');
+    return null;
+  }
 
   return (
-    <div style={{ padding: 16 }}>
-      <h1>Admin zprávy</h1>
-
-      {loading && <div>Načítám…</div>}
-      {error && <div style={{ color: "red" }}>{error}</div>}
-
-      <ul style={{ listStyle: "none", padding: 0 }}>
-        {messages.map((m) => (
-          <li
-            key={m.id}
-            style={{
-              padding: 8,
-              borderBottom: "1px solid #eee",
-              display: "flex",
-              justifyContent: "space-between",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 12, color: "#777" }}>
-                {m.created_at ? new Date(m.created_at).toLocaleString() : ""}
-              </div>
-              <div>{m.content}</div>
-              <div style={{ fontSize: 12, color: "#aaa" }}>Uživatel: {m.user_id ?? "unknown"}</div>
-            </div>
-
-            <div>
-              <button onClick={() => startEdit(m)} style={{ marginRight: 8 }}>
-                Upravit
-              </button>
-              <button onClick={() => deleteMessage(m.id)} style={{ color: "red" }}>
-                Smazat
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-
-      {editing && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 20,
-            right: 20,
-            background: "white",
-            padding: 16,
-            border: "1px solid #ddd",
-          }}
-        >
-          <h3>Upravit zprávu</h3>
-          <textarea
-            value={editing.content}
-            onChange={(e) => setEditing({ ...editing, content: e.target.value })}
-            style={{ width: 300, height: 100 }}
-          />
-
-          <div style={{ marginTop: 8 }}>
-            <button onClick={saveEdit} style={{ marginRight: 8 }}>
-              Uložit
-            </button>
-            <button onClick={cancelEdit}>Zrušit</button>
-          </div>
+    <div className="min-h-screen flex flex-col bg-background">
+      <AdminMenu />
+      
+      <main className="flex-1 container mx-auto px-4 py-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground">Zprávy od uživatelů</h1>
+          <p className="text-muted-foreground mt-1">
+            Správa konverzací s uživateli
+          </p>
         </div>
-      )}
+
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <Skeleton className="h-20 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : conversations.length === 0 ? (
+          <Card className="border-border/50">
+            <CardContent className="pt-6 text-center">
+              <MessageCircle className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+              <p className="text-muted-foreground">Zatím nejsou žádné zprávy</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {conversations.map((conv) => (
+              <Card 
+                key={conv.user_id}
+                className="border-border/50 hover:border-primary/50 transition-colors cursor-pointer"
+                onClick={() => navigate(`/admin/messages/${conv.user_id}`)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium text-foreground">
+                          {conv.user_name || conv.user_email}
+                        </span>
+                        {conv.unread_count > 0 && (
+                          <Badge variant="destructive" className="text-xs">
+                            {conv.unread_count} nepřečtených
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                        {conv.last_message_content}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(conv.last_message_date), 'd. M. yyyy HH:mm', { locale: cs })}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="sm">
+                      Otevřít
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   );
 }
