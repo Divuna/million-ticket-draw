@@ -41,6 +41,8 @@ import OneMilAudit from "@/pages/OneMilAudit";
 import TestLogin from "@/pages/TestLogin";
 import NotFound from "@/pages/NotFound";
 
+import { BottomNavigation } from "@/components/BottomNavigation";
+
 const queryClient = new QueryClient();
 
 function AppContent() {
@@ -94,6 +96,7 @@ function App() {
             <TooltipProvider>
               <BrowserRouter>
                 <AppContent />
+                <BottomNavigation />
                 <Toaster />
                 <Sonner />
               </BrowserRouter>
