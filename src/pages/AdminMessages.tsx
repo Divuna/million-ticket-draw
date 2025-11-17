@@ -230,13 +230,9 @@ export default function AdminMessages() {
         </div>
 
         {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i}>
-                <CardContent className="p-4">
-                  <Skeleton className="h-20 w-full" />
-                </CardContent>
-              </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <Skeleton key={i} className="h-32 w-full rounded-full" />
             ))}
           </div>
         ) : conversations.length === 0 ? (
@@ -247,37 +243,39 @@ export default function AdminMessages() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {conversations.map((conv) => (
               <Card 
                 key={conv.user_id}
-                className="border-border/50 hover:border-primary/50 transition-colors cursor-pointer"
+                className={`rounded-full transition-all duration-200 cursor-pointer hover:scale-105 hover:shadow-lg ${
+                  conv.unread_count > 0 
+                    ? 'border-2 border-destructive shadow-md' 
+                    : 'border-border/50 hover:border-primary/50'
+                }`}
                 onClick={() => navigate(`/admin/messages/${conv.user_id}`)}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium text-foreground">
-                          {conv.user_name || conv.user_email}
-                        </span>
-                        {conv.unread_count > 0 && (
-                          <Badge variant="destructive" className="text-xs">
-                            {conv.unread_count} nepřečtených
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                        {conv.last_message_content}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(conv.last_message_date), 'd. M. yyyy HH:mm', { locale: cs })}
-                      </p>
+                <CardContent className="p-6">
+                  <div className="flex flex-col items-center text-center space-y-2">
+                    <div className="flex items-center justify-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium text-foreground text-sm truncate max-w-[180px]">
+                        {conv.user_name || conv.user_email}
+                      </span>
                     </div>
-                    <Button variant="ghost" size="sm">
-                      Otevřít
-                    </Button>
+                    
+                    {conv.unread_count > 0 && (
+                      <Badge variant="destructive" className="text-xs">
+                        {conv.unread_count} nepřečtených
+                      </Badge>
+                    )}
+                    
+                    <p className="text-xs text-muted-foreground line-clamp-2 max-w-[200px]">
+                      {conv.last_message_content}
+                    </p>
+                    
+                    <p className="text-xs text-muted-foreground/70">
+                      {format(new Date(conv.last_message_date), 'd. M. yyyy HH:mm', { locale: cs })}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
