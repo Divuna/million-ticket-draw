@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      _messages_policies_backup: {
+        Row: {
+          backed_at: string | null
+          cmd: string | null
+          db: unknown
+          permissive: string | null
+          policyname: unknown
+          qual: string | null
+          roles: unknown[] | null
+          schemaname: unknown
+          tablename: unknown
+          with_check: string | null
+        }
+        Insert: {
+          backed_at?: string | null
+          cmd?: string | null
+          db?: unknown
+          permissive?: string | null
+          policyname?: unknown
+          qual?: string | null
+          roles?: unknown[] | null
+          schemaname?: unknown
+          tablename?: unknown
+          with_check?: string | null
+        }
+        Update: {
+          backed_at?: string | null
+          cmd?: string | null
+          db?: unknown
+          permissive?: string | null
+          policyname?: unknown
+          qual?: string | null
+          roles?: unknown[] | null
+          schemaname?: unknown
+          tablename?: unknown
+          with_check?: string | null
+        }
+        Relationships: []
+      }
       admin_actions: {
         Row: {
           action_type: string
