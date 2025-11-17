@@ -36,7 +36,7 @@ export const BottomNavigation: React.FC = () => {
               {showBadge && (
                 <span
                   className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold 
-                             rounded-full px-[6px] py-[1px] shadow-lg"
+                    rounded-full px-[6px] py-[1px] shadow-lg"
                 >
                   {unreadCount}
                 </span>
