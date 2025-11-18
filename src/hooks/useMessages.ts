@@ -8,32 +8,27 @@ export const useMessages = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 🔵 Načti zprávy uživatele
   const getUserMessages = useCallback(async () => {
     if (!user) return;
-
     setLoading(true);
     const { data, error } = await supabase
       .from("messages")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: true });
-
     if (error) {
       console.error("LOAD MESSAGES ERROR:", error);
       toast({
         title: "Chyba",
-        description: "Nepodařilo se načíst zprávy.",
+        description: "Nelze načíst zprávy.",
         variant: "destructive",
       });
     } else {
       setMessages(data || []);
     }
-
     setLoading(false);
   }, [user]);
 
-  // 🔵 Odeslání zprávy od zákazníka
   const sendMessageToAdmin = async (content: string) => {
     if (!user) {
       toast({
@@ -43,52 +38,59 @@ export const useMessages = () => {
       });
       return false;
     }
-
     const { error } = await supabase.from("messages").insert({
       user_id: user.id,
       sender: "user",
       content: content.trim(),
     });
-
     if (error) {
       console.error("SEND MESSAGE ERROR:", error);
       toast({
         title: "Chyba",
-        description: "Nepodařilo se odeslat zprávu.",
+        description: "Nelze odeslat zprávu.",
         variant: "destructive",
       });
       return false;
     }
-
     return true;
   };
 
-  // 🔵 Realtime odběr
+  const sendAdminReply = async (userId: string, content: string) => {
+    if (!userId || !content.trim()) return false;
+    const { error } = await supabase.from("messages").insert({
+      user_id: userId,
+      sender: "admin",
+      content: content.trim(),
+    });
+    if (error) {
+      console.error("ADMIN SEND ERROR:", error);
+      toast({
+        title: "Chyba",
+        description: "Nelze odeslat zprávu.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
+
   const subscribeToMessages = useCallback(() => {
     if (!user) return;
-
     const channel = supabase
       .channel("messages-changes")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "messages", filter: `user_id=eq.${user.id}` },
-        () => {
-          getUserMessages();
-        },
+        () => getUserMessages(),
       )
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => supabase.removeChannel(channel);
   }, [user, getUserMessages]);
 
-  // Auto-load
   useEffect(() => {
     getUserMessages();
   }, [getUserMessages]);
 
-  // Auto-subscribe
   useEffect(() => {
     const cleanup = subscribeToMessages();
     return () => cleanup && cleanup();
@@ -97,8 +99,7 @@ export const useMessages = () => {
   return {
     messages,
     loading,
-    getUserMessages,
     sendMessageToAdmin,
-    subscribeToMessages,
+    sendAdminReply,
   };
 };
