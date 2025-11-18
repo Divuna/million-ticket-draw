@@ -1,117 +1,136 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { Header } from "@/components/Header";
-import { BottomNavigation } from "@/components/BottomNavigation";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { useMessages } from "@/hooks/useMessages";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Send } from "lucide-react";
-import { format } from "date-fns";
-import { cs } from "date-fns/locale";
+import { useMessages } from "@/hooks/useMessages";
 import { toast } from "@/hooks/use-toast";
-import { useUserRole } from "@/hooks/useUserRole";
 
-export default function Messages() {
-  const navigate = useNavigate();
+interface Message {
+  id: string;
+  user_id: string;
+  sender: "user" | "admin";
+  title: string | null;
+  content: string;
+  category: string | null;
+  read: boolean;
+  created_at: string;
+  parent_message_id: string | null;
+}
+
+export default function MessagesPage() {
   const { user } = useAuth();
-  const { isAdmin } = useUserRole();
-  const { messages, loading, sendMessage } = useMessages(user?.id);
-  const [content, setContent] = useState("");
-  const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const { sendMessageToAdmin } = useMessages();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [newMessage, setNewMessage] = useState("");
 
-  // safe redirect
   useEffect(() => {
-    if (!user) navigate("/login");
+    const loadMessages = async () => {
+      if (!user) return;
+      try {
+        setLoading(true);
+        setError(null);
+
+        const { data, error } = await window.supabase
+          .from("messages")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("❌ Chyba při načítání zpráv:", error);
+          setError("Nepodařilo se načíst zprávy.");
+          return;
+        }
+
+        setMessages(Array.isArray(data) ? data : []);
+      } catch (err: any) {
+        console.error("❌ Neočekávaná chyba:", err);
+        setError("Došlo k chybě při načítání zpráv.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMessages();
   }, [user]);
 
-  if (!user) return null;
-
-  // scroll down on new messages
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // determine input bar position
-  const inputPosition = isAdmin ? "bottom-0" : "bottom-14";
-
   const handleSend = async () => {
-    if (!content.trim()) {
-      return toast({
-        title: "Chyba",
-        description: "Zpráva nemůže být prázdná.",
-        variant: "destructive",
-      });
-    }
-
-    setSending(true);
-    const success = await sendMessage(content);
-    setSending(false);
-
-    if (success) {
-      setContent("");
-      toast({ title: "Úspěch", description: "Zpráva byla odeslána." });
-    } else {
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se odeslat zprávu.",
-        variant: "destructive",
-      });
+    if (!newMessage.trim()) return;
+    try {
+      setLoading(true);
+      await sendMessageToAdmin(newMessage);
+      toast({ title: "Zpráva odeslána", description: "Vaše zpráva byla úspěšně odeslána.", variant: "default" });
+      setNewMessage("");
+    } catch (err: any) {
+      console.error("❌ Odesílání zprávy selhalo:", err);
+      toast({ title: "Chyba", description: "Nepodařilo se odeslat zprávu.", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
+        <p>Přihlaste se, abyste mohli zobrazit a odesílat zprávy.</p>
+      </div>
+    );
+  }
+
+  if (loading && messages.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
+        <p>Načítání zpráv...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center text-red-500">
+        <p>{error}</p>
+      </div>
+    );
+  }
+
+  const safeMessages = Array.isArray(messages) ? messages : [];
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#0B0F19]">
-      {!isAdmin && <Header />}
-
-      {/* CHAT SCROLL AREA */}
-      <main className="flex-1 overflow-y-auto px-4 py-6 pb-40 space-y-4">
-        {loading && <p className="text-center text-muted-foreground">Načítám…</p>}
-
-        {messages.map((msg) => {
-          const isUserMsg = msg.sender === "user";
-          const bubbleColor = isUserMsg
-            ? "bg-blue-600 border-blue-700 text-white"
-            : "bg-[#111827] border-yellow-400 shadow-yellow-500/20 text-white";
-
-          return (
-            <div key={msg.id} className={`flex ${isUserMsg ? "justify-end" : "justify-start"} w-full`}>
-              <div className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-lg border ${bubbleColor}`}>
-                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                <p className="text-[10px] opacity-70 mt-1">
-                  {format(new Date(msg.created_at), "d. M. yyyy HH:mm", { locale: cs })}
-                </p>
-              </div>
+    <div className="flex flex-col gap-4 p-4">
+      <div className="flex flex-col gap-2 overflow-y-auto max-h-[70vh]">
+        {safeMessages.length > 0 ? (
+          safeMessages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`p-3 rounded-xl ${
+                msg.sender === "user" ? "bg-blue-500/10 self-end" : "bg-gray-700/20 self-start"
+              }`}
+            >
+              <p className="text-sm text-gray-300">{msg.content}</p>
+              <p className="text-xs text-gray-500 mt-1">{new Date(msg.created_at).toLocaleString()}</p>
             </div>
-          );
-        })}
-
-        <div ref={bottomRef} />
-      </main>
-
-      {/* FIXED INPUT BOX (same style for admin + user) */}
-      <div className={`fixed ${inputPosition} left-0 right-0 bg-[#0B0F19] border-t border-white/10 px-4 py-3 z-50`}>
-        <div className="flex items-center gap-3">
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Napište zprávu…"
-            className="flex-1 bg-[#111827] text-white border border-white/10 rounded-xl resize-none h-12"
-          />
-
-          <Button
-            onClick={handleSend}
-            disabled={sending || !content.trim()}
-            className="h-12 px-4 flex items-center gap-2"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
+          ))
+        ) : (
+          <p className="text-center text-gray-400">Zatím žádné zprávy.</p>
+        )}
       </div>
 
-      {/* user only navigation */}
-      {!isAdmin && <BottomNavigation />}
+      <div className="flex gap-2 mt-4">
+        <input
+          type="text"
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          placeholder="Napište zprávu..."
+          className="flex-1 bg-gray-800 text-gray-100 p-2 rounded-lg outline-none border border-gray-700 focus:border-blue-500"
+        />
+        <button
+          onClick={handleSend}
+          disabled={loading}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition disabled:opacity-50"
+        >
+          Odeslat
+        </button>
+      </div>
     </div>
   );
 }
