@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
@@ -30,7 +31,7 @@ export default function MessagesPage() {
         setLoading(true);
         setError(null);
 
-        const { data, error } = await window.supabase
+        const { data, error } = await supabase
           .from("messages")
           .select("*")
           .eq("user_id", user.id)
