@@ -17,7 +17,6 @@ export function useMessages() {
       content,
       category: "support",
       read: false,
-      created_at: new Date().toISOString(),
       parent_message_id: null,
     };
 
