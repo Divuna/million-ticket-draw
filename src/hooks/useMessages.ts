@@ -6,12 +6,12 @@ export function useMessages() {
 
   const sendMessageToAdmin = async (content: string, title?: string) => {
     if (!user) {
-      console.error("❌ Uživatel není přihlášený, nelze odeslat zprávu");
-      throw new Error("Musíte být přihlášený");
+      console.error("❌ Uživatel není přihlášený");
+      throw new Error("Musíte být přihlášený pro odeslání zprávy");
     }
 
     const message = {
-      user_id: user.id,
+      user_id: user.id, // 🔑 zajištěno, že auth.uid() nebude NULL
       sender: "user",
       title: title || null,
       content,
@@ -20,16 +20,14 @@ export function useMessages() {
       parent_message_id: null,
     };
 
-    console.log("📤 ODESÍLÁM ZPRÁVU:", message);
-
     const { data, error } = await supabase.from("messages").insert([message]);
 
     if (error) {
       console.error("❌ Chyba při odesílání zprávy:", error);
-      throw new Error("Nepodařilo se odeslat zprávu");
+      throw new Error(error.message || "Nepodařilo se odeslat zprávu");
     }
 
-    console.log("✅ Zpráva odeslána:", data);
+    console.log("✅ Zpráva uložena:", data);
     return data;
   };
 
