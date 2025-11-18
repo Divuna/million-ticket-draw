@@ -15,10 +15,8 @@ export interface UserConversation {
 export interface ConversationMessage {
   id: string;
   user_id: string;
-  title: string | null;
   content: string;
   sender: "user" | "admin";
-  category: string | null;
   read: boolean;
   created_at: string;
 }
@@ -64,9 +62,7 @@ export const useAdminMessages = () => {
           });
         } else {
           const conv = grouped.get(msg.user_id)!;
-          if (msg.sender === "user" && !msg.read) {
-            conv.unread_count += 1;
-          }
+          if (msg.sender === "user" && !msg.read) conv.unread_count += 1;
         }
       });
 
@@ -87,13 +83,11 @@ export const useAdminMessages = () => {
     fetchConversations();
 
     const channel = supabase
-      .channel("admin-messages-changes")
+      .channel("admin-messages")
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => fetchConversations())
       .subscribe();
 
-    return () => {
-      channel.unsubscribe();
-    };
+    return () => channel.unsubscribe();
   }, [isAdmin]);
 
   return {
@@ -119,11 +113,12 @@ export const useAdminMessageThread = (userId: string | undefined) => {
     try {
       const { data, error } = await supabase
         .from("messages")
-        .select("*")
+        .select("id, user_id, content, sender, read, created_at")
         .eq("user_id", userId)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
+
       setMessages((data || []) as ConversationMessage[]);
 
       const { data: user, error: userError } = await supabase
@@ -133,6 +128,7 @@ export const useAdminMessageThread = (userId: string | undefined) => {
         .single();
 
       if (userError) throw userError;
+
       setUserInfo(user);
 
       await supabase
@@ -197,9 +193,7 @@ export const useAdminMessageThread = (userId: string | undefined) => {
       )
       .subscribe();
 
-    return () => {
-      channel.unsubscribe();
-    };
+    return () => channel.unsubscribe();
   }, [isAdmin, userId]);
 
   return {
