@@ -153,17 +153,14 @@ export const useAdminMessageThread = (userId: string | undefined) => {
     }
   };
 
-  const sendAdminReply = async (content: string, title?: string) => {
+  const sendAdminReply = async (content: string) => {
     if (!userId || !content.trim()) return false;
 
     try {
       const { error } = await supabase.from("messages").insert({
         user_id: userId,
         sender: "admin",
-        title: title || null,
-        content,
-        parent_message_id: null,
-        category: "support",
+        content: content.trim(),
       });
 
       if (error) throw error;
