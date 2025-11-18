@@ -9,7 +9,6 @@ export function useMessages(userId: string | undefined) {
     if (!userId) return;
     setLoading(true);
 
-    // načteme zprávy
     const { data, error } = await supabase
       .from("messages")
       .select("*")
@@ -26,7 +25,7 @@ export function useMessages(userId: string | undefined) {
     setMessages(data || []);
     setLoading(false);
 
-    // OZNAČIT ADMIN ZPRÁVY JAKO PŘEČTENÉ
+    // Označit admin zprávy jako přečtené
     await supabase
       .from("messages")
       .update({ read: true })
@@ -40,7 +39,6 @@ export function useMessages(userId: string | undefined) {
 
     loadMessages();
 
-    // unikátní realtime kanál
     const channel = supabase
       .channel(`user-thread-${userId}`)
       .on(
@@ -55,14 +53,14 @@ export function useMessages(userId: string | undefined) {
       )
       .subscribe();
 
-    return () => {
-      channel.unsubscribe();
-    };
+    return () => channel.unsubscribe();
   }, [userId]);
 
+  // 🔥 SEND MESSAGE TO ONEMIL + SOFINITY
   const sendMessage = async (content: string, title?: string) => {
     if (!userId || !content.trim()) return false;
 
+    // 1) Uložit v OneMil
     const { error } = await supabase.from("messages").insert({
       user_id: userId,
       sender: "user",
@@ -76,6 +74,24 @@ export function useMessages(userId: string | undefined) {
     if (error) {
       console.error("Error sending message:", error);
       return false;
+    }
+
+    // 2) Odeslat do Sofinity
+    try {
+      await fetch("https://rrmvxsldrjgbdxluklka.supabase.co/functions/v1/sofinity-message-intake", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-webhook-token": "Jizd287FYEReMXFFVuzXQsTEnOEisbs4khIyOztjZEIiqiGLR1l2VGZQEVCpF4go",
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          sender: "user",
+          content,
+        }),
+      });
+    } catch (err) {
+      console.error("⚠️ Error sending to Sofinity:", err);
     }
 
     return true;
