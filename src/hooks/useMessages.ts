@@ -11,85 +11,93 @@ export const useMessages = () => {
   const getUserMessages = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+
     const { data, error } = await supabase
       .from("messages")
-      .select("*")
+      .select("id, user_id, content, sender, read, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: true });
+
     if (error) {
-      console.error("LOAD MESSAGES ERROR:", error);
-      toast({
-        title: "Chyba",
-        description: "Nelze načíst zprávy.",
-        variant: "destructive",
-      });
+      console.error("Error loading messages:", error);
+      toast({ title: "Chyba", description: "Nepodařilo se načíst zprávy", variant: "destructive" });
     } else {
       setMessages(data || []);
     }
+
     setLoading(false);
   }, [user]);
 
   const sendMessageToAdmin = async (content: string) => {
     if (!user) {
-      toast({
-        title: "Chyba",
-        description: "Musíte být přihlášený.",
-        variant: "destructive",
-      });
+      toast({ title: "Chyba", description: "Musíte být přihlášený", variant: "destructive" });
       return false;
     }
-    const { error } = await supabase.from("messages").insert({
-      user_id: user.id,
-      sender: "user",
-      content: content.trim(),
-    });
-    if (error) {
-      console.error("SEND MESSAGE ERROR:", error);
-      toast({
-        title: "Chyba",
-        description: "Nelze odeslat zprávu.",
-        variant: "destructive",
-      });
+
+    try {
+      const { error } = await supabase.from("messages").insert([
+        {
+          user_id: user.id,
+          sender: "user",
+          content: content.trim(),
+        },
+      ]);
+
+      if (error) throw error;
+
+      await getUserMessages();
+      return true;
+    } catch (error: any) {
+      console.error("Error sending message:", error);
+      toast({ title: "Chyba", description: "Nepodařilo se odeslat zprávu", variant: "destructive" });
       return false;
     }
-    return true;
   };
 
-  const sendAdminReply = async (userId: string, content: string) => {
-    if (!userId || !content.trim()) return false;
-    const { error } = await supabase.from("messages").insert({
-      user_id: userId,
-      sender: "admin",
-      content: content.trim(),
-    });
-    if (error) {
-      console.error("ADMIN SEND ERROR:", error);
-      toast({
-        title: "Chyba",
-        description: "Nelze odeslat zprávu.",
-        variant: "destructive",
-      });
+  const sendAdminReply = async (content: string) => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase.from("messages").insert([
+        {
+          user_id: user.id,
+          sender: "admin",
+          content: content.trim(),
+        },
+      ]);
+
+      if (error) throw error;
+
+      await getUserMessages();
+      return true;
+    } catch (error: any) {
+      console.error("Error sending admin reply:", error);
+      toast({ title: "Chyba", description: "Nepodařilo se odeslat zprávu", variant: "destructive" });
       return false;
     }
-    return true;
   };
 
   const subscribeToMessages = useCallback(() => {
     if (!user) return;
+
     const channel = supabase
-      .channel("messages-changes")
+      .channel(`user-messages-${user.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "messages", filter: `user_id=eq.${user.id}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "messages",
+          filter: `user_id=eq.${user.id}`,
+        },
         () => getUserMessages(),
       )
       .subscribe();
-    return () => supabase.removeChannel(channel);
-  }, [user, getUserMessages]);
 
-  useEffect(() => {
-    getUserMessages();
-  }, [getUserMessages]);
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [user, getUserMessages]);
 
   useEffect(() => {
     const cleanup = subscribeToMessages();
