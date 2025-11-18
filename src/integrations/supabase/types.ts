@@ -257,6 +257,27 @@ export type Database = {
         }
         Relationships: []
       }
+      debug_event_log: {
+        Row: {
+          created_at: string | null
+          event_name: string | null
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_name?: string | null
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          event_name?: string | null
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
       event_forward_log: {
         Row: {
           created_at: string | null
