@@ -35,7 +35,6 @@ export default function AdminMessages() {
   const [sending, setSending] = useState(false);
   
   const [recipient, setRecipient] = useState<string>('');
-  const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
 
   useEffect(() => {
@@ -78,20 +77,11 @@ export default function AdminMessages() {
 
     setSending(true);
     try {
-      const messageData = {
-        sender: 'admin',
-        title: title.trim() || null,
-        content: content.trim(),
-        category: 'support',
-        parent_message_id: null,
-        read: false,
-      };
-
       if (recipient === 'all') {
-        // Send to all users
         const messages = users.map(user => ({
-          ...messageData,
           user_id: user.id,
+          sender: 'admin',
+          content: content.trim(),
         }));
 
         const { error } = await supabase
@@ -100,12 +90,12 @@ export default function AdminMessages() {
 
         if (error) throw error;
       } else {
-        // Send to single user
         const { error } = await supabase
           .from('messages')
           .insert({
-            ...messageData,
             user_id: recipient,
+            sender: 'admin',
+            content: content.trim(),
           });
 
         if (error) throw error;
@@ -118,7 +108,6 @@ export default function AdminMessages() {
 
       setIsModalOpen(false);
       setRecipient('');
-      setTitle('');
       setContent('');
       refetch();
     } catch (error) {
@@ -187,17 +176,6 @@ export default function AdminMessages() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="title">Předmět (nepovinné)</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Předmět zprávy..."
-                    disabled={sending}
-                  />
                 </div>
 
                 <div className="space-y-2">
