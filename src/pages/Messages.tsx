@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { toast } from "@/hooks/use-toast";
@@ -8,126 +8,135 @@ interface Message {
   id: string;
   user_id: string;
   sender: "user" | "admin";
-  title: string | null;
   content: string;
-  category: string | null;
   read: boolean;
   created_at: string;
-  parent_message_id: string | null;
 }
 
 export default function MessagesPage() {
   const { user } = useAuth();
-  const { sendMessageToAdmin } = useMessages();
+  const { sendMessageToAdmin, refetch } = useMessages();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
 
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // AUTO SCROLL
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // LOAD MESSAGES
   useEffect(() => {
     const loadMessages = async () => {
       if (!user) return;
-      try {
-        setLoading(true);
-        setError(null);
 
-        const { data, error } = await supabase
-          .from("messages")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
+      setLoading(true);
+      setError(null);
 
-        if (error) {
-          console.error("❌ Chyba při načítání zpráv:", error);
-          setError("Nepodařilo se načíst zprávy.");
-          return;
-        }
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true });
 
-        setMessages(Array.isArray(data) ? data : []);
-      } catch (err: any) {
-        console.error("❌ Neočekávaná chyba:", err);
-        setError("Došlo k chybě při načítání zpráv.");
-      } finally {
-        setLoading(false);
+      if (error) {
+        setError("Nepodařilo se načíst zprávy.");
+        console.error(error);
+      } else {
+        setMessages(data || []);
       }
+
+      setLoading(false);
     };
 
     loadMessages();
+
+    const channel = supabase
+      .channel("messages-user-thread")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages", filter: `user_id=eq.${user?.id}` },
+        () => loadMessages(),
+      )
+      .subscribe();
+
+    return () => channel.unsubscribe();
   }, [user]);
 
+  // SEND MESSAGE
   const handleSend = async () => {
     if (!newMessage.trim()) return;
-    try {
-      setLoading(true);
-      await sendMessageToAdmin(newMessage);
-      toast({ title: "Zpráva odeslána", description: "Vaše zpráva byla úspěšně odeslána.", variant: "default" });
+
+    setLoading(true);
+    const ok = await sendMessageToAdmin(newMessage);
+
+    if (ok) {
+      toast({ title: "Zpráva odeslána", description: "Odesláno úspěšně." });
       setNewMessage("");
-    } catch (err: any) {
-      console.error("❌ Odesílání zprávy selhalo:", err);
+      await refetch();
+    } else {
       toast({ title: "Chyba", description: "Nepodařilo se odeslat zprávu.", variant: "destructive" });
-    } finally {
-      setLoading(false);
     }
+
+    setLoading(false);
   };
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
-        <p>Přihlaste se, abyste mohli zobrazit a odesílat zprávy.</p>
+      <div className="flex flex-col items-center justify-center h-full text-gray-400">
+        <p>Přihlaste se pro zobrazení zpráv.</p>
       </div>
     );
   }
-
-  if (loading && messages.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
-        <p>Načítání zpráv...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center text-red-500">
-        <p>{error}</p>
-      </div>
-    );
-  }
-
-  const safeMessages = Array.isArray(messages) ? messages : [];
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <div className="flex flex-col gap-2 overflow-y-auto max-h-[70vh]">
-        {safeMessages.length > 0 ? (
-          safeMessages.map((msg) => (
+    <div className="flex flex-col h-full p-4 pb-24">
+      {/* MESSAGE LIST */}
+      <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto h-full pr-1">
+        {loading && messages.length === 0 ? (
+          <p className="text-center text-gray-400 mt-20">Načítání zpráv…</p>
+        ) : messages.length === 0 ? (
+          <p className="text-center text-gray-400 mt-20">Zatím žádné zprávy.</p>
+        ) : (
+          messages.map((msg) => (
             <div
               key={msg.id}
-              className={`p-3 rounded-xl ${
-                msg.sender === "user" ? "bg-blue-500/10 self-end" : "bg-gray-700/20 self-start"
+              className={`max-w-[70%] p-3 rounded-xl ${
+                msg.sender === "user"
+                  ? "bg-blue-600/20 text-blue-100 self-end"
+                  : "bg-gray-700/40 text-gray-100 self-start"
               }`}
             >
-              <p className="text-sm text-gray-300">{msg.content}</p>
-              <p className="text-xs text-gray-500 mt-1">{new Date(msg.created_at).toLocaleString()}</p>
+              <p>{msg.content}</p>
+              <p className="text-xs text-gray-400 mt-1">{new Date(msg.created_at).toLocaleString()}</p>
             </div>
           ))
-        ) : (
-          <p className="text-center text-gray-400">Zatím žádné zprávy.</p>
         )}
       </div>
 
-      <div className="flex gap-2 mt-4">
+      {/* INPUT */}
+      <div className="flex gap-2 mt-4 fixed bottom-20 left-0 right-0 p-4 bg-[#0f0f11] border-t border-gray-800">
         <input
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Napište zprávu..."
-          className="flex-1 bg-gray-800 text-gray-100 p-2 rounded-lg outline-none border border-gray-700 focus:border-blue-500"
+          className="flex-1 bg-gray-800 text-gray-100 p-3 rounded-lg border border-gray-700 focus:border-blue-500 outline-none"
         />
         <button
           onClick={handleSend}
           disabled={loading}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition disabled:opacity-50"
+          className="px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50"
         >
           Odeslat
         </button>
