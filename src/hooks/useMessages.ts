@@ -20,7 +20,11 @@ export const useMessages = () => {
 
     if (error) {
       console.error("Error loading messages:", error);
-      toast({ title: "Chyba", description: "Nepodařilo se načíst zprávy", variant: "destructive" });
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se načíst zprávy",
+        variant: "destructive",
+      });
     } else {
       setMessages(data || []);
     }
@@ -30,7 +34,11 @@ export const useMessages = () => {
 
   const sendMessageToAdmin = async (content: string) => {
     if (!user) {
-      toast({ title: "Chyba", description: "Musíte být přihlášený", variant: "destructive" });
+      toast({
+        title: "Chyba",
+        description: "Musíte být přihlášený",
+        variant: "destructive",
+      });
       return false;
     }
 
@@ -40,7 +48,10 @@ export const useMessages = () => {
           user_id: user.id,
           sender: "user",
           content: content.trim(),
+          title: null,
+          category: "support",
           read: false,
+          parent_message_id: null,
         },
       ]);
 
@@ -50,7 +61,11 @@ export const useMessages = () => {
       return true;
     } catch (error: any) {
       console.error("Error sending message:", error);
-      toast({ title: "Chyba", description: "Nepodařilo se odeslat zprávu", variant: "destructive" });
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se odeslat zprávu",
+        variant: "destructive",
+      });
       return false;
     }
   };
@@ -64,6 +79,10 @@ export const useMessages = () => {
           user_id: user.id,
           sender: "admin",
           content: content.trim(),
+          title: null,
+          category: "support",
+          read: false,
+          parent_message_id: null,
         },
       ]);
 
@@ -73,7 +92,11 @@ export const useMessages = () => {
       return true;
     } catch (error: any) {
       console.error("Error sending admin reply:", error);
-      toast({ title: "Chyba", description: "Nepodařilo se odeslat zprávu", variant: "destructive" });
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se odeslat zprávu",
+        variant: "destructive",
+      });
       return false;
     }
   };
