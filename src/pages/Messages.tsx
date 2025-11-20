@@ -19,48 +19,41 @@ export default function MessagesPage() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // AUTO SCROLL
+  // ----------------------------
+  // SCROLL TO BOTTOM CLEAN FIX
+  // ----------------------------
   const scrollToBottom = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }, 0);
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  useEffect(scrollToBottom, [messages]);
 
   // LOAD MESSAGES
   useEffect(() => {
     const loadMessages = async () => {
       if (!user) return;
 
-      setLoading(true);
-      setError(null);
-
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("messages")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: true });
 
-      if (error) {
-        setError("Nepodařilo se načíst zprávy.");
-        console.error(error);
-      } else {
-        setMessages(data || []);
-      }
-
-      setLoading(false);
+      setMessages(data || []);
+      scrollToBottom();
     };
 
     loadMessages();
 
+    // realtime
     const channel = supabase
       .channel("messages-user-thread")
       .on(
@@ -73,7 +66,7 @@ export default function MessagesPage() {
     return () => channel.unsubscribe();
   }, [user]);
 
-  // SEND MESSAGE
+  // SEND
   const handleSend = async () => {
     if (!newMessage.trim()) return;
 
@@ -81,40 +74,39 @@ export default function MessagesPage() {
     const ok = await sendMessageToAdmin(newMessage);
 
     if (ok) {
-      toast({ title: "Zpráva odeslána", description: "Odesláno úspěšně." });
       setNewMessage("");
       await refetch();
+      scrollToBottom();
     } else {
-      toast({ title: "Chyba", description: "Nepodařilo se odeslat zprávu.", variant: "destructive" });
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se odeslat zprávu.",
+        variant: "destructive",
+      });
     }
 
     setLoading(false);
   };
 
-  if (!user) {
+  if (!user)
     return (
-      <div className="flex flex-col items-center justify-center h-full text-gray-400">
-        <p>Přihlaste se pro zobrazení zpráv.</p>
-      </div>
+      <div className="flex h-full items-center justify-center text-gray-400">Přihlaste se pro zobrazení zpráv.</div>
     );
-  }
 
   return (
-    <div className="flex flex-col h-full p-4 gap-4 pb-4">
-      {/* MESSAGE LIST */}
-      <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto pr-1 pb-32">
-        {loading && messages.length === 0 ? (
-          <p className="text-center text-gray-400 mt-20">Načítání zpráv…</p>
-        ) : messages.length === 0 ? (
-          <p className="text-center text-gray-400 mt-20">Zatím žádné zprávy.</p>
+    <div className="flex flex-col h-full p-4 gap-4">
+      {/* CHAT WINDOW */}
+      <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto h-full pb-20">
+        {messages.length === 0 ? (
+          <p className="text-center text-gray-500 mt-10">Zatím žádné zprávy.</p>
         ) : (
           messages.map((msg) => (
             <div
               key={msg.id}
-              className={`max-w-[70%] p-3 rounded-xl ${
+              className={`max-w-[75%] p-3 rounded-xl ${
                 msg.sender === "user"
                   ? "bg-blue-600/20 text-blue-100 self-end"
-                  : "bg-gray-700/40 text-gray-100 self-start"
+                  : "bg-gray-700/40 text-gray-200 self-start"
               }`}
             >
               <p>{msg.content}</p>
@@ -124,13 +116,13 @@ export default function MessagesPage() {
         )}
       </div>
 
-      {/* INPUT */}
-      <div className="flex gap-2 pt-2 border-t border-gray-800 bg-[#0f0f11]">
+      {/* INPUT BAR */}
+      <div className="flex gap-2 pt-2 pb-2 border-t border-gray-800 bg-[#0f0f11]">
         <input
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Napište zprávu..."
+          placeholder="Napište zprávu…"
           className="flex-1 bg-gray-800 text-gray-100 p-3 rounded-lg border border-gray-700 focus:border-blue-500 outline-none"
         />
         <button
