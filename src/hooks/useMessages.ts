@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
-import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 export const useMessages = () => {
-  const supabase = useSupabaseClient();
-
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
