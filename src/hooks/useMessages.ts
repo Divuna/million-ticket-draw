@@ -61,7 +61,8 @@ export const useMessages = () => {
 
       await getUserMessages();
       return true;
-    } catch {
+    } catch (err) {
+      console.error("Error sending message:", err);
       toast({
         title: "Chyba",
         description: "Nepodařilo se odeslat zprávu",
@@ -91,7 +92,8 @@ export const useMessages = () => {
 
       await getUserMessages();
       return true;
-    } catch {
+    } catch (err) {
+      console.error("Error sending admin reply:", err);
       toast({
         title: "Chyba",
         description: "Nepodařilo se odeslat zprávu",
