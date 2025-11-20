@@ -33,45 +33,53 @@ export const useAdminMessages = () => {
       return;
     }
 
+    setLoading(true);
+
     try {
-      const { data: messages, error: messagesError } = await supabase
+      const { data, error } = await supabase
         .from("messages")
-        .select("id, user_id, content, sender, read, created_at")
-        .order("created_at", { ascending: false });
+        .select(
+          `
+          user_id,
+          users:profiles!messages_user_id_fkey (
+            email,
+            full_name
+          ),
+          last_message:messages!messages_user_id_fkey (
+            content,
+            created_at,
+            sender,
+            read
+          )
+        `,
+        )
+        .order("created_at", { referencedTable: "last_message", ascending: false });
 
-      if (messagesError) throw messagesError;
+      if (error) {
+        console.error("Error fetching conversations:", error);
+        toast({
+          title: "Chyba",
+          description: "Nepodařilo se načíst konverzace",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      const { data: users, error: usersError } = await supabase.from("users").select("id, email, name");
+      const formatted: UserConversation[] = (data || []).map((item: any) => ({
+        user_id: item.user_id,
+        user_email: item.users?.email || "Neznámý uživatel",
+        user_name: item.users?.full_name || null,
+        last_message_date: item.last_message?.created_at || "",
+        unread_count: item.last_message?.read === false ? 1 : 0,
+        last_message_content: item.last_message?.content || "",
+      }));
 
-      if (usersError) throw usersError;
-
-      const grouped = new Map<string, UserConversation>();
-
-      messages?.forEach((msg) => {
-        const user = users?.find((u) => u.id === msg.user_id);
-        if (!user) return;
-
-        if (!grouped.has(msg.user_id)) {
-          grouped.set(msg.user_id, {
-            user_id: msg.user_id,
-            user_email: user.email,
-            user_name: user.name,
-            last_message_date: msg.created_at,
-            unread_count: msg.sender === "user" && !msg.read ? 1 : 0,
-            last_message_content: msg.content,
-          });
-        } else {
-          const conv = grouped.get(msg.user_id)!;
-          if (msg.sender === "user" && !msg.read) conv.unread_count += 1;
-        }
-      });
-
-      setConversations(Array.from(grouped.values()));
+      setConversations(formatted);
     } catch (error: any) {
-      console.error("Error fetching admin messages:", error);
+      console.error("Error fetching conversations:", error);
       toast({
         title: "Chyba",
-        description: "Nepodařilo se načíst zprávy",
+        description: "Nepodařilo se načíst konverzace",
         variant: "destructive",
       });
     } finally {
@@ -81,6 +89,8 @@ export const useAdminMessages = () => {
 
   useEffect(() => {
     fetchConversations();
+
+    if (!isAdmin) return;
 
     const channel = supabase
       .channel("admin-messages")
@@ -95,43 +105,79 @@ export const useAdminMessages = () => {
   return {
     conversations,
     loading,
-    refetch: fetchConversations,
   };
 };
 
-export const useAdminMessageThread = (userId: string | undefined) => {
+export const useAdminMessageThread = (userId: string | null) => {
   const { isAdmin } = useUserRole();
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userInfo, setUserInfo] = useState<{ email: string; name: string | null } | null>(null);
+  const [userInfo, setUserInfo] = useState<{
+    email: string;
+    name: string | null;
+    unread_count: number;
+  } | null>(null);
 
   const fetchThread = async () => {
     if (!isAdmin || !userId) {
       setMessages([]);
+      setUserInfo(null);
       setLoading(false);
       return;
     }
 
+    setLoading(true);
+
     try {
-      const { data, error } = await supabase
+      const { data: userData, error: userError } = await supabase
+        .from("profiles")
+        .select("email, full_name")
+        .eq("id", userId)
+        .single();
+
+      if (userError) {
+        console.error("Error fetching user info:", userError);
+      } else {
+        const { count: unreadCount } = await supabase
+          .from("messages")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("sender", "user")
+          .eq("read", false);
+
+        setUserInfo({
+          email: userData?.email || "Neznámý uživatel",
+          name: userData?.full_name || null,
+          unread_count: unreadCount || 0,
+        });
+      }
+
+      const { data: messagesData, error: messagesError } = await supabase
         .from("messages")
         .select("id, user_id, content, sender, read, created_at")
         .eq("user_id", userId)
         .order("created_at", { ascending: true });
 
-      if (error) throw error;
+      if (messagesError) {
+        console.error("Error fetching thread:", messagesError);
+        toast({
+          title: "Chyba",
+          description: "Nepodařilo se načíst konverzaci",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      setMessages((data || []) as ConversationMessage[]);
-
-      const { data: user, error: userError } = await supabase
-        .from("users")
-        .select("email, name")
-        .eq("id", userId)
-        .single();
-
-      if (userError) throw userError;
-
-      setUserInfo(user);
+      setMessages(
+        (messagesData || []).map((msg: any) => ({
+          id: msg.id,
+          user_id: msg.user_id,
+          content: msg.content,
+          sender: msg.sender,
+          read: msg.read,
+          created_at: msg.created_at,
+        })),
+      );
 
       await supabase
         .from("messages")
@@ -155,11 +201,21 @@ export const useAdminMessageThread = (userId: string | undefined) => {
     if (!userId || !content.trim()) return false;
 
     try {
-      const { error } = await supabase.from("messages").insert({
-        user_id: userId,
-        sender: "admin",
-        content: content.trim(),
-      });
+      const { error } = await supabase.from("messages").insert([
+        {
+          user_id: userId,
+          sender: "admin",
+          content: content.trim(),
+          read: false,
+          // 🔥 POVINNÉ SLOUPCE PRO ONEMIL ↔ SOFINITY PIPELINE
+          topic: "support",
+          extension: "onemil",
+          // ZACHOVÁNÍ SCHÉMATU
+          payload: null,
+          event: null,
+          private: false,
+        },
+      ]);
 
       if (error) throw error;
 
