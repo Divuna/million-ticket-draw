@@ -1,136 +1,86 @@
-import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/router";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-interface Message {
-  id: string;
-  user_id: string;
-  sender: "user" | "admin";
-  content: string;
-  created_at: string;
-}
-
-export default function AdminMessageThread() {
+export default function AdminMessages() {
   const router = useRouter();
-  const { id: userId } = router.query;
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [reply, setReply] = useState("");
+  const [threads, setThreads] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-
-  const scrollToBottom = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  };
-
-  useEffect(scrollToBottom, [messages]);
-
-  // LOAD MESSAGES
-  const loadMessages = async () => {
-    if (!userId) return;
-
+  const loadThreads = async () => {
     setLoading(true);
 
     const { data, error } = await supabase
       .from("messages")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: true });
+      .select("user_id, content, created_at, sender")
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error(error);
-      toast({ title: "Chyba", description: "Nelze načíst zprávy", variant: "destructive" });
-    } else {
-      setMessages(data || []);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se načíst zprávy.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
     }
 
+    // seskupení podle user_id
+    const grouped: any = {};
+    data?.forEach((msg) => {
+      if (!grouped[msg.user_id]) grouped[msg.user_id] = [];
+      grouped[msg.user_id].push(msg);
+    });
+
+    const result = Object.keys(grouped).map((uid) => ({
+      user_id: uid,
+      last_message: grouped[uid][0]?.content || "",
+      last_date: grouped[uid][0]?.created_at || "",
+    }));
+
+    setThreads(result);
     setLoading(false);
   };
 
   useEffect(() => {
-    loadMessages();
-
-    if (!userId) return;
+    loadThreads();
 
     const channel = supabase
-      .channel("admin-message-thread")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "messages", filter: `user_id=eq.${userId}` },
-        loadMessages,
-      )
+      .channel("admin-message-thread-list")
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => loadThreads())
       .subscribe();
 
     return () => channel.unsubscribe();
-  }, [userId]);
-
-  // SEND ADMIN REPLY
-  const sendReply = async () => {
-    if (!reply.trim()) return;
-
-    const { error } = await supabase.from("messages").insert({
-      user_id: userId,
-      sender: "admin",
-      content: reply.trim(),
-      read: false,
-      topic: "support",
-      extension: "onemil",
-      payload: {},
-      event: "admin_reply",
-      private: false,
-    });
-
-    if (error) {
-      console.error(error);
-      toast({ title: "Chyba", description: "Nelze odeslat zprávu", variant: "destructive" });
-      return;
-    }
-
-    setReply("");
-    await loadMessages();
-  };
+  }, []);
 
   return (
-    <div className="flex flex-col h-full p-4 pb-24">
-      {/* MESSAGE LIST */}
-      <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto h-full pr-1">
-        {loading ? (
-          <p className="text-gray-400 text-center mt-10">Načítání…</p>
-        ) : messages.length === 0 ? (
-          <p className="text-gray-400 text-center mt-10">Zatím žádné zprávy.</p>
-        ) : (
-          messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`max-w-[70%] p-3 rounded-xl ${
-                msg.sender === "admin"
-                  ? "self-end bg-blue-600/20 text-blue-100"
-                  : "self-start bg-gray-700/40 text-gray-200"
-              }`}
-            >
-              <p>{msg.content}</p>
-              <p className="text-xs text-gray-400 mt-1">{new Date(msg.created_at).toLocaleString()}</p>
-            </div>
-          ))
-        )}
-      </div>
+    <div className="flex flex-col p-6 gap-4 h-full">
+      <h2 className="text-xl font-bold text-gray-100">Zprávy uživatelů</h2>
 
-      {/* INPUT BAR */}
-      <div className="fixed bottom-20 left-0 right-0 px-4 py-3 bg-[#0f0f11] border-t border-gray-800 flex gap-2">
-        <input
-          className="flex-1 bg-gray-800 text-gray-100 p-3 rounded-lg border border-gray-700 focus:border-blue-500 outline-none"
-          placeholder="Napište odpověď…"
-          value={reply}
-          onChange={(e) => setReply(e.target.value)}
-        />
-        <button onClick={sendReply} className="px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-          Odeslat
-        </button>
-      </div>
+      {loading ? (
+        <p className="text-gray-400">Načítání…</p>
+      ) : threads.length === 0 ? (
+        <p className="text-gray-400">Zatím žádné zprávy.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {threads.map((th) => (
+            <div
+              key={th.user_id}
+              onClick={() => router.push(`/admin/messages/${th.user_id}`)}
+              className="p-4 bg-gray-800 rounded-xl cursor-pointer hover:bg-gray-700 transition"
+            >
+              <p className="text-gray-100 font-semibold">{th.user_id}</p>
+              <p className="text-gray-400 text-sm truncate">{th.last_message}</p>
+              <p className="text-gray-500 text-xs mt-1">{new Date(th.last_date).toLocaleString()}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
