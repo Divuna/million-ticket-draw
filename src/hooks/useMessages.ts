@@ -48,10 +48,16 @@ export const useMessages = () => {
           user_id: user.id,
           sender: "user",
           content: content.trim(),
-          title: null,
-          category: "support",
           read: false,
-          parent_message_id: null,
+
+          // 🔥 Doplněno – POVINNÉ SLOUPCE
+          topic: "support",
+          extension: "onemil",
+
+          // ZACHOVÁNÍ SCHÉMATU
+          payload: null,
+          event: null,
+          private: false,
         },
       ]);
 
@@ -79,10 +85,15 @@ export const useMessages = () => {
           user_id: user.id,
           sender: "admin",
           content: content.trim(),
-          title: null,
-          category: "support",
           read: false,
-          parent_message_id: null,
+
+          // 🔥 POVINNÉ
+          topic: "support",
+          extension: "onemil",
+
+          payload: null,
+          event: null,
+          private: false,
         },
       ]);
 
