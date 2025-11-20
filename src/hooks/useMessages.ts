@@ -23,7 +23,7 @@ export const useMessages = () => {
 
     const { data, error } = await supabase
       .from("messages")
-      .select("id, user_id, sender, content, read, created_at")
+      .select("id, user_id, sender, content, read, created_at, topic, extension, payload, event, private")
       .eq("user_id", user.id)
       .order("created_at", { ascending: true });
 
@@ -50,6 +50,13 @@ export const useMessages = () => {
         sender: "user",
         content: content.trim(),
         read: false,
+
+        // 🔥 POVINNÉ SLOUPCE – TVOJE DB JE MÁ
+        topic: "support",
+        extension: "onemil",
+        payload: {},
+        event: "message_created",
+        private: false,
       });
 
       if (error) throw error;
@@ -76,6 +83,13 @@ export const useMessages = () => {
         sender: "admin",
         content: content.trim(),
         read: false,
+
+        // 🔥 TY SAMÉ SLOUPCE – MUSÍ BÝT
+        topic: "support",
+        extension: "onemil",
+        payload: {},
+        event: "admin_reply",
+        private: false,
       });
 
       if (error) throw error;
