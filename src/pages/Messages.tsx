@@ -23,23 +23,21 @@ export default function MessagesPage() {
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // ----------------------------
-  // SCROLL TO BOTTOM CLEAN FIX
-  // ----------------------------
   const scrollToBottom = () => {
-    setTimeout(() => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      }
-    }, 0);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
   };
 
-  useEffect(scrollToBottom, [messages]);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   // LOAD MESSAGES
   useEffect(() => {
     const loadMessages = async () => {
       if (!user) return;
+      setLoading(true);
 
       const { data } = await supabase
         .from("messages")
@@ -48,12 +46,11 @@ export default function MessagesPage() {
         .order("created_at", { ascending: true });
 
       setMessages(data || []);
-      scrollToBottom();
+      setLoading(false);
     };
 
     loadMessages();
 
-    // realtime
     const channel = supabase
       .channel("messages-user-thread")
       .on(
@@ -76,59 +73,45 @@ export default function MessagesPage() {
     if (ok) {
       setNewMessage("");
       await refetch();
-      scrollToBottom();
+      toast({ title: "Odesláno" });
     } else {
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se odeslat zprávu.",
-        variant: "destructive",
-      });
+      toast({ title: "Chyba", description: "Odeslání selhalo", variant: "destructive" });
     }
 
     setLoading(false);
   };
 
-  if (!user)
-    return (
-      <div className="flex h-full items-center justify-center text-gray-400">Přihlaste se pro zobrazení zpráv.</div>
-    );
-
   return (
-    <div className="flex flex-col h-full p-4 gap-4">
-      {/* CHAT WINDOW */}
-      <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto h-full pb-20">
-        {messages.length === 0 ? (
-          <p className="text-center text-gray-500 mt-10">Zatím žádné zprávy.</p>
-        ) : (
-          messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`max-w-[75%] p-3 rounded-xl ${
-                msg.sender === "user"
-                  ? "bg-blue-600/20 text-blue-100 self-end"
-                  : "bg-gray-700/40 text-gray-200 self-start"
-              }`}
-            >
-              <p>{msg.content}</p>
-              <p className="text-xs text-gray-400 mt-1">{new Date(msg.created_at).toLocaleString()}</p>
-            </div>
-          ))
-        )}
+    <div className="flex flex-col h-[calc(100vh-80px)] p-4 pb-24">
+      {/* MESSAGE LIST */}
+      <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto h-full pr-1">
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`max-w-[70%] p-3 rounded-xl ${
+              msg.sender === "user"
+                ? "bg-blue-600/20 text-blue-100 self-end"
+                : "bg-gray-700/40 text-gray-100 self-start"
+            }`}
+          >
+            <p>{msg.content}</p>
+            <p className="text-xs text-gray-400 mt-1">{new Date(msg.created_at).toLocaleString()}</p>
+          </div>
+        ))}
       </div>
 
-      {/* INPUT BAR */}
-      <div className="flex gap-2 pt-2 pb-2 border-t border-gray-800 bg-[#0f0f11]">
+      {/* INPUT BAR — ALWAYS VISIBLE */}
+      <div className="fixed bottom-20 left-0 right-0 p-4 flex gap-2 bg-[#0f0f11] border-t border-gray-800">
         <input
-          type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Napište zprávu…"
-          className="flex-1 bg-gray-800 text-gray-100 p-3 rounded-lg border border-gray-700 focus:border-blue-500 outline-none"
+          placeholder="Napište zprávu..."
+          className="flex-1 bg-gray-800 text-gray-100 p-3 rounded-lg border border-gray-700"
         />
         <button
           onClick={handleSend}
           disabled={loading}
-          className="px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50"
+          className="px-5 bg-blue-600 hover:bg-blue-700 rounded-lg text-white disabled:opacity-50"
         >
           Odeslat
         </button>
