@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
+interface MessageRow {
+  user_id: string;
+  content: string;
+  created_at: string;
+  sender: string;
+}
+
 export default function AdminMessages() {
   const router = useRouter();
 
@@ -30,18 +37,23 @@ export default function AdminMessages() {
       return;
     }
 
-    // seskupení podle user_id
-    const grouped: any = {};
+    // GROUP BY user_id
+    const byUser: Record<string, MessageRow[]> = {};
+
     data?.forEach((msg) => {
-      if (!grouped[msg.user_id]) grouped[msg.user_id] = [];
-      grouped[msg.user_id].push(msg);
+      if (!byUser[msg.user_id]) byUser[msg.user_id] = [];
+      byUser[msg.user_id].push(msg);
     });
 
-    const result = Object.keys(grouped).map((uid) => ({
-      user_id: uid,
-      last_message: grouped[uid][0]?.content || "",
-      last_date: grouped[uid][0]?.created_at || "",
-    }));
+    const result = Object.keys(byUser).map((uid) => {
+      const sorted = byUser[uid].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      return {
+        user_id: uid,
+        last_message: sorted[0]?.content ?? "",
+        last_date: sorted[0]?.created_at ?? "",
+      };
+    });
 
     setThreads(result);
     setLoading(false);
@@ -52,7 +64,7 @@ export default function AdminMessages() {
 
     const channel = supabase
       .channel("admin-message-thread-list")
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => loadThreads())
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, loadThreads)
       .subscribe();
 
     return () => channel.unsubscribe();
