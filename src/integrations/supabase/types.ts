@@ -411,25 +411,40 @@ export type Database = {
         Row: {
           content: string
           created_at: string
+          event: string | null
+          extension: string | null
           id: string
+          payload: Json | null
+          private: boolean | null
           read: boolean
           sender: string
+          topic: string | null
           user_id: string
         }
         Insert: {
           content: string
           created_at?: string
+          event?: string | null
+          extension?: string | null
           id?: string
+          payload?: Json | null
+          private?: boolean | null
           read?: boolean
           sender: string
+          topic?: string | null
           user_id: string
         }
         Update: {
           content?: string
           created_at?: string
+          event?: string | null
+          extension?: string | null
           id?: string
+          payload?: Json | null
+          private?: boolean | null
           read?: boolean
           sender?: string
+          topic?: string | null
           user_id?: string
         }
         Relationships: []

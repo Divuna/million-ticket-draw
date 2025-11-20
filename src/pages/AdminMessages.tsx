@@ -83,6 +83,11 @@ export default function AdminMessages() {
           sender: 'admin',
           content: content.trim(),
           read: false,
+          topic: 'support',
+          extension: 'onemil',
+          payload: {},
+          event: 'admin_broadcast',
+          private: false,
         }));
 
         const { error } = await supabase
@@ -98,6 +103,11 @@ export default function AdminMessages() {
             sender: 'admin',
             content: content.trim(),
             read: false,
+            topic: 'support',
+            extension: 'onemil',
+            payload: {},
+            event: 'admin_message',
+            private: false,
           });
 
         if (error) throw error;

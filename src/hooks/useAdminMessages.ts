@@ -72,3 +72,110 @@ export const useAdminMessages = () => {
     refetch: fetchConversations,
   };
 };
+
+export const useAdminMessageThread = (userId: string) => {
+  const { isAdmin } = useUserRole();
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [userInfo, setUserInfo] = useState<any>(null);
+
+  const fetchMessages = async () => {
+    if (!isAdmin || !userId) {
+      setMessages([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+
+    if (!error) {
+      setMessages(data || []);
+      
+      // Mark user messages as read
+      await supabase
+        .from("messages")
+        .update({ read: true })
+        .eq("user_id", userId)
+        .eq("sender", "user")
+        .eq("read", false);
+    }
+
+    setLoading(false);
+  };
+
+  const fetchUserInfo = async () => {
+    if (!userId) return;
+
+    const { data } = await supabase
+      .from("users")
+      .select("email, name")
+      .eq("id", userId)
+      .single();
+
+    if (data) {
+      setUserInfo(data);
+    }
+  };
+
+  const sendAdminReply = async (content: string) => {
+    if (!isAdmin || !userId) return false;
+
+    try {
+      const { error } = await supabase.from("messages").insert({
+        user_id: userId,
+        sender: "admin",
+        content: content.trim(),
+        read: false,
+        topic: "support",
+        extension: "onemil",
+        payload: {},
+        event: "admin_reply",
+        private: false,
+      });
+
+      if (error) throw error;
+
+      await fetchMessages();
+      return true;
+    } catch {
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se odeslat zprávu",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    fetchMessages();
+    fetchUserInfo();
+
+    const channel = supabase
+      .channel(`admin-thread-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages", filter: `user_id=eq.${userId}` },
+        () => fetchMessages()
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [userId, isAdmin]);
+
+  return {
+    messages,
+    loading,
+    userInfo,
+    sendAdminReply,
+    refetch: fetchMessages,
+  };
+};
