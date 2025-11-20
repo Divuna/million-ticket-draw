@@ -100,9 +100,9 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="flex flex-col h-full p-4 pb-24">
+    <div className="flex flex-col h-full p-4 gap-4 pb-4">
       {/* MESSAGE LIST */}
-      <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto h-full pr-1">
+      <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto pr-1 pb-32">
         {loading && messages.length === 0 ? (
           <p className="text-center text-gray-400 mt-20">Načítání zpráv…</p>
         ) : messages.length === 0 ? (
@@ -125,7 +125,7 @@ export default function MessagesPage() {
       </div>
 
       {/* INPUT */}
-      <div className="flex gap-2 mt-4 fixed bottom-20 left-0 right-0 p-4 bg-[#0f0f11] border-t border-gray-800">
+      <div className="flex gap-2 pt-2 border-t border-gray-800 bg-[#0f0f11]">
         <input
           type="text"
           value={newMessage}
