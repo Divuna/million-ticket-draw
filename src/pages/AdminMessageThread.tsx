@@ -125,9 +125,6 @@ export default function AdminMessageThread() {
                           : undefined
                       }
                     >
-                      {msg.title && (
-                        <p className="text-xs font-semibold mb-1 opacity-80">{msg.title}</p>
-                      )}
                       <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                       <p className="text-xs opacity-70 mt-1">
                         {format(new Date(msg.created_at), 'dd.MM.yyyy HH:mm', { locale: cs })}
