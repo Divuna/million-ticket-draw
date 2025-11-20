@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom"; // ✅ Lovable router
 
 export default function AdminMessages() {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const [threads, setThreads] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -31,6 +31,7 @@ export default function AdminMessages() {
     }
 
     const grouped: Record<string, any[]> = {};
+
     data?.forEach((msg) => {
       if (!grouped[msg.user_id]) grouped[msg.user_id] = [];
       grouped[msg.user_id].push(msg);
@@ -54,9 +55,7 @@ export default function AdminMessages() {
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => loadThreads())
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => channel.unsubscribe();
   }, []);
 
   return (
@@ -72,7 +71,7 @@ export default function AdminMessages() {
           {threads.map((th) => (
             <div
               key={th.user_id}
-              onClick={() => router.push(`/admin/messages/${th.user_id}`)}
+              onClick={() => navigate(`/admin/messages/${th.user_id}`)} // ✅ plně funkční
               className="p-4 bg-gray-800 rounded-xl cursor-pointer hover:bg-gray-700 transition"
             >
               <p className="text-gray-100 font-semibold">{th.user_id}</p>
