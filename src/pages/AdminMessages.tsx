@@ -82,6 +82,7 @@ export default function AdminMessages() {
           user_id: user.id,
           sender: 'admin',
           content: content.trim(),
+          read: false,
         }));
 
         const { error } = await supabase
@@ -96,6 +97,7 @@ export default function AdminMessages() {
             user_id: recipient,
             sender: 'admin',
             content: content.trim(),
+            read: false,
           });
 
         if (error) throw error;

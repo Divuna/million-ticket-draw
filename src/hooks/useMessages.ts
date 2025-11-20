@@ -43,23 +43,12 @@ export const useMessages = () => {
     }
 
     try {
-      const { error } = await supabase.from("messages").insert([
-        {
-          user_id: user.id,
-          sender: "user",
-          content: content.trim(),
-          read: false,
-
-          // 🔥 Doplněno – POVINNÉ SLOUPCE
-          topic: "support",
-          extension: "onemil",
-
-          // ZACHOVÁNÍ SCHÉMATU
-          payload: null,
-          event: null,
-          private: false,
-        },
-      ]);
+      const { error } = await supabase.from("messages").insert({
+        user_id: user.id,
+        sender: "user",
+        content: content.trim(),
+        read: false,
+      });
 
       if (error) throw error;
 
@@ -80,22 +69,12 @@ export const useMessages = () => {
     if (!user) return false;
 
     try {
-      const { error } = await supabase.from("messages").insert([
-        {
-          user_id: user.id,
-          sender: "admin",
-          content: content.trim(),
-          read: false,
-
-          // 🔥 POVINNÉ
-          topic: "support",
-          extension: "onemil",
-
-          payload: null,
-          event: null,
-          private: false,
-        },
-      ]);
+      const { error } = await supabase.from("messages").insert({
+        user_id: user.id,
+        sender: "admin",
+        content: content.trim(),
+        read: false,
+      });
 
       if (error) throw error;
 
