@@ -1,18 +1,27 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import { useAdminMessageThread } from "@/hooks/useAdminMessages";
-import { Button } from "@/components/ui/button";
+import { useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+
+interface Message {
+  id: string;
+  user_id: string;
+  sender: "user" | "admin";
+  content: string;
+  created_at: string;
+}
 
 export default function AdminMessageThread() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-
-  const { messages, loading, userInfo, sendAdminReply, refetch } = useAdminMessageThread(id || "");
-
+  const { userId } = useParams();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
+
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
+  // -----------------------------------------------------
+  // AUTO SCROLL DOLŮ
+  // -----------------------------------------------------
   const scrollToBottom = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -23,76 +32,103 @@ export default function AdminMessageThread() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!newMessage.trim() || !id) return;
+  // -----------------------------------------------------
+  // NAČTENÍ ZPRÁV
+  // -----------------------------------------------------
+  const loadMessages = async () => {
+    if (!userId) return;
 
-    const ok = await sendAdminReply(newMessage.trim());
-    if (ok) {
-      setNewMessage("");
-      await refetch();
-      scrollToBottom();
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error(error);
+      return;
     }
+
+    setMessages(data || []);
+    setLoading(false);
   };
 
-  const safeMessages = Array.isArray(messages) ? messages : [];
+  useEffect(() => {
+    loadMessages();
 
+    const channel = supabase
+      .channel("admin-thread")
+      .on("postgres_changes", { event: "*", table: "messages", schema: "public", filter: `user_id=eq.${userId}` }, () =>
+        loadMessages(),
+      )
+      .subscribe();
+
+    return () => channel.unsubscribe();
+  }, [userId]);
+
+  // -----------------------------------------------------
+  // ODESLÁNÍ ZPRÁVY ADMINEM
+  // -----------------------------------------------------
+  const handleSend = async () => {
+    if (!newMessage.trim()) return;
+
+    const { error } = await supabase.from("messages").insert({
+      user_id: userId,
+      sender: "admin",
+      content: newMessage.trim(),
+      read: false,
+    });
+
+    if (error) {
+      toast({ title: "Chyba", description: "Zprávu nelze odeslat", variant: "destructive" });
+      return;
+    }
+
+    setNewMessage("");
+    loadMessages();
+  };
+
+  // -----------------------------------------------------
+  // UI
+  // -----------------------------------------------------
   return (
-    <div className="flex flex-col h-full max-h-screen bg-[#050816] text-white">
-      {/* HEADER */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-white/5">
-        <button
-          onClick={() => navigate("/admin/messages")}
-          className="flex items-center justify-center w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 transition"
-        >
-          <ArrowLeft className="w-5 h-5" />
+    <div className="flex flex-col h-[100vh] bg-[#0b0d11] p-4 pb-28">
+      {/* ZPRÁVY */}
+      <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto h-full pr-1">
+        {loading && messages.length === 0 ? (
+          <p className="text-gray-500 mt-10 text-center">Načítání zpráv…</p>
+        ) : messages.length === 0 ? (
+          <p className="text-gray-500 mt-10 text-center">Zatím žádné zprávy.</p>
+        ) : (
+          messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`max-w-[70%] p-3 rounded-xl ${
+                msg.sender === "admin"
+                  ? "bg-blue-600/30 text-blue-100 self-end"
+                  : "bg-gray-700/40 text-gray-100 self-start"
+              }`}
+            >
+              <p>{msg.content}</p>
+              <p className="text-xs mt-1 text-gray-400">{new Date(msg.created_at).toLocaleString()}</p>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* INPUT DOLE */}
+      <div className="fixed bottom-0 left-0 right-0 bg-[#0b0d11] border-t border-gray-800 p-4 flex gap-2">
+        <input
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          placeholder="Napište odpověď…"
+          className="flex-1 bg-gray-800 text-gray-200 p-3 rounded-lg border border-gray-700 focus:border-blue-500 outline-none"
+        />
+        <button onClick={handleSend} className="px-5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
+          Odeslat
         </button>
-        <div className="flex flex-col">
-          <span className="text-sm text-white/60">Konverzace s uživatelem</span>
-          <span className="text-base font-semibold">{userInfo?.email || "Neznámý uživatel"}</span>
-        </div>
-      </div>
-
-      {/* THREAD */}
-      <div className="flex flex-col flex-1 px-6 pt-4 pb-28">
-        <div ref={scrollRef} className="flex flex-col gap-3 flex-1 overflow-y-auto pr-1">
-          {loading && safeMessages.length === 0 ? (
-            <p className="mt-10 text-center text-white/40">Načítání zpráv…</p>
-          ) : safeMessages.length === 0 ? (
-            <p className="mt-10 text-center text-white/40">Zatím žádné zprávy.</p>
-          ) : (
-            safeMessages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`max-w-[70%] p-3 rounded-2xl text-sm ${
-                  msg.sender === "admin" ? "self-end bg-blue-600/80 text-white" : "self-start bg-white/10 text-white"
-                }`}
-              >
-                <p>{msg.content}</p>
-                <p className="mt-1 text-[11px] text-white/50">{new Date(msg.created_at).toLocaleString()}</p>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* INPUT BAR – nad spodním admin bottom barem */}
-      <div className="fixed bottom-20 left-0 right-0 px-6 pb-4 bg-gradient-to-t from-[#050816] via-[#050816]/95 to-transparent">
-        <div className="flex gap-3 items-center">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Napište odpověď…"
-            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-500"
-          />
-          <Button
-            onClick={handleSend}
-            disabled={loading || !newMessage.trim()}
-            className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-          >
-            Odeslat
-          </Button>
-        </div>
       </div>
     </div>
   );
