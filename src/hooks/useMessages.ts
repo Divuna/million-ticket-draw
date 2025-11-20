@@ -23,13 +23,11 @@ export const useMessages = () => {
 
     const { data, error } = await supabase
       .from("messages")
-      .select("id, user_id, sender, content, read, created_at, topic, extension, payload, event, private")
+      .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: true });
 
-    if (!error) {
-      setMessages(data || []);
-    }
+    if (!error) setMessages(data || []);
 
     setLoading(false);
   };
@@ -51,10 +49,9 @@ export const useMessages = () => {
         content: content.trim(),
         read: false,
 
-        // 🔥 POVINNÉ SLOUPCE – TVOJE DB JE MÁ
         topic: "support",
         extension: "onemil",
-        payload: {},
+        payload: {}, // ← JSONB OK
         event: "message_created",
         private: false,
       });
@@ -84,10 +81,9 @@ export const useMessages = () => {
         content: content.trim(),
         read: false,
 
-        // 🔥 TY SAMÉ SLOUPCE – MUSÍ BÝT
         topic: "support",
         extension: "onemil",
-        payload: {},
+        payload: {}, // ← JSONB OK
         event: "admin_reply",
         private: false,
       });
@@ -108,18 +104,14 @@ export const useMessages = () => {
   };
 
   useEffect(() => {
-    getUser().then(() => {
-      getUserMessages();
-    });
+    getUser().then(() => getUserMessages());
 
     const channel = supabase
       .channel("user-messages")
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => getUserMessages())
       .subscribe();
 
-    return () => {
-      channel.unsubscribe();
-    };
+    return () => channel.unsubscribe();
   }, [user]);
 
   return {
