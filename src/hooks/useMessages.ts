@@ -40,6 +40,7 @@ export const useMessages = () => {
           user_id: user.id,
           sender: "user",
           content: content.trim(),
+          read: false,
         },
       ]);
 

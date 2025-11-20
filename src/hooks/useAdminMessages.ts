@@ -87,7 +87,9 @@ export const useAdminMessages = () => {
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => fetchConversations())
       .subscribe();
 
-    return () => channel.unsubscribe();
+    return () => {
+      channel.unsubscribe();
+    };
   }, [isAdmin]);
 
   return {
@@ -193,7 +195,9 @@ export const useAdminMessageThread = (userId: string | undefined) => {
       )
       .subscribe();
 
-    return () => channel.unsubscribe();
+    return () => {
+      channel.unsubscribe();
+    };
   }, [isAdmin, userId]);
 
   return {
