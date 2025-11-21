@@ -9,6 +9,7 @@ interface Message {
   sender: "user" | "admin";
   content: string;
   created_at: string;
+  read: boolean;
 }
 
 export default function AdminMessageThread() {
@@ -19,9 +20,6 @@ export default function AdminMessageThread() {
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // -----------------------------------------------------
-  // AUTO SCROLL DOLŮ
-  // -----------------------------------------------------
   const scrollToBottom = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -32,9 +30,6 @@ export default function AdminMessageThread() {
     scrollToBottom();
   }, [messages]);
 
-  // -----------------------------------------------------
-  // NAČTENÍ ZPRÁV
-  // -----------------------------------------------------
   const loadMessages = async () => {
     if (!userId) return;
 
@@ -48,10 +43,20 @@ export default function AdminMessageThread() {
 
     if (error) {
       console.error(error);
+      setLoading(false);
       return;
     }
 
     setMessages(data || []);
+
+    // Mark all user messages as read
+    await supabase
+      .from("messages")
+      .update({ read: true })
+      .eq("user_id", userId)
+      .eq("sender", "user")
+      .eq("read", false);
+
     setLoading(false);
   };
 
@@ -65,12 +70,11 @@ export default function AdminMessageThread() {
       )
       .subscribe();
 
-    return () => channel.unsubscribe();
+    return () => {
+      channel.unsubscribe();
+    };
   }, [userId]);
 
-  // -----------------------------------------------------
-  // ODESLÁNÍ ZPRÁVY ADMINEM
-  // -----------------------------------------------------
   const handleSend = async () => {
     if (!newMessage.trim()) return;
 
@@ -79,6 +83,11 @@ export default function AdminMessageThread() {
       sender: "admin",
       content: newMessage.trim(),
       read: false,
+      topic: "support",
+      extension: "onemil",
+      payload: {},
+      event: "admin_reply",
+      private: false,
     });
 
     if (error) {
@@ -90,12 +99,9 @@ export default function AdminMessageThread() {
     loadMessages();
   };
 
-  // -----------------------------------------------------
-  // UI
-  // -----------------------------------------------------
   return (
-    <div className="flex flex-col h-[100vh] bg-[#0b0d11] p-4 pb-28">
-      {/* ZPRÁVY */}
+    <div className="flex flex-col h-[100vh] bg-[#0b0d11] p-4 pb-24">
+      {/* MESSAGES */}
       <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto h-full pr-1">
         {loading && messages.length === 0 ? (
           <p className="text-gray-500 mt-10 text-center">Načítání zpráv…</p>
@@ -118,8 +124,8 @@ export default function AdminMessageThread() {
         )}
       </div>
 
-      {/* INPUT DOLE */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#0b0d11] border-t border-gray-800 p-4 flex gap-2">
+      {/* INPUT AT BOTTOM */}
+      <div className="mt-4 flex gap-2">
         <input
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}

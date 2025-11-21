@@ -5,10 +5,17 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
+interface Thread {
+  user_id: string;
+  last_message: string;
+  last_date: string;
+  has_unread: boolean;
+}
+
 export default function AdminMessages() {
   const navigate = useNavigate();
 
-  const [threads, setThreads] = useState<any[]>([]);
+  const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadThreads = async () => {
@@ -16,7 +23,7 @@ export default function AdminMessages() {
 
     const { data, error } = await supabase
       .from("messages")
-      .select("user_id, content, created_at, sender")
+      .select("user_id, content, created_at, sender, read")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -30,18 +37,27 @@ export default function AdminMessages() {
       return;
     }
 
-    // seskupení podle user_id (THREADS)
+    // Group by user_id
     const grouped: Record<string, any[]> = {};
     data?.forEach((msg) => {
       if (!grouped[msg.user_id]) grouped[msg.user_id] = [];
       grouped[msg.user_id].push(msg);
     });
 
-    const result = Object.keys(grouped).map((uid) => ({
-      user_id: uid,
-      last_message: grouped[uid][0]?.content || "",
-      last_date: grouped[uid][0]?.created_at || "",
-    }));
+    const result = Object.keys(grouped).map((uid) => {
+      const userMessages = grouped[uid];
+      const hasUnread = userMessages.some((msg) => msg.sender === "user" && !msg.read);
+      
+      return {
+        user_id: uid,
+        last_message: userMessages[0]?.content || "",
+        last_date: userMessages[0]?.created_at || "",
+        has_unread: hasUnread,
+      };
+    });
+
+    // Sort by last_date DESC
+    result.sort((a, b) => new Date(b.last_date).getTime() - new Date(a.last_date).getTime());
 
     setThreads(result);
     setLoading(false);
@@ -55,7 +71,9 @@ export default function AdminMessages() {
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => loadThreads())
       .subscribe();
 
-    return () => channel.unsubscribe();
+    return () => {
+      channel.unsubscribe();
+    };
   }, []);
 
   return (
@@ -72,8 +90,13 @@ export default function AdminMessages() {
             <div
               key={thread.user_id}
               onClick={() => navigate(`/admin/messages/${thread.user_id}`)}
-              className="p-4 bg-gray-800 rounded-xl cursor-pointer hover:bg-gray-700 transition"
+              className={`p-4 rounded-xl cursor-pointer hover:bg-gray-700 transition relative ${
+                thread.has_unread ? "bg-red-900/20" : "bg-gray-800"
+              }`}
             >
+              {thread.has_unread && (
+                <div className="absolute top-4 right-4 w-3 h-3 bg-red-500 rounded-full"></div>
+              )}
               <p className="text-gray-100 font-semibold">{thread.user_id}</p>
               <p className="text-gray-400 text-sm truncate">{thread.last_message}</p>
               <p className="text-gray-500 text-xs mt-1">{new Date(thread.last_date).toLocaleString()}</p>

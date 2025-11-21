@@ -60,7 +60,9 @@ export default function MessagesPage() {
       )
       .subscribe();
 
-    return () => channel.unsubscribe();
+    return () => {
+      channel.unsubscribe();
+    };
   }, [user]);
 
   // SEND

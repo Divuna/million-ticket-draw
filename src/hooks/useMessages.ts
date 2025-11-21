@@ -111,7 +111,9 @@ export const useMessages = () => {
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => getUserMessages())
       .subscribe();
 
-    return () => channel.unsubscribe();
+    return () => {
+      channel.unsubscribe();
+    };
   }, [user]);
 
   return {
