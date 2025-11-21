@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthProvider";
 import TestAuthProvider from "@/components/TestAuthProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -42,48 +42,57 @@ import TestLogin from "@/pages/TestLogin";
 import NotFound from "@/pages/NotFound";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { AdminMenu } from "@/components/AdminMenu";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const queryClient = new QueryClient();
 
 function AppContent() {
   const { user } = useAuth();
+  const { isAdmin } = useUserRole();
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   useOneSignal();
 
   return (
-    <Routes>
-      <Route path="/" element={<Homepage />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/games" element={<Games />} />
-      <Route path="/contest/:id" element={<ContestDetail />} />
-      <Route path="/my-contests" element={<MyContests />} />
-      <Route path="/my-contest/:id" element={<MyContestDetail />} />
-      <Route path="/bonus/:id" element={<BonusDetail />} />
-      <Route path="/vouchers" element={<Vouchers />} />
-      <Route path="/messages" element={<Messages />} />
-      <Route path="/messages/:id" element={<MessageDetail />} />
-      <Route path="/payment/success" element={<PaymentSuccess />} />
-      <Route path="/payment/cancel" element={<PaymentCancel />} />
-      <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/admin/users" element={<AdminUsers />} />
-      <Route path="/admin/banners" element={<AdminBanners />} />
-      <Route path="/admin/vouchers" element={<AdminVouchers />} />
-      <Route path="/admin/payments" element={<AdminPayments />} />
-      <Route path="/admin/statistics" element={<AdminStatistics />} />
-      <Route path="/admin/notifications" element={<AdminNotifications />} />
-      <Route path="/admin/winners" element={<AdminWinners />} />
-      <Route path="/admin/tests" element={<AdminTests />} />
-      <Route path="/admin/partners" element={<AdminPartners />} />
-      <Route path="/admin/messages" element={<AdminMessages />} />
-      <Route path="/admin/messages/:userId" element={<AdminMessageThread />} />
-      <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
-      <Route path="/admin/audit-repair" element={<AdminAuditRepair />} />
-      <Route path="/admin/onemil-audit" element={<OneMilAudit />} />
-      <Route path="/test-login" element={<TestLogin />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Homepage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/games" element={<Games />} />
+        <Route path="/contest/:id" element={<ContestDetail />} />
+        <Route path="/my-contests" element={<MyContests />} />
+        <Route path="/my-contest/:id" element={<MyContestDetail />} />
+        <Route path="/bonus/:id" element={<BonusDetail />} />
+        <Route path="/vouchers" element={<Vouchers />} />
+        <Route path="/messages" element={<Messages />} />
+        <Route path="/messages/:id" element={<MessageDetail />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/cancel" element={<PaymentCancel />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/admin/banners" element={<AdminBanners />} />
+        <Route path="/admin/vouchers" element={<AdminVouchers />} />
+        <Route path="/admin/payments" element={<AdminPayments />} />
+        <Route path="/admin/statistics" element={<AdminStatistics />} />
+        <Route path="/admin/notifications" element={<AdminNotifications />} />
+        <Route path="/admin/winners" element={<AdminWinners />} />
+        <Route path="/admin/tests" element={<AdminTests />} />
+        <Route path="/admin/partners" element={<AdminPartners />} />
+        <Route path="/admin/messages" element={<AdminMessages />} />
+        <Route path="/admin/messages/:userId" element={<AdminMessageThread />} />
+        <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+        <Route path="/admin/audit-repair" element={<AdminAuditRepair />} />
+        <Route path="/admin/onemil-audit" element={<OneMilAudit />} />
+        <Route path="/test-login" element={<TestLogin />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      
+      {isAdmin && isAdminRoute ? <AdminMenu /> : <BottomNavigation />}
+    </>
   );
 }
 
@@ -96,7 +105,6 @@ function App() {
             <TooltipProvider>
               <BrowserRouter>
                 <AppContent />
-                <BottomNavigation />
                 <Toaster />
                 <Sonner />
               </BrowserRouter>

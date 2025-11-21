@@ -77,7 +77,7 @@ export default function AdminMessages() {
   }, []);
 
   return (
-    <div className="flex flex-col p-6 gap-4 h-full">
+    <div className="flex flex-col p-6 gap-4 h-full pb-24">
       <h2 className="text-xl font-bold text-gray-100">Zprávy uživatelů</h2>
 
       {loading ? (
