@@ -50,12 +50,7 @@ export default function AdminMessageThread() {
     setMessages(data || []);
 
     // Mark all user messages as read
-    await supabase
-      .from("messages")
-      .update({ read: true })
-      .eq("user_id", userId)
-      .eq("sender", "user")
-      .eq("read", false);
+    await supabase.from("messages").update({ read: true }).eq("user_id", userId).eq("sender", "user").eq("read", false);
 
     setLoading(false);
   };
@@ -91,7 +86,11 @@ export default function AdminMessageThread() {
     });
 
     if (error) {
-      toast({ title: "Chyba", description: "Zprávu nelze odeslat", variant: "destructive" });
+      toast({
+        title: "Chyba",
+        description: "Zprávu nelze odeslat",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -109,16 +108,17 @@ export default function AdminMessageThread() {
           <p className="text-gray-500 mt-10 text-center">Zatím žádné zprávy.</p>
         ) : (
           messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`max-w-[70%] p-3 rounded-xl ${
-                msg.sender === "admin"
-                  ? "bg-blue-600/30 text-blue-100 self-end"
-                  : "bg-gray-700/40 text-gray-100 self-start"
-              }`}
-            >
-              <p>{msg.content}</p>
-              <p className="text-xs mt-1 text-gray-400">{new Date(msg.created_at).toLocaleString()}</p>
+            <div key={msg.id} className={`flex w-full ${msg.sender === "admin" ? "justify-end" : "justify-start"}`}>
+              <div
+                className={`relative max-w-[75%] px-4 py-2 rounded-2xl shadow-sm transition-all ${
+                  msg.sender === "admin"
+                    ? "bg-blue-600/30 text-blue-100 rounded-br-none"
+                    : "bg-gray-700/50 text-gray-100 rounded-bl-none"
+                }`}
+              >
+                <p className="break-words leading-relaxed">{msg.content}</p>
+                <p className="text-xs text-gray-400 mt-1 text-right">{new Date(msg.created_at).toLocaleString()}</p>
+              </div>
             </div>
           ))
         )}
