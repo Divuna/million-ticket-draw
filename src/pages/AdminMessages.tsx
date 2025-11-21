@@ -85,17 +85,19 @@ export default function AdminMessages() {
       ) : threads.length === 0 ? (
         <p className="text-gray-400">Zatím žádné zprávy.</p>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {threads.map((thread) => (
             <div
               key={thread.user_id}
               onClick={() => navigate(`/admin/messages/${thread.user_id}`)}
-              className={`p-4 rounded-xl cursor-pointer hover:bg-gray-700 transition relative ${
-                thread.has_unread ? "bg-red-900/20" : "bg-gray-800"
+              className={`p-5 rounded-2xl cursor-pointer hover:bg-gray-700/80 transition-all relative shadow-lg ${
+                thread.has_unread 
+                  ? "bg-red-900/40 border border-red-500/50" 
+                  : "bg-gray-800 border border-gray-700/50"
               }`}
             >
               {thread.has_unread && (
-                <div className="absolute top-4 right-4 w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="absolute top-5 right-5 w-3 h-3 bg-red-500 rounded-full"></div>
               )}
               <p className="text-gray-100 font-semibold">{thread.user_id}</p>
               <p className="text-gray-400 text-sm truncate">{thread.last_message}</p>
