@@ -50,7 +50,8 @@ export const useMessages = () => {
         read: false,
         topic: "support",
         extension: "onemil",
-        payload: {} as Record<string, any>,
+        payload: {},
+        event: "message_created",
         private: false,
       });
 
@@ -80,7 +81,8 @@ export const useMessages = () => {
         read: false,
         topic: "support",
         extension: "onemil",
-        payload: {} as Record<string, any>,
+        payload: {},
+        event: "admin_reply",
         private: false,
       });
 
