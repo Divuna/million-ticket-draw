@@ -7,11 +7,13 @@ export const useMessages = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
 
+  // 🌟 1) Načtení uživatele
   const getUser = async () => {
     const { data } = await supabase.auth.getUser();
     setUser(data?.user || null);
   };
 
+  // 🌟 2) Načtení zpráv
   const getUserMessages = async () => {
     if (!user) {
       setMessages([]);
@@ -32,6 +34,7 @@ export const useMessages = () => {
     setLoading(false);
   };
 
+  // 🌟 3) ODESLÁNÍ ZPRÁVY ZÁKAZNÍKA
   const sendMessageToAdmin = async (content: string) => {
     if (!user) {
       toast({
@@ -50,7 +53,7 @@ export const useMessages = () => {
         read: false,
         topic: "support",
         extension: "onemil",
-        payload: {},
+        payload: {}, // JSONB
         event: "message_created",
         private: false,
       });
@@ -70,6 +73,7 @@ export const useMessages = () => {
     }
   };
 
+  // 🌟 4) ODESLÁNÍ ZPRÁVY ADMINA
   const sendAdminReply = async (content: string) => {
     if (!user) return false;
 
@@ -101,6 +105,7 @@ export const useMessages = () => {
     }
   };
 
+  // 🌟 5) REALTIME LISTENER
   useEffect(() => {
     getUser().then(() => getUserMessages());
 
