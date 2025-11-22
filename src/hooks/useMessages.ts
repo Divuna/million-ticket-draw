@@ -7,13 +7,13 @@ export const useMessages = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
 
-  // 🌟 1) Načtení uživatele
+  // ✭ 1) Načtení uživatele
   const getUser = async () => {
     const { data } = await supabase.auth.getUser();
     setUser(data?.user || null);
   };
 
-  // 🌟 2) Načtení zpráv
+  // ✭ 2) Načtení zpráv pro uživatele
   const getUserMessages = async () => {
     if (!user) {
       setMessages([]);
@@ -29,12 +29,14 @@ export const useMessages = () => {
       .eq("user_id", user.id)
       .order("created_at", { ascending: true });
 
-    if (!error) setMessages(data || []);
+    if (!error) {
+      setMessages(data || []);
+    }
 
     setLoading(false);
   };
 
-  // 🌟 3) ODESLÁNÍ ZPRÁVY ZÁKAZNÍKA
+  // ✭ 3) Zákazník → Admin
   const sendMessageToAdmin = async (content: string) => {
     if (!user) {
       toast({
@@ -53,7 +55,7 @@ export const useMessages = () => {
         read: false,
         topic: "support",
         extension: "onemil",
-        payload: {}, // JSONB
+        payload: {},
         event: "message_created",
         private: false,
       });
@@ -73,7 +75,7 @@ export const useMessages = () => {
     }
   };
 
-  // 🌟 4) ODESLÁNÍ ZPRÁVY ADMINA
+  // ✭ 4) Admin → zákazník
   const sendAdminReply = async (content: string) => {
     if (!user) return false;
 
@@ -83,47 +85,4 @@ export const useMessages = () => {
         sender: "admin",
         content: content.trim(),
         read: false,
-        topic: "support",
-        extension: "onemil",
-        payload: {},
-        event: "admin_reply",
-        private: false,
-      });
-
-      if (error) throw error;
-
-      await getUserMessages();
-      return true;
-    } catch (err) {
-      console.error("Error sending admin reply:", err);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se odeslat zprávu",
-        variant: "destructive",
-      });
-      return false;
-    }
-  };
-
-  // 🌟 5) REALTIME LISTENER
-  useEffect(() => {
-    getUser().then(() => getUserMessages());
-
-    const channel = supabase
-      .channel("user-messages")
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => getUserMessages())
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [user]);
-
-  return {
-    messages,
-    loading,
-    sendMessageToAdmin,
-    sendAdminReply,
-    refetch: getUserMessages,
-  };
-};
+        topic:
