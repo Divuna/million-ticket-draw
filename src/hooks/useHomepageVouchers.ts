@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 
 interface HomepageVoucher {
   id: string;
@@ -15,7 +14,6 @@ interface HomepageVoucher {
 }
 
 export const useHomepageVouchers = () => {
-  const { user } = useAuth();
   const [vouchers, setVouchers] = useState<HomepageVoucher[]>([]);
   const [loading, setLoading] = useState(true);
 
