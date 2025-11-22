@@ -23,21 +23,12 @@ export const useHomepageVouchers = () => {
     try {
       setLoading(true);
       
-      // Build query to fetch vouchers that are either unassigned (user_id IS NULL) 
-      // or assigned to the current user
-      let query = supabase
+      // Fetch all public vouchers (unassigned) for everyone
+      const { data, error } = await supabase
         .from('vouchers')
         .select('id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, user_id')
+        .is('user_id', null)
         .order('created_at', { ascending: false });
-
-      // Filter by user assignment - unassigned or assigned to current user
-      if (user) {
-        query = query.or(`user_id.is.null,user_id.eq.${user.id}`);
-      } else {
-        query = query.is('user_id', null);
-      }
-
-      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -66,7 +57,7 @@ export const useHomepageVouchers = () => {
 
   useEffect(() => {
     fetchActiveVouchers();
-  }, [user?.id]);
+  }, []);
 
   // Subscribe to voucher changes for real-time updates
   useEffect(() => {
@@ -83,7 +74,7 @@ export const useHomepageVouchers = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, []);
 
   const getRemainingCount = (voucher: HomepageVoucher) => {
     if (!voucher.max_quantity) return 'Neomezeně';
