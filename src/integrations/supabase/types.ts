@@ -1161,6 +1161,7 @@ export type Database = {
       }
     }
     Functions: {
+      _invoke_forward_messages_to_sofinity: { Args: never; Returns: undefined }
       admin_manage_bonus_prize: {
         Args: {
           p_amount?: number
