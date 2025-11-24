@@ -52,6 +52,7 @@ function AppContent() {
   const { isAdmin } = useUserRole();
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isHomepage = location.pathname === '/';
 
   useOneSignal();
 
@@ -91,7 +92,7 @@ function AppContent() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       
-      {isAdmin && isAdminRoute ? <AdminMenu /> : <BottomNavigation />}
+      {!isHomepage && (isAdmin && isAdminRoute ? <AdminMenu /> : <BottomNavigation />)}
     </>
   );
 }
