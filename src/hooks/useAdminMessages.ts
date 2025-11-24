@@ -16,101 +16,68 @@ export const useAdminMessages = () => {
     }
 
     setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("messages")
-        .select(
-          `
-          user_id,
-          users:user_id ( email, name ),
-          content,
-          created_at,
-          sender,
-          read
-        `,
-        )
-        .order("created_at", { ascending: false });
 
-      if (error) throw error;
+    const { data, error } = await supabase
+      .from("messages")
+      .select("user_id, sender, content, read, created_at")
+      .order("created_at", { ascending: false });
 
-      const grouped = data.reduce((acc: any, msg: any) => {
-        const userId = msg.user_id;
-        if (!acc[userId]) {
-          acc[userId] = {
-            user_id: userId,
-            user_email: msg.users?.email ?? "",
-            user_name: msg.users?.name ?? "",
-            last_message_date: msg.created_at,
-            unread_count: 0,
-            last_message_content: msg.content,
-          };
-        }
-
-        if (msg.created_at > acc[userId].last_message_date) {
-          acc[userId].last_message_date = msg.created_at;
-          acc[userId].last_message_content = msg.content;
-        }
-
-        if (msg.sender === "user" && !msg.read) {
-          acc[userId].unread_count += 1;
-        }
-
-        return acc;
-      }, {});
-
-      const sortedConversations = Object.values(grouped).sort(
-        // @ts-ignore
-        (a, b) => new Date((b as any).last_message_date).getTime() - new Date((a as any).last_message_date).getTime(),
-      );
-
-      setConversations(sortedConversations);
-    } catch (err) {
-      console.error("Error fetching admin conversations:", err);
+    if (error) {
       toast({
         title: "Chyba",
-        description: "Nepodařilo se načíst zprávy",
+        description: "Nepodařilo se načíst konverzace",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
+      return;
     }
+
+    const convMap = {};
+
+    data.forEach((msg) => {
+      if (!convMap[msg.user_id]) {
+        convMap[msg.user_id] = {
+          user_id: msg.user_id,
+          last_message: msg.content,
+          last_message_date: msg.created_at,
+          unread_count: 0,
+        };
+      }
+
+      if (msg.sender === "user" && !msg.read) {
+        convMap[msg.user_id].unread_count++;
+      }
+    });
+
+    setConversations(Object.values(convMap));
+    setLoading(false);
   };
 
   useEffect(() => {
     fetchConversations();
-  }, [isAdmin]);
-
-  useEffect(() => {
-    if (!isAdmin) return;
 
     const channel = supabase
-      .channel("admin-messages-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "messages",
-        },
-        () => {
-          fetchConversations();
-        },
-      )
+      .channel("admin-messages")
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => fetchConversations())
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      channel.unsubscribe();
     };
   }, [isAdmin]);
 
-  return { conversations, loading, refetch: fetchConversations };
+  return {
+    conversations,
+    loading,
+    refetch: fetchConversations,
+  };
 };
 
-export const useAdminMessageThread = (userId: string | null) => {
+export const useAdminMessageThread = (userId: string) => {
   const { isAdmin } = useUserRole();
-  const [messages, setMessages] = useState<any[]>([]);
-  const [userInfo, setUserInfo] = useState<{ email: string; name: string | null } | null>(null);
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userInfo, setUserInfo] = useState<any>(null);
 
   const fetchMessages = async () => {
     if (!isAdmin || !userId) {
@@ -120,32 +87,36 @@ export const useAdminMessageThread = (userId: string | null) => {
     }
 
     setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: true });
 
-      if (error) throw error;
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
 
+    if (!error) {
       setMessages(data || []);
-    } catch (err) {
-      console.error("Error fetching admin message thread:", err);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se načíst konverzaci",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      
+      // Mark user messages as read
+      await supabase
+        .from("messages")
+        .update({ read: true })
+        .eq("user_id", userId)
+        .eq("sender", "user")
+        .eq("read", false);
     }
+
+    setLoading(false);
   };
 
   const fetchUserInfo = async () => {
     if (!userId) return;
 
-    const { data } = await supabase.from("users").select("email, name").eq("id", userId).single();
+    const { data } = await supabase
+      .from("users")
+      .select("email, name")
+      .eq("id", userId)
+      .single();
 
     if (data) {
       setUserInfo(data);
@@ -161,6 +132,11 @@ export const useAdminMessageThread = (userId: string | null) => {
         sender: "admin",
         content: content.trim(),
         read: false,
+        topic: "support",
+        extension: "onemil",
+        payload: {},
+        event: "admin_reply",
+        private: false,
       });
 
       if (error) throw error;
@@ -180,31 +156,26 @@ export const useAdminMessageThread = (userId: string | null) => {
   useEffect(() => {
     fetchMessages();
     fetchUserInfo();
-  }, [isAdmin, userId]);
-
-  useEffect(() => {
-    if (!isAdmin || !userId) return;
 
     const channel = supabase
       .channel(`admin-thread-${userId}`)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "messages",
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          fetchMessages();
-        },
+        { event: "*", schema: "public", table: "messages", filter: `user_id=eq.${userId}` },
+        () => fetchMessages()
       )
       .subscribe();
 
     return () => {
       channel.unsubscribe();
     };
-  }, [userId]);
+  }, [userId, isAdmin]);
 
-  return { messages, userInfo, loading, sendAdminReply, refetch: fetchMessages };
+  return {
+    messages,
+    loading,
+    userInfo,
+    sendAdminReply,
+    refetch: fetchMessages,
+  };
 };
