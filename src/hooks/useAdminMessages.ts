@@ -132,6 +132,11 @@ export const useAdminMessageThread = (userId: string) => {
         sender: "admin",
         content: content.trim(),
         read: false,
+        topic: "support",
+        extension: "onemil",
+        payload: {},
+        event: "admin_reply",
+        private: false,
       });
 
       if (error) throw error;
