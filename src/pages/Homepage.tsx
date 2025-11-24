@@ -1,86 +1,60 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import landingImage from "@/assets/onemil-landing.png";
+import { toast } from "@/hooks/use-toast";
 
-const Homepage = () => {
-  const navigate = useNavigate();
-
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setErrorMsg("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    setLoading(false);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      setErrorMsg("Nesprávný email nebo heslo.");
-      return;
+      toast({
+        title: "Chyba",
+        description: "Nesprávný email nebo heslo",
+        variant: "destructive",
+      });
     }
 
-    navigate("/domu"); // přesměrování po úspěšném loginu
+    setLoading(false);
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Background Image */}
-      <img src={landingImage} alt="OneMil" className="absolute inset-0 w-full h-full object-cover" />
+    <div className="relative min-h-screen bg-cover bg-center" style={{ backgroundImage: "url(/bg.jpg)" }}>
+      <div className="absolute top-6 left-6 bg-black/80 p-8 rounded-xl w-full max-w-sm backdrop-blur-md shadow-2xl">
+        <h1 className="text-white text-2xl font-bold mb-6 text-center">Přihlášení</h1>
 
-      {/* Dark overlay for better readability */}
-      <div className="absolute inset-0 bg-black/40" />
+        <form onSubmit={handleLogin} className="flex flex-col gap-4">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-3 py-2 rounded-md bg-white/10 text-white placeholder-white/60 border border-white/20 focus:outline-none"
+          />
 
-      {/* Login box */}
-      <div className="relative z-10 flex items-center justify-center min-h-screen">
-        <div className="bg-black/70 backdrop-blur-xl p-8 rounded-2xl shadow-2xl w-[90%] max-w-[380px]">
-          <h2 className="text-white text-2xl font-bold text-center mb-6">Přihlášení</h2>
+          <input
+            type="password"
+            placeholder="Heslo"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-3 py-2 rounded-md bg-white/10 text-white placeholder-white/60 border border-white/20 focus:outline-none"
+          />
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-white/60 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <input
-                type="password"
-                placeholder="Heslo"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-white/60 focus:outline-none"
-              />
-            </div>
-
-            {errorMsg && <p className="text-red-400 text-sm text-center">{errorMsg}</p>}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-white text-black font-bold py-3 rounded-lg shadow-lg hover:bg-gray-200 transition-all"
-            >
-              {loading ? "Přihlašuji…" : "Přihlásit se"}
-            </button>
-          </form>
-        </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2 bg-white text-black font-semibold rounded-md hover:bg-white/90 transition"
+          >
+            {loading ? "Přihlašování…" : "Přihlásit se"}
+          </button>
+        </form>
       </div>
     </div>
   );
-};
-
-export default Homepage;
+}
