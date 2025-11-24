@@ -25,7 +25,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-cover bg-center" style={{ backgroundImage: "url(/bg.jpg)" }}>
+    <div
+      className="relative min-h-screen bg-cover bg-center"
+      style={{ backgroundImage: "url(/Gemini_Generated_Image_byckidbyckidbyck (2).png)" }}
+    >
       <div className="absolute top-6 left-6 bg-black/80 p-8 rounded-xl w-full max-w-sm backdrop-blur-md shadow-2xl">
         <h1 className="text-white text-2xl font-bold mb-6 text-center">Přihlášení</h1>
 
