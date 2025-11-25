@@ -588,15 +588,10 @@ const Homepage = () => {
                   >
                     <Card 
                       className={`relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30 transition-all duration-300 ${
-                        user && !isAdmin 
-                          ? 'cursor-pointer hover-scale hover:shadow-lg' 
-                          : !user
-                            ? 'cursor-pointer hover:opacity-80 hover:scale-[1.02]'
-                            : isAdmin
-                              ? 'opacity-90'
-                              : ''
+                        !isAdmin 
+                          ? 'hover:opacity-90 hover:scale-[1.01]'
+                          : 'opacity-90'
                       }`}
-                      onClick={() => !isAdmin && handleVoucherRedeem(voucher.id)}
                     >
                       <div className="flex h-48 relative">
                         {/* Left side - Content */}
@@ -620,8 +615,16 @@ const Homepage = () => {
                             <Button
                               className="w-fit"
                               disabled={isAdmin}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!user) {
+                                  navigate('/login');
+                                } else if (!isAdmin) {
+                                  handleVoucherRedeem(voucher.id);
+                                }
+                              }}
                             >
-                              POUŽÍT VOUCHER
+                              {!user ? 'PŘIHLÁSIT SE' : 'POUŽÍT VOUCHER'}
                             </Button>
                             
                             {/* Status indicator */}
