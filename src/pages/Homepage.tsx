@@ -583,7 +583,6 @@ const Homepage = () => {
             ) : (
               [...homepageVouchers, ...homepageVouchers].map((voucher, index) => (
                   <div 
-                    key={`${voucher.id}-${index}`}
                     className="flex-none w-80"
                     style={{ scrollSnapAlign: 'start' }}
                   >
