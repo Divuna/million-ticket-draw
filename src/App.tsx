@@ -39,6 +39,7 @@ import AdminMessages from "@/pages/AdminMessages";
 import AdminMessageThread from "@/pages/AdminMessageThread";
 import OneMilAudit from "@/pages/OneMilAudit";
 import TestLogin from "@/pages/TestLogin";
+import Winners from "@/pages/Winners";
 import NotFound from "@/pages/NotFound";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -72,6 +73,7 @@ function AppContent() {
         <Route path="/messages/:id" element={<MessageDetail />} />
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />
+        <Route path="/winners" element={<Winners />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/banners" element={<AdminBanners />} />

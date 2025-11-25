@@ -374,6 +374,7 @@ export type Database = {
           last_error: string | null
           metadata: Json | null
           processed_at: string | null
+          request_id: number | null
           retry_count: number | null
           source_system: string | null
           status: string | null
@@ -387,6 +388,7 @@ export type Database = {
           last_error?: string | null
           metadata?: Json | null
           processed_at?: string | null
+          request_id?: number | null
           retry_count?: number | null
           source_system?: string | null
           status?: string | null
@@ -400,6 +402,7 @@ export type Database = {
           last_error?: string | null
           metadata?: Json | null
           processed_at?: string | null
+          request_id?: number | null
           retry_count?: number | null
           source_system?: string | null
           status?: string | null
@@ -1395,6 +1398,10 @@ export type Database = {
       run_deep_sofinity_test_suite: {
         Args: { p_performance_events?: number }
         Returns: Json
+      }
+      safe_send_message: {
+        Args: { p_content: string; p_sender: string; p_user_id: string }
+        Returns: undefined
       }
       send_push_via_onesignal:
         | {
