@@ -1,24 +1,24 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Header } from '@/components/Header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
-import { BottomNavigation } from '@/components/BottomNavigation';
-import { AdminMenu } from '@/components/AdminMenu';
-import { useUserRole } from '@/hooks/useUserRole';
-import { useAuth } from '@/hooks/useAuth';
-import { useHomepageVouchers } from '@/hooks/useHomepageVouchers';
-import { useMegajackpotBanners } from '@/hooks/useMegajackpotBanners';
-import { useHomepageBanners } from '@/hooks/useHomepageBanners';
-import { usePartners } from '@/hooks/usePartners';
-import { useHomepageVideoSimple } from '@/hooks/useHomepageVideoSimple';
-import { useLatestWinners } from '@/hooks/useLatestWinners';
-import { WinnerCard } from '@/components/WinnerCard';
-import YouTubeEmbed from '@/components/YouTubeEmbed';
-import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink } from 'lucide-react';
-import { toast } from 'sonner';
+import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Header } from "@/components/Header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { BottomNavigation } from "@/components/BottomNavigation";
+import { AdminMenu } from "@/components/AdminMenu";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/hooks/useAuth";
+import { useHomepageVouchers } from "@/hooks/useHomepageVouchers";
+import { useMegajackpotBanners } from "@/hooks/useMegajackpotBanners";
+import { useHomepageBanners } from "@/hooks/useHomepageBanners";
+import { usePartners } from "@/hooks/usePartners";
+import { useHomepageVideoSimple } from "@/hooks/useHomepageVideoSimple";
+import { useLatestWinners } from "@/hooks/useLatestWinners";
+import { WinnerCard } from "@/components/WinnerCard";
+import YouTubeEmbed from "@/components/YouTubeEmbed";
+import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 
 interface Contest {
   id: string;
@@ -52,18 +52,18 @@ const Homepage = () => {
   const fetchContests = async () => {
     try {
       const { data, error } = await supabase
-        .from('contests')
-        .select('id, title, main_prize, main_image, status, ticket_count, ticket_price, created_at')
-        .in('status', ['active', 'pending'])
-        .order('created_at', { ascending: false })
+        .from("contests")
+        .select("id, title, main_prize, main_image, status, ticket_count, ticket_price, created_at")
+        .in("status", ["active", "pending"])
+        .order("created_at", { ascending: false })
         .limit(10);
 
       if (error) throw error;
-      
+
       setContests(data || []);
     } catch (error) {
-      console.error('Error fetching contests:', error);
-      toast.error('Nepodařilo se načíst soutěže');
+      console.error("Error fetching contests:", error);
+      toast.error("Nepodařilo se načíst soutěže");
     } finally {
       setLoading(false);
     }
@@ -77,13 +77,10 @@ const Homepage = () => {
   // Subscribe to contest changes for real-time updates
   useEffect(() => {
     const channel = supabase
-      .channel('contest-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'contests' }, 
-        () => {
-          fetchContests(); // Refresh contests when any contest changes
-        }
-      )
+      .channel("contest-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "contests" }, () => {
+        fetchContests(); // Refresh contests when any contest changes
+      })
       .subscribe();
 
     return () => {
@@ -125,38 +122,38 @@ const Homepage = () => {
 
   const handleContestClick = (contestId: string) => {
     if (!user) {
-      toast.error('Pro hraní her se musíte přihlásit');
-      navigate('/login');
+      toast.error("Pro hraní her se musíte přihlásit");
+      navigate("/login");
       return;
     }
-    
+
     if (isAdmin) {
       return; // Read-only for admin
     }
-    
+
     // Navigate to main games page
-    navigate('/games');
+    navigate("/games");
   };
 
   const handleVoucherRedeem = (voucherId: string) => {
     if (!user) {
-      toast.error('Pro uplatnění voucheru se musíte přihlásit');
-      navigate('/login');
+      toast.error("Pro uplatnění voucheru se musíte přihlásit");
+      navigate("/login");
       return;
     }
-    
+
     if (isAdmin) {
       return; // Read-only for admin
     }
-    
+
     // Link to voucher redemption
-    navigate('/vouchers');
+    navigate("/vouchers");
   };
 
   return (
     <div className="min-h-screen bg-background dark pb-20">
       <Header />
-      
+
       <div className="container mx-auto px-4 py-8 space-y-12">
         {/* Megajackpot Banner Section */}
         <section className="w-full">
@@ -168,12 +165,12 @@ const Homepage = () => {
             <div className="relative">
               <div className="h-80 md:h-96 relative overflow-hidden rounded-lg">
                 {/* Banner image */}
-                <img 
+                <img
                   src={megajackpotBanners[currentBannerIndex]?.image_url}
-                  alt={megajackpotBanners[currentBannerIndex]?.title || 'Banner'}
+                  alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
                   className="w-full h-full object-cover"
                 />
-                
+
                 {/* Navigation arrows for multiple banners */}
                 {megajackpotBanners.length > 1 && (
                   <>
@@ -181,9 +178,9 @@ const Homepage = () => {
                       variant="ghost"
                       size="sm"
                       className="absolute left-2 top-1/2 transform -translate-y-1/2 z-20 bg-background/20 backdrop-blur-sm hover:bg-background/40"
-                      onClick={() => setCurrentBannerIndex(prev => 
-                        prev === 0 ? megajackpotBanners.length - 1 : prev - 1
-                      )}
+                      onClick={() =>
+                        setCurrentBannerIndex((prev) => (prev === 0 ? megajackpotBanners.length - 1 : prev - 1))
+                      }
                     >
                       <ChevronLeft className="w-6 h-6" />
                     </Button>
@@ -191,16 +188,16 @@ const Homepage = () => {
                       variant="ghost"
                       size="sm"
                       className="absolute right-2 top-1/2 transform -translate-y-1/2 z-20 bg-background/20 backdrop-blur-sm hover:bg-background/40"
-                      onClick={() => setCurrentBannerIndex(prev => 
-                        prev === megajackpotBanners.length - 1 ? 0 : prev + 1
-                      )}
+                      onClick={() =>
+                        setCurrentBannerIndex((prev) => (prev === megajackpotBanners.length - 1 ? 0 : prev + 1))
+                      }
                     >
                       <ChevronRight className="w-6 h-6" />
                     </Button>
                   </>
                 )}
               </div>
-              
+
               {/* Dot indicators for multiple banners */}
               {megajackpotBanners.length > 1 && (
                 <div className="flex justify-center gap-2 mt-4">
@@ -208,9 +205,9 @@ const Homepage = () => {
                     <button
                       key={index}
                       className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                        index === currentBannerIndex 
-                          ? 'bg-primary shadow-lg' 
-                          : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                        index === currentBannerIndex
+                          ? "bg-primary shadow-lg"
+                          : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
                       }`}
                       onClick={() => setCurrentBannerIndex(index)}
                     />
@@ -232,39 +229,34 @@ const Homepage = () => {
                     <Gift className="w-8 h-8" />
                     Kupte si vouchery
                   </h2>
-                  <p className="text-lg text-muted-foreground">
-                    Získejte MioCoiny za každý nákup
-                  </p>
+                  <p className="text-lg text-muted-foreground">Získejte MioCoiny za každý nákup</p>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed flex-1">
-                  Nakupujte u našich partnerů a získejte MioCoiny, které můžete použít pro nákup tiketů do soutěží o luxusní ceny. Každý nákup vám přinese bonusové body!
+                  Nakupujte u našich partnerů a získejte MioCoiny, které můžete použít pro nákup tiketů do soutěží o
+                  luxusní ceny. Každý nákup vám přinese bonusové body!
                 </p>
                 <div className="relative h-48 rounded-xl overflow-hidden mb-4">
-                  <img 
+                  <img
                     src="/src/assets/luxury-brands-banner.jpg"
                     alt="Luxury brands vouchers"
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.src = '/placeholder.svg';
+                      target.src = "/placeholder.svg";
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
                 </div>
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   className="w-full"
-                  onClick={() => !isAdmin && navigate('/vouchers')}
+                  onClick={() => !isAdmin && navigate("/vouchers")}
                   disabled={isAdmin}
                 >
                   <Gift className="w-5 h-5 mr-2" />
                   Přehled voucherů
                 </Button>
-                {isAdmin && (
-                  <div className="text-xs text-amber-400 text-center">
-                    Admin zobrazení - pouze pro čtení
-                  </div>
-                )}
+                {isAdmin && <div className="text-xs text-amber-400 text-center">Admin zobrazení - pouze pro čtení</div>}
               </div>
             </CardContent>
           </Card>
@@ -278,9 +270,7 @@ const Homepage = () => {
                     <Trophy className="w-8 h-8" />
                     Poslední výherci
                   </h2>
-                  <p className="text-lg text-muted-foreground">
-                    Nejnovější výhry z našich soutěží
-                  </p>
+                  <p className="text-lg text-muted-foreground">Nejnovější výhry z našich soutěží</p>
                 </div>
 
                 <div className="space-y-4 flex-1 overflow-y-auto">
@@ -302,31 +292,26 @@ const Homepage = () => {
                     <div className="text-center py-12 space-y-3">
                       <Trophy className="w-12 h-12 mx-auto text-muted-foreground/50" />
                       <h3 className="text-lg font-bold text-foreground">Zatím žádní výherci</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Momentálně nejsou k dispozici žádné výhry
-                      </p>
+                      <p className="text-sm text-muted-foreground">Momentálně nejsou k dispozici žádné výhry</p>
                     </div>
                   ) : (
-                    latestWinners.slice(0, 3).map((winner) => (
-                      <WinnerCard
-                        key={winner.id}
-                        userName={winner.user_name}
-                        userNickname={winner.user_nickname}
-                        prizeName={winner.prize_name}
-                        contestTitle={winner.contest_title}
-                        createdAt={winner.created_at}
-                        type={winner.type}
-                      />
-                    ))
+                    latestWinners
+                      .slice(0, 3)
+                      .map((winner) => (
+                        <WinnerCard
+                          key={winner.id}
+                          userName={winner.user_name}
+                          userNickname={winner.user_nickname}
+                          prizeName={winner.prize_name}
+                          contestTitle={winner.contest_title}
+                          createdAt={winner.created_at}
+                          type={winner.type}
+                        />
+                      ))
                   )}
                 </div>
 
-                <Button 
-                  variant="outline"
-                  size="lg" 
-                  className="w-full gap-2"
-                  onClick={() => navigate('/winners')}
-                >
+                <Button variant="outline" size="lg" className="w-full gap-2" onClick={() => navigate("/winners")}>
                   Zobrazit všechny
                   <ChevronRight className="w-4 h-4" />
                 </Button>
@@ -340,14 +325,14 @@ const Homepage = () => {
           <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Voucher Banner */}
             {voucherBanner && (
-              <div 
+              <div
                 className={`relative rounded-lg overflow-hidden transition-all duration-200 ${
-                  user && !isAdmin ? 'cursor-pointer hover:scale-105' : ''
-                }`} 
-                onClick={() => !isAdmin && navigate('/vouchers')}
+                  user && !isAdmin ? "cursor-pointer hover:scale-105" : ""
+                }`}
+                onClick={() => !isAdmin && navigate("/vouchers")}
               >
-                <img 
-                  src={voucherBanner.image_url} 
+                <img
+                  src={voucherBanner.image_url}
                   alt={voucherBanner.title}
                   className="w-full h-64 md:h-80 object-cover"
                 />
@@ -361,17 +346,13 @@ const Homepage = () => {
 
             {/* Games Banner */}
             {gamesBanner && (
-              <div 
+              <div
                 className={`relative rounded-lg overflow-hidden transition-all duration-200 ${
-                  user && !isAdmin ? 'cursor-pointer hover:scale-105' : ''
-                }`} 
-                onClick={() => !isAdmin && navigate('/games')}
+                  user && !isAdmin ? "cursor-pointer hover:scale-105" : ""
+                }`}
+                onClick={() => !isAdmin && navigate("/games")}
               >
-                <img 
-                  src={gamesBanner.image_url} 
-                  alt={gamesBanner.title}
-                  className="w-full h-64 md:h-80 object-cover"
-                />
+                <img src={gamesBanner.image_url} alt={gamesBanner.title} className="w-full h-64 md:h-80 object-cover" />
                 {isAdmin && (
                   <div className="absolute top-2 right-2 px-2 py-1 bg-amber-100/10 border border-amber-400/30 rounded text-xs text-amber-400">
                     Pouze čtení
@@ -404,15 +385,15 @@ const Homepage = () => {
               )}
             </div>
           </div>
-          
-          <div 
+
+          <div
             ref={contestsCarouselRef}
             data-carousel-content
-            className={`flex overflow-x-auto scroll-smooth gap-4 pb-4 ${isAdmin ? 'carousel-disabled' : ''}`}
-            style={{ 
-              scrollBehavior: 'smooth', 
-              scrollSnapType: 'none',
-              WebkitOverflowScrolling: 'touch'
+            className={`flex overflow-x-auto scroll-smooth gap-4 pb-4 ${isAdmin ? "carousel-disabled" : ""}`}
+            style={{
+              scrollBehavior: "smooth",
+              scrollSnapType: "none",
+              WebkitOverflowScrolling: "touch",
             }}
           >
             {loading ? (
@@ -452,24 +433,28 @@ const Homepage = () => {
             ) : (
               // Duplicate content for infinite loop
               [...contests, ...contests].map((contest, index) => (
-                <Card 
+                <Card
                   key={`${contest.id}-${index}`}
                   className={`flex-shrink-0 w-[280px] md:w-[320px] rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm transition-all duration-300 shadow-lg ${
-                    user && !isAdmin 
-                      ? 'cursor-pointer hover:scale-105 hover:border-primary/40 hover:shadow-primary/20' 
+                    user && !isAdmin
+                      ? "cursor-pointer hover:scale-105 hover:border-primary/40 hover:shadow-primary/20"
                       : !user
-                        ? 'cursor-pointer hover:opacity-80 hover:scale-[1.02]'
+                        ? "cursor-pointer hover:opacity-80 hover:scale-[1.02]"
                         : isAdmin
-                          ? 'opacity-90'
-                          : ''
+                          ? "opacity-90"
+                          : ""
                   }`}
                   onClick={() => !isAdmin && handleContestClick(contest.id)}
                 >
                   <CardContent className="p-0">
                     <div className="relative">
                       {contest.main_image ? (
-                        <img 
-                          src={contest.main_image.startsWith('http') ? contest.main_image : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`}
+                        <img
+                          src={
+                            contest.main_image.startsWith("http")
+                              ? contest.main_image
+                              : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`
+                          }
                           alt={contest.title}
                           className="w-full h-48 object-cover"
                           loading="lazy"
@@ -484,36 +469,40 @@ const Homepage = () => {
                       )}
                       <div className="absolute top-2 right-2">
                         <Badge variant="secondary" className="bg-primary/90 text-primary-foreground border-0">
-                          {contest.status === 'active' ? 'Aktivní' : 'Připravuje se'}
+                          {contest.status === "active" ? "Aktivní" : "Připravuje se"}
                         </Badge>
                       </div>
                     </div>
-                    
+
                     <div className="p-4 space-y-3">
                       <h3 className="font-bold text-lg line-clamp-2 group-hover:text-primary transition-colors">
                         {contest.title}
                       </h3>
-                      
+
                       <div className="flex items-center gap-2">
                         <Star className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-semibold text-primary line-clamp-1">
-                          {contest.main_prize}
-                        </span>
+                        <span className="text-sm font-semibold text-primary line-clamp-1">{contest.main_prize}</span>
                       </div>
-                      
+
                       <div className="pt-2 border-t border-border/50 space-y-2">
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span>Celkem tiketů</span>
-                          <span className="font-bold text-foreground">{contest.ticket_count?.toLocaleString('cs-CZ')}</span>
+                          <span className="font-bold text-foreground">
+                            {contest.ticket_count?.toLocaleString("cs-CZ")}
+                          </span>
                         </div>
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span>Cena tiketu</span>
                           <span className="font-bold text-foreground">{contest.ticket_price} Kč</span>
                         </div>
                       </div>
-                      
+
                       <div className="text-xs text-muted-foreground pt-2 border-t border-border/30">
-                        {user && !isAdmin ? 'Klikněte pro hraní her' : !user ? 'Přihlaste se pro hraní' : 'Admin zobrazení - pouze pro čtení'}
+                        {user && !isAdmin
+                          ? "Klikněte pro hraní her"
+                          : !user
+                            ? "Přihlaste se pro hraní"
+                            : "Admin zobrazení - pouze pro čtení"}
                       </div>
                     </div>
                   </CardContent>
@@ -545,15 +534,15 @@ const Homepage = () => {
               )}
             </div>
           </div>
-          
-          <div 
+
+          <div
             ref={vouchersCarouselRef}
             data-carousel-content
-            className={`flex overflow-x-auto scroll-smooth gap-4 pb-4 ${isAdmin ? 'carousel-disabled' : ''}`}
-            style={{ 
-              scrollBehavior: 'smooth', 
-              scrollSnapType: 'none',
-              WebkitOverflowScrolling: 'touch'
+            className={`flex overflow-x-auto scroll-smooth gap-4 pb-4 ${isAdmin ? "carousel-disabled" : ""}`}
+            style={{
+              scrollBehavior: "smooth",
+              scrollSnapType: "none",
+              WebkitOverflowScrolling: "touch",
             }}
           >
             {vouchersLoading ? (
@@ -581,87 +570,79 @@ const Homepage = () => {
                 </Card>
               </div>
             ) : (
-              [...homepageVouchers, ...homepageVouchers].map((voucher, index) => (
-                  <div 
-                    className="flex-none w-80"
-                    style={{ scrollSnapAlign: 'start' }}
+              homepageVouchers.map((voucher) => (
+                <div className="flex-none w-80" style={{ scrollSnapAlign: "start" }}>
+                  <Card
+                    className={`relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30 transition-all duration-300 ${
+                      !isAdmin ? "hover:opacity-90 hover:scale-[1.01]" : "opacity-90"
+                    }`}
                   >
-                    <Card 
-                      className={`relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30 transition-all duration-300 ${
-                        !isAdmin 
-                          ? 'hover:opacity-90 hover:scale-[1.01]'
-                          : 'opacity-90'
-                      }`}
-                    >
-                      <div className="flex h-48 relative">
-                        {/* Left side - Content */}
-                        <div className="flex-1 p-6 flex flex-col justify-between">
-                          {/* Header */}
-                          <div>
-                            <h2 className="text-foreground font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
-                            <p className="text-muted-foreground text-sm font-medium">HRAJ O CENY</p>
-                          </div>
+                    <div className="flex h-48 relative">
+                      {/* Left side - Content */}
+                      <div className="flex-1 p-6 flex flex-col justify-between">
+                        {/* Header */}
+                        <div>
+                          <h2 className="text-foreground font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
+                          <p className="text-muted-foreground text-sm font-medium">HRAJ O CENY</p>
+                        </div>
 
-                          {/* Voucher name and value */}
-                          <div className="my-3">
-                            <h3 className="text-foreground font-bold text-lg mb-2">{voucher.name}</h3>
-                            <div className="text-primary font-bold text-3xl">
-                              BONUS VOUCHER
-                            </div>
-                          </div>
+                        {/* Voucher name and value */}
+                        <div className="my-3">
+                          <h3 className="text-foreground font-bold text-lg mb-2">{voucher.name}</h3>
+                          <div className="text-primary font-bold text-3xl">BONUS VOUCHER</div>
+                        </div>
 
-                          {/* Button and status */}
-                          <div className="space-y-2">
-                            <Button
-                              className="w-fit"
-                              disabled={isAdmin}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (!user) {
-                                  navigate('/login');
-                                } else if (!isAdmin) {
-                                  handleVoucherRedeem(voucher.id);
-                                }
-                              }}
-                            >
-                              {!user ? 'PŘIHLÁSIT SE' : 'POUŽÍT VOUCHER'}
-                            </Button>
-                            
-                            {/* Status indicator */}
-                            <div className="text-xs text-muted-foreground">
-                              {user && !isAdmin 
-                                ? 'Klikněte pro uplatnění' 
-                                : !user
-                                  ? 'Přihlaste se pro uplatnění'
-                                  : 'Admin zobrazení - pouze pro čtení'
+                        {/* Button and status */}
+                        <div className="space-y-2">
+                          <Button
+                            className="w-fit"
+                            disabled={isAdmin}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!user) {
+                                navigate("/login");
+                              } else if (!isAdmin) {
+                                handleVoucherRedeem(voucher.id);
                               }
-                            </div>
+                            }}
+                          >
+                            {!user ? "PŘIHLÁSIT SE" : "POUŽÍT VOUCHER"}
+                          </Button>
+
+                          {/* Status indicator */}
+                          <div className="text-xs text-muted-foreground">
+                            {user && !isAdmin
+                              ? "Klikněte pro uplatnění"
+                              : !user
+                                ? "Přihlaste se pro uplatnění"
+                                : "Admin zobrazení - pouze pro čtení"}
                           </div>
-                        </div>
-
-                        {/* Right side - Image */}
-                        <div className="w-32 relative border-l border-dashed border-border/50">
-                          {voucher.image_url ? (
-                            <img 
-                              src={voucher.image_url} 
-                              alt={voucher.name}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-muted/40 flex items-center justify-center">
-                              <span className="text-muted-foreground text-sm text-center px-2">VOUCHER</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Remaining count indicator */}
-                        <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded border border-border">
-                          Zbývá: {getRemainingCount(voucher)}
                         </div>
                       </div>
-                    </Card>
-                  </div>
+
+                      {/* Right side - Image */}
+                      <div className="w-32 relative border-l border-dashed border-border/50">
+                        {voucher.image_url ? (
+                          <img
+                            src={voucher.image_url}
+                            alt={voucher.name}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-muted/40 flex items-center justify-center">
+                            <span className="text-muted-foreground text-sm text-center px-2">VOUCHER</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Remaining count indicator */}
+                      <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded border border-border">
+                        Zbývá: {getRemainingCount(voucher)}
+                      </div>
+                    </div>
+                  </Card>
+                </div>
               ))
             )}
           </div>
@@ -675,7 +656,7 @@ const Homepage = () => {
               Naši partneři, kde můžete získat MioCoiny za nákup
             </h3>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
             {partnersLoading ? (
               // Loading placeholder
@@ -685,16 +666,14 @@ const Homepage = () => {
             ) : partners.length === 0 ? (
               // No partners message
               <div className="col-span-full text-center py-12">
-                <div className="text-muted-foreground">
-                  Momentálně nejsou k dispozici žádní partneři
-                </div>
+                <div className="text-muted-foreground">Momentálně nejsou k dispozici žádní partneři</div>
               </div>
             ) : (
               partners.map((partner) => (
                 <div
                   key={partner.id}
                   className="aspect-square bg-card border border-border rounded-lg overflow-hidden cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary group"
-                  onClick={() => window.open(partner.website_url, '_blank')}
+                  onClick={() => window.open(partner.website_url, "_blank")}
                 >
                   <div className="w-full h-full p-4 flex items-center justify-center relative">
                     <img
@@ -703,9 +682,9 @@ const Homepage = () => {
                       className="max-w-full max-h-full object-contain transition-all duration-300 group-hover:scale-110"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
+                        target.style.display = "none";
                         if (target.nextElementSibling) {
-                          (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                          (target.nextElementSibling as HTMLElement).style.display = "flex";
                         }
                       }}
                     />
@@ -731,13 +710,10 @@ const Homepage = () => {
                 Jak to funguje
               </h3>
             </div>
-            
+
             <div className="max-w-4xl mx-auto space-y-6">
-              <YouTubeEmbed 
-                url={videoUrl} 
-                className="rounded-lg shadow-lg" 
-              />
-              
+              <YouTubeEmbed url={videoUrl} className="rounded-lg shadow-lg" />
+
               <div className="text-center space-y-4 px-4">
                 <h4 className="text-xl font-semibold text-foreground">
                   Jak hra funguje, co se vyhrává a jak probíhá nákup voucherů
@@ -883,9 +859,7 @@ const Homepage = () => {
           {/* Bottom Bar */}
           <div className="border-t border-border pt-8 pb-8">
             <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-              <div className="text-sm text-muted-foreground">
-                © 2024 OneMil s.r.o. Všechna práva vyhrazena.
-              </div>
+              <div className="text-sm text-muted-foreground">© 2024 OneMil s.r.o. Všechna práva vyhrazena.</div>
               <div className="flex items-center space-x-6 text-sm text-muted-foreground">
                 <span>Verze 1.0.0</span>
                 <span>•</span>
