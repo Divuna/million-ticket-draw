@@ -16,6 +16,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Upload, Calendar as CalendarIcon, Infinity, Hash, Image as ImageIcon, Search, Edit, Trash2, Eye, Gift } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AdminMenu } from '@/components/AdminMenu';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -40,6 +42,7 @@ interface Voucher {
   end_date: string | null;
   created_at: string;
   updated_at: string | null;
+  is_public: boolean;
 }
 
 const AdminVouchers: React.FC = () => {
@@ -81,7 +84,7 @@ const AdminVouchers: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('vouchers')
-        .select('id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, created_at, updated_at')
+        .select('id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, created_at, updated_at, is_public')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -336,6 +339,23 @@ const AdminVouchers: React.FC = () => {
       toast.error('Chyba při mazání voucheru');
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleTogglePublic = async (voucherId: string, currentValue: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('vouchers')
+        .update({ is_public: !currentValue })
+        .eq('id', voucherId);
+
+      if (error) throw error;
+      
+      toast.success(`Voucher ${!currentValue ? 'zveřejněn' : 'skryt'}`);
+      fetchVouchers();
+    } catch (error: any) {
+      console.error('Error toggling public status:', error);
+      toast.error('Chyba při změně veřejného stavu');
     }
   };
 
@@ -688,6 +708,7 @@ const AdminVouchers: React.FC = () => {
                     <TableHead>Voucher</TableHead>
                     <TableHead>Zbývající množství</TableHead>
                     <TableHead>Stav</TableHead>
+                    <TableHead>Zveřejnit</TableHead>
                     <TableHead>Platnost</TableHead>
                     <TableHead>Vytvořen</TableHead>
                     <TableHead className="text-right">Akce</TableHead>
@@ -724,6 +745,23 @@ const AdminVouchers: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell>{getStatusBadge(voucher)}</TableCell>
+                      <TableCell>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center">
+                                <Checkbox
+                                  checked={voucher.is_public}
+                                  onCheckedChange={() => handleTogglePublic(voucher.id, voucher.is_public)}
+                                />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Zobrazit voucher na homepage veřejně</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
                       <TableCell className="text-sm">
                         {voucher.start_date && voucher.end_date ? (
                           <div className="flex items-center gap-1">
