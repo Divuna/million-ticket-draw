@@ -40,6 +40,7 @@ import AdminMessageThread from "@/pages/AdminMessageThread";
 import OneMilAudit from "@/pages/OneMilAudit";
 import TestLogin from "@/pages/TestLogin";
 import Winners from "@/pages/Winners";
+import FavoriteGames from "@/pages/FavoriteGames";
 import NotFound from "@/pages/NotFound";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -64,6 +65,7 @@ function AppContent() {
         <Route path="/register" element={<Register />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/games" element={<Games />} />
+        <Route path="/favorite-games" element={<FavoriteGames />} />
         <Route path="/contest/:id" element={<ContestDetail />} />
         <Route path="/my-contests" element={<MyContests />} />
         <Route path="/my-contest/:id" element={<MyContestDetail />} />

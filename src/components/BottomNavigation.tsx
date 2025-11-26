@@ -17,7 +17,7 @@ export const BottomNavigation: React.FC = () => {
     { path: "/", label: "Domů", icon: Home },
     { path: "/profile", label: "Můj profil", icon: User },
     { path: "/vouchers", label: "Vouchery", icon: Ticket },
-    { path: "/games", label: "Moje hry", icon: Gamepad2 },
+    { path: "/games", label: "Soutěže", icon: Gamepad2 },
     { path: "/messages", label: "Zprávy", icon: MessageCircle },
   ];
 
