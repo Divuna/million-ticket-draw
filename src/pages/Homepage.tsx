@@ -101,24 +101,44 @@ const Homepage = () => {
       if (el.scrollWidth <= el.clientWidth + 8) return;
 
       let rafId = 0;
+      let isPaused = false;
+
       const step = () => {
-        el.scrollLeft += speed;
-        const half = el.scrollWidth / 2;
-        
-        // Handle wrapping for both directions
-        if (speed > 0 && half > 0 && el.scrollLeft >= half) {
-          // Scrolling right - wrap back to start
-          el.scrollLeft -= half;
-        } else if (speed < 0 && el.scrollLeft <= 0) {
-          // Scrolling left - wrap to middle
-          el.scrollLeft += half;
+        if (!isPaused) {
+          el.scrollLeft += speed;
+          const half = el.scrollWidth / 2;
+          
+          // Handle wrapping for both directions
+          if (speed > 0 && half > 0 && el.scrollLeft >= half) {
+            // Scrolling right - wrap back to start
+            el.scrollLeft -= half;
+          } else if (speed < 0 && el.scrollLeft <= 0) {
+            // Scrolling left - wrap to middle
+            el.scrollLeft += half;
+          }
         }
         
         rafId = requestAnimationFrame(step);
       };
 
+      const handleMouseEnter = () => {
+        isPaused = true;
+      };
+
+      const handleMouseLeave = () => {
+        isPaused = false;
+      };
+
+      el.addEventListener('mouseenter', handleMouseEnter);
+      el.addEventListener('mouseleave', handleMouseLeave);
+
       rafId = requestAnimationFrame(step);
-      return () => cancelAnimationFrame(rafId);
+      
+      return () => {
+        cancelAnimationFrame(rafId);
+        el.removeEventListener('mouseenter', handleMouseEnter);
+        el.removeEventListener('mouseleave', handleMouseLeave);
+      };
     };
 
     const stopContests = startAutoScroll(contestsCarouselRef, 0.8);
