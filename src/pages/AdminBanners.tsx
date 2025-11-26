@@ -31,7 +31,6 @@ interface BannerForm {
   targetPage: string;
   startDate: Date | undefined;
   endDate: Date | undefined;
-  bannerType: 'regular' | 'coming_soon';
 }
 
 interface Banner {
@@ -44,7 +43,6 @@ interface Banner {
   end_date: string | null;
   created_at: string;
   updated_at: string;
-  banner_type?: 'regular' | 'coming_soon';
 }
 
 const AdminBanners: React.FC = () => {
@@ -76,7 +74,6 @@ const AdminBanners: React.FC = () => {
     targetPage: 'homepage_customer',
     startDate: undefined,
     endDate: undefined,
-    bannerType: 'regular',
   });
 
   useEffect(() => {
@@ -99,41 +96,13 @@ const AdminBanners: React.FC = () => {
   const fetchBanners = async () => {
     try {
       setLoading(true);
-      
-      // Fetch regular banners
-      const { data: regularBanners, error: regularError } = await supabase
+      const { data, error } = await supabase
         .from('banners')
         .select('id, title, image_url, active, target_page, start_date, end_date, created_at, updated_at')
         .order('created_at', { ascending: false });
 
-      if (regularError) throw regularError;
-
-      // Fetch coming soon banners
-      const { data: comingSoonBanners, error: comingSoonError } = await supabase
-        .from('coming_soon_banners')
-        .select('id, title, image_url, created_at')
-        .order('created_at', { ascending: false });
-
-      if (comingSoonError) throw comingSoonError;
-
-      // Combine banners with type indicator
-      const combined = [
-        ...(regularBanners || []).map(b => ({ ...b, banner_type: 'regular' as const })),
-        ...(comingSoonBanners || []).map(b => ({ 
-          ...b, 
-          active: true,
-          target_page: 'coming_soon',
-          start_date: null,
-          end_date: null,
-          updated_at: b.created_at,
-          banner_type: 'coming_soon' as const 
-        }))
-      ];
-
-      // Sort by created_at
-      combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      
-      setBanners(combined);
+      if (error) throw error;
+      setBanners(data || []);
     } catch (error: any) {
       console.error('Error fetching banners:', error);
       toast.error('Chyba při načítání bannerů');
@@ -163,12 +132,7 @@ const AdminBanners: React.FC = () => {
       return;
     }
 
-    if (bannerForm.bannerType === 'coming_soon') {
-      if (!bannerForm.imageFile) {
-        toast.error('Obrázek je povinný pro Coming Soon banner');
-        return;
-      }
-    } else if (bannerForm.targetPage === 'homepage_video') {
+    if (bannerForm.targetPage === 'homepage_video') {
       if (!bannerForm.videoUrl) {
         toast.error('YouTube URL je povinná pro video banner');
         return;
@@ -183,41 +147,31 @@ const AdminBanners: React.FC = () => {
     try {
       setCreateLoading(true);
 
-      // Handle Coming Soon banners
-      if (bannerForm.bannerType === 'coming_soon') {
-        const imageUrl = await uploadImage(bannerForm.imageFile!);
-        
-        const { error } = await supabase
-          .from('coming_soon_banners')
-          .insert({
-            title: bannerForm.title,
-            image_url: imageUrl,
-          });
-
-        if (error) throw error;
+      let imageUrl = '';
+      
+      if (bannerForm.targetPage === 'homepage_video') {
+        // For video banners, store the YouTube URL in image_url field
+        imageUrl = bannerForm.videoUrl;
       } else {
-        // Handle regular banners
-        let imageUrl = '';
-        
-        if (bannerForm.targetPage === 'homepage_video') {
-          imageUrl = bannerForm.videoUrl;
-        } else {
-          imageUrl = await uploadImage(bannerForm.imageFile!);
-        }
-
-        const { error } = await supabase
-          .from('banners')
-          .insert({
-            title: bannerForm.title,
-            image_url: imageUrl,
-            active: bannerForm.active,
-            target_page: bannerForm.targetPage,
-            start_date: bannerForm.startDate?.toISOString().split('T')[0],
-            end_date: bannerForm.endDate?.toISOString().split('T')[0],
-          });
-
-        if (error) throw error;
+        // For regular banners, upload the image file
+        imageUrl = await uploadImage(bannerForm.imageFile!);
       }
+
+      // Create banner
+      const { data, error } = await supabase
+        .from('banners')
+        .insert({
+          title: bannerForm.title,
+          image_url: imageUrl,
+          active: bannerForm.active,
+          target_page: bannerForm.targetPage,
+          start_date: bannerForm.startDate?.toISOString().split('T')[0],
+          end_date: bannerForm.endDate?.toISOString().split('T')[0],
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
 
       toast.success('Banner byl úspěšně vytvořen');
       setShowCreateDialog(false);
@@ -240,29 +194,19 @@ const AdminBanners: React.FC = () => {
       targetPage: 'homepage_customer',
       startDate: undefined,
       endDate: undefined,
-      bannerType: 'regular',
     });
   };
 
-  const handleDeleteBanner = async (banner: Banner) => {
+  const handleDeleteBanner = async (bannerId: string) => {
     try {
       setDeleteLoading(true);
       
-      if (banner.banner_type === 'coming_soon') {
-        const { error } = await supabase
-          .from('coming_soon_banners')
-          .delete()
-          .eq('id', banner.id);
+      const { error } = await supabase
+        .from('banners')
+        .delete()
+        .eq('id', bannerId);
 
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('banners')
-          .delete()
-          .eq('id', banner.id);
-
-        if (error) throw error;
-      }
+      if (error) throw error;
       
       toast.success('Banner byl úspěšně smazán');
       fetchBanners();
@@ -340,45 +284,28 @@ const AdminBanners: React.FC = () => {
     try {
       setEditLoading(true);
 
-      if (editingBanner.banner_type === 'coming_soon') {
-        let imageUrl = editingBanner.image_url;
-        
-        if (bannerForm.imageFile) {
-          imageUrl = await uploadImage(bannerForm.imageFile);
-        }
-
-        const { error } = await supabase
-          .from('coming_soon_banners')
-          .update({
-            title: bannerForm.title,
-            image_url: imageUrl,
-          })
-          .eq('id', editingBanner.id);
-
-        if (error) throw error;
-      } else {
-        let imageUrl = editingBanner.image_url;
-        
-        if (bannerForm.targetPage === 'homepage_video' && bannerForm.videoUrl) {
-          imageUrl = bannerForm.videoUrl;
-        } else if (bannerForm.imageFile) {
-          imageUrl = await uploadImage(bannerForm.imageFile);
-        }
-
-        const { error } = await supabase
-          .from('banners')
-          .update({
-            title: bannerForm.title,
-            image_url: imageUrl,
-            active: bannerForm.active,
-            target_page: bannerForm.targetPage,
-            start_date: bannerForm.startDate?.toISOString().split('T')[0],
-            end_date: bannerForm.endDate?.toISOString().split('T')[0],
-          })
-          .eq('id', editingBanner.id);
-
-        if (error) throw error;
+      let imageUrl = editingBanner.image_url;
+      
+      // If new image/video was provided
+      if (bannerForm.targetPage === 'homepage_video' && bannerForm.videoUrl) {
+        imageUrl = bannerForm.videoUrl;
+      } else if (bannerForm.imageFile) {
+        imageUrl = await uploadImage(bannerForm.imageFile);
       }
+
+      const { error } = await supabase
+        .from('banners')
+        .update({
+          title: bannerForm.title,
+          image_url: imageUrl,
+          active: bannerForm.active,
+          target_page: bannerForm.targetPage,
+          start_date: bannerForm.startDate?.toISOString().split('T')[0],
+          end_date: bannerForm.endDate?.toISOString().split('T')[0],
+        })
+        .eq('id', editingBanner.id);
+
+      if (error) throw error;
 
       toast.success('Banner byl úspěšně aktualizován');
       setShowEditDialog(false);
@@ -396,14 +323,13 @@ const AdminBanners: React.FC = () => {
   const handleEditClick = (banner: Banner) => {
     setEditingBanner(banner);
     setBannerForm({
-      title: banner.title || '',
+      title: banner.title,
       imageFile: null,
       videoUrl: banner.target_page === 'homepage_video' ? banner.image_url : '',
       active: banner.active,
       targetPage: banner.target_page,
       startDate: banner.start_date ? new Date(banner.start_date) : undefined,
       endDate: banner.end_date ? new Date(banner.end_date) : undefined,
-      bannerType: banner.banner_type || 'regular',
     });
     setShowEditDialog(true);
   };
@@ -473,22 +399,6 @@ const AdminBanners: React.FC = () => {
               
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label>Typ banneru</Label>
-                  <Select
-                    value={bannerForm.bannerType}
-                    onValueChange={(value: 'regular' | 'coming_soon') => setBannerForm({...bannerForm, bannerType: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="regular">Domovská / Megajackpot</SelectItem>
-                      <SelectItem value="coming_soon">Připravujeme</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="title">Název banneru *</Label>
                   <Input
                     id="title"
@@ -498,24 +408,7 @@ const AdminBanners: React.FC = () => {
                   />
                 </div>
 
-                {bannerForm.bannerType === 'coming_soon' ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="bannerImage">Obrázek banneru *</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="bannerImage"
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setBannerForm({...bannerForm, imageFile: e.target.files?.[0] || null})}
-                        className="flex-1"
-                      />
-                      <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Obrázek se zobrazí v sekci "Připravujeme" na domovské stránce
-                    </p>
-                  </div>
-                ) : bannerForm.targetPage === 'homepage_video' ? (
+                {bannerForm.targetPage === 'homepage_video' ? (
                   <div className="space-y-2">
                     <Label htmlFor="videoUrl">YouTube URL *</Label>
                     <Input
@@ -549,36 +442,34 @@ const AdminBanners: React.FC = () => {
                   </div>
                 )}
 
-                {bannerForm.bannerType === 'regular' && (
-                  <>
-                    <div className="space-y-2">
-                      <Label>Cílová stránka</Label>
-                      <Select
-                        value={bannerForm.targetPage}
-                        onValueChange={(value) => setBannerForm({...bannerForm, targetPage: value})}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="homepage_customer">Domovská stránka</SelectItem>
-                          <SelectItem value="vouchers">Kupte Voucher</SelectItem>
-                          <SelectItem value="games">Hraj o luxusní ceny</SelectItem>
-                          <SelectItem value="homepage_video">Jak to funguje (Video)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                <div className="space-y-2">
+                  <Label>Cílová stránka</Label>
+                  <Select
+                    value={bannerForm.targetPage}
+                    onValueChange={(value) => setBannerForm({...bannerForm, targetPage: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="homepage_customer">Domovská stránka</SelectItem>
+                      <SelectItem value="vouchers">Kupte Voucher</SelectItem>
+                      <SelectItem value="games">Hraj o luxusní ceny</SelectItem>
+                      <SelectItem value="homepage_video">Jak to funguje (Video)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="active"
-                        checked={bannerForm.active}
-                        onCheckedChange={(checked) => setBannerForm({...bannerForm, active: checked})}
-                      />
-                      <Label htmlFor="active">Aktivní</Label>
-                    </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="active"
+                    checked={bannerForm.active}
+                    onCheckedChange={(checked) => setBannerForm({...bannerForm, active: checked})}
+                  />
+                  <Label htmlFor="active">Aktivní</Label>
+                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Datum začátku</Label>
                     <Popover>
@@ -630,9 +521,7 @@ const AdminBanners: React.FC = () => {
                       </PopoverContent>
                     </Popover>
                   </div>
-                    </div>
-                  </>
-                )}
+                </div>
 
                 <div className="flex gap-4 pt-4">
                   <Button 
@@ -790,10 +679,9 @@ const AdminBanners: React.FC = () => {
                       <TableCell className="text-sm">
                         {getValidityText(banner)}
                       </TableCell>
-                       <TableCell>
+                      <TableCell>
                         <Badge variant="outline">
-                          {banner.banner_type === 'coming_soon' ? 'Připravujeme' :
-                           banner.target_page === 'homepage_customer' ? 'Domů' : 
+                          {banner.target_page === 'homepage_customer' ? 'Domů' : 
                            banner.target_page === 'games' ? 'Hry' : 
                            banner.target_page === 'vouchers' ? 'Vouchery' : banner.target_page}
                         </Badge>
@@ -824,8 +712,8 @@ const AdminBanners: React.FC = () => {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Zrušit</AlertDialogCancel>
-                               <AlertDialogAction
-                                  onClick={() => handleDeleteBanner(banner)}
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteBanner(banner.id)}
                                   disabled={deleteLoading}
                                   className="bg-red-600 hover:bg-red-700"
                                 >
@@ -903,18 +791,6 @@ const AdminBanners: React.FC = () => {
           
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label>Typ banneru</Label>
-              <Input
-                value={bannerForm.bannerType === 'coming_soon' ? 'Připravujeme' : 'Domovská / Megajackpot'}
-                disabled
-                className="bg-muted"
-              />
-              <p className="text-xs text-muted-foreground">
-                Typ banneru nelze měnit po vytvoření
-              </p>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="edit-title">Název banneru *</Label>
               <Input
                 id="edit-title"
@@ -924,24 +800,7 @@ const AdminBanners: React.FC = () => {
               />
             </div>
 
-            {bannerForm.bannerType === 'coming_soon' ? (
-              <div className="space-y-2">
-                <Label htmlFor="edit-bannerImage">Nový obrázek banneru</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="edit-bannerImage"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setBannerForm({...bannerForm, imageFile: e.target.files?.[0] || null})}
-                    className="flex-1"
-                  />
-                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Ponechejte prázdné pro zachování stávajícího obrázku
-                </p>
-              </div>
-            ) : bannerForm.targetPage === 'homepage_video' ? (
+            {bannerForm.targetPage === 'homepage_video' ? (
               <div className="space-y-2">
                 <Label htmlFor="edit-videoUrl">YouTube URL *</Label>
                 <Input
@@ -975,36 +834,34 @@ const AdminBanners: React.FC = () => {
               </div>
             )}
 
-            {bannerForm.bannerType === 'regular' && (
-              <>
-                <div className="space-y-2">
-                  <Label>Cílová stránka</Label>
-                  <Select
-                    value={bannerForm.targetPage}
-                    onValueChange={(value) => setBannerForm({...bannerForm, targetPage: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="homepage_customer">Domovská stránka</SelectItem>
-                      <SelectItem value="vouchers">Kupte Voucher</SelectItem>
-                      <SelectItem value="games">Hraj o luxusní ceny</SelectItem>
-                      <SelectItem value="homepage_video">Jak to funguje (Video)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="space-y-2">
+              <Label>Cílová stránka</Label>
+              <Select
+                value={bannerForm.targetPage}
+                onValueChange={(value) => setBannerForm({...bannerForm, targetPage: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="homepage_customer">Domovská stránka</SelectItem>
+                  <SelectItem value="vouchers">Kupte Voucher</SelectItem>
+                  <SelectItem value="games">Hraj o luxusní ceny</SelectItem>
+                  <SelectItem value="homepage_video">Jak to funguje (Video)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="edit-active"
-                    checked={bannerForm.active}
-                    onCheckedChange={(checked) => setBannerForm({...bannerForm, active: checked})}
-                  />
-                  <Label htmlFor="edit-active">Aktivní</Label>
-                </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="edit-active"
+                checked={bannerForm.active}
+                onCheckedChange={(checked) => setBannerForm({...bannerForm, active: checked})}
+              />
+              <Label htmlFor="edit-active">Aktivní</Label>
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Datum začátku</Label>
                 <Popover>
@@ -1056,9 +913,7 @@ const AdminBanners: React.FC = () => {
                   </PopoverContent>
                 </Popover>
               </div>
-                </div>
-              </>
-            )}
+            </div>
 
             <div className="flex gap-4 pt-4">
               <Button 
