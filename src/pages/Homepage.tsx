@@ -202,6 +202,35 @@ const Homepage = () => {
     toast.success("Kód voucheru zkopírován do schránky!");
   };
 
+  const handleCoinPurchase = async (amount: number, bonusAmount: number = 0) => {
+    if (!user) {
+      toast.error("Pro nákup MioCoinů se musíte přihlásit");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const totalCoins = amount + bonusAmount;
+      toast.loading("Otevírám platební bránu...");
+      
+      const { data, error } = await supabase.functions.invoke("create-stripe-checkout", {
+        body: { amount: totalCoins },
+      });
+
+      if (error) throw error;
+      
+      if (data?.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        throw new Error("Nepodařilo se získat platební odkaz");
+      }
+    } catch (error) {
+      console.error("Error creating checkout:", error);
+      toast.dismiss();
+      toast.error("Nepodařilo se otevřít platební bránu");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background dark pb-20">
       <Header />
@@ -270,45 +299,109 @@ const Homepage = () => {
           ) : null}
         </section>
 
-        {/* Two-Column Banner Section - Vouchers & Contests */}
+        {/* Coin Top-up Section */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Column - Kupte si vouchery */}
+          {/* Left Column - Dobijte si MioCoiny */}
           <Card className="rounded-2xl overflow-hidden bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-primary/10 transition-all duration-300 h-full">
             <CardContent className="p-8 h-full flex flex-col">
               <div className="space-y-6 flex-1 flex flex-col">
                 <div className="space-y-3">
                   <h2 className="text-2xl md:text-3xl font-bold text-primary flex items-center gap-3">
                     <Gift className="w-8 h-8" />
-                    Kupte si vouchery
+                    Dobijte si MioCoiny
                   </h2>
-                  <p className="text-lg text-muted-foreground">Získejte MioCoiny za každý nákup</p>
+                  <p className="text-lg text-muted-foreground">Dobíjejte si MioCoiny pro otevření voucherů nebo účasti ve hře.</p>
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed flex-1">
-                  Nakupujte u našich partnerů a získejte MioCoiny, které můžete použít pro nákup tiketů do soutěží o
-                  luxusní ceny. Každý nákup vám přinese bonusové body!
-                </p>
-                <div className="relative h-48 rounded-xl overflow-hidden mb-4">
-                  <img
-                    src="/src/assets/luxury-brands-banner.jpg"
-                    alt="Luxury brands vouchers"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = "/placeholder.svg";
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+
+                {/* Coin Packages Grid */}
+                <div className="grid grid-cols-2 gap-4 flex-1">
+                  {/* Package 50 */}
+                  <div className="rounded-xl p-4 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 flex flex-col items-center justify-between">
+                    <div className="text-center">
+                      <div className="text-4xl font-bold text-blue-500">50</div>
+                      <div className="text-sm text-muted-foreground mt-1">MioCoinů</div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
+                      onClick={() => handleCoinPurchase(50, 0)}
+                    >
+                      Dobít
+                    </Button>
+                  </div>
+
+                  {/* Package 300 +10 Bonus */}
+                  <div className="rounded-xl p-4 bg-gradient-to-br from-yellow-500/10 to-cyan-500/10 border border-yellow-500/20 flex flex-col items-center justify-between relative">
+                    <Badge className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs">+10 Bonus</Badge>
+                    <div className="text-center">
+                      <div className="text-4xl font-bold text-yellow-500">300</div>
+                      <div className="text-sm text-muted-foreground mt-1">MioCoinů</div>
+                      <div className="text-xs text-muted-foreground mt-1">299 Kč</div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      className="w-full mt-4 bg-yellow-600 hover:bg-yellow-700"
+                      onClick={() => handleCoinPurchase(300, 10)}
+                    >
+                      Dobít
+                    </Button>
+                  </div>
+
+                  {/* Package 500 +25 Bonus */}
+                  <div className="rounded-xl p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex flex-col items-center justify-between relative">
+                    <Badge className="absolute -top-2 -right-2 bg-purple-500 text-white text-xs">+25 Bonus</Badge>
+                    <div className="text-center">
+                      <div className="text-4xl font-bold text-purple-500">500</div>
+                      <div className="text-sm text-muted-foreground mt-1">MioCoinů</div>
+                      <div className="text-xs text-muted-foreground mt-1">499 Kč</div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      className="w-full mt-4 bg-purple-600 hover:bg-purple-700"
+                      onClick={() => handleCoinPurchase(500, 25)}
+                    >
+                      Dobít
+                    </Button>
+                  </div>
+
+                  {/* Package 1200 +80 Bonus */}
+                  <div className="rounded-xl p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 flex flex-col items-center justify-between relative">
+                    <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-xs">+80 Bonus</Badge>
+                    <div className="text-center">
+                      <div className="text-4xl font-bold text-green-500">1200</div>
+                      <div className="text-sm text-muted-foreground mt-1">MioCoinů</div>
+                      <div className="text-xs text-muted-foreground mt-1">999 Kč</div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      className="w-full mt-4 bg-green-600 hover:bg-green-700"
+                      onClick={() => handleCoinPurchase(1200, 80)}
+                    >
+                      Dobít
+                    </Button>
+                  </div>
                 </div>
-                <Button
-                  size="lg"
-                  className="w-full"
-                  onClick={() => !isAdmin && navigate("/vouchers")}
-                  disabled={isAdmin}
-                >
-                  <Gift className="w-5 h-5 mr-2" />
-                  Přehled voucherů
-                </Button>
-                {isAdmin && <div className="text-xs text-amber-400 text-center">Admin zobrazení - pouze pro čtení</div>}
+
+                {/* Two Boxes Below */}
+                <div className="grid grid-cols-2 gap-4 mt-6">
+                  {/* Box 1: Probíhající soutěže */}
+                  <div 
+                    className="rounded-xl p-4 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 cursor-pointer hover:scale-105 transition-transform duration-200 flex flex-col items-center justify-center text-center"
+                    onClick={() => navigate("/games")}
+                  >
+                    <Trophy className="w-8 h-8 text-amber-500 mb-2" />
+                    <div className="text-sm font-semibold text-foreground">Probíhající soutěže</div>
+                  </div>
+
+                  {/* Box 2: Koupit voucher se slevou */}
+                  <div 
+                    className="rounded-xl p-4 bg-gradient-to-br from-pink-500/10 to-rose-500/10 border border-pink-500/20 cursor-pointer hover:scale-105 transition-transform duration-200 flex flex-col items-center justify-center text-center"
+                    onClick={() => navigate("/vouchers")}
+                  >
+                    <Gift className="w-8 h-8 text-pink-500 mb-2" />
+                    <div className="text-sm font-semibold text-foreground">Koupit voucher se slevou</div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
