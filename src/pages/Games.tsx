@@ -333,22 +333,30 @@ const Index = () => {
               </CardContent>
               
               <CardFooter>
-                {/* Show interactive button only for logged-in non-admin users */}
+                {/* Show interactive buttons only for logged-in non-admin users */}
                 {user && !isAdmin && (
-                  <Button 
-                    className="w-full bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0 glow-cyan"
-                    onClick={() => handleUnlockTicket(contest.id)}
-                    disabled={contest.status !== 'active' || processingContestId === contest.id}
-                  >
-                    {processingContestId === contest.id 
-                      ? 'Zpracování...' 
-                      : contest.status === 'pending'
-                        ? 'Připravuje se...'
-                        : contest.status === 'closed'
-                        ? 'Ukončena'
-                        : `Uplatnit ${contest.ticket_price} miocoinů`
-                    }
-                  </Button>
+                  <div className="flex gap-2 w-full">
+                    <Button 
+                      className="flex-1 bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0 glow-cyan"
+                      onClick={() => handleUnlockTicket(contest.id)}
+                      disabled={contest.status !== 'active' || processingContestId === contest.id}
+                    >
+                      {processingContestId === contest.id 
+                        ? 'Zpracování...' 
+                        : contest.status === 'pending'
+                          ? 'Připravuje se...'
+                          : contest.status === 'closed'
+                          ? 'Ukončena'
+                          : `Uplatnit ${contest.ticket_price} miocoinů`
+                      }
+                    </Button>
+                    <Button
+                      className="bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0"
+                      onClick={() => navigate(`/contest/${contest.id}`, { state: { from: 'games' } })}
+                    >
+                      Detail
+                    </Button>
+                  </div>
                 )}
                 
                 {/* Show login prompt for non-logged-in users */}
