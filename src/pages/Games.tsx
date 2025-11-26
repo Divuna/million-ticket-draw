@@ -184,6 +184,15 @@ const Index = () => {
           <p className="text-xl text-muted-foreground">Vyberte si soutěž a zkuste štěstí!</p>
         </div>
         
+        <div className="flex justify-end mb-4">
+          <Button 
+            variant="outline"
+            onClick={() => navigate('/favorite-games')}
+          >
+            Oblíbené soutěže
+          </Button>
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {contests.map((contest) => (
             <Card key={contest.id} className="ticket-game ticket-perforations relative">
