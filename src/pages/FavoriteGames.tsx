@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
+import { ArrowLeft } from 'lucide-react';
+import { TicketResultModal } from '@/components/TicketResultModal';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,10 +24,25 @@ interface Contest {
   created_at: string;
 }
 
+interface UnlockTicketResult {
+  ticket_number: number;
+  ticket_price: number;
+  next_bonus_position?: number | null;
+  distance_to_next_bonus?: number | null;
+  won_prize?: string | null;
+  remaining_tickets?: number;
+  won_type?: 'bonus' | 'main' | null;
+  bonus_prize_id?: string | null;
+}
+
 const FavoriteGames = () => {
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingContestId, setProcessingContestId] = useState<string | null>(null);
+  const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
+  const [modalContestId, setModalContestId] = useState<string | null>(null);
   const { user } = useAuth();
+  const { isAdmin } = useUserRole();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -87,6 +105,53 @@ const FavoriteGames = () => {
     }
   };
 
+  const handleUnlockTicket = async (contestId: string) => {
+    if (!user) {
+      toast.error('Pro koupi tiketu se musíte přihlásit');
+      return;
+    }
+
+    setProcessingContestId(contestId);
+    
+    try {
+      const { data, error } = await supabase.rpc('unlock_ticket' as any, {
+        contest_id: contestId,
+        user_id: user.id
+      });
+
+      if (error) {
+        console.error('Error unlocking ticket:', error);
+        
+        if (error.message?.includes('insufficient') || error.message?.includes('nedostatek')) {
+          toast.error('Nedostatek miocoinů pro nákup tiketu');
+        } else if (error.message?.includes('closed') || error.message?.includes('ukončen')) {
+          toast.error('Tato hra již byla ukončena');
+        } else {
+          toast.error(error.message || 'Chyba při koupi tiketu');
+        }
+        return;
+      }
+
+      if (data) {
+        setModalResult(data);
+        setModalContestId(contestId);
+        
+        fetchFavoriteContests();
+        
+        if (data.won_prize) {
+          toast.success(`Gratulujeme! Vyhrál jsi ${data.won_prize}!`);
+        } else {
+          toast.success(`Tiket #${data.ticket_number.toLocaleString('cs-CZ')} zakoupen!`);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error unlocking ticket:', error);
+      toast.error('Chyba při koupi tiketu');
+    } finally {
+      setProcessingContestId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -102,6 +167,15 @@ const FavoriteGames = () => {
     <div className="min-h-screen bg-background dark pb-20">
       <Header />
       <div className="container mx-auto px-4 py-8">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/games')}
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Zpět
+        </Button>
+        
         <div className="text-center mb-8">
           <h1 className="mb-4 text-4xl font-bold text-neon-green">Oblíbené soutěže</h1>
           <p className="text-xl text-muted-foreground">Soutěže, které máte oblíbené nebo jste již hráli</p>
@@ -159,15 +233,51 @@ const FavoriteGames = () => {
               </CardContent>
               
               <CardFooter>
-                <Button 
-                  className="w-full bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0 glow-cyan"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/contest/${contest.id}`);
-                  }}
-                >
-                  Zobrazit detail
-                </Button>
+                {user && !isAdmin && (
+                  <div className="flex gap-2 w-full">
+                    <Button 
+                      className="flex-1 bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0 glow-cyan"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleUnlockTicket(contest.id);
+                      }}
+                      disabled={contest.status !== 'active' || processingContestId === contest.id}
+                    >
+                      {processingContestId === contest.id 
+                        ? 'Zpracování...' 
+                        : contest.status === 'pending'
+                          ? 'Připravuje se...'
+                          : contest.status === 'closed'
+                          ? 'Ukončena'
+                          : `Uplatnit ${contest.ticket_price} miocoinů`
+                      }
+                    </Button>
+                    <Button
+                      className="bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/contest/${contest.id}`, { state: { from: 'favorites' } });
+                      }}
+                    >
+                      Detail
+                    </Button>
+                  </div>
+                )}
+                
+                {!user && (
+                  <Button 
+                    className="w-full bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0 glow-cyan"
+                    onClick={() => navigate('/login')}
+                  >
+                    Přihlásit se pro koupi tiketu
+                  </Button>
+                )}
+                
+                {user && isAdmin && (
+                  <div className="w-full text-center text-sm text-muted-foreground py-3">
+                    Admin zobrazení - pouze pro čtení
+                  </div>
+                )}
               </CardFooter>
             </Card>
           ))}
@@ -186,6 +296,24 @@ const FavoriteGames = () => {
           </div>
         )}
       </div>
+
+      <TicketResultModal
+        result={modalResult ? {
+          ticket_number: modalResult.ticket_number,
+          distance_to_next_bonus: modalResult.distance_to_next_bonus,
+          next_bonus_position: modalResult.next_bonus_position,
+          won_prize: modalResult.won_prize,
+          won_type: modalResult.won_type,
+          bonus_prize_id: modalResult.bonus_prize_id,
+          remaining_tickets: modalResult.remaining_tickets
+        } : null}
+        contestId={modalContestId}
+        isOpen={!!modalResult}
+        onClose={() => {
+          setModalResult(null);
+          setModalContestId(null);
+        }}
+      />
 
       <BottomNavigation />
     </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
@@ -8,6 +8,8 @@ import { TicketResultModal } from "@/components/TicketResultModal";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminMenu } from "@/components/AdminMenu";
 import { useUserRole } from "@/hooks/useUserRole";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 import { AdminContestView } from "@/components/AdminContestView";
 import { CustomerContestView } from "@/components/CustomerContestView";
@@ -57,6 +59,8 @@ interface TicketResult {
 const ContestDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user, session } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [contest, setContest] = useState<Contest | null>(null);
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [currentTickets, setCurrentTickets] = useState(0);
@@ -259,11 +263,24 @@ const ContestDetail: React.FC = () => {
     );
   }
 
+  const handleBack = () => {
+    const fromFavorites = location.state?.from === 'favorites';
+    navigate(fromFavorites ? '/favorite-games' : '/games');
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <Header />
 
       <div className="container mx-auto px-4 py-8">
+        <Button
+          variant="ghost"
+          onClick={handleBack}
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Zpět
+        </Button>
         {isAdmin ? (
           <AdminContestView
             contest={contest as any}
