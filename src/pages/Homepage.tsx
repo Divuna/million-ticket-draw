@@ -314,7 +314,7 @@ const Homepage = () => {
                 </div>
 
                 {/* Coin Packages Grid */}
-                <div className="grid grid-cols-2 gap-4 flex-1">
+                <div className="grid grid-cols-4 gap-4 flex-1">
                   {/* Package 50 */}
                   <div className="rounded-xl p-4 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 flex flex-col items-center justify-between">
                     <div className="text-center">
