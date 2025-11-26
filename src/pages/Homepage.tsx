@@ -915,16 +915,38 @@ const Homepage = () => {
         </section>
 
         {/* Coming Soon Section */}
-        {!comingSoonLoading && comingSoonBanners.length > 0 && (
-          <section className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-bold text-primary flex items-center gap-2">
-                Připravujeme
-              </h3>
-            </div>
+        <section className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-bold text-primary flex items-center gap-2">
+              Připravujeme
+            </h3>
+          </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {comingSoonBanners.map((banner) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {comingSoonLoading ? (
+              // Loading placeholder
+              Array.from({ length: 3 }).map((_, index) => (
+                <Card key={index} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30">
+                  <CardContent className="p-0">
+                    <div className="aspect-video rounded-lg overflow-hidden bg-muted/40 animate-pulse" />
+                  </CardContent>
+                </Card>
+              ))
+            ) : comingSoonBanners.length === 0 ? (
+              // Placeholder cards when empty
+              Array.from({ length: 3 }).map((_, index) => (
+                <Card key={index} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30">
+                  <CardContent className="p-0">
+                    <div className="aspect-video rounded-lg overflow-hidden bg-muted/40 flex items-center justify-center">
+                      <div className="text-center text-muted-foreground">
+                        <span className="text-sm">Připravujeme</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              comingSoonBanners.map((banner) => (
                 <Card key={banner.id} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30">
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/40">
@@ -941,10 +963,10 @@ const Homepage = () => {
                     )}
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-          </section>
-        )}
+              ))
+            )}
+          </div>
+        </section>
 
         {/* Instructional Video Section */}
         {!videoLoading && videoUrl && isVideoActive && (
