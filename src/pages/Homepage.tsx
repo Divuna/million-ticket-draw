@@ -16,6 +16,7 @@ import { useHomepageBanners } from "@/hooks/useHomepageBanners";
 import { usePartners } from "@/hooks/usePartners";
 import { useHomepageVideoSimple } from "@/hooks/useHomepageVideoSimple";
 import { useLatestWinners } from "@/hooks/useLatestWinners";
+import { useComingSoonBanners } from "@/hooks/useComingSoonBanners";
 import { WinnerCard } from "@/components/WinnerCard";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, Copy } from "lucide-react";
@@ -43,6 +44,7 @@ const Homepage = () => {
   const { partners, loading: partnersLoading } = usePartners();
   const { videoUrl, isActive: isVideoActive, loading: videoLoading } = useHomepageVideoSimple();
   const { data: latestWinners, isLoading: winnersLoading } = useLatestWinners(50);
+  const { banners: comingSoonBanners, loading: comingSoonLoading } = useComingSoonBanners();
   const contestsCarouselRef = useRef<HTMLDivElement>(null);
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
   const megajackpotCarouselRef = useRef<HTMLDivElement>(null);
@@ -911,6 +913,38 @@ const Homepage = () => {
             )}
           </div>
         </section>
+
+        {/* Coming Soon Section */}
+        {!comingSoonLoading && comingSoonBanners.length > 0 && (
+          <section className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-primary flex items-center gap-2">
+                Připravujeme
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {comingSoonBanners.map((banner) => (
+                <Card key={banner.id} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30">
+                  <CardContent className="p-0">
+                    <div className="aspect-video rounded-lg overflow-hidden bg-muted/40">
+                      <img
+                        src={banner.image_url}
+                        alt={banner.title || 'Coming soon'}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    {banner.title && (
+                      <div className="p-4">
+                        <h4 className="font-bold text-lg text-foreground text-center">{banner.title}</h4>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Instructional Video Section */}
         {!videoLoading && videoUrl && isVideoActive && (
