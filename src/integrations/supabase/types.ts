@@ -215,6 +215,27 @@ export type Database = {
           },
         ]
       }
+      coming_soon_banners: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
       contests: {
         Row: {
           created_at: string
