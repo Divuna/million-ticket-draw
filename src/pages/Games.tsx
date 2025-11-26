@@ -11,6 +11,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { Heart } from 'lucide-react';
 
 interface Contest {
   id: string;
@@ -41,6 +42,7 @@ const Index = () => {
   const [processingContestId, setProcessingContestId] = useState<string | null>(null);
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
   const [modalContestId, setModalContestId] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
@@ -69,7 +71,69 @@ const Index = () => {
 
   useEffect(() => {
     fetchContests();
-  }, []);
+    if (user) {
+      fetchFavorites();
+    }
+  }, [user]);
+
+  const fetchFavorites = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_contest_favorites')
+        .select('contest_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      setFavorites(new Set(data.map(f => f.contest_id)));
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    }
+  };
+
+  const toggleFavorite = async (contestId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!user) {
+      toast.error('Pro uložení oblíbených se musíte přihlásit');
+      return;
+    }
+
+    const isFavorite = favorites.has(contestId);
+
+    try {
+      if (isFavorite) {
+        const { error } = await supabase
+          .from('user_contest_favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('contest_id', contestId);
+
+        if (error) throw error;
+
+        setFavorites(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(contestId);
+          return newSet;
+        });
+        toast.success('Odebráno z oblíbených');
+      } else {
+        const { error } = await supabase
+          .from('user_contest_favorites')
+          .insert({ user_id: user.id, contest_id: contestId });
+
+        if (error) throw error;
+
+        setFavorites(prev => new Set(prev).add(contestId));
+        toast.success('Přidáno do oblíbených');
+      }
+    } catch (error: any) {
+      console.error('Error toggling favorite:', error);
+      toast.error('Chyba při ukládání oblíbené');
+    }
+  };
 
   // Real-time updates: refresh when contests table changes
   useEffect(() => {
@@ -179,17 +243,17 @@ const Index = () => {
     <div className="min-h-screen bg-background dark pb-20">
       <Header />
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <h1 className="mb-4 text-4xl font-bold text-neon-green">OneMil</h1>
-          <p className="text-xl text-muted-foreground">Vyberte si soutěž a zkuste štěstí!</p>
-        </div>
-        
-        <div className="flex justify-end mb-4">
+        <div className="flex items-center justify-between mb-8">
+          <div className="text-center flex-1">
+            <h1 className="mb-4 text-4xl font-bold text-neon-green">OneMil</h1>
+            <p className="text-xl text-muted-foreground">Vyberte si soutěž a zkuste štěstí!</p>
+          </div>
+          
           <Button 
-            variant="outline"
+            className="bg-[#FF4D4D] hover:bg-[#FF3333] text-white font-bold px-8 py-6 rounded-full text-lg"
             onClick={() => navigate('/favorite-games')}
           >
-            Oblíbené soutěže
+            OBLÍBENÉ
           </Button>
         </div>
         
@@ -200,6 +264,22 @@ const Index = () => {
                 <Badge className="absolute top-4 right-4 bg-destructive text-destructive-foreground">
                   Hra ukončena – hlavní výhra padla
                 </Badge>
+              )}
+              
+              {user && !isAdmin && (
+                <button
+                  onClick={(e) => toggleFavorite(contest.id, e)}
+                  className="absolute top-4 right-4 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors"
+                  aria-label="Toggle favorite"
+                >
+                  <Heart
+                    className={`w-5 h-5 ${
+                      favorites.has(contest.id)
+                        ? 'fill-red-500 text-red-500'
+                        : 'text-muted-foreground'
+                    }`}
+                  />
+                </button>
               )}
               
               <CardHeader>
