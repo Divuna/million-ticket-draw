@@ -40,16 +40,26 @@ const FavoriteGames = () => {
     if (!user) return;
 
     try {
-      // Fetch contests where user has tickets
-      const { data: userTickets, error: ticketsError } = await supabase
+      // Get favorited contests
+      const { data: favoriteData, error: favoriteError } = await supabase
+        .from('user_contest_favorites')
+        .select('contest_id')
+        .eq('user_id', user.id);
+
+      if (favoriteError) throw favoriteError;
+
+      // Get contests where user has purchased tickets
+      const { data: ticketData, error: ticketError } = await supabase
         .from('tickets')
         .select('contest_id')
         .eq('user_id', user.id);
 
-      if (ticketsError) throw ticketsError;
+      if (ticketError) throw ticketError;
 
-      // Get unique contest IDs
-      const contestIds = [...new Set(userTickets?.map(t => t.contest_id) || [])];
+      // Combine both sets of contest IDs
+      const favoriteIds = favoriteData?.map(f => f.contest_id) || [];
+      const ticketIds = ticketData?.map(t => t.contest_id) || [];
+      const contestIds = [...new Set([...favoriteIds, ...ticketIds])];
 
       if (contestIds.length === 0) {
         setContests([]);
@@ -94,7 +104,7 @@ const FavoriteGames = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="mb-4 text-4xl font-bold text-neon-green">Oblíbené soutěže</h1>
-          <p className="text-xl text-muted-foreground">Soutěže, ve kterých jste již hráli</p>
+          <p className="text-xl text-muted-foreground">Soutěže, které máte oblíbené nebo jste již hráli</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -168,7 +178,7 @@ const FavoriteGames = () => {
             <div className="text-4xl mb-4">❤️</div>
             <h3 className="text-xl font-semibold mb-2">Žádné oblíbené soutěže</h3>
             <p className="text-muted-foreground mb-6">
-              Zatím jste nehráli v žádné soutěži.
+              Zatím jste si neoblíbili ani nehráli žádnou soutěž.
             </p>
             <Button onClick={() => navigate('/games')}>
               Prohlédnout soutěže
