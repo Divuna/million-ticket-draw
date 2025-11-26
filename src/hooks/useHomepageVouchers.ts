@@ -11,6 +11,7 @@ interface HomepageVoucher {
   start_date: string | null;
   end_date: string | null;
   user_id: string | null;
+  is_public: boolean;
 }
 
 export const useHomepageVouchers = () => {
@@ -21,11 +22,11 @@ export const useHomepageVouchers = () => {
     try {
       setLoading(true);
       
-      // Fetch all public vouchers (unassigned) for everyone
+      // Fetch all public vouchers (is_public = true) for everyone
       const { data, error } = await supabase
         .from('vouchers')
-        .select('id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, user_id')
-        .is('user_id', null)
+        .select('id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, user_id, is_public')
+        .eq('is_public', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
