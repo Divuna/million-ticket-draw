@@ -66,6 +66,10 @@ const AdminBanners: React.FC = () => {
   const [videoSaveLoading, setVideoSaveLoading] = useState(false);
   const { videoUrl, isActive: isVideoActive, loading: videoSettingsLoading, updateVideoSettings } = useHomepageVideoSimple();
   
+  // Coming soon banners state
+  const [comingSoonBanners, setComingSoonBanners] = useState<Array<{id: string, image_url: string, title: string | null}>>([]);
+  const [comingSoonUploading, setComingSoonUploading] = useState<{[key: number]: boolean}>({});
+  
   const [bannerForm, setBannerForm] = useState<BannerForm>({
     title: '',
     imageFile: null,
@@ -83,6 +87,7 @@ const AdminBanners: React.FC = () => {
     }
     if (user && isAdmin) {
       fetchBanners();
+      fetchComingSoonBanners();
     }
   }, [user, isAdmin, roleLoading, navigate]);
 
@@ -108,6 +113,61 @@ const AdminBanners: React.FC = () => {
       toast.error('Chyba při načítání bannerů');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchComingSoonBanners = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('coming_soon_banners')
+        .select('id, image_url, title')
+        .order('created_at', { ascending: true })
+        .limit(3);
+
+      if (error) throw error;
+      setComingSoonBanners(data || []);
+    } catch (error: any) {
+      console.error('Error fetching coming soon banners:', error);
+    }
+  };
+
+  const handleComingSoonUpload = async (slotIndex: number, file: File) => {
+    try {
+      setComingSoonUploading({ ...comingSoonUploading, [slotIndex]: true });
+      
+      // Upload image
+      const imageUrl = await uploadImage(file, 'banner-images');
+      
+      // Check if we already have a banner for this slot
+      const existingBanner = comingSoonBanners[slotIndex];
+      
+      if (existingBanner) {
+        // Update existing record
+        const { error } = await supabase
+          .from('coming_soon_banners')
+          .update({ image_url: imageUrl })
+          .eq('id', existingBanner.id);
+        
+        if (error) throw error;
+      } else {
+        // Insert new record
+        const { error } = await supabase
+          .from('coming_soon_banners')
+          .insert({
+            image_url: imageUrl,
+            title: `Připravujeme ${slotIndex + 1}`
+          });
+        
+        if (error) throw error;
+      }
+      
+      toast.success(`Banner ${slotIndex + 1} byl úspěšně nahrán`);
+      fetchComingSoonBanners();
+    } catch (error: any) {
+      console.error('Error uploading coming soon banner:', error);
+      toast.error('Chyba při nahrávání banneru');
+    } finally {
+      setComingSoonUploading({ ...comingSoonUploading, [slotIndex]: false });
     }
   };
 
@@ -623,6 +683,67 @@ const AdminBanners: React.FC = () => {
             >
               {videoSaveLoading ? 'Ukládá se...' : 'Uložit nastavení videa'}
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Coming Soon Banners */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ImageIcon className="h-5 w-5" />
+              Připravujeme (3 bannery)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Nahrajte 3 obrázky, které se zobrazí v sekci "Připravujeme" na úvodní stránce
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[0, 1, 2].map((slotIndex) => {
+                const banner = comingSoonBanners[slotIndex];
+                const isUploading = comingSoonUploading[slotIndex];
+                
+                return (
+                  <div key={slotIndex} className="space-y-2">
+                    <Label htmlFor={`coming-soon-${slotIndex}`}>
+                      Připravujeme {slotIndex + 1}
+                    </Label>
+                    
+                    {banner?.image_url && (
+                      <div className="relative aspect-video rounded-lg overflow-hidden border">
+                        <img 
+                          src={banner.image_url} 
+                          alt={`Připravujeme ${slotIndex + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id={`coming-soon-${slotIndex}`}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleComingSoonUpload(slotIndex, file);
+                        }}
+                        disabled={isUploading}
+                        className="flex-1"
+                      />
+                      <Upload className={cn(
+                        "h-4 w-4",
+                        isUploading ? "animate-pulse text-primary" : "text-muted-foreground"
+                      )} />
+                    </div>
+                    
+                    {isUploading && (
+                      <p className="text-xs text-primary">Nahrává se...</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
 
