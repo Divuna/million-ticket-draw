@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useHomepageVouchers } from '@/hooks/useHomepageVouchers';
@@ -14,14 +14,53 @@ import { Gift, Copy, Heart, Ticket } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+const FAVORITES_STORAGE_KEY = 'voucher_favorites';
+
 const Vouchers: React.FC = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const { vouchers: availableVouchers, loading: availableLoading, getRemainingCount, isVoucherAvailable, refetch: refetchAvailable } = useHomepageVouchers();
   const { vouchers: userVouchers, loading: userVouchersLoading, refetch: refetchUserVouchers } = useUserVouchers();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
+  const [purchasingCharityId, setPurchasingCharityId] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
-  const handleVoucherPurchase = async (voucherId: string) => {
+  // Load favorites from localStorage on mount
+  useEffect(() => {
+    if (user) {
+      const stored = localStorage.getItem(`${FAVORITES_STORAGE_KEY}_${user.id}`);
+      if (stored) {
+        setFavorites(JSON.parse(stored));
+      }
+    }
+  }, [user]);
+
+  const toggleFavorite = (voucherId: string) => {
+    if (!user) {
+      toast.error("Pro přidání do oblíbených se musíte přihlásit");
+      return;
+    }
+    
+    setFavorites(prev => {
+      const newFavorites = prev.includes(voucherId)
+        ? prev.filter(id => id !== voucherId)
+        : [...prev, voucherId];
+      
+      localStorage.setItem(`${FAVORITES_STORAGE_KEY}_${user.id}`, JSON.stringify(newFavorites));
+      
+      if (newFavorites.includes(voucherId)) {
+        toast.success("Voucher přidán do oblíbených");
+      } else {
+        toast.success("Voucher odebrán z oblíbených");
+      }
+      
+      return newFavorites;
+    });
+  };
+
+  const isFavorite = (voucherId: string) => favorites.includes(voucherId);
+
+  const handleVoucherPurchase = async (voucherId: string, price: number = 1, isCharity: boolean = false) => {
     if (!user) {
       toast.error("Pro koupi voucheru se musíte přihlásit");
       return;
@@ -31,7 +70,11 @@ const Vouchers: React.FC = () => {
       return;
     }
 
-    setPurchasingId(voucherId);
+    if (isCharity) {
+      setPurchasingCharityId(voucherId);
+    } else {
+      setPurchasingId(voucherId);
+    }
 
     try {
       // Check user's wallet balance
@@ -43,8 +86,8 @@ const Vouchers: React.FC = () => {
 
       if (walletError) throw walletError;
 
-      if (!walletData || walletData.balance_coins < 1) {
-        toast.error("Nemáte dostatek MioCoinů. Potřebujete alespoň 1 MioCoin.");
+      if (!walletData || walletData.balance_coins < price) {
+        toast.error(`Nemáte dostatek MioCoinů. Potřebujete alespoň ${price} MioCoin${price > 1 ? 'ů' : ''}.`);
         return;
       }
 
@@ -61,7 +104,7 @@ const Vouchers: React.FC = () => {
         return;
       }
 
-      // Purchase voucher: create user_vouchers record and deduct 1 MC
+      // Purchase voucher: create user_vouchers record and deduct coins
       const { error: purchaseError } = await supabase
         .from('user_vouchers')
         .insert({
@@ -78,15 +121,15 @@ const Vouchers: React.FC = () => {
         throw purchaseError;
       }
 
-      // Deduct 1 MioCoin from wallet
+      // Deduct MioCoins from wallet
       const { error: updateError } = await supabase
         .from('wallets')
-        .update({ balance_coins: walletData.balance_coins - 1 })
+        .update({ balance_coins: walletData.balance_coins - price })
         .eq('user_id', user.id);
 
       if (updateError) throw updateError;
 
-      toast.success("Voucher úspěšně zakoupen za 1 MioCoin!");
+      toast.success(`Voucher úspěšně zakoupen za ${price} MioCoin${price > 1 ? 'ů' : ''}!`);
       refetchUserVouchers();
       refetchAvailable();
     } catch (error) {
@@ -94,6 +137,7 @@ const Vouchers: React.FC = () => {
       toast.error("Nepodařilo se zakoupit voucher");
     } finally {
       setPurchasingId(null);
+      setPurchasingCharityId(null);
     }
   };
 
@@ -176,9 +220,22 @@ const Vouchers: React.FC = () => {
                   const remaining = getRemainingCount(voucher);
                   const isAvailable = isVoucherAvailable(voucher);
                   const isPurchasing = purchasingId === voucher.id;
+                  const isPurchasingCharity = purchasingCharityId === voucher.id;
+                  const favorited = isFavorite(voucher.id);
 
                   return (
                     <Card key={voucher.id} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30 shadow-md hover:shadow-lg transition-all duration-300">
+                      {/* Favorite heart button */}
+                      <button
+                        onClick={() => toggleFavorite(voucher.id)}
+                        className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors"
+                        aria-label={favorited ? "Odebrat z oblíbených" : "Přidat do oblíbených"}
+                      >
+                        <Heart 
+                          className={`w-5 h-5 transition-colors ${favorited ? 'fill-red-500 text-red-500' : 'text-muted-foreground hover:text-red-500'}`} 
+                        />
+                      </button>
+
                       {voucher.banner_url && (
                         <img
                           src={voucher.banner_url}
@@ -219,12 +276,27 @@ const Vouchers: React.FC = () => {
                         </div>
 
                         <Button
-                          onClick={() => handleVoucherPurchase(voucher.id)}
-                          disabled={!isAvailable || isPurchasing || isAdmin}
+                          onClick={() => handleVoucherPurchase(voucher.id, 1, false)}
+                          disabled={!isAvailable || isPurchasing || isPurchasingCharity || isAdmin}
                           className="w-full h-11 text-base font-semibold"
                         >
                           {isPurchasing ? "Kupuji..." : "KOUPIT VOUCHER"}
                         </Button>
+
+                        {/* 5 MC charity purchase button */}
+                        <div className="space-y-1">
+                          <Button
+                            onClick={() => handleVoucherPurchase(voucher.id, 5, true)}
+                            disabled={!isAvailable || isPurchasing || isPurchasingCharity || isAdmin}
+                            variant="secondary"
+                            className="w-full h-11 text-base font-semibold"
+                          >
+                            {isPurchasingCharity ? "Kupuji..." : "Koupit za 5 MioCoinů"}
+                          </Button>
+                          <p className="text-xs text-center text-muted-foreground">
+                            50 % z částky jde na pomoc potřebným.
+                          </p>
+                        </div>
                       </CardContent>
                     </Card>
                   );
