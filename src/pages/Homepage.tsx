@@ -241,6 +241,15 @@ const Homepage = () => {
 
     if (topUpLoading) return; // Prevent double-clicks
 
+    // Ensure clean numbers
+    const cleanPrice = Number(priceInCzk);
+    const cleanCoins = Number(totalCoins);
+
+    if (isNaN(cleanPrice) || cleanPrice < 50) {
+      toast.error("Neplatná částka");
+      return;
+    }
+
     setTopUpLoading(true);
 
     try {
@@ -255,10 +264,12 @@ const Homepage = () => {
         return;
       }
       
+      console.log("Sending to Stripe:", { priceInCzk: cleanPrice, totalCoins: cleanCoins });
+      
       const { data, error } = await supabase.functions.invoke("create-stripe-checkout", {
         body: { 
-          priceInCzk,
-          totalCoins
+          priceInCzk: cleanPrice,
+          totalCoins: cleanCoins
         },
       });
 
