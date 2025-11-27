@@ -38,22 +38,34 @@ serve(async (req) => {
 
     console.log('Creating checkout for user:', user.id)
 
-    const body = await req.json()
-    console.log('Received body:', JSON.stringify(body))
+    // Parse body with error handling
+    let body: { priceInCzk?: unknown; totalCoins?: unknown } = {}
+    try {
+      const rawBody = await req.text()
+      console.log('Raw body received:', rawBody)
+      if (rawBody && rawBody.trim()) {
+        body = JSON.parse(rawBody)
+      }
+    } catch (parseError) {
+      console.error('Body parse error:', parseError)
+      throw new Error('Invalid JSON body')
+    }
+    
+    console.log('Parsed body:', JSON.stringify(body))
     
     // Extract and convert to clean numbers
     const priceInCzk = Number(body.priceInCzk)
     const totalCoins = Number(body.totalCoins)
     
-    console.log('Parsed values:', { priceInCzk, totalCoins })
+    console.log('Values after Number():', { priceInCzk, totalCoins })
 
     // Validate inputs
-    if (isNaN(priceInCzk) || priceInCzk < 50) {
-      throw new Error(`Minimum price is 50 CZK. Received: ${body.priceInCzk} (type: ${typeof body.priceInCzk})`)
+    if (!body.priceInCzk || isNaN(priceInCzk) || priceInCzk < 50) {
+      throw new Error(`Minimum price is 50 CZK. Raw: ${body.priceInCzk}, Parsed: ${priceInCzk}`)
     }
 
-    if (isNaN(totalCoins) || totalCoins < 50) {
-      throw new Error(`Minimum coins is 50. Received: ${body.totalCoins} (type: ${typeof body.totalCoins})`)
+    if (!body.totalCoins || isNaN(totalCoins) || totalCoins < 50) {
+      throw new Error(`Minimum coins is 50. Raw: ${body.totalCoins}, Parsed: ${totalCoins}`)
     }
 
     // Get user email
