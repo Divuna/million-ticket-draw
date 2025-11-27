@@ -723,7 +723,17 @@ const Homepage = () => {
               Dostupné vouchery
             </h3>
             <div className="flex items-center gap-2">
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              {user && !isAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/vouchers")}
+                  className="text-xs"
+                >
+                  Moje vouchery
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              )}
               {isAdmin && (
                 <div className="px-2 py-1 bg-amber-100/10 border border-amber-400/30 rounded text-xs text-amber-400">
                   Pouze čtení
