@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useHomepageVouchers } from '@/hooks/useHomepageVouchers';
@@ -14,53 +14,64 @@ import { Gift, Copy, Heart, Ticket } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-const FAVORITES_STORAGE_KEY = 'voucher_favorites';
-
 const Vouchers: React.FC = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const { vouchers: availableVouchers, loading: availableLoading, getRemainingCount, isVoucherAvailable, refetch: refetchAvailable } = useHomepageVouchers();
   const { vouchers: userVouchers, loading: userVouchersLoading, refetch: refetchUserVouchers } = useUserVouchers();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
-  const [purchasingCharityId, setPurchasingCharityId] = useState<string | null>(null);
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
 
-  // Load favorites from localStorage on mount
-  useEffect(() => {
-    if (user) {
-      const stored = localStorage.getItem(`${FAVORITES_STORAGE_KEY}_${user.id}`);
-      if (stored) {
-        setFavorites(JSON.parse(stored));
-      }
-    }
-  }, [user]);
+  // Check if voucher is in user's collection (DB-based)
+  const isInUserVouchers = (voucherId: string) => {
+    return userVouchers.some(uv => uv.voucher_id === voucherId);
+  };
 
-  const toggleFavorite = (voucherId: string) => {
+  const toggleFavorite = async (voucherId: string) => {
     if (!user) {
       toast.error("Pro přidání do oblíbených se musíte přihlásit");
       return;
     }
-    
-    setFavorites(prev => {
-      const newFavorites = prev.includes(voucherId)
-        ? prev.filter(id => id !== voucherId)
-        : [...prev, voucherId];
-      
-      localStorage.setItem(`${FAVORITES_STORAGE_KEY}_${user.id}`, JSON.stringify(newFavorites));
-      
-      if (newFavorites.includes(voucherId)) {
-        toast.success("Voucher přidán do oblíbených");
-      } else {
+
+    setTogglingFavoriteId(voucherId);
+
+    try {
+      const existingRecord = userVouchers.find(uv => uv.voucher_id === voucherId);
+
+      if (existingRecord) {
+        // Remove from favorites (delete record)
+        const { error } = await supabase
+          .from('user_vouchers')
+          .delete()
+          .eq('id', existingRecord.id);
+
+        if (error) throw error;
         toast.success("Voucher odebrán z oblíbených");
+      } else {
+        // Add to favorites (insert record)
+        const { error } = await supabase
+          .from('user_vouchers')
+          .insert({
+            user_id: user.id,
+            voucher_id: voucherId,
+            redeemed: false
+          });
+
+        if (error) throw error;
+        toast.success("Voucher přidán do oblíbených");
       }
-      
-      return newFavorites;
-    });
+
+      refetchUserVouchers();
+      refetchAvailable();
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      toast.error("Nepodařilo se změnit oblíbené");
+    } finally {
+      setTogglingFavoriteId(null);
+    }
   };
 
-  const isFavorite = (voucherId: string) => favorites.includes(voucherId);
-
-  const handleVoucherPurchase = async (voucherId: string, price: number = 1, isCharity: boolean = false) => {
+  const handleVoucherPurchase = async (voucherId: string) => {
     if (!user) {
       toast.error("Pro koupi voucheru se musíte přihlásit");
       return;
@@ -70,13 +81,11 @@ const Vouchers: React.FC = () => {
       return;
     }
 
-    if (isCharity) {
-      setPurchasingCharityId(voucherId);
-    } else {
-      setPurchasingId(voucherId);
-    }
+    setPurchasingId(voucherId);
 
     try {
+      const price = 5;
+
       // Check user's wallet balance
       const { data: walletData, error: walletError } = await supabase
         .from('wallets')
@@ -87,38 +96,30 @@ const Vouchers: React.FC = () => {
       if (walletError) throw walletError;
 
       if (!walletData || walletData.balance_coins < price) {
-        toast.error(`Nemáte dostatek MioCoinů. Potřebujete alespoň ${price} MioCoin${price > 1 ? 'ů' : ''}.`);
+        toast.error(`Nemáte dostatek MioCoinů. Potřebujete alespoň ${price} MioCoinů.`);
         return;
       }
 
-      // Check if already purchased
-      const { data: existingPurchase } = await supabase
-        .from('user_vouchers')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('voucher_id', voucherId)
-        .maybeSingle();
+      // Check if already in user_vouchers (favorited or purchased)
+      const existingRecord = userVouchers.find(uv => uv.voucher_id === voucherId);
 
-      if (existingPurchase) {
-        toast.error("Tento voucher jste již zakoupili");
-        return;
-      }
+      if (!existingRecord) {
+        // Create user_vouchers record
+        const { error: purchaseError } = await supabase
+          .from('user_vouchers')
+          .insert({
+            user_id: user.id,
+            voucher_id: voucherId,
+            redeemed: false
+          });
 
-      // Purchase voucher: create user_vouchers record and deduct coins
-      const { error: purchaseError } = await supabase
-        .from('user_vouchers')
-        .insert({
-          user_id: user.id,
-          voucher_id: voucherId,
-          redeemed: false
-        });
-
-      if (purchaseError) {
-        if (purchaseError.code === '23505') {
-          toast.error("Tento voucher jste již zakoupili");
-          return;
+        if (purchaseError) {
+          if (purchaseError.code === '23505') {
+            toast.error("Tento voucher jste již zakoupili");
+            return;
+          }
+          throw purchaseError;
         }
-        throw purchaseError;
       }
 
       // Deduct MioCoins from wallet
@@ -129,7 +130,7 @@ const Vouchers: React.FC = () => {
 
       if (updateError) throw updateError;
 
-      toast.success(`Voucher úspěšně zakoupen za ${price} MioCoin${price > 1 ? 'ů' : ''}!`);
+      toast.success(`Voucher úspěšně zakoupen za ${price} MioCoinů!`);
       refetchUserVouchers();
       refetchAvailable();
     } catch (error) {
@@ -137,7 +138,6 @@ const Vouchers: React.FC = () => {
       toast.error("Nepodařilo se zakoupit voucher");
     } finally {
       setPurchasingId(null);
-      setPurchasingCharityId(null);
     }
   };
 
@@ -216,91 +216,80 @@ const Vouchers: React.FC = () => {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {availableVouchers.map((voucher) => {
-                  const remaining = getRemainingCount(voucher);
-                  const isAvailable = isVoucherAvailable(voucher);
-                  const isPurchasing = purchasingId === voucher.id;
-                  const isPurchasingCharity = purchasingCharityId === voucher.id;
-                  const favorited = isFavorite(voucher.id);
+                {availableVouchers
+                  .filter(voucher => !isInUserVouchers(voucher.id))
+                  .map((voucher) => {
+                    const remaining = getRemainingCount(voucher);
+                    const isAvailable = isVoucherAvailable(voucher);
+                    const isPurchasing = purchasingId === voucher.id;
+                    const isTogglingFavorite = togglingFavoriteId === voucher.id;
+                    const favorited = isInUserVouchers(voucher.id);
 
-                  return (
-                    <Card key={voucher.id} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30 shadow-md hover:shadow-lg transition-all duration-300">
-                      {/* Favorite heart button */}
-                      <button
-                        onClick={() => toggleFavorite(voucher.id)}
-                        className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors"
-                        aria-label={favorited ? "Odebrat z oblíbených" : "Přidat do oblíbených"}
-                      >
-                        <Heart 
-                          className={`w-5 h-5 transition-colors ${favorited ? 'fill-red-500 text-red-500' : 'text-muted-foreground hover:text-red-500'}`} 
-                        />
-                      </button>
-
-                      {voucher.banner_url && (
-                        <img
-                          src={voucher.banner_url}
-                          alt={`${voucher.name} banner`}
-                          className="w-full h-32 object-cover"
-                          loading="lazy"
-                        />
-                      )}
-                      
-                      <CardContent className="p-6 space-y-4">
-                        <div className="flex items-center gap-4">
-                          {voucher.image_url && (
-                            <div className="flex-shrink-0">
-                              <img
-                                src={voucher.image_url}
-                                alt={voucher.name}
-                                className="w-14 h-14 object-cover rounded-lg border border-border"
-                                loading="lazy"
-                              />
-                            </div>
-                          )}
-                          <div className="flex-1">
-                            <h3 className="text-lg font-bold text-foreground">{voucher.name}</h3>
-                            {!isAvailable && (
-                              <Badge variant="destructive" className="mt-1">Nedostupný</Badge>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between py-2 px-3 bg-muted/30 rounded-lg">
-                          <span className="text-sm text-muted-foreground">Zbývá:</span>
-                          <span className="font-bold text-primary">{remaining}</span>
-                        </div>
-
-                        <div className="flex items-center justify-between py-2 px-3 bg-primary/10 rounded-lg">
-                          <span className="text-sm text-muted-foreground">Cena:</span>
-                          <span className="font-bold text-primary">1 MioCoin</span>
-                        </div>
-
-                        <Button
-                          onClick={() => handleVoucherPurchase(voucher.id, 1, false)}
-                          disabled={!isAvailable || isPurchasing || isPurchasingCharity || isAdmin}
-                          className="w-full h-11 text-base font-semibold"
+                    return (
+                      <Card key={voucher.id} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30 shadow-md hover:shadow-lg transition-all duration-300">
+                        {/* Favorite heart button */}
+                        <button
+                          onClick={() => toggleFavorite(voucher.id)}
+                          disabled={isTogglingFavorite}
+                          className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors disabled:opacity-50"
+                          aria-label={favorited ? "Odebrat z oblíbených" : "Přidat do oblíbených"}
                         >
-                          {isPurchasing ? "Kupuji..." : "KOUPIT VOUCHER"}
-                        </Button>
+                          <Heart 
+                            className={`w-5 h-5 transition-colors ${favorited ? 'fill-red-500 text-red-500' : 'text-muted-foreground hover:text-red-500'}`} 
+                          />
+                        </button>
 
-                        {/* 5 MC charity purchase button */}
-                        <div className="space-y-1">
-                          <Button
-                            onClick={() => handleVoucherPurchase(voucher.id, 5, true)}
-                            disabled={!isAvailable || isPurchasing || isPurchasingCharity || isAdmin}
-                            variant="secondary"
-                            className="w-full h-11 text-base font-semibold"
-                          >
-                            {isPurchasingCharity ? "Kupuji..." : "Koupit za 5 MioCoinů"}
-                          </Button>
-                          <p className="text-xs text-center text-muted-foreground">
-                            50 % z částky jde na pomoc potřebným.
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                        {voucher.banner_url && (
+                          <img
+                            src={voucher.banner_url}
+                            alt={`${voucher.name} banner`}
+                            className="w-full h-32 object-cover"
+                            loading="lazy"
+                          />
+                        )}
+                        
+                        <CardContent className="p-6 space-y-4">
+                          <div className="flex items-center gap-4">
+                            {voucher.image_url && (
+                              <div className="flex-shrink-0">
+                                <img
+                                  src={voucher.image_url}
+                                  alt={voucher.name}
+                                  className="w-14 h-14 object-cover rounded-lg border border-border"
+                                  loading="lazy"
+                                />
+                              </div>
+                            )}
+                            <div className="flex-1">
+                              <h3 className="text-lg font-bold text-foreground">{voucher.name}</h3>
+                              {!isAvailable && (
+                                <Badge variant="destructive" className="mt-1">Nedostupný</Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between py-2 px-3 bg-muted/30 rounded-lg">
+                            <span className="text-sm text-muted-foreground">Zbývá:</span>
+                            <span className="font-bold text-primary">{remaining}</span>
+                          </div>
+
+                          {/* 5 MC charity purchase button */}
+                          <div className="space-y-1">
+                            <Button
+                              onClick={() => handleVoucherPurchase(voucher.id)}
+                              disabled={!isAvailable || isPurchasing || isAdmin}
+                              className="w-full h-11 text-base font-semibold"
+                            >
+                              {isPurchasing ? "Kupuji..." : "Koupit za 5 MioCoinů"}
+                            </Button>
+                            <p className="text-xs text-center text-muted-foreground">
+                              50 % z částky jde na pomoc potřebným.
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
               </div>
             )}
           </TabsContent>
