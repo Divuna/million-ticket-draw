@@ -38,15 +38,22 @@ serve(async (req) => {
 
     console.log('Creating checkout for user:', user.id)
 
-    const { priceInCzk, totalCoins } = await req.json()
+    const body = await req.json()
+    console.log('Received body:', JSON.stringify(body))
+    
+    // Extract and convert to clean numbers
+    const priceInCzk = Number(body.priceInCzk)
+    const totalCoins = Number(body.totalCoins)
+    
+    console.log('Parsed values:', { priceInCzk, totalCoins })
 
     // Validate inputs
-    if (!priceInCzk || priceInCzk < 50) {
-      throw new Error('Minimum price is 50 CZK')
+    if (isNaN(priceInCzk) || priceInCzk < 50) {
+      throw new Error(`Minimum price is 50 CZK. Received: ${body.priceInCzk} (type: ${typeof body.priceInCzk})`)
     }
 
-    if (!totalCoins || totalCoins < 50) {
-      throw new Error('Minimum coins is 50')
+    if (isNaN(totalCoins) || totalCoins < 50) {
+      throw new Error(`Minimum coins is 50. Received: ${body.totalCoins} (type: ${typeof body.totalCoins})`)
     }
 
     // Get user email
