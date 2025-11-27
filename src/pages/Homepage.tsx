@@ -10,7 +10,7 @@ import { AdminMenu } from "@/components/AdminMenu";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAuth } from "@/hooks/useAuth";
 import { useHomepageVouchers } from "@/hooks/useHomepageVouchers";
-import { useUserVouchers } from "@/hooks/useUserVouchers";
+
 import { useMegajackpotBanners } from "@/hooks/useMegajackpotBanners";
 import { useHomepageBanners } from "@/hooks/useHomepageBanners";
 import { usePartners } from "@/hooks/usePartners";
@@ -19,7 +19,7 @@ import { useLatestWinners } from "@/hooks/useLatestWinners";
 import { useComingSoonBanners } from "@/hooks/useComingSoonBanners";
 import { WinnerCard } from "@/components/WinnerCard";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
-import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, Copy } from "lucide-react";
+import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 interface Contest {
@@ -38,7 +38,7 @@ const Homepage = () => {
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
   const { vouchers: homepageVouchers, loading: vouchersLoading, getRemainingCount } = useHomepageVouchers();
-  const { vouchers: userVouchers, loading: userVouchersLoading, refetch: refetchUserVouchers } = useUserVouchers();
+  
   const { banners: megajackpotBanners, loading: bannersLoading } = useMegajackpotBanners();
   const { voucherBanner, gamesBanner, loading: homepageBannersLoading } = useHomepageBanners();
   const { partners, loading: partnersLoading } = usePartners();
@@ -218,16 +218,10 @@ const Homepage = () => {
       if (updateError) throw updateError;
 
       toast.success("Voucher úspěšně zakoupen za 1 MioCoin!");
-      refetchUserVouchers();
     } catch (error) {
       console.error("Error purchasing voucher:", error);
       toast.error("Nepodařilo se zakoupit voucher");
     }
-  };
-
-  const handleCopyVoucherCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast.success("Kód voucheru zkopírován do schránky!");
   };
 
   const [topUpLoading, setTopUpLoading] = useState(false);
@@ -842,90 +836,6 @@ const Homepage = () => {
           </div>
         </section>
 
-        {/* My Vouchers Section - Only for logged in users */}
-        {user && !isAdmin && (
-          <section className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-bold text-primary flex items-center gap-2">
-                <Gift className="w-6 h-6" />
-                Moje vouchery
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-              {userVouchersLoading ? (
-                // Loading placeholder
-                Array.from({ length: 3 }).map((_, index) => (
-                  <Card key={index} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40">
-                    <CardContent className="p-6 space-y-4">
-                      <div className="h-6 bg-muted rounded animate-pulse mb-2" />
-                      <div className="h-4 bg-muted/70 rounded animate-pulse w-24" />
-                      <div className="h-12 bg-muted rounded animate-pulse mb-4" />
-                      <div className="h-10 bg-muted/80 rounded animate-pulse" />
-                    </CardContent>
-                  </Card>
-                ))
-              ) : userVouchers.length === 0 ? (
-                // No user vouchers message
-                <div className="col-span-full">
-                  <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40">
-                    <CardContent className="p-8 space-y-2 text-center">
-                      <Gift className="w-12 h-12 mx-auto text-muted-foreground/50" />
-                      <h3 className="text-xl font-bold text-primary">Zatím nemáte žádné vouchery</h3>
-                      <div className="text-sm text-muted-foreground">
-                        Zakupte si voucher výše, abyste mohli získat bonusové MioCoiny
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              ) : (
-                userVouchers.map((userVoucher) => (
-                  <Card key={userVoucher.id} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30">
-                    <CardContent className="p-6 space-y-4">
-                      {/* Voucher image */}
-                      <div className="aspect-video rounded-lg overflow-hidden bg-muted/40">
-                        {userVoucher.voucher.image_url ? (
-                          <img
-                            src={userVoucher.voucher.image_url}
-                            alt={userVoucher.voucher.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Gift className="w-12 h-12 text-muted-foreground/50" />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Voucher info */}
-                      <div className="space-y-2">
-                        <h4 className="font-bold text-lg text-foreground">{userVoucher.voucher.name}</h4>
-                        <div className="text-sm text-muted-foreground">
-                          Aktivován: {new Date(userVoucher.created_at).toLocaleDateString('cs-CZ')}
-                        </div>
-                        
-                        {/* Voucher code */}
-                        <div className="bg-background/80 rounded-lg p-3 space-y-2">
-                          <div className="text-xs text-muted-foreground">Váš kód:</div>
-                          <div className="font-mono font-bold text-lg text-primary">{userVoucher.code}</div>
-                        </div>
-
-                        {/* Copy button */}
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => handleCopyVoucherCode(userVoucher.code)}
-                        >
-                          Zkopírovat kód
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </section>
-        )}
 
         {/* Partners Section */}
         <section className="space-y-6">
