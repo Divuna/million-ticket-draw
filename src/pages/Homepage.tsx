@@ -331,8 +331,8 @@ const Homepage = () => {
         <section className="w-full overflow-x-hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Left Column - Dobijte si MioCoiny */}
           <Card className="rounded-2xl overflow-hidden bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-primary/10 transition-all duration-300 h-full">
-            <CardContent className="p-4 sm:p-5 md:p-6 h-full flex flex-col">
-              <div className="space-y-4 flex-1 flex flex-col">
+            <CardContent className="p-3 sm:p-3 md:p-4 h-full flex flex-col">
+              <div className="space-y-2 flex-1 flex flex-col">
                 <div className="space-y-2">
                   <h2 className="text-xl md:text-2xl font-bold text-primary flex items-center gap-2">
                     <Gift className="w-6 h-6 md:w-7 md:h-7" />
@@ -342,9 +342,9 @@ const Homepage = () => {
                 </div>
 
                 {/* Coin Packages Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 flex-1">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 flex-1">
                   {/* Package 50 */}
-                  <div className="rounded-xl p-3 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 flex flex-col items-center justify-between">
+                  <div className="rounded-xl p-2 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 flex flex-col items-center justify-between">
                     <div className="text-center">
                       <div className="text-4xl font-bold text-blue-500">50</div>
                       <div className="text-sm text-muted-foreground mt-1">MioCoinů</div>
@@ -359,7 +359,7 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 300 +10 Bonus */}
-                  <div className="rounded-xl p-3 bg-gradient-to-br from-yellow-500/10 to-cyan-500/10 border border-yellow-500/20 flex flex-col items-center justify-between relative">
+                  <div className="rounded-xl p-2 bg-gradient-to-br from-yellow-500/10 to-cyan-500/10 border border-yellow-500/20 flex flex-col items-center justify-between relative">
                     <Badge className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs">+10 Bonus</Badge>
                     <div className="text-center">
                       <div className="text-4xl font-bold text-yellow-500">300</div>
@@ -376,7 +376,7 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 500 +25 Bonus */}
-                  <div className="rounded-xl p-3 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex flex-col items-center justify-between relative">
+                  <div className="rounded-xl p-2 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex flex-col items-center justify-between relative">
                     <Badge className="absolute -top-2 -right-2 bg-purple-500 text-white text-xs">+25 Bonus</Badge>
                     <div className="text-center">
                       <div className="text-4xl font-bold text-purple-500">500</div>
@@ -393,7 +393,7 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 1200 +80 Bonus */}
-                  <div className="rounded-xl p-3 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 flex flex-col items-center justify-between relative">
+                  <div className="rounded-xl p-2 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 flex flex-col items-center justify-between relative">
                     <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-xs">+80 Bonus</Badge>
                     <div className="text-center">
                       <div className="text-4xl font-bold text-green-500">1200</div>
@@ -411,10 +411,10 @@ const Homepage = () => {
                 </div>
 
                 {/* Two Boxes Below */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                   {/* Box 1: Probíhající soutěže */}
                   <div 
-                    className="rounded-xl p-3 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 cursor-pointer hover:scale-105 transition-transform duration-200 flex flex-col items-center justify-center text-center"
+                    className="rounded-xl p-2 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 cursor-pointer hover:scale-105 transition-transform duration-200 flex flex-col items-center justify-center text-center"
                     onClick={() => navigate("/games")}
                   >
                     <Trophy className="w-8 h-8 text-amber-500 mb-2" />
@@ -423,7 +423,7 @@ const Homepage = () => {
 
                   {/* Box 2: Koupit voucher se slevou */}
                   <div 
-                    className="rounded-xl p-3 bg-gradient-to-br from-pink-500/10 to-rose-500/10 border border-pink-500/20 cursor-pointer hover:scale-105 transition-transform duration-200 flex flex-col items-center justify-center text-center"
+                    className="rounded-xl p-2 bg-gradient-to-br from-pink-500/10 to-rose-500/10 border border-pink-500/20 cursor-pointer hover:scale-105 transition-transform duration-200 flex flex-col items-center justify-center text-center"
                     onClick={() => navigate("/vouchers")}
                   >
                     <Gift className="w-8 h-8 text-pink-500 mb-2" />
@@ -436,8 +436,8 @@ const Homepage = () => {
 
           {/* Right Column - Poslední výherci */}
           <Card className="rounded-2xl overflow-hidden bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-primary/10 transition-all duration-300 h-full">
-            <CardContent className="p-4 sm:p-5 md:p-6 h-full flex flex-col">
-              <div className="space-y-4 flex-1 flex flex-col">
+            <CardContent className="p-3 sm:p-3 md:p-4 h-full flex flex-col">
+              <div className="space-y-2 flex-1 flex flex-col">
                 <div className="space-y-2">
                   <h2 className="text-xl md:text-2xl font-bold text-primary flex items-center gap-2">
                     <Trophy className="w-6 h-6 md:w-7 md:h-7" />
@@ -446,7 +446,7 @@ const Homepage = () => {
                   <p className="text-base text-muted-foreground">Nejnovější výhry z našich soutěží</p>
                 </div>
 
-                <div className="space-y-4 flex-1 overflow-y-auto">
+                <div className="space-y-2 flex-1 overflow-y-auto">
                   {winnersLoading ? (
                     // Loading placeholders
                     Array.from({ length: 3 }).map((_, index) => (
@@ -816,7 +816,7 @@ const Homepage = () => {
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
               {userVouchersLoading ? (
                 // Loading placeholder
                 Array.from({ length: 3 }).map((_, index) => (
