@@ -344,14 +344,12 @@ const Homepage = () => {
                 {/* Coin Packages Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 flex-1">
                   {/* Package 50 */}
-                  <div className="rounded-xl py-1.5 px-2 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 flex flex-col items-center justify-between">
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-blue-500">50</div>
-                      <div className="text-sm text-muted-foreground">MioCoinů</div>
-                    </div>
+                  <div className="rounded-xl py-2 px-2 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 flex flex-col items-center gap-1">
+                    <div className="text-2xl font-bold text-blue-500">50</div>
+                    <div className="text-xs text-muted-foreground">MioCoinů</div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-blue-600 hover:bg-blue-700"
+                      className="w-full h-7 text-xs bg-blue-600 hover:bg-blue-700"
                       onClick={() => handleCoinPurchase(50, 0)}
                     >
                       Dobít
@@ -359,16 +357,14 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 300 +10 Bonus */}
-                  <div className="rounded-xl py-1.5 px-2 bg-gradient-to-br from-yellow-500/10 to-cyan-500/10 border border-yellow-500/20 flex flex-col items-center justify-between relative">
+                  <div className="rounded-xl py-2 px-2 bg-gradient-to-br from-yellow-500/10 to-cyan-500/10 border border-yellow-500/20 flex flex-col items-center gap-1 relative">
                     <Badge className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs">+10 Bonus</Badge>
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-yellow-500">300</div>
-                      <div className="text-sm text-muted-foreground">MioCoinů</div>
-                      <div className="text-xs text-muted-foreground">299 Kč</div>
-                    </div>
+                    <div className="text-2xl font-bold text-yellow-500">300</div>
+                    <div className="text-xs text-muted-foreground">MioCoinů</div>
+                    <div className="text-xs text-muted-foreground">299 Kč</div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-yellow-600 hover:bg-yellow-700"
+                      className="w-full h-7 text-xs bg-yellow-600 hover:bg-yellow-700"
                       onClick={() => handleCoinPurchase(300, 10)}
                     >
                       Dobít
@@ -376,16 +372,14 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 500 +25 Bonus */}
-                  <div className="rounded-xl py-1.5 px-2 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex flex-col items-center justify-between relative">
+                  <div className="rounded-xl py-2 px-2 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex flex-col items-center gap-1 relative">
                     <Badge className="absolute -top-2 -right-2 bg-purple-500 text-white text-xs">+25 Bonus</Badge>
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-purple-500">500</div>
-                      <div className="text-sm text-muted-foreground">MioCoinů</div>
-                      <div className="text-xs text-muted-foreground">499 Kč</div>
-                    </div>
+                    <div className="text-2xl font-bold text-purple-500">500</div>
+                    <div className="text-xs text-muted-foreground">MioCoinů</div>
+                    <div className="text-xs text-muted-foreground">499 Kč</div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-purple-600 hover:bg-purple-700"
+                      className="w-full h-7 text-xs bg-purple-600 hover:bg-purple-700"
                       onClick={() => handleCoinPurchase(500, 25)}
                     >
                       Dobít
@@ -393,16 +387,14 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 1200 +80 Bonus */}
-                  <div className="rounded-xl py-1.5 px-2 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 flex flex-col items-center justify-between relative">
+                  <div className="rounded-xl py-2 px-2 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 flex flex-col items-center gap-1 relative">
                     <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-xs">+80 Bonus</Badge>
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-green-500">1200</div>
-                      <div className="text-sm text-muted-foreground">MioCoinů</div>
-                      <div className="text-xs text-muted-foreground">999 Kč</div>
-                    </div>
+                    <div className="text-2xl font-bold text-green-500">1200</div>
+                    <div className="text-xs text-muted-foreground">MioCoinů</div>
+                    <div className="text-xs text-muted-foreground">999 Kč</div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-green-600 hover:bg-green-700"
+                      className="w-full h-7 text-xs bg-green-600 hover:bg-green-700"
                       onClick={() => handleCoinPurchase(1200, 80)}
                     >
                       Dobít
