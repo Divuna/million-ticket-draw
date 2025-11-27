@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import type { Database } from '../_shared/database.types.ts'
 import Stripe from 'https://esm.sh/stripe@14.21.0'
 
 const corsHeaders = {
@@ -24,18 +23,30 @@ serve(async (req) => {
     )
 
     // Get user from JWT
-    const authHeader = req.headers.get('Authorization')!
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      throw new Error('Missing authorization header')
+    }
+    
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user } } = await supabaseClient.auth.getUser(token)
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
 
-    if (!user) {
-      throw new Error('Unauthorized')
+    if (authError || !user) {
+      console.error('Auth error:', authError)
+      throw new Error('Unauthorized - could not verify user')
     }
 
-    const { amount } = await req.json()
+    console.log('Creating checkout for user:', user.id)
 
-    if (!amount || amount < 50) {
-      throw new Error('Minimum amount is 50 CZK')
+    const { priceInCzk, totalCoins } = await req.json()
+
+    // Validate inputs
+    if (!priceInCzk || priceInCzk < 50) {
+      throw new Error('Minimum price is 50 CZK')
+    }
+
+    if (!totalCoins || totalCoins < 50) {
+      throw new Error('Minimum coins is 50')
     }
 
     // Get user email
@@ -55,10 +66,10 @@ serve(async (req) => {
           price_data: {
             currency: 'czk',
             product_data: {
-              name: 'OneMil Vouchery',
-              description: `${amount} voucherů pro OneMil`,
+              name: 'OneMil MioCoiny',
+              description: `${totalCoins} MioCoinů pro OneMil`,
             },
-            unit_amount: amount * 100, // Stripe expects amount in smallest currency unit (haléře)
+            unit_amount: priceInCzk * 100, // Stripe expects amount in smallest currency unit (haléře)
           },
           quantity: 1,
         },
@@ -67,13 +78,14 @@ serve(async (req) => {
       customer_email: userEmail,
       metadata: {
         user_id: user.id,
-        amount: amount.toString(),
+        price_czk: priceInCzk.toString(),
+        total_coins: totalCoins.toString(),
       },
       success_url: `${req.headers.get('origin')}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get('origin')}/payment-cancel`,
     })
 
-    console.log('Stripe checkout session created:', session.id)
+    console.log('Stripe checkout session created:', session.id, 'for', totalCoins, 'coins at', priceInCzk, 'CZK')
 
     return new Response(
       JSON.stringify({ checkout_url: session.url }),

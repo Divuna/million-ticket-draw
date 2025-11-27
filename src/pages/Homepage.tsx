@@ -230,32 +230,52 @@ const Homepage = () => {
     toast.success("Kód voucheru zkopírován do schránky!");
   };
 
-  const handleCoinPurchase = async (amount: number, bonusAmount: number = 0) => {
+  const [topUpLoading, setTopUpLoading] = useState(false);
+
+  const handleCoinPurchase = async (priceInCzk: number, totalCoins: number) => {
     if (!user) {
       toast.error("Pro nákup MioCoinů se musíte přihlásit");
       navigate("/login");
       return;
     }
 
+    if (topUpLoading) return; // Prevent double-clicks
+
+    setTopUpLoading(true);
+
     try {
-      const totalCoins = amount + bonusAmount;
-      toast.loading("Otevírám platební bránu...");
+      toast.loading("Otevírám platební bránu...", { id: "topup-loading" });
+      
+      // Wait for session to be ready
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.user?.id) {
+        toast.dismiss("topup-loading");
+        toast.error("Nepodařilo se ověřit uživatele. Zkuste se znovu přihlásit.");
+        setTopUpLoading(false);
+        return;
+      }
       
       const { data, error } = await supabase.functions.invoke("create-stripe-checkout", {
-        body: { amount: totalCoins },
+        body: { 
+          priceInCzk,
+          totalCoins
+        },
       });
 
       if (error) throw error;
       
       if (data?.checkout_url) {
+        // Redirect to Stripe - page will unload
         window.location.href = data.checkout_url;
+        // Don't reset loading state as page is redirecting
       } else {
         throw new Error("Nepodařilo se získat platební odkaz");
       }
     } catch (error) {
       console.error("Error creating checkout:", error);
-      toast.dismiss();
+      toast.dismiss("topup-loading");
       toast.error("Nepodařilo se otevřít platební bránu");
+      setTopUpLoading(false);
     }
   };
 
@@ -343,69 +363,74 @@ const Homepage = () => {
 
                 {/* Coin Packages Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 flex-1">
-                  {/* Package 50 */}
+                  {/* Package 50 Kč → 50 MC */}
                   <div className="rounded-xl py-1.5 px-2 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 flex flex-col items-center justify-between">
                     <div className="text-center">
                       <div className="text-4xl font-bold text-blue-500">50</div>
                       <div className="text-sm text-muted-foreground">MioCoinů</div>
+                      <div className="text-xs text-muted-foreground">50 Kč</div>
                     </div>
                     <Button 
                       size="sm" 
                       className="w-full mt-2 bg-blue-600 hover:bg-blue-700"
-                      onClick={() => handleCoinPurchase(50, 0)}
+                      onClick={() => handleCoinPurchase(50, 50)}
+                      disabled={topUpLoading}
                     >
-                      Dobít
+                      {topUpLoading ? "..." : "Dobít"}
                     </Button>
                   </div>
 
-                  {/* Package 300 +10 Bonus */}
+                  {/* Package 300 Kč → 310 MC (+10 Bonus) */}
                   <div className="rounded-xl py-1.5 px-2 bg-gradient-to-br from-yellow-500/10 to-cyan-500/10 border border-yellow-500/20 flex flex-col items-center justify-between relative">
                     <Badge className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs">+10 Bonus</Badge>
                     <div className="text-center">
-                      <div className="text-4xl font-bold text-yellow-500">300</div>
+                      <div className="text-4xl font-bold text-yellow-500">310</div>
                       <div className="text-sm text-muted-foreground">MioCoinů</div>
-                      <div className="text-xs text-muted-foreground">299 Kč</div>
+                      <div className="text-xs text-muted-foreground">300 Kč</div>
                     </div>
                     <Button 
                       size="sm" 
                       className="w-full mt-2 bg-yellow-600 hover:bg-yellow-700"
-                      onClick={() => handleCoinPurchase(300, 10)}
+                      onClick={() => handleCoinPurchase(300, 310)}
+                      disabled={topUpLoading}
                     >
-                      Dobít
+                      {topUpLoading ? "..." : "Dobít"}
                     </Button>
                   </div>
 
-                  {/* Package 500 +25 Bonus */}
+                  {/* Package 500 Kč → 525 MC (+25 Bonus) */}
                   <div className="rounded-xl py-1.5 px-2 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex flex-col items-center justify-between relative">
                     <Badge className="absolute -top-2 -right-2 bg-purple-500 text-white text-xs">+25 Bonus</Badge>
                     <div className="text-center">
-                      <div className="text-4xl font-bold text-purple-500">500</div>
+                      <div className="text-4xl font-bold text-purple-500">525</div>
                       <div className="text-sm text-muted-foreground">MioCoinů</div>
-                      <div className="text-xs text-muted-foreground">499 Kč</div>
+                      <div className="text-xs text-muted-foreground">500 Kč</div>
                     </div>
                     <Button 
                       size="sm" 
                       className="w-full mt-2 bg-purple-600 hover:bg-purple-700"
-                      onClick={() => handleCoinPurchase(500, 25)}
+                      onClick={() => handleCoinPurchase(500, 525)}
+                      disabled={topUpLoading}
                     >
-                      Dobít
+                      {topUpLoading ? "..." : "Dobít"}
                     </Button>
                   </div>
 
-                  {/* Package 1200 +80 Bonus */}
+                  {/* Package 1200 Kč → 1280 MC (+80 Bonus) */}
                   <div className="rounded-xl py-1.5 px-2 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 flex flex-col items-center justify-between relative">
                     <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-xs">+80 Bonus</Badge>
                     <div className="text-center">
-                      <div className="text-4xl font-bold text-green-500">1200</div>
+                      <div className="text-4xl font-bold text-green-500">1280</div>
                       <div className="text-sm text-muted-foreground">MioCoinů</div>
-                      <div className="text-xs text-muted-foreground">999 Kč</div>
+                      <div className="text-xs text-muted-foreground">1200 Kč</div>
                     </div>
                     <Button 
                       size="sm" 
                       className="w-full mt-2 bg-green-600 hover:bg-green-700"
-                      onClick={() => handleCoinPurchase(1200, 80)}
+                      onClick={() => handleCoinPurchase(1200, 1280)}
+                      disabled={topUpLoading}
                     >
-                      Dobít
+                      {topUpLoading ? "..." : "Dobít"}
                     </Button>
                   </div>
                 </div>

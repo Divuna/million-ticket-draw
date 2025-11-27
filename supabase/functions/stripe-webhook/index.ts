@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import type { Database } from '../_shared/database.types.ts'
 import Stripe from 'https://esm.sh/stripe@14.21.0'
 
 const corsHeaders = {
@@ -58,13 +57,19 @@ serve(async (req) => {
       const session = event.data.object as Stripe.Checkout.Session
       
       const userId = session.metadata?.user_id
-      const amount = parseInt(session.metadata?.amount || '0')
+      const totalCoins = parseInt(session.metadata?.total_coins || '0')
+      const priceCzk = parseInt(session.metadata?.price_czk || '0')
       
-      if (!userId || !amount) {
-        throw new Error('Missing user_id or amount in session metadata')
+      // Fallback for old format (amount field)
+      const legacyAmount = parseInt(session.metadata?.amount || '0')
+      const coinsToCredit = totalCoins > 0 ? totalCoins : legacyAmount
+      
+      if (!userId || coinsToCredit <= 0) {
+        console.error('Missing user_id or coins in session metadata:', session.metadata)
+        throw new Error('Missing user_id or coins in session metadata')
       }
 
-      console.log(`Processing payment for user ${userId}, amount: ${amount}, session: ${session.id}`)
+      console.log(`Processing payment for user ${userId}, coins: ${coinsToCredit}, price: ${priceCzk} CZK, session: ${session.id}`)
 
       // Check if payment already processed (idempotency)
       const { data: existingPayment } = await supabaseClient
@@ -84,12 +89,13 @@ serve(async (req) => {
         )
       }
 
-      // Insert payment record - the database trigger will handle wallet updates
+      // Insert payment record with the coins amount (not the price)
+      // The database trigger will use this amount to update the wallet
       const { error: paymentError } = await supabaseClient
         .from('payments')
         .insert({
           user_id: userId,
-          amount: amount,
+          amount: coinsToCredit, // This is the number of MioCoins to add
           method: 'stripe',
           status: 'completed',
           stripe_session_id: session.id
@@ -100,7 +106,7 @@ serve(async (req) => {
         throw new Error('Failed to record payment')
       }
 
-      console.log(`Successfully recorded payment for user ${userId}, wallet will be updated by trigger`)
+      console.log(`Successfully recorded payment for user ${userId}, ${coinsToCredit} MioCoins will be added by trigger`)
     }
 
     return new Response(
