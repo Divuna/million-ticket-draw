@@ -328,10 +328,10 @@ const Homepage = () => {
         </section>
 
         {/* Coin Top-up Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <section className="w-full overflow-x-hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column - Dobijte si MioCoiny */}
           <Card className="rounded-2xl overflow-hidden bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-primary/10 transition-all duration-300 h-full">
-            <CardContent className="p-8 h-full flex flex-col">
+            <CardContent className="p-4 sm:p-6 md:p-8 h-full flex flex-col">
               <div className="space-y-6 flex-1 flex flex-col">
                 <div className="space-y-3">
                   <h2 className="text-2xl md:text-3xl font-bold text-primary flex items-center gap-3">
@@ -342,7 +342,7 @@ const Homepage = () => {
                 </div>
 
                 {/* Coin Packages Grid */}
-                <div className="grid grid-cols-4 gap-4 flex-1">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 flex-1">
                   {/* Package 50 */}
                   <div className="rounded-xl p-4 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 flex flex-col items-center justify-between">
                     <div className="text-center">
@@ -411,7 +411,7 @@ const Homepage = () => {
                 </div>
 
                 {/* Two Boxes Below */}
-                <div className="grid grid-cols-2 gap-4 mt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
                   {/* Box 1: Probíhající soutěže */}
                   <div 
                     className="rounded-xl p-4 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 cursor-pointer hover:scale-105 transition-transform duration-200 flex flex-col items-center justify-center text-center"
