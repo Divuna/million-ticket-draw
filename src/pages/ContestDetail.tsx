@@ -206,16 +206,22 @@ const ContestDetail: React.FC = () => {
     setPurchasing(true);
 
     try {
-      // 1. Get next ticket number
-      const { data: lastTicket } = await supabase
+      // 1. Get current ticket count
+      const { count: ticketCount, error: countError } = await supabase
         .from("tickets")
-        .select("number")
-        .eq("contest_id", contest.id)
-        .order("number", { ascending: false })
-        .limit(1)
-        .single();
+        .select("*", { count: "exact", head: true })
+        .eq("contest_id", contest.id);
 
-      const nextTicketNumber = lastTicket ? lastTicket.number + 1 : 1;
+      if (countError) {
+        toast({
+          title: "Chyba",
+          description: "Chyba při kontrole tiketů.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      let nextTicketNumber = (ticketCount || 0) + 1;
 
       if (nextTicketNumber > (contest.ticket_count || 1000000)) {
         toast({
@@ -226,7 +232,7 @@ const ContestDetail: React.FC = () => {
         return;
       }
 
-      // 2. Deduct coins from wallet
+      // 2. Deduct coins from wallet FIRST
       const { error: walletUpdateError } = await supabase
         .from("wallets")
         .update({ balance_coins: userWallet.balance_coins - ticketPrice })
@@ -241,17 +247,49 @@ const ContestDetail: React.FC = () => {
         return;
       }
 
-      // 3. Create ticket
-      const { error: ticketError } = await supabase
-        .from("tickets")
-        .insert({
-          contest_id: contest.id,
-          user_id: user.id,
-          number: nextTicketNumber,
-        });
+      // 3. Create ticket with retry logic for race conditions
+      let ticketCreated = false;
+      let finalTicketNumber = nextTicketNumber;
+      let retries = 3;
 
-      if (ticketError) {
-        // Rollback wallet
+      while (!ticketCreated && retries > 0) {
+        const { error: ticketError } = await supabase
+          .from("tickets")
+          .insert({
+            contest_id: contest.id,
+            user_id: user.id,
+            number: finalTicketNumber,
+          });
+
+        if (ticketError) {
+          if (ticketError.code === "23505" || ticketError.message?.includes("duplicate")) {
+            const { count: freshCount } = await supabase
+              .from("tickets")
+              .select("*", { count: "exact", head: true })
+              .eq("contest_id", contest.id);
+            
+            finalTicketNumber = (freshCount || 0) + 1;
+            retries--;
+            continue;
+          }
+
+          await supabase
+            .from("wallets")
+            .update({ balance_coins: userWallet.balance_coins })
+            .eq("user_id", user.id);
+
+          toast({
+            title: "Chyba",
+            description: "Chyba při vytváření tiketu.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        ticketCreated = true;
+      }
+
+      if (!ticketCreated) {
         await supabase
           .from("wallets")
           .update({ balance_coins: userWallet.balance_coins })
@@ -259,7 +297,7 @@ const ContestDetail: React.FC = () => {
 
         toast({
           title: "Chyba",
-          description: "Chyba při vytváření tiketu.",
+          description: "Nepodařilo se vytvořit tiket, zkuste to znovu.",
           variant: "destructive",
         });
         return;
@@ -270,7 +308,7 @@ const ContestDetail: React.FC = () => {
         .from("bonus_prizes")
         .select("*")
         .eq("contest_id", contest.id)
-        .eq("ticket_position", nextTicketNumber)
+        .eq("ticket_position", finalTicketNumber)
         .single();
 
       let wonPrize: string | null = null;
@@ -289,7 +327,7 @@ const ContestDetail: React.FC = () => {
             user_id: user.id,
             prize_id: bonusPrize.id,
             type: "bonus",
-            notes: `Bonusová výhra s tiketem #${nextTicketNumber}`,
+            notes: `Bonusová výhra s tiketem #${finalTicketNumber}`,
           });
 
         await supabase
@@ -299,7 +337,7 @@ const ContestDetail: React.FC = () => {
       }
 
       // 5. Check main prize
-      if (nextTicketNumber === contest.ticket_count) {
+      if (finalTicketNumber === contest.ticket_count) {
         wonPrize = contest.main_prize;
         wonType = "main";
 
@@ -309,7 +347,7 @@ const ContestDetail: React.FC = () => {
             contest_id: contest.id,
             user_id: user.id,
             type: "main",
-            notes: `Hlavní výhra s tiketem #${nextTicketNumber}`,
+            notes: `Hlavní výhra s tiketem #${finalTicketNumber}`,
           });
 
         await supabase
@@ -324,19 +362,19 @@ const ContestDetail: React.FC = () => {
         .select("ticket_position")
         .eq("contest_id", contest.id)
         .eq("status", "pending")
-        .gt("ticket_position", nextTicketNumber)
+        .gt("ticket_position", finalTicketNumber)
         .order("ticket_position", { ascending: true })
         .limit(1)
         .single();
 
       const result: TicketResult = {
-        ticket_number: nextTicketNumber,
-        distance_to_next_bonus: nextBonus ? nextBonus.ticket_position - nextTicketNumber : null,
+        ticket_number: finalTicketNumber,
+        distance_to_next_bonus: nextBonus ? nextBonus.ticket_position - finalTicketNumber : null,
         next_bonus_position: nextBonus?.ticket_position || null,
         won_prize: wonPrize,
         won_type: wonType,
         bonus_prize_id: bonusPrizeId,
-        remaining_tickets: (contest.ticket_count || 1000000) - nextTicketNumber,
+        remaining_tickets: (contest.ticket_count || 1000000) - finalTicketNumber,
       };
 
       setTicketResult(result);
