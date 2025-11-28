@@ -226,10 +226,16 @@ const ContestDetail: React.FC = () => {
         return;
       }
 
-      const rpcResult = data as any;
+      // Normalize result - handle both array and object responses
+      const rpcResult = Array.isArray(data) ? data[0] : data;
       
-      if (!rpcResult?.success) {
-        const errorMsg = rpcResult?.error || 'Nákup se nepodařil';
+      if (!rpcResult) {
+        toast({ title: "Chyba", description: "Nákup se nepodařil.", variant: "destructive" });
+        return;
+      }
+
+      if (!rpcResult.success) {
+        const errorMsg = String(rpcResult.error || 'Nákup se nepodařil');
         if (errorMsg.includes('closed') || errorMsg.includes('uzavřena')) {
           toast({ title: "Nedostupná akce", description: "Soutěž je uzavřena.", variant: "destructive" });
         } else if (errorMsg.includes('coins') || errorMsg.includes('mincí') || errorMsg.includes('balance')) {
