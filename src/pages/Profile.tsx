@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon, Bell } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Bell, Coins, Check } from 'lucide-react';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -20,9 +20,9 @@ interface UserWallet {
   email: string;
   name: string;
   balance_coins: number;
-  balance_vouchers: number;
   created_at: string;
 }
+
 interface UserProfile {
   nickname: string;
   first_name: string;
@@ -31,11 +31,22 @@ interface UserProfile {
   phone: string;
 }
 
+interface CoinPackage {
+  id: string;
+  coins: number;
+  bonus: number;
+  price: number;
+}
+
+const COIN_PACKAGES: CoinPackage[] = [
+  { id: 'pack_50', coins: 50, bonus: 0, price: 50 },
+  { id: 'pack_300', coins: 300, bonus: 10, price: 300 },
+  { id: 'pack_500', coins: 500, bonus: 25, price: 500 },
+  { id: 'pack_1200', coins: 1200, bonus: 80, price: 1200 },
+];
+
 const Profile: React.FC = () => {
-  const {
-    user,
-    session
-  } = useAuth();
+  const { user, session } = useAuth();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
   const [wallet, setWallet] = useState<UserWallet | null>(null);
@@ -48,33 +59,31 @@ const Profile: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showVoucherForm, setShowVoucherForm] = useState(false);
-  const [voucherAmount, setVoucherAmount] = useState('');
+  const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<CoinPackage | null>(null);
+  const [customAmount, setCustomAmount] = useState('');
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [testingNotification, setTestingNotification] = useState(false);
+
   useEffect(() => {
     if (user) {
       fetchUserWallet();
       fetchUserProfile();
     }
   }, [user]);
+
   const fetchUserWallet = async () => {
     try {
-      const {
-        data,
-        error
-      } = await (supabase as any).from('wallets').select('*').eq('user_id', user?.id).maybeSingle();
+      const { data, error } = await (supabase as any).from('wallets').select('*').eq('user_id', user?.id).maybeSingle();
       if (error) {
         console.error('Error fetching wallet:', error);
-        // Fallback to basic user data
         setWallet({
           user_id: user?.id || '',
           email: user?.email || '',
           name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
           balance_coins: 0,
-          balance_vouchers: 0,
           created_at: new Date().toISOString()
         });
       } else if (data) {
@@ -83,17 +92,14 @@ const Profile: React.FC = () => {
           email: user?.email || '',
           name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
           balance_coins: Number(data.balance_coins) || 0,
-          balance_vouchers: Number(data.balance_vouchers) || 0,
           created_at: data.created_at || new Date().toISOString()
         });
       } else {
-        // No wallet data found, use fallback
         setWallet({
           user_id: user?.id || '',
           email: user?.email || '',
           name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
           balance_coins: 0,
-          balance_vouchers: 0,
           created_at: new Date().toISOString()
         });
       }
@@ -104,13 +110,13 @@ const Profile: React.FC = () => {
         email: user?.email || '',
         name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
         balance_coins: 0,
-        balance_vouchers: 0,
         created_at: new Date().toISOString()
       });
     } finally {
       setLoading(false);
     }
   };
+
   const fetchUserProfile = async () => {
     try {
       const result = await (supabase as any).from('users').select('nickname, first_name, last_name, address, phone').eq('id', user?.id).maybeSingle();
@@ -137,9 +143,7 @@ const Profile: React.FC = () => {
   const handleProfileSave = async () => {
     setProfileSaving(true);
     try {
-      const {
-        error
-      } = await (supabase as any).from('users').update({
+      const { error } = await (supabase as any).from('users').update({
         nickname: profile.nickname || null,
         first_name: profile.first_name || null,
         last_name: profile.last_name || null,
@@ -153,8 +157,6 @@ const Profile: React.FC = () => {
         title: "Úspěch",
         description: "Profil byl úspěšně uložen."
       });
-      
-      // Switch back to read-only mode and scroll to top
       setEditMode(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
@@ -168,6 +170,7 @@ const Profile: React.FC = () => {
       setProfileSaving(false);
     }
   };
+
   const handleRefreshBalance = async () => {
     setRefreshing(true);
     try {
@@ -187,15 +190,14 @@ const Profile: React.FC = () => {
       setRefreshing(false);
     }
   };
+
   const handleTestNotification = async () => {
     setTestingNotification(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-test-notification');
-      
       if (error) {
         throw error;
       }
-
       toast({
         title: "Notifikace odeslána",
         description: "Testovací notifikace byla úspěšně odeslána. Zkontrolujte svá zařízení.",
@@ -212,55 +214,68 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleVoucherPurchase = async () => {
-    const amount = parseInt(voucherAmount);
-    if (!amount || amount < 50) {
+  const handleTopUpPurchase = async () => {
+    let priceInCzk: number;
+    let totalCoins: number;
+
+    if (selectedPackage) {
+      priceInCzk = selectedPackage.price;
+      totalCoins = selectedPackage.coins + selectedPackage.bonus;
+    } else if (customAmount) {
+      const amount = parseInt(customAmount);
+      if (!amount || amount < 1) {
+        toast({
+          title: "Chyba",
+          description: "Zadejte platnou částku.",
+          variant: "destructive"
+        });
+        return;
+      }
+      priceInCzk = amount;
+      totalCoins = amount; // No bonus for custom amount
+    } else {
       toast({
         title: "Chyba",
-        description: "Minimální částka je 50 CZK.",
+        description: "Vyberte balíček nebo zadejte vlastní částku.",
         variant: "destructive"
       });
       return;
     }
-    setPurchaseLoading(true);
 
-    // Pre-open a blank window immediately (tied to user gesture)
+    setPurchaseLoading(true);
     const preOpenedWindow = window.open('', '_blank');
+
     try {
-      // Call edge function to create Stripe checkout session
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke('create-stripe-checkout', {
+      const { data, error } = await supabase.functions.invoke('create-stripe-checkout', {
         body: {
-          amount
+          priceInCzk,
+          totalCoins
         }
       });
+
       if (error) {
         throw error;
       }
+
       if (data.checkout_url) {
-        // Try to redirect pre-opened window first
         if (preOpenedWindow && !preOpenedWindow.closed) {
           preOpenedWindow.location.href = data.checkout_url;
         } else {
-          // Fallback to top-level navigation (escape iframe)
           if (window.top && window.top !== window) {
             window.top.location.assign(data.checkout_url);
           } else {
-            // Final fallback to current window
             window.location.assign(data.checkout_url);
           }
         }
       } else {
         throw new Error('No checkout URL received');
       }
-      setShowVoucherForm(false);
-      setVoucherAmount('');
+
+      setShowTopUpModal(false);
+      setSelectedPackage(null);
+      setCustomAmount('');
     } catch (error) {
       console.error('Error creating checkout session:', error);
-
-      // Close pre-opened window on error
       if (preOpenedWindow && !preOpenedWindow.closed) {
         preOpenedWindow.close();
       }
@@ -273,20 +288,36 @@ const Profile: React.FC = () => {
       setPurchaseLoading(false);
     }
   };
+
+  const handlePackageSelect = (pkg: CoinPackage) => {
+    setSelectedPackage(pkg);
+    setCustomAmount('');
+  };
+
+  const handleCustomAmountChange = (value: string) => {
+    setCustomAmount(value);
+    setSelectedPackage(null);
+  };
+
   if (!session) {
     return <Navigate to="/login" replace />;
   }
+
   if (loading) {
-    return <div className="min-h-screen bg-background">
+    return (
+      <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <p className="text-muted-foreground">Načítám profil...</p>
           </div>
         </div>
-      </div>;
+      </div>
+    );
   }
-  return <div className="min-h-screen bg-background pb-20">
+
+  return (
+    <div className="min-h-screen bg-background pb-20">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
@@ -308,12 +339,14 @@ const Profile: React.FC = () => {
                   <p className="text-lg">{wallet?.email || user?.email}</p>
                 </div>
                 
-                {wallet?.name && <div className="space-y-2">
+                {wallet?.name && (
+                  <div className="space-y-2">
                     <label className="text-sm font-medium text-muted-foreground">
                       Jméno:
                     </label>
                     <p className="text-lg">{wallet.name}</p>
-                  </div>}
+                  </div>
+                )}
               </div>
               
               {/* Profile Section */}
@@ -336,43 +369,72 @@ const Profile: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div className="space-y-2">
                         <Label htmlFor="nickname">Přezdívka</Label>
-                        <Input id="nickname" type="text" value={profile.nickname} onChange={e => setProfile(prev => ({
-                        ...prev,
-                        nickname: e.target.value
-                      }))} placeholder="Zadejte přezdívku" />
+                        <Input 
+                          id="nickname" 
+                          type="text" 
+                          value={profile.nickname} 
+                          onChange={e => setProfile(prev => ({
+                            ...prev,
+                            nickname: e.target.value
+                          }))} 
+                          placeholder="Zadejte přezdívku" 
+                        />
                       </div>
                       
                       <div className="space-y-2">
                         <Label htmlFor="phone">Telefon</Label>
-                        <Input id="phone" type="text" value={profile.phone} onChange={e => setProfile(prev => ({
-                        ...prev,
-                        phone: e.target.value
-                      }))} placeholder="Zadejte telefon" />
+                        <Input 
+                          id="phone" 
+                          type="text" 
+                          value={profile.phone} 
+                          onChange={e => setProfile(prev => ({
+                            ...prev,
+                            phone: e.target.value
+                          }))} 
+                          placeholder="Zadejte telefon" 
+                        />
                       </div>
                       
                       <div className="space-y-2">
                         <Label htmlFor="first_name">Křestní jméno</Label>
-                        <Input id="first_name" type="text" value={profile.first_name} onChange={e => setProfile(prev => ({
-                        ...prev,
-                        first_name: e.target.value
-                      }))} placeholder="Zadejte křestní jméno" />
+                        <Input 
+                          id="first_name" 
+                          type="text" 
+                          value={profile.first_name} 
+                          onChange={e => setProfile(prev => ({
+                            ...prev,
+                            first_name: e.target.value
+                          }))} 
+                          placeholder="Zadejte křestní jméno" 
+                        />
                       </div>
                       
                       <div className="space-y-2">
                         <Label htmlFor="last_name">Příjmení</Label>
-                        <Input id="last_name" type="text" value={profile.last_name} onChange={e => setProfile(prev => ({
-                        ...prev,
-                        last_name: e.target.value
-                      }))} placeholder="Zadejte příjmení" />
+                        <Input 
+                          id="last_name" 
+                          type="text" 
+                          value={profile.last_name} 
+                          onChange={e => setProfile(prev => ({
+                            ...prev,
+                            last_name: e.target.value
+                          }))} 
+                          placeholder="Zadejte příjmení" 
+                        />
                       </div>
                       
                       <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="address">Doručovací adresa výhry
-                      </Label>
-                        <Textarea id="address" value={profile.address} onChange={e => setProfile(prev => ({
-                        ...prev,
-                        address: e.target.value
-                      }))} placeholder="Zadejte doručovací adresu pro výhry" rows={3} />
+                        <Label htmlFor="address">Doručovací adresa výhry</Label>
+                        <Textarea 
+                          id="address" 
+                          value={profile.address} 
+                          onChange={e => setProfile(prev => ({
+                            ...prev,
+                            address: e.target.value
+                          }))} 
+                          placeholder="Zadejte doručovací adresu pro výhry" 
+                          rows={3} 
+                        />
                       </div>
                     </div>
                     
@@ -439,7 +501,7 @@ const Profile: React.FC = () => {
                 )}
               </div>
 
-
+              {/* Wallet Section - Only Coins */}
               <div className="border-t pt-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">Peněženka</h3>
@@ -449,24 +511,13 @@ const Profile: React.FC = () => {
                   </Button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="mb-6">
                   <Card className="ticket-game ticket-perforations">
                     <CardContent className="pt-6">
                       <div className="text-center">
-                        <p className="text-sm font-medium text-muted-foreground">Mince (coins):</p>
+                        <p className="text-sm font-medium text-muted-foreground">MioCoiny:</p>
                         <p className="text-3xl font-bold text-neon-green">
                           {wallet?.balance_coins?.toLocaleString('cs-CZ') || '0'}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="ticket-voucher ticket-perforations">
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-muted-foreground">Vouchery:</p>
-                        <p className="text-3xl font-bold text-neon-pink">
-                          {wallet?.balance_vouchers?.toLocaleString('cs-CZ') || '0'}
                         </p>
                       </div>
                     </CardContent>
@@ -474,8 +525,9 @@ const Profile: React.FC = () => {
                 </div>
                 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button onClick={() => setShowVoucherForm(true)} size="lg">
-                    Dobít vouchery + miocoiny
+                  <Button onClick={() => setShowTopUpModal(true)} size="lg">
+                    <Coins className="h-5 w-5 mr-2" />
+                    Dobít MioCoiny
                   </Button>
                   
                   <Button onClick={() => navigate('/my-contests')} variant="outline" size="lg">
@@ -505,39 +557,90 @@ const Profile: React.FC = () => {
             </CardContent>
           </Card>
         </div>
-
       </div>
 
-      {/* Voucher Purchase Dialog */}
-      <Dialog open={showVoucherForm} onOpenChange={setShowVoucherForm}>
-        <DialogContent>
+      {/* MioCoin Top-up Modal */}
+      <Dialog open={showTopUpModal} onOpenChange={setShowTopUpModal}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Koupit vouchery</DialogTitle>
+            <DialogTitle>Dobít MioCoiny</DialogTitle>
             <DialogDescription>
-              Zadejte částku v CZK (minimálně 50). 1 CZK = 1 voucher = 1 mince.
+              Vyberte balíček nebo zadejte vlastní částku.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="amount" className="text-sm font-medium">
-                Částka (CZK) *
-              </label>
-              <Input id="amount" type="number" placeholder="50" min="50" value={voucherAmount} onChange={e => setVoucherAmount(e.target.value)} />
-              <p className="text-sm text-muted-foreground">
-                Minimální částka je 50 CZK
-              </p>
+            {/* Package Selection */}
+            <div className="grid grid-cols-1 gap-3">
+              {COIN_PACKAGES.map((pkg) => (
+                <button
+                  key={pkg.id}
+                  onClick={() => handlePackageSelect(pkg)}
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${
+                    selectedPackage?.id === pkg.id
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Coins className="h-5 w-5 text-neon-green" />
+                      <div>
+                        <p className="font-semibold">
+                          {pkg.coins.toLocaleString('cs-CZ')} MioCoinů
+                          {pkg.bonus > 0 && (
+                            <span className="text-neon-green ml-1">+{pkg.bonus} Bonus</span>
+                          )}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{pkg.price} Kč</p>
+                      </div>
+                    </div>
+                    {selectedPackage?.id === pkg.id && (
+                      <Check className="h-5 w-5 text-primary" />
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Custom Amount */}
+            <div className="border-t pt-4">
+              <Label htmlFor="customAmount" className="text-sm font-medium">
+                Vlastní částka (Kč)
+              </Label>
+              <Input
+                id="customAmount"
+                type="number"
+                placeholder="Zadejte částku..."
+                min="1"
+                value={customAmount}
+                onChange={(e) => handleCustomAmountChange(e.target.value)}
+                className="mt-2"
+              />
+              {customAmount && parseInt(customAmount) > 0 && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Obdržíte {parseInt(customAmount).toLocaleString('cs-CZ')} MioCoinů (bez bonusu)
+                </p>
+              )}
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-            setShowVoucherForm(false);
-            setVoucherAmount('');
-          }} disabled={purchaseLoading}>
+          <DialogFooter className="mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowTopUpModal(false);
+                setSelectedPackage(null);
+                setCustomAmount('');
+              }} 
+              disabled={purchaseLoading}
+            >
               Zrušit
             </Button>
-            <Button onClick={handleVoucherPurchase} disabled={purchaseLoading || !voucherAmount || parseInt(voucherAmount) < 50}>
+            <Button 
+              onClick={handleTopUpPurchase} 
+              disabled={purchaseLoading || (!selectedPackage && !customAmount)}
+            >
               {purchaseLoading ? 'Zpracovávám...' : 'Pokračovat k platbě'}
             </Button>
           </DialogFooter>
@@ -545,6 +648,8 @@ const Profile: React.FC = () => {
       </Dialog>
 
       {isAdmin ? <AdminMenu /> : <BottomNavigation />}
-    </div>;
+    </div>
+  );
 };
+
 export default Profile;
