@@ -194,23 +194,25 @@ const Index = () => {
         return;
       }
 
-      // 3. Get next ticket number
-      const { data: lastTicket } = await supabase
+      // 3. Get current ticket count using COUNT (more accurate for concurrent purchases)
+      const { count: ticketCount, error: countError } = await supabase
         .from('tickets')
-        .select('number')
-        .eq('contest_id', contestId)
-        .order('number', { ascending: false })
-        .limit(1)
-        .single();
+        .select('*', { count: 'exact', head: true })
+        .eq('contest_id', contestId);
 
-      const nextTicketNumber = lastTicket ? lastTicket.number + 1 : 1;
+      if (countError) {
+        toast.error('Chyba při kontrole tiketů');
+        return;
+      }
+
+      const nextTicketNumber = (ticketCount || 0) + 1;
 
       if (nextTicketNumber > contestData.ticket_count) {
         toast.error('Soutěž je plná');
         return;
       }
 
-      // 4. Deduct coins from wallet
+      // 4. Deduct coins from wallet FIRST
       const { error: walletUpdateError } = await supabase
         .from('wallets')
         .update({ balance_coins: walletData.balance_coins - ticketPrice })
@@ -221,25 +223,57 @@ const Index = () => {
         return;
       }
 
-      // 5. Create ticket
-      const { data: newTicket, error: ticketError } = await supabase
-        .from('tickets')
-        .insert({
-          contest_id: contestId,
-          user_id: user.id,
-          number: nextTicketNumber
-        })
-        .select()
-        .single();
+      // 5. Try to create ticket with retry logic for race conditions
+      let ticketCreated = false;
+      let finalTicketNumber = nextTicketNumber;
+      let retries = 3;
 
-      if (ticketError) {
-        // Rollback wallet update
+      while (!ticketCreated && retries > 0) {
+        const { data: newTicket, error: ticketError } = await supabase
+          .from('tickets')
+          .insert({
+            contest_id: contestId,
+            user_id: user.id,
+            number: finalTicketNumber
+          })
+          .select()
+          .single();
+
+        if (ticketError) {
+          // Check if it's a duplicate key error
+          if (ticketError.code === '23505' || ticketError.message?.includes('duplicate')) {
+            // Get fresh count and retry
+            const { count: freshCount } = await supabase
+              .from('tickets')
+              .select('*', { count: 'exact', head: true })
+              .eq('contest_id', contestId);
+            
+            finalTicketNumber = (freshCount || 0) + 1;
+            retries--;
+            continue;
+          }
+          
+          // Other error - rollback wallet
+          await supabase
+            .from('wallets')
+            .update({ balance_coins: walletData.balance_coins })
+            .eq('user_id', user.id);
+          
+          toast.error('Chyba při vytváření tiketu');
+          return;
+        }
+
+        ticketCreated = true;
+      }
+
+      if (!ticketCreated) {
+        // All retries failed - rollback wallet
         await supabase
           .from('wallets')
           .update({ balance_coins: walletData.balance_coins })
           .eq('user_id', user.id);
         
-        toast.error('Chyba při vytváření tiketu');
+        toast.error('Nepodařilo se vytvořit tiket, zkuste to znovu');
         return;
       }
 
@@ -248,7 +282,7 @@ const Index = () => {
         .from('bonus_prizes')
         .select('*')
         .eq('contest_id', contestId)
-        .eq('ticket_position', nextTicketNumber)
+        .eq('ticket_position', finalTicketNumber)
         .single();
 
       let wonPrize: string | null = null;
@@ -260,7 +294,6 @@ const Index = () => {
         wonType = 'bonus';
         bonusPrizeId = bonusPrize.id;
 
-        // Create winner record for bonus
         await supabase
           .from('winners')
           .insert({
@@ -268,10 +301,9 @@ const Index = () => {
             user_id: user.id,
             prize_id: bonusPrize.id,
             type: 'bonus',
-            notes: `Bonusová výhra s tiketem #${nextTicketNumber}`
+            notes: `Bonusová výhra s tiketem #${finalTicketNumber}`
           });
 
-        // Update bonus prize status
         await supabase
           .from('bonus_prizes')
           .update({ status: 'won' })
@@ -279,21 +311,19 @@ const Index = () => {
       }
 
       // 7. Check if main prize won (last ticket)
-      if (nextTicketNumber === contestData.ticket_count) {
+      if (finalTicketNumber === contestData.ticket_count) {
         wonPrize = contestData.main_prize;
         wonType = 'main';
 
-        // Create winner record for main prize
         await supabase
           .from('winners')
           .insert({
             contest_id: contestId,
             user_id: user.id,
             type: 'main',
-            notes: `Hlavní výhra s tiketem #${nextTicketNumber}`
+            notes: `Hlavní výhra s tiketem #${finalTicketNumber}`
           });
 
-        // Close the contest
         await supabase
           .from('contests')
           .update({ status: 'closed' })
@@ -306,20 +336,20 @@ const Index = () => {
         .select('ticket_position')
         .eq('contest_id', contestId)
         .eq('status', 'pending')
-        .gt('ticket_position', nextTicketNumber)
+        .gt('ticket_position', finalTicketNumber)
         .order('ticket_position', { ascending: true })
         .limit(1)
         .single();
 
       const result: UnlockTicketResult = {
-        ticket_number: nextTicketNumber,
+        ticket_number: finalTicketNumber,
         ticket_price: ticketPrice,
         next_bonus_position: nextBonus?.ticket_position || null,
-        distance_to_next_bonus: nextBonus ? nextBonus.ticket_position - nextTicketNumber : null,
+        distance_to_next_bonus: nextBonus ? nextBonus.ticket_position - finalTicketNumber : null,
         won_prize: wonPrize,
         won_type: wonType,
         bonus_prize_id: bonusPrizeId,
-        remaining_tickets: contestData.ticket_count - nextTicketNumber
+        remaining_tickets: contestData.ticket_count - finalTicketNumber
       };
 
       // Send event to Sofinity
@@ -330,7 +360,7 @@ const Index = () => {
             user_id: user.id,
             contest_id: contestId,
             metadata: {
-              ticket_number: nextTicketNumber,
+              ticket_number: finalTicketNumber,
               ticket_price: ticketPrice
             }
           }
@@ -342,13 +372,12 @@ const Index = () => {
       setModalResult(result);
       setModalContestId(contestId);
       
-      // Refresh contests
       fetchContests();
       
       if (wonPrize) {
         toast.success(`Gratulujeme! Vyhrál jsi ${wonPrize}!`);
       } else {
-        toast.success(`Tiket #${nextTicketNumber.toLocaleString('cs-CZ')} zakoupen!`);
+        toast.success(`Tiket #${finalTicketNumber.toLocaleString('cs-CZ')} zakoupen!`);
       }
     } catch (error: any) {
       console.error('Error unlocking ticket:', error);
