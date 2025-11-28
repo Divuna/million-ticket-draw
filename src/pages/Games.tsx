@@ -178,10 +178,16 @@ const Index = () => {
         return;
       }
 
-      const rpcResult = data as any;
+      // Normalize result - handle both array and object responses
+      const rpcResult = Array.isArray(data) ? data[0] : data;
       
-      if (!rpcResult?.success) {
-        const errorMsg = rpcResult?.error || 'Chyba při koupi tiketu';
+      if (!rpcResult) {
+        toast.error('Chyba při koupi tiketu');
+        return;
+      }
+
+      if (!rpcResult.success) {
+        const errorMsg = String(rpcResult.error || 'Chyba při koupi tiketu');
         if (errorMsg.includes('closed') || errorMsg.includes('uzavřena')) {
           toast.error('Soutěž je uzavřena');
         } else if (errorMsg.includes('coins') || errorMsg.includes('mincí') || errorMsg.includes('balance')) {
