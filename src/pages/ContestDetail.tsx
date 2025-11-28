@@ -213,7 +213,7 @@ const ContestDetail: React.FC = () => {
         .eq("contest_id", contest.id)
         .order("number", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       const nextTicketNumber = lastTicket ? lastTicket.number + 1 : 1;
 
@@ -271,7 +271,7 @@ const ContestDetail: React.FC = () => {
         .select("*")
         .eq("contest_id", contest.id)
         .eq("ticket_position", nextTicketNumber)
-        .single();
+        .maybeSingle();
 
       let wonPrize: string | null = null;
       let wonType: "bonus" | "main" | null = null;
@@ -327,7 +327,7 @@ const ContestDetail: React.FC = () => {
         .gt("ticket_position", nextTicketNumber)
         .order("ticket_position", { ascending: true })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       const result: TicketResult = {
         ticket_number: nextTicketNumber,
