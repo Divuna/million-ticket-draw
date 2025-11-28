@@ -192,10 +192,12 @@ const ContestDetail: React.FC = () => {
       return;
     }
 
-    if (userWallet.balance_coins < 1) {
+    const ticketPrice = contest.ticket_price || 1;
+
+    if (userWallet.balance_coins < ticketPrice) {
       toast({
         title: "Nedostatek mincí",
-        description: "Potřebujete minci.",
+        description: `Potřebujete ${ticketPrice} miocoinů.`,
         variant: "destructive",
       });
       return;
@@ -204,26 +206,143 @@ const ContestDetail: React.FC = () => {
     setPurchasing(true);
 
     try {
-      const { data, error } = await supabase.rpc("unlock_ticket", {
-        contest_id: contest.id,
-        user_id: user.id,
-      });
+      // 1. Get next ticket number
+      const { data: lastTicket } = await supabase
+        .from("tickets")
+        .select("number")
+        .eq("contest_id", contest.id)
+        .order("number", { ascending: false })
+        .limit(1)
+        .single();
 
-      if (error || !data) throw error;
+      const nextTicketNumber = lastTicket ? lastTicket.number + 1 : 1;
+
+      if (nextTicketNumber > (contest.ticket_count || 1000000)) {
+        toast({
+          title: "Chyba",
+          description: "Soutěž je plná.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // 2. Deduct coins from wallet
+      const { error: walletUpdateError } = await supabase
+        .from("wallets")
+        .update({ balance_coins: userWallet.balance_coins - ticketPrice })
+        .eq("user_id", user.id);
+
+      if (walletUpdateError) {
+        toast({
+          title: "Chyba",
+          description: "Chyba při odečítání mincí.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // 3. Create ticket
+      const { error: ticketError } = await supabase
+        .from("tickets")
+        .insert({
+          contest_id: contest.id,
+          user_id: user.id,
+          number: nextTicketNumber,
+        });
+
+      if (ticketError) {
+        // Rollback wallet
+        await supabase
+          .from("wallets")
+          .update({ balance_coins: userWallet.balance_coins })
+          .eq("user_id", user.id);
+
+        toast({
+          title: "Chyba",
+          description: "Chyba při vytváření tiketu.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // 4. Check for bonus prize
+      const { data: bonusPrize } = await supabase
+        .from("bonus_prizes")
+        .select("*")
+        .eq("contest_id", contest.id)
+        .eq("ticket_position", nextTicketNumber)
+        .single();
+
+      let wonPrize: string | null = null;
+      let wonType: "bonus" | "main" | null = null;
+      let bonusPrizeId: string | null = null;
+
+      if (bonusPrize) {
+        wonPrize = bonusPrize.description;
+        wonType = "bonus";
+        bonusPrizeId = bonusPrize.id;
+
+        await supabase
+          .from("winners")
+          .insert({
+            contest_id: contest.id,
+            user_id: user.id,
+            prize_id: bonusPrize.id,
+            type: "bonus",
+            notes: `Bonusová výhra s tiketem #${nextTicketNumber}`,
+          });
+
+        await supabase
+          .from("bonus_prizes")
+          .update({ status: "won" })
+          .eq("id", bonusPrize.id);
+      }
+
+      // 5. Check main prize
+      if (nextTicketNumber === contest.ticket_count) {
+        wonPrize = contest.main_prize;
+        wonType = "main";
+
+        await supabase
+          .from("winners")
+          .insert({
+            contest_id: contest.id,
+            user_id: user.id,
+            type: "main",
+            notes: `Hlavní výhra s tiketem #${nextTicketNumber}`,
+          });
+
+        await supabase
+          .from("contests")
+          .update({ status: "closed" })
+          .eq("id", contest.id);
+      }
+
+      // 6. Get next bonus position
+      const { data: nextBonus } = await supabase
+        .from("bonus_prizes")
+        .select("ticket_position")
+        .eq("contest_id", contest.id)
+        .eq("status", "pending")
+        .gt("ticket_position", nextTicketNumber)
+        .order("ticket_position", { ascending: true })
+        .limit(1)
+        .single();
 
       const result: TicketResult = {
-        ticket_number: data.ticket_number,
-        distance_to_next_bonus: data.distance_to_next_bonus,
-        next_bonus_position: data.next_bonus_position,
-        won_prize: data.won_prize,
-        won_type: data.won_type,
-        bonus_prize_id: data.bonus_prize_id,
-        remaining_tickets: data.remaining_tickets,
+        ticket_number: nextTicketNumber,
+        distance_to_next_bonus: nextBonus ? nextBonus.ticket_position - nextTicketNumber : null,
+        next_bonus_position: nextBonus?.ticket_position || null,
+        won_prize: wonPrize,
+        won_type: wonType,
+        bonus_prize_id: bonusPrizeId,
+        remaining_tickets: (contest.ticket_count || 1000000) - nextTicketNumber,
       };
 
       setTicketResult(result);
       setShowResultModal(true);
 
+      await fetchContestData();
       await fetchUserWallet();
       await fetchUserWins();
     } catch (error) {
