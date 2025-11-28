@@ -60,12 +60,12 @@ serve(async (req) => {
     console.log('Values after Number():', { priceInCzk, totalCoins })
 
     // Validate inputs
-    if (!body.priceInCzk || isNaN(priceInCzk) || priceInCzk < 50) {
-      throw new Error(`Minimum price is 50 CZK. Raw: ${body.priceInCzk}, Parsed: ${priceInCzk}`)
+    if (!body.priceInCzk || isNaN(priceInCzk) || priceInCzk < 1) {
+      throw new Error(`Minimum price is 1 CZK. Raw: ${body.priceInCzk}, Parsed: ${priceInCzk}`)
     }
 
-    if (!body.totalCoins || isNaN(totalCoins) || totalCoins < 50) {
-      throw new Error(`Minimum coins is 50. Raw: ${body.totalCoins}, Parsed: ${totalCoins}`)
+    if (!body.totalCoins || isNaN(totalCoins) || totalCoins < 1) {
+      throw new Error(`Minimum coins is 1. Raw: ${body.totalCoins}, Parsed: ${totalCoins}`)
     }
 
     // Get user email
