@@ -1271,7 +1271,7 @@ export type Database = {
         Returns: Json
       }
       buy_ticket_atomic: {
-        Args: { in_contest_id: string; in_user_id: string }
+        Args: { p_contest_id: string; p_user_id: string }
         Returns: Json
       }
       create_test_result: {

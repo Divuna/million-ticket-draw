@@ -127,8 +127,8 @@ export const TicketMap: React.FC<TicketMapProps> = ({
     try {
       // Call atomic RPC for ticket purchase
       const { data, error } = await supabase.rpc('buy_ticket_atomic', {
-        in_contest_id: contestId,
-        in_user_id: user.id
+        p_contest_id: contestId,
+        p_user_id: user.id
       });
 
       if (error) {

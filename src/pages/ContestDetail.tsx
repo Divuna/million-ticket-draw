@@ -208,8 +208,8 @@ const ContestDetail: React.FC = () => {
     try {
       // Call atomic RPC for ticket purchase
       const { data, error } = await supabase.rpc('buy_ticket_atomic', {
-        in_contest_id: contest.id,
-        in_user_id: user.id
+        p_contest_id: contest.id,
+        p_user_id: user.id
       });
 
       if (error) {
