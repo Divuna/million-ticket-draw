@@ -206,137 +206,50 @@ const ContestDetail: React.FC = () => {
     setPurchasing(true);
 
     try {
-      // 1. Get next ticket number
-      const { data: lastTicket } = await supabase
-        .from("tickets")
-        .select("number")
-        .eq("contest_id", contest.id)
-        .order("number", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Call atomic RPC for ticket purchase
+      const { data, error } = await supabase.rpc('buy_ticket_atomic', {
+        in_contest_id: contest.id,
+        in_user_id: user.id
+      });
 
-      const nextTicketNumber = lastTicket ? lastTicket.number + 1 : 1;
-
-      if (nextTicketNumber > (contest.ticket_count || 1000000)) {
-        toast({
-          title: "Chyba",
-          description: "Soutěž je plná.",
-          variant: "destructive",
-        });
+      if (error) {
+        console.error('RPC error:', error);
+        if (error.message?.includes('closed') || error.message?.includes('uzavřena')) {
+          toast({ title: "Nedostupná akce", description: "Soutěž je uzavřena.", variant: "destructive" });
+        } else if (error.message?.includes('coins') || error.message?.includes('mincí') || error.message?.includes('balance')) {
+          toast({ title: "Nedostatek mincí", description: `Potřebujete ${contest.ticket_price || 1} miocoinů.`, variant: "destructive" });
+        } else if (error.message?.includes('full') || error.message?.includes('plná')) {
+          toast({ title: "Chyba", description: "Soutěž je plná.", variant: "destructive" });
+        } else {
+          toast({ title: "Chyba", description: "Nákup se nepodařil.", variant: "destructive" });
+        }
         return;
       }
 
-      // 2. Deduct coins from wallet
-      const { error: walletUpdateError } = await supabase
-        .from("wallets")
-        .update({ balance_coins: userWallet.balance_coins - ticketPrice })
-        .eq("user_id", user.id);
-
-      if (walletUpdateError) {
-        toast({
-          title: "Chyba",
-          description: "Chyba při odečítání mincí.",
-          variant: "destructive",
-        });
+      const rpcResult = data as any;
+      
+      if (!rpcResult?.success) {
+        const errorMsg = rpcResult?.error || 'Nákup se nepodařil';
+        if (errorMsg.includes('closed') || errorMsg.includes('uzavřena')) {
+          toast({ title: "Nedostupná akce", description: "Soutěž je uzavřena.", variant: "destructive" });
+        } else if (errorMsg.includes('coins') || errorMsg.includes('mincí') || errorMsg.includes('balance')) {
+          toast({ title: "Nedostatek mincí", description: `Potřebujete ${contest.ticket_price || 1} miocoinů.`, variant: "destructive" });
+        } else if (errorMsg.includes('full') || errorMsg.includes('plná')) {
+          toast({ title: "Chyba", description: "Soutěž je plná.", variant: "destructive" });
+        } else {
+          toast({ title: "Chyba", description: errorMsg, variant: "destructive" });
+        }
         return;
       }
-
-      // 3. Create ticket
-      const { error: ticketError } = await supabase
-        .from("tickets")
-        .insert({
-          contest_id: contest.id,
-          user_id: user.id,
-          number: nextTicketNumber,
-        });
-
-      if (ticketError) {
-        // Rollback wallet
-        await supabase
-          .from("wallets")
-          .update({ balance_coins: userWallet.balance_coins })
-          .eq("user_id", user.id);
-
-        toast({
-          title: "Chyba",
-          description: "Chyba při vytváření tiketu.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // 4. Check for bonus prize
-      const { data: bonusPrize } = await supabase
-        .from("bonus_prizes")
-        .select("*")
-        .eq("contest_id", contest.id)
-        .eq("ticket_position", nextTicketNumber)
-        .maybeSingle();
-
-      let wonPrize: string | null = null;
-      let wonType: "bonus" | "main" | null = null;
-      let bonusPrizeId: string | null = null;
-
-      if (bonusPrize) {
-        wonPrize = bonusPrize.description;
-        wonType = "bonus";
-        bonusPrizeId = bonusPrize.id;
-
-        await supabase
-          .from("winners")
-          .insert({
-            contest_id: contest.id,
-            user_id: user.id,
-            prize_id: bonusPrize.id,
-            type: "bonus",
-            notes: `Bonusová výhra s tiketem #${nextTicketNumber}`,
-          });
-
-        await supabase
-          .from("bonus_prizes")
-          .update({ status: "won" })
-          .eq("id", bonusPrize.id);
-      }
-
-      // 5. Check main prize
-      if (nextTicketNumber === contest.ticket_count) {
-        wonPrize = contest.main_prize;
-        wonType = "main";
-
-        await supabase
-          .from("winners")
-          .insert({
-            contest_id: contest.id,
-            user_id: user.id,
-            type: "main",
-            notes: `Hlavní výhra s tiketem #${nextTicketNumber}`,
-          });
-
-        await supabase
-          .from("contests")
-          .update({ status: "closed" })
-          .eq("id", contest.id);
-      }
-
-      // 6. Get next bonus position
-      const { data: nextBonus } = await supabase
-        .from("bonus_prizes")
-        .select("ticket_position")
-        .eq("contest_id", contest.id)
-        .eq("status", "pending")
-        .gt("ticket_position", nextTicketNumber)
-        .order("ticket_position", { ascending: true })
-        .limit(1)
-        .maybeSingle();
 
       const result: TicketResult = {
-        ticket_number: nextTicketNumber,
-        distance_to_next_bonus: nextBonus ? nextBonus.ticket_position - nextTicketNumber : null,
-        next_bonus_position: nextBonus?.ticket_position || null,
-        won_prize: wonPrize,
-        won_type: wonType,
-        bonus_prize_id: bonusPrizeId,
-        remaining_tickets: (contest.ticket_count || 1000000) - nextTicketNumber,
+        ticket_number: rpcResult.ticket_number,
+        distance_to_next_bonus: rpcResult.distance_to_next_bonus || null,
+        next_bonus_position: rpcResult.next_bonus_position || null,
+        won_prize: rpcResult.won_prize || null,
+        won_type: rpcResult.won_type || null,
+        bonus_prize_id: rpcResult.bonus_prize_id || null,
+        remaining_tickets: rpcResult.remaining_tickets || 0,
       };
 
       setTicketResult(result);
