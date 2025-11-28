@@ -125,49 +125,183 @@ export const TicketMap: React.FC<TicketMapProps> = ({
     setProcessingTicket(ticketNumber);
 
     try {
-      const { data, error } = await supabase.rpc('unlock_ticket' as any, {
-        contest_id: contestId,
-        user_id: user.id
-      });
+      // 1. Get contest info
+      const { data: contestData, error: contestError } = await supabase
+        .from('contests')
+        .select('*')
+        .eq('id', contestId)
+        .single();
 
-      if (error) {
-        console.error('Error unlocking ticket:', error);
-        
-        if (error.message?.includes('insufficient') || error.message?.includes('nedostatek')) {
-          toast.error('Nedostatek miocoinů pro nákup tiketu');
-        } else if (error.message?.includes('closed') || error.message?.includes('ukončen')) {
-          toast.error('Tato hra již byla ukončena');
-        } else {
-          toast.error(error.message || 'Chyba při koupi tiketu');
-        }
+      if (contestError || !contestData) {
+        toast.error('Soutěž nenalezena');
         return;
       }
 
-      if (data) {
-        // Trigger success animation for non-admin users
-        if (!isAdmin) {
-          setRecentlyUnlocked(data.ticket_number);
-          setAnimatingTickets(prev => new Set([...prev, data.ticket_number]));
-          
-          // Remove animation after 2 seconds
-          setTimeout(() => {
-            setAnimatingTickets(prev => {
-              const next = new Set(prev);
-              next.delete(data.ticket_number);
-              return next;
-            });
-            setRecentlyUnlocked(null);
-          }, 2000);
-        }
+      if (contestData.status !== 'active') {
+        toast.error('Tato hra již byla ukončena');
+        return;
+      }
+
+      // 2. Check user wallet
+      const { data: walletData, error: walletError } = await supabase
+        .from('wallets')
+        .select('balance_coins')
+        .eq('user_id', user.id)
+        .single();
+
+      if (walletError || !walletData) {
+        toast.error('Peněženka nenalezena');
+        return;
+      }
+
+      if (walletData.balance_coins < ticketPrice) {
+        toast.error('Nedostatek miocoinů pro nákup tiketu');
+        return;
+      }
+
+      // 3. Get next ticket number
+      const { data: lastTicket } = await supabase
+        .from('tickets')
+        .select('number')
+        .eq('contest_id', contestId)
+        .order('number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const nextTicketNumber = lastTicket ? lastTicket.number + 1 : 1;
+
+      if (nextTicketNumber > contestData.ticket_count) {
+        toast.error('Soutěž je plná');
+        return;
+      }
+
+      // 4. Deduct coins from wallet
+      const { error: walletUpdateError } = await supabase
+        .from('wallets')
+        .update({ balance_coins: walletData.balance_coins - ticketPrice })
+        .eq('user_id', user.id);
+
+      if (walletUpdateError) {
+        toast.error('Chyba při odečítání mincí');
+        return;
+      }
+
+      // 5. Create ticket
+      const { error: ticketError } = await supabase
+        .from('tickets')
+        .insert({
+          contest_id: contestId,
+          user_id: user.id,
+          number: nextTicketNumber
+        });
+
+      if (ticketError) {
+        // Rollback wallet update
+        await supabase
+          .from('wallets')
+          .update({ balance_coins: walletData.balance_coins })
+          .eq('user_id', user.id);
         
-        // Refresh ticket data
-        fetchTicketData();
-        
-        if (data.won_prize) {
-          toast.success(`Gratulujeme! Vyhrál jsi ${data.won_prize}!`);
-        } else {
-          toast.success(`Tiket #${data.ticket_number.toLocaleString('cs-CZ')} zakoupen!`);
-        }
+        toast.error('Chyba při vytváření tiketu');
+        return;
+      }
+
+      // 6. Check for bonus prize
+      const { data: bonusPrize } = await supabase
+        .from('bonus_prizes')
+        .select('*')
+        .eq('contest_id', contestId)
+        .eq('ticket_position', nextTicketNumber)
+        .maybeSingle();
+
+      let wonPrize: string | null = null;
+      let wonType: 'bonus' | 'main' | null = null;
+      let bonusPrizeId: string | null = null;
+
+      if (bonusPrize) {
+        wonPrize = bonusPrize.description;
+        wonType = 'bonus';
+        bonusPrizeId = bonusPrize.id;
+
+        await supabase
+          .from('winners')
+          .insert({
+            contest_id: contestId,
+            user_id: user.id,
+            prize_id: bonusPrize.id,
+            type: 'bonus',
+            notes: `Bonusová výhra s tiketem #${nextTicketNumber}`
+          });
+
+        await supabase
+          .from('bonus_prizes')
+          .update({ status: 'won' })
+          .eq('id', bonusPrize.id);
+      }
+
+      // 7. Check if main prize won (last ticket)
+      if (nextTicketNumber === contestData.ticket_count) {
+        wonPrize = contestData.main_prize;
+        wonType = 'main';
+
+        await supabase
+          .from('winners')
+          .insert({
+            contest_id: contestId,
+            user_id: user.id,
+            type: 'main',
+            notes: `Hlavní výhra s tiketem #${nextTicketNumber}`
+          });
+
+        await supabase
+          .from('contests')
+          .update({ status: 'closed' })
+          .eq('id', contestId);
+      }
+
+      // 8. Get next bonus position
+      const { data: nextBonus } = await supabase
+        .from('bonus_prizes')
+        .select('ticket_position')
+        .eq('contest_id', contestId)
+        .eq('status', 'pending')
+        .gt('ticket_position', nextTicketNumber)
+        .order('ticket_position', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      const result = {
+        ticket_number: nextTicketNumber,
+        ticket_price: ticketPrice,
+        next_bonus_position: nextBonus?.ticket_position || null,
+        distance_to_next_bonus: nextBonus ? nextBonus.ticket_position - nextTicketNumber : null,
+        won_prize: wonPrize,
+        won_type: wonType,
+        bonus_prize_id: bonusPrizeId,
+        remaining_tickets: contestData.ticket_count - nextTicketNumber
+      };
+
+      // Trigger success animation for non-admin users
+      setRecentlyUnlocked(result.ticket_number);
+      setAnimatingTickets(prev => new Set([...prev, result.ticket_number]));
+      
+      // Remove animation after 2 seconds
+      setTimeout(() => {
+        setAnimatingTickets(prev => {
+          const next = new Set(prev);
+          next.delete(result.ticket_number);
+          return next;
+        });
+        setRecentlyUnlocked(null);
+      }, 2000);
+      
+      // Refresh ticket data
+      fetchTicketData();
+      
+      if (result.won_prize) {
+        toast.success(`Gratulujeme! Vyhrál jsi ${result.won_prize}!`);
+      } else {
+        toast.success(`Tiket #${result.ticket_number.toLocaleString('cs-CZ')} zakoupen!`);
       }
     } catch (error: any) {
       console.error('Error unlocking ticket:', error);
