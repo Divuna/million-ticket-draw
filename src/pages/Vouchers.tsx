@@ -79,12 +79,14 @@ const Vouchers: React.FC = () => {
       return;
     }
 
-    const existingRecord = userVouchers.find(uv => uv.voucher_id === voucherId);
+    // Explicitly find favorite (redeemed=false) vs purchased (redeemed=true)
+    const existingFavorite = userVouchers.find(uv => uv.voucher_id === voucherId && !uv.redeemed);
+    const existingPurchased = userVouchers.find(uv => uv.voucher_id === voucherId && uv.redeemed);
     
-    if (existingRecord && !existingRecord.redeemed) {
-      // Show confirmation dialog for removal
+    if (existingFavorite) {
+      // Show confirmation dialog for removal - only for favorites
       setRemoveConfirmId(voucherId);
-    } else if (existingRecord && existingRecord.redeemed) {
+    } else if (existingPurchased) {
       toast.info("Zakoupený voucher nelze odebrat z oblíbených");
     } else {
       // Add to favorites directly
@@ -140,6 +142,23 @@ const Vouchers: React.FC = () => {
     setRemoveConfirmId(null);
     setTogglingFavoriteId(voucherIdToRemove);
 
+    // Find the specific favorite record to ensure we have the correct voucher_id
+    const favoriteToRemove = userVouchers.find(
+      uv => uv.voucher_id === voucherIdToRemove && !uv.redeemed
+    );
+    
+    if (!favoriteToRemove) {
+      toast.error("Oblíbený voucher nenalezen");
+      setTogglingFavoriteId(null);
+      return;
+    }
+
+    console.log("Removing favorite:", {
+      user_voucher_id: favoriteToRemove.id,
+      voucher_id: favoriteToRemove.voucher_id,
+      redeemed: favoriteToRemove.redeemed
+    });
+
     // Optimistically update local state immediately
     optimisticRemoveByVoucherId(voucherIdToRemove);
 
@@ -147,10 +166,12 @@ const Vouchers: React.FC = () => {
       const { data, error } = await supabase
         .from('user_vouchers')
         .delete()
-        .eq('voucher_id', voucherIdToRemove)
+        .eq('voucher_id', favoriteToRemove.voucher_id)
         .eq('user_id', user.id)
         .eq('redeemed', false)
         .select();
+
+      console.log("Delete response:", { data, error });
 
       if (error) throw error;
       
