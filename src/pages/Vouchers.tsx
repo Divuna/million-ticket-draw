@@ -31,7 +31,7 @@ const Vouchers: React.FC = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const { vouchers: availableVouchers, loading: availableLoading, getRemainingCount, isVoucherAvailable, refetch: refetchAvailable } = useHomepageVouchers();
-  const { vouchers: userVouchers, loading: userVouchersLoading, refetch: refetchUserVouchers } = useUserVouchers();
+  const { vouchers: userVouchers, loading: userVouchersLoading, refetch: refetchUserVouchers, optimisticRemoveByVoucherId } = useUserVouchers();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
   const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
@@ -125,6 +125,9 @@ const Vouchers: React.FC = () => {
     setRemoveConfirmId(null);
     setTogglingFavoriteId(voucherIdToRemove);
 
+    // Optimistically update local state immediately
+    optimisticRemoveByVoucherId(voucherIdToRemove);
+
     try {
       const { error } = await supabase
         .from('user_vouchers')
@@ -141,6 +144,8 @@ const Vouchers: React.FC = () => {
     } catch (error) {
       console.error("Error removing favorite:", error);
       toast.error("Nepodařilo se odebrat z oblíbených");
+      // Refetch to restore state on error
+      await refetchUserVouchers();
     } finally {
       setTogglingFavoriteId(null);
     }
