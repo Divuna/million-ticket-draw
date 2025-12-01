@@ -40,6 +40,7 @@ import AdminMessageThread from "@/pages/AdminMessageThread";
 import OneMilAudit from "@/pages/OneMilAudit";
 import TestLogin from "@/pages/TestLogin";
 import Winners from "@/pages/Winners";
+import Wins from "@/pages/Wins";
 import FavoriteGames from "@/pages/FavoriteGames";
 import NotFound from "@/pages/NotFound";
 
@@ -76,6 +77,7 @@ function AppContent() {
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />
         <Route path="/winners" element={<Winners />} />
+        <Route path="/wins" element={<Wins />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/banners" element={<AdminBanners />} />
