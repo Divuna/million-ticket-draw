@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Heart } from 'lucide-react';
 import { TicketResultModal } from '@/components/TicketResultModal';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,6 +44,38 @@ const FavoriteGames = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
+  const [removingFavoriteId, setRemovingFavoriteId] = useState<string | null>(null);
+
+  const handleRemoveFavorite = async (contestId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) return;
+
+    setRemovingFavoriteId(contestId);
+    
+    // Optimistic update
+    setContests(prev => prev.filter(c => c.id !== contestId));
+
+    try {
+      const { error } = await supabase
+        .from('user_contest_favorites')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('contest_id', contestId);
+
+      if (error) {
+        // Revert on error
+        fetchFavoriteContests();
+        toast.error('Chyba při odebírání z oblíbených');
+      } else {
+        toast.success('Odebráno z oblíbených');
+      }
+    } catch (error) {
+      fetchFavoriteContests();
+      toast.error('Chyba při odebírání z oblíbených');
+    } finally {
+      setRemovingFavoriteId(null);
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -202,8 +234,17 @@ const FavoriteGames = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {contests.map((contest) => (
             <Card key={contest.id} className="ticket-game ticket-perforations relative cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/contest/${contest.id}`)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 z-10 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                onClick={(e) => handleRemoveFavorite(contest.id, e)}
+                disabled={removingFavoriteId === contest.id}
+              >
+                <Heart className="h-5 w-5 fill-current" />
+              </Button>
               {contest.status === 'closed' && (
-                <Badge className="absolute top-4 right-4 bg-destructive text-destructive-foreground">
+                <Badge className="absolute top-10 right-4 bg-destructive text-destructive-foreground">
                   Hra ukončena
                 </Badge>
               )}
