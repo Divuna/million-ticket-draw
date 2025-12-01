@@ -77,31 +77,37 @@ export default function AdminMessages() {
   }, []);
 
   return (
-    <div className="flex flex-col p-6 gap-4 h-full pb-24">
-      <h2 className="text-xl font-bold text-gray-100">Zprávy uživatelů</h2>
+    <div className="p-6 pb-24">
+      <h2 className="text-xl font-bold text-foreground mb-6">Zprávy uživatelů</h2>
 
       {loading ? (
-        <p className="text-gray-400">Načítání…</p>
+        <p className="text-muted-foreground">Načítání…</p>
       ) : threads.length === 0 ? (
-        <p className="text-gray-400">Zatím žádné zprávy.</p>
+        <p className="text-muted-foreground">Zatím žádné zprávy.</p>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {threads.map((thread) => (
             <div
               key={thread.user_id}
               onClick={() => navigate(`/admin/messages/${thread.user_id}`)}
-              className={`p-5 rounded-2xl cursor-pointer hover:bg-gray-700/80 transition-all relative shadow-lg ${
+              className={`relative p-4 rounded-2xl cursor-pointer transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02] ${
                 thread.has_unread 
-                  ? "bg-red-900/40 border border-red-500/50" 
-                  : "bg-gray-800 border border-gray-700/50"
+                  ? "bg-destructive/20 border border-destructive/40 hover:bg-destructive/30" 
+                  : "bg-card border border-border hover:bg-accent/50"
               }`}
             >
               {thread.has_unread && (
-                <div className="absolute top-5 right-5 w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="absolute top-3 right-3 w-3 h-3 bg-destructive rounded-full animate-pulse" />
               )}
-              <p className="text-gray-100 font-semibold">{thread.user_id}</p>
-              <p className="text-gray-400 text-sm truncate">{thread.last_message}</p>
-              <p className="text-gray-500 text-xs mt-1">{new Date(thread.last_date).toLocaleString()}</p>
+              <p className="text-foreground font-semibold text-sm truncate pr-6">
+                {thread.user_id.slice(0, 8)}...
+              </p>
+              <p className="text-muted-foreground text-sm mt-2 line-clamp-2 min-h-[40px]">
+                {thread.last_message}
+              </p>
+              <p className="text-muted-foreground/70 text-xs mt-3 border-t border-border/50 pt-2">
+                {new Date(thread.last_date).toLocaleString()}
+              </p>
             </div>
           ))}
         </div>
