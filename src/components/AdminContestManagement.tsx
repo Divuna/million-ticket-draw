@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,6 +69,7 @@ export const AdminContestManagement: React.FC = () => {
   const [showBonusDialog, setShowBonusDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const bonusPanelRef = useRef<HTMLDivElement>(null);
 
   const [contestForm, setContestForm] = useState<ContestForm>({
     title: '',
@@ -615,7 +616,12 @@ export const AdminContestManagement: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setSelectedContestId(contest.contest_id)}
+                          onClick={() => {
+                            setSelectedContestId(contest.contest_id);
+                            setTimeout(() => {
+                              bonusPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }, 100);
+                          }}
                         >
                           <Coins className="w-3 h-3 mr-1" />
                           Bonusy
@@ -632,7 +638,7 @@ export const AdminContestManagement: React.FC = () => {
 
       {/* Bonus Prizes Management */}
       {selectedContestId && (
-        <Card>
+        <Card ref={bonusPanelRef}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Coins className="w-5 h-5" />
