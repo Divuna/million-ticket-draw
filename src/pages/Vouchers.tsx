@@ -31,7 +31,7 @@ const Vouchers: React.FC = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const { vouchers: availableVouchers, loading: availableLoading, getRemainingCount, isVoucherAvailable, refetch: refetchAvailable } = useHomepageVouchers();
-  const { vouchers: userVouchers, loading: userVouchersLoading, refetch: refetchUserVouchers, optimisticRemoveByVoucherId } = useUserVouchers();
+  const { vouchers: userVouchers, loading: userVouchersLoading, refetch: refetchUserVouchers, optimisticRemoveByVoucherId, optimisticAddFavorite } = useUserVouchers();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
   const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
@@ -97,6 +97,19 @@ const Vouchers: React.FC = () => {
     
     setTogglingFavoriteId(voucherId);
 
+    // Find voucher data for optimistic update
+    const voucherData = availableVouchers.find(v => v.id === voucherId);
+    
+    // Optimistically add to favorites immediately
+    if (voucherData) {
+      optimisticAddFavorite(voucherId, {
+        id: voucherData.id,
+        name: voucherData.name,
+        image_url: voucherData.image_url || '',
+        banner_url: voucherData.banner_url
+      });
+    }
+
     try {
       const { error } = await supabase
         .from('user_vouchers')
@@ -109,10 +122,12 @@ const Vouchers: React.FC = () => {
       if (error) throw error;
       toast.success("Voucher přidán do oblíbených");
       await refetchUserVouchers();
-      refetchAvailable();
+      await refetchAvailable();
     } catch (error) {
       console.error("Error adding favorite:", error);
       toast.error("Nepodařilo se přidat do oblíbených");
+      // Revert optimistic update on error
+      optimisticRemoveByVoucherId(voucherId);
     } finally {
       setTogglingFavoriteId(null);
     }

@@ -68,6 +68,20 @@ export const useUserVouchers = () => {
     setVouchers(prev => prev.filter(v => v.voucher_id !== voucherId));
   }, []);
 
+  // Optimistically add a favorite voucher to local state
+  const optimisticAddFavorite = useCallback((voucherId: string, voucherData: { id: string; name: string; image_url: string; banner_url: string | null }) => {
+    const tempId = `temp-${Date.now()}`;
+    const newEntry: UserVoucher = {
+      id: tempId,
+      voucher_id: voucherId,
+      created_at: new Date().toISOString(),
+      redeemed: false,
+      voucher: voucherData,
+      code: `OMV-${tempId.substring(0, 8).toUpperCase()}`
+    };
+    setVouchers(prev => [newEntry, ...prev]);
+  }, []);
+
   useEffect(() => {
     fetchUserVouchers();
   }, [user?.id]);
@@ -95,6 +109,7 @@ export const useUserVouchers = () => {
     vouchers,
     loading,
     refetch: fetchUserVouchers,
-    optimisticRemoveByVoucherId
+    optimisticRemoveByVoucherId,
+    optimisticAddFavorite
   };
 };
