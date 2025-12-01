@@ -7,6 +7,8 @@ import { toast } from "@/hooks/use-toast";
 
 interface Thread {
   user_id: string;
+  user_email: string | null;
+  user_name: string | null;
   last_message: string;
   last_date: string;
   has_unread: boolean;
@@ -21,13 +23,14 @@ export default function AdminMessages() {
   const loadThreads = async () => {
     setLoading(true);
 
-    const { data, error } = await supabase
+    // Fetch messages
+    const { data: messagesData, error: messagesError } = await supabase
       .from("messages")
       .select("user_id, content, created_at, sender, read")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error(error);
+    if (messagesError) {
+      console.error(messagesError);
       toast({
         title: "Chyba",
         description: "Nepodařilo se načíst zprávy.",
@@ -39,17 +42,38 @@ export default function AdminMessages() {
 
     // Group by user_id
     const grouped: Record<string, any[]> = {};
-    data?.forEach((msg) => {
+    messagesData?.forEach((msg) => {
       if (!grouped[msg.user_id]) grouped[msg.user_id] = [];
       grouped[msg.user_id].push(msg);
     });
 
-    const result = Object.keys(grouped).map((uid) => {
+    // Get unique user IDs
+    const userIds = Object.keys(grouped);
+
+    // Fetch user info for all users
+    const { data: usersData } = await supabase
+      .from("users")
+      .select("id, email, name, first_name, last_name")
+      .in("id", userIds);
+
+    // Create a map of user info
+    const userMap: Record<string, { email: string | null; name: string | null }> = {};
+    usersData?.forEach((user) => {
+      const displayName = user.name || 
+        (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : null) ||
+        user.first_name || null;
+      userMap[user.id] = { email: user.email, name: displayName };
+    });
+
+    const result: Thread[] = userIds.map((uid) => {
       const userMessages = grouped[uid];
       const hasUnread = userMessages.some((msg) => msg.sender === "user" && !msg.read);
+      const userInfo = userMap[uid] || { email: null, name: null };
       
       return {
         user_id: uid,
+        user_email: userInfo.email,
+        user_name: userInfo.name,
         last_message: userMessages[0]?.content || "",
         last_date: userMessages[0]?.created_at || "",
         has_unread: hasUnread,
@@ -105,9 +129,9 @@ export default function AdminMessages() {
                 <div className="absolute top-3 right-3 w-3 h-3 bg-destructive rounded-full animate-pulse" />
               )}
               
-              {/* Sender / User ID */}
+              {/* Sender / User name or email */}
               <p className="text-foreground font-semibold text-sm truncate pr-6">
-                {thread.user_id.slice(0, 8)}…
+                {thread.user_name || thread.user_email || `${thread.user_id.slice(0, 8)}…`}
               </p>
               
               {/* Last message preview */}
