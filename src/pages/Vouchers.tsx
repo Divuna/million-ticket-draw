@@ -79,7 +79,8 @@ const Vouchers: React.FC = () => {
           const { error } = await supabase
             .from('user_vouchers')
             .delete()
-            .eq('id', existingRecord.id);
+            .eq('voucher_id', voucherId)
+            .eq('user_id', user.id);
 
           if (error) throw error;
           toast.success("Voucher odebrán z oblíbených");
@@ -100,7 +101,8 @@ const Vouchers: React.FC = () => {
         toast.success("Voucher přidán do oblíbených");
       }
 
-      refetchUserVouchers();
+      // Immediately refetch to update local state
+      await refetchUserVouchers();
       refetchAvailable();
     } catch (error) {
       console.error("Error toggling favorite:", error);
