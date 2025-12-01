@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit2, Trophy, Ticket, Image, Coins, Target, TrendingUp, Settings } from 'lucide-react';
+import { Plus, Edit2, Trophy, Ticket, Image, Coins, Target, TrendingUp, Settings, Trash2, Package } from 'lucide-react';
 
 interface ContestData {
   contest_id: string;
@@ -58,6 +58,20 @@ interface BonusPrizeForm {
   status: string;
 }
 
+interface MioCoinBonusForm {
+  totalToDistribute: number;
+  valuePerWin: number;
+  distributionMethod: 'random' | 'step_interval';
+}
+
+interface PhysicalPrize {
+  id: string;
+  description: string;
+  ticketPosition: number;
+  imageFile: File | null;
+  imagePreview: string;
+}
+
 export const AdminContestManagement: React.FC = () => {
   const [contests, setContests] = useState<ContestData[]>([]);
   const [selectedContestId, setSelectedContestId] = useState<string>('');
@@ -70,13 +84,16 @@ export const AdminContestManagement: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const bonusPanelRef = useRef<HTMLDivElement>(null);
+  const [dialogTab, setDialogTab] = useState('basic');
+  const [generatingBonuses, setGeneratingBonuses] = useState(false);
+  const [generatedMioCoins, setGeneratedMioCoins] = useState<number[]>([]);
 
   const [contestForm, setContestForm] = useState<ContestForm>({
     title: '',
     description: '',
     main_prize: '',
     main_image: '',
-      status: 'pending',
+    status: 'pending',
     ticket_count: 1000000,
     ticket_price: 1
   });
@@ -86,6 +103,20 @@ export const AdminContestManagement: React.FC = () => {
     ticket_position: 1,
     amount: null,
     status: 'pending'
+  });
+
+  const [mioCoinBonusForm, setMioCoinBonusForm] = useState<MioCoinBonusForm>({
+    totalToDistribute: 1000,
+    valuePerWin: 10,
+    distributionMethod: 'random'
+  });
+
+  const [physicalPrizes, setPhysicalPrizes] = useState<PhysicalPrize[]>([]);
+  const [newPhysicalPrize, setNewPhysicalPrize] = useState<Omit<PhysicalPrize, 'id'>>({
+    description: '',
+    ticketPosition: 1,
+    imageFile: null,
+    imagePreview: ''
   });
 
   // Fetch data on component mount
@@ -204,9 +235,60 @@ export const AdminContestManagement: React.FC = () => {
 
       if (error) throw error;
 
+      const contestData = data as any;
+      const createdContestId = contestData?.contest_id || editingContest?.contest_id;
+
+      // Save MioCoin bonuses if we have generated positions and this is a new contest
+      if (!editingContest && createdContestId && generatedMioCoins.length > 0) {
+        const mioCoinBonuses = generatedMioCoins.map(position => ({
+          contest_id: createdContestId,
+          description: `MioCoin - ${mioCoinBonusForm.valuePerWin} MioCoins`,
+          ticket_position: position,
+          status: 'pending',
+          amount: mioCoinBonusForm.valuePerWin
+        }));
+
+        const { error: bonusError } = await supabase
+          .from('bonus_prizes')
+          .insert(mioCoinBonuses);
+
+        if (bonusError) {
+          console.error('Error saving MioCoin bonuses:', bonusError);
+          toast({
+            title: "Varování",
+            description: "Soutěž vytvořena, ale MioCoin bonusy se nepodařilo uložit.",
+            variant: "destructive"
+          });
+        }
+      }
+
+      // Save physical prizes if we have any and this is a new contest
+      if (!editingContest && createdContestId && physicalPrizes.length > 0) {
+        const physicalBonuses = physicalPrizes.map(prize => ({
+          contest_id: createdContestId,
+          description: prize.description,
+          ticket_position: prize.ticketPosition,
+          status: 'pending',
+          amount: 0
+        }));
+
+        const { error: physicalError } = await supabase
+          .from('bonus_prizes')
+          .insert(physicalBonuses);
+
+        if (physicalError) {
+          console.error('Error saving physical prizes:', physicalError);
+          toast({
+            title: "Varování",
+            description: "Soutěž vytvořena, ale věcné výhry se nepodařilo uložit.",
+            variant: "destructive"
+          });
+        }
+      }
+
       toast({
         title: "Úspěch",
-        description: (data as any)?.message || "Soutěž byla úspěšně uložena",
+        description: contestData?.message || "Soutěž byla úspěšně uložena",
       });
 
       // Reset form and refresh data
@@ -299,6 +381,144 @@ export const AdminContestManagement: React.FC = () => {
     });
     setSelectedFile(null);
     setImagePreview('');
+    setDialogTab('basic');
+    setGeneratedMioCoins([]);
+    setMioCoinBonusForm({
+      totalToDistribute: 1000,
+      valuePerWin: 10,
+      distributionMethod: 'random'
+    });
+    setPhysicalPrizes([]);
+    setNewPhysicalPrize({
+      description: '',
+      ticketPosition: 1,
+      imageFile: null,
+      imagePreview: ''
+    });
+  };
+
+  const handleGenerateMioCoinPositions = async () => {
+    if (!contestForm.title || !contestForm.main_prize) {
+      toast({
+        title: "Chyba",
+        description: "Nejprve vyplňte název soutěže a hlavní cenu na záložce Základní údaje.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const numberOfBonuses = Math.floor(mioCoinBonusForm.totalToDistribute / mioCoinBonusForm.valuePerWin);
+    if (numberOfBonuses <= 0) {
+      toast({
+        title: "Chyba",
+        description: "Celková hodnota musí být vyšší než hodnota jedné výhry.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Generate positions locally (will be saved with contest)
+    const positions: number[] = [];
+    const maxPosition = contestForm.ticket_count;
+    
+    if (mioCoinBonusForm.distributionMethod === 'random') {
+      const selectedPositions = new Set<number>();
+      let attempts = 0;
+      const maxAttempts = numberOfBonuses * 10;
+      
+      while (positions.length < numberOfBonuses && attempts < maxAttempts) {
+        const randomPos = Math.floor(Math.random() * maxPosition) + 1;
+        if (!selectedPositions.has(randomPos)) {
+          positions.push(randomPos);
+          selectedPositions.add(randomPos);
+        }
+        attempts++;
+      }
+    } else {
+      // step_interval (rovnoměrně)
+      const step = Math.floor(maxPosition / numberOfBonuses);
+      for (let i = 0; i < numberOfBonuses; i++) {
+        positions.push(Math.min((i + 1) * step, maxPosition));
+      }
+    }
+    
+    positions.sort((a, b) => a - b);
+    setGeneratedMioCoins(positions);
+    
+    toast({
+      title: "Pozice vygenerovány",
+      description: `Vygenerováno ${positions.length} pozic pro MioCoiny. Budou uloženy po vytvoření soutěže.`,
+    });
+  };
+
+  const handleAddPhysicalPrize = () => {
+    if (!newPhysicalPrize.description || newPhysicalPrize.ticketPosition < 1) {
+      toast({
+        title: "Chyba",
+        description: "Vyplňte název výhry a pozici tiketu.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const newPrize: PhysicalPrize = {
+      id: crypto.randomUUID(),
+      ...newPhysicalPrize
+    };
+    
+    setPhysicalPrizes([...physicalPrizes, newPrize]);
+    setNewPhysicalPrize({
+      description: '',
+      ticketPosition: 1,
+      imageFile: null,
+      imagePreview: ''
+    });
+    
+    toast({
+      title: "Přidáno",
+      description: "Věcná výhra přidána do seznamu. Bude uložena po vytvoření soutěže.",
+    });
+  };
+
+  const handleRemovePhysicalPrize = (id: string) => {
+    setPhysicalPrizes(physicalPrizes.filter(p => p.id !== id));
+  };
+
+  const handlePhysicalPrizeImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Chyba",
+          description: "Povolené formáty: .jpg, .jpeg, .png",
+          variant: "destructive"
+        });
+        e.target.value = '';
+        return;
+      }
+
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast({
+          title: "Chyba",
+          description: "Maximální velikost souboru je 5 MB",
+          variant: "destructive"
+        });
+        e.target.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setNewPhysicalPrize(prev => ({
+          ...prev,
+          imageFile: file,
+          imagePreview: event.target?.result as string
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const resetBonusPrizeForm = () => {
@@ -416,7 +636,7 @@ export const AdminContestManagement: React.FC = () => {
               Nová soutěž
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingContest ? 'Upravit soutěž' : 'Vytvořit novou soutěž'}
@@ -426,96 +646,270 @@ export const AdminContestManagement: React.FC = () => {
               </DialogDescription>
             </DialogHeader>
             
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="title">Název soutěže *</Label>
-                  <Input
-                    id="title"
-                    value={contestForm.title}
-                    onChange={(e) => setContestForm({...contestForm, title: e.target.value})}
-                    placeholder="Zadejte název soutěže"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="main_prize">Hlavní cena *</Label>
-                  <Input
-                    id="main_prize"
-                    value={contestForm.main_prize}
-                    onChange={(e) => setContestForm({...contestForm, main_prize: e.target.value})}
-                    placeholder="Např. iPhone 15 Pro"
-                  />
-                </div>
-              </div>
+            <Tabs value={dialogTab} onValueChange={setDialogTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="basic">Základní údaje</TabsTrigger>
+                <TabsTrigger value="miocoins" disabled={!!editingContest}>Bonusy – MioCoins</TabsTrigger>
+                <TabsTrigger value="physical" disabled={!!editingContest}>Bonusy – věcné výhry</TabsTrigger>
+              </TabsList>
 
-              <div>
-                <Label htmlFor="description">Popis soutěže</Label>
-                <Textarea
-                  id="description"
-                  value={contestForm.description}
-                  onChange={(e) => setContestForm({...contestForm, description: e.target.value})}
-                  placeholder="Volitelný popis soutěže"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="image">Hlavní obrázek</Label>
-                <input
-                  id="image"
-                  type="file"
-                  accept=".jpg,.jpeg,.png"
-                  onChange={handleFileSelect}
-                  className="w-full p-2 border rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
-                {imagePreview && (
-                  <div className="mt-2">
-                    <img 
-                      src={imagePreview} 
-                      alt="Preview" 
-                      className="max-w-xs max-h-32 rounded-md border object-cover"
+              {/* Tab 1: Základní údaje */}
+              <TabsContent value="basic" className="space-y-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="title">Název soutěže *</Label>
+                    <Input
+                      id="title"
+                      value={contestForm.title}
+                      onChange={(e) => setContestForm({...contestForm, title: e.target.value})}
+                      placeholder="Zadejte název soutěže"
                     />
                   </div>
-                )}
-              </div>
+                  <div>
+                    <Label htmlFor="main_prize">Hlavní cena *</Label>
+                    <Input
+                      id="main_prize"
+                      value={contestForm.main_prize}
+                      onChange={(e) => setContestForm({...contestForm, main_prize: e.target.value})}
+                      placeholder="Např. iPhone 15 Pro"
+                    />
+                  </div>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="ticket_count">Počet tiketů *</Label>
-                  <Input
-                    id="ticket_count"
-                    type="number"
-                    min="1"
-                    value={contestForm.ticket_count}
-                    onChange={(e) => setContestForm({...contestForm, ticket_count: parseInt(e.target.value) || 1})}
+                  <Label htmlFor="description">Popis soutěže</Label>
+                  <Textarea
+                    id="description"
+                    value={contestForm.description}
+                    onChange={(e) => setContestForm({...contestForm, description: e.target.value})}
+                    placeholder="Volitelný popis soutěže"
+                    rows={3}
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="ticket_price">Cena tiketu (MioCoins) *</Label>
-                  <Input
-                    id="ticket_price"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={contestForm.ticket_price}
-                    onChange={(e) => setContestForm({...contestForm, ticket_price: parseFloat(e.target.value) || 1})}
+                  <Label htmlFor="image">Hlavní obrázek</Label>
+                  <input
+                    id="image"
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    onChange={handleFileSelect}
+                    className="w-full p-2 border rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   />
+                  {imagePreview && (
+                    <div className="mt-2">
+                      <img 
+                        src={imagePreview} 
+                        alt="Preview" 
+                        className="max-w-xs max-h-32 rounded-md border object-cover"
+                      />
+                    </div>
+                  )}
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="ticket_count">Počet tiketů *</Label>
+                    <Input
+                      id="ticket_count"
+                      type="number"
+                      min="1"
+                      value={contestForm.ticket_count}
+                      onChange={(e) => setContestForm({...contestForm, ticket_count: parseInt(e.target.value) || 1})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="ticket_price">Cena tiketu (MioCoins) *</Label>
+                    <Input
+                      id="ticket_price"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={contestForm.ticket_price}
+                      onChange={(e) => setContestForm({...contestForm, ticket_price: parseFloat(e.target.value) || 1})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="status">Status</Label>
+                    <Select value={contestForm.status} onValueChange={(value) => setContestForm({...contestForm, status: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Připravena</SelectItem>
+                        <SelectItem value="active">Aktivní</SelectItem>
+                        <SelectItem value="closed">Ukončena</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Tab 2: Bonusy – MioCoins */}
+              <TabsContent value="miocoins" className="space-y-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="totalToDistribute">Celkem rozdělit (MioCoins)</Label>
+                    <Input
+                      id="totalToDistribute"
+                      type="number"
+                      min="1"
+                      value={mioCoinBonusForm.totalToDistribute}
+                      onChange={(e) => setMioCoinBonusForm({...mioCoinBonusForm, totalToDistribute: parseInt(e.target.value) || 0})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="valuePerWin">Hodnota jedné výhry (MioCoins)</Label>
+                    <Input
+                      id="valuePerWin"
+                      type="number"
+                      min="1"
+                      value={mioCoinBonusForm.valuePerWin}
+                      onChange={(e) => setMioCoinBonusForm({...mioCoinBonusForm, valuePerWin: parseInt(e.target.value) || 1})}
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={contestForm.status} onValueChange={(value) => setContestForm({...contestForm, status: value})}>
+                  <Label htmlFor="distributionMethod">Způsob rozmístění</Label>
+                  <Select 
+                    value={mioCoinBonusForm.distributionMethod} 
+                    onValueChange={(value: 'random' | 'step_interval') => setMioCoinBonusForm({...mioCoinBonusForm, distributionMethod: value})}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pending">Připravena</SelectItem>
-                      <SelectItem value="active">Aktivní</SelectItem>
-                      <SelectItem value="closed">Ukončena</SelectItem>
+                      <SelectItem value="random">Náhodně</SelectItem>
+                      <SelectItem value="step_interval">Rovnoměrně</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-            </div>
+
+                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Počet bonusů: {Math.floor(mioCoinBonusForm.totalToDistribute / mioCoinBonusForm.valuePerWin) || 0}
+                    </p>
+                    {generatedMioCoins.length > 0 && (
+                      <p className="text-sm text-green-600 font-medium">
+                        Vygenerováno {generatedMioCoins.length} pozic
+                      </p>
+                    )}
+                  </div>
+                  <Button 
+                    type="button" 
+                    onClick={handleGenerateMioCoinPositions}
+                    disabled={generatingBonuses}
+                  >
+                    <Coins className="w-4 h-4 mr-2" />
+                    Vygenerovat pozice
+                  </Button>
+                </div>
+
+                {generatedMioCoins.length > 0 && (
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Náhled pozic (prvních 20):</p>
+                    <p className="text-sm font-mono">
+                      {generatedMioCoins.slice(0, 20).join(', ')}{generatedMioCoins.length > 20 ? '...' : ''}
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Tab 3: Bonusy – věcné výhry */}
+              <TabsContent value="physical" className="space-y-4 mt-4">
+                <div className="space-y-4 p-4 border rounded-lg">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    Přidat věcnou výhru
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="physicalDescription">Název / popis *</Label>
+                      <Input
+                        id="physicalDescription"
+                        value={newPhysicalPrize.description}
+                        onChange={(e) => setNewPhysicalPrize({...newPhysicalPrize, description: e.target.value})}
+                        placeholder="Např. Samsung Galaxy Watch"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="physicalPosition">Pozice tiketu *</Label>
+                      <Input
+                        id="physicalPosition"
+                        type="number"
+                        min="1"
+                        max={contestForm.ticket_count}
+                        value={newPhysicalPrize.ticketPosition}
+                        onChange={(e) => setNewPhysicalPrize({...newPhysicalPrize, ticketPosition: parseInt(e.target.value) || 1})}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="physicalImage">Obrázek výhry</Label>
+                    <input
+                      id="physicalImage"
+                      type="file"
+                      accept=".jpg,.jpeg,.png"
+                      onChange={handlePhysicalPrizeImageSelect}
+                      className="w-full p-2 border rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    {newPhysicalPrize.imagePreview && (
+                      <div className="mt-2">
+                        <img 
+                          src={newPhysicalPrize.imagePreview} 
+                          alt="Preview" 
+                          className="max-w-xs max-h-24 rounded-md border object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <Button type="button" onClick={handleAddPhysicalPrize} variant="outline">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Přidat do seznamu
+                  </Button>
+                </div>
+
+                {physicalPrizes.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Přidané věcné výhry ({physicalPrizes.length})</h4>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Název</TableHead>
+                          <TableHead>Pozice</TableHead>
+                          <TableHead>Akce</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {physicalPrizes.map((prize) => (
+                          <TableRow key={prize.id}>
+                            <TableCell>{prize.description}</TableCell>
+                            <TableCell>#{prize.ticketPosition}</TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleRemovePhysicalPrize(prize.id)}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                {physicalPrizes.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">
+                    Zatím nebyly přidány žádné věcné výhry.
+                  </p>
+                )}
+              </TabsContent>
+            </Tabs>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowContestDialog(false)}>
