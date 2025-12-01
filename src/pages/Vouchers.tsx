@@ -144,21 +144,27 @@ const Vouchers: React.FC = () => {
     optimisticRemoveByVoucherId(voucherIdToRemove);
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('user_vouchers')
         .delete()
         .eq('voucher_id', voucherIdToRemove)
         .eq('user_id', user.id)
-        .eq('redeemed', false);
+        .eq('redeemed', false)
+        .select();
 
       if (error) throw error;
+      
+      // Check if any row was actually deleted
+      if (!data || data.length === 0) {
+        throw new Error('Voucher nebyl nalezen nebo nemáte oprávnění k jeho odebrání');
+      }
       
       toast.success("Voucher odebrán z oblíbených");
       await refetchUserVouchers();
       await refetchAvailable();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error removing favorite:", error);
-      toast.error("Nepodařilo se odebrat z oblíbených");
+      toast.error(error.message || "Nepodařilo se odebrat z oblíbených");
       // Refetch to restore state on error
       await refetchUserVouchers();
     } finally {
