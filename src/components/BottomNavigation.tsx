@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { useUserRole } from "@/hooks/useUserRole";
 
-import { Home, User, Ticket, Gamepad2, MessageCircle } from "lucide-react";
+import { Home, User, Ticket, Gamepad2, Trophy, MessageCircle } from "lucide-react";
 
 export const BottomNavigation: React.FC = () => {
   const navigate = useNavigate();
@@ -15,10 +15,11 @@ export const BottomNavigation: React.FC = () => {
 
   const navItems = [
     { path: "/", label: "Domů", icon: Home },
-    { path: "/profile", label: "Můj profil", icon: User },
     { path: "/vouchers", label: "Vouchery", icon: Ticket },
     { path: "/games", label: "Soutěže", icon: Gamepad2 },
+    { path: "/wins", label: "Výhry", icon: Trophy },
     { path: "/messages", label: "Zprávy", icon: MessageCircle },
+    { path: "/profile", label: "Můj profil", icon: User },
   ];
 
   return (
