@@ -397,6 +397,36 @@ export const AdminContestManagement: React.FC = () => {
     });
   };
 
+  const isContestFormValid = (): boolean => {
+    // TAB 1: Základní údaje
+    const hasTitle = contestForm.title.trim() !== '';
+    const hasMainPrize = contestForm.main_prize.trim() !== '';
+    const hasTicketCount = contestForm.ticket_count > 0;
+    const hasTicketPrice = contestForm.ticket_price > 0;
+    const hasImage = selectedFile !== null || contestForm.main_image.trim() !== '';
+    
+    const tab1Valid = hasTitle && hasMainPrize && hasTicketCount && hasTicketPrice && hasImage;
+    
+    // TAB 2: Bonusy – MioCoins
+    let tab2Valid = true;
+    if (mioCoinBonusForm.totalToDistribute > 0) {
+      const hasValuePerWin = mioCoinBonusForm.valuePerWin > 0;
+      const totalIsGreaterOrEqual = mioCoinBonusForm.totalToDistribute >= mioCoinBonusForm.valuePerWin;
+      const hasGeneratedPositions = generatedMioCoins.length > 0;
+      tab2Valid = hasValuePerWin && totalIsGreaterOrEqual && hasGeneratedPositions;
+    }
+    
+    // TAB 3: Bonusy – věcné výhry
+    let tab3Valid = true;
+    if (physicalPrizes.length > 0) {
+      tab3Valid = physicalPrizes.every(prize => 
+        prize.description.trim() !== '' && prize.ticketPosition >= 1
+      );
+    }
+    
+    return tab1Valid && tab2Valid && tab3Valid;
+  };
+
   const handleGenerateMioCoinPositions = async () => {
     if (!contestForm.title || !contestForm.main_prize) {
       toast({
@@ -915,7 +945,7 @@ export const AdminContestManagement: React.FC = () => {
               <Button variant="outline" onClick={() => setShowContestDialog(false)}>
                 Zrušit
               </Button>
-              <Button onClick={handleSaveContest}>
+              <Button onClick={handleSaveContest} disabled={!isContestFormValid()}>
                 {editingContest ? 'Aktualizovat' : 'Vytvořit'}
               </Button>
             </DialogFooter>
