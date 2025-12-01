@@ -121,20 +121,23 @@ const Vouchers: React.FC = () => {
   const confirmRemoveFavorite = async () => {
     if (!user || !removeConfirmId) return;
     
-    setTogglingFavoriteId(removeConfirmId);
+    const voucherIdToRemove = removeConfirmId;
     setRemoveConfirmId(null);
+    setTogglingFavoriteId(voucherIdToRemove);
 
     try {
       const { error } = await supabase
         .from('user_vouchers')
         .delete()
-        .eq('voucher_id', removeConfirmId)
-        .eq('user_id', user.id);
+        .eq('voucher_id', voucherIdToRemove)
+        .eq('user_id', user.id)
+        .eq('redeemed', false);
 
       if (error) throw error;
+      
       toast.success("Voucher odebrán z oblíbených");
       await refetchUserVouchers();
-      refetchAvailable();
+      await refetchAvailable();
     } catch (error) {
       console.error("Error removing favorite:", error);
       toast.error("Nepodařilo se odebrat z oblíbených");
