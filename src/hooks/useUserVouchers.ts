@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -63,6 +63,11 @@ export const useUserVouchers = () => {
     }
   };
 
+  // Optimistically remove a voucher from local state by voucher_id
+  const optimisticRemoveByVoucherId = useCallback((voucherId: string) => {
+    setVouchers(prev => prev.filter(v => v.voucher_id !== voucherId));
+  }, []);
+
   useEffect(() => {
     fetchUserVouchers();
   }, [user?.id]);
@@ -89,6 +94,7 @@ export const useUserVouchers = () => {
   return {
     vouchers,
     loading,
-    refetch: fetchUserVouchers
+    refetch: fetchUserVouchers,
+    optimisticRemoveByVoucherId
   };
 };
