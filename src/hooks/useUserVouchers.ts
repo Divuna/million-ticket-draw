@@ -63,9 +63,9 @@ export const useUserVouchers = () => {
     }
   };
 
-  // Optimistically remove a voucher from local state by voucher_id
+  // Optimistically remove a favorite (redeemed=false) voucher from local state by voucher_id
   const optimisticRemoveByVoucherId = useCallback((voucherId: string) => {
-    setVouchers(prev => prev.filter(v => v.voucher_id !== voucherId));
+    setVouchers(prev => prev.filter(v => !(v.voucher_id === voucherId && !v.redeemed)));
   }, []);
 
   // Optimistically add a favorite voucher to local state
