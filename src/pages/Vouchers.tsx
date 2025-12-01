@@ -10,7 +10,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Gift, Copy, Heart, Ticket, Clock, ShoppingCart } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Gift, Copy, Heart, Ticket, Clock, ShoppingCart, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -24,6 +34,7 @@ const Vouchers: React.FC = () => {
   const { vouchers: userVouchers, loading: userVouchersLoading, refetch: refetchUserVouchers } = useUserVouchers();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
+  const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
 
   // Separate user vouchers into favorites (redeemed=false) and purchased (redeemed=true)
   const favoriteVouchers = userVouchers.filter(uv => !uv.redeemed);
@@ -60,7 +71,7 @@ const Vouchers: React.FC = () => {
     };
   };
 
-  const toggleFavorite = async (e: React.MouseEvent, voucherId: string) => {
+  const handleFavoriteClick = (e: React.MouseEvent, voucherId: string) => {
     e.stopPropagation();
     
     if (!user) {
@@ -68,45 +79,65 @@ const Vouchers: React.FC = () => {
       return;
     }
 
+    const existingRecord = userVouchers.find(uv => uv.voucher_id === voucherId);
+    
+    if (existingRecord && !existingRecord.redeemed) {
+      // Show confirmation dialog for removal
+      setRemoveConfirmId(voucherId);
+    } else if (existingRecord && existingRecord.redeemed) {
+      toast.info("Zakoupený voucher nelze odebrat z oblíbených");
+    } else {
+      // Add to favorites directly
+      addToFavorites(voucherId);
+    }
+  };
+
+  const addToFavorites = async (voucherId: string) => {
+    if (!user) return;
+    
     setTogglingFavoriteId(voucherId);
 
     try {
-      const existingRecord = userVouchers.find(uv => uv.voucher_id === voucherId);
+      const { error } = await supabase
+        .from('user_vouchers')
+        .insert({
+          user_id: user.id,
+          voucher_id: voucherId,
+          redeemed: false
+        });
 
-      if (existingRecord) {
-        // If it's a favorite (not purchased), remove it
-        if (!existingRecord.redeemed) {
-          const { error } = await supabase
-            .from('user_vouchers')
-            .delete()
-            .eq('voucher_id', voucherId)
-            .eq('user_id', user.id);
-
-          if (error) throw error;
-          toast.success("Voucher odebrán z oblíbených");
-        } else {
-          toast.info("Zakoupený voucher nelze odebrat z oblíbených");
-        }
-      } else {
-        // Add to favorites (insert record with redeemed=false)
-        const { error } = await supabase
-          .from('user_vouchers')
-          .insert({
-            user_id: user.id,
-            voucher_id: voucherId,
-            redeemed: false
-          });
-
-        if (error) throw error;
-        toast.success("Voucher přidán do oblíbených");
-      }
-
-      // Immediately refetch to update local state
+      if (error) throw error;
+      toast.success("Voucher přidán do oblíbených");
       await refetchUserVouchers();
       refetchAvailable();
     } catch (error) {
-      console.error("Error toggling favorite:", error);
-      toast.error("Nepodařilo se změnit oblíbené");
+      console.error("Error adding favorite:", error);
+      toast.error("Nepodařilo se přidat do oblíbených");
+    } finally {
+      setTogglingFavoriteId(null);
+    }
+  };
+
+  const confirmRemoveFavorite = async () => {
+    if (!user || !removeConfirmId) return;
+    
+    setTogglingFavoriteId(removeConfirmId);
+    setRemoveConfirmId(null);
+
+    try {
+      const { error } = await supabase
+        .from('user_vouchers')
+        .delete()
+        .eq('voucher_id', removeConfirmId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      toast.success("Voucher odebrán z oblíbených");
+      await refetchUserVouchers();
+      refetchAvailable();
+    } catch (error) {
+      console.error("Error removing favorite:", error);
+      toast.error("Nepodařilo se odebrat z oblíbených");
     } finally {
       setTogglingFavoriteId(null);
     }
@@ -295,14 +326,16 @@ const Vouchers: React.FC = () => {
                     <Card key={voucher.id} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30 shadow-md hover:shadow-lg transition-all duration-300">
                       {/* Favorite heart button */}
                       <button
-                        onClick={(e) => toggleFavorite(e, voucher.id)}
+                        onClick={(e) => handleFavoriteClick(e, voucher.id)}
                         disabled={isTogglingFavorite}
                         className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors disabled:opacity-50"
                         aria-label="Přidat do oblíbených"
                       >
-                        <Heart 
-                          className="w-5 h-5 text-muted-foreground hover:text-red-500 transition-colors" 
-                        />
+                        {isTogglingFavorite ? (
+                          <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
+                        ) : (
+                          <Heart className="w-5 h-5 text-muted-foreground hover:text-red-500 transition-colors" />
+                        )}
                       </button>
 
                       {voucher.banner_url && (
@@ -394,14 +427,16 @@ const Vouchers: React.FC = () => {
                     <Card key={userVoucher.id} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30 shadow-md">
                       {/* Remove from favorites button */}
                       <button
-                        onClick={(e) => toggleFavorite(e, userVoucher.voucher_id)}
+                        onClick={(e) => handleFavoriteClick(e, userVoucher.voucher_id)}
                         disabled={isTogglingFavorite}
                         className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors disabled:opacity-50"
                         aria-label="Odebrat z oblíbených"
                       >
-                        <Heart 
-                          className="w-5 h-5 fill-red-500 text-red-500 transition-colors" 
-                        />
+                        {isTogglingFavorite ? (
+                          <Loader2 className="w-5 h-5 text-red-500 animate-spin" />
+                        ) : (
+                          <Heart className="w-5 h-5 fill-red-500 text-red-500 transition-colors" />
+                        )}
                       </button>
 
                       <CardContent className="p-6 space-y-4">
@@ -549,6 +584,24 @@ const Vouchers: React.FC = () => {
       </div>
 
       {isAdmin ? <AdminMenu /> : <BottomNavigation />}
+
+      {/* Confirmation dialog for removing favorite */}
+      <AlertDialog open={!!removeConfirmId} onOpenChange={(open) => !open && setRemoveConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Odebrat z oblíbených?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Opravdu chcete odebrat tento voucher z oblíbených?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemoveFavorite}>
+              Odebrat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
