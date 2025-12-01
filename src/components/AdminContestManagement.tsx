@@ -403,7 +403,9 @@ export const AdminContestManagement: React.FC = () => {
     const hasMainPrize = contestForm.main_prize.trim() !== '';
     const hasTicketCount = contestForm.ticket_count > 0;
     const hasTicketPrice = contestForm.ticket_price > 0;
-    const hasImage = selectedFile !== null || contestForm.main_image.trim() !== '';
+    const hasImage = editingContest
+      ? true
+      : (selectedFile !== null || contestForm.main_image.trim() !== '');
     
     const tab1Valid = hasTitle && hasMainPrize && hasTicketCount && hasTicketPrice && hasImage;
     
