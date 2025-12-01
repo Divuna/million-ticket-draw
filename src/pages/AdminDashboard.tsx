@@ -671,7 +671,7 @@ const AdminDashboard: React.FC = () => {
               <TabsTrigger value="ticketmap">Mapa tiketů</TabsTrigger>
               <TabsTrigger value="bonus-overview">Přehled bonusů</TabsTrigger>
               <TabsTrigger value="prize-delivery">Předání výher</TabsTrigger>
-              
+              <TabsTrigger value="prizes">Bonusové výhry</TabsTrigger>
               <TabsTrigger value="payments">Platby</TabsTrigger>
               <TabsTrigger value="notifications">Notifikace</TabsTrigger>
               
