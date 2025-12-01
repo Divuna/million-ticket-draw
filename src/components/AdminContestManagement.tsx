@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,13 +51,6 @@ interface ContestForm {
   ticket_price: number;
 }
 
-interface BonusPrizeForm {
-  description: string;
-  ticket_position: number;
-  amount: number | null;
-  status: string;
-}
-
 interface MioCoinBonusForm {
   totalToDistribute: number;
   valuePerWin: number;
@@ -74,19 +67,16 @@ interface PhysicalPrize {
 
 export const AdminContestManagement: React.FC = () => {
   const [contests, setContests] = useState<ContestData[]>([]);
-  const [selectedContestId, setSelectedContestId] = useState<string>('');
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingContest, setEditingContest] = useState<ContestData | null>(null);
-  const [editingBonusPrize, setEditingBonusPrize] = useState<BonusPrize | null>(null);
   const [showContestDialog, setShowContestDialog] = useState(false);
-  const [showBonusDialog, setShowBonusDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
-  const bonusPanelRef = useRef<HTMLDivElement>(null);
   const [dialogTab, setDialogTab] = useState('basic');
   const [generatingBonuses, setGeneratingBonuses] = useState(false);
   const [generatedMioCoins, setGeneratedMioCoins] = useState<number[]>([]);
+
 
   const [contestForm, setContestForm] = useState<ContestForm>({
     title: '',
@@ -96,13 +86,6 @@ export const AdminContestManagement: React.FC = () => {
     status: 'pending',
     ticket_count: 1000000,
     ticket_price: 1
-  });
-
-  const [bonusPrizeForm, setBonusPrizeForm] = useState<BonusPrizeForm>({
-    description: '',
-    ticket_position: 1,
-    amount: null,
-    status: 'pending'
   });
 
   const [mioCoinBonusForm, setMioCoinBonusForm] = useState<MioCoinBonusForm>({
@@ -124,12 +107,6 @@ export const AdminContestManagement: React.FC = () => {
     fetchContests();
   }, []);
 
-  // Fetch bonus prizes when contest is selected
-  useEffect(() => {
-    if (selectedContestId) {
-      fetchBonusPrizes(selectedContestId);
-    }
-  }, [selectedContestId]);
 
   const fetchContests = async () => {
     setLoading(true);
@@ -306,44 +283,7 @@ export const AdminContestManagement: React.FC = () => {
     }
   };
 
-  const handleSaveBonusPrize = async () => {
-    try {
-      const operation = editingBonusPrize ? 'update' : 'create';
-      const { data, error } = await supabase
-        .rpc('admin_manage_bonus_prize', {
-          p_prize_id: editingBonusPrize?.id || null,
-          p_contest_id: selectedContestId,
-          p_description: bonusPrizeForm.description,
-          p_ticket_position: bonusPrizeForm.ticket_position,
-          p_amount: bonusPrizeForm.amount,
-          p_status: bonusPrizeForm.status,
-          p_operation: operation
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Úspěch",
-        description: (data as any)?.message || "Bonusová výhra byla úspěšně uložena",
-      });
-
-      // Reset form and refresh data
-      resetBonusPrizeForm();
-      setShowBonusDialog(false);
-      fetchBonusPrizes(selectedContestId);
-      fetchContests(); // Refresh to update bonus summary
-
-    } catch (error: any) {
-      console.error('Error saving bonus prize:', error);
-      toast({
-        title: "Chyba",
-        description: error.message || "Nepodařilo se uložit bonusovou výhru.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleEditContest = (contest: ContestData) => {
+  const handleEditContest = async (contest: ContestData, openTab: string = 'basic') => {
     setEditingContest(contest);
     setContestForm({
       title: contest.title,
@@ -354,18 +294,50 @@ export const AdminContestManagement: React.FC = () => {
       ticket_count: contest.ticket_count,
       ticket_price: contest.ticket_price
     });
-    setShowContestDialog(true);
-  };
+    
+    // Load existing bonus prizes for this contest
+    try {
+      const { data, error } = await supabase
+        .from('bonus_prizes')
+        .select('*')
+        .eq('contest_id', contest.contest_id)
+        .order('ticket_position', { ascending: true });
 
-  const handleEditBonusPrize = (prize: BonusPrize) => {
-    setEditingBonusPrize(prize);
-    setBonusPrizeForm({
-      description: prize.description,
-      ticket_position: prize.ticket_position,
-      amount: prize.amount || null,
-      status: prize.status
-    });
-    setShowBonusDialog(true);
+      if (!error && data) {
+        setBonusPrizes(data);
+        
+        // Separate MioCoin bonuses from physical prizes
+        const mioCoins = data.filter(p => p.amount && p.amount > 0);
+        const physical = data.filter(p => !p.amount || p.amount === 0);
+        
+        // Set generated MioCoins positions for display
+        setGeneratedMioCoins(mioCoins.map(p => p.ticket_position));
+        
+        // Set physical prizes for display
+        setPhysicalPrizes(physical.map(p => ({
+          id: p.id,
+          description: p.description,
+          ticketPosition: p.ticket_position,
+          imageFile: null,
+          imagePreview: ''
+        })));
+        
+        // If there are MioCoins, calculate the form values
+        if (mioCoins.length > 0) {
+          const valuePerWin = mioCoins[0].amount || 10;
+          setMioCoinBonusForm({
+            totalToDistribute: mioCoins.length * valuePerWin,
+            valuePerWin: valuePerWin,
+            distributionMethod: 'random'
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading bonus prizes:', error);
+    }
+    
+    setDialogTab(openTab);
+    setShowContestDialog(true);
   };
 
   const resetContestForm = () => {
@@ -553,16 +525,6 @@ export const AdminContestManagement: React.FC = () => {
     }
   };
 
-  const resetBonusPrizeForm = () => {
-    setEditingBonusPrize(null);
-    setBonusPrizeForm({
-      description: '',
-      ticket_position: 1,
-      amount: null,
-      status: 'pending'
-    });
-  };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -681,8 +643,8 @@ export const AdminContestManagement: React.FC = () => {
             <Tabs value={dialogTab} onValueChange={setDialogTab} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="basic">Základní údaje</TabsTrigger>
-                <TabsTrigger value="miocoins" disabled={!!editingContest}>Bonusy – MioCoins</TabsTrigger>
-                <TabsTrigger value="physical" disabled={!!editingContest}>Bonusy – věcné výhry</TabsTrigger>
+                <TabsTrigger value="miocoins">Bonusy – MioCoins</TabsTrigger>
+                <TabsTrigger value="physical">Bonusy – věcné výhry</TabsTrigger>
               </TabsList>
 
               {/* Tab 1: Základní údaje */}
@@ -1042,12 +1004,7 @@ export const AdminContestManagement: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            setSelectedContestId(contest.contest_id);
-                            setTimeout(() => {
-                              bonusPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }, 100);
-                          }}
+                          onClick={() => handleEditContest(contest, 'miocoins')}
                         >
                           <Coins className="w-3 h-3 mr-1" />
                           Bonusy
@@ -1062,138 +1019,6 @@ export const AdminContestManagement: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Bonus Prizes Management */}
-      {selectedContestId && (
-        <Card ref={bonusPanelRef}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Coins className="w-5 h-5" />
-              Bonusové výhry - {contests.find(c => c.contest_id === selectedContestId)?.title}
-            </CardTitle>
-            <CardDescription>
-              Spravujte bonusové výhry pro vybranou soutěž
-            </CardDescription>
-            <div className="flex justify-end">
-              <Dialog open={showBonusDialog} onOpenChange={setShowBonusDialog}>
-                <DialogTrigger asChild>
-                  <Button onClick={resetBonusPrizeForm}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Přidat bonusovou výhru
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingBonusPrize ? 'Upravit bonusovou výhru' : 'Přidat bonusovou výhru'}
-                    </DialogTitle>
-                  </DialogHeader>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="bonus_description">Popis výhry *</Label>
-                      <Input
-                        id="bonus_description"
-                        value={bonusPrizeForm.description}
-                        onChange={(e) => setBonusPrizeForm({...bonusPrizeForm, description: e.target.value})}
-                        placeholder="Např. 100 MioCoins nebo Samsung Galaxy Watch"
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="ticket_position">Pozice tiketu *</Label>
-                        <Input
-                          id="ticket_position"
-                          type="number"
-                          min="1"
-                          value={bonusPrizeForm.ticket_position}
-                          onChange={(e) => setBonusPrizeForm({...bonusPrizeForm, ticket_position: parseInt(e.target.value) || 1})}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="amount">Hodnota MioCoins</Label>
-                        <Input
-                          id="amount"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={bonusPrizeForm.amount || ''}
-                          onChange={(e) => setBonusPrizeForm({...bonusPrizeForm, amount: e.target.value ? parseFloat(e.target.value) : null})}
-                          placeholder="Pro fyzické výhry ponechte prázdné"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="bonus_status">Status</Label>
-                      <Select value={bonusPrizeForm.status} onValueChange={(value) => setBonusPrizeForm({...bonusPrizeForm, status: value})}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Čeká</SelectItem>
-                          <SelectItem value="won">Vyhráno</SelectItem>
-                          <SelectItem value="delivered">Předáno</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowBonusDialog(false)}>
-                      Zrušit
-                    </Button>
-                    <Button onClick={handleSaveBonusPrize}>
-                      {editingBonusPrize ? 'Aktualizovat' : 'Přidat'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {bonusPrizes.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">V této soutěži nejsou žádné bonusové výhry.</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Pozice</TableHead>
-                    <TableHead>Popis</TableHead>
-                    <TableHead>Hodnota</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Akce</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {bonusPrizes.map((prize) => (
-                    <TableRow key={prize.id}>
-                      <TableCell className="font-medium">#{prize.ticket_position}</TableCell>
-                      <TableCell>{prize.description}</TableCell>
-                      <TableCell>
-                        {prize.amount && prize.amount > 0 ? `${prize.amount} MioCoins` : 'Fyzická výhra'}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(prize.status)}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditBonusPrize(prize)}
-                        >
-                          <Edit2 className="w-3 h-3 mr-1" />
-                          Upravit
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
