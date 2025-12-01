@@ -369,6 +369,32 @@ export const AdminContestManagement: React.FC = () => {
     });
   };
 
+  // Helper function to check for position conflicts
+  const getPositionConflicts = (): { hasDuplicates: boolean; conflictingPositions: number[] } => {
+    const physicalPositions = physicalPrizes.map(p => p.ticketPosition);
+    const mioCoinPositions = generatedMioCoins;
+    
+    // Check for duplicates within physical prizes
+    const physicalDuplicates = physicalPositions.filter((pos, idx) => 
+      physicalPositions.indexOf(pos) !== idx
+    );
+    
+    // Check for duplicates within MioCoin positions
+    const mioCoinDuplicates = mioCoinPositions.filter((pos, idx) => 
+      mioCoinPositions.indexOf(pos) !== idx
+    );
+    
+    // Check for conflicts between physical and MioCoin positions
+    const crossConflicts = physicalPositions.filter(pos => mioCoinPositions.includes(pos));
+    
+    const allConflicts = [...new Set([...physicalDuplicates, ...mioCoinDuplicates, ...crossConflicts])];
+    
+    return {
+      hasDuplicates: allConflicts.length > 0,
+      conflictingPositions: allConflicts
+    };
+  };
+
   const isContestFormValid = (): boolean => {
     // TAB 1: Základní údaje
     const hasTitle = contestForm.title.trim() !== '';
@@ -398,7 +424,11 @@ export const AdminContestManagement: React.FC = () => {
       );
     }
     
-    return tab1Valid && tab2Valid && tab3Valid;
+    // Check for position conflicts
+    const { hasDuplicates } = getPositionConflicts();
+    const noPositionConflicts = !hasDuplicates;
+    
+    return tab1Valid && tab2Valid && tab3Valid && noPositionConflicts;
   };
 
   const handleGenerateMioCoinPositions = async () => {
@@ -421,17 +451,27 @@ export const AdminContestManagement: React.FC = () => {
       return;
     }
 
+    // Get positions already used by physical prizes
+    const physicalPositions = new Set(physicalPrizes.map(p => p.ticketPosition));
+
     // Generate positions locally (will be saved with contest)
     const positions: number[] = [];
     const maxPosition = contestForm.ticket_count;
+    let skippedCount = 0;
     
     if (mioCoinBonusForm.distributionMethod === 'random') {
       const selectedPositions = new Set<number>();
       let attempts = 0;
-      const maxAttempts = numberOfBonuses * 10;
+      const maxAttempts = numberOfBonuses * 20; // Increased attempts due to potential conflicts
       
       while (positions.length < numberOfBonuses && attempts < maxAttempts) {
         const randomPos = Math.floor(Math.random() * maxPosition) + 1;
+        // Skip positions already used by physical prizes
+        if (physicalPositions.has(randomPos)) {
+          skippedCount++;
+          attempts++;
+          continue;
+        }
         if (!selectedPositions.has(randomPos)) {
           positions.push(randomPos);
           selectedPositions.add(randomPos);
@@ -442,16 +482,28 @@ export const AdminContestManagement: React.FC = () => {
       // step_interval (rovnoměrně)
       const step = Math.floor(maxPosition / numberOfBonuses);
       for (let i = 0; i < numberOfBonuses; i++) {
-        positions.push(Math.min((i + 1) * step, maxPosition));
+        const pos = Math.min((i + 1) * step, maxPosition);
+        // Skip positions already used by physical prizes
+        if (physicalPositions.has(pos)) {
+          skippedCount++;
+          continue;
+        }
+        positions.push(pos);
       }
     }
     
     positions.sort((a, b) => a - b);
     setGeneratedMioCoins(positions);
     
+    let message = `Vygenerováno ${positions.length} pozic pro MioCoiny.`;
+    if (skippedCount > 0) {
+      message += ` Přeskočeno ${skippedCount} pozic obsazených věcnými výhrami.`;
+    }
+    message += ' Budou uloženy po vytvoření soutěže.';
+    
     toast({
       title: "Pozice vygenerovány",
-      description: `Vygenerováno ${positions.length} pozic pro MioCoiny. Budou uloženy po vytvoření soutěže.`,
+      description: message,
     });
   };
 
@@ -460,6 +512,29 @@ export const AdminContestManagement: React.FC = () => {
       toast({
         title: "Chyba",
         description: "Vyplňte název výhry a pozici tiketu.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const position = newPhysicalPrize.ticketPosition;
+
+    // Check if position is already used by another physical prize
+    const existingPhysical = physicalPrizes.find(p => p.ticketPosition === position);
+    if (existingPhysical) {
+      toast({
+        title: "Konflikt pozice",
+        description: `Pozice #${position} je již obsazena jinou výhrou.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if position is already used by MioCoin bonuses
+    if (generatedMioCoins.includes(position)) {
+      toast({
+        title: "Konflikt pozice",
+        description: `Pozice #${position} je již obsazena jinou výhrou.`,
         variant: "destructive"
       });
       return;
