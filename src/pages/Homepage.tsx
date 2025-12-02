@@ -636,80 +636,84 @@ const Homepage = () => {
             ) : (
               // Duplicate content for infinite loop
               [...contests, ...contests].map((contest, index) => (
-                <Card
+                <div
                   key={`${contest.id}-${index}`}
-                  className={`flex-shrink-0 w-[280px] md:w-[320px] rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm transition-all duration-300 shadow-lg ${
-                    user && !isAdmin
-                      ? "cursor-pointer hover:scale-105 hover:border-primary/40 hover:shadow-primary/20"
-                      : !user
-                        ? "cursor-pointer hover:opacity-80 hover:scale-[1.02]"
-                        : isAdmin
-                          ? "opacity-90"
-                          : ""
-                  }`}
-                  onClick={() => !isAdmin && handleContestClick(contest.id)}
+                  className="contest-card flex-shrink-0 w-[280px] md:w-[320px] rounded-2xl overflow-hidden relative"
                 >
-                  <CardContent className="p-0">
-                    <div className="relative">
-                      {contest.main_image ? (
-                        <img
-                          src={
-                            contest.main_image.startsWith("http")
-                              ? contest.main_image
-                              : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`
-                          }
-                          alt={contest.title}
-                          className="w-full h-48 object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-48 bg-muted/40 flex items-center justify-center">
-                          <div className="text-center text-muted-foreground">
-                            <Trophy className="w-12 h-12 mx-auto mb-2" />
-                            <span className="text-sm">Bez obrázku</span>
-                          </div>
-                        </div>
-                      )}
-                      <div className="absolute top-2 right-2">
-                        <Badge variant="secondary" className="bg-primary/90 text-primary-foreground border-0">
-                          {contest.status === "active" ? "Aktivní" : "Připravuje se"}
-                        </Badge>
+                  {/* Full-width banner image */}
+                  {contest.main_image ? (
+                    <img
+                      src={
+                        contest.main_image.startsWith("http")
+                          ? contest.main_image
+                          : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`
+                      }
+                      alt={contest.title}
+                      className="w-full h-64 object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-64 bg-muted/40 flex items-center justify-center">
+                      <div className="text-center text-muted-foreground">
+                        <Trophy className="w-12 h-12 mx-auto mb-2" />
+                        <span className="text-sm">Bez obrázku</span>
                       </div>
                     </div>
-
-                    <div className="p-4 space-y-3">
-                      <h3 className="font-bold text-lg line-clamp-2 group-hover:text-primary transition-colors">
-                        {contest.title}
-                      </h3>
-
-                      <div className="flex items-center gap-2">
-                        <Star className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-semibold text-primary line-clamp-1">{contest.main_prize}</span>
+                  )}
+                  
+                  {/* Bottom dark gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
+                  
+                  {/* Status badge */}
+                  <div className="absolute top-2 right-2">
+                    <Badge variant="secondary" className="bg-primary/90 text-primary-foreground border-0">
+                      {contest.status === "active" ? "Aktivní" : "Připravuje se"}
+                    </Badge>
+                  </div>
+                  
+                  {/* Overlay buttons */}
+                  <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-2">
+                    <h3 className="font-bold text-lg text-white line-clamp-2 mb-2">
+                      {contest.title}
+                    </h3>
+                    {user && !isAdmin ? (
+                      <>
+                        <button
+                          className="w-full py-2 px-4 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleContestClick(contest.id);
+                          }}
+                        >
+                          Uplatnit {contest.ticket_price} MioCoinů
+                        </button>
+                        <button
+                          className="w-full py-2 px-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/contest/${contest.id}`);
+                          }}
+                        >
+                          Detail
+                        </button>
+                      </>
+                    ) : !user ? (
+                      <button
+                        className="w-full py-2 px-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/login');
+                        }}
+                      >
+                        Přihlaste se pro hraní
+                      </button>
+                    ) : (
+                      <div className="text-xs text-white/70 text-center">
+                        Admin zobrazení - pouze pro čtení
                       </div>
-
-                      <div className="pt-2 border-t border-border/50 space-y-2">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>Celkem tiketů</span>
-                          <span className="font-bold text-foreground">
-                            {contest.ticket_count?.toLocaleString("cs-CZ")}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>Cena tiketu</span>
-                          <span className="font-bold text-foreground">{contest.ticket_price} Kč</span>
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-muted-foreground pt-2 border-t border-border/30">
-                        {user && !isAdmin
-                          ? "Klikněte pro hraní her"
-                          : !user
-                            ? "Přihlaste se pro hraní"
-                            : "Admin zobrazení - pouze pro čtení"}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    )}
+                  </div>
+                </div>
               ))
             )}
           </div>
