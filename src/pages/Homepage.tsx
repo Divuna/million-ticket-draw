@@ -19,7 +19,7 @@ import { useLatestWinners } from "@/hooks/useLatestWinners";
 import { useComingSoonBanners } from "@/hooks/useComingSoonBanners";
 import { WinnerCard } from "@/components/WinnerCard";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
-import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink } from "lucide-react";
+import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, Heart } from "lucide-react";
 import { toast } from "sonner";
 
 interface Contest {
@@ -51,6 +51,7 @@ const Homepage = () => {
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   // Fetch contests from database
   const fetchContests = async () => {
@@ -73,10 +74,73 @@ const Homepage = () => {
     }
   };
 
+  // Fetch favorites from database
+  const fetchFavorites = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_contest_favorites')
+        .select('contest_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      setFavorites(new Set(data.map(f => f.contest_id)));
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    }
+  };
+
+  const toggleFavorite = async (contestId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!user) {
+      toast.error('Pro uložení oblíbených se musíte přihlásit');
+      return;
+    }
+
+    const isFavorite = favorites.has(contestId);
+
+    try {
+      if (isFavorite) {
+        const { error } = await supabase
+          .from('user_contest_favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('contest_id', contestId);
+
+        if (error) throw error;
+
+        setFavorites(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(contestId);
+          return newSet;
+        });
+        toast.success('Odebráno z oblíbených');
+      } else {
+        const { error } = await supabase
+          .from('user_contest_favorites')
+          .insert({ user_id: user.id, contest_id: contestId });
+
+        if (error) throw error;
+
+        setFavorites(prev => new Set(prev).add(contestId));
+        toast.success('Přidáno do oblíbených');
+      }
+    } catch (error: any) {
+      console.error('Error toggling favorite:', error);
+      toast.error('Chyba při ukládání oblíbené');
+    }
+  };
+
   // Load contests on component mount
   useEffect(() => {
     fetchContests();
-  }, []);
+    if (user) {
+      fetchFavorites();
+    }
+  }, [user]);
 
   // Subscribe to contest changes for real-time updates
   useEffect(() => {
@@ -665,21 +729,42 @@ const Homepage = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
                   
                   {/* Status badge */}
-                  <div className="absolute top-2 right-2">
+                  <div className="absolute top-3 right-3">
                     <Badge variant="secondary" className="bg-primary/90 text-primary-foreground border-0">
                       {contest.status === "active" ? "Aktivní" : "Připravuje se"}
                     </Badge>
                   </div>
                   
-                  {/* Overlay buttons */}
+                  {/* Favorite button */}
+                  {user && !isAdmin && (
+                    <button
+                      onClick={(e) => toggleFavorite(contest.id, e)}
+                      className="absolute top-3 left-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors"
+                      aria-label="Toggle favorite"
+                    >
+                      <Heart
+                        className={`w-5 h-5 ${
+                          favorites.has(contest.id)
+                            ? 'fill-red-500 text-red-500'
+                            : 'text-muted-foreground'
+                        }`}
+                      />
+                    </button>
+                  )}
+                  
+                  {/* Overlay content */}
                   <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-2">
-                    <h3 className="font-bold text-lg text-white line-clamp-2 mb-2">
+                    <h3 className="font-bold text-lg text-white line-clamp-2 mb-1">
                       {contest.title}
                     </h3>
+                    <p className="text-sm text-white/80 line-clamp-1">
+                      {contest.main_prize}
+                    </p>
+                    
                     {user && !isAdmin ? (
-                      <>
+                      <div className="flex gap-2 mt-2">
                         <button
-                          className="w-full py-2 px-4 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors"
+                          className="flex-1 py-2 px-4 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleContestClick(contest.id);
@@ -688,7 +773,7 @@ const Homepage = () => {
                           Uplatnit {contest.ticket_price} MioCoinů
                         </button>
                         <button
-                          className="w-full py-2 px-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-colors"
+                          className="py-2 px-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(`/contest/${contest.id}`);
@@ -696,10 +781,10 @@ const Homepage = () => {
                         >
                           Detail
                         </button>
-                      </>
+                      </div>
                     ) : !user ? (
                       <button
-                        className="w-full py-2 px-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-colors"
+                        className="w-full py-2 px-4 mt-2 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate('/login');
@@ -708,7 +793,7 @@ const Homepage = () => {
                         Přihlaste se pro hraní
                       </button>
                     ) : (
-                      <div className="text-xs text-white/70 text-center">
+                      <div className="text-xs text-white/70 text-center mt-2">
                         Admin zobrazení - pouze pro čtení
                       </div>
                     )}
