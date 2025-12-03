@@ -916,12 +916,14 @@ export const AdminContestManagement: React.FC = () => {
             </DialogHeader>
             
             <Tabs value={dialogTab} onValueChange={setDialogTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-7">
                 <TabsTrigger value="basic">Základní údaje</TabsTrigger>
                 <TabsTrigger value="miocoins">Bonusy – MioCoins</TabsTrigger>
+                <TabsTrigger value="description">Popis hlavní výhry</TabsTrigger>
                 <TabsTrigger value="physical">Bonusy – věcné</TabsTrigger>
                 <TabsTrigger value="graphics">Grafika – detail</TabsTrigger>
                 <TabsTrigger value="banner">Grafika – banner</TabsTrigger>
+                <TabsTrigger value="submit">Vytvořit soutěž</TabsTrigger>
               </TabsList>
 
               {/* Tab 1: Základní údaje */}
@@ -945,17 +947,6 @@ export const AdminContestManagement: React.FC = () => {
                       placeholder="Např. iPhone 15 Pro"
                     />
                   </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="description">Popis soutěže</Label>
-                  <Textarea
-                    id="description"
-                    value={contestForm.description}
-                    onChange={(e) => setContestForm({...contestForm, description: e.target.value})}
-                    placeholder="Volitelný popis soutěže"
-                    rows={3}
-                  />
                 </div>
 
                 <div>
@@ -1109,7 +1100,25 @@ export const AdminContestManagement: React.FC = () => {
                 )}
               </TabsContent>
 
-              {/* Tab 3: Bonusy – věcné výhry */}
+              {/* Tab 3: Popis hlavní výhry */}
+              <TabsContent value="description" className="space-y-4 mt-4">
+                <div>
+                  <Label htmlFor="main_prize_description">Popis hlavní výhry</Label>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Detailní popis hlavní výhry, který se zobrazí na stránce detailu soutěže.
+                  </p>
+                  <Textarea
+                    id="main_prize_description"
+                    value={contestForm.description}
+                    onChange={(e) => setContestForm({...contestForm, description: e.target.value})}
+                    placeholder="Zadejte podrobný popis hlavní výhry..."
+                    rows={8}
+                    className="min-h-[200px]"
+                  />
+                </div>
+              </TabsContent>
+
+              {/* Tab 4: Bonusy – věcné výhry */}
               <TabsContent value="physical" className="space-y-4 mt-4">
                 <div className="space-y-4 p-4 border rounded-lg">
                   <h4 className="font-medium flex items-center gap-2">
@@ -1202,7 +1211,7 @@ export const AdminContestManagement: React.FC = () => {
                 )}
               </TabsContent>
 
-              {/* Tab 4: Grafika – detail soutěže */}
+              {/* Tab 5: Grafika – detail soutěže */}
               <TabsContent value="graphics" className="space-y-4 mt-4">
                 <div>
                   <Label htmlFor="secondary_image">Doplňková fotka hlavní výhry (pravý box)</Label>
@@ -1228,7 +1237,7 @@ export const AdminContestManagement: React.FC = () => {
                 </div>
               </TabsContent>
 
-              {/* Tab 5: Grafika – banner */}
+              {/* Tab 6: Grafika – banner */}
               <TabsContent value="banner" className="space-y-4 mt-4">
                 <div>
                   <Label htmlFor="banner_image">Banner soutěže</Label>
@@ -1253,16 +1262,39 @@ export const AdminContestManagement: React.FC = () => {
                   )}
                 </div>
               </TabsContent>
-            </Tabs>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowContestDialog(false)}>
-                Zrušit
-              </Button>
-              <Button onClick={handleSaveContest} disabled={!isContestFormValid()}>
-                {editingContest ? 'Aktualizovat' : 'Vytvořit'}
-              </Button>
-            </DialogFooter>
+              {/* Tab 7: Vytvořit soutěž */}
+              <TabsContent value="submit" className="space-y-4 mt-4">
+                <div className="space-y-4">
+                  <div className="p-4 bg-muted rounded-lg space-y-2">
+                    <h4 className="font-medium">Shrnutí soutěže</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="text-muted-foreground">Název:</div>
+                      <div>{contestForm.title || '—'}</div>
+                      <div className="text-muted-foreground">Hlavní cena:</div>
+                      <div>{contestForm.main_prize || '—'}</div>
+                      <div className="text-muted-foreground">Počet tiketů:</div>
+                      <div>{contestForm.ticket_count.toLocaleString()}</div>
+                      <div className="text-muted-foreground">Cena tiketu:</div>
+                      <div>{contestForm.ticket_price} MioCoins</div>
+                      <div className="text-muted-foreground">MioCoin bonusy:</div>
+                      <div>{generatedMioCoins.length > 0 ? `${generatedMioCoins.length} pozic` : 'Žádné'}</div>
+                      <div className="text-muted-foreground">Věcné výhry:</div>
+                      <div>{physicalPrizes.length > 0 ? `${physicalPrizes.length} položek` : 'Žádné'}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" onClick={() => setShowContestDialog(false)}>
+                      Zrušit
+                    </Button>
+                    <Button onClick={handleSaveContest} disabled={!isContestFormValid()}>
+                      {editingContest ? 'Aktualizovat soutěž' : 'Vytvořit soutěž'}
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </DialogContent>
         </Dialog>
       </div>
