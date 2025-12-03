@@ -2,15 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { TicketResultModal } from '@/components/TicketResultModal';
 import { BottomNavigation } from '@/components/BottomNavigation';
-import { AdminMenu } from '@/components/AdminMenu';
+import { ContestCard } from '@/components/ContestCard';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Heart } from 'lucide-react';
 
 interface Contest {
   id: string;
@@ -277,119 +275,17 @@ const Index = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {contests.map((contest) => (
-            <div
+            <ContestCard
               key={contest.id}
-              className="contest-card rounded-2xl overflow-hidden relative"
-            >
-              {/* Full-width banner image */}
-              {contest.main_image ? (
-                <img
-                  src={
-                    contest.main_image.startsWith("http")
-                      ? contest.main_image
-                      : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`
-                  }
-                  alt={contest.title}
-                  className="w-full h-64 object-cover"
-                  onError={(e) => {
-                    console.log('Contest image failed to load:', contest.main_image);
-                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-64 bg-muted/40 flex items-center justify-center">
-                  <div className="text-center text-muted-foreground">
-                    <span className="text-6xl">🎯</span>
-                  </div>
-                </div>
-              )}
-              
-              {/* Bottom dark gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
-              
-              {/* Status badge */}
-              <div className="absolute top-3 right-3">
-                {contest.status === 'closed' ? (
-                  <Badge className="bg-destructive text-destructive-foreground">
-                    Hra ukončena
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="bg-primary/90 text-primary-foreground border-0">
-                    {contest.status === 'active' ? 'Aktivní' : 'Připravuje se'}
-                  </Badge>
-                )}
-              </div>
-              
-              {/* Favorite button */}
-              {user && !isAdmin && (
-                <button
-                  onClick={(e) => toggleFavorite(contest.id, e)}
-                  className="absolute top-3 left-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors"
-                  aria-label="Toggle favorite"
-                >
-                  <Heart
-                    className={`w-5 h-5 ${
-                      favorites.has(contest.id)
-                        ? 'fill-red-500 text-red-500'
-                        : 'text-muted-foreground'
-                    }`}
-                  />
-                </button>
-              )}
-              
-              {/* Overlay content */}
-              <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-2">
-                <h3 className="font-bold text-lg text-white line-clamp-2 mb-1">
-                  {contest.title}
-                </h3>
-                <p className="text-sm text-white/80 line-clamp-1">
-                  {contest.main_prize}
-                </p>
-                
-                {/* Show interactive buttons only for logged-in non-admin users */}
-                {user && !isAdmin && (
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      className="flex-1 py-2 px-4 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => handleUnlockTicket(contest.id)}
-                      disabled={contest.status !== 'active' || processingContestId === contest.id}
-                    >
-                      {processingContestId === contest.id 
-                        ? 'Zpracování...' 
-                        : contest.status === 'pending'
-                          ? 'Připravuje se...'
-                          : contest.status === 'closed'
-                          ? 'Ukončena'
-                          : `Uplatnit ${contest.ticket_price} MioCoinů`
-                      }
-                    </button>
-                    <button
-                      className="py-2 px-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-colors"
-                      onClick={() => navigate(`/contest/${contest.id}`, { state: { from: 'games' } })}
-                    >
-                      Detail
-                    </button>
-                  </div>
-                )}
-                
-                {/* Show login prompt for non-logged-in users */}
-                {!user && (
-                  <button
-                    className="w-full py-2 px-4 mt-2 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-colors"
-                    onClick={() => navigate('/login')}
-                  >
-                    Přihlásit se pro koupi tiketu
-                  </button>
-                )}
-                
-                {/* Show read-only message for admin users */}
-                {user && isAdmin && (
-                  <div className="text-xs text-white/70 text-center mt-2">
-                    Admin zobrazení - pouze pro čtení
-                  </div>
-                )}
-              </div>
-            </div>
+              contest={contest}
+              user={user}
+              isAdmin={isAdmin}
+              processingContestId={processingContestId}
+              favorites={favorites}
+              onToggleFavorite={toggleFavorite}
+              onPlay={handleUnlockTicket}
+              fromPage="games"
+            />
           ))}
         </div>
 
