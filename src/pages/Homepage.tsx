@@ -19,7 +19,8 @@ import { useLatestWinners } from "@/hooks/useLatestWinners";
 import { useComingSoonBanners } from "@/hooks/useComingSoonBanners";
 import { WinnerCard } from "@/components/WinnerCard";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
-import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, Heart } from "lucide-react";
+import { ContestCard } from "@/components/ContestCard";
+import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 interface Contest {
@@ -700,105 +701,17 @@ const Homepage = () => {
             ) : (
               // Duplicate content for infinite loop
               [...contests, ...contests].map((contest, index) => (
-                <div
+                <ContestCard
                   key={`${contest.id}-${index}`}
-                  className="contest-card flex-shrink-0 w-[280px] md:w-[320px] rounded-2xl overflow-hidden relative"
-                >
-                  {/* Full-width banner image */}
-                  {contest.main_image ? (
-                    <img
-                      src={
-                        contest.main_image.startsWith("http")
-                          ? contest.main_image
-                          : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`
-                      }
-                      alt={contest.title}
-                      className="w-full h-64 object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="w-full h-64 bg-muted/40 flex items-center justify-center">
-                      <div className="text-center text-muted-foreground">
-                        <Trophy className="w-12 h-12 mx-auto mb-2" />
-                        <span className="text-sm">Bez obrázku</span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Bottom dark gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
-                  
-                  {/* Status badge */}
-                  <div className="absolute top-3 right-3">
-                    <Badge variant="secondary" className="bg-primary/90 text-primary-foreground border-0">
-                      {contest.status === "active" ? "Aktivní" : "Připravuje se"}
-                    </Badge>
-                  </div>
-                  
-                  {/* Favorite button */}
-                  {user && !isAdmin && (
-                    <button
-                      onClick={(e) => toggleFavorite(contest.id, e)}
-                      className="absolute top-3 left-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors"
-                      aria-label="Toggle favorite"
-                    >
-                      <Heart
-                        className={`w-5 h-5 ${
-                          favorites.has(contest.id)
-                            ? 'fill-red-500 text-red-500'
-                            : 'text-muted-foreground'
-                        }`}
-                      />
-                    </button>
-                  )}
-                  
-                  {/* Overlay content */}
-                  <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-2">
-                    <h3 className="font-bold text-lg text-white line-clamp-2 mb-1">
-                      {contest.title}
-                    </h3>
-                    <p className="text-sm text-white/80 line-clamp-1">
-                      {contest.main_prize}
-                    </p>
-                    
-                    {user && !isAdmin ? (
-                      <div className="flex gap-2 mt-2">
-                        <button
-                          className="flex-1 py-2 px-4 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleContestClick(contest.id);
-                          }}
-                        >
-                          Uplatnit {contest.ticket_price} MioCoinů
-                        </button>
-                        <button
-                          className="py-2 px-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/contest/${contest.id}`);
-                          }}
-                        >
-                          Detail
-                        </button>
-                      </div>
-                    ) : !user ? (
-                      <button
-                        className="w-full py-2 px-4 mt-2 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate('/login');
-                        }}
-                      >
-                        Přihlaste se pro hraní
-                      </button>
-                    ) : (
-                      <div className="text-xs text-white/70 text-center mt-2">
-                        Admin zobrazení - pouze pro čtení
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  contest={contest}
+                  user={user}
+                  isAdmin={isAdmin}
+                  favorites={favorites}
+                  onToggleFavorite={toggleFavorite}
+                  onPlay={handleContestClick}
+                  fromPage="homepage"
+                  className="flex-shrink-0 w-[280px] md:w-[320px]"
+                />
               ))
             )}
           </div>
