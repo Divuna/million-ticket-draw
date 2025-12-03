@@ -47,6 +47,7 @@ interface ContestForm {
   main_prize: string;
   main_image: string;
   main_prize_secondary_image: string;
+  banner_image: string;
   status: string;
   ticket_count: number;
   ticket_price: number;
@@ -76,6 +77,8 @@ export const AdminContestManagement: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string>('');
   const [selectedSecondaryFile, setSelectedSecondaryFile] = useState<File | null>(null);
   const [secondaryImagePreview, setSecondaryImagePreview] = useState<string>('');
+  const [selectedBannerFile, setSelectedBannerFile] = useState<File | null>(null);
+  const [bannerImagePreview, setBannerImagePreview] = useState<string>('');
   const [dialogTab, setDialogTab] = useState('basic');
   const [generatingBonuses, setGeneratingBonuses] = useState(false);
   const [generatedMioCoins, setGeneratedMioCoins] = useState<number[]>([]);
@@ -88,6 +91,7 @@ export const AdminContestManagement: React.FC = () => {
     main_prize: '',
     main_image: '',
     main_prize_secondary_image: '',
+    banner_image: '',
     status: 'pending',
     ticket_count: 1000000,
     ticket_price: 1
@@ -196,6 +200,7 @@ export const AdminContestManagement: React.FC = () => {
     try {
       let imageUrl = contestForm.main_image;
       let secondaryImageUrl = contestForm.main_prize_secondary_image;
+      let bannerImageUrl = contestForm.banner_image;
 
       // Upload image if file is selected
       if (selectedFile) {
@@ -205,6 +210,11 @@ export const AdminContestManagement: React.FC = () => {
       // Upload secondary image if file is selected
       if (selectedSecondaryFile) {
         secondaryImageUrl = await handleImageUpload(selectedSecondaryFile);
+      }
+
+      // Upload banner image if file is selected
+      if (selectedBannerFile) {
+        bannerImageUrl = await handleImageUpload(selectedBannerFile);
       }
 
       const operation = editingContest ? 'update' : 'create';
@@ -226,15 +236,19 @@ export const AdminContestManagement: React.FC = () => {
       const contestData = data as any;
       const createdContestId = contestData?.contest_id || editingContest?.contest_id;
 
-      // Save secondary image separately (not in RPC)
-      if (createdContestId && secondaryImageUrl) {
+      // Save secondary image and banner image separately (not in RPC)
+      if (createdContestId && (secondaryImageUrl || bannerImageUrl)) {
+        const updateData: { main_prize_secondary_image?: string; banner_image?: string } = {};
+        if (secondaryImageUrl) updateData.main_prize_secondary_image = secondaryImageUrl;
+        if (bannerImageUrl) updateData.banner_image = bannerImageUrl;
+        
         const { error: updateError } = await supabase
           .from('contests')
-          .update({ main_prize_secondary_image: secondaryImageUrl })
+          .update(updateData)
           .eq('id', createdContestId);
 
         if (updateError) {
-          console.error('Error saving secondary image:', updateError);
+          console.error('Error saving images:', updateError);
         }
       }
 
@@ -309,19 +323,21 @@ export const AdminContestManagement: React.FC = () => {
   const handleEditContest = async (contest: ContestData, openTab: string = 'basic') => {
     setEditingContest(contest);
     
-    // Fetch full contest data including secondary image
+    // Fetch full contest data including secondary image and banner
     let secondaryImage = '';
+    let bannerImage = '';
     try {
       const { data: fullContest } = await supabase
         .from('contests')
-        .select('main_prize_secondary_image')
+        .select('main_prize_secondary_image, banner_image')
         .eq('id', contest.contest_id)
         .single();
       if (fullContest) {
         secondaryImage = fullContest.main_prize_secondary_image || '';
+        bannerImage = fullContest.banner_image || '';
       }
     } catch (error) {
-      console.error('Error fetching secondary image:', error);
+      console.error('Error fetching contest images:', error);
     }
     
     setContestForm({
@@ -330,11 +346,13 @@ export const AdminContestManagement: React.FC = () => {
       main_prize: contest.main_prize,
       main_image: contest.main_image || '',
       main_prize_secondary_image: secondaryImage,
+      banner_image: bannerImage,
       status: contest.status,
       ticket_count: contest.ticket_count,
       ticket_price: contest.ticket_price
     });
     setSecondaryImagePreview(secondaryImage);
+    setBannerImagePreview(bannerImage);
     
     // Load existing bonus prizes for this contest
     try {
@@ -389,6 +407,7 @@ export const AdminContestManagement: React.FC = () => {
       main_prize: '',
       main_image: '',
       main_prize_secondary_image: '',
+      banner_image: '',
       status: 'pending',
       ticket_count: 1000000,
       ticket_price: 1
@@ -397,6 +416,8 @@ export const AdminContestManagement: React.FC = () => {
     setImagePreview('');
     setSelectedSecondaryFile(null);
     setSecondaryImagePreview('');
+    setSelectedBannerFile(null);
+    setBannerImagePreview('');
     setDialogTab('basic');
     setGeneratedMioCoins([]);
     setMioCoinBonusForm({
@@ -833,6 +854,42 @@ export const AdminContestManagement: React.FC = () => {
     }
   };
 
+  const handleBannerFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Chyba",
+          description: "Povolené formáty: .jpg, .jpeg, .png",
+          variant: "destructive"
+        });
+        e.target.value = '';
+        return;
+      }
+
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        toast({
+          title: "Chyba",
+          description: "Maximální velikost souboru je 5 MB",
+          variant: "destructive"
+        });
+        e.target.value = '';
+        return;
+      }
+
+      setSelectedBannerFile(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setBannerImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Contest Management Header */}
@@ -859,11 +916,12 @@ export const AdminContestManagement: React.FC = () => {
             </DialogHeader>
             
             <Tabs value={dialogTab} onValueChange={setDialogTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="basic">Základní údaje</TabsTrigger>
                 <TabsTrigger value="miocoins">Bonusy – MioCoins</TabsTrigger>
-                <TabsTrigger value="physical">Bonusy – věcné výhry</TabsTrigger>
+                <TabsTrigger value="physical">Bonusy – věcné</TabsTrigger>
                 <TabsTrigger value="graphics">Grafika – detail</TabsTrigger>
+                <TabsTrigger value="banner">Grafika – banner</TabsTrigger>
               </TabsList>
 
               {/* Tab 1: Základní údaje */}
@@ -1163,6 +1221,32 @@ export const AdminContestManagement: React.FC = () => {
                       <img 
                         src={secondaryImagePreview || contestForm.main_prize_secondary_image} 
                         alt="Secondary Preview" 
+                        className="max-w-xs max-h-32 rounded-md border object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* Tab 5: Grafika – banner */}
+              <TabsContent value="banner" className="space-y-4 mt-4">
+                <div>
+                  <Label htmlFor="banner_image">Banner soutěže</Label>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Tento banner se zobrazí na stránce detailu soutěže nahoře nad ostatním obsahem.
+                  </p>
+                  <input
+                    id="banner_image"
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    onChange={handleBannerFileSelect}
+                    className="w-full p-2 border rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {(bannerImagePreview || contestForm.banner_image) && (
+                    <div className="mt-2">
+                      <img 
+                        src={bannerImagePreview || contestForm.banner_image} 
+                        alt="Banner Preview" 
                         className="max-w-xs max-h-32 rounded-md border object-cover"
                       />
                     </div>
