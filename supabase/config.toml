@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.run-audit]
 verify_jwt = false
+
+[functions.generate-contest-banner]
+verify_jwt = true
