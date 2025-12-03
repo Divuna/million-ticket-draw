@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit2, Trophy, Ticket, Image, Coins, Target, TrendingUp, Settings, Trash2, Package } from 'lucide-react';
+import { Plus, Edit2, Trophy, Ticket, Image, Coins, Target, TrendingUp, Settings, Trash2, Package, Sparkles, Loader2 } from 'lucide-react';
 
 interface ContestData {
   contest_id: string;
@@ -76,6 +76,7 @@ export const AdminContestManagement: React.FC = () => {
   const [dialogTab, setDialogTab] = useState('basic');
   const [generatingBonuses, setGeneratingBonuses] = useState(false);
   const [generatedMioCoins, setGeneratedMioCoins] = useState<number[]>([]);
+  const [generatingBanner, setGeneratingBanner] = useState(false);
 
 
   const [contestForm, setContestForm] = useState<ContestForm>({
@@ -507,6 +508,69 @@ export const AdminContestManagement: React.FC = () => {
     });
   };
 
+  const handleGenerateAIBanner = async () => {
+    if (!contestForm.title || !contestForm.main_prize) {
+      toast({
+        title: "Chyba",
+        description: "Nejprve vyplňte název soutěže a hlavní cenu.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setGeneratingBanner(true);
+    
+    try {
+      // Build bonus summary
+      let bonusSummary = '';
+      if (generatedMioCoins.length > 0) {
+        bonusSummary += `${generatedMioCoins.length}x MioCoin bonus (${mioCoinBonusForm.valuePerWin} each)`;
+      }
+      if (physicalPrizes.length > 0) {
+        if (bonusSummary) bonusSummary += ', ';
+        bonusSummary += `${physicalPrizes.length} physical prizes`;
+      }
+
+      const { data, error } = await supabase.functions.invoke('generate-contest-banner', {
+        body: {
+          title: contestForm.title,
+          description: contestForm.description,
+          main_prize: contestForm.main_prize,
+          ticket_count: contestForm.ticket_count,
+          ticket_price: contestForm.ticket_price,
+          bonus_summary: bonusSummary
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Chyba při volání funkce');
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      if (data?.url) {
+        setContestForm({ ...contestForm, main_image: data.url });
+        setImagePreview(data.url);
+        setSelectedFile(null);
+        toast({
+          title: "Banner vygenerován",
+          description: "AI úspěšně vygeneroval banner pro soutěž.",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error generating AI banner:', error);
+      toast({
+        title: "Chyba při generování banneru",
+        description: error.message || "Nepodařilo se vygenerovat banner.",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingBanner(false);
+    }
+  };
+
   const handleAddPhysicalPrize = () => {
     if (!newPhysicalPrize.description || newPhysicalPrize.ticketPosition < 1) {
       toast({
@@ -758,17 +822,38 @@ export const AdminContestManagement: React.FC = () => {
 
                 <div>
                   <Label htmlFor="image">Hlavní obrázek</Label>
-                  <input
-                    id="image"
-                    type="file"
-                    accept=".jpg,.jpeg,.png"
-                    onChange={handleFileSelect}
-                    className="w-full p-2 border rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                  {imagePreview && (
+                  <div className="flex gap-2 mt-1">
+                    <input
+                      id="image"
+                      type="file"
+                      accept=".jpg,.jpeg,.png"
+                      onChange={handleFileSelect}
+                      className="flex-1 p-2 border rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleGenerateAIBanner}
+                      disabled={generatingBanner || !contestForm.title || !contestForm.main_prize}
+                      className="shrink-0"
+                    >
+                      {generatingBanner ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Generuji...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Vygenerovat pomocí AI
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  {(imagePreview || contestForm.main_image) && (
                     <div className="mt-2">
                       <img 
-                        src={imagePreview} 
+                        src={imagePreview || contestForm.main_image} 
                         alt="Preview" 
                         className="max-w-xs max-h-32 rounded-md border object-cover"
                       />
