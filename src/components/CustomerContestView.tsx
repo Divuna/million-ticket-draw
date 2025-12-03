@@ -15,7 +15,6 @@ interface Contest {
   status: string;
   ticket_count: number;
   created_at: string;
-  main_prize_secondary_image?: string | null;
 }
 
 interface BonusPrize {
@@ -114,13 +113,6 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
             <p className="text-muted-foreground">
               Vyhrává poslední tiket!
             </p>
-            {contest.main_prize_secondary_image && (
-              <img 
-                src={contest.main_prize_secondary_image} 
-                alt="Doplňková fotka hlavní výhry"
-                className="w-full h-auto rounded-lg object-cover mt-4"
-              />
-            )}
           </div>
         </CardContent>
       </Card>
