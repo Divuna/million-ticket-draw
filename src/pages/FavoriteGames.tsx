@@ -4,7 +4,7 @@ import { Header } from '@/components/Header';
 import { ArrowLeft, Heart } from 'lucide-react';
 import { TicketResultModal } from '@/components/TicketResultModal';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BottomNavigation } from '@/components/BottomNavigation';
@@ -233,69 +233,74 @@ const FavoriteGames = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {contests.map((contest) => (
-            <Card key={contest.id} className="ticket-game ticket-perforations relative cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/contest/${contest.id}`)}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-2 right-2 z-10 text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                onClick={(e) => handleRemoveFavorite(contest.id, e)}
-                disabled={removingFavoriteId === contest.id}
-              >
-                <Heart className="h-5 w-5 fill-current" />
-              </Button>
-              {contest.status === 'closed' && (
-                <Badge className="absolute top-10 right-4 bg-destructive text-destructive-foreground">
-                  Hra ukončena
-                </Badge>
+            <div
+              key={contest.id}
+              className="contest-card rounded-2xl overflow-hidden relative"
+            >
+              {/* Full-width banner image */}
+              {contest.main_image ? (
+                <img
+                  src={
+                    contest.main_image.startsWith("http")
+                      ? contest.main_image
+                      : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`
+                  }
+                  alt={contest.title}
+                  className="w-full h-64 object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="w-full h-64 bg-muted/40 flex items-center justify-center">
+                  <div className="text-center text-muted-foreground">
+                    <span className="text-6xl">🎯</span>
+                  </div>
+                </div>
               )}
               
-              <CardHeader>
-                <div className="w-full h-48 rounded-md mb-4 overflow-hidden bg-gradient-to-br from-purple-900/20 to-cyan-900/20 flex items-center justify-center">
-                  {contest.main_image ? (
-                    <img
-                      src={contest.main_image.startsWith('http') ? contest.main_image : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`}
-                      alt={contest.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className="text-6xl">🎯</div>
-                  )}
-                </div>
-                <CardTitle className="text-neon-green">{contest.title}</CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  {contest.description}
-                </CardDescription>
-              </CardHeader>
+              {/* Bottom dark gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
               
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Hlavní výhra:</span>
-                    <span className="text-sm font-medium text-neon-green">{contest.main_prize}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Cena tiketu:</span>
-                    <span className="text-sm font-medium text-neon-green">
-                      {contest.ticket_price} miocoinů
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Stav:</span>
-                    <span className="text-sm font-medium">
-                      {contest.status}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
+              {/* Status badge */}
+              <div className="absolute top-3 right-3">
+                {contest.status === 'closed' ? (
+                  <Badge className="bg-destructive text-destructive-foreground">
+                    Hra ukončena
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="bg-primary/90 text-primary-foreground border-0">
+                    {contest.status === 'active' ? 'Aktivní' : 'Připravuje se'}
+                  </Badge>
+                )}
+              </div>
               
-              <CardFooter>
+              {/* Favorite button (always filled since this is favorites page) */}
+              {user && !isAdmin && (
+                <button
+                  onClick={(e) => handleRemoveFavorite(contest.id, e)}
+                  className="absolute top-3 left-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors"
+                  aria-label="Remove from favorites"
+                  disabled={removingFavoriteId === contest.id}
+                >
+                  <Heart className="w-5 h-5 fill-red-500 text-red-500" />
+                </button>
+              )}
+              
+              {/* Overlay content */}
+              <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-2">
+                <h3 className="font-bold text-lg text-white line-clamp-2 mb-1">
+                  {contest.title}
+                </h3>
+                <p className="text-sm text-white/80 line-clamp-1">
+                  {contest.main_prize}
+                </p>
+                
+                {/* Show interactive buttons only for logged-in non-admin users */}
                 {user && !isAdmin && (
-                  <div className="flex gap-2 w-full">
-                    <Button 
-                      className="flex-1 bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0 glow-cyan"
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      className="flex-1 py-2 px-4 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleUnlockTicket(contest.id);
@@ -308,37 +313,39 @@ const FavoriteGames = () => {
                           ? 'Připravuje se...'
                           : contest.status === 'closed'
                           ? 'Ukončena'
-                          : `Uplatnit ${contest.ticket_price} miocoinů`
+                          : `Uplatnit ${contest.ticket_price} MioCoinů`
                       }
-                    </Button>
-                    <Button
-                      className="bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0"
+                    </button>
+                    <button
+                      className="py-2 px-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/contest/${contest.id}`, { state: { from: 'favorites' } });
                       }}
                     >
                       Detail
-                    </Button>
+                    </button>
                   </div>
                 )}
                 
+                {/* Show login prompt for non-logged-in users */}
                 {!user && (
-                  <Button 
-                    className="w-full bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 text-white border-0 glow-cyan"
+                  <button
+                    className="w-full py-2 px-4 mt-2 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-colors"
                     onClick={() => navigate('/login')}
                   >
                     Přihlásit se pro koupi tiketu
-                  </Button>
+                  </button>
                 )}
                 
+                {/* Show read-only message for admin users */}
                 {user && isAdmin && (
-                  <div className="w-full text-center text-sm text-muted-foreground py-3">
+                  <div className="text-xs text-white/70 text-center mt-2">
                     Admin zobrazení - pouze pro čtení
                   </div>
                 )}
-              </CardFooter>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
 
