@@ -15,6 +15,7 @@ interface Contest {
   status: string;
   ticket_count: number;
   created_at: string;
+  banner_image?: string;
 }
 
 interface BonusPrize {
@@ -67,6 +68,17 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+
+      {/* Contest Banner */}
+      {contest.banner_image && (
+        <div className="w-full">
+          <img 
+            src={contest.banner_image} 
+            alt={`${contest.title} banner`}
+            className="w-full h-auto rounded-2xl object-cover"
+          />
+        </div>
+      )}
       
       {/* Contest Header */}
       <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">

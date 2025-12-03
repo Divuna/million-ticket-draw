@@ -238,6 +238,7 @@ export type Database = {
       }
       contests: {
         Row: {
+          banner_image: string | null
           created_at: string
           description: string | null
           id: string
@@ -252,6 +253,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          banner_image?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -266,6 +268,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          banner_image?: string | null
           created_at?: string
           description?: string | null
           id?: string
