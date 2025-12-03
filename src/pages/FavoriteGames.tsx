@@ -6,6 +6,7 @@ import { TicketResultModal } from '@/components/TicketResultModal';
 import { ContestCard } from '@/components/ContestCard';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -225,7 +226,14 @@ const FavoriteGames = () => {
             Zpět
           </Button>
           <div className="text-center flex-1">
-            <h1 className="mb-4 text-4xl font-bold text-neon-green">Oblíbené soutěže</h1>
+            <h1 className="mb-4 text-4xl font-bold text-neon-green inline-flex items-center gap-3 justify-center">
+              Oblíbené soutěže
+              {contests.length > 0 && (
+                <Badge variant="secondary" className="text-lg px-3 py-1 bg-primary/20 text-primary">
+                  {contests.length}
+                </Badge>
+              )}
+            </h1>
             <p className="text-xl text-muted-foreground">Soutěže, které máte oblíbené nebo jste již hráli</p>
           </div>
           <div className="w-[100px]" />
