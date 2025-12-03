@@ -216,18 +216,19 @@ const FavoriteGames = () => {
     <div className="min-h-screen bg-background dark pb-20">
       <Header />
       <div className="container mx-auto px-4 py-8">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/games')}
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Zpět
-        </Button>
-        
-        <div className="text-center mb-8">
-          <h1 className="mb-4 text-4xl font-bold text-neon-green">Oblíbené soutěže</h1>
-          <p className="text-xl text-muted-foreground">Soutěže, které máte oblíbené nebo jste již hráli</p>
+        <div className="flex items-center justify-between mb-8">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/games')}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Zpět
+          </Button>
+          <div className="text-center flex-1">
+            <h1 className="mb-4 text-4xl font-bold text-neon-green">Oblíbené soutěže</h1>
+            <p className="text-xl text-muted-foreground">Soutěže, které máte oblíbené nebo jste již hráli</p>
+          </div>
+          <div className="w-[100px]" />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
