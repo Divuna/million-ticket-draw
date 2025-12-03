@@ -46,6 +46,7 @@ interface ContestForm {
   description: string;
   main_prize: string;
   main_image: string;
+  main_prize_secondary_image: string;
   status: string;
   ticket_count: number;
   ticket_price: number;
@@ -73,6 +74,8 @@ export const AdminContestManagement: React.FC = () => {
   const [showContestDialog, setShowContestDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [selectedSecondaryFile, setSelectedSecondaryFile] = useState<File | null>(null);
+  const [secondaryImagePreview, setSecondaryImagePreview] = useState<string>('');
   const [dialogTab, setDialogTab] = useState('basic');
   const [generatingBonuses, setGeneratingBonuses] = useState(false);
   const [generatedMioCoins, setGeneratedMioCoins] = useState<number[]>([]);
@@ -84,6 +87,7 @@ export const AdminContestManagement: React.FC = () => {
     description: '',
     main_prize: '',
     main_image: '',
+    main_prize_secondary_image: '',
     status: 'pending',
     ticket_count: 1000000,
     ticket_price: 1
@@ -191,10 +195,16 @@ export const AdminContestManagement: React.FC = () => {
   const handleSaveContest = async () => {
     try {
       let imageUrl = contestForm.main_image;
+      let secondaryImageUrl = contestForm.main_prize_secondary_image;
 
       // Upload image if file is selected
       if (selectedFile) {
         imageUrl = await handleImageUpload(selectedFile);
+      }
+
+      // Upload secondary image if file is selected
+      if (selectedSecondaryFile) {
+        secondaryImageUrl = await handleImageUpload(selectedSecondaryFile);
       }
 
       const operation = editingContest ? 'update' : 'create';
@@ -215,6 +225,18 @@ export const AdminContestManagement: React.FC = () => {
 
       const contestData = data as any;
       const createdContestId = contestData?.contest_id || editingContest?.contest_id;
+
+      // Save secondary image separately (not in RPC)
+      if (createdContestId && secondaryImageUrl) {
+        const { error: updateError } = await supabase
+          .from('contests')
+          .update({ main_prize_secondary_image: secondaryImageUrl })
+          .eq('id', createdContestId);
+
+        if (updateError) {
+          console.error('Error saving secondary image:', updateError);
+        }
+      }
 
       // Save MioCoin bonuses if we have generated positions and this is a new contest
       if (!editingContest && createdContestId && generatedMioCoins.length > 0) {
@@ -286,15 +308,33 @@ export const AdminContestManagement: React.FC = () => {
 
   const handleEditContest = async (contest: ContestData, openTab: string = 'basic') => {
     setEditingContest(contest);
+    
+    // Fetch full contest data including secondary image
+    let secondaryImage = '';
+    try {
+      const { data: fullContest } = await supabase
+        .from('contests')
+        .select('main_prize_secondary_image')
+        .eq('id', contest.contest_id)
+        .single();
+      if (fullContest) {
+        secondaryImage = fullContest.main_prize_secondary_image || '';
+      }
+    } catch (error) {
+      console.error('Error fetching secondary image:', error);
+    }
+    
     setContestForm({
       title: contest.title,
       description: contest.description || '',
       main_prize: contest.main_prize,
       main_image: contest.main_image || '',
+      main_prize_secondary_image: secondaryImage,
       status: contest.status,
       ticket_count: contest.ticket_count,
       ticket_price: contest.ticket_price
     });
+    setSecondaryImagePreview(secondaryImage);
     
     // Load existing bonus prizes for this contest
     try {
@@ -348,12 +388,15 @@ export const AdminContestManagement: React.FC = () => {
       description: '',
       main_prize: '',
       main_image: '',
+      main_prize_secondary_image: '',
       status: 'pending',
       ticket_count: 1000000,
       ticket_price: 1
     });
     setSelectedFile(null);
     setImagePreview('');
+    setSelectedSecondaryFile(null);
+    setSecondaryImagePreview('');
     setDialogTab('basic');
     setGeneratedMioCoins([]);
     setMioCoinBonusForm({
@@ -754,6 +797,42 @@ export const AdminContestManagement: React.FC = () => {
     }
   };
 
+  const handleSecondaryFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Chyba",
+          description: "Povolené formáty: .jpg, .jpeg, .png",
+          variant: "destructive"
+        });
+        e.target.value = '';
+        return;
+      }
+
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        toast({
+          title: "Chyba",
+          description: "Maximální velikost souboru je 5 MB",
+          variant: "destructive"
+        });
+        e.target.value = '';
+        return;
+      }
+
+      setSelectedSecondaryFile(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setSecondaryImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Contest Management Header */}
@@ -780,10 +859,11 @@ export const AdminContestManagement: React.FC = () => {
             </DialogHeader>
             
             <Tabs value={dialogTab} onValueChange={setDialogTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="basic">Základní údaje</TabsTrigger>
                 <TabsTrigger value="miocoins">Bonusy – MioCoins</TabsTrigger>
                 <TabsTrigger value="physical">Bonusy – věcné výhry</TabsTrigger>
+                <TabsTrigger value="graphics">Grafika – detail</TabsTrigger>
               </TabsList>
 
               {/* Tab 1: Základní údaje */}
@@ -1062,6 +1142,32 @@ export const AdminContestManagement: React.FC = () => {
                     Zatím nebyly přidány žádné věcné výhry.
                   </p>
                 )}
+              </TabsContent>
+
+              {/* Tab 4: Grafika – detail soutěže */}
+              <TabsContent value="graphics" className="space-y-4 mt-4">
+                <div>
+                  <Label htmlFor="secondary_image">Doplňková fotka hlavní výhry (pravý box)</Label>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Tato fotka se zobrazí na stránce detailu soutěže v pravém boxu pod hero obrázkem.
+                  </p>
+                  <input
+                    id="secondary_image"
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    onChange={handleSecondaryFileSelect}
+                    className="w-full p-2 border rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {(secondaryImagePreview || contestForm.main_prize_secondary_image) && (
+                    <div className="mt-2">
+                      <img 
+                        src={secondaryImagePreview || contestForm.main_prize_secondary_image} 
+                        alt="Secondary Preview" 
+                        className="max-w-xs max-h-32 rounded-md border object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
               </TabsContent>
             </Tabs>
 
