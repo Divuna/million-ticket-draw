@@ -14,7 +14,11 @@ export const Header: React.FC = () => {
     <header className="border-b bg-background">
       <div className="container mx-auto flex items-center justify-between px-4 py-4">
         <Link to="/" className="flex items-center">
-          <img src={logo} alt="OneMil" className="h-8 w-auto" />
+          <img
+            src={logo}
+            alt="OneMil logo"
+            className="h-10 w-auto object-contain"
+          />
         </Link>
         
         <nav className="flex items-center space-x-4">
