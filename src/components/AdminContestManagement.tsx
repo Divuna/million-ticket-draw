@@ -969,14 +969,14 @@ export const AdminContestManagement: React.FC = () => {
             </DialogHeader>
             
             <Tabs value={dialogTab} onValueChange={setDialogTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-7">
-                <TabsTrigger value="basic">Základní údaje</TabsTrigger>
-                <TabsTrigger value="bonus-coins">Bonusy – MioCoins</TabsTrigger>
-                <TabsTrigger value="main-prize-description">Popis hlavní výhry</TabsTrigger>
-                <TabsTrigger value="bonus-physical">Bonusy – věcné</TabsTrigger>
-                <TabsTrigger value="graphics-detail">Grafika – detail</TabsTrigger>
-                <TabsTrigger value="graphics-banner">Grafika – banner</TabsTrigger>
-                <TabsTrigger value="create">Vytvořit soutěž</TabsTrigger>
+              <TabsList className="flex w-full h-auto flex-wrap gap-1 p-1 overflow-x-auto">
+                <TabsTrigger value="basic" className="flex-shrink-0 px-3 py-2 text-xs">Základní údaje</TabsTrigger>
+                <TabsTrigger value="bonus-coins" className="flex-shrink-0 px-3 py-2 text-xs">Bonusy – MioCoins</TabsTrigger>
+                <TabsTrigger value="main-prize-description" className="flex-shrink-0 px-3 py-2 text-xs">Popis hlavní výhry</TabsTrigger>
+                <TabsTrigger value="bonus-physical" className="flex-shrink-0 px-3 py-2 text-xs">Bonusy – věcné</TabsTrigger>
+                <TabsTrigger value="graphics-detail" className="flex-shrink-0 px-3 py-2 text-xs">Grafika – detail</TabsTrigger>
+                <TabsTrigger value="graphics-banner" className="flex-shrink-0 px-3 py-2 text-xs">Grafika – banner</TabsTrigger>
+                <TabsTrigger value="create" className="flex-shrink-0 px-3 py-2 text-xs">Vytvořit soutěž</TabsTrigger>
               </TabsList>
 
               {/* Tab 1: Základní údaje */}
