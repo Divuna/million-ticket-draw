@@ -64,7 +64,7 @@ const Login: React.FC = () => {
         <img
           src={logo}
           alt="OneMil logo"
-          className="h-16 w-auto mx-auto mb-4 object-contain"
+          className="h-16 w-auto mx-auto mb-4 object-contain onemil-logo-animated"
         />
         <Card className="w-full">
         <CardHeader>
