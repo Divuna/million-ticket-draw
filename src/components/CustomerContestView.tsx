@@ -8,10 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { TicketMap } from "@/components/TicketMap";
 
-/* ------------------------------------------------------------------ */
-/*  TYPES                                                             */
-/* ------------------------------------------------------------------ */
-
 interface Contest {
   id: string;
   title: string;
@@ -23,7 +19,6 @@ interface Contest {
   created_at: string;
   banner_image?: string | null;
   generated_poster_url?: string | null;
-  // volitelné – pokud zatím nemáš sloupec, nic se nestane
   main_prize_secondary_image?: string | null;
 }
 
@@ -55,10 +50,6 @@ interface CustomerContestViewProps {
   onBuyTicket: () => void;
 }
 
-/* ------------------------------------------------------------------ */
-/*  COMPONENT                                                         */
-/* ------------------------------------------------------------------ */
-
 export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
   contest,
   bonusPrizes,
@@ -68,8 +59,6 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
   onBuyTicket,
 }) => {
   const navigate = useNavigate();
-
-  /* ----------------------------- LOGIKA ---------------------------- */
 
   const handleBuyTicket = () => {
     if (userWallet.balance_coins < contest.ticket_price) {
@@ -102,7 +91,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
           ? "Ukončená"
           : "Připravena";
 
-  const statusVariant: React.ComponentProps<typeof Badge>["variant"] =
+  const statusVariant =
     contest.status === "active"
       ? "default"
       : contest.status === "paused"
@@ -111,82 +100,151 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
           ? "outline"
           : "secondary";
 
-  /* ------------------------------------------------------------------ */
-  /*  RENDER                                                            */
-  /* ------------------------------------------------------------------ */
+  const heroImage = contest.generated_poster_url || contest.banner_image || undefined;
+
+  const createdAt = contest.created_at ? new Date(contest.created_at) : undefined;
+
+  const formattedCreatedAt = createdAt
+    ? createdAt.toLocaleDateString("cs-CZ", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+    : null;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-24">
-      {/* ==============================================================
-          1) HERO / BANNER
-          ============================================================== */}
-      <div className="rounded-3xl border border-border/60 bg-gradient-to-b from-background via-background/60 to-background shadow-xl overflow-hidden">
+    <div className="max-w-6xl mx-auto space-y-8 pb-28">
+      {/* HERO sekce */}
+      <section className="rounded-3xl overflow-hidden border border-border/60 bg-gradient-to-b from-[#050816] via-background to-background shadow-[0_0_60px_rgba(0,0,0,0.55)]">
         <div className="relative">
-          {contest.generated_poster_url || contest.banner_image ? (
-            <img
-              src={contest.generated_poster_url || contest.banner_image || ""}
-              alt={`${contest.title} banner`}
-              className="w-full max-h-[420px] object-cover"
-            />
-          ) : (
-            <div className="h-[260px] w-full bg-gradient-to-br from-[#040810] via-[#08111f] to-[#020308] flex items-center justify-center">
-              <div className="text-center space-y-2">
-                <p className="text-3xl font-semibold bg-gradient-to-r from-yellow-400 via-yellow-300 to-amber-300 bg-clip-text text-transparent drop-shadow">
-                  {contest.title}
-                </p>
-                <p className="text-sm text-muted-foreground">Luxusní soutěž v systému OneMil</p>
-              </div>
-            </div>
+          {heroImage && (
+            <>
+              <img src={heroImage} alt={`${contest.title} banner`} className="w-full max-h-[420px] object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
+              <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08),transparent_55%)]" />
+            </>
           )}
 
-          {/* overlay + text */}
-          <div className="absolute inset-0 bg-gradient-to-t from-background/85 via-background/40 to-transparent pointer-events-none" />
+          {/* Obsah hero */}
+          <div className="relative px-6 md:px-10 pt-8 md:pt-10 pb-6 md:pb-10 flex flex-col gap-6">
+            {/* Horní meta řádek */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge variant={statusVariant} className="backdrop-blur bg-background/70 border-border/60">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 mr-2 shadow-[0_0_12px_rgba(52,211,153,0.8)]" />
+                  {statusLabel}
+                </Badge>
 
-          <div className="absolute inset-x-4 bottom-4 md:bottom-6 md:left-8 md:right-8 pointer-events-none">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div className="space-y-2 pointer-events-auto">
-                <h1 className="text-3xl md:text-4xl font-bold text-primary-foreground drop-shadow">{contest.title}</h1>
-                {contest.description && (
-                  <p className="max-w-2xl text-sm md:text-base text-primary-foreground/90 drop-shadow">
-                    {contest.description}
-                  </p>
+                {formattedCreatedAt && (
+                  <span className="text-xs md:text-sm text-muted-foreground/80">
+                    Vytvořeno: <span className="font-medium">{formattedCreatedAt}</span>
+                  </span>
                 )}
-                <div className="flex flex-wrap gap-2 mt-1">
-                  <Badge variant={statusVariant}>{statusLabel}</Badge>
-                  <Badge
-                    variant="outline"
-                    className="backdrop-blur bg-background/70 border-yellow-500/40 text-yellow-300 flex items-center gap-1"
-                  >
-                    <Coins className="w-4 h-4" />
-                    Cena ticketu: {contest.ticket_price} MioCoins
-                  </Badge>
+              </div>
+
+              <div className="hidden md:flex items-center gap-3 text-xs md:text-sm text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <Coins className="w-4 h-4 text-yellow-400" />
+                  <span>
+                    Cena ticketu:{" "}
+                    <span className="font-semibold">
+                      {contest.ticket_price} MioCoin
+                      {contest.ticket_price === 1 ? "" : "ů"}
+                    </span>
+                  </span>
+                </div>
+                <span className="h-4 w-px bg-border/60" />
+                <div className="flex items-center gap-1.5">
+                  <Info className="w-4 h-4 text-primary" />
+                  <span>
+                    Ticketů v soutěži:{" "}
+                    <span className="font-semibold">{contest.ticket_count.toLocaleString("cs-CZ")}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Titulek + CTA */}
+            <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 items-start lg:items-end justify-between">
+              <div className="space-y-3 max-w-2xl">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight">
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#FACC6B] via-[#FBBF24] to-[#FEF3C7] drop-shadow-[0_0_30px_rgba(250,204,21,0.45)]">
+                    {contest.title}
+                  </span>
+                </h1>
+
+                <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
+                  {contest.description || "Vyber si svůj ticket, zapoj se do hry a zkus štěstí v této soutěži."}
+                </p>
+
+                <div className="inline-flex items-center gap-2 rounded-full bg-background/70 border border-border/60 px-3 py-1.5 text-xs md:text-sm text-muted-foreground">
+                  <Crown className="w-4 h-4 text-yellow-400" />
+                  <span className="font-medium text-foreground/90">Hlavní výhra:</span>
+                  <span>{contest.main_prize}</span>
                 </div>
               </div>
 
-              <div className="flex flex-col items-start md:items-end gap-2 pointer-events-auto">
-                <p className="text-xs uppercase tracking-wide text-primary-foreground/70">Počet ticketů v soutěži</p>
-                <p className="text-lg md:text-2xl font-semibold text-primary-foreground">
-                  {contest.ticket_count.toLocaleString()}{" "}
-                  <span className="text-sm font-normal text-primary-foreground/70">ticketů</span>
-                </p>
+              {/* CTA blok */}
+              <div className="flex flex-col gap-2 w-full sm:w-auto max-w-xs sm:max-w-none sm:items-end">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto min-w-[200px] text-base font-semibold shadow-[0_0_30px_rgba(59,130,246,0.55)]"
+                  onClick={handleBuyTicket}
+                  disabled={purchasing || contest.status !== "active"}
+                >
+                  {purchasing
+                    ? "Probíhá nákup ticketu…"
+                    : `Uplatnit ${contest.ticket_price} MioCoin${contest.ticket_price === 1 ? "" : "ů"}`}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto border-border/70 bg-background/60"
+                  onClick={() => navigate("/wallet")}
+                >
+                  Dobít MioCoiny
+                </Button>
+                <span className="text-[11px] text-muted-foreground/80 mt-1 text-center sm:text-right">
+                  Zůstatek:{" "}
+                  <span className="font-semibold text-foreground">
+                    {userWallet.balance_coins} MioCoin
+                    {userWallet.balance_coins === 1 ? "" : "ů"}
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            {/* Spodní meta řádek – responzivní verze ticket info */}
+            <div className="flex md:hidden flex-wrap items-center gap-3 pt-1 border-t border-border/50 mt-2 pt-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Coins className="w-3.5 h-3.5 text-yellow-400" />
+                <span>
+                  Cena ticketu:{" "}
+                  <span className="font-semibold">
+                    {contest.ticket_price} MioCoin
+                    {contest.ticket_price === 1 ? "" : "ů"}
+                  </span>
+                </span>
+              </div>
+              <span className="h-3 w-px bg-border/60" />
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Info className="w-3.5 h-3.5 text-primary" />
+                <span>
+                  Ticketů: <span className="font-semibold">{contest.ticket_count.toLocaleString("cs-CZ")}</span>
+                </span>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* ==============================================================
-          2) HLAVNÍ VÝHRA + PENĚŽENKA
-          ============================================================== */}
-      <div className="grid gap-4 md:grid-cols-[minmax(0,2fr),minmax(0,1.15fr)]">
-        {/* Hlavní výhra */}
-        <Card className="rounded-2xl shadow-md border-border/70 bg-gradient-to-br from-background via-background/80 to-background">
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
+      {/* Detail + peněženka / info */}
+      <section className="grid gap-5 md:grid-cols-[minmax(0,2.1fr),minmax(0,1.1fr)]">
+        {/* Detail výhry + text */}
+        <Card className="rounded-3xl shadow-md border-border/70 bg-gradient-to-b from-background/80 to-background/40">
+          <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-yellow-500/15 flex items-center justify-center">
-                <Crown className="w-4 h-4 text-yellow-400" />
-              </div>
-              <CardTitle className="text-xl">Hlavní výhra</CardTitle>
+              <Crown className="w-5 h-5 text-yellow-400" />
+              <CardTitle className="text-xl">Detail hlavní výhry</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -198,32 +256,32 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
 
             {contest.main_prize_secondary_image && (
               <div className="mt-2">
-                <p className="text-xs text-muted-foreground mb-1">Doplňkový obrázek hlavní výhry</p>
-                <div className="overflow-hidden rounded-xl border border-border/70 bg-card/60">
+                <div className="text-xs text-muted-foreground/80 mb-1">Doplňkový obrázek hlavní výhry</div>
+                <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40">
                   <img
                     src={contest.main_prize_secondary_image}
-                    alt="Hlavní výhra detail"
-                    className="w-full max-h-64 object-cover"
+                    alt="Detail hlavní výhry"
+                    className="w-full max-h-[260px] object-cover"
                   />
                 </div>
               </div>
             )}
 
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground/90 pt-2 border-t border-border/60">
-              <div className="flex items-center gap-1">
-                <Info className="w-3 h-3" />
+            <div className="pt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground/80 border-t border-border/60 mt-2">
+              <div className="flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5" />
                 <span>
-                  Ticketů v soutěži: <span className="font-medium">{contest.ticket_count.toLocaleString()}</span>
+                  Ticketů v soutěži:{" "}
+                  <span className="font-semibold">{contest.ticket_count.toLocaleString("cs-CZ")}</span>
                 </span>
               </div>
-              <span>Vytvořeno: {new Date(contest.created_at).toLocaleDateString("cs-CZ")}</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Peněženka + nákup */}
-        <Card className="rounded-2xl shadow-md border-border/70">
-          <CardHeader>
+        {/* Peněženka / meta info */}
+        <Card className="rounded-3xl shadow-md border-border/70 bg-gradient-to-b from-background/90 via-background/70 to-background/40">
+          <CardHeader className="pb-3">
             <CardTitle>Tvá peněženka</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -249,42 +307,47 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </section>
 
-      {/* ==============================================================
-          3) PROGRESS BAR – CESTA K HLAVNÍ VÝHŘE (zatím statický design)
-          ============================================================== */}
-      <Card className="rounded-2xl shadow-md border-border/70 bg-gradient-to-r from-background via-background/80 to-background">
-        <CardHeader>
+      {/* Cesta k hlavní výhře */}
+      <Card className="rounded-3xl shadow-md border-border/70 bg-gradient-to-b from-background/90 via-background/70 to-background">
+        <CardHeader className="pb-2">
           <CardTitle className="text-base md:text-lg">Cesta k hlavní výhře</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Linka */}
-          <div className="relative h-2 rounded-full bg-gradient-to-r from-yellow-500/20 via-yellow-400/10 to-yellow-500/20 overflow-hidden">
-            <div className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-yellow-400/40 via-yellow-300/30 to-transparent" />
+          {/* Progress line */}
+          <div className="relative w-full h-2 rounded-full bg-gradient-to-r from-border/50 via-border/40 to-border/20 overflow-hidden">
+            <div className="absolute inset-y-0 left-0 w-full bg-[radial-gradient(circle_at_center,_rgba(250,204,21,0.2),transparent_55%)] opacity-60" />
+            <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-yellow-400/70 via-yellow-300/60 to-transparent shadow-[0_0_30px_rgba(250,204,21,0.5)]" />
           </div>
 
-          {/* Milníky – čistě vizuální, zatím bez logiky pro „sold“ */}
-          <div className="flex justify-between text-[11px] text-muted-foreground/80">
-            {["10 000", "50 000", "100 000", "250 000", "500 000", "750 000", "1 000 000"].map((label, index) => (
-              <div key={label} className="flex flex-col items-center gap-1 flex-1">
-                <div className="w-3 h-3 rounded-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.7)]" />
-                <span className={index === 6 ? "font-semibold text-yellow-300" : ""}>{label}</span>
-              </div>
-            ))}
+          {/* Milestones */}
+          <div className="relative mt-3">
+            <div className="flex justify-between text-[10px] md:text-xs text-muted-foreground/80">
+              {[
+                { value: 10000, label: "10 000" },
+                { value: 50000, label: "50 000" },
+                { value: 100000, label: "100 000" },
+                { value: 250000, label: "250 000" },
+                { value: 500000, label: "500 000" },
+                { value: 750000, label: "750 000" },
+                { value: 1000000, label: "1 000 000" },
+              ].map((milestone, index) => (
+                <div key={milestone.value} className="flex flex-col items-center gap-1 min-w-[40px]">
+                  <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-yellow-300 to-yellow-500 shadow-[0_0_16px_rgba(250,204,21,0.9)]" />
+                  <span>{milestone.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* ==============================================================
-          4) BONUSOVÉ VÝHRY
-          ============================================================== */}
-      <Card className="rounded-2xl shadow-md border-border/70">
+      {/* BONUSOVÉ VÝHRY */}
+      <Card className="rounded-3xl shadow-md border-border/70 bg-gradient-to-b from-background/90 via-background/70 to-background">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Gift className="w-4 h-4 text-primary" />
-            </div>
+            <Gift className="w-5 h-5 text-primary" />
             <CardTitle>Bonusové výhry</CardTitle>
           </div>
         </CardHeader>
@@ -296,13 +359,10 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
               }
             >
               {bonusPrizes.map((bonus) => (
-                <div
-                  key={bonus.id}
-                  className="rounded-xl border border-border/70 bg-card/80 p-3 flex flex-col gap-1 hover:border-yellow-500/60 hover:bg-card/90 transition-colors"
-                >
+                <div key={bonus.id} className="rounded-2xl border border-border/70 bg-card/80 p-3 flex flex-col gap-1">
                   <div className="text-sm font-semibold">{bonus.description}</div>
                   <div className="text-xs text-muted-foreground">
-                    Výherní ticket: <span className="font-medium">{bonus.ticket_position.toLocaleString()}</span>
+                    Výherní ticket: <span className="font-medium">{bonus.ticket_position.toLocaleString("cs-CZ")}</span>
                   </div>
                   <div className="text-[11px] text-muted-foreground/80">Stav: {bonus.status}</div>
                 </div>
@@ -316,22 +376,18 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
         </CardContent>
       </Card>
 
-      {/* ==============================================================
-          5) MAPA TICKETŮ
-          ============================================================== */}
-      <div className="mt-4">
+      {/* Ticket Map */}
+      <section className="mt-4">
         <TicketMap
           contestId={contest.id}
           contestTitle={contest.title}
           ticketCount={contest.ticket_count}
           ticketPrice={contest.ticket_price}
         />
-      </div>
+      </section>
 
-      {/* ==============================================================
-          6) MOJE VÝHRY
-          ============================================================== */}
-      <Card className="rounded-2xl shadow-md border-border/70">
+      {/* MOJE VÝHRY */}
+      <Card className="rounded-3xl shadow-md border-border/70 bg-gradient-to-b from-background/90 via-background/70 to-background">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Crown className="w-5 h-5 text-primary" />
@@ -344,7 +400,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
               {userWins.map((win) => (
                 <div
                   key={win.id}
-                  className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded-xl border border-border/70 bg-card/80 px-3 py-2"
+                  className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded-2xl border border-border/70 bg-card/80 px-3 py-2"
                 >
                   <div>
                     <p className="text-sm font-medium">{win.type === "main" ? "Hlavní výhra" : "Bonusová výhra"}</p>
