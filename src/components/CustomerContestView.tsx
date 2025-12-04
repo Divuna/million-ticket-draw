@@ -218,15 +218,15 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
         </CardContent>
       </Card>
 
-      {/* MAPA TICKETŮ */}
-      <Card className="rounded-2xl shadow-md border-border/70">
-        <CardHeader>
-          <CardTitle>Mapa ticketů</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TicketMap contestId={contest.id} />
-        </CardContent>
-      </Card>
+      {/* Ticket Map Section */}
+      <div className="mt-6">
+        <TicketMap
+          contestId={contest.id}
+          contestTitle={contest.title}
+          ticketCount={contest.ticket_count}
+          ticketPrice={contest.ticket_price}
+        />
+      </div>
 
       {/* MOJE VÝHRY */}
       <Card className="rounded-2xl shadow-md border-border/70">
