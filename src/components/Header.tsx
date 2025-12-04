@@ -12,12 +12,12 @@ export const Header: React.FC = () => {
 
   return (
     <header className="border-b bg-background">
-      <div className="container mx-auto flex items-center justify-between px-4 py-4">
+      <div className="container mx-auto flex items-center justify-between px-4 py-4 h-20 md:h-28">
         <Link to="/" className="flex items-center">
           <img
             src={logo}
             alt="OneMil logo"
-            className="h-10 md:h-14 w-auto object-contain onemil-logo-animated onemil-logo-hover"
+            className="h-12 md:h-20 w-auto object-contain onemil-logo-animated onemil-logo-hover"
           />
         </Link>
         
