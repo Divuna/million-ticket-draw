@@ -1166,9 +1166,40 @@ export const AdminContestManagement: React.FC = () => {
 
               {/* Tab 3: Popis hlavní výhry */}
               <TabsContent value="main-prize-description" className="space-y-4 mt-4">
-                <p className="text-muted-foreground text-center py-8">
-                  Obsah pro popis hlavní výhry bude doplněn.
-                </p>
+                <div>
+                  <Label htmlFor="main_prize_description">Popis hlavní výhry</Label>
+                  <Textarea
+                    id="main_prize_description"
+                    value={contestForm.description}
+                    onChange={(e) => setContestForm({...contestForm, description: e.target.value})}
+                    placeholder="Podrobný popis hlavní výhry soutěže..."
+                    rows={6}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="secondary_image_tab3">Doplňková fotografie hlavní výhry</Label>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Tato fotografie se zobrazí na stránce detailu soutěže.
+                  </p>
+                  <input
+                    id="secondary_image_tab3"
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    onChange={handleSecondaryFileSelect}
+                    className="w-full p-2 border rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {(secondaryImagePreview || contestForm.main_prize_secondary_image) && (
+                    <div className="mt-2">
+                      <img 
+                        src={secondaryImagePreview || contestForm.main_prize_secondary_image} 
+                        alt="Náhled doplňkové fotografie" 
+                        className="max-w-xs max-h-32 rounded-md border object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
               </TabsContent>
 
               {/* Tab 4: Bonusy – věcné výhry */}
