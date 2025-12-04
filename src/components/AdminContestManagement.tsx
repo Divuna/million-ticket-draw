@@ -83,7 +83,8 @@ export const AdminContestManagement: React.FC = () => {
   const [generatingBonuses, setGeneratingBonuses] = useState(false);
   const [generatedMioCoins, setGeneratedMioCoins] = useState<number[]>([]);
   const [generatingBanner, setGeneratingBanner] = useState(false);
-
+  const [generatingPoster, setGeneratingPoster] = useState(false);
+  const [generatedPosterUrl, setGeneratedPosterUrl] = useState<string>('');
 
   const [contestForm, setContestForm] = useState<ContestForm>({
     title: '',
@@ -323,18 +324,20 @@ export const AdminContestManagement: React.FC = () => {
   const handleEditContest = async (contest: ContestData, openTab: string = 'basic') => {
     setEditingContest(contest);
     
-    // Fetch full contest data including secondary image and banner
+    // Fetch full contest data including secondary image, banner, and poster
     let secondaryImage = '';
     let bannerImage = '';
+    let posterUrl = '';
     try {
       const { data: fullContest } = await supabase
         .from('contests')
-        .select('main_prize_secondary_image, banner_image')
+        .select('main_prize_secondary_image, banner_image, generated_poster_url')
         .eq('id', contest.contest_id)
         .single();
       if (fullContest) {
         secondaryImage = fullContest.main_prize_secondary_image || '';
         bannerImage = fullContest.banner_image || '';
+        posterUrl = fullContest.generated_poster_url || '';
       }
     } catch (error) {
       console.error('Error fetching contest images:', error);
@@ -353,6 +356,7 @@ export const AdminContestManagement: React.FC = () => {
     });
     setSecondaryImagePreview(secondaryImage);
     setBannerImagePreview(bannerImage);
+    setGeneratedPosterUrl(posterUrl);
     
     // Load existing bonus prizes for this contest
     try {
@@ -432,6 +436,7 @@ export const AdminContestManagement: React.FC = () => {
       imageFile: null,
       imagePreview: ''
     });
+    setGeneratedPosterUrl('');
   };
 
   // Helper function to check for position conflicts
@@ -632,6 +637,54 @@ export const AdminContestManagement: React.FC = () => {
       });
     } finally {
       setGeneratingBanner(false);
+    }
+  };
+
+  const handleGeneratePoster = async () => {
+    if (!editingContest?.contest_id) {
+      toast({
+        title: "Chyba",
+        description: "Plakát lze generovat pouze pro existující soutěž.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setGeneratingPoster(true);
+    toast({
+      title: "Generuji AI plakát…",
+      description: "Prosím počkejte, toto může trvat několik sekund.",
+    });
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-poster', {
+        body: { contest_id: editingContest.contest_id }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Chyba při volání funkce');
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      if (data?.url) {
+        setGeneratedPosterUrl(data.url);
+        toast({
+          title: "Plakát byl úspěšně vygenerován.",
+          description: "AI vytvořil plakát pro soutěž.",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error generating AI poster:', error);
+      toast({
+        title: "Chyba při generování plakátu",
+        description: error.message || "Nepodařilo se vygenerovat plakát.",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingPoster(false);
     }
   };
 
@@ -1252,6 +1305,42 @@ export const AdminContestManagement: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {/* AI Poster Generator */}
+                {editingContest && (
+                  <div className="pt-4 border-t">
+                    <Label>AI generátor plakátu</Label>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Vygenerujte plakát pomocí AI na základě informací o soutěži.
+                    </p>
+                    <Button 
+                      type="button" 
+                      onClick={handleGeneratePoster}
+                      disabled={generatingPoster}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {generatingPoster ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Generuji…
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Vygenerovat plakát (AI)
+                        </>
+                      )}
+                    </Button>
+                    {generatedPosterUrl && (
+                      <img 
+                        src={generatedPosterUrl} 
+                        alt="AI Generated Poster" 
+                        className="mt-4 w-full rounded-lg"
+                      />
+                    )}
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
 
