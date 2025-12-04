@@ -11,13 +11,13 @@ export const Header: React.FC = () => {
   const { isAdmin } = useUserRole();
 
   return (
-    <header className="sticky top-0 z-50 h-24 md:h-32 bg-background/70 backdrop-blur-xl border-b border-white/10 shadow-[0_4px_25px_rgba(0,0,0,0.4)] flex items-center">
+    <header className="sticky top-0 z-50 h-16 md:h-20 bg-background/70 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4">
       <div className="container mx-auto flex items-center justify-between px-4">
-        <Link to="/" className="flex items-center">
+        <Link to="/" className="flex items-center gap-3">
           <img
             src={logo}
             alt="OneMil logo"
-            className="h-16 md:h-24 w-auto object-contain transition-all duration-300 onemil-logo-hover drop-shadow-[0_0_18px_rgba(255,220,100,0.45)] animate-pulse-slow"
+            className="h-12 md:h-20 w-auto object-contain transition-all duration-300 onemil-logo-hover drop-shadow-[0_0_18px_rgba(255,220,100,0.45)] animate-pulse-slow"
           />
         </Link>
         
