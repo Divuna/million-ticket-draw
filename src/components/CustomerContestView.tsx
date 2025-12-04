@@ -17,7 +17,7 @@ interface Contest {
   ticket_count: number;
   created_at: string;
   banner_image?: string | null;
-  generated_poster_url?: string | null; // připraveno na AI plakát
+  generated_poster_url?: string | null;
 }
 
 interface BonusPrize {
@@ -100,7 +100,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-24">
-      {/* HERO / BANNER */}
+      {/* BANNER */}
       {(contest.generated_poster_url || contest.banner_image) && (
         <div className="w-full rounded-2xl overflow-hidden bg-gradient-to-br from-background via-card to-background shadow-xl border border-border/60">
           <div className="relative">
@@ -131,9 +131,9 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
         </div>
       )}
 
-      {/* HLAVNÍ INFORMACE O SOUTĚŽI */}
+      {/* INFO GRID */}
       <div className="grid gap-4 md:grid-cols-[minmax(0,2fr),minmax(0,1.1fr)]">
-        {/* Detail hlavní výhry */}
+        {/* HLAVNÍ VÝHRA */}
         <Card className="rounded-2xl shadow-md border-border/70">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -149,13 +149,13 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
             <div className="text-xs text-muted-foreground/80 flex items-center gap-1">
               <Info className="w-3 h-3" />
               <span>
-                Počet ticketů v soutěži: <span className="font-medium">{contest.ticket_count.toLocaleString()}</span>
+                Počet ticketů: <span className="font-medium">{contest.ticket_count.toLocaleString()}</span>
               </span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Peněženka + nákup ticketu */}
+        {/* PENĚŽENKA */}
         <Card className="rounded-2xl shadow-md border-border/70">
           <CardHeader>
             <CardTitle>Tvá peněženka</CardTitle>
@@ -211,14 +211,12 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              Pro tuto soutěž zatím nejsou definovány žádné bonusové výhry.
-            </p>
+            <p className="text-sm text-muted-foreground">Pro tuto soutěž nejsou definovány žádné bonusové výhry.</p>
           )}
         </CardContent>
       </Card>
 
-      {/* Ticket Map Section */}
+      {/* TICKET MAP — full correct props */}
       <div className="mt-6">
         <TicketMap
           contestId={contest.id}
