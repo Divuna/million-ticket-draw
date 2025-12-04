@@ -185,6 +185,41 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
         </Card>
       </div>
 
+      {/* MILESTONE PROGRESS */}
+      <Card className="rounded-2xl shadow-md border-border/70 overflow-hidden">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Cesta k hlavní výhře</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-2 pb-6">
+          <div className="relative px-4">
+            {/* Progress line */}
+            <div className="absolute top-3 left-4 right-4 h-[2px] bg-gradient-to-r from-amber-400/30 via-amber-500/50 to-amber-600/30 rounded-full" />
+            
+            {/* Milestones */}
+            <div className="relative flex justify-between items-start">
+              {[
+                { value: 10000, label: "10 000" },
+                { value: 50000, label: "50 000" },
+                { value: 100000, label: "100 000" },
+                { value: 250000, label: "250 000" },
+                { value: 500000, label: "500 000" },
+                { value: 750000, label: "750 000" },
+                { value: 1000000, label: "1 000 000" },
+              ].map((milestone, index) => (
+                <div key={milestone.value} className="flex flex-col items-center">
+                  {/* Gold dot */}
+                  <div className="w-3 h-3 rounded-full bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 shadow-[0_0_8px_rgba(245,158,11,0.5)] border border-amber-500/50" />
+                  {/* Label */}
+                  <span className="mt-2 text-[10px] sm:text-xs text-muted-foreground font-medium whitespace-nowrap">
+                    {milestone.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* BONUSOVÉ VÝHRY */}
       <Card className="rounded-2xl shadow-md border-border/70">
         <CardHeader>
