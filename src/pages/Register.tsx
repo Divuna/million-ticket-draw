@@ -79,7 +79,7 @@ const Register: React.FC = () => {
         <img
           src={logo}
           alt="OneMil logo"
-          className="h-16 w-auto object-contain mx-auto mb-4"
+          className="h-16 w-auto object-contain mx-auto mb-4 onemil-logo-animated"
         />
         <Card className="w-full">
         <CardHeader>
