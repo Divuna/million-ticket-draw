@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import logo from '@/assets/logo-onemil.png';
 
 const Register: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -74,7 +75,13 @@ const Register: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md">
+        <img
+          src={logo}
+          alt="OneMil logo"
+          className="h-16 w-auto object-contain mx-auto mb-4"
+        />
+        <Card className="w-full">
         <CardHeader>
           <CardTitle>Registrace</CardTitle>
           <CardDescription>
@@ -164,7 +171,8 @@ const Register: React.FC = () => {
             </p>
           </CardFooter>
         </form>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };
