@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Home } from 'lucide-react';
+import logo from '@/assets/logo-onemil.png';
 
 export const Header: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -12,8 +13,8 @@ export const Header: React.FC = () => {
   return (
     <header className="border-b bg-background">
       <div className="container mx-auto flex items-center justify-between px-4 py-4">
-        <Link to="/" className="text-xl font-bold">
-          OneMil
+        <Link to="/" className="flex items-center">
+          <img src={logo} alt="OneMil" className="h-8 w-auto" />
         </Link>
         
         <nav className="flex items-center space-x-4">
