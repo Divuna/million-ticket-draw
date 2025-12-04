@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import logo from "@/assets/logo-onemil.png";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -59,7 +60,13 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md">
+        <img
+          src={logo}
+          alt="OneMil logo"
+          className="h-16 w-auto mx-auto mb-4 object-contain"
+        />
+        <Card className="w-full">
         <CardHeader>
           <CardTitle>Přihlášení</CardTitle>
           <CardDescription>Přihlaste se ke svému účtu OneMil</CardDescription>
@@ -119,7 +126,8 @@ const Login: React.FC = () => {
             </p>
           </CardFooter>
         </form>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };
