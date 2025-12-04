@@ -17,7 +17,7 @@ export const Header: React.FC = () => {
           <img
             src={logo}
             alt="OneMil logo"
-            className="h-10 w-auto object-contain onemil-logo-animated transition-transform duration-200 hover:scale-105"
+            className="h-10 md:h-14 w-auto object-contain onemil-logo-animated onemil-logo-hover"
           />
         </Link>
         
