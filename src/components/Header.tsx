@@ -17,7 +17,7 @@ export const Header: React.FC = () => {
           <img
             src={logo}
             alt="OneMil logo"
-            className="h-12 md:h-20 w-auto object-contain transition-all duration-300 onemil-logo-hover drop-shadow-[0_0_18px_rgba(255,220,100,0.45)] animate-pulse-slow"
+            className="h-12 md:h-20 w-auto object-contain"
           />
         </Link>
         
@@ -28,31 +28,31 @@ export const Header: React.FC = () => {
               {isAdmin ? (
                 <>
                   <Link to="/">
-                    <Button variant="ghost" className="transition-all duration-200 hover:scale-105 hover:text-primary">
+                    <Button variant="ghost">
                       <Home className="mr-2 h-4 w-4" />
                       ÚVODNÍ STRÁNKA
                     </Button>
                   </Link>
                   <Link to="/admin">
-                    <Button variant="ghost" className="transition-all duration-200 hover:scale-105 hover:text-primary">Admin</Button>
+                    <Button variant="ghost">Admin</Button>
                   </Link>
                 </>
               ) : (
                 <Link to="/profile">
-                  <Button variant="ghost" className="transition-all duration-200 hover:scale-105 hover:text-primary">Profil</Button>
+                  <Button variant="ghost">Profil</Button>
                 </Link>
               )}
-              <Button variant="outline" onClick={signOut} className="transition-all duration-200 hover:scale-105">
+              <Button variant="outline" onClick={signOut}>
                 Odhlásit se
               </Button>
             </>
           ) : (
             <>
               <Link to="/login">
-                <Button variant="ghost" className="transition-all duration-200 hover:scale-105 hover:text-primary">Přihlásit</Button>
+                <Button variant="ghost">Přihlásit</Button>
               </Link>
               <Link to="/register">
-                <Button variant="default" className="transition-all duration-200 hover:scale-105">Registrovat</Button>
+                <Button variant="default">Registrovat</Button>
               </Link>
             </>
           )}
