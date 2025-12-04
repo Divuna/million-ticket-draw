@@ -969,12 +969,14 @@ export const AdminContestManagement: React.FC = () => {
             </DialogHeader>
             
             <Tabs value={dialogTab} onValueChange={setDialogTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-7">
                 <TabsTrigger value="basic">Základní údaje</TabsTrigger>
-                <TabsTrigger value="miocoins">Bonusy – MioCoins</TabsTrigger>
-                <TabsTrigger value="physical">Bonusy – věcné</TabsTrigger>
-                <TabsTrigger value="graphics">Grafika – detail</TabsTrigger>
-                <TabsTrigger value="banner">Grafika – banner</TabsTrigger>
+                <TabsTrigger value="bonus-coins">Bonusy – MioCoins</TabsTrigger>
+                <TabsTrigger value="main-prize-description">Popis hlavní výhry</TabsTrigger>
+                <TabsTrigger value="bonus-physical">Bonusy – věcné</TabsTrigger>
+                <TabsTrigger value="graphics-detail">Grafika – detail</TabsTrigger>
+                <TabsTrigger value="graphics-banner">Grafika – banner</TabsTrigger>
+                <TabsTrigger value="create">Vytvořit soutěž</TabsTrigger>
               </TabsList>
 
               {/* Tab 1: Základní údaje */}
@@ -1091,7 +1093,7 @@ export const AdminContestManagement: React.FC = () => {
               </TabsContent>
 
               {/* Tab 2: Bonusy – MioCoins */}
-              <TabsContent value="miocoins" className="space-y-4 mt-4">
+              <TabsContent value="bonus-coins" className="space-y-4 mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="totalToDistribute">Celkem rozdělit (MioCoins)</Label>
@@ -1162,8 +1164,15 @@ export const AdminContestManagement: React.FC = () => {
                 )}
               </TabsContent>
 
-              {/* Tab 3: Bonusy – věcné výhry */}
-              <TabsContent value="physical" className="space-y-4 mt-4">
+              {/* Tab 3: Popis hlavní výhry */}
+              <TabsContent value="main-prize-description" className="space-y-4 mt-4">
+                <p className="text-muted-foreground text-center py-8">
+                  Obsah pro popis hlavní výhry bude doplněn.
+                </p>
+              </TabsContent>
+
+              {/* Tab 4: Bonusy – věcné výhry */}
+              <TabsContent value="bonus-physical" className="space-y-4 mt-4">
                 <div className="space-y-4 p-4 border rounded-lg">
                   <h4 className="font-medium flex items-center gap-2">
                     <Package className="w-4 h-4" />
@@ -1255,8 +1264,8 @@ export const AdminContestManagement: React.FC = () => {
                 )}
               </TabsContent>
 
-              {/* Tab 4: Grafika – detail soutěže */}
-              <TabsContent value="graphics" className="space-y-4 mt-4">
+              {/* Tab 5: Grafika – detail soutěže */}
+              <TabsContent value="graphics-detail" className="space-y-4 mt-4">
                 <div>
                   <Label htmlFor="secondary_image">Doplňková fotka hlavní výhry (pravý box)</Label>
                   <p className="text-sm text-muted-foreground mb-2">
@@ -1281,8 +1290,8 @@ export const AdminContestManagement: React.FC = () => {
                 </div>
               </TabsContent>
 
-              {/* Tab 5: Grafika – banner */}
-              <TabsContent value="banner" className="space-y-4 mt-4">
+              {/* Tab 6: Grafika – banner */}
+              <TabsContent value="graphics-banner" className="space-y-4 mt-4">
                 <div>
                   <Label htmlFor="banner_image">Banner soutěže</Label>
                   <p className="text-sm text-muted-foreground mb-2">
@@ -1342,16 +1351,24 @@ export const AdminContestManagement: React.FC = () => {
                   </div>
                 )}
               </TabsContent>
-            </Tabs>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowContestDialog(false)}>
-                Zrušit
-              </Button>
-              <Button onClick={handleSaveContest} disabled={!isContestFormValid()}>
-                {editingContest ? 'Aktualizovat' : 'Vytvořit'}
-              </Button>
-            </DialogFooter>
+              {/* Tab 7: Vytvořit soutěž */}
+              <TabsContent value="create" className="space-y-4 mt-4">
+                <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                  <p className="text-muted-foreground text-center">
+                    Zkontrolujte všechny údaje a poté klikněte na tlačítko níže.
+                  </p>
+                  <div className="flex gap-4">
+                    <Button variant="outline" onClick={() => setShowContestDialog(false)}>
+                      Zrušit
+                    </Button>
+                    <Button onClick={handleSaveContest} disabled={!isContestFormValid()}>
+                      {editingContest ? 'Aktualizovat' : 'Vytvořit'}
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </DialogContent>
         </Dialog>
       </div>
@@ -1443,7 +1460,7 @@ export const AdminContestManagement: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleEditContest(contest, 'miocoins')}
+                          onClick={() => handleEditContest(contest, 'bonus-coins')}
                         >
                           <Coins className="w-3 h-3 mr-1" />
                           Bonusy
