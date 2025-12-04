@@ -786,3 +786,12 @@
 .onemil-logo-animated {
   animation: onemilFadeIn 0.8s ease-out forwards;
 }
+
+.onemil-logo-hover {
+  transition: all 0.25s ease-out;
+}
+
+.onemil-logo-hover:hover {
+  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.35));
+  transform: scale(1.05);
+}
