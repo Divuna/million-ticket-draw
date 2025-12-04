@@ -241,6 +241,7 @@ export type Database = {
           banner_image: string | null
           created_at: string
           description: string | null
+          generated_poster_url: string | null
           id: string
           main_image: string | null
           main_prize: string
@@ -256,6 +257,7 @@ export type Database = {
           banner_image?: string | null
           created_at?: string
           description?: string | null
+          generated_poster_url?: string | null
           id?: string
           main_image?: string | null
           main_prize: string
@@ -271,6 +273,7 @@ export type Database = {
           banner_image?: string | null
           created_at?: string
           description?: string | null
+          generated_poster_url?: string | null
           id?: string
           main_image?: string | null
           main_prize?: string
