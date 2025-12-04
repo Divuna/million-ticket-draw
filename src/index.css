@@ -795,3 +795,14 @@
   filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.35));
   transform: scale(1.05);
 }
+
+/* Breathing animation for logo */
+@keyframes pulse-slow {
+  0% { opacity: 0.85; }
+  50% { opacity: 1; }
+  100% { opacity: 0.85; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
