@@ -253,11 +253,7 @@ export default function ContestDetail() {
 
       {/* MIOCOIN SEKCE */}
       <div className="bg-[#111418] rounded-2xl p-6 border border-yellow-500/20 flex items-center gap-4 shadow-[0_0_20px_rgba(250,204,21,0.1)]">
-        <img
-          src="/miocoin.png"
-          alt="MioCoin"
-          className="w-8 h-8 object-contain mr-2"
-        />
+        <img src="/miocoin.png" className="w-12 h-12" alt="MioCoin" />
         <p className="text-yellow-300 font-bold text-lg">
           Ve hře je celkem: {bonusMiocoins.toLocaleString("cs-CZ")} MioCoinů
         </p>
