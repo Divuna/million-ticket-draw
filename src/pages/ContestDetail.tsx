@@ -38,7 +38,7 @@ export default function ContestDetail() {
   const [myWins, setMyWins] = useState<Winner[]>([]);
   const [balance, setBalance] = useState(0);
 
-  // FUNKCE PRO NAČTENÍ PRIZE IMAGE
+  // FUNKCE PRO NAČTENÍ OBRÁZKU HLAVNÍ VÝHRY
   const resolvePrizeImage = (contest: Contest): string => {
     const base = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public`;
 
@@ -75,7 +75,7 @@ export default function ContestDetail() {
 
       const typedBonus = (bonusData ?? []) as BonusPrize[];
 
-      // Fyzické výhry
+      // Fyzické bonusové výhry (věcné)
       const physical = typedBonus.filter((b) => !b.amount || b.amount === 0);
       setBonusPrizes(physical);
 
@@ -91,7 +91,7 @@ export default function ContestDetail() {
 
       setMyWins((wins ?? []) as Winner[]);
 
-      // 4) balance
+      // 4) Zůstatek MioCoinů
       const { data: auth } = await supabase.auth.getUser();
 
       if (auth?.user) {
@@ -140,14 +140,16 @@ export default function ContestDetail() {
             src={prizeImage}
             alt={contest.title}
             className="w-[450px] object-contain drop-shadow-[0_0_40px_rgba(250,204,21,0.45)]"
-            onError={(e) => (e.currentTarget.src = "/fallback-car.png")}
+            onError={(e) => {
+              e.currentTarget.src = "/fallback-car.png";
+            }}
           />
         </div>
       </div>
 
       {/* CTA */}
       <div className="bg-[#111418] rounded-2xl p-6 border border-white/5 flex flex-col gap-4">
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-wrap">
           <Button className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3 rounded-xl">
             Uplatnit {contest.ticket_price} MioCoinů
           </Button>
@@ -169,12 +171,12 @@ export default function ContestDetail() {
         </p>
       </div>
 
-      {/* CESTA K HLAVNÍ VÝHŘE – STATICKÝ GRAFICKÝ PRVEK */}
+      {/* CESTA K HLAVNÍ VÝHŘE – JEN GRAFIKA, ŽÁDNÁ DATA */}
       <div className="bg-[#111418] rounded-2xl p-6 border border-white/5">
         <h2 className="text-white font-semibold mb-4">Cesta k hlavní výhře</h2>
 
-        {/* SEM DOSADÍŠ GROK / SVG / PNG */}
-        <div className="w-full h-24 rounded-xl bg-gradient-to-r from-yellow-600/20 via-yellow-300/30 to-yellow-600/20 shadow-[0_0_25px_rgba(250,204,21,0.3)]"></div>
+        {/* čistý grafický prvek – žádná procenta, žádné tikety */}
+        <div className="w-full h-3 rounded-full bg-gradient-to-r from-yellow-500 via-yellow-300 to-yellow-600 shadow-[0_0_15px_rgba(250,204,21,0.6)]" />
       </div>
 
       {/* BONUSOVÉ VĚCNÉ VÝHRY */}
@@ -189,7 +191,6 @@ export default function ContestDetail() {
               <div key={b.id} className="p-4 rounded-xl bg-black/30 border border-white/5">
                 <p className="text-white text-sm">{b.description || "Bonusová výhra"}</p>
 
-                {/* INDEXOVÁNÍ OBRÁZKŮ DLE image_url */}
                 {b.image_url && (
                   <img
                     src={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/bonus-images/${b.image_url}`}
