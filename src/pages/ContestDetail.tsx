@@ -40,41 +40,23 @@ export default function ContestDetail() {
   const [myWins, setMyWins] = useState<Winner[]>([]);
   const [balance, setBalance] = useState(0);
 
-  // 🔥 FUNKCE NAČTENÍ ZŮSTATKU – nejdřív wallets, pak fallback na profiles
+  // 🔥 FUNKCE NAČTENÍ ZŮSTATKU
   async function loadUserBalance(userId: string) {
-    // 1) Peněženka v tabulce wallets
-    const { data: wallet, error: walletError } = await supabase
-      .from("wallets")
-      .select("balance_coins")
-      .eq("user_id", userId)
-      .maybeSingle();
+    const { data: wallet } = await supabase.from("wallets").select("balance_coins").eq("user_id", userId).maybeSingle();
 
-    if (walletError) {
-      console.warn("Wallet load error (wallets):", walletError);
-    }
-
-    if (wallet && wallet.balance_coins != null) {
+    if (wallet?.balance_coins != null) {
       setBalance(wallet.balance_coins);
       return;
     }
 
-    // 2) Fallback – pokud používáš miocoin_balance v profiles
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("miocoin_balance")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (profileError) {
-      console.warn("Wallet load error (profiles):", profileError);
-    }
+    const { data: profile } = await supabase.from("profiles").select("miocoin_balance").eq("id", userId).maybeSingle();
 
     if (profile?.miocoin_balance != null) {
       setBalance(profile.miocoin_balance);
     }
   }
 
-  // 🔥 OBNOVA SESSION – když se přihlášení objeví až později
+  // 🔥 LISTENER PRO OBNOVU SESSION
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
@@ -82,82 +64,44 @@ export default function ContestDetail() {
       }
     });
 
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    return () => listener.subscription.unsubscribe();
   }, []);
 
-  // 🔥 Funkce UPLATNIT (sem pak dáme reálnou nákupní logiku)
+  // 🔥 FUNKCE UPLATNIT
   async function handleUseMiocoins() {
-    if (!contest) return;
-    console.log("Uplatnit", contest.ticket_price, "MioCoinů pro soutěž", contest.id);
-    // TODO: tady napojíš existující logiku nákupu ticketu
+    console.log("Uplatnit", contest?.ticket_price, "MioCoinů");
   }
 
-  // 🔥 Načtení detailu soutěže
+  // 🔥 NAČTENÍ DETAILU SOUTĚŽE
   useEffect(() => {
     const load = async () => {
       if (!id) return;
       setLoading(true);
 
-      // Soutěž
-      const { data: contestData, error: contestError } = await supabase
-        .from("contests")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
-
-      if (contestError) {
-        console.error("Error loading contest:", contestError);
-      }
+      const { data: contestData } = await supabase.from("contests").select("*").eq("id", id).maybeSingle();
 
       if (!contestData) {
         setLoading(false);
         return;
       }
 
-      const typedContest = contestData as Contest;
-      setContest(typedContest);
+      setContest(contestData as Contest);
 
-      // Bonusové výhry
-      const { data: bonusData, error: bonusError } = await supabase
-        .from("bonus_prizes")
-        .select("*")
-        .eq("contest_id", id);
-
-      if (bonusError) {
-        console.error("Error loading bonus prizes:", bonusError);
-      }
+      const { data: bonusData } = await supabase.from("bonus_prizes").select("*").eq("contest_id", id);
 
       const typedBonus = (bonusData ?? []) as BonusPrize[];
 
-      const physical = typedBonus.filter((b) => !b.amount || b.amount === 0);
-      setBonusPrizes(physical);
+      setBonusPrizes(typedBonus.filter((b) => !b.amount || b.amount === 0));
 
-      const totalMio = typedBonus.reduce((sum, b) => {
-        if (b.amount && b.amount > 0) return sum + b.amount;
-        return sum;
-      }, 0);
-      setBonusMiocoins(totalMio);
+      setBonusMiocoins(typedBonus.reduce((sum, b) => (b.amount ? sum + b.amount : sum), 0));
 
-      // Moje výhry
-      const { data: wins, error: winsError } = await supabase.from("winners").select("*").eq("contest_id", id);
-
-      if (winsError) {
-        console.error("Error loading wins:", winsError);
-      }
+      const { data: wins } = await supabase.from("winners").select("*").eq("contest_id", id);
 
       setMyWins((wins ?? []) as Winner[]);
 
-      // Zůstatek (první pokus – pokud je session později, chytí onAuthStateChange)
-      const { data: auth, error: authError } = await supabase.auth.getUser();
-
-      if (authError) {
-        console.error("Error getting auth user:", authError);
-      }
-
+      const { data: auth } = await supabase.auth.getUser();
       if (auth?.user) {
-        await loadUserBalance(auth.user.id);
+        loadUserBalance(auth.user.id);
       }
 
       setLoading(false);
@@ -192,14 +136,14 @@ export default function ContestDetail() {
           <img
             src={prizeImage}
             alt={contest.title}
-            className="w-[450px] object-contain"
+            className="w-[450px] object-contain pointer-events-none"
             onError={(e) => (e.currentTarget.src = "/fallback-car.png")}
           />
         </div>
       </div>
 
       {/* CTA */}
-      <div className="bg-[#111418] rounded-2xl p-6 border border-white/5 flex flex-col gap-4">
+      <div className="bg-[#111418] rounded-2xl p-6 border border-white/5 flex flex-col gap-4 relative z-50">
         <div className="flex gap-4 flex-wrap">
           <Button
             onClick={handleUseMiocoins}
