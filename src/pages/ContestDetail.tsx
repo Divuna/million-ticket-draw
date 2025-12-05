@@ -162,17 +162,19 @@ export default function ContestDetail() {
       </div>
 
       {/* MIOCOIN SEKCE */}
-      <div className="bg-[#111418] rounded-2xl p-6 border border-yellow-500/20 flex items-center gap-4">
-        <img src="/miocoin.png" className="w-12 h-12 flex-shrink-0" alt="MioCoin" />
+      <div className="bg-[#111418] rounded-2xl p-6 border border-yellow-500/20 flex items-center gap-4 shadow-[0_0_20px_rgba(250,204,21,0.1)]">
+        <img src="/miocoin.png" className="w-12 h-12" alt="MioCoin" />
         <p className="text-yellow-300 font-bold text-lg">
           Ve hře je celkem: {bonusMiocoins.toLocaleString("cs-CZ")} MioCoinů
         </p>
       </div>
 
-      {/* CESTA K HLAVNÍ VÝHŘE */}
+      {/* CESTA K HLAVNÍ VÝHŘE – STATICKÝ GRAFICKÝ PRVEK */}
       <div className="bg-[#111418] rounded-2xl p-6 border border-white/5">
         <h2 className="text-white font-semibold mb-4">Cesta k hlavní výhře</h2>
-        <div className="w-full h-20 rounded-xl bg-black/40 border border-yellow-500/20"></div>
+
+        {/* SEM DOSADÍŠ GROK / SVG / PNG */}
+        <div className="w-full h-24 rounded-xl bg-gradient-to-r from-yellow-600/20 via-yellow-300/30 to-yellow-600/20 shadow-[0_0_25px_rgba(250,204,21,0.3)]"></div>
       </div>
 
       {/* BONUSOVÉ VĚCNÉ VÝHRY */}
