@@ -343,39 +343,6 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
         </CardContent>
       </Card>
 
-      {/* BONUSOVÉ VÝHRY */}
-      <Card className="rounded-3xl shadow-md border-border/70 bg-gradient-to-b from-background/90 via-background/70 to-background">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Gift className="w-5 h-5 text-primary" />
-            <CardTitle>Bonusové výhry</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {bonusPrizes.length > 0 ? (
-            <div
-              className={
-                bonusPrizes.length <= 3 ? "grid gap-3 md:grid-cols-3" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
-              }
-            >
-              {bonusPrizes.map((bonus) => (
-                <div key={bonus.id} className="rounded-2xl border border-border/70 bg-card/80 p-3 flex flex-col gap-1">
-                  <div className="text-sm font-semibold">{bonus.description}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Výherní ticket: <span className="font-medium">{bonus.ticket_position.toLocaleString("cs-CZ")}</span>
-                  </div>
-                  <div className="text-[11px] text-muted-foreground/80">Stav: {bonus.status}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Pro tuto soutěž zatím nejsou definovány žádné bonusové výhry.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Ticket Map */}
       <section className="mt-4">
         <TicketMap
