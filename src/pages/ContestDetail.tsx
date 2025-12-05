@@ -278,24 +278,23 @@ export default function ContestDetail() {
       <div className="bg-black/40 rounded-xl p-4 border border-yellow-500/20">
         <h2 className="text-white font-semibold mb-4">Cesta k hlavní výhře</h2>
         
-        {/* Static milestone labels */}
-        <div className="flex justify-between mb-2 px-1">
-          <span className="text-xs text-yellow-400/80">0</span>
-          <span className="text-xs text-yellow-400/80">10 000</span>
-          <span className="text-xs text-yellow-400/80">50 000</span>
-          <span className="text-xs text-yellow-400/80">100 000</span>
-          <span className="text-xs text-yellow-400/80">250 000</span>
-          <span className="text-xs text-yellow-400/80">500 000</span>
-          <span className="text-xs text-yellow-400/80">750 000</span>
-          <span className="text-xs text-yellow-400/80">1 000 000</span>
+        {/* Static milestone labels with tick marks */}
+        <div className="flex justify-between mb-1 px-1">
+          {['0', '10 000', '50 000', '100 000', '250 000', '500 000', '750 000', '1 000 000'].map((label) => (
+            <div key={label} className="flex flex-col items-center">
+              <span className="text-xs text-yellow-400/80">{label}</span>
+              <div className="w-px h-2 bg-yellow-400/60 mt-1" />
+            </div>
+          ))}
         </div>
         
-        {/* Static neon bar */}
+        {/* Static neon bar with pulse glow animation */}
         <div 
-          className="w-full h-3 rounded-full"
+          className="w-full h-3 rounded-full animate-pulse"
           style={{
             background: 'linear-gradient(to right, #f6e27a, #d4a017)',
-            boxShadow: '0 0 25px rgba(255, 200, 0, 0.6)'
+            boxShadow: '0 0 25px rgba(255, 200, 0, 0.6)',
+            animationDuration: '2s'
           }}
         />
       </div>
