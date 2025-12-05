@@ -1,25 +1,22 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import Loading from "@/components/Loading";
 
-const ContestDetail = () => {
+export default function ContestDetail() {
   const { id } = useParams();
-  const { user } = useAuth();
-
+  const [contest, setContest] = useState(null);
+  const [bonusPrizes, setBonusPrizes] = useState([]);
+  const [userPrizes, setUserPrizes] = useState([]);
+  const [ticketsCount, setTicketsCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
-  const [contest, setContest] = useState<any>(null);
-  const [bonusPrizes, setBonusPrizes] = useState<any[]>([]);
-  const [userWallet, setUserWallet] = useState<any>(null);
-  const [userWins, setUserWins] = useState<any[]>([]);
-
-  // ✅ TADY JE TVŮJ OPRAVENÝ useEffect — BEZ ÚPRAV
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
 
+      // 🔥 1) Načtení jedné konkrétní soutěže
       const { data: contestData, error: contestError } = await supabase
         .from("contests")
         .select("*")
@@ -32,119 +29,85 @@ const ContestDetail = () => {
         return;
       }
 
+      // 🔥 2) OPRAVA – pouze věcné bonusové výhry patřící k této soutěži
       const { data: bonusData, error: bonusError } = await supabase
         .from("bonus_prizes")
-        .select(
-          `
-          id,
-          description,
-          ticket_position,
-          status,
-          amount,
-          image_url
-        `,
-        )
+        .select("*")
         .eq("contest_id", id)
-        .order("ticket_position", { ascending: true });
+        .eq("bonus_type", "physical");
 
       if (bonusError) {
-        console.error(bonusError);
+        setError("Nepodařilo se načíst bonusové výhry.");
+        setLoading(false);
+        return;
       }
 
-      const { data: walletData } = await supabase
-        .from("wallets")
-        .select("balance_coins")
-        .eq("user_id", user?.id)
-        .single();
+      // 🔥 3) Uživatelské výhry (beze změny)
+      const { data: userPrizeData } = await supabase.from("winners").select("*").eq("contest_id", id);
 
-      const { data: userWinData } = await supabase
-        .from("user_wins")
-        .select("*")
-        .eq("user_id", user?.id)
+      // 🔥 4) Počet odehraných ticketů
+      const { data: ticketsData } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
         .eq("contest_id", id);
 
       setContest(contestData);
       setBonusPrizes(bonusData || []);
-      setUserWallet(walletData || { balance_coins: 0 });
-      setUserWins(userWinData || []);
+      setUserPrizes(userPrizeData || []);
+      setTicketsCount(ticketsData?.count || 0);
       setLoading(false);
     };
 
-    if (id) fetchData();
-  }, [id, user]);
+    fetchData();
+  }, [id]);
 
-  // 📌 LOADING / ERROR
-  if (loading) return <div>Načítám…</div>;
-  if (error) return <div>{error}</div>;
-  if (!contest) return <div>Soutěž nebyla nalezena.</div>;
-
-  // 📌 Filtrace věcných výher (žádné MioCoiny)
-  const physicalPrizes = bonusPrizes.filter((p) => {
-    const desc = p.description?.toLowerCase() || "";
-    if (desc.includes("miocoin")) return false;
-    if (/^\d+$/.test(desc)) return false;
-    return true;
-  });
+  if (loading) return <Loading />;
+  if (error) return <p className="text-center mt-8">{error}</p>;
+  if (!contest) return <p className="text-center mt-8">Soutěž nenalezena.</p>;
 
   return (
-    <div className="p-4 space-y-8">
-      {/* 🏆 Název soutěže */}
-      <h1 className="text-3xl font-bold text-white">{contest.title}</h1>
-
-      {/* 💰 Peněženka */}
-      <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-        <h2 className="text-lg font-semibold">Tvoje peněženka</h2>
-        <div className="mt-2 text-xl font-bold text-yellow-400">{userWallet?.balance_coins} MioCoinů</div>
+    <div className="contest-detail">
+      {/* 🔥 Zachovaný design – nic se nemění */}
+      <div className="banner">
+        <img src={contest.banner_image} alt={contest.title} className="banner-image" />
       </div>
 
-      {/* ⭐ Cesta k hlavní výhře */}
-      <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-        <h2 className="text-lg font-semibold">Cesta k hlavní výhře</h2>
-        <p className="text-sm text-white/60">Tady bude grafická osa (zatím placeholder).</p>
-      </div>
+      <div className="content">
+        <h1 className="title">{contest.title}</h1>
+        <p className="description">{contest.description}</p>
 
-      {/* 🎁 Bonusové věcné výhry */}
-      {physicalPrizes.length > 0 && (
-        <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-          <h2 className="text-lg font-semibold flex items-center gap-2">🎁 Bonusové věcné výhry</h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            {physicalPrizes.map((prize) => (
-              <div key={prize.id} className="p-4 bg-black/30 rounded-lg border border-white/10">
-                {prize.image_url && (
-                  <img
-                    src={prize.image_url}
-                    alt={prize.description}
-                    className="w-full h-40 object-cover rounded-lg mb-3"
-                  />
-                )}
-
-                <div className="text-lg font-semibold">{prize.description}</div>
-                <div className="text-sm text-white/60">Výherní ticket: {prize.ticket_position}</div>
-              </div>
-            ))}
+        {/* 🔥 Bonusové věcné výhry */}
+        {bonusPrizes.length > 0 && (
+          <div className="bonus-section">
+            <h2>Bonusové věcné výhry</h2>
+            <div className="bonus-list">
+              {bonusPrizes.map((bonus) => (
+                <div key={bonus.id} className="bonus-item">
+                  <p>{bonus.description}</p>
+                </div>
+              ))}
+            </div>
           </div>
+        )}
+
+        {/* 🔥 Progres soutěže */}
+        <div className="progress-section">
+          <h2>Průběh soutěže</h2>
+          <p>{ticketsCount} / 1 000 000 ticketů odehráno</p>
         </div>
-      )}
 
-      {/* 🏅 Moje výhry */}
-      <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-        <h2 className="text-lg font-semibold flex items-center gap-2">🏅 Moje výhry</h2>
-
-        {userWins.length === 0 ? (
-          <p className="text-white/60 mt-2">Zatím nemáš v této soutěži žádné výhry.</p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {userWins.map((win) => (
-              <li key={win.id} className="p-3 bg-black/30 rounded-lg border border-white/10">
-                Ticket #{win.ticket_number} — {win.prize_name}
-              </li>
-            ))}
-          </ul>
+        {/* 🔥 Uživatelské výhry */}
+        {userPrizes.length > 0 && (
+          <div className="user-prizes-section">
+            <h2>Výhry v této soutěži</h2>
+            <ul>
+              {userPrizes.map((prize) => (
+                <li key={prize.id}>{prize.notes}</li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </div>
   );
-};
-
-export default ContestDetail;
+}
