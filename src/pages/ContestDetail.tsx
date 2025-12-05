@@ -40,16 +40,41 @@ export default function ContestDetail() {
   const [myWins, setMyWins] = useState<Winner[]>([]);
   const [balance, setBalance] = useState(0);
 
-  // 🔥 FUNKCE NAČTENÍ ZŮSTATKU
+  // 🔥 FUNKCE NAČTENÍ ZŮSTATKU – nejdřív wallets, pak fallback na profiles
   async function loadUserBalance(userId: string) {
-    const { data: profile } = await supabase.from("profiles").select("miocoin_balance").eq("id", userId).single();
+    // 1) Peněženka v tabulce wallets
+    const { data: wallet, error: walletError } = await supabase
+      .from("wallets")
+      .select("balance_coins")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (walletError) {
+      console.warn("Wallet load error (wallets):", walletError);
+    }
+
+    if (wallet && wallet.balance_coins != null) {
+      setBalance(wallet.balance_coins);
+      return;
+    }
+
+    // 2) Fallback – pokud používáš miocoin_balance v profiles
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("miocoin_balance")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (profileError) {
+      console.warn("Wallet load error (profiles):", profileError);
+    }
 
     if (profile?.miocoin_balance != null) {
       setBalance(profile.miocoin_balance);
     }
   }
 
-  // 🔥 OBNOVA SESSION — OPRAVUJE PROBLÉM DETAILU
+  // 🔥 OBNOVA SESSION – když se přihlášení objeví až později
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
@@ -62,9 +87,11 @@ export default function ContestDetail() {
     };
   }, []);
 
-  // 🔥 Funkce UPLATNIT (sem můžeš dát logiku)
+  // 🔥 Funkce UPLATNIT (sem pak dáme reálnou nákupní logiku)
   async function handleUseMiocoins() {
-    console.log("Uplatnit", contest?.ticket_price);
+    if (!contest) return;
+    console.log("Uplatnit", contest.ticket_price, "MioCoinů pro soutěž", contest.id);
+    // TODO: tady napojíš existující logiku nákupu ticketu
   }
 
   // 🔥 Načtení detailu soutěže
@@ -74,7 +101,15 @@ export default function ContestDetail() {
       setLoading(true);
 
       // Soutěž
-      const { data: contestData } = await supabase.from("contests").select("*").eq("id", id).maybeSingle();
+      const { data: contestData, error: contestError } = await supabase
+        .from("contests")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (contestError) {
+        console.error("Error loading contest:", contestError);
+      }
 
       if (!contestData) {
         setLoading(false);
@@ -85,7 +120,14 @@ export default function ContestDetail() {
       setContest(typedContest);
 
       // Bonusové výhry
-      const { data: bonusData } = await supabase.from("bonus_prizes").select("*").eq("contest_id", id);
+      const { data: bonusData, error: bonusError } = await supabase
+        .from("bonus_prizes")
+        .select("*")
+        .eq("contest_id", id);
+
+      if (bonusError) {
+        console.error("Error loading bonus prizes:", bonusError);
+      }
 
       const typedBonus = (bonusData ?? []) as BonusPrize[];
 
@@ -99,13 +141,23 @@ export default function ContestDetail() {
       setBonusMiocoins(totalMio);
 
       // Moje výhry
-      const { data: wins } = await supabase.from("winners").select("*").eq("contest_id", id);
+      const { data: wins, error: winsError } = await supabase.from("winners").select("*").eq("contest_id", id);
+
+      if (winsError) {
+        console.error("Error loading wins:", winsError);
+      }
+
       setMyWins((wins ?? []) as Winner[]);
 
-      // Zůstatek (první pokus — pokud je session později, chytí onAuthStateChange)
-      const { data: auth } = await supabase.auth.getUser();
+      // Zůstatek (první pokus – pokud je session později, chytí onAuthStateChange)
+      const { data: auth, error: authError } = await supabase.auth.getUser();
+
+      if (authError) {
+        console.error("Error getting auth user:", authError);
+      }
+
       if (auth?.user) {
-        loadUserBalance(auth.user.id);
+        await loadUserBalance(auth.user.id);
       }
 
       setLoading(false);
