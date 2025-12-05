@@ -277,6 +277,20 @@ export default function ContestDetail() {
       {/* CESTA K HLAVNÍ VÝHŘE */}
       <div className="bg-black/40 rounded-xl p-4 border border-yellow-500/20">
         <h2 className="text-white font-semibold mb-4">Cesta k hlavní výhře</h2>
+        
+        {/* Static milestone labels */}
+        <div className="flex justify-between mb-2 px-1">
+          <span className="text-xs text-yellow-400/80">0</span>
+          <span className="text-xs text-yellow-400/80">10 000</span>
+          <span className="text-xs text-yellow-400/80">50 000</span>
+          <span className="text-xs text-yellow-400/80">100 000</span>
+          <span className="text-xs text-yellow-400/80">250 000</span>
+          <span className="text-xs text-yellow-400/80">500 000</span>
+          <span className="text-xs text-yellow-400/80">750 000</span>
+          <span className="text-xs text-yellow-400/80">1 000 000</span>
+        </div>
+        
+        {/* Static neon bar */}
         <div 
           className="w-full h-3 rounded-full"
           style={{
