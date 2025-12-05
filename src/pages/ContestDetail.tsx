@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 export default function ContestDetail() {
   const { id } = useParams();
@@ -14,6 +15,7 @@ export default function ContestDetail() {
   const [bonusPrizes, setBonusPrizes] = useState<any[]>([]);
   const [bonusMiocoins, setBonusMiocoins] = useState(0);
   const [myWins, setMyWins] = useState<any[]>([]);
+  const [balance, setBalance] = useState(0);
 
   /** -----------------------------------------------------------
    *  NAČTENÍ DAT SOUTĚŽE
@@ -21,7 +23,6 @@ export default function ContestDetail() {
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
-
       setLoading(true);
 
       /** 1) Soutěž */
@@ -44,7 +45,7 @@ export default function ContestDetail() {
 
       setBonusPrizes(bonusData || []);
 
-      /** 4) Bonusové MioCoiny (počítají se podle total_miocoin_bonus) */
+      /** 4) Bonusové MioCoiny */
       const totalMiocoins = contestData?.total_miocoin_bonus ?? 0;
       setBonusMiocoins(totalMiocoins);
 
@@ -53,6 +54,11 @@ export default function ContestDetail() {
 
       setMyWins(myWinsData || []);
 
+      /** 6) Zůstatek kreditů */
+      const { data: profileData } = await supabase.from("profiles").select("*").single();
+
+      setBalance(profileData?.miocoin_balance ?? 0);
+
       setLoading(false);
     };
 
@@ -60,11 +66,14 @@ export default function ContestDetail() {
   }, [id]);
 
   /** -----------------------------------------------------------
-   *  VÝPOČET URL PRO BANNER (z bucketu contest-banners)
+   *  BANNER S HLAVNÍ VÝHROU
    * ---------------------------------------------------------- */
-  const bannerSrc = contest?.banner_image
-    ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-banners/${contest.banner_image}`
-    : "/fallback-car.png";
+
+  const prizeImage = contest?.main_prize_secondary_image
+    ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-banners/${contest.main_prize_secondary_image}`
+    : contest?.banner_image
+      ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-banners/${contest.banner_image}`
+      : "/fallback-car.png";
 
   if (loading || !contest) {
     return (
@@ -77,68 +86,47 @@ export default function ContestDetail() {
   return (
     <div className="p-6 w-full mx-auto space-y-8">
       {/* -----------------------------------------------------------
-           LUXUSNÍ FULL-WIDTH PROMO BANNER
+           HLAVNÍ BANNER S OBRÁZKEM VÝHRY (VARIANTA A)
          ---------------------------------------------------------- */}
-      <div
-        className="w-full rounded-3xl relative overflow-hidden bg-gradient-to-br from-[#1a1a1a] via-[#0d0d0d] to-black 
-        border border-yellow-500/20 shadow-[0_0_60px_rgba(250,204,21,0.25)] pb-10"
-      >
-        {/* Zlaté pozadí */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(250,204,21,0.15),transparent_70%)]"></div>
-        <div className="absolute -top-40 -right-40 w-[460px] h-[460px] bg-yellow-500/20 blur-3xl rounded-full"></div>
+      <div className="w-full rounded-3xl relative overflow-hidden bg-black/40 border border-yellow-500/20 shadow-[0_0_60px_rgba(250,204,21,0.25)] py-12 px-10">
+        {/* LEVÁ STRANA – TEXT SOUTĚŽE */}
+        <div className="max-w-xl space-y-5 relative z-10">
+          <h1 className="text-5xl font-extrabold text-yellow-400">{contest.title}</h1>
 
-        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center px-10 py-12">
-          {/* LEVÁ STRANA – TEXT */}
-          <div className="flex-1 space-y-5 max-w-xl">
-            <Badge className="bg-yellow-500/10 text-yellow-300 border border-yellow-500/40">
-              Vytvořeno: {new Date(contest.created_at).toLocaleDateString("cs-CZ")}
-            </Badge>
+          <p className="text-gray-300 text-base leading-relaxed">{contest.description}</p>
+        </div>
 
-            <h1 className="text-5xl font-extrabold text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]">
-              {contest.title}
-            </h1>
-
-            <p className="text-gray-300 text-base leading-relaxed">{contest.description}</p>
-
-            <div className="flex gap-6 text-gray-300 text-sm pt-1">
-              <span>
-                Cena tiketu: <strong>{contest.ticket_price} MioCoinů</strong>
-              </span>
-              <span>
-                Tiketů: <strong>{contest.ticket_count.toLocaleString("cs-CZ")}</strong>
-              </span>
-              <span>
-                Odehráno:{" "}
-                <strong>
-                  {ticketsPlayed} ({progressPercent}%)
-                </strong>
-              </span>
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              <button className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3 rounded-xl shadow-lg">
-                Uplatnit {contest.ticket_price} MioCoinů
-              </button>
-
-              <button className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-8 py-3 rounded-xl shadow-lg">
-                Dobít MioCoiny
-              </button>
-            </div>
-          </div>
-
-          {/* PRAVÁ STRANA – AUTO BANNER */}
-          <div className="flex-1 flex justify-center items-center mt-10 lg:mt-0">
-            <img
-              src={bannerSrc}
-              alt={contest.title}
-              className="w-[480px] drop-shadow-[0_0_40px_rgba(250,204,21,0.45)] object-contain"
-            />
-          </div>
+        {/* PRAVÁ STRANA – AUTO */}
+        <div className="absolute right-10 top-1/2 -translate-y-1/2">
+          <img
+            src={prizeImage}
+            alt={contest.title}
+            className="w-[450px] drop-shadow-[0_0_40px_rgba(250,204,21,0.45)] object-contain"
+          />
         </div>
       </div>
 
       {/* -----------------------------------------------------------
-           CESTA K HLAVNÍ VÝHŘE (PROGRESS BAR)
+           CTA KARTA – UPLATNIT / DOBÍT + ZŮSTATEK
+         ---------------------------------------------------------- */}
+      <div className="bg-[#111418] rounded-2xl p-6 border border-white/5 flex flex-col items-start gap-4">
+        <div className="flex gap-4">
+          <Button className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3 rounded-xl">
+            Uplatnit {contest.ticket_price} MioCoinů
+          </Button>
+
+          <Button className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-8 py-3 rounded-xl">
+            Dobít MioCoiny
+          </Button>
+        </div>
+
+        <p className="text-gray-300 text-sm">
+          <strong>Zůstatek:</strong> {balance} MioCoinů
+        </p>
+      </div>
+
+      {/* -----------------------------------------------------------
+           CESTA K HLAVNÍ VÝHŘE
          ---------------------------------------------------------- */}
       <div className="bg-[#111418] rounded-2xl p-6 border border-white/5">
         <h2 className="text-white font-semibold mb-3">Cesta k hlavní výhře</h2>
@@ -150,7 +138,6 @@ export default function ContestDetail() {
           ></div>
         </div>
 
-        {/* Milníky */}
         <div className="flex justify-between text-xs text-gray-400 mt-4">
           {[10000, 50000, 100000, 250000, 500000, 750000, 1000000].map((m) => (
             <div key={m} className="flex flex-col items-center">
