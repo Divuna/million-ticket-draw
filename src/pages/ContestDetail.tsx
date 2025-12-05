@@ -38,21 +38,6 @@ export default function ContestDetail() {
   const [myWins, setMyWins] = useState<Winner[]>([]);
   const [balance, setBalance] = useState(0);
 
-  // FUNKCE PRO NAČTENÍ OBRÁZKU HLAVNÍ VÝHRY
-  const resolvePrizeImage = (contest: Contest): string => {
-    const base = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public`;
-
-    const paths = [
-      contest.main_prize_secondary_image ? `contest-banners/${contest.main_prize_secondary_image}` : null,
-      contest.main_image ? `contest-images/${contest.main_image}` : null,
-      contest.banner_image ? `contest-banners/${contest.banner_image}` : null,
-    ];
-
-    for (const p of paths) {
-      if (p) return `${base}/${p}`;
-    }
-    return "/fallback-car.png";
-  };
 
   useEffect(() => {
     const load = async () => {
@@ -120,7 +105,7 @@ export default function ContestDetail() {
     );
   }
 
-  const prizeImage = resolvePrizeImage(contest);
+  const prizeImage = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${contest.main_image}`;
 
   return (
     <div className="p-6 w-full mx-auto space-y-10">
@@ -139,10 +124,8 @@ export default function ContestDetail() {
           <img
             src={prizeImage}
             alt={contest.title}
-            className="w-[450px] object-contain drop-shadow-[0_0_40px_rgba(250,204,21,0.45)]"
-            onError={(e) => {
-              e.currentTarget.src = "/fallback-car.png";
-            }}
+            className="w-[450px] object-contain"
+            onError={(e) => (e.currentTarget.src = "/fallback-car.png")}
           />
         </div>
       </div>
