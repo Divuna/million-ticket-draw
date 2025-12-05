@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,6 +30,8 @@ type Winner = {
 
 export default function ContestDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+
   const [contest, setContest] = useState<Contest | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -38,6 +40,10 @@ export default function ContestDetail() {
   const [myWins, setMyWins] = useState<Winner[]>([]);
   const [balance, setBalance] = useState(0);
 
+  async function handleUseMiocoins() {
+    // 🔥 SEM DÁŠ TVŮJ LOGIKU PRO UPLATNĚNÍ MIOCOINŮ
+    console.log("Uplatnit", contest?.ticket_price);
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -52,7 +58,7 @@ export default function ContestDetail() {
         return;
       }
 
-      const typedContest = contestData as unknown as Contest;
+      const typedContest = contestData as Contest;
       setContest(typedContest);
 
       // 2) Bonusové výhry
@@ -84,7 +90,7 @@ export default function ContestDetail() {
           .from("profiles")
           .select("miocoin_balance")
           .eq("id", auth.user.id)
-          .maybeSingle();
+          .single();
 
         if (profile?.miocoin_balance != null) {
           setBalance(profile.miocoin_balance);
@@ -111,7 +117,6 @@ export default function ContestDetail() {
     <div className="p-6 w-full mx-auto space-y-10">
       {/* HLAVNÍ BANNER */}
       <div className="w-full rounded-3xl relative overflow-hidden bg-[#0b0e12] border border-yellow-500/20 shadow-[0_0_60px_rgba(250,204,21,0.25)] p-10">
-        {/* text */}
         <div className="max-w-xl space-y-5 relative z-10">
           <h1 className="text-5xl font-extrabold text-yellow-400">{contest.title}</h1>
           {contest.description && (
@@ -119,7 +124,6 @@ export default function ContestDetail() {
           )}
         </div>
 
-        {/* obrázek */}
         <div className="absolute right-10 top-1/2 -translate-y-1/2">
           <img
             src={prizeImage}
@@ -133,14 +137,21 @@ export default function ContestDetail() {
       {/* CTA */}
       <div className="bg-[#111418] rounded-2xl p-6 border border-white/5 flex flex-col gap-4">
         <div className="flex gap-4 flex-wrap">
-          <Button className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3 rounded-xl">
+          <Button
+            onClick={handleUseMiocoins}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3 rounded-xl"
+          >
             Uplatnit {contest.ticket_price} MioCoinů
           </Button>
 
-          <Button className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-8 py-3 rounded-xl">
+          <Button
+            onClick={() => navigate("/topup")}
+            className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-8 py-3 rounded-xl"
+          >
             Dobít MioCoiny
           </Button>
         </div>
+
         <p className="text-gray-300 text-sm">
           <strong>Zůstatek:</strong> {balance} MioCoinů
         </p>
@@ -154,11 +165,9 @@ export default function ContestDetail() {
         </p>
       </div>
 
-      {/* CESTA K HLAVNÍ VÝHŘE – JEN GRAFIKA, ŽÁDNÁ DATA */}
+      {/* CESTA K HLAVNÍ VÝHŘE */}
       <div className="bg-[#111418] rounded-2xl p-6 border border-white/5">
         <h2 className="text-white font-semibold mb-4">Cesta k hlavní výhře</h2>
-
-        {/* čistý grafický prvek – žádná procenta, žádné tikety */}
         <div className="w-full h-3 rounded-full bg-gradient-to-r from-yellow-500 via-yellow-300 to-yellow-600 shadow-[0_0_15px_rgba(250,204,21,0.6)]" />
       </div>
 
