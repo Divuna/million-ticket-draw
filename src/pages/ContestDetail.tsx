@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,6 +30,7 @@ type Winner = {
 
 export default function ContestDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [contest, setContest] = useState<Contest | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -78,17 +79,13 @@ export default function ContestDetail() {
 
       // 4) Zůstatek MioCoinů
       const { data: auth } = await supabase.auth.getUser();
-
       if (auth?.user) {
         const { data: profile } = await supabase
           .from("profiles")
           .select("miocoin_balance")
           .eq("id", auth.user.id)
-          .maybeSingle();
-
-        if (profile?.miocoin_balance != null) {
-          setBalance(profile.miocoin_balance);
-        }
+          .single();
+        setBalance(profile?.miocoin_balance ?? 0);
       }
 
       setLoading(false);
@@ -106,6 +103,10 @@ export default function ContestDetail() {
   }
 
   const prizeImage = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${contest.main_image}`;
+
+  async function handleUseMiocoins() {
+    // TODO: insert your existing purchase logic
+  }
 
   return (
     <div className="p-6 w-full mx-auto space-y-10">
@@ -133,11 +134,17 @@ export default function ContestDetail() {
       {/* CTA */}
       <div className="bg-[#111418] rounded-2xl p-6 border border-white/5 flex flex-col gap-4">
         <div className="flex gap-4 flex-wrap">
-          <Button className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3 rounded-xl">
+          <Button
+            onClick={() => handleUseMiocoins()}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3 rounded-xl"
+          >
             Uplatnit {contest.ticket_price} MioCoinů
           </Button>
 
-          <Button className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-8 py-3 rounded-xl">
+          <Button
+            onClick={() => navigate("/topup")}
+            className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-8 py-3 rounded-xl"
+          >
             Dobít MioCoiny
           </Button>
         </div>
