@@ -175,6 +175,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          image_url: string | null
           status: string
           ticket_position: number
         }
@@ -185,6 +186,7 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
+          image_url?: string | null
           status?: string
           ticket_position: number
         }
@@ -195,6 +197,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          image_url?: string | null
           status?: string
           ticket_position?: number
         }

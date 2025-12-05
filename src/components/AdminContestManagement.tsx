@@ -38,6 +38,7 @@ interface BonusPrize {
   status: string;
   amount?: number;
   admin_notes?: string;
+  image_url?: string | null;
   created_at: string;
 }
 
@@ -65,6 +66,7 @@ interface PhysicalPrize {
   ticketPosition: number;
   imageFile: File | null;
   imagePreview: string;
+  imageUrl?: string | null;
 }
 
 export const AdminContestManagement: React.FC = () => {
@@ -279,12 +281,38 @@ export const AdminContestManagement: React.FC = () => {
 
       // Save physical prizes if we have any and this is a new contest
       if (!editingContest && createdContestId && physicalPrizes.length > 0) {
-        const physicalBonuses = physicalPrizes.map(prize => ({
-          contest_id: createdContestId,
-          description: prize.description,
-          ticket_position: prize.ticketPosition,
-          status: 'pending',
-          amount: 0
+        // Upload images for physical prizes
+        const physicalBonuses = await Promise.all(physicalPrizes.map(async (prize) => {
+          let imageUrl: string | null = null;
+          
+          if (prize.imageFile) {
+            try {
+              const fileExt = prize.imageFile.name.split('.').pop();
+              const fileName = `bonus-prizes/${createdContestId}/${prize.id}.${fileExt}`;
+              
+              const { error: uploadError } = await supabase.storage
+                .from('contest-images')
+                .upload(fileName, prize.imageFile);
+              
+              if (!uploadError) {
+                const { data: urlData } = supabase.storage
+                  .from('contest-images')
+                  .getPublicUrl(fileName);
+                imageUrl = urlData.publicUrl;
+              }
+            } catch (err) {
+              console.error('Error uploading prize image:', err);
+            }
+          }
+          
+          return {
+            contest_id: createdContestId,
+            description: prize.description,
+            ticket_position: prize.ticketPosition,
+            status: 'pending',
+            amount: 0,
+            image_url: imageUrl
+          };
         }));
 
         const { error: physicalError } = await supabase
@@ -376,13 +404,14 @@ export const AdminContestManagement: React.FC = () => {
         // Set generated MioCoins positions for display
         setGeneratedMioCoins(mioCoins.map(p => p.ticket_position));
         
-        // Set physical prizes for display
+        // Set physical prizes for display (including image_url)
         setPhysicalPrizes(physical.map(p => ({
           id: p.id,
           description: p.description,
           ticketPosition: p.ticket_position,
           imageFile: null,
-          imagePreview: ''
+          imagePreview: p.image_url || '',
+          imageUrl: p.image_url
         })));
         
         // If there are MioCoins, calculate the form values
@@ -1262,6 +1291,7 @@ export const AdminContestManagement: React.FC = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead>Obrázek</TableHead>
                           <TableHead>Název</TableHead>
                           <TableHead>Pozice</TableHead>
                           <TableHead>Akce</TableHead>
@@ -1270,6 +1300,19 @@ export const AdminContestManagement: React.FC = () => {
                       <TableBody>
                         {physicalPrizes.map((prize) => (
                           <TableRow key={prize.id}>
+                            <TableCell>
+                              {(prize.imagePreview || prize.imageUrl) ? (
+                                <img 
+                                  src={prize.imagePreview || prize.imageUrl || ''} 
+                                  alt={prize.description}
+                                  className="w-12 h-12 rounded-md object-cover border"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center">
+                                  <Package className="w-5 h-5 text-muted-foreground" />
+                                </div>
+                              )}
+                            </TableCell>
                             <TableCell>{prize.description}</TableCell>
                             <TableCell>#{prize.ticketPosition}</TableCell>
                             <TableCell>

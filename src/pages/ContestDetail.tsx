@@ -32,6 +32,7 @@ interface BonusPrize {
   description: string;
   ticket_position: number;
   status: string;
+  image_url?: string | null;
 }
 
 interface UserWallet {

@@ -27,6 +27,7 @@ interface BonusPrize {
   description: string;
   ticket_position: number;
   status: string;
+  image_url?: string | null;
 }
 
 interface UserWallet {
@@ -368,9 +369,20 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
                   {physicalPrizes.map((prize) => (
                     <div
                       key={prize.id}
-                      className="rounded-2xl border border-border/70 bg-card/80 p-4 space-y-2"
+                      className="rounded-2xl border border-border/70 bg-card/80 overflow-hidden"
                     >
-                      <p className="text-sm font-medium text-foreground">{prize.description}</p>
+                      {prize.image_url && (
+                        <div className="aspect-[4/3] w-full overflow-hidden">
+                          <img 
+                            src={prize.image_url} 
+                            alt={prize.description}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <p className="text-sm font-medium text-foreground">{prize.description}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
