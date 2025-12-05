@@ -343,6 +343,46 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
         </CardContent>
       </Card>
 
+      {/* BONUSOVÉ VĚCNÉ VÝHRY */}
+      {(() => {
+        const physicalPrizes = bonusPrizes.filter((prize) => {
+          const desc = prize.description.toLowerCase();
+          // Filter out MioCoin bonuses
+          if (desc.includes("miocoin") || desc.includes("mio coin")) return false;
+          // Filter out pure number descriptions (like "100" meaning 100 MioCoins)
+          if (/^\d+$/.test(prize.description.trim())) return false;
+          return true;
+        });
+
+        return (
+          <Card className="rounded-3xl shadow-md border-border/70 bg-gradient-to-b from-background/90 via-background/70 to-background">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Gift className="w-5 h-5 text-primary" />
+                <CardTitle>Bonusové věcné výhry</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {physicalPrizes.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {physicalPrizes.map((prize) => (
+                    <div
+                      key={prize.id}
+                      className="rounded-2xl border border-border/70 bg-card/80 p-4 space-y-2"
+                    >
+                      <p className="text-sm font-medium text-foreground">{prize.description}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  Zatím nebyly přidány žádné věcné bonusové výhry.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* MOJE VÝHRY */}
       <Card className="rounded-3xl shadow-md border-border/70 bg-gradient-to-b from-background/90 via-background/70 to-background">
