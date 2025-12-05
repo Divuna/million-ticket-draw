@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { TicketResultModal } from "@/components/TicketResultModal";
 
 type Contest = {
   id: string;
@@ -28,9 +31,21 @@ type Winner = {
   bonus_prize_id?: string | null;
 };
 
+interface UnlockTicketResult {
+  ticket_number: number;
+  ticket_price: number;
+  next_bonus_position?: number | null;
+  distance_to_next_bonus?: number | null;
+  won_prize?: string | null;
+  remaining_tickets?: number;
+  won_type?: 'bonus' | 'main' | null;
+  bonus_prize_id?: string | null;
+}
+
 export default function ContestDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [contest, setContest] = useState<Contest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +55,10 @@ export default function ContestDetail() {
   const [myWins, setMyWins] = useState<Winner[]>([]);
   const [balance, setBalance] = useState(0);
 
-  // 🔥 FUNKCE NAČTENÍ ZŮSTATKU
+  const [processingContestId, setProcessingContestId] = useState<string | null>(null);
+  const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
+  const [modalContestId, setModalContestId] = useState<string | null>(null);
+
   async function loadUserBalance(userId: string) {
     const { data: wallet } = await supabase.from("wallets").select("balance_coins").eq("user_id", userId).maybeSingle();
 
@@ -56,7 +74,6 @@ export default function ContestDetail() {
     }
   }
 
-  // 🔥 LISTENER PRO OBNOVU SESSION
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
@@ -67,12 +84,79 @@ export default function ContestDetail() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // 🔥 FUNKCE UPLATNIT
   async function handleUseMiocoins() {
-    console.log("Uplatnit", contest?.ticket_price, "MioCoinů");
+    if (!user) {
+      toast.error("Pro nákup tiketu se musíš přihlásit.");
+      navigate("/login");
+      return;
+    }
+
+    if (!contest) return;
+
+    setProcessingContestId(contest.id);
+
+    try {
+      const { data, error } = await supabase.rpc('buy_ticket_atomic', {
+        p_contest_id: contest.id,
+        p_user_id: user.id
+      });
+
+      if (error) {
+        console.error("RPC error:", error);
+        if (error.message?.includes("closed") || error.message?.includes("uzavřena")) {
+          toast.error("Soutěž je již uzavřena.");
+        } else if (error.message?.includes("insufficient") || error.message?.includes("nedostatek")) {
+          toast.error("Nedostatek MioCoinů. Dobi si kredit.");
+        } else if (error.message?.includes("full") || error.message?.includes("plná")) {
+          toast.error("Soutěž je již plná.");
+        } else {
+          toast.error("Chyba při nákupu tiketu.");
+        }
+        setProcessingContestId(null);
+        return;
+      }
+
+      if (data && typeof data === 'object') {
+        const result = data as { success?: boolean; error?: string } & UnlockTicketResult;
+        
+        if (result.success === false || result.error) {
+          const errorMsg = result.error || "Chyba při nákupu tiketu.";
+          if (errorMsg.includes("closed") || errorMsg.includes("uzavřena")) {
+            toast.error("Soutěž je již uzavřena.");
+          } else if (errorMsg.includes("insufficient") || errorMsg.includes("nedostatek")) {
+            toast.error("Nedostatek MioCoinů. Dobi si kredit.");
+          } else if (errorMsg.includes("full") || errorMsg.includes("plná")) {
+            toast.error("Soutěž je již plná.");
+          } else {
+            toast.error(errorMsg);
+          }
+          setProcessingContestId(null);
+          return;
+        }
+
+        // Success - show modal
+        setModalResult(result);
+        setModalContestId(contest.id);
+
+        // Reload balance
+        await loadUserBalance(user.id);
+
+        if (result.won_type === 'main') {
+          toast.success("Gratulujeme! Vyhrál jsi hlavní cenu!");
+        } else if (result.won_type === 'bonus') {
+          toast.success("Gratulujeme! Vyhrál jsi bonusovou cenu!");
+        } else {
+          toast.success(`Tiket #${result.ticket_number} zakoupen!`);
+        }
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast.error("Neočekávaná chyba při nákupu tiketu.");
+    } finally {
+      setProcessingContestId(null);
+    }
   }
 
-  // 🔥 NAČTENÍ DETAILU SOUTĚŽE
   useEffect(() => {
     const load = async () => {
       if (!id) return;
@@ -119,6 +203,7 @@ export default function ContestDetail() {
   }
 
   const prizeImage = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${contest.main_image}`;
+  const isProcessing = processingContestId === contest.id;
 
   return (
     <div className="p-6 w-full mx-auto space-y-10">
@@ -147,13 +232,14 @@ export default function ContestDetail() {
         <div className="flex gap-4 flex-wrap">
           <Button
             onClick={handleUseMiocoins}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3 rounded-xl"
+            disabled={isProcessing}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3 rounded-xl disabled:opacity-50"
           >
-            Uplatnit {contest.ticket_price} MioCoinů
+            {isProcessing ? "Zpracovávám..." : `Uplatnit ${contest.ticket_price} MioCoinů`}
           </Button>
 
           <Button
-            onClick={() => navigate("/topup")}
+            onClick={() => navigate("/profile")}
             className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-8 py-3 rounded-xl"
           >
             Dobít MioCoiny
@@ -222,6 +308,25 @@ export default function ContestDetail() {
           </ul>
         )}
       </div>
+
+      {/* TICKET RESULT MODAL */}
+      <TicketResultModal
+        isOpen={modalResult !== null}
+        onClose={() => {
+          setModalResult(null);
+          setModalContestId(null);
+        }}
+        contestId={modalContestId || ""}
+        result={modalResult ? {
+          ticket_number: modalResult.ticket_number,
+          next_bonus_position: modalResult.next_bonus_position ?? 0,
+          distance_to_next_bonus: modalResult.distance_to_next_bonus ?? 0,
+          won_prize: modalResult.won_prize,
+          remaining_tickets: modalResult.remaining_tickets,
+          won_type: modalResult.won_type,
+          bonus_prize_id: modalResult.bonus_prize_id
+        } : undefined}
+      />
     </div>
   );
 }
