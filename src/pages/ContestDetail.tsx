@@ -40,17 +40,40 @@ export default function ContestDetail() {
   const [myWins, setMyWins] = useState<Winner[]>([]);
   const [balance, setBalance] = useState(0);
 
+  // 🔥 FUNKCE NAČTENÍ ZŮSTATKU
+  async function loadUserBalance(userId: string) {
+    const { data: profile } = await supabase.from("profiles").select("miocoin_balance").eq("id", userId).single();
+
+    if (profile?.miocoin_balance != null) {
+      setBalance(profile.miocoin_balance);
+    }
+  }
+
+  // 🔥 OBNOVA SESSION — OPRAVUJE PROBLÉM DETAILU
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        loadUserBalance(session.user.id);
+      }
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  // 🔥 Funkce UPLATNIT (sem můžeš dát logiku)
   async function handleUseMiocoins() {
-    // 🔥 SEM DÁŠ TVŮJ LOGIKU PRO UPLATNĚNÍ MIOCOINŮ
     console.log("Uplatnit", contest?.ticket_price);
   }
 
+  // 🔥 Načtení detailu soutěže
   useEffect(() => {
     const load = async () => {
       if (!id) return;
       setLoading(true);
 
-      // 1) Soutěž
+      // Soutěž
       const { data: contestData } = await supabase.from("contests").select("*").eq("id", id).maybeSingle();
 
       if (!contestData) {
@@ -61,40 +84,28 @@ export default function ContestDetail() {
       const typedContest = contestData as Contest;
       setContest(typedContest);
 
-      // 2) Bonusové výhry
+      // Bonusové výhry
       const { data: bonusData } = await supabase.from("bonus_prizes").select("*").eq("contest_id", id);
 
       const typedBonus = (bonusData ?? []) as BonusPrize[];
 
-      // Fyzické bonusové výhry (věcné)
       const physical = typedBonus.filter((b) => !b.amount || b.amount === 0);
       setBonusPrizes(physical);
 
-      // Bonusové MioCoiny – X ve hře
       const totalMio = typedBonus.reduce((sum, b) => {
         if (b.amount && b.amount > 0) return sum + b.amount;
         return sum;
       }, 0);
       setBonusMiocoins(totalMio);
 
-      // 3) Moje výhry
+      // Moje výhry
       const { data: wins } = await supabase.from("winners").select("*").eq("contest_id", id);
-
       setMyWins((wins ?? []) as Winner[]);
 
-      // 4) Zůstatek MioCoinů
+      // Zůstatek (první pokus — pokud je session později, chytí onAuthStateChange)
       const { data: auth } = await supabase.auth.getUser();
-
       if (auth?.user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("miocoin_balance")
-          .eq("id", auth.user.id)
-          .single();
-
-        if (profile?.miocoin_balance != null) {
-          setBalance(profile.miocoin_balance);
-        }
+        loadUserBalance(auth.user.id);
       }
 
       setLoading(false);
@@ -119,6 +130,7 @@ export default function ContestDetail() {
       <div className="w-full rounded-3xl relative overflow-hidden bg-[#0b0e12] border border-yellow-500/20 shadow-[0_0_60px_rgba(250,204,21,0.25)] p-10">
         <div className="max-w-xl space-y-5 relative z-10">
           <h1 className="text-5xl font-extrabold text-yellow-400">{contest.title}</h1>
+
           {contest.description && (
             <p className="text-gray-300 text-base leading-relaxed whitespace-pre-line">{contest.description}</p>
           )}
@@ -203,6 +215,7 @@ export default function ContestDetail() {
       {/* MOJE VÝHRY */}
       <div className="bg-[#111418] rounded-2xl p-6 border border-white/5">
         <h2 className="text-white font-semibold mb-4">Moje výhry</h2>
+
         {myWins.length === 0 ? (
           <p className="text-gray-400 text-sm">Nemáš žádné výhry.</p>
         ) : (
