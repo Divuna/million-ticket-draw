@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { TicketMap } from "@/components/TicketMap";
+
 
 interface Contest {
   id: string;
@@ -343,15 +343,6 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
         </CardContent>
       </Card>
 
-      {/* Ticket Map */}
-      <section className="mt-4">
-        <TicketMap
-          contestId={contest.id}
-          contestTitle={contest.title}
-          ticketCount={contest.ticket_count}
-          ticketPrice={contest.ticket_price}
-        />
-      </section>
 
       {/* MOJE VÝHRY */}
       <Card className="rounded-3xl shadow-md border-border/70 bg-gradient-to-b from-background/90 via-background/70 to-background">
