@@ -275,9 +275,15 @@ export default function ContestDetail() {
       </div>
 
       {/* CESTA K HLAVNÍ VÝHŘE */}
-      <div className="bg-[#111418] rounded-2xl p-6 border border-white/5">
+      <div className="bg-black/40 rounded-xl p-4 border border-yellow-500/20">
         <h2 className="text-white font-semibold mb-4">Cesta k hlavní výhře</h2>
-        <div className="w-full h-3 rounded-full bg-gradient-to-r from-yellow-500 via-yellow-300 to-yellow-600 shadow-[0_0_15px_rgba(250,204,21,0.6)]" />
+        <div 
+          className="w-full h-3 rounded-full"
+          style={{
+            background: 'linear-gradient(to right, #f6e27a, #d4a017)',
+            boxShadow: '0 0 25px rgba(255, 200, 0, 0.6)'
+          }}
+        />
       </div>
 
       {/* BONUSOVÉ VĚCNÉ VÝHRY */}
