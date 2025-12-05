@@ -1,302 +1,217 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { Header } from "@/components/Header";
-import { BottomNavigation } from "@/components/BottomNavigation";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trophy, Gift, Coins } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const ContestDetail: React.FC = () => {
+export default function ContestDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-
   const [contest, setContest] = useState<any>(null);
-  const [bonusPrizes, setBonusPrizes] = useState<any[]>([]);
-  const [wallet, setWallet] = useState<any>(null);
-  const [userWins, setUserWins] = useState<any[]>([]);
-  const [ticketsPlayed, setTicketsPlayed] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
-  const contestId = id ?? "";
+  const [ticketsPlayed, setTicketsPlayed] = useState(0);
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [bonusPrizes, setBonusPrizes] = useState<any[]>([]);
+  const [bonusMiocoins, setBonusMiocoins] = useState(0);
+  const [myWins, setMyWins] = useState<any[]>([]);
 
+  /** -----------------------------------------------------------
+   *  NAČTENÍ DAT SOUTĚŽE
+   * ---------------------------------------------------------- */
   useEffect(() => {
-    const loadData = async () => {
+    const fetchData = async () => {
+      if (!id) return;
+
       setLoading(true);
 
-      const { data: contestData } = await supabase.from("contests").select("*").eq("id", contestId).single();
-
-      if (!contestData) {
-        setLoading(false);
-        return;
-      }
+      /** 1) Soutěž */
+      const { data: contestData } = await supabase.from("contests").select("*").eq("id", id).single();
 
       setContest(contestData);
 
-      const { data: bonusData } = await supabase
-        .from("bonus_prizes")
-        .select("*")
-        .eq("contest_id", contestId)
-        .order("ticket_position", { ascending: true });
+      /** 2) Odehrané tickety */
+      const { data: ticketsData } = await supabase.from("tickets").select("id").eq("contest_id", id);
 
-      if (bonusData) {
-        const physical = bonusData.filter((b) => {
-          if (!b.description) return false;
-          const lower = b.description.toLowerCase();
-          return !lower.startsWith("miocoin");
-        });
-        setBonusPrizes(physical);
-      }
+      const played = ticketsData?.length ?? 0;
+      setTicketsPlayed(played);
 
-      const { count: ticketsCount } = await supabase
-        .from("tickets")
-        .select("*", { count: "exact", head: true })
-        .eq("contest_id", contestId);
+      const percent = contestData ? Math.min(100, ((played / contestData.ticket_count) * 100).toFixed(2)) : 0;
 
-      setTicketsPlayed(ticketsCount ?? 0);
+      setProgressPercent(percent);
 
-      if (user) {
-        const { data: walletData } = await supabase.from("wallets").select("*").eq("user_id", user.id).maybeSingle();
+      /** 3) Bonusové výhry (věcné) */
+      const { data: bonusData } = await supabase.from("bonus_prizes").select("*").eq("contest_id", id);
 
-        if (walletData) setWallet(walletData);
+      setBonusPrizes(bonusData || []);
 
-        const { data: winsData } = await supabase
-          .from("winners")
-          .select("*")
-          .eq("contest_id", contestId)
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
+      /** 4) Bonusové MioCoiny (počítají se podle total_miocoin_bonus) */
+      const totalMiocoins = contestData?.total_miocoin_bonus ?? 0;
+      setBonusMiocoins(totalMiocoins);
 
-        if (winsData) setUserWins(winsData);
-      }
+      /** 5) Moje výhry */
+      const { data: myWinsData } = await supabase.from("winners").select("*").eq("contest_id", id);
+
+      setMyWins(myWinsData || []);
 
       setLoading(false);
     };
 
-    loadData();
-  }, [contestId, user]);
+    fetchData();
+  }, [id]);
 
-  const progressPercent =
-    contest && contest.ticket_count > 0 ? Math.round((ticketsPlayed / contest.ticket_count) * 100) : 0;
+  /** -----------------------------------------------------------
+   *  VÝPOČET URL PRO BANNER (z bucketu contest-banners)
+   * ---------------------------------------------------------- */
+  const bannerSrc = contest?.banner_image
+    ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-banners/${contest.banner_image}`
+    : "/fallback-car.png";
 
-  if (loading) {
+  if (loading || !contest) {
     return (
-      <div className="min-h-screen bg-background pb-20">
-        <Header />
-        <main className="max-w-5xl mx-auto px-4 py-6">
-          <p className="text-center text-muted-foreground">Načítání…</p>
-        </main>
-        <BottomNavigation />
+      <div className="p-6">
+        <Skeleton className="w-full h-[400px] rounded-2xl" />
       </div>
     );
   }
-
-  if (!contest) {
-    return (
-      <div className="min-h-screen bg-background pb-20">
-        <Header />
-        <main className="max-w-5xl mx-auto px-4 py-6">
-          <p className="text-center text-destructive">Soutěž nenalezena.</p>
-        </main>
-        <BottomNavigation />
-      </div>
-    );
-  }
-
-  const bannerSrc = contest.banner_image || contest.main_prize_secondary_image || "/corvette-banner.png"; // můžeš nahradit tím PNG s Corvette
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <Header />
+    <div className="p-6 w-full mx-auto space-y-8">
+      {/* -----------------------------------------------------------
+           LUXUSNÍ FULL-WIDTH PROMO BANNER
+         ---------------------------------------------------------- */}
+      <div
+        className="w-full rounded-3xl relative overflow-hidden bg-gradient-to-br from-[#1a1a1a] via-[#0d0d0d] to-black 
+        border border-yellow-500/20 shadow-[0_0_60px_rgba(250,204,21,0.25)] pb-10"
+      >
+        {/* Zlaté pozadí */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(250,204,21,0.15),transparent_70%)]"></div>
+        <div className="absolute -top-40 -right-40 w-[460px] h-[460px] bg-yellow-500/20 blur-3xl rounded-full"></div>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-8">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Zpět
-        </button>
+        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center px-10 py-12">
+          {/* LEVÁ STRANA – TEXT */}
+          <div className="flex-1 space-y-5 max-w-xl">
+            <Badge className="bg-yellow-500/10 text-yellow-300 border border-yellow-500/40">
+              Vytvořeno: {new Date(contest.created_at).toLocaleDateString("cs-CZ")}
+            </Badge>
 
-        {/* HLAVNÍ PROMO CARD */}
-        <Card className="bg-gradient-to-br from-black via-slate-900 to-black border border-yellow-500/20 shadow-[0_0_40px_rgba(250,204,21,0.25)] rounded-3xl overflow-hidden">
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 via-transparent to-yellow-500/10 pointer-events-none" />
-            <div className="absolute -top-20 -right-40 w-[380px] h-[380px] rounded-full bg-yellow-500/10 blur-3xl" />
+            <h1 className="text-5xl font-extrabold text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]">
+              {contest.title}
+            </h1>
 
-            <div className="flex flex-col lg:flex-row items-stretch">
-              {/* Levá část – text */}
-              <div className="flex-1 px-6 sm:px-10 py-8 space-y-4 relative z-10">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge className="bg-yellow-500/10 text-yellow-300 border border-yellow-500/40">
-                    Vytvořeno: {new Date(contest.created_at).toLocaleDateString("cs-CZ")}
-                  </Badge>
+            <p className="text-gray-300 text-base leading-relaxed">{contest.description}</p>
 
-                  <div className="flex flex-col items-end text-xs sm:text-sm text-muted-foreground gap-1">
-                    <span>
-                      Cena tiketu: <span className="text-white font-semibold">{contest.ticket_price} MioCoinů</span>
-                    </span>
-                    <span>
-                      Tiketů v soutěži:{" "}
-                      <span className="text-white font-semibold">{contest.ticket_count?.toLocaleString("cs-CZ")}</span>
-                    </span>
-                    <span>
-                      Odehráno:{" "}
-                      <span className="text-white font-semibold">
-                        {ticketsPlayed?.toLocaleString("cs-CZ")} ({progressPercent}%)
-                      </span>
-                    </span>
-                  </div>
-                </div>
+            <div className="flex gap-6 text-gray-300 text-sm pt-1">
+              <span>
+                Cena tiketu: <strong>{contest.ticket_price} MioCoinů</strong>
+              </span>
+              <span>
+                Tiketů: <strong>{contest.ticket_count.toLocaleString("cs-CZ")}</strong>
+              </span>
+              <span>
+                Odehráno:{" "}
+                <strong>
+                  {ticketsPlayed} ({progressPercent}%)
+                </strong>
+              </span>
+            </div>
 
-                <CardTitle className="text-4xl sm:text-5xl font-bold text-yellow-400">{contest.title}</CardTitle>
+            <div className="flex gap-4 pt-4">
+              <button className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3 rounded-xl shadow-lg">
+                Uplatnit {contest.ticket_price} MioCoinů
+              </button>
 
-                {contest.description && (
-                  <p className="text-sm sm:text-base text-muted-foreground leading-relaxed whitespace-pre-line max-w-2xl">
-                    {contest.description}
-                  </p>
-                )}
-
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-4">
-                  <button className="w-full sm:w-64 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl shadow-lg shadow-blue-500/30 transition">
-                    Uplatnit {contest.ticket_price} MioCoinů
-                  </button>
-
-                  <div className="flex flex-col gap-1 sm:items-end flex-1">
-                    <button className="w-full sm:w-40 bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-3 rounded-xl shadow-lg shadow-yellow-500/30 transition">
-                      Dobít MioCoiny
-                    </button>
-                    <span className="text-xs text-muted-foreground">
-                      Zůstatek:{" "}
-                      <span className="text-white font-semibold">
-                        {wallet?.amount?.toLocaleString("cs-CZ") ?? 0} MioCoinů
-                      </span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Pravá část – banner s autem */}
-              <div className="relative flex-1 min-h-[260px] lg:min-h-[320px]">
-                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-black/30 to-black/70" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-[90%] max-w-md aspect-[3/2] rounded-3xl bg-gradient-to-br from-slate-900 via-black to-slate-900 border border-white/5 shadow-[0_0_50px_rgba(15,23,42,0.8)] overflow-hidden flex items-center justify-center">
-                    <img src={bannerSrc} alt={contest.title} className="w-full h-full object-contain" />
-                  </div>
-                </div>
-              </div>
+              <button className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-8 py-3 rounded-xl shadow-lg">
+                Dobít MioCoiny
+              </button>
             </div>
           </div>
-        </Card>
 
-        {/* CESTA K HLAVNÍ VÝHŘE – statická vizuální osa */}
-        <Card className="bg-card/40 border border-white/10 rounded-2xl">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Cesta k hlavní výhře</CardTitle>
-          </CardHeader>
+          {/* PRAVÁ STRANA – AUTO BANNER */}
+          <div className="flex-1 flex justify-center items-center mt-10 lg:mt-0">
+            <img
+              src={bannerSrc}
+              alt={contest.title}
+              className="w-[480px] drop-shadow-[0_0_40px_rgba(250,204,21,0.45)] object-contain"
+            />
+          </div>
+        </div>
+      </div>
 
-          <CardContent className="pt-2">
-            <div className="w-full h-3 rounded-full bg-black/60 overflow-hidden mb-6 shadow-inner">
-              <div className="h-full bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500" />
+      {/* -----------------------------------------------------------
+           CESTA K HLAVNÍ VÝHŘE (PROGRESS BAR)
+         ---------------------------------------------------------- */}
+      <div className="bg-[#111418] rounded-2xl p-6 border border-white/5">
+        <h2 className="text-white font-semibold mb-3">Cesta k hlavní výhře</h2>
+
+        <div className="w-full h-2 bg-gray-800 rounded-full">
+          <div
+            className="h-full bg-yellow-400 rounded-full transition-all"
+            style={{ width: `${progressPercent}%` }}
+          ></div>
+        </div>
+
+        {/* Milníky */}
+        <div className="flex justify-between text-xs text-gray-400 mt-4">
+          {[10000, 50000, 100000, 250000, 500000, 750000, 1000000].map((m) => (
+            <div key={m} className="flex flex-col items-center">
+              <div className="w-3 h-3 bg-yellow-400 rounded-full mb-1"></div>
+              {m.toLocaleString("cs-CZ")}
             </div>
+          ))}
+        </div>
+      </div>
 
-            <div className="grid grid-cols-7 text-center text-[11px] text-muted-foreground mt-2">
-              {["10 000", "50 000", "100 000", "250 000", "500 000", "750 000", "1 000 000"].map((step, index) => (
-                <div key={index} className="flex flex-col items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.8)]" />
-                  <span>{step}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {/* -----------------------------------------------------------
+           BONUSOVÉ VĚCNÉ VÝHRY
+         ---------------------------------------------------------- */}
+      <div className="bg-[#111418] rounded-2xl p-6 border border-white/5">
+        <h2 className="text-white font-semibold mb-4">Bonusové věcné výhry</h2>
 
-        {/* BONUSOVÉ VĚCNÉ VÝHRY */}
-        <Card className="bg-card/40 border border-white/10 rounded-2xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Gift className="h-5 w-5 text-pink-400" /> Bonusové věcné výhry
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent>
-            {bonusPrizes.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Žádné bonusové výhry.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {bonusPrizes.map((bonus) => (
-                  <div
-                    key={bonus.id}
-                    className="p-4 rounded-2xl bg-gradient-to-br from-black/60 via-slate-900/60 to-black/60 border border-white/10 shadow-[0_0_20px_rgba(15,23,42,0.8)]"
-                  >
-                    <div className="text-sm text-muted-foreground mb-1">
-                      Výherní ticket: <span className="text-white font-semibold">{bonus.ticket_position}</span>
-                    </div>
-                    <div className="font-semibold text-white text-sm">{bonus.description}</div>
-                  </div>
-                ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {bonusPrizes
+            .filter((b) => !b.amount)
+            .map((b) => (
+              <div key={b.id} className="p-4 rounded-xl bg-black/30 border border-white/5">
+                <p className="text-white text-sm">{b.description}</p>
+                <p className="text-yellow-300 text-xs mt-1">Výherní tiket: {b.ticket_position}</p>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            ))}
+        </div>
+      </div>
 
-        {/* BONUSOVÉ MIOCOINY */}
-        <Card className="bg-card/40 border border-yellow-500/40 rounded-2xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Coins className="h-5 w-5 text-yellow-400" /> Bonusové MioCoiny
-            </CardTitle>
-          </CardHeader>
+      {/* -----------------------------------------------------------
+           BONUSOVÉ MIOCOINY
+         ---------------------------------------------------------- */}
+      <div className="bg-[#111418] rounded-2xl p-6 border border-yellow-500/20 shadow-[0_0_20px_rgba(250,204,21,0.1)]">
+        <h2 className="text-white font-semibold mb-4">Bonusové MioCoiny</h2>
 
-          <CardContent>
-            <div className="p-4 bg-gradient-to-r from-black/70 via-slate-900/70 to-black/70 rounded-2xl border border-yellow-500/40 flex items-center gap-4 shadow-[0_0_25px_rgba(250,204,21,0.45)]">
-              <div className="w-12 h-12 rounded-full bg-yellow-500/10 border border-yellow-400/60 flex items-center justify-center">
-                <img src="/miocoin.png" alt="MioCoin" className="w-8 h-8 object-contain" />
-              </div>
-              <div>
-                <div className="text-yellow-300 font-bold text-xl">
-                  {contest.total_miocoin_bonus?.toLocaleString("cs-CZ") ?? 0} MioCoinů
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Celkový počet bonusových MioCoin výher v této soutěži.
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-4 p-4 bg-black/30 rounded-xl border border-white/5">
+          <img src="/miocoin.png" alt="MioCoin" className="w-10 h-10" />
+          <div>
+            <p className="text-yellow-300 font-bold text-lg">{bonusMiocoins} MioCoinů</p>
+            <p className="text-gray-400 text-xs">Celkový počet bonusových MioCoin výher v soutěži.</p>
+          </div>
+        </div>
+      </div>
 
-        {/* MOJE VÝHRY */}
-        <Card className="bg-card/40 border border-white/10 rounded-2xl mb-4">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Trophy className="h-5 w-5 text-emerald-400" /> Moje výhry
-            </CardTitle>
-          </CardHeader>
+      {/* -----------------------------------------------------------
+           MOJE VÝHRY
+         ---------------------------------------------------------- */}
+      <div className="bg-[#111418] rounded-2xl p-6 border border-white/5">
+        <h2 className="text-white font-semibold mb-4">Moje výhry</h2>
 
-          <CardContent>
-            {!user && <p className="text-muted-foreground text-sm">Pro zobrazení výher je potřeba být přihlášen.</p>}
-
-            {user && userWins.length === 0 && <p className="text-muted-foreground text-sm">Nemáš žádné výhry.</p>}
-
-            {user && userWins.length > 0 && (
-              <ul className="space-y-3">
-                {userWins.map((win) => (
-                  <li key={win.id} className="p-4 rounded-xl bg-black/40 border border-white/10 text-sm">
-                    <div className="font-semibold text-white">{win.prize_name ?? "Výhra"}</div>
-                    {win.notes && <div className="text-xs text-muted-foreground mt-1">{win.notes}</div>}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </main>
-
-      <BottomNavigation />
+        {myWins.length === 0 ? (
+          <p className="text-gray-400 text-sm">Nemáš žádné výhry.</p>
+        ) : (
+          <ul className="text-gray-300 text-sm space-y-1">
+            {myWins.map((w) => (
+              <li key={w.id}>
+                Výhra na tiketu {w.ticket_id}: {w.prize}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
-};
-
-export default ContestDetail;
+}
