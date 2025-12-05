@@ -254,6 +254,7 @@ export type Database = {
           ticket_count: number
           ticket_price: number
           title: string
+          total_miocoin_bonus: number | null
           updated_at: string
         }
         Insert: {
@@ -270,6 +271,7 @@ export type Database = {
           ticket_count?: number
           ticket_price?: number
           title: string
+          total_miocoin_bonus?: number | null
           updated_at?: string
         }
         Update: {
@@ -286,6 +288,7 @@ export type Database = {
           ticket_count?: number
           ticket_price?: number
           title?: string
+          total_miocoin_bonus?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -1371,8 +1374,6 @@ export type Database = {
       get_contest_management_data: {
         Args: { p_contest_id_filter?: string }
         Returns: {
-          bonus_count: number
-          bonus_summary: string
           contest_id: string
           created_at: string
           description: string
@@ -1384,6 +1385,7 @@ export type Database = {
           ticket_price: number
           tickets_sold: number
           title: string
+          total_miocoin_bonus: number
           updated_at: string
         }[]
       }
