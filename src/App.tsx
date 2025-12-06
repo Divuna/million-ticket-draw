@@ -8,6 +8,7 @@ import TestAuthProvider from "@/components/TestAuthProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useOneSignal } from "@/hooks/useOneSignal";
 import { useAuth } from "@/hooks/useAuth";
+import ContestDetailAdmin from "@/components/ContestDetailAdmin";
 
 import Homepage from "@/pages/Homepage";
 import Login from "@/pages/Login";
@@ -93,6 +94,7 @@ function AppContent() {
         <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
         <Route path="/admin/audit-repair" element={<AdminAuditRepair />} />
         <Route path="/admin/onemil-audit" element={<OneMilAudit />} />
+        <Route path="/admin/contest/:contestId" element={<ContestDetailAdmin />} />
         <Route path="/test-login" element={<TestLogin />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
