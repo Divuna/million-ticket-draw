@@ -545,14 +545,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && !saving && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl w-[95vw] h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-white/10 shrink-0">
           <DialogTitle>{isEditing ? "Upravit soutěž" : "Vytvořit novou soutěž"}</DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col overflow-hidden">
-          <ScrollArea className="w-full">
-            <TabsList className="inline-flex w-max gap-1 mb-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 px-6">
+          <div className="shrink-0 overflow-x-auto py-4">
+            <TabsList className="inline-flex w-max gap-1">
               <TabsTrigger value="basic">Základní údaje</TabsTrigger>
               <TabsTrigger value="bonus-coins">Bonusy – MioCoins</TabsTrigger>
               <TabsTrigger value="main-prize-description">Popis hlavní výhry</TabsTrigger>
@@ -561,9 +561,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               <TabsTrigger value="graphics-banner">Grafika – banner</TabsTrigger>
               <TabsTrigger value="create">Vytvořit soutěž</TabsTrigger>
             </TabsList>
-          </ScrollArea>
+          </div>
 
-          <div className="flex-1 overflow-y-auto pr-2">
+          <div className="flex-1 overflow-y-auto pr-2 pb-4 min-h-0">
             {/* Tab 1: Základní údaje */}
             <TabsContent value="basic" className="space-y-4 mt-0">
               <div>
@@ -876,7 +876,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           </div>
         </Tabs>
 
-        <DialogFooter className="mt-4 border-t border-white/10 pt-4">
+        <DialogFooter className="px-6 py-4 border-t border-white/10 shrink-0 bg-background">
           <Button variant="outline" onClick={onClose} disabled={saving}>
             Zavřít
           </Button>
