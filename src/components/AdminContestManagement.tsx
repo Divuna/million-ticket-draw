@@ -100,8 +100,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   // MioCoin bonus state
   const [mioCoinBonuses, setMioCoinBonuses] = useState<MioCoinBonus[]>([]);
-  const [mioCoinAmount, setMioCoinAmount] = useState<number>(10);
-  const [mioCoinCount, setMioCoinCount] = useState<number>(100);
+  const [totalMioCoinsInput, setTotalMioCoinsInput] = useState<number>(1000);
+  const [stepValue, setStepValue] = useState<number>(10);
+  const [distributionType, setDistributionType] = useState<"even" | "random">("even");
 
   // Physical prize state
   const [physicalPrizes, setPhysicalPrizes] = useState<PhysicalPrize[]>([]);
@@ -358,12 +359,24 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }));
   };
 
+  // Computed number of positions
+  const computedPositionCount = stepValue > 0 ? Math.floor(totalMioCoinsInput / stepValue) : 0;
+
   // MioCoin bonus generation
   const generateMioCoinBonuses = () => {
-    if (mioCoinCount <= 0 || mioCoinAmount <= 0) {
+    if (totalMioCoinsInput <= 0 || stepValue <= 0) {
       toast({
         title: "Chyba",
-        description: "Zadej platný počet a hodnotu MioCoinů.",
+        description: "Zadej platný celkový počet MioCoinů a hodnotu bonusu.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (computedPositionCount <= 0) {
+      toast({
+        title: "Chyba",
+        description: "Počet pozic musí být alespoň 1.",
         variant: "destructive",
       });
       return;
@@ -375,22 +388,41 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     ]);
 
     const newBonuses: MioCoinBonus[] = [];
-    let attempts = 0;
-    const maxAttempts = mioCoinCount * 10;
+    const ticketCount = form.ticket_count || 1000000;
 
-    while (newBonuses.length < mioCoinCount && attempts < maxAttempts) {
-      const position = Math.floor(Math.random() * form.ticket_count) + 1;
-      if (!usedPositions.has(position)) {
-        usedPositions.add(position);
-        newBonuses.push({ ticket_position: position, amount: mioCoinAmount });
+    if (distributionType === "even") {
+      // Evenly spaced positions
+      const spacing = Math.floor(ticketCount / (computedPositionCount + 1));
+      for (let i = 1; i <= computedPositionCount; i++) {
+        let position = spacing * i;
+        // Adjust if position is already used
+        while (usedPositions.has(position) && position <= ticketCount) {
+          position++;
+        }
+        if (position <= ticketCount && !usedPositions.has(position)) {
+          usedPositions.add(position);
+          newBonuses.push({ ticket_position: position, amount: stepValue });
+        }
       }
-      attempts++;
+    } else {
+      // Random positions
+      let attempts = 0;
+      const maxAttempts = computedPositionCount * 10;
+
+      while (newBonuses.length < computedPositionCount && attempts < maxAttempts) {
+        const position = Math.floor(Math.random() * ticketCount) + 1;
+        if (!usedPositions.has(position)) {
+          usedPositions.add(position);
+          newBonuses.push({ ticket_position: position, amount: stepValue });
+        }
+        attempts++;
+      }
     }
 
-    if (newBonuses.length < mioCoinCount) {
+    if (newBonuses.length < computedPositionCount) {
       toast({
         title: "Upozornění",
-        description: `Podařilo se vygenerovat pouze ${newBonuses.length} z ${mioCoinCount} bonusů.`,
+        description: `Podařilo se vygenerovat pouze ${newBonuses.length} z ${computedPositionCount} bonusů.`,
       });
     }
 
@@ -540,14 +572,6 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }
   };
 
-  // Placeholder handlers for distribution
-  const handleEvenDistribution = () => {
-    // TODO: Implement even distribution logic
-  };
-
-  const handleRandomDistribution = () => {
-    // TODO: Implement random distribution logic
-  };
 
   const isEditing = !!editingContest;
   const totalMioCoins = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
@@ -710,42 +734,68 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               <div className="border border-dashed border-white/20 rounded-lg p-4 space-y-4">
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <Label>Hodnota na pozici (MC)</Label>
+                    <Label>Celkový počet MioCoinů ve hře</Label>
                     <Input 
                       type="number" 
                       min={1} 
-                      value={mioCoinAmount} 
-                      onChange={(e) => setMioCoinAmount(Number(e.target.value))} 
+                      value={totalMioCoinsInput} 
+                      onChange={(e) => setTotalMioCoinsInput(Number(e.target.value))} 
                     />
                   </div>
                   <div className="flex-1">
-                    <Label>Počet pozic</Label>
+                    <Label>Hodnota jednoho bonusu (po kolika)</Label>
                     <Input 
                       type="number" 
                       min={1} 
-                      value={mioCoinCount} 
-                      onChange={(e) => setMioCoinCount(Number(e.target.value))} 
+                      value={stepValue} 
+                      onChange={(e) => setStepValue(Number(e.target.value))} 
                     />
                   </div>
                 </div>
 
+                {totalMioCoinsInput > 0 && stepValue > 0 && (
+                  <div className="bg-muted/30 rounded-md p-3 text-sm">
+                    <span className="text-muted-foreground">Počet pozic: </span>
+                    <span className="font-medium text-foreground">{computedPositionCount.toLocaleString("cs-CZ")}</span>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>Typ rozmístění</Label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="distributionType"
+                        value="even"
+                        checked={distributionType === "even"}
+                        onChange={() => setDistributionType("even")}
+                        className="w-4 h-4 accent-primary"
+                      />
+                      <span>Rovnoměrně</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="distributionType"
+                        value="random"
+                        checked={distributionType === "random"}
+                        onChange={() => setDistributionType("random")}
+                        className="w-4 h-4 accent-primary"
+                      />
+                      <span>Náhodně</span>
+                    </label>
+                  </div>
+                </div>
+
                 <div className="flex gap-2">
-                  <Button onClick={generateMioCoinBonuses} className="flex-1">
+                  <Button onClick={generateMioCoinBonuses} className="flex-1" disabled={computedPositionCount <= 0}>
                     <Coins className="mr-2 h-4 w-4" />
                     Vygenerovat MioCoiny
                   </Button>
                   <Button variant="outline" onClick={clearMioCoinBonuses} disabled={mioCoinBonuses.length === 0}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Smazat vše
-                  </Button>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button variant="secondary" onClick={handleEvenDistribution} className="flex-1">
-                    Rovnoměrně rozložit
-                  </Button>
-                  <Button variant="secondary" onClick={handleRandomDistribution} className="flex-1">
-                    Náhodně rozložit
                   </Button>
                 </div>
               </div>
