@@ -381,8 +381,7 @@ export const AdminContestManagement: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-h-screen overflow-y-auto">
-      <div className="space-y-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Správa soutěží</h2>
         <Button onClick={() => { setEditingContest(null); setModalOpen(true); }}>
@@ -505,7 +504,6 @@ export const AdminContestManagement: React.FC = () => {
         onSaved={loadContests}
         editingContest={editingContest}
       />
-      </div>
     </div>
   );
 };
