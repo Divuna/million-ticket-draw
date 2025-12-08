@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Pencil, X, Sparkles, ImagePlus, Wand2, Trash2, Coins } from "lucide-react";
+import { Loader2, Plus, Pencil, X, Sparkles, ImagePlus, Wand2, Trash2, Coins, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -543,6 +543,35 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   const isEditing = !!editingContest;
   const totalMioCoins = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
 
+  // Validation logic for each tab
+  const hasMainImage = !!(form.main_image_file || form.main_image_url || (isEditing && editingContest?.main_image));
+  
+  const validation = {
+    basic: {
+      isValid: !!(form.title.trim() && form.main_prize.trim() && form.ticket_count > 0 && form.ticket_price > 0),
+      errors: [
+        !form.title.trim() && "Název soutěže",
+        !form.main_prize.trim() && "Hlavní výhra",
+        form.ticket_count <= 0 && "Počet tiketů",
+        form.ticket_price <= 0 && "Cena tiketu",
+      ].filter(Boolean) as string[],
+    },
+    graphics: {
+      isValid: hasMainImage,
+      errors: [
+        !hasMainImage && "Hlavní obrázek",
+      ].filter(Boolean) as string[],
+    },
+  };
+
+  const isFormValid = validation.basic.isValid && validation.graphics.isValid;
+
+  const TabIndicator = ({ isValid }: { isValid: boolean }) => (
+    <span className={`ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full ${isValid ? 'text-green-500' : 'text-red-500'}`}>
+      {isValid ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+    </span>
+  );
+
   return (
     <Dialog open={open} onOpenChange={(open) => !open && !saving && onClose()}>
       <DialogContent className="max-w-4xl w-[95vw] h-[90vh] flex flex-col p-0">
@@ -553,10 +582,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 px-6">
           <div className="shrink-0 overflow-x-auto py-4">
             <TabsList className="inline-flex w-max gap-1">
-              <TabsTrigger value="basic">Základní údaje</TabsTrigger>
+              <TabsTrigger value="basic" className="flex items-center">
+                Základní údaje
+                <TabIndicator isValid={validation.basic.isValid} />
+              </TabsTrigger>
               <TabsTrigger value="bonus-coins">Bonusy – MioCoins</TabsTrigger>
               <TabsTrigger value="bonus-physical">Bonusy – věcné</TabsTrigger>
-              <TabsTrigger value="graphics">Grafika</TabsTrigger>
+              <TabsTrigger value="graphics" className="flex items-center">
+                Grafika
+                <TabIndicator isValid={validation.graphics.isValid} />
+              </TabsTrigger>
               <TabsTrigger value="create">Vytvořit soutěž</TabsTrigger>
             </TabsList>
           </div>
@@ -863,7 +898,21 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 </div>
               </div>
 
-              <Button onClick={handleSave} disabled={saving} className="w-full" size="lg">
+              {!isFormValid && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4">
+                  <div className="flex items-center gap-2 text-red-400 text-sm font-medium mb-2">
+                    <AlertCircle className="w-4 h-4" />
+                    Chybějící povinné údaje:
+                  </div>
+                  <ul className="text-sm text-muted-foreground space-y-1 ml-6 list-disc">
+                    {[...validation.basic.errors, ...validation.graphics.errors].map((error, i) => (
+                      <li key={i}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <Button onClick={handleSave} disabled={saving || !isFormValid} className="w-full" size="lg">
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEditing ? "Uložit změny" : "Vytvořit soutěž"}
               </Button>
