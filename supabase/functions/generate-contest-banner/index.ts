@@ -1,148 +1,147 @@
+// --- Imports ---
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// --- CORS ---
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// --- Start Server ---
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      console.error('OPENAI_API_KEY is not configured');
-      return new Response(
-        JSON.stringify({ error: 'OpenAI API key není nakonfigurován' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // --- Load GROK API KEY ---
+    const grokKey = Deno.env.get("GROK_API_KEY");
+    if (!grokKey) {
+      console.error("GROK_API_KEY missing");
+      return new Response(JSON.stringify({ error: "GROK API key není nakonfigurován" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    // --- Supabase ---
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // --- Get input data ---
     const { title, description, main_prize, ticket_count, ticket_price, bonus_summary } = await req.json();
 
     if (!title || !main_prize) {
-      return new Response(
-        JSON.stringify({ error: 'Název soutěže a hlavní cena jsou povinné' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: "Název soutěže a hlavní cena jsou povinné" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log('Generating banner for contest:', { title, main_prize, ticket_count });
+    console.log("⭐ Generuji banner pomocí Groku…");
 
-    // Build a detailed prompt for the banner
-    const prompt = `Create a stunning promotional banner for a contest/sweepstakes with the following details:
-- Contest Title: "${title}"
-- Main Prize: "${main_prize}"
-${description ? `- Description: "${description}"` : ''}
-${ticket_count ? `- Total tickets: ${ticket_count.toLocaleString()}` : ''}
-${ticket_price ? `- Ticket price: ${ticket_price} MioCoins` : ''}
-${bonus_summary ? `- Bonus prizes: ${bonus_summary}` : ''}
+    // --- Build image prompt ---
+    const prompt = `
+Create a high-quality promotional banner for a sweepstakes/contest.
 
-Style requirements:
-- Modern, eye-catching design with vibrant colors
-- Professional quality suitable for marketing
-- Include visual representation of the main prize
-- Exciting, luxurious feel that conveys value
-- DO NOT include any text in the image - just visuals
-- Wide banner format (landscape orientation)
-- High contrast and appealing color scheme`;
+Details:
+- Contest title: "${title}"
+- Main prize: "${main_prize}"
+${description ? `- Description: ${description}` : ""}
+${ticket_count ? `- Total tickets: ${ticket_count}` : ""}
+${ticket_price ? `- Ticket price: ${ticket_price} MioCoins` : ""}
+${bonus_summary ? `- Bonus prizes: ${bonus_summary}` : ""}
 
-    console.log('Calling OpenAI Image Generation API...');
+Visual style:
+- Modern, cinematic, vibrant lighting
+- Luxurious, exciting atmosphere
+- Show the main prize visually
+- NO TEXT in the image
+- Landscape banner format, wide layout
+- Sharp, professional, marketing-ready
+    `.trim();
 
-    // Generate image using OpenAI gpt-image-1
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
+    // --- Call GROK IMAGE API ---
+    const response = await fetch("https://api.x.ai/v1/images/generations", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${grokKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: prompt,
-        n: 1,
-        size: '1536x1024',
-        quality: 'high',
+        model: "grok-image-1",
+        prompt,
+        size: "1536x1024",
+        response_format: "b64_json",
       }),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
-      return new Response(
-        JSON.stringify({ error: `Chyba při generování obrázku: ${response.status}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const data = await response.json();
-    console.log('OpenAI response received');
-
-    // gpt-image-1 returns base64 directly
-    const imageBase64 = data.data?.[0]?.b64_json;
-    if (!imageBase64) {
-      console.error('No image data in response:', data);
-      return new Response(
-        JSON.stringify({ error: 'Nepodařilo se získat vygenerovaný obrázek' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Convert base64 to buffer
-    const imageBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const sanitizedTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 30);
-    const fileName = `ai-banner-${sanitizedTitle}-${timestamp}.png`;
-
-    console.log('Uploading to storage:', fileName);
-
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('contest-banners')
-      .upload(fileName, imageBuffer, {
-        contentType: 'image/png',
-        upsert: false,
+      const err = await response.text();
+      console.error("❌ Grok API error:", err);
+      return new Response(JSON.stringify({ error: `Chyba při generování obrázku: ${response.status}` }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    const json = await response.json();
+    const b64 = json.data?.[0]?.b64_json;
+
+    if (!b64) {
+      console.error("❌ Missing image data:", json);
+      return new Response(JSON.stringify({ error: "Grok nevrátil obrázek" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // --- Convert base64 to binary ---
+    const binary = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+    // --- Create filename ---
+    const timestamp = Date.now();
+    const sanitized = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "-")
+      .substring(0, 30);
+    const fileName = `ai-banner-${sanitized}-${timestamp}.png`;
+
+    // --- Upload to Supabase Storage ---
+    const { error: uploadError } = await supabase.storage.from("contest-banners").upload(fileName, binary, {
+      contentType: "image/png",
+    });
 
     if (uploadError) {
-      console.error('Storage upload error:', uploadError);
-      return new Response(
-        JSON.stringify({ error: `Chyba při nahrávání obrázku: ${uploadError.message}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("❌ Upload error:", uploadError);
+      return new Response(JSON.stringify({ error: "Chyba při ukládání banneru" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Get public URL
-    const { data: publicUrlData } = supabase.storage
-      .from('contest-banners')
-      .getPublicUrl(fileName);
+    // --- Get public URL ---
+    const { data: publicUrlData } = supabase.storage.from("contest-banners").getPublicUrl(fileName);
 
-    console.log('Banner generated and uploaded successfully:', publicUrlData.publicUrl);
+    console.log("✅ Banner hotový:", publicUrlData.publicUrl);
 
+    // --- Return success ---
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
         url: publicUrlData.publicUrl,
-        fileName: fileName
+        fileName,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-
-  } catch (error) {
-    console.error('Error in generate-contest-banner:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Neznámá chyba' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  } catch (err) {
+    console.error("❌ Unexpected error:", err);
+    return new Response(JSON.stringify({ error: "Neočekávaná chyba serveru" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
