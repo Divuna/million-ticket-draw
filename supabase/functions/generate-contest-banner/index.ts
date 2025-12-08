@@ -17,14 +17,14 @@ serve(async (req) => {
     if (!GROK_KEY) {
       return new Response(JSON.stringify({ error: "GROK_API_KEY není nastavené" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: corsHeaders,
       });
     }
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const body = await req.json();
-    const { title, main_prize, description } = body;
+    const { title, main_prize } = body;
 
     if (!title || !main_prize) {
       return new Response(JSON.stringify({ error: "Chybí název soutěže nebo hlavní výhra" }), {
@@ -33,18 +33,17 @@ serve(async (req) => {
       });
     }
 
-    // 🔥 Prompt
+    // Banner prompt
     const prompt = `
-Create ultra-luxury 16:9 marketing banner WITHOUT ANY TEXT.
-Gold/black neon glow, metallic reflections, premium realistic lighting.
-
+Create a luxury 16:9 marketing banner WITHOUT ANY TEXT.
+Black and gold neon light, metallic reflections, premium realism.
 Main prize: ${main_prize}
 Contest: ${title}
 `.trim();
 
-    console.log("Calling GROK IMAGE API…");
+    console.log("Calling GROK Image API…");
 
-    // 🔥 Correct Grok Image API
+    // Grok image generation – CORRECT REQUEST
     const grokResponse = await fetch("https://api.x.ai/v1/images/generations", {
       method: "POST",
       headers: {
@@ -52,9 +51,8 @@ Contest: ${title}
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "grok-2-image-1212",
+        model: "grok-2-image",
         prompt: prompt,
-        size: "1024x1024",
         response_format: "b64_json",
       }),
     });
@@ -69,10 +67,9 @@ Contest: ${title}
       });
     }
 
-    const imageBase64 = grokData.data?.[0]?.b64_json;
+    const imageBase64 = grokData?.data?.[0]?.b64_json;
 
     if (!imageBase64) {
-      console.error("Missing image");
       return new Response(JSON.stringify({ error: "Grok negeneroval obrázek" }), {
         status: 500,
         headers: corsHeaders,
