@@ -555,10 +555,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             <TabsList className="inline-flex w-max gap-1">
               <TabsTrigger value="basic">Základní údaje</TabsTrigger>
               <TabsTrigger value="bonus-coins">Bonusy – MioCoins</TabsTrigger>
-              <TabsTrigger value="main-prize-description">Popis hlavní výhry</TabsTrigger>
               <TabsTrigger value="bonus-physical">Bonusy – věcné</TabsTrigger>
-              <TabsTrigger value="graphics-detail">Grafika – detail</TabsTrigger>
-              <TabsTrigger value="graphics-banner">Grafika – banner</TabsTrigger>
+              <TabsTrigger value="graphics">Grafika</TabsTrigger>
               <TabsTrigger value="create">Vytvořit soutěž</TabsTrigger>
             </TabsList>
           </div>
@@ -584,6 +582,42 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Automaticky předvyplněno z názvu soutěže
+                </p>
+              </div>
+
+              {/* AI Popis hlavní výhry - moved here */}
+              <div className="border border-dashed border-white/20 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Popis soutěže</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateDescription}
+                    disabled={generatingDescription || (!form.title && !form.main_prize)}
+                  >
+                    {generatingDescription ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generuji…
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        Vygenerovat AI popis
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <Textarea
+                  value={form.description}
+                  onChange={handleChange("description")}
+                  placeholder="Stručný popis soutěže… Nebo klikni na tlačítko pro AI generování."
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">
+                  <Sparkles className="inline h-3 w-3 mr-1" />
+                  AI generování vytvoří poutavý marketingový popis na základě názvu a hlavní výhry.
                 </p>
               </div>
 
@@ -670,43 +704,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               )}
             </TabsContent>
 
-            {/* Tab 3: Popis hlavní výhry (AI) */}
-            <TabsContent value="main-prize-description" className="space-y-4 mt-0">
-              <div className="flex items-center justify-between">
-                <Label>Popis soutěže</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGenerateDescription}
-                  disabled={generatingDescription || (!form.title && !form.main_prize)}
-                >
-                  {generatingDescription ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generuji…
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="mr-2 h-4 w-4" />
-                      Vygenerovat AI popis
-                    </>
-                  )}
-                </Button>
-              </div>
-              <Textarea
-                value={form.description}
-                onChange={handleChange("description")}
-                placeholder="Stručný popis soutěže… Nebo klikni na tlačítko pro AI generování."
-                rows={6}
-              />
-              <p className="text-xs text-muted-foreground">
-                <Sparkles className="inline h-3 w-3 mr-1" />
-                AI generování vytvoří poutavý marketingový popis na základě názvu a hlavní výhry.
-              </p>
-            </TabsContent>
-
-            {/* Tab 4: Bonusy – věcné */}
+            {/* Tab 3: Bonusy – věcné */}
             <TabsContent value="bonus-physical" className="space-y-4 mt-0">
               <div className="font-medium mb-2">Věcné bonusové výhry</div>
 
@@ -763,8 +761,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               )}
             </TabsContent>
 
-            {/* Tab 5: Grafika – detail */}
-            <TabsContent value="graphics-detail" className="space-y-4 mt-0">
+            {/* Tab 4: Grafika (merged) */}
+            <TabsContent value="graphics" className="space-y-6 mt-0">
               <div>
                 <Label>Hlavní obrázek soutěže</Label>
                 <Input type="file" accept="image/*" onChange={handleFileChange("main_image_file")} />
@@ -780,10 +778,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   Zobrazí se na stránce detailu soutěže vedle hlavního banneru.
                 </p>
               </div>
-            </TabsContent>
 
-            {/* Tab 6: Grafika – banner */}
-            <TabsContent value="graphics-banner" className="space-y-4 mt-0">
               <div>
                 <Label>Banner obrázek (fullwidth)</Label>
                 <Input type="file" accept="image/*" onChange={handleFileChange("banner_image_file")} />
