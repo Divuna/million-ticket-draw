@@ -672,27 +672,35 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         : (contestResult as any)?.contest_id;
 
       // Update AI-generated images directly in contests table
+      // PRIORITY: AI-generated URLs ALWAYS override manual uploads
       if (contestId) {
         const additionalUpdates: Record<string, string | null> = {};
         
         // Handle secondary/detail image (hero layout)
-        if (form.detail_image_file) {
+        // AI-generated URL has priority, then manual upload as fallback
+        if (aiGeneratedImages.hero) {
+          additionalUpdates.main_prize_secondary_image = aiGeneratedImages.hero;
+          console.log("Using AI hero image:", aiGeneratedImages.hero);
+        } else if (form.detail_image_file) {
           const detailPath = await handleImageUpload(form.detail_image_file);
           additionalUpdates.main_prize_secondary_image = detailPath;
-        } else if (aiGeneratedImages.hero) {
-          additionalUpdates.main_prize_secondary_image = aiGeneratedImages.hero;
+          console.log("Using uploaded detail image:", detailPath);
         }
         
         // Handle banner image
-        if (form.banner_image_file) {
+        // AI-generated URL has priority, then manual upload as fallback
+        if (aiGeneratedImages.banner) {
+          additionalUpdates.banner_image = aiGeneratedImages.banner;
+          console.log("Using AI banner image:", aiGeneratedImages.banner);
+        } else if (form.banner_image_file) {
           const bannerPath = await handleImageUpload(form.banner_image_file);
           additionalUpdates.banner_image = bannerPath;
-        } else if (aiGeneratedImages.banner) {
-          additionalUpdates.banner_image = aiGeneratedImages.banner;
+          console.log("Using uploaded banner image:", bannerPath);
         }
         
         // Apply additional updates if any
         if (Object.keys(additionalUpdates).length > 0) {
+          console.log("Saving contest image updates:", additionalUpdates);
           const { error: updateError } = await supabase
             .from("contests")
             .update(additionalUpdates)
@@ -700,6 +708,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           
           if (updateError) {
             console.error("Error updating AI images:", updateError);
+          } else {
+            console.log("Contest images saved successfully");
           }
         }
       }
