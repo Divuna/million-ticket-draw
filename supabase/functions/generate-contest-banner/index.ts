@@ -15,43 +15,35 @@ serve(async (req) => {
   try {
     const GROK_KEY = Deno.env.get("GROK_API_KEY");
     if (!GROK_KEY) {
-      return new Response(JSON.stringify({ error: "Missing GROK_API_KEY" }), {
+      return new Response(JSON.stringify({ error: "GROK_API_KEY není nastaveno" }), {
         status: 500,
         headers: corsHeaders,
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    const { title, main_prize, description } = await req.json();
+    const body = await req.json();
+    const { title, main_prize } = body;
 
     if (!title || !main_prize) {
-      return new Response(JSON.stringify({ error: "Missing title or prize" }), {
+      return new Response(JSON.stringify({ error: "Chybí title nebo main_prize" }), {
         status: 400,
         headers: corsHeaders,
       });
     }
 
-    // --------------------------
-    //  PROMPT
-    // --------------------------
+    // ---------- PROMPT ----------
     const prompt = `
-Create a luxury marketing banner for a contest.
-NO TEXT in the image.
+Vytvoř luxusní marketingový banner (bez textu) ve stylu černé a zlaté.
+Hlavní výhra: ${main_prize}.
+Styl: glow, neon gold, realistic render, 16:9, extrémně luxusní, Black/Gold premium.
+`;
 
-Main prize: ${main_prize}
-Style: black & gold, neon glow, premium luxury design
-Format: 1536×864, wide banner
-Photorealistic + glossy reflections
-High-end cinematic lighting
-`.trim();
+    console.log("Calling GROK Image API...");
 
-    // --------------------------
-    //  GROK 2 IMAGE API REQUEST
-    // --------------------------
-    const grokResponse = await fetch("https://api.x.ai/v1/images/generations", {
+    // ---------- GROK IMAGE API ----------
+    const grokRes = await fetch("https://api.x.ai/v1/images/generations", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${GROK_KEY}`,
@@ -61,57 +53,47 @@ High-end cinematic lighting
         model: "grok-2-image-1212",
         prompt,
         size: "1536x864",
-        n: 1,
+        response_format: "b64_json",
       }),
     });
 
-    if (!grokResponse.ok) {
-      const err = await grokResponse.text();
-      console.error("GROK ERROR:", err);
-      return new Response(JSON.stringify({ error: "Grok image generation failed" }), {
+    if (!grokRes.ok) {
+      const err = await grokRes.text();
+      console.error("Grok API error:", err);
+
+      return new Response(JSON.stringify({ error: "Chyba generování obrázku (Grok)" }), {
         status: 500,
         headers: corsHeaders,
       });
     }
 
-    const grokData = await grokResponse.json();
-    const imageBase64 = grokData?.data?.[0]?.b64_json;
+    const imgData = await grokRes.json();
+    const base64 = imgData?.data?.[0]?.b64_json;
 
-    if (!imageBase64) {
-      console.error("Missing b64_json:", grokData);
-      return new Response(JSON.stringify({ error: "No image returned" }), { status: 500, headers: corsHeaders });
+    if (!base64) {
+      console.error("Grok failure:", imgData);
+      return new Response(JSON.stringify({ error: "Grok nevrátil obrázek" }), { status: 500, headers: corsHeaders });
     }
 
-    // Convert base64 to bytes
-    const imageBytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0));
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const fileName = `banner-${Date.now()}.png`;
 
-    // --------------------------
-    //  UPLOAD TO SUPABASE
-    // --------------------------
-    const fileName = `banner-${Date.now()}-${crypto.randomUUID()}.png`;
-
-    const { error: uploadErr } = await supabase.storage.from("contest-banners").upload(fileName, imageBytes, {
+    const { error: uploadErr } = await supabase.storage.from("contest-banners").upload(fileName, bytes, {
       contentType: "image/png",
       upsert: false,
     });
 
     if (uploadErr) {
-      console.error("UPLOAD ERROR:", uploadErr);
-      return new Response(JSON.stringify({ error: "Upload failed" }), { status: 500, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: uploadErr.message }), { status: 500, headers: corsHeaders });
     }
 
     const { data: urlData } = supabase.storage.from("contest-banners").getPublicUrl(fileName);
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        url: urlData.publicUrl,
-        fileName,
-      }),
-      { status: 200, headers: corsHeaders },
-    );
+    return new Response(JSON.stringify({ success: true, url: urlData.publicUrl }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
-    console.error("FINAL ERROR:", err);
-    return new Response(JSON.stringify({ error: "Unexpected server error" }), { status: 500, headers: corsHeaders });
+    console.error(err);
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
   }
 });
