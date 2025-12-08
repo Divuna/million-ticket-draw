@@ -391,12 +391,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }
   };
 
-  // AI-powered banner generation
+  // AI-powered banner generation - uses the same transform-prize-image edge function
   const handleGenerateBanner = async () => {
-    if (!form.title && !form.main_prize) {
+    // Banner generation requires an uploaded main image to transform
+    if (!form.main_image_file && !form.main_image_url) {
       toast({
         title: "Chyba",
-        description: "Vyplň název soutěže nebo hlavní výhru pro generování banneru.",
+        description: "Nejprve nahraj hlavní obrázek soutěže pro generování AI banneru.",
         variant: "destructive",
       });
       return;
@@ -409,44 +410,47 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     });
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-
-      if (!token) {
-        throw new Error("Nejste přihlášeni.");
+      // Get the image as base64 from either uploaded file or existing URL
+      let imageBase64: string;
+      
+      if (form.main_image_file) {
+        // Convert uploaded file to base64
+        imageBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(form.main_image_file!);
+        });
+      } else if (form.main_image_url) {
+        // Fetch existing image and convert to base64
+        const imageUrl = form.main_image_url.startsWith('http') 
+          ? form.main_image_url 
+          : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${form.main_image_url}`;
+        
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        imageBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } else {
+        throw new Error("Žádný obrázek k transformaci.");
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-contest-banner`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            title: form.title,
-            description: form.description,
-            main_prize: form.main_prize,
-            ticket_count: form.ticket_count,
-            ticket_price: form.ticket_price,
-          }),
-        }
-      );
+      // Call the same transform-prize-image edge function with layout "banner"
+      const result = await transformImage(imageBase64, "banner", form.main_prize || form.title);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Nepodařilo se vygenerovat banner.");
-      }
-
-      const result = await response.json();
-
-      if (result.url) {
-        setForm((prev) => ({ ...prev, main_image_url: result.url }));
+      if (result.success && result.url) {
+        setAiGeneratedImages((prev) => ({ ...prev, banner: result.url }));
+        setForm((prev) => ({ ...prev, banner_image_url: result.url }));
         toast({
           title: "Banner vygenerován",
-          description: "AI banner byl úspěšně vytvořen a nastaven jako hlavní obrázek.",
+          description: "AI banner byl úspěšně vytvořen pomocí transformace obrázku.",
         });
+      } else {
+        throw new Error(result.error || "Nepodařilo se vygenerovat banner.");
       }
     } catch (err: any) {
       console.error("Error generating banner:", err);
