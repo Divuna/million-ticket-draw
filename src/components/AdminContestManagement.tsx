@@ -545,13 +545,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && !saving && onClose()}>
-      <DialogContent className="max-w-4xl w-[95vw] h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-white/10 shrink-0">
+      <DialogContent className="max-w-4xl w-[95vw] h-[90vh] !flex !flex-col gap-0 p-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-white/10 flex-shrink-0">
           <DialogTitle>{isEditing ? "Upravit soutěž" : "Vytvořit novou soutěž"}</DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 px-6">
-          <div className="shrink-0 overflow-x-auto py-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-shrink-0 overflow-x-auto px-6 py-4 border-b border-white/5">
             <TabsList className="inline-flex w-max gap-1">
               <TabsTrigger value="basic">Základní údaje</TabsTrigger>
               <TabsTrigger value="bonus-coins">Bonusy – MioCoins</TabsTrigger>
@@ -563,7 +563,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             </TabsList>
           </div>
 
-          <div className="flex-1 overflow-y-auto pr-2 pb-4 min-h-0">
+          <div className="flex-1 overflow-y-auto px-6 py-4">
             {/* Tab 1: Základní údaje */}
             <TabsContent value="basic" className="space-y-4 mt-0">
               <div>
@@ -876,7 +876,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           </div>
         </Tabs>
 
-        <DialogFooter className="px-6 py-4 border-t border-white/10 shrink-0 bg-background">
+        <DialogFooter className="px-6 py-4 border-t border-white/10 flex-shrink-0">
           <Button variant="outline" onClick={onClose} disabled={saving}>
             Zavřít
           </Button>
