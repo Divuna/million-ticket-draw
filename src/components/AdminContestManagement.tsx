@@ -46,12 +46,17 @@ interface ContestModalProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: "draft", label: "Koncept" },
-  { value: "pending", label: "Čeká na start" },
-  { value: "active", label: "Aktivní" },
-  { value: "paused", label: "Pozastaveno" },
-  { value: "closed", label: "Ukončeno" },
+  { value: "draft", label: "Koncept", color: "bg-gray-500/20 text-gray-300 border-gray-500/30" },
+  { value: "pending", label: "Čeká na start", color: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" },
+  { value: "active", label: "Aktivní", color: "bg-green-500/20 text-green-300 border-green-500/30" },
+  { value: "paused", label: "Pozastaveno", color: "bg-orange-500/20 text-orange-300 border-orange-500/30" },
+  { value: "closed", label: "Ukončeno", color: "bg-red-500/20 text-red-300 border-red-500/30" },
 ];
+
+const getStatusBadgeClass = (status: string) => {
+  const option = STATUS_OPTIONS.find((opt) => opt.value === status);
+  return option?.color || "bg-gray-500/20 text-gray-300 border-gray-500/30";
+};
 
 const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, editingContest }) => {
   const [form, setForm] = useState<ContestFormData>({
@@ -398,23 +403,26 @@ export const AdminContestManagement: React.FC = () => {
           ) : contests.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">Žádné soutěže nebyly nalezeny.</div>
           ) : (
-            <div className="w-full overflow-x-auto overflow-y-auto">
+            <div className="w-full overflow-x-auto overflow-y-auto max-h-[70vh]">
               <Table className="min-w-max">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Název</TableHead>
-                    <TableHead className="text-center">Hlavní výhra</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-center">Tikety</TableHead>
-                    <TableHead className="text-center">% hotovo</TableHead>
-                    <TableHead className="text-center">Bonusové MioCoiny</TableHead>
-                    <TableHead className="text-right">Akce</TableHead>
+                <TableHeader className="sticky top-0 z-10 bg-card">
+                  <TableRow className="border-b border-white/10 hover:bg-transparent">
+                    <TableHead className="bg-card">Název</TableHead>
+                    <TableHead className="text-center bg-card">Hlavní výhra</TableHead>
+                    <TableHead className="text-center bg-card">Status</TableHead>
+                    <TableHead className="text-center bg-card">Tikety</TableHead>
+                    <TableHead className="text-center bg-card">% hotovo</TableHead>
+                    <TableHead className="text-center bg-card">Bonusové MioCoiny</TableHead>
+                    <TableHead className="text-right bg-card">Akce</TableHead>
                   </TableRow>
                 </TableHeader>
 
                 <TableBody>
-                  {contests.map((contest) => (
-                    <TableRow key={contest.contest_id}>
+                  {contests.map((contest, index) => (
+                    <TableRow 
+                      key={contest.contest_id}
+                      className={`border-b border-white/5 transition-colors hover:bg-white/5 ${index % 2 === 0 ? "bg-white/[0.02]" : ""}`}
+                    >
                       <TableCell>
                         <div className="font-medium">{contest.title}</div>
                         <div className="text-xs text-muted-foreground">ID: {contest.contest_id}</div>
@@ -423,26 +431,33 @@ export const AdminContestManagement: React.FC = () => {
                       <TableCell className="text-center">{contest.main_prize}</TableCell>
 
                       <TableCell className="text-center">
-                        <Select
-                          value={contest.status}
-                          onValueChange={(value) => handleStatusChange(contest.contest_id, value)}
-                          disabled={updatingStatus === contest.contest_id}
-                        >
-                          <SelectTrigger className="w-28 bg-background">
-                            {updatingStatus === contest.contest_id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <SelectValue />
-                            )}
-                          </SelectTrigger>
-                          <SelectContent className="bg-background z-50">
-                            {STATUS_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center justify-center gap-2">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusBadgeClass(contest.status)}`}>
+                            {STATUS_OPTIONS.find((opt) => opt.value === contest.status)?.label || contest.status}
+                          </span>
+                          <Select
+                            value={contest.status}
+                            onValueChange={(value) => handleStatusChange(contest.contest_id, value)}
+                            disabled={updatingStatus === contest.contest_id}
+                          >
+                            <SelectTrigger className="w-8 h-8 p-0 bg-transparent border-white/10 hover:bg-white/10">
+                              {updatingStatus === contest.contest_id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Pencil className="h-3 w-3" />
+                              )}
+                            </SelectTrigger>
+                            <SelectContent className="bg-background z-50">
+                              {STATUS_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${option.color}`}>
+                                    {option.label}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </TableCell>
 
                       <TableCell className="text-center">
