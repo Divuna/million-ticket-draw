@@ -130,28 +130,42 @@ LAYOUT:
 
     const prompt = layoutPrompts[layout] + (prize_name ? `\nProduct: ${prize_name}` : "");
 
-    console.log(`Generating ${layout} image with Lovable AI...`);
+    console.log(`Generating ${layout} image with Lovable AI (image-to-image mode)...`);
+    console.log(`Input image URL prefix: ${imageDataUrl?.substring(0, 50)}...`);
+    console.log(`Prompt length: ${prompt.length} chars`);
 
-    // Call Lovable AI Gateway with image editing
+    // Call Lovable AI Gateway with image editing (image-to-image mode)
+    // The image is passed as image_url in the message content - this is the correct
+    // way to do image editing with Lovable AI's chat completions endpoint
+    const requestBody = {
+      model: "google/gemini-2.5-flash-image-preview",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { 
+              type: "image_url", 
+              image_url: { url: imageDataUrl } 
+            },
+            { 
+              type: "text", 
+              text: prompt 
+            },
+          ],
+        },
+      ],
+      modalities: ["image", "text"],
+    };
+
+    console.log("Sending image-to-image request to Lovable AI Gateway...");
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: imageDataUrl } },
-            ],
-          },
-        ],
-        modalities: ["image", "text"],
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
