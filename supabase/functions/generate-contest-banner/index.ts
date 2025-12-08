@@ -13,103 +13,105 @@ serve(async (req) => {
   }
 
   try {
-    const XAI_KEY = Deno.env.get("GROK_API_KEY");
-    if (!XAI_KEY) {
-      return new Response(JSON.stringify({ error: "GROK_API_KEY není nastaveno" }), {
+    const GROK_KEY = Deno.env.get("GROK_API_KEY");
+    if (!GROK_KEY) {
+      return new Response(JSON.stringify({ error: "Missing GROK_API_KEY" }), {
         status: 500,
         headers: corsHeaders,
       });
     }
 
-    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const body = await req.json();
-    const { title, main_prize } = body;
+    const { title, main_prize, description } = await req.json();
 
     if (!title || !main_prize) {
-      return new Response(JSON.stringify({ error: "Chybí název nebo výhra" }), {
+      return new Response(JSON.stringify({ error: "Missing title or prize" }), {
         status: 400,
         headers: corsHeaders,
       });
     }
 
     // --------------------------
-    // LUXURY BANNER PROMPT
+    //  PROMPT
     // --------------------------
     const prompt = `
-Luxury black & gold neon contest banner (NO TEXT).
-Main prize: ${main_prize}.
-High-end glow, metallic reflections, cinematic lighting.
-Wide aspect ratio, premium detail.
+Create a luxury marketing banner for a contest.
+NO TEXT in the image.
+
+Main prize: ${main_prize}
+Style: black & gold, neon glow, premium luxury design
+Format: 1536×864, wide banner
+Photorealistic + glossy reflections
+High-end cinematic lighting
 `.trim();
 
-    console.log("Calling xAI image API…");
-
     // --------------------------
-    // XAI IMAGE GENERATION
+    //  GROK 2 IMAGE API REQUEST
     // --------------------------
-    const apiResponse = await fetch("https://api.x.ai/v1/images/generations", {
+    const grokResponse = await fetch("https://api.x.ai/v1/images/generations", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${XAI_KEY}`,
+        Authorization: `Bearer ${GROK_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "grok-2-image-1212",
         prompt,
-        size: "1024x768", // XAI NEUMÍ custom rozměry, jen default
+        size: "1536x864",
         n: 1,
-        response_format: "b64_json",
       }),
     });
 
-    if (!apiResponse.ok) {
-      console.error(await apiResponse.text());
-      return new Response(JSON.stringify({ error: "Chyba generování obrázku" }), {
+    if (!grokResponse.ok) {
+      const err = await grokResponse.text();
+      console.error("GROK ERROR:", err);
+      return new Response(JSON.stringify({ error: "Grok image generation failed" }), {
         status: 500,
         headers: corsHeaders,
       });
     }
 
-    const json = await apiResponse.json();
-    const base64 = json.data?.[0]?.b64_json;
+    const grokData = await grokResponse.json();
+    const imageBase64 = grokData?.data?.[0]?.b64_json;
 
-    if (!base64) {
-      return new Response(JSON.stringify({ error: "XAI nevrátil obrázek" }), {
-        status: 500,
-        headers: corsHeaders,
-      });
+    if (!imageBase64) {
+      console.error("Missing b64_json:", grokData);
+      return new Response(JSON.stringify({ error: "No image returned" }), { status: 500, headers: corsHeaders });
     }
 
-    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    // Convert base64 to bytes
+    const imageBytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0));
 
     // --------------------------
-    // UPLOAD TO SUPABASE
+    //  UPLOAD TO SUPABASE
     // --------------------------
-    const fileName = `banner-${Date.now()}.png`;
+    const fileName = `banner-${Date.now()}-${crypto.randomUUID()}.png`;
 
-    const { error: uploadErr } = await supabase.storage.from("contest-banners").upload(fileName, bytes, {
+    const { error: uploadErr } = await supabase.storage.from("contest-banners").upload(fileName, imageBytes, {
       contentType: "image/png",
+      upsert: false,
     });
 
     if (uploadErr) {
-      console.error(uploadErr);
-      return new Response(JSON.stringify({ error: uploadErr.message }), {
-        status: 500,
-        headers: corsHeaders,
-      });
+      console.error("UPLOAD ERROR:", uploadErr);
+      return new Response(JSON.stringify({ error: "Upload failed" }), { status: 500, headers: corsHeaders });
     }
 
-    const { data: publicUrl } = supabase.storage.from("contest-banners").getPublicUrl(fileName);
+    const { data: urlData } = supabase.storage.from("contest-banners").getPublicUrl(fileName);
 
-    return new Response(JSON.stringify({ success: true, url: publicUrl.publicUrl }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        url: urlData.publicUrl,
+        fileName,
+      }),
+      { status: 200, headers: corsHeaders },
+    );
   } catch (err) {
-    console.error(err);
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: corsHeaders,
-    });
+    console.error("FINAL ERROR:", err);
+    return new Response(JSON.stringify({ error: "Unexpected server error" }), { status: 500, headers: corsHeaders });
   }
 });
