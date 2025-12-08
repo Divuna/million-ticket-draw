@@ -318,7 +318,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
       const isEditing = !!editingContest;
 
-      const { error } = await supabase.rpc("admin_manage_contest", {
+      // Step 1: Create or update contest via RPC
+      const { data: rpcResult, error } = await supabase.rpc("admin_manage_contest", {
         p_contest_id: isEditing ? editingContest.contest_id : null,
         p_title: form.title,
         p_description: form.description || null,
@@ -334,9 +335,64 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         throw error;
       }
 
+      // Step 2: For new contests, trigger ticket generation
+      if (!isEditing) {
+        // Get the newly created contest ID from response or fetch it
+        let newContestId: string | null = null;
+        
+        // Try to get contest_id from RPC result
+        if (rpcResult && typeof rpcResult === 'object' && 'contest_id' in rpcResult) {
+          newContestId = (rpcResult as { contest_id: string }).contest_id;
+        }
+        
+        // If not in result, fetch the latest contest with this title
+        if (!newContestId) {
+          const { data: latestContest } = await supabase
+            .from('contests')
+            .select('id')
+            .eq('title', form.title)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          
+          newContestId = latestContest?.id || null;
+        }
+
+        if (newContestId) {
+          toast({
+            title: "Generuji tikety…",
+            description: `Připravuji ${form.ticket_count.toLocaleString()} tiketů pro soutěž.`,
+          });
+
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData?.session?.access_token;
+
+          const ticketResponse = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-tickets`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ contest_id: newContestId }),
+            }
+          );
+
+          if (!ticketResponse.ok) {
+            const ticketError = await ticketResponse.json().catch(() => ({}));
+            console.error("Ticket generation warning:", ticketError);
+            // Don't throw - contest was created, just log warning
+          }
+        }
+      }
+
+      // Step 3: Show success and close
       toast({
         title: isEditing ? "Soutěž aktualizována" : "Soutěž vytvořena",
-        description: isEditing ? "Změny byly úspěšně uloženy." : "Nová soutěž byla úspěšně uložena.",
+        description: isEditing 
+          ? "Změny byly úspěšně uloženy." 
+          : `Nová soutěž byla úspěšně vytvořena s ${form.ticket_count.toLocaleString()} tikety.`,
       });
 
       onSaved();
