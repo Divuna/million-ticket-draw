@@ -67,38 +67,65 @@ serve(async (req) => {
       imageDataUrl = `data:${contentType};base64,${base64}`;
     }
 
-    // Build layout-specific prompts
+    // Build layout-specific prompts - STRICT image-to-image editing
     const layoutPrompts: Record<ImageLayout, string> = {
-      hero: `Transform this product image into a premium OneMil-style hero graphic:
-- Dark navy to black gradient background
-- Soft gold or blue neon glow behind the object
-- Cinematic lighting with highlights
-- Subtle ground reflection under the object
-- Keep the original object exactly as is - do not alter its shape or details
-- Object positioned on the RIGHT side of the image
-- Empty space on the LEFT side for text overlay
-- 16:9 aspect ratio, horizontal layout
-- Ultra high resolution, professional quality`,
+      hero: `IMPORTANT: This is an IMAGE EDIT task. You MUST preserve the exact object from the uploaded image.
+
+STRICT RULES:
+- DO NOT generate a new object
+- DO NOT replace, modify, or alter the original object in any way
+- The object (car, watch, phone, etc.) must remain 100% identical to the uploaded image
+- ONLY modify: background, lighting, glow effects, and reflections
+
+REQUIRED STYLE (OneMil premium):
+- Background: dark navy (#0a0a1a) to pure black (#000000) gradient
+- Glow: soft gold (#d4a017) or electric blue (#00a8ff) neon glow behind the object
+- Lighting: cinematic rim-lighting around the object edges
+- Reflection: subtle mirror-like ground reflection under the object
+
+LAYOUT:
+- Position the UNCHANGED object on the RIGHT side of the image
+- Leave empty space on the LEFT side for text overlay
+- Horizontal 16:9 aspect ratio
+- Ultra high resolution output`,
       
-      banner: `Transform this product image into a premium OneMil-style banner graphic:
-- Dark navy to black gradient background
-- Soft gold or blue neon glow behind the object
-- Cinematic lighting with highlights
-- Subtle ground reflection under the object
-- Keep the original object exactly as is - do not alter its shape or details
-- Object CENTERED horizontally
+      banner: `IMPORTANT: This is an IMAGE EDIT task. You MUST preserve the exact object from the uploaded image.
+
+STRICT RULES:
+- DO NOT generate a new object
+- DO NOT replace, modify, or alter the original object in any way
+- The object (car, watch, phone, etc.) must remain 100% identical to the uploaded image
+- ONLY modify: background, lighting, glow effects, and reflections
+
+REQUIRED STYLE (OneMil premium):
+- Background: dark navy (#0a0a1a) to pure black (#000000) gradient
+- Glow: soft gold (#d4a017) or electric blue (#00a8ff) neon glow behind the object
+- Lighting: cinematic rim-lighting around the object edges
+- Reflection: subtle mirror-like ground reflection under the object
+
+LAYOUT:
+- Position the UNCHANGED object CENTERED horizontally
 - Wide horizontal banner format (3:1 aspect ratio)
-- Ultra high resolution, professional quality`,
+- Ultra high resolution output`,
       
-      bonus: `Transform this product image into a premium OneMil-style square graphic:
-- Dark navy to black gradient background
-- Soft gold or blue neon glow behind the object
-- Cinematic lighting with highlights
-- Subtle ground reflection under the object
-- Keep the original object exactly as is - do not alter its shape or details
-- Object centered in a square composition
+      bonus: `IMPORTANT: This is an IMAGE EDIT task. You MUST preserve the exact object from the uploaded image.
+
+STRICT RULES:
+- DO NOT generate a new object
+- DO NOT replace, modify, or alter the original object in any way
+- The object (car, watch, phone, etc.) must remain 100% identical to the uploaded image
+- ONLY modify: background, lighting, glow effects, and reflections
+
+REQUIRED STYLE (OneMil premium):
+- Background: dark navy (#0a0a1a) to pure black (#000000) gradient
+- Glow: soft gold (#d4a017) or electric blue (#00a8ff) neon glow behind the object
+- Lighting: cinematic rim-lighting around the object edges
+- Reflection: subtle mirror-like ground reflection under the object
+
+LAYOUT:
+- Position the UNCHANGED object CENTERED in a square composition
 - 1:1 aspect ratio
-- Ultra high resolution, professional quality`,
+- Ultra high resolution output`,
     };
 
     const prompt = layoutPrompts[layout] + (prize_name ? `\nProduct: ${prize_name}` : "");
