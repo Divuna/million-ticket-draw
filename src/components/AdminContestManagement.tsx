@@ -4,13 +4,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Pencil, X } from "lucide-react";
+import { Loader2, Plus, Pencil, X, Sparkles, ImagePlus, Wand2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ContestData {
   contest_id: string;
@@ -36,6 +37,11 @@ interface ContestFormData {
   ticket_price: number;
   status: string;
   main_image_file: File | null;
+  banner_image_file: File | null;
+  detail_image_file: File | null;
+  main_image_url: string;
+  banner_image_url: string;
+  detail_image_url: string;
 }
 
 interface ContestModalProps {
@@ -67,8 +73,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     ticket_price: 1,
     status: "pending",
     main_image_file: null,
+    banner_image_file: null,
+    detail_image_file: null,
+    main_image_url: "",
+    banner_image_url: "",
+    detail_image_url: "",
   });
   const [saving, setSaving] = useState(false);
+  const [generatingDescription, setGeneratingDescription] = useState(false);
+  const [generatingBanner, setGeneratingBanner] = useState(false);
+  const [activeTab, setActiveTab] = useState("basic");
 
   // Reset form when modal opens or editingContest changes
   useEffect(() => {
@@ -81,6 +95,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         ticket_price: editingContest.ticket_price || 1,
         status: editingContest.status || "pending",
         main_image_file: null,
+        banner_image_file: null,
+        detail_image_file: null,
+        main_image_url: editingContest.main_image || "",
+        banner_image_url: "",
+        detail_image_url: "",
       });
     } else {
       setForm({
@@ -91,8 +110,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         ticket_price: 1,
         status: "pending",
         main_image_file: null,
+        banner_image_file: null,
+        detail_image_file: null,
+        main_image_url: "",
+        banner_image_url: "",
+        detail_image_url: "",
       });
     }
+    setActiveTab("basic");
   }, [editingContest, open]);
 
   const handleChange =
@@ -105,10 +130,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     setForm((prev) => ({ ...prev, status: value }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setForm((prev) => ({ ...prev, main_image_file: file }));
-  };
+  const handleFileChange = (field: "main_image_file" | "banner_image_file" | "detail_image_file") => 
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0] || null;
+      setForm((prev) => ({ ...prev, [field]: file }));
+    };
 
   const handleImageUpload = async (file: File): Promise<string> => {
     const ext = file.name.split(".").pop();
@@ -122,6 +148,150 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }
 
     return filePath;
+  };
+
+  // AI-powered description generation
+  const handleGenerateDescription = async () => {
+    if (!form.title && !form.main_prize) {
+      toast({
+        title: "Chyba",
+        description: "Vyplň název soutěže nebo hlavní výhru pro generování popisu.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingDescription(true);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        throw new Error("Nejste přihlášeni.");
+      }
+
+      // Use OpenAI via edge function for description generation
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-contest-description`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: form.title,
+            main_prize: form.main_prize,
+            ticket_count: form.ticket_count,
+            ticket_price: form.ticket_price,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Nepodařilo se vygenerovat popis.");
+      }
+
+      const result = await response.json();
+      
+      if (result.description) {
+        setForm((prev) => ({ ...prev, description: result.description }));
+        toast({
+          title: "Popis vygenerován",
+          description: "AI popis byl úspěšně vytvořen.",
+        });
+      }
+    } catch (err: any) {
+      console.error("Error generating description:", err);
+      toast({
+        title: "Chyba",
+        description: err?.message || "Nepodařilo se vygenerovat popis.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingDescription(false);
+    }
+  };
+
+  // AI-powered banner generation
+  const handleGenerateBanner = async () => {
+    if (!form.title && !form.main_prize) {
+      toast({
+        title: "Chyba",
+        description: "Vyplň název soutěže nebo hlavní výhru pro generování banneru.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingBanner(true);
+    toast({
+      title: "Generuji AI banner…",
+      description: "Prosím počkejte, generování může trvat až 30 sekund.",
+    });
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        throw new Error("Nejste přihlášeni.");
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-contest-banner`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: form.title,
+            description: form.description,
+            main_prize: form.main_prize,
+            ticket_count: form.ticket_count,
+            ticket_price: form.ticket_price,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Nepodařilo se vygenerovat banner.");
+      }
+
+      const result = await response.json();
+
+      if (result.url) {
+        setForm((prev) => ({ ...prev, main_image_url: result.url }));
+        toast({
+          title: "Banner vygenerován",
+          description: "AI banner byl úspěšně vytvořen a nastaven jako hlavní obrázek.",
+        });
+      }
+    } catch (err: any) {
+      console.error("Error generating banner:", err);
+      toast({
+        title: "Chyba",
+        description: err?.message || "Nepodařilo se vygenerovat banner.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingBanner(false);
+    }
+  };
+
+  // Auto-prefill main_prize when title changes
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTitle = e.target.value;
+    setForm((prev) => ({
+      ...prev,
+      title: newTitle,
+      main_prize: prev.main_prize || newTitle,
+    }));
   };
 
   const handleSave = async () => {
@@ -139,7 +309,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     try {
       let imagePath: string | null = editingContest?.main_image || null;
 
-      if (form.main_image_file) {
+      // If AI generated a URL, use it directly
+      if (form.main_image_url && !form.main_image_file) {
+        imagePath = form.main_image_url;
+      } else if (form.main_image_file) {
         imagePath = await handleImageUpload(form.main_image_file);
       }
 
@@ -184,70 +357,176 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && !saving && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Upravit soutěž" : "Vytvořit novou soutěž"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div>
-            <Label>Název soutěže</Label>
-            <Input value={form.title} onChange={handleChange("title")} placeholder="Např. Corvette C8" />
-          </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="basic">Základní údaje</TabsTrigger>
+            <TabsTrigger value="description">Popis (AI)</TabsTrigger>
+            <TabsTrigger value="images">Grafika</TabsTrigger>
+          </TabsList>
 
-          <div>
-            <Label>Popis</Label>
+          {/* Tab 1: Basic Info */}
+          <TabsContent value="basic" className="space-y-4">
+            <div>
+              <Label>Název soutěže</Label>
+              <Input 
+                value={form.title} 
+                onChange={handleTitleChange} 
+                placeholder="Např. Corvette C8" 
+              />
+            </div>
+
+            <div>
+              <Label>Hlavní výhra</Label>
+              <Input 
+                value={form.main_prize} 
+                onChange={handleChange("main_prize")} 
+                placeholder="Např. Corvette C8" 
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Automaticky předvyplněno z názvu soutěže
+              </p>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Label>Počet tiketů</Label>
+                <Input type="number" min={1} value={form.ticket_count} onChange={handleChange("ticket_count")} />
+              </div>
+              <div className="flex-1">
+                <Label>Cena tiketu (MioCoins)</Label>
+                <Input type="number" min={1} value={form.ticket_price} onChange={handleChange("ticket_price")} />
+              </div>
+            </div>
+
+            <div>
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={handleStatusChange}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Vyber status" />
+                </SelectTrigger>
+                <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
+                  {STATUS_OPTIONS.map((option) => (
+                    <SelectItem 
+                      key={option.value} 
+                      value={option.value}
+                      className="text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </TabsContent>
+
+          {/* Tab 2: AI-Generated Description */}
+          <TabsContent value="description" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Popis soutěže</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateDescription}
+                disabled={generatingDescription || (!form.title && !form.main_prize)}
+              >
+                {generatingDescription ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generuji…
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    Vygenerovat AI popis
+                  </>
+                )}
+              </Button>
+            </div>
             <Textarea
               value={form.description}
               onChange={handleChange("description")}
-              placeholder="Stručný popis soutěže…"
+              placeholder="Stručný popis soutěže… Nebo klikni na tlačítko pro AI generování."
+              rows={6}
             />
-          </div>
+            <p className="text-xs text-muted-foreground">
+              <Sparkles className="inline h-3 w-3 mr-1" />
+              AI generování vytvoří poutavý marketingový popis na základě názvu a hlavní výhry.
+            </p>
+          </TabsContent>
 
-          <div>
-            <Label>Hlavní výhra</Label>
-            <Input value={form.main_prize} onChange={handleChange("main_prize")} placeholder="Např. Corvette C8" />
-          </div>
-
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <Label>Počet tiketů</Label>
-              <Input type="number" min={1} value={form.ticket_count} onChange={handleChange("ticket_count")} />
+          {/* Tab 3: Images & Banner */}
+          <TabsContent value="images" className="space-y-4">
+            <div>
+              <Label>Hlavní obrázek (ruční upload)</Label>
+              <Input type="file" accept="image/*" onChange={handleFileChange("main_image_file")} />
+              {isEditing && editingContest?.main_image && !form.main_image_file && !form.main_image_url && (
+                <p className="text-xs text-muted-foreground mt-1">Aktuální: {editingContest.main_image}</p>
+              )}
             </div>
-            <div className="flex-1">
-              <Label>Cena tiketu (MioCoins)</Label>
-              <Input type="number" min={1} value={form.ticket_price} onChange={handleChange("ticket_price")} />
+
+            <div className="border border-dashed border-white/20 rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base">AI Banner generátor</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Automaticky vygeneruje banner pomocí OpenAI na základě údajů soutěže.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleGenerateBanner}
+                  disabled={generatingBanner || (!form.title && !form.main_prize)}
+                >
+                  {generatingBanner ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generuji…
+                    </>
+                  ) : (
+                    <>
+                      <ImagePlus className="mr-2 h-4 w-4" />
+                      Vygenerovat banner (AI)
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {form.main_image_url && (
+                <div className="mt-3">
+                  <Label className="text-sm mb-2 block">Náhled AI banneru:</Label>
+                  <img 
+                    src={form.main_image_url} 
+                    alt="AI vygenerovaný banner" 
+                    className="w-full max-h-48 object-cover rounded-md border border-white/10"
+                  />
+                </div>
+              )}
             </div>
-          </div>
 
-          <div>
-            <Label>Status</Label>
-            <Select value={form.status} onValueChange={handleStatusChange}>
-              <SelectTrigger className="bg-background">
-                <SelectValue placeholder="Vyber status" />
-              </SelectTrigger>
-              <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
-                {STATUS_OPTIONS.map((option) => (
-                  <SelectItem 
-                    key={option.value} 
-                    value={option.value}
-                    className="text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"
-                  >
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div>
+              <Label>Detail obrázek (sekundární)</Label>
+              <Input type="file" accept="image/*" onChange={handleFileChange("detail_image_file")} />
+              <p className="text-xs text-muted-foreground mt-1">
+                Zobrazí se na stránce detailu soutěže vedle hlavního banneru.
+              </p>
+            </div>
 
-          <div>
-            <Label>Obrázek hlavní výhry (upload)</Label>
-            <Input type="file" accept="image/*" onChange={handleFileChange} />
-            {isEditing && editingContest?.main_image && !form.main_image_file && (
-              <p className="text-xs text-muted-foreground mt-1">Aktuální: {editingContest.main_image}</p>
-            )}
-          </div>
-        </div>
+            <div>
+              <Label>Banner obrázek (fullwidth)</Label>
+              <Input type="file" accept="image/*" onChange={handleFileChange("banner_image_file")} />
+              <p className="text-xs text-muted-foreground mt-1">
+                Plnoširokový banner zobrazený v horní části stránky detailu.
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         <DialogFooter className="mt-4">
           <Button variant="outline" onClick={onClose} disabled={saving}>
