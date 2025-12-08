@@ -398,102 +398,104 @@ export const AdminContestManagement: React.FC = () => {
           ) : contests.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">Žádné soutěže nebyly nalezeny.</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Název</TableHead>
-                  <TableHead className="text-center">Hlavní výhra</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-center">Tikety</TableHead>
-                  <TableHead className="text-center">% hotovo</TableHead>
-                  <TableHead className="text-center">Bonusové MioCoiny</TableHead>
-                  <TableHead className="text-right">Akce</TableHead>
-                </TableRow>
-              </TableHeader>
+            <div className="w-full overflow-x-auto overflow-y-auto">
+              <Table className="min-w-max">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Název</TableHead>
+                    <TableHead className="text-center">Hlavní výhra</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Tikety</TableHead>
+                    <TableHead className="text-center">% hotovo</TableHead>
+                    <TableHead className="text-center">Bonusové MioCoiny</TableHead>
+                    <TableHead className="text-right">Akce</TableHead>
+                  </TableRow>
+                </TableHeader>
 
-              <TableBody>
-                {contests.map((contest) => (
-                  <TableRow key={contest.contest_id}>
-                    <TableCell>
-                      <div className="font-medium">{contest.title}</div>
-                      <div className="text-xs text-muted-foreground">ID: {contest.contest_id}</div>
-                    </TableCell>
+                <TableBody>
+                  {contests.map((contest) => (
+                    <TableRow key={contest.contest_id}>
+                      <TableCell>
+                        <div className="font-medium">{contest.title}</div>
+                        <div className="text-xs text-muted-foreground">ID: {contest.contest_id}</div>
+                      </TableCell>
 
-                    <TableCell className="text-center">{contest.main_prize}</TableCell>
+                      <TableCell className="text-center">{contest.main_prize}</TableCell>
 
-                    <TableCell className="text-center">
-                      <Select
-                        value={contest.status}
-                        onValueChange={(value) => handleStatusChange(contest.contest_id, value)}
-                        disabled={updatingStatus === contest.contest_id}
-                      >
-                        <SelectTrigger className="w-28 bg-background">
-                          {updatingStatus === contest.contest_id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <SelectValue />
-                          )}
-                        </SelectTrigger>
-                        <SelectContent className="bg-background z-50">
-                          {STATUS_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-
-                    <TableCell className="text-center">
-                      {contest.tickets_sold} / {contest.ticket_count}
-                    </TableCell>
-
-                    <TableCell className="text-center">{contest.progress_percentage}%</TableCell>
-
-                    <TableCell className="text-center">
-                      {contest.total_miocoin_bonus?.toLocaleString("cs-CZ") || 0}
-                    </TableCell>
-
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(contest)}
+                      <TableCell className="text-center">
+                        <Select
+                          value={contest.status}
+                          onValueChange={(value) => handleStatusChange(contest.contest_id, value)}
+                          disabled={updatingStatus === contest.contest_id}
                         >
-                          <Pencil className="h-4 w-4 mr-1" />
-                          Upravit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => (window.location.href = `/admin/contest/${contest.contest_id}`)}
-                        >
-                          Otevřít
-                        </Button>
-                        {contest.status === "active" && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleCloseContest(contest.contest_id)}
-                            disabled={closingContest === contest.contest_id}
-                          >
-                            {closingContest === contest.contest_id ? (
+                          <SelectTrigger className="w-28 bg-background">
+                            {updatingStatus === contest.contest_id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                              <>
-                                <X className="h-4 w-4 mr-1" />
-                                Uzavřít
-                              </>
+                              <SelectValue />
                             )}
+                          </SelectTrigger>
+                          <SelectContent className="bg-background z-50">
+                            {STATUS_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+
+                      <TableCell className="text-center">
+                        {contest.tickets_sold} / {contest.ticket_count}
+                      </TableCell>
+
+                      <TableCell className="text-center">{contest.progress_percentage}%</TableCell>
+
+                      <TableCell className="text-center">
+                        {contest.total_miocoin_bonus?.toLocaleString("cs-CZ") || 0}
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(contest)}
+                          >
+                            <Pencil className="h-4 w-4 mr-1" />
+                            Upravit
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => (window.location.href = `/admin/contest/${contest.contest_id}`)}
+                          >
+                            Otevřít
+                          </Button>
+                          {contest.status === "active" && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleCloseContest(contest.contest_id)}
+                              disabled={closingContest === contest.contest_id}
+                            >
+                              {closingContest === contest.contest_id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <X className="h-4 w-4 mr-1" />
+                                  Uzavřít
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
