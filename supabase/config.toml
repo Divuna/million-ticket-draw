@@ -1,5 +1,8 @@
 project_id = "xkzhjldrojjlrkezorey"
 
+[functions.generate-tickets]
+verify_jwt = false
+
 [functions.sofinity-player-sync]
 verify_jwt = true
 
