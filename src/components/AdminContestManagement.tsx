@@ -849,17 +849,32 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               {physicalPrizes.length > 0 && (
                 <div className="space-y-2">
                   <Label>Přidané výhry ({physicalPrizes.length})</Label>
-                  {physicalPrizes.map((prize, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
-                      <div>
-                        <span className="font-medium">{prize.description}</span>
-                        <span className="text-muted-foreground ml-2">Pozice #{prize.ticket_position}</span>
+                  {physicalPrizes.map((prize, index) => {
+                    const thumbnailSrc = prize.image_file 
+                      ? URL.createObjectURL(prize.image_file) 
+                      : prize.image_url || null;
+                    
+                    return (
+                      <div key={index} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          {thumbnailSrc && (
+                            <img 
+                              src={thumbnailSrc} 
+                              alt={prize.description} 
+                              className="w-10 h-10 rounded object-cover border border-white/10"
+                            />
+                          )}
+                          <div>
+                            <span className="font-medium">{prize.description}</span>
+                            <span className="text-muted-foreground ml-2">Pozice #{prize.ticket_position}</span>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => removePhysicalPrize(index)}>
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => removePhysicalPrize(index)}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>
