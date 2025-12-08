@@ -53,11 +53,11 @@ interface NewBonusPrizeForm {
 }
 
 const STATUS_OPTIONS = [
-  { value: "draft", label: "Draft" },
-  { value: "pending", label: "Pending" },
-  { value: "active", label: "Active" },
-  { value: "paused", label: "Paused" },
-  { value: "closed", label: "Closed" },
+  { value: "draft", label: "Koncept" },
+  { value: "pending", label: "Čeká na start" },
+  { value: "active", label: "Aktivní" },
+  { value: "paused", label: "Pozastaveno" },
+  { value: "closed", label: "Ukončeno" },
 ];
 
 const ContestDetailAdmin: React.FC = () => {
