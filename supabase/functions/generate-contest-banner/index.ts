@@ -53,6 +53,7 @@ Contest: ${title}
       body: JSON.stringify({
         model: "grok-2-image",
         prompt: prompt,
+        n: 1,
         response_format: "b64_json",
       }),
     });
