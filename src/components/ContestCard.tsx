@@ -9,6 +9,8 @@ interface Contest {
   title: string;
   main_prize: string;
   main_image: string | null;
+  banner_image?: string | null;
+  main_prize_secondary_image?: string | null;
   status: string;
   ticket_price: number;
 }
@@ -75,35 +77,54 @@ export const ContestCard: React.FC<ContestCardProps> = ({
 
   return (
     <div className={`contest-card rounded-2xl overflow-hidden relative ${className}`}>
-      {/* Full-width banner image */}
-      {contest.main_image ? (
-        <img
-          src={
-            contest.main_image.startsWith("http")
-              ? contest.main_image
-              : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`
+      {/* Full-width banner image - Priority: banner_image > main_prize_secondary_image > main_image */}
+      {(() => {
+        // Determine the best image source with priority
+        const getBestImageUrl = (): string | null => {
+          // Priority 1: AI-generated banner_image (if starts with http)
+          if (contest.banner_image?.startsWith('http')) {
+            return contest.banner_image;
           }
-          alt={contest.title}
-          className="w-full h-64 object-cover"
-          loading="lazy"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).style.display = 'none';
-          }}
-        />
-      ) : (
-        <div className="w-full h-64 bg-muted/40 flex items-center justify-center">
-          <div className="text-center text-muted-foreground">
-            {fromPage === 'homepage' ? (
-              <>
-                <Trophy className="w-12 h-12 mx-auto mb-2" />
-                <span className="text-sm">Bez obrázku</span>
-              </>
-            ) : (
-              <span className="text-6xl">🎯</span>
-            )}
+          // Priority 2: AI-generated main_prize_secondary_image (if starts with http)
+          if (contest.main_prize_secondary_image?.startsWith('http')) {
+            return contest.main_prize_secondary_image;
+          }
+          // Priority 3: Original main_image (only if no AI images exist)
+          if (contest.main_image) {
+            return contest.main_image.startsWith('http')
+              ? contest.main_image
+              : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`;
+          }
+          return null;
+        };
+
+        const imageUrl = getBestImageUrl();
+
+        return imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={contest.title}
+            className="w-full h-64 object-cover"
+            loading="lazy"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        ) : (
+          <div className="w-full h-64 bg-muted/40 flex items-center justify-center">
+            <div className="text-center text-muted-foreground">
+              {fromPage === 'homepage' ? (
+                <>
+                  <Trophy className="w-12 h-12 mx-auto mb-2" />
+                  <span className="text-sm">Bez obrázku</span>
+                </>
+              ) : (
+                <span className="text-6xl">🎯</span>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
       
       {/* Bottom dark gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />

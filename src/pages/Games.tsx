@@ -16,6 +16,8 @@ interface Contest {
   description: string | null;
   main_prize: string;
   main_image: string | null;
+  banner_image: string | null;
+  main_prize_secondary_image: string | null;
   ticket_price: number;
   status: string;
   ticket_count: number;
@@ -51,7 +53,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from('contests')
         .select(`
-          id, title, description, main_prize, main_image, ticket_price, ticket_count, status, created_at
+          id, title, description, main_prize, main_image, banner_image, main_prize_secondary_image, ticket_price, ticket_count, status, created_at
         `)
         .order('created_at', { ascending: false });
 
