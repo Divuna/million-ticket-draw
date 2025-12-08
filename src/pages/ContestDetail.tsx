@@ -24,7 +24,9 @@ type BonusPrize = {
   contest_id: string;
   description: string | null;
   amount: number | null;
+  image?: string | null;
   image_url?: string | null;
+  ticket_position?: number | null;
 };
 
 type Winner = {
@@ -318,12 +320,20 @@ export default function ContestDetail() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {bonusPrizes.map((b) => {
-              // Build correct image URL: handle full URLs or storage paths
-              const bonusImageUrl = b.image_url 
-                ? (b.image_url.startsWith('http') 
-                    ? b.image_url 
-                    : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${b.image_url}`)
-                : null;
+              // Image priority: image (http) → getPublicUrl(image) → image_url fallback
+              let bonusImageUrl: string | null = null;
+              
+              if (b.image) {
+                if (b.image.startsWith('http')) {
+                  bonusImageUrl = b.image;
+                } else {
+                  bonusImageUrl = supabase.storage.from('contest-images').getPublicUrl(b.image).data.publicUrl;
+                }
+              } else if (b.image_url) {
+                bonusImageUrl = b.image_url.startsWith('http') 
+                  ? b.image_url 
+                  : supabase.storage.from('contest-images').getPublicUrl(b.image_url).data.publicUrl;
+              }
               
               return (
                 <div key={b.id} className="p-4 rounded-xl bg-black/30 border border-white/5 flex flex-col gap-3">
