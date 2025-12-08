@@ -204,7 +204,17 @@ export default function ContestDetail() {
     );
   }
 
-  const prizeImage = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${contest.main_image}`;
+  // Hero image: prefer main_prize_secondary_image (AI-generated), fallback to main_image
+  const heroImage = contest.main_prize_secondary_image 
+    ? (contest.main_prize_secondary_image.startsWith('http') 
+        ? contest.main_prize_secondary_image 
+        : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${contest.main_prize_secondary_image}`)
+    : (contest.main_image 
+        ? (contest.main_image.startsWith('http') 
+            ? contest.main_image 
+            : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${contest.main_image}`)
+        : "/fallback-car.png");
+  
   const isProcessing = processingContestId === contest.id;
 
   return (
@@ -221,7 +231,7 @@ export default function ContestDetail() {
 
         <div className="absolute right-10 top-1/2 -translate-y-1/2">
           <img
-            src={prizeImage}
+            src={heroImage}
             alt={contest.title}
             className="w-[450px] object-contain pointer-events-none"
             onError={(e) => (e.currentTarget.src = "/fallback-car.png")}
@@ -307,23 +317,33 @@ export default function ContestDetail() {
           <p className="text-gray-400 text-sm">Zatím nebyly přidány žádné věcné bonusové výhry.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {bonusPrizes.map((b) => (
-              <div key={b.id} className="p-4 rounded-xl bg-black/30 border border-white/5">
-                <p className="text-white text-sm">{b.description || "Bonusová výhra"}</p>
+            {bonusPrizes.map((b) => {
+              // Build correct image URL: handle full URLs or storage paths
+              const bonusImageUrl = b.image_url 
+                ? (b.image_url.startsWith('http') 
+                    ? b.image_url 
+                    : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${b.image_url}`)
+                : null;
+              
+              return (
+                <div key={b.id} className="p-4 rounded-xl bg-black/30 border border-white/5 flex flex-col gap-3">
+                  {bonusImageUrl && (
+                    <img
+                      src={bonusImageUrl}
+                      alt={b.description ?? "Bonus prize"}
+                      className="w-full h-32 object-contain rounded-lg"
+                      onError={(e) => (e.currentTarget.style.display = "none")}
+                    />
+                  )}
+                  
+                  <p className="text-white text-sm font-medium">{b.description || "Bonusová výhra"}</p>
 
-                {b.image_url && (
-                  <img
-                    src={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/bonus-images/${b.image_url}`}
-                    alt={b.description ?? "Bonus prize"}
-                    className="w-20 h-20 object-contain mt-2"
-                  />
-                )}
-
-                {myWins.some((w) => w.bonus_prize_id === b.id) && (
-                  <p className="text-green-400 text-xs mt-2">Moje výhra</p>
-                )}
-              </div>
-            ))}
+                  {myWins.some((w) => w.bonus_prize_id === b.id) && (
+                    <p className="text-green-400 text-xs">Moje výhra</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
