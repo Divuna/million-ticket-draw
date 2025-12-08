@@ -98,6 +98,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   const [saving, setSaving] = useState(false);
   const [generatingDescription, setGeneratingDescription] = useState(false);
   const [generatingBanner, setGeneratingBanner] = useState(false);
+  const [regeneratingHero, setRegeneratingHero] = useState(false);
+  const [regeneratingBanner, setRegeneratingBanner] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
   
   // AI image transformation state
@@ -270,6 +272,126 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       });
     } finally {
       setTransformingImage(false);
+    }
+  };
+
+  // Get image base64 from existing URL or uploaded file
+  const getExistingImageBase64 = async (): Promise<string | null> => {
+    // Priority 1: Newly uploaded file
+    if (form.main_image_file) {
+      return await fileToBase64(form.main_image_file);
+    }
+    
+    // Priority 2: Existing main_image URL from form or editing contest
+    const existingUrl = form.main_image_url || editingContest?.main_image;
+    if (existingUrl) {
+      try {
+        const imageUrl = existingUrl.startsWith('http') 
+          ? existingUrl 
+          : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${existingUrl}`;
+        
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch (err) {
+        console.error("Error fetching existing image:", err);
+        return null;
+      }
+    }
+    
+    return null;
+  };
+
+  // Regenerate only hero image
+  const handleRegenerateHero = async () => {
+    const base64 = await getExistingImageBase64();
+    if (!base64) {
+      toast({
+        title: "Chyba",
+        description: "Není k dispozici žádný obrázek pro regeneraci. Nejprve nahraj hlavní obrázek.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setRegeneratingHero(true);
+    toast({
+      title: "Regeneruji hero obrázek…",
+      description: "Vytvářím nový stylizovaný hero obrázek.",
+    });
+
+    try {
+      const prizeName = form.main_prize || form.title || "";
+      const result = await transformImage(base64, "hero", prizeName);
+
+      if (result.success && result.url) {
+        setAiGeneratedImages((prev) => ({ ...prev, hero: result.url }));
+        setForm((prev) => ({ ...prev, detail_image_url: result.url }));
+        toast({
+          title: "Hero obrázek regenerován",
+          description: "Nový AI hero obrázek byl úspěšně vytvořen.",
+        });
+      } else {
+        throw new Error(result.error || "Nepodařilo se regenerovat hero obrázek.");
+      }
+    } catch (err: any) {
+      console.error("Error regenerating hero:", err);
+      toast({
+        title: "Chyba",
+        description: err?.message || "Nepodařilo se regenerovat hero obrázek.",
+        variant: "destructive",
+      });
+    } finally {
+      setRegeneratingHero(false);
+    }
+  };
+
+  // Regenerate only banner image
+  const handleRegenerateBanner = async () => {
+    const base64 = await getExistingImageBase64();
+    if (!base64) {
+      toast({
+        title: "Chyba",
+        description: "Není k dispozici žádný obrázek pro regeneraci. Nejprve nahraj hlavní obrázek.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setRegeneratingBanner(true);
+    toast({
+      title: "Regeneruji banner…",
+      description: "Vytvářím nový stylizovaný banner.",
+    });
+
+    try {
+      const prizeName = form.main_prize || form.title || "";
+      const result = await transformImage(base64, "banner", prizeName);
+
+      if (result.success && result.url) {
+        setAiGeneratedImages((prev) => ({ ...prev, banner: result.url }));
+        setForm((prev) => ({ ...prev, banner_image_url: result.url }));
+        toast({
+          title: "Banner regenerován",
+          description: "Nový AI banner byl úspěšně vytvořen.",
+        });
+      } else {
+        throw new Error(result.error || "Nepodařilo se regenerovat banner.");
+      }
+    } catch (err: any) {
+      console.error("Error regenerating banner:", err);
+      toast({
+        title: "Chyba",
+        description: err?.message || "Nepodařilo se regenerovat banner.",
+        variant: "destructive",
+      });
+    } finally {
+      setRegeneratingBanner(false);
     }
   };
 
@@ -1123,37 +1245,84 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   </div>
                 )}
 
-                {/* AI Generated Images Preview */}
-                {(aiGeneratedImages.hero || aiGeneratedImages.banner) && (
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    {aiGeneratedImages.hero && (
-                      <div className="space-y-2">
-                        <Label className="text-sm flex items-center gap-1">
-                          <Sparkles className="h-3 w-3" />
-                          AI Hero (detail)
-                        </Label>
-                        <img 
-                          src={aiGeneratedImages.hero} 
-                          alt="AI Hero" 
-                          className="w-full h-32 object-cover rounded-md border border-primary/20"
-                        />
-                      </div>
-                    )}
-                    {aiGeneratedImages.banner && (
-                      <div className="space-y-2">
-                        <Label className="text-sm flex items-center gap-1">
-                          <Sparkles className="h-3 w-3" />
-                          AI Banner
-                        </Label>
-                        <img 
-                          src={aiGeneratedImages.banner} 
-                          alt="AI Banner" 
-                          className="w-full h-32 object-cover rounded-md border border-primary/20"
-                        />
+                {/* AI Generated Images Preview with Regenerate Buttons */}
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  {/* Hero Image Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" />
+                        AI Hero (detail)
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRegenerateHero}
+                        disabled={regeneratingHero || transformingImage || (!form.main_image_file && !form.main_image_url && !editingContest?.main_image)}
+                        className="h-7 text-xs"
+                      >
+                        {regeneratingHero ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <>
+                            <Wand2 className="h-3 w-3 mr-1" />
+                            Regenerovat
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    {aiGeneratedImages.hero ? (
+                      <img 
+                        src={aiGeneratedImages.hero} 
+                        alt="AI Hero" 
+                        className="w-full h-32 object-cover rounded-md border border-primary/20"
+                      />
+                    ) : (
+                      <div className="w-full h-32 rounded-md border border-dashed border-muted-foreground/30 flex items-center justify-center text-xs text-muted-foreground">
+                        Zatím nevygenerováno
                       </div>
                     )}
                   </div>
-                )}
+
+                  {/* Banner Image Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" />
+                        AI Banner
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRegenerateBanner}
+                        disabled={regeneratingBanner || transformingImage || (!form.main_image_file && !form.main_image_url && !editingContest?.main_image)}
+                        className="h-7 text-xs"
+                      >
+                        {regeneratingBanner ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <>
+                            <Wand2 className="h-3 w-3 mr-1" />
+                            Regenerovat
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    {aiGeneratedImages.banner ? (
+                      <img 
+                        src={aiGeneratedImages.banner} 
+                        alt="AI Banner" 
+                        className="w-full h-32 object-cover rounded-md border border-primary/20"
+                      />
+                    ) : (
+                      <div className="w-full h-32 rounded-md border border-dashed border-muted-foreground/30 flex items-center justify-center text-xs text-muted-foreground">
+                        Zatím nevygenerováno
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div>
