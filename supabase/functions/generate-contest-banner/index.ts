@@ -21,32 +21,31 @@ serve(async (req) => {
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const body = await req.json();
-    const { title, main_prize } = body;
+    const { title, main_prize, description } = body;
 
     if (!title || !main_prize) {
       return new Response(JSON.stringify({ error: "Chybí název soutěže nebo hlavní výhra" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: corsHeaders,
       });
     }
 
+    // 🔥 Prompt
     const prompt = `
-Vytvoř luxusní marketingový banner BEZ TEXTU.
-Styl: černo-zlatý, neon glow, luxusní, prémiový.
-Hlavní objekt: ${main_prize}
-Formát: širokoúhlý banner (16:9)
-Realistický styl + světelné efekty.
+Create ultra-luxury 16:9 marketing banner WITHOUT ANY TEXT.
+Gold/black neon glow, metallic reflections, premium realistic lighting.
+
+Main prize: ${main_prize}
+Contest: ${title}
 `.trim();
 
-    console.log("Calling GROK Image API...");
+    console.log("Calling GROK IMAGE API…");
 
-    // ❗ WITHOUT `size:` (Grok 2.1 image does not support it)
-    const grokResponse = await fetch("https://api.x.ai/v1/messages", {
+    // 🔥 Correct Grok Image API
+    const grokResponse = await fetch("https://api.x.ai/v1/images/generations", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${GROK_KEY}`,
@@ -54,34 +53,26 @@ Realistický styl + světelné efekty.
       },
       body: JSON.stringify({
         model: "grok-2-image-1212",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: prompt,
-              },
-            ],
-          },
-        ],
+        prompt: prompt,
+        size: "1024x1024",
+        response_format: "b64_json",
       }),
     });
 
+    const grokData = await grokResponse.json();
+
     if (!grokResponse.ok) {
-      const err = await grokResponse.text();
-      console.error("Grok API error:", err);
-      return new Response(JSON.stringify({ error: "Grok image generation failed" }), {
+      console.error("Grok error:", grokData);
+      return new Response(JSON.stringify({ error: `Grok chyba: ${JSON.stringify(grokData)}` }), {
         status: 500,
         headers: corsHeaders,
       });
     }
 
-    const grokData = await grokResponse.json();
-    const imageBase64 = grokData?.output?.[0]?.content?.[0]?.image_base64 ?? null;
+    const imageBase64 = grokData.data?.[0]?.b64_json;
 
     if (!imageBase64) {
-      console.error("Grok returned no image:", grokData);
+      console.error("Missing image");
       return new Response(JSON.stringify({ error: "Grok negeneroval obrázek" }), {
         status: 500,
         headers: corsHeaders,
@@ -89,34 +80,31 @@ Realistický styl + světelné efekty.
     }
 
     const imageBytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0));
+    const fileName = `banner-${Date.now()}.png`;
 
-    const fileName = `banner-${Date.now()}-${crypto.randomUUID()}.png`;
-
-    const { error: uploadErr } = await supabase.storage.from("contest-banners").upload(fileName, imageBytes, {
+    const upload = await supabase.storage.from("contest-banners").upload(fileName, imageBytes, {
       contentType: "image/png",
-      upsert: false,
     });
 
-    if (uploadErr) {
-      console.error("Upload failed:", uploadErr);
-      return new Response(JSON.stringify({ error: uploadErr.message }), {
+    if (upload.error) {
+      return new Response(JSON.stringify({ error: upload.error.message }), {
         status: 500,
         headers: corsHeaders,
       });
     }
 
-    const { data: urlData } = supabase.storage.from("contest-banners").getPublicUrl(fileName);
+    const { data: url } = supabase.storage.from("contest-banners").getPublicUrl(fileName);
 
     return new Response(
       JSON.stringify({
         success: true,
-        url: urlData.publicUrl,
+        url: url.publicUrl,
         fileName,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { headers: corsHeaders },
     );
   } catch (err) {
-    console.error("ERROR:", err);
+    console.error(err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: corsHeaders,
