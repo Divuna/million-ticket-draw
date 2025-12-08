@@ -226,9 +226,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               <SelectTrigger className="bg-background">
                 <SelectValue placeholder="Vyber status" />
               </SelectTrigger>
-              <SelectContent className="bg-background z-50">
+              <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
                 {STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem 
+                    key={option.value} 
+                    value={option.value}
+                    className="text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"
+                  >
                     {option.label}
                   </SelectItem>
                 ))}
@@ -447,12 +451,14 @@ export const AdminContestManagement: React.FC = () => {
                                 <Pencil className="h-3 w-3" />
                               )}
                             </SelectTrigger>
-                            <SelectContent className="bg-background z-50">
+                            <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
                               {STATUS_OPTIONS.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${option.color}`}>
-                                    {option.label}
-                                  </span>
+                                <SelectItem 
+                                  key={option.value} 
+                                  value={option.value}
+                                  className="text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"
+                                >
+                                  {option.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>

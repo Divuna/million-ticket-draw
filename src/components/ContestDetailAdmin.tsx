@@ -451,9 +451,13 @@ const ContestDetailAdmin: React.FC = () => {
                       <SelectValue />
                     )}
                   </SelectTrigger>
-                  <SelectContent className="bg-background z-50">
+                  <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
                     {STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
+                      <SelectItem 
+                        key={option.value} 
+                        value={option.value}
+                        className="text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"
+                      >
                         {option.label}
                       </SelectItem>
                     ))}
