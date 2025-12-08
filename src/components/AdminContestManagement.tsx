@@ -540,6 +540,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }
   };
 
+  // Placeholder handlers for distribution
+  const handleEvenDistribution = () => {
+    // TODO: Implement even distribution logic
+  };
+
+  const handleRandomDistribution = () => {
+    // TODO: Implement random distribution logic
+  };
+
   const isEditing = !!editingContest;
   const totalMioCoins = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
 
@@ -728,6 +737,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   <Button variant="outline" onClick={clearMioCoinBonuses} disabled={mioCoinBonuses.length === 0}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Smazat vše
+                  </Button>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={handleEvenDistribution} className="flex-1">
+                    Rovnoměrně rozložit
+                  </Button>
+                  <Button variant="secondary" onClick={handleRandomDistribution} className="flex-1">
+                    Náhodně rozložit
                   </Button>
                 </div>
               </div>
