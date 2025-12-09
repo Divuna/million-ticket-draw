@@ -15,10 +15,10 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    const GROK_API_KEY = Deno.env.get("GROK_API_KEY");
+    if (!GROK_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY není nastavený" }),
+        JSON.stringify({ error: "GROK_API_KEY není nastavený" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -29,19 +29,10 @@ serve(async (req) => {
     );
 
     const body = await req.json();
-    const { image_base64, image_url, layout, prize_name } = body as {
-      image_base64?: string;
-      image_url?: string;
+    const { layout, prize_name } = body as {
       layout: ImageLayout;
-      prize_name?: string;
+      prize_name: string;
     };
-
-    if (!image_base64 && !image_url) {
-      return new Response(
-        JSON.stringify({ error: "Chybí image_base64 nebo image_url" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     if (!layout) {
       return new Response(
@@ -50,127 +41,69 @@ serve(async (req) => {
       );
     }
 
-    // Resolve image source
-    let imageDataUrl = image_base64;
-    if (!imageDataUrl && image_url) {
-      // Fetch image from URL and convert to base64
-      const imgResponse = await fetch(image_url);
-      if (!imgResponse.ok) {
-        return new Response(
-          JSON.stringify({ error: "Nepodařilo se stáhnout obrázek z URL" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      const imgBuffer = await imgResponse.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(imgBuffer)));
-      const contentType = imgResponse.headers.get("content-type") || "image/png";
-      imageDataUrl = `data:${contentType};base64,${base64}`;
+    if (!prize_name) {
+      return new Response(
+        JSON.stringify({ error: "Chybí prize_name (název ceny)" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Build layout-specific prompts - STRICT image-to-image editing
+    // Layout-specific prompts for Grok 2 text-to-image
     const layoutPrompts: Record<ImageLayout, string> = {
-      hero: `IMPORTANT: This is an IMAGE EDIT task. You MUST preserve the exact object from the uploaded image.
-
-STRICT RULES:
-- DO NOT generate a new object
-- DO NOT replace, modify, or alter the original object in any way
-- The object (car, watch, phone, etc.) must remain 100% identical to the uploaded image
-- ONLY modify: background, lighting, glow effects, and reflections
-
-REQUIRED STYLE (OneMil premium):
-- Background: dark navy (#0a0a1a) to pure black (#000000) gradient
-- Glow: soft gold (#d4a017) or electric blue (#00a8ff) neon glow behind the object
-- Lighting: cinematic rim-lighting around the object edges
-- Reflection: subtle mirror-like ground reflection under the object
-
-LAYOUT:
-- Position the UNCHANGED object on the RIGHT side of the image
-- Leave empty space on the LEFT side for text overlay
-- Horizontal 16:9 aspect ratio
-- Ultra high resolution output`,
+      hero: `Ultra-realistic product photography of ${prize_name}. 
+Position the product on the RIGHT side of the image, leaving empty space on the LEFT for text overlay.
+Premium dark background with deep navy (#0a0a1a) to black gradient.
+Soft golden neon glow behind the product.
+Cinematic rim lighting around edges.
+Subtle mirror reflection on glossy dark floor.
+Horizontal 16:9 aspect ratio composition.
+Luxury brand advertisement quality.
+Ultra high resolution, photorealistic, 8K quality.`,
       
-      banner: `IMPORTANT: This is an IMAGE EDIT task. You MUST preserve the exact object from the uploaded image.
-
-STRICT RULES:
-- DO NOT generate a new object
-- DO NOT replace, modify, or alter the original object in any way
-- The object (car, watch, phone, etc.) must remain 100% identical to the uploaded image
-- ONLY modify: background, lighting, glow effects, and reflections
-
-REQUIRED STYLE (OneMil premium):
-- Background: dark navy (#0a0a1a) to pure black (#000000) gradient
-- Glow: soft gold (#d4a017) or electric blue (#00a8ff) neon glow behind the object
-- Lighting: cinematic rim-lighting around the object edges
-- Reflection: subtle mirror-like ground reflection under the object
-
-LAYOUT:
-- Position the UNCHANGED object CENTERED horizontally
-- Wide horizontal banner format (3:1 aspect ratio)
-- Ultra high resolution output`,
+      banner: `Ultra-realistic product photography of ${prize_name}.
+Product CENTERED horizontally in a wide banner format.
+Premium dark background with deep navy to black gradient.
+Elegant gold and blue neon glow effects behind product.
+Cinematic professional lighting with rim lights.
+Subtle ground reflection for depth.
+Wide horizontal banner composition (3:1 aspect ratio).
+Luxury brand marketing quality.
+Ultra high resolution, photorealistic, 8K quality.`,
       
-      bonus: `IMPORTANT: This is an IMAGE EDIT task. You MUST preserve the exact object from the uploaded image.
-
-STRICT RULES:
-- DO NOT generate a new object
-- DO NOT replace, modify, or alter the original object in any way
-- The object (car, watch, phone, etc.) must remain 100% identical to the uploaded image
-- ONLY modify: background, lighting, glow effects, and reflections
-
-REQUIRED STYLE (OneMil premium):
-- Background: dark navy (#0a0a1a) to pure black (#000000) gradient
-- Glow: soft gold (#d4a017) or electric blue (#00a8ff) neon glow behind the object
-- Lighting: cinematic rim-lighting around the object edges
-- Reflection: subtle mirror-like ground reflection under the object
-
-LAYOUT:
-- Position the UNCHANGED object CENTERED in a square composition
-- 1:1 aspect ratio
-- Ultra high resolution output`,
+      bonus: `Ultra-realistic product photography of ${prize_name}.
+Product CENTERED in a square composition.
+Premium dark navy (#0a0a1a) to black gradient background.
+Soft golden or electric blue neon glow behind the product.
+Cinematic rim lighting highlighting edges.
+Subtle mirror-like floor reflection.
+Square 1:1 aspect ratio composition.
+Luxury premium quality aesthetic.
+Ultra high resolution, photorealistic, 8K quality.`,
     };
 
-    const prompt = layoutPrompts[layout] + (prize_name ? `\nProduct: ${prize_name}` : "");
+    const prompt = layoutPrompts[layout];
 
-    console.log(`Generating ${layout} image with Lovable AI (image-to-image mode)...`);
-    console.log(`Input image URL prefix: ${imageDataUrl?.substring(0, 50)}...`);
-    console.log(`Prompt length: ${prompt.length} chars`);
+    console.log(`Generating ${layout} image with Grok 2 for: ${prize_name}`);
+    console.log(`Prompt: ${prompt.substring(0, 100)}...`);
 
-    // Call Lovable AI Gateway with image editing (image-to-image mode)
-    // The image is passed as image_url in the message content - this is the correct
-    // way to do image editing with Lovable AI's chat completions endpoint
-    const requestBody = {
-      model: "google/gemini-2.5-flash-image-preview",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { 
-              type: "image_url", 
-              image_url: { url: imageDataUrl } 
-            },
-            { 
-              type: "text", 
-              text: prompt 
-            },
-          ],
-        },
-      ],
-      modalities: ["image", "text"],
-    };
-
-    console.log("Sending image-to-image request to Lovable AI Gateway...");
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Call Grok 2 API for text-to-image generation
+    const response = await fetch("https://api.x.ai/v1/images/generations", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GROK_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({
+        model: "grok-2-image",
+        prompt: prompt,
+        n: 1,
+        response_format: "b64_json",
+      }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Lovable AI error:", response.status, errorText);
+      console.error("Grok API error:", response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
@@ -178,51 +111,35 @@ LAYOUT:
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Nedostatek kreditů, dobijte si účet" }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
       
       return new Response(
-        JSON.stringify({ error: `AI chyba: ${response.status}` }),
+        JSON.stringify({ error: `Grok API chyba: ${response.status}` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const data = await response.json();
-    console.log("AI response received");
+    console.log("Grok response received");
 
-    // Extract generated image
-    const generatedImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (!generatedImageUrl) {
-      console.error("No image in response:", JSON.stringify(data).substring(0, 500));
+    // Extract generated image base64
+    const imageBase64 = data.data?.[0]?.b64_json;
+    if (!imageBase64) {
+      console.error("No image in Grok response:", JSON.stringify(data).substring(0, 500));
       return new Response(
-        JSON.stringify({ error: "AI nevygenerovala obrázek" }),
+        JSON.stringify({ error: "Grok nevygeneroval obrázek" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Extract base64 data from data URL
-    const base64Match = generatedImageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
-    if (!base64Match) {
-      return new Response(
-        JSON.stringify({ error: "Neplatný formát vygenerovaného obrázku" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const imageFormat = base64Match[1];
-    const imageBase64Data = base64Match[2];
-    const imageBytes = Uint8Array.from(atob(imageBase64Data), (c) => c.charCodeAt(0));
+    // Convert base64 to bytes
+    const imageBytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0));
 
     // Upload to Supabase Storage
-    const fileName = `ai-${layout}-${Date.now()}.${imageFormat}`;
+    const fileName = `ai-${layout}-${Date.now()}.png`;
     const { error: uploadError } = await supabase.storage
       .from("contest-banners")
       .upload(fileName, imageBytes, {
-        contentType: `image/${imageFormat}`,
+        contentType: "image/png",
         upsert: false,
       });
 
