@@ -192,8 +192,7 @@ serve(async (req) => {
       ],
       parameters: {
         sampleCount: 1,
-        temperature: 0.4,
-        guidanceScale: 0
+        aspectRatio: layout === "bonus" ? "1:1" : "16:9",
       }
     };
 
