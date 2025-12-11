@@ -177,10 +177,11 @@ serve(async (req) => {
 
     const location = "us-central1";
     const stylePrompt = getStylePrompt(layout);
-    const aspectRatio = layout === "bonus" ? "1:1" : "16:9";
 
-    // Imagen 3.0 direct API endpoint
-    const imagen3Url = `https://${location}-aiplatform.googleapis.com/v1/projects/${serviceAccount.project_id}/locations/${location}/publishers/google/models/imagen-3.0-generate-001:predict`;
+    // Imagen 3.0 generate with image input
+    const imagen3Url = `https://${location}-aiplatform.googleapis.com/v1/projects/${serviceAccount.project_id}/locations/${location}/publishers/google/models/imagen-3.0-generate-002:predict`;
+
+    const aspectRatio = layout === "bonus" ? "1:1" : "16:9";
 
     const vertexResponse = await fetch(imagen3Url, {
       method: "POST",
@@ -189,18 +190,19 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: `projects/${serviceAccount.project_id}/locations/${location}/publishers/google/models/imagen-3.0-generate-001`,
-        prompt: {
-          text: stylePrompt,
-        },
-        image: {
-          source: {
-            bytesBase64Encoded: cleanBase64,
+        instances: [
+          {
+            prompt: `${stylePrompt} The product in the image must appear exactly as shown, only enhance the background.`,
+            image: {
+              bytesBase64Encoded: cleanBase64,
+            },
           },
-        },
-        config: {
+        ],
+        parameters: {
           sampleCount: 1,
           aspectRatio: aspectRatio,
+          negativePrompt: "blurry, low quality, distorted, text, watermark, logo, signature",
+          safetyFilterLevel: "block_some",
         },
       }),
     });
@@ -229,14 +231,14 @@ serve(async (req) => {
       );
     }
 
-    const result = await vertexResponse.json();
+    const vertexData = await vertexResponse.json();
     console.log("Vertex AI Imagen 3.0 response received");
 
-    const imageBase64Result = result.images?.[0]?.bytesBase64Encoded;
+    const imageBase64Result = vertexData.predictions?.[0]?.bytesBase64Encoded;
     if (!imageBase64Result) {
-      console.error("Image generation failed:", JSON.stringify(result).substring(0, 500));
+      console.error("No image in Vertex AI response:", JSON.stringify(vertexData).substring(0, 500));
       return new Response(
-        JSON.stringify({ error: "Image generation failed" }),
+        JSON.stringify({ error: "Vertex AI nevygeneroval obrázek" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
