@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.vertex-generate-image]
 verify_jwt = false
+
+[functions.vertex-style-image]
+verify_jwt = false

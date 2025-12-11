@@ -108,6 +108,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     hero?: string;
     banner?: string;
   }>({});
+  // Store original product image base64 for regeneration
+  const [productImageBase64, setProductImageBase64] = useState<string | null>(null);
 
   // MioCoin bonus state
   const [mioCoinBonuses, setMioCoinBonuses] = useState<MioCoinBonus[]>([]);
@@ -213,13 +215,22 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setForm((prev) => ({ ...prev, [field]: file }));
     };
 
-  // AI Text-to-Image generation (Vertex AI / Gemini)
+  // Convert File to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // AI Image-to-Image generation (Vertex AI Imagen 2)
   const generateAiStyledImages = async () => {
-    const prizeName = form.main_prize || form.title || "";
-    if (!prizeName) {
+    if (!form.main_image_file) {
       toast({
         title: "Chyba",
-        description: "Vyplň název hlavní výhry pro generování AI grafiky.",
+        description: "Nahraj obrázek produktu pro generování AI grafiky.",
         variant: "destructive",
       });
       return;
@@ -228,14 +239,18 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     setTransformingImage(true);
     toast({
       title: "Generuji AI grafiku…",
-      description: "Vytvářím stylizované obrázky (hero + banner). Trvá cca 30-60 sekund.",
+      description: "Stylizuji nahraný produkt (hero + banner). Trvá cca 30-60 sekund.",
     });
 
     try {
-      // Generate hero and banner variants in parallel using Vertex AI text-to-image
+      // Convert uploaded file to base64 and store for regeneration
+      const imageBase64 = await fileToBase64(form.main_image_file);
+      setProductImageBase64(imageBase64);
+
+      // Generate hero and banner variants in parallel using Vertex AI image-to-image
       const [heroResult, bannerResult] = await Promise.allSettled([
-        transformImage("hero", prizeName),
-        transformImage("banner", prizeName),
+        styleImage("hero", imageBase64),
+        styleImage("banner", imageBase64),
       ]);
 
       const heroData = heroResult.status === "fulfilled" ? heroResult.value : { success: false };
@@ -279,13 +294,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }
   };
 
-  // Regenerate only hero image (text-to-image, no upload required)
+  // Regenerate only hero image (image-to-image using stored product base64)
   const handleRegenerateHero = async () => {
-    const prizeName = form.main_prize || form.title || "";
-    if (!prizeName) {
+    if (!productImageBase64 && !form.main_image_file) {
       toast({
         title: "Chyba",
-        description: "Vyplň název hlavní výhry pro regeneraci hero obrázku.",
+        description: "Nahraj obrázek produktu pro regeneraci hero obrázku.",
         variant: "destructive",
       });
       return;
@@ -298,7 +312,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     });
 
     try {
-      const result = await transformImage("hero", prizeName);
+      // Use stored base64 or convert file again
+      let imageBase64 = productImageBase64;
+      if (!imageBase64 && form.main_image_file) {
+        imageBase64 = await fileToBase64(form.main_image_file);
+        setProductImageBase64(imageBase64);
+      }
+
+      const result = await styleImage("hero", imageBase64!);
 
       if (result.success && result.url) {
         setAiGeneratedImages((prev) => ({ ...prev, hero: result.url }));
@@ -322,13 +343,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }
   };
 
-  // Regenerate only banner image (text-to-image, no upload required)
+  // Regenerate only banner image (image-to-image using stored product base64)
   const handleRegenerateBanner = async () => {
-    const prizeName = form.main_prize || form.title || "";
-    if (!prizeName) {
+    if (!productImageBase64 && !form.main_image_file) {
       toast({
         title: "Chyba",
-        description: "Vyplň název hlavní výhry pro regeneraci banneru.",
+        description: "Nahraj obrázek produktu pro regeneraci banneru.",
         variant: "destructive",
       });
       return;
@@ -341,7 +361,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     });
 
     try {
-      const result = await transformImage("banner", prizeName);
+      // Use stored base64 or convert file again
+      let imageBase64 = productImageBase64;
+      if (!imageBase64 && form.main_image_file) {
+        imageBase64 = await fileToBase64(form.main_image_file);
+        setProductImageBase64(imageBase64);
+      }
+
+      const result = await styleImage("banner", imageBase64!);
 
       if (result.success && result.url) {
         setAiGeneratedImages((prev) => ({ ...prev, banner: result.url }));
@@ -365,20 +392,20 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }
   };
 
-  // Text-to-image transformation using Vertex AI (no input image required)
-  const transformImage = async (
+  // Image-to-image styling using Vertex AI Imagen 2
+  const styleImage = async (
     layout: "hero" | "banner" | "bonus",
-    prizeName: string
+    imageBase64: string
   ): Promise<{ success: boolean; url?: string; error?: string }> => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vertex-generate-image`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vertex-style-image`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             layout,
-            prize_name: prizeName,
+            image_base64: imageBase64,
           }),
         }
       );
@@ -473,13 +500,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }
   };
 
-  // AI-powered banner generation using Vertex AI text-to-image
+  // AI-powered banner generation using Vertex AI image-to-image
   const handleGenerateBanner = async () => {
-    const prizeName = form.main_prize || form.title || "";
-    if (!prizeName) {
+    if (!productImageBase64 && !form.main_image_file) {
       toast({
         title: "Chyba",
-        description: "Vyplň název hlavní výhry pro generování AI banneru.",
+        description: "Nahraj obrázek produktu pro generování AI banneru.",
         variant: "destructive",
       });
       return;
@@ -492,7 +518,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     });
 
     try {
-      const result = await transformImage("banner", prizeName);
+      // Use stored base64 or convert file
+      let imageBase64 = productImageBase64;
+      if (!imageBase64 && form.main_image_file) {
+        imageBase64 = await fileToBase64(form.main_image_file);
+        setProductImageBase64(imageBase64);
+      }
+
+      const result = await styleImage("banner", imageBase64!);
 
       if (result.success && result.url) {
         setAiGeneratedImages((prev) => ({ ...prev, banner: result.url }));
@@ -632,7 +665,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
     const prizeToAdd = { ...newPhysicalPrize };
     
-    // If image file is provided, generate AI styled version using text-to-image
+    // If image file is provided, generate AI styled version using image-to-image
     if (prizeToAdd.image_file) {
       prizeToAdd.ai_generating = true;
       setPhysicalPrizes((prev) => [...prev, prizeToAdd]);
@@ -640,12 +673,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       
       toast({
         title: "Generuji AI grafiku pro bonus…",
-        description: "Vytvářím stylizovaný obrázek bonusové výhry pomocí Vertex AI.",
+        description: "Stylizuji nahraný obrázek bonusové výhry pomocí Vertex AI.",
       });
 
       try {
-        // Use text-to-image with the prize description
-        const result = await transformImage("bonus", prizeToAdd.description);
+        // Convert bonus image to base64 and use image-to-image
+        const bonusImageBase64 = await fileToBase64(prizeToAdd.image_file);
+        const result = await styleImage("bonus", bonusImageBase64);
         
         setPhysicalPrizes((prev) => 
           prev.map((p) => 
@@ -658,7 +692,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         if (result.success) {
           toast({
             title: "AI grafika vytvořena",
-            description: "Bonusový obrázek byl vygenerován pomocí Vertex AI.",
+            description: "Bonusový obrázek byl stylizován pomocí Vertex AI.",
           });
         }
       } catch (err) {
