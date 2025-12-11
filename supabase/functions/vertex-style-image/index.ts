@@ -171,18 +171,17 @@ serve(async (req) => {
       cleanBase64 = image_base64.split(",")[1];
     }
 
-    console.log(`Styling ${layout} image with Vertex AI Imagen 2 (image-to-image editing)`);
+    console.log(`Styling ${layout} image with Vertex AI Imagen 3.0 (image-to-image)`);
 
     const accessToken = await getAccessToken(serviceAccount);
 
-    // Use Imagen 2 for image editing (imagegeneration@006 supports edit)
     const location = "us-central1";
-    const vertexUrl = `https://${location}-aiplatform.googleapis.com/v1/projects/${serviceAccount.project_id}/locations/${location}/publishers/google/models/imagegeneration@006:predict`;
-
     const stylePrompt = getStylePrompt(layout);
 
-    // Use Imagen 3 generate (not edit) - more reliable than edit mode
+    // Imagen 3.0 generate with image input
     const imagen3Url = `https://${location}-aiplatform.googleapis.com/v1/projects/${serviceAccount.project_id}/locations/${location}/publishers/google/models/imagen-3.0-generate-002:predict`;
+
+    const aspectRatio = layout === "bonus" ? "1:1" : "16:9";
 
     const vertexResponse = await fetch(imagen3Url, {
       method: "POST",
@@ -193,30 +192,24 @@ serve(async (req) => {
       body: JSON.stringify({
         instances: [
           {
-            prompt: `${stylePrompt} The product in the reference image must appear exactly as shown, only the background changes.`,
-            referenceImages: [
-              {
-                referenceType: 1, // REFERENCE_TYPE_RAW
-                referenceId: 1,
-                referenceImage: {
-                  bytesBase64Encoded: cleanBase64,
-                },
-              },
-            ],
+            prompt: `${stylePrompt} The product in the image must appear exactly as shown, only enhance the background.`,
+            image: {
+              bytesBase64Encoded: cleanBase64,
+            },
           },
         ],
         parameters: {
           sampleCount: 1,
-          aspectRatio: layout === "banner" ? "16:9" : layout === "hero" ? "16:9" : "1:1",
-          negativePrompt: "blurry, low quality, distorted product, deformed product, text, watermark, logo, signature, changed product shape, modified product",
-          personGeneration: "dont_allow",
+          aspectRatio: aspectRatio,
+          negativePrompt: "blurry, low quality, distorted, text, watermark, logo, signature",
+          safetyFilterLevel: "block_some",
         },
       }),
     });
 
     if (!vertexResponse.ok) {
       const errorText = await vertexResponse.text();
-      console.error("Vertex AI Imagen 2 error:", vertexResponse.status, errorText);
+      console.error("Vertex AI Imagen 3.0 error:", vertexResponse.status, errorText);
 
       if (vertexResponse.status === 429) {
         return new Response(
@@ -239,7 +232,7 @@ serve(async (req) => {
     }
 
     const vertexData = await vertexResponse.json();
-    console.log("Vertex AI Imagen 2 response received");
+    console.log("Vertex AI Imagen 3.0 response received");
 
     const imageBase64Result = vertexData.predictions?.[0]?.bytesBase64Encoded;
     if (!imageBase64Result) {
