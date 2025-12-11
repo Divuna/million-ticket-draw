@@ -35,7 +35,7 @@ async function generateJWT(serviceAccount: ServiceAccountKey): Promise<string> {
   const payload = {
     iss: serviceAccount.client_email,
     sub: serviceAccount.client_email,
-    aud: "https://aiplatform.googleapis.com/",
+    aud: "https://oauth2.googleapis.com/token",
     iat: now,
     exp: exp,
     scope: "https://www.googleapis.com/auth/cloud-platform",
