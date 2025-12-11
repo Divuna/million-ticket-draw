@@ -181,7 +181,21 @@ serve(async (req) => {
     // Imagen 3.0 generate with image input
     const imagen3Url = `https://${location}-aiplatform.googleapis.com/v1/projects/${serviceAccount.project_id}/locations/${location}/publishers/google/models/imagen-3.0-generate-002:predict`;
 
-    const aspectRatio = layout === "bonus" ? "1:1" : "16:9";
+    const finalPrompt = `${stylePrompt} The product in the image must appear exactly as shown, only enhance the background.`;
+
+    const requestBody = {
+      instances: [
+        {
+          prompt: finalPrompt,
+          image: { bytesBase64Encoded: cleanBase64 }
+        }
+      ],
+      parameters: {
+        sampleCount: 1,
+        temperature: 0.4,
+        guidanceScale: 0
+      }
+    };
 
     const vertexResponse = await fetch(imagen3Url, {
       method: "POST",
@@ -189,22 +203,7 @@ serve(async (req) => {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        instances: [
-          {
-            prompt: `${stylePrompt} The product in the image must appear exactly as shown, only enhance the background.`,
-            image: {
-              bytesBase64Encoded: cleanBase64,
-            },
-          },
-        ],
-        parameters: {
-          sampleCount: 1,
-          aspectRatio: aspectRatio,
-          negativePrompt: "blurry, low quality, distorted, text, watermark, logo, signature",
-          safetyFilterLevel: "block_some",
-        },
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!vertexResponse.ok) {
