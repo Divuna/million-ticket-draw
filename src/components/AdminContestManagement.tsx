@@ -458,7 +458,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-contest-description`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-contest-description-openai`,
         {
           method: "POST",
           headers: {
@@ -468,8 +468,6 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           body: JSON.stringify({
             title: form.title,
             main_prize: form.main_prize,
-            ticket_count: form.ticket_count,
-            ticket_price: form.ticket_price,
           }),
         }
       );

@@ -36,6 +36,9 @@ verify_jwt = false
 [functions.generate-contest-description]
 verify_jwt = false
 
+[functions.generate-contest-description-openai]
+verify_jwt = false
+
 [functions.transform-prize-image]
 verify_jwt = false
 
