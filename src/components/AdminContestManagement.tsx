@@ -4,7 +4,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Pencil, X, Sparkles, ImagePlus, Wand2, Trash2, Coins, AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Pencil,
+  X,
+  Sparkles,
+  ImagePlus,
+  Wand2,
+  Trash2,
+  Coins,
+  AlertCircle,
+  CheckCircle2,
+} from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +24,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ContestData {
   contest_id: string;
@@ -101,7 +112,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   const [regeneratingHero, setRegeneratingHero] = useState(false);
   const [regeneratingBanner, setRegeneratingBanner] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
-  
+
   // AI image transformation state
   const [transformingImage, setTransformingImage] = useState(false);
   const [aiGeneratedImages, setAiGeneratedImages] = useState<{
@@ -166,10 +177,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   }, [editingContest, open]);
 
   const loadExistingBonuses = async (contestId: string) => {
-    const { data, error } = await supabase
-      .from("bonus_prizes")
-      .select("*")
-      .eq("contest_id", contestId);
+    const { data, error } = await supabase.from("bonus_prizes").select("*").eq("contest_id", contestId);
 
     if (error) {
       console.error("Error loading bonuses:", error);
@@ -209,7 +217,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     setForm((prev) => ({ ...prev, status: value }));
   };
 
-  const handleFileChange = (field: "main_image_file" | "banner_image_file" | "detail_image_file") => 
+  const handleFileChange =
+    (field: "main_image_file" | "banner_image_file" | "detail_image_file") =>
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0] || null;
       setForm((prev) => ({ ...prev, [field]: file }));
@@ -225,7 +234,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     });
   };
 
-  // AI Image-to-Image generation (Vertex AI Imagen 2)
+  // Helper – jednotný název ceny pro AI
+  const getPrizeName = (fallback?: string) => {
+    return (
+      (form.main_prize && form.main_prize.trim()) || (form.title && form.title.trim()) || fallback || "Hlavní výhra"
+    );
+  };
+
+  // AI Image-to-Image generation (Vertex AI Imagen)
   const generateAiStyledImages = async () => {
     if (!form.main_image_file) {
       toast({
@@ -246,11 +262,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       // Convert uploaded file to base64 and store for regeneration
       const imageBase64 = await fileToBase64(form.main_image_file);
       setProductImageBase64(imageBase64);
+      const prizeName = getPrizeName();
 
       // Generate hero and banner variants in parallel using Vertex AI image-to-image
       const [heroResult, bannerResult] = await Promise.allSettled([
-        styleImage("hero", imageBase64),
-        styleImage("banner", imageBase64),
+        styleImage("hero", imageBase64, prizeName),
+        styleImage("banner", imageBase64, prizeName),
       ]);
 
       const heroData = heroResult.status === "fulfilled" ? heroResult.value : { success: false };
@@ -319,7 +336,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         setProductImageBase64(imageBase64);
       }
 
-      const result = await styleImage("hero", imageBase64!);
+      const prizeName = getPrizeName();
+      const result = await styleImage("hero", imageBase64!, prizeName);
 
       if (result.success && result.url) {
         setAiGeneratedImages((prev) => ({ ...prev, hero: result.url }));
@@ -368,7 +386,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         setProductImageBase64(imageBase64);
       }
 
-      const result = await styleImage("banner", imageBase64!);
+      const prizeName = getPrizeName();
+      const result = await styleImage("banner", imageBase64!, prizeName);
 
       if (result.success && result.url) {
         setAiGeneratedImages((prev) => ({ ...prev, banner: result.url }));
@@ -392,23 +411,22 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }
   };
 
-  // Image-to-image styling using Vertex AI Imagen 2
+  // Image-to-image styling using Vertex AI Imagen – POSÍLÁME I prize_name
   const styleImage = async (
     layout: "hero" | "banner" | "bonus",
-    imageBase64: string
+    imageBase64: string,
+    prizeName: string,
   ): Promise<{ success: boolean; url?: string; error?: string }> => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vertex-style-image`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            layout,
-            image_base64: imageBase64,
-          }),
-        }
-      );
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vertex-style-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          layout,
+          prize_name: prizeName,
+          image_base64: imageBase64,
+        }),
+      });
 
       const result = await response.json();
 
@@ -469,7 +487,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             title: form.title,
             main_prize: form.main_prize,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -478,7 +496,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       }
 
       const result = await response.json();
-      
+
       if (result.description) {
         setForm((prev) => ({ ...prev, description: result.description }));
         toast({
@@ -523,7 +541,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         setProductImageBase64(imageBase64);
       }
 
-      const result = await styleImage("banner", imageBase64!);
+      const prizeName = getPrizeName();
+      const result = await styleImage("banner", imageBase64!, prizeName);
 
       if (result.success && result.url) {
         setAiGeneratedImages((prev) => ({ ...prev, banner: result.url }));
@@ -662,13 +681,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }
 
     const prizeToAdd = { ...newPhysicalPrize };
-    
+
     // If image file is provided, generate AI styled version using image-to-image
     if (prizeToAdd.image_file) {
       prizeToAdd.ai_generating = true;
       setPhysicalPrizes((prev) => [...prev, prizeToAdd]);
       setNewPhysicalPrize({ ticket_position: 1, description: "", image_file: null });
-      
+
       toast({
         title: "Generuji AI grafiku pro bonus…",
         description: "Stylizuji nahraný obrázek bonusové výhry pomocí Vertex AI.",
@@ -677,14 +696,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       try {
         // Convert bonus image to base64 and use image-to-image
         const bonusImageBase64 = await fileToBase64(prizeToAdd.image_file);
-        const result = await styleImage("bonus", bonusImageBase64);
-        
-        setPhysicalPrizes((prev) => 
-          prev.map((p) => 
+        const prizeName = prizeToAdd.description || getPrizeName("Bonusová výhra");
+        const result = await styleImage("bonus", bonusImageBase64, prizeName);
+
+        setPhysicalPrizes((prev) =>
+          prev.map((p) =>
             p.ticket_position === prizeToAdd.ticket_position && p.description === prizeToAdd.description
               ? { ...p, ai_image_url: result.url, ai_generating: false }
-              : p
-          )
+              : p,
+          ),
         );
 
         if (result.success) {
@@ -695,12 +715,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         }
       } catch (err) {
         console.error("AI bonus image error:", err);
-        setPhysicalPrizes((prev) => 
-          prev.map((p) => 
+        setPhysicalPrizes((prev) =>
+          prev.map((p) =>
             p.ticket_position === prizeToAdd.ticket_position && p.description === prizeToAdd.description
               ? { ...p, ai_generating: false }
-              : p
-          )
+              : p,
+          ),
         );
       }
     } else {
@@ -755,15 +775,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       }
 
       // Get contest_id for bonus saving and additional updates
-      const contestId = isEditingContest 
-        ? editingContest.contest_id 
-        : (contestResult as any)?.contest_id;
+      const contestId = isEditingContest ? editingContest.contest_id : (contestResult as any)?.contest_id;
 
       // Update AI-generated images directly in contests table
       // PRIORITY: AI-generated URLs ALWAYS override manual uploads
       if (contestId) {
         const additionalUpdates: Record<string, string | null> = {};
-        
+
         // Handle secondary/detail image (hero layout)
         // AI-generated URL has priority, then manual upload as fallback
         if (aiGeneratedImages.hero) {
@@ -774,7 +792,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           additionalUpdates.main_prize_secondary_image = detailPath;
           console.log("Using uploaded detail image:", detailPath);
         }
-        
+
         // Handle banner image
         // AI-generated URL has priority, then manual upload as fallback
         if (aiGeneratedImages.banner) {
@@ -785,15 +803,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           additionalUpdates.banner_image = bannerPath;
           console.log("Using uploaded banner image:", bannerPath);
         }
-        
+
         // Apply additional updates if any
         if (Object.keys(additionalUpdates).length > 0) {
           console.log("Saving contest image updates:", additionalUpdates);
-          const { error: updateError } = await supabase
-            .from("contests")
-            .update(additionalUpdates)
-            .eq("id", contestId);
-          
+          const { error: updateError } = await supabase.from("contests").update(additionalUpdates).eq("id", contestId);
+
           if (updateError) {
             console.error("Error updating AI images:", updateError);
           } else {
@@ -822,7 +837,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         for (const prize of physicalPrizes) {
           // Prefer AI-generated image, then uploaded file, then existing URL
           let imageUrl = prize.ai_image_url || prize.image_url;
-          
+
           if (!imageUrl && prize.image_file) {
             const ext = prize.image_file.name.split(".").pop();
             const fileName = `bonus-prizes/${contestId}/${crypto.randomUUID()}.${ext}`;
@@ -859,13 +874,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }
   };
 
-
   const isEditing = !!editingContest;
   const totalMioCoins = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
 
   // Validation logic for each tab
   const hasMainImage = !!(form.main_image_file || form.main_image_url || (isEditing && editingContest?.main_image));
-  
+
   const validation = {
     basic: {
       isValid: !!(form.title.trim() && form.main_prize.trim() && form.ticket_count > 0 && form.ticket_price > 0),
@@ -878,16 +892,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     },
     graphics: {
       isValid: hasMainImage,
-      errors: [
-        !hasMainImage && "Hlavní obrázek",
-      ].filter(Boolean) as string[],
+      errors: [!hasMainImage && "Hlavní obrázek"].filter(Boolean) as string[],
     },
   };
 
   const isFormValid = validation.basic.isValid && validation.graphics.isValid;
 
   const TabIndicator = ({ isValid }: { isValid: boolean }) => (
-    <span className={`ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full ${isValid ? 'text-green-500' : 'text-red-500'}`}>
+    <span
+      className={`ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full ${isValid ? "text-green-500" : "text-red-500"}`}
+    >
       {isValid ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
     </span>
   );
@@ -921,23 +935,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             <TabsContent value="basic" className="space-y-4 mt-0">
               <div>
                 <Label>Název soutěže</Label>
-                <Input 
-                  value={form.title} 
-                  onChange={handleTitleChange} 
-                  placeholder="Např. Corvette C8" 
-                />
+                <Input value={form.title} onChange={handleTitleChange} placeholder="Např. Corvette C8" />
               </div>
 
               <div>
                 <Label>Hlavní výhra</Label>
-                <Input 
-                  value={form.main_prize} 
-                  onChange={handleChange("main_prize")} 
-                  placeholder="Např. Corvette C8" 
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Automaticky předvyplněno z názvu soutěže
-                </p>
+                <Input value={form.main_prize} onChange={handleChange("main_prize")} placeholder="Např. Corvette C8" />
+                <p className="text-xs text-muted-foreground mt-1">Automaticky předvyplněno z názvu soutěže</p>
               </div>
 
               {/* AI Popis hlavní výhry - moved here */}
@@ -995,8 +999,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   </SelectTrigger>
                   <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
                     {STATUS_OPTIONS.map((option) => (
-                      <SelectItem 
-                        key={option.value} 
+                      <SelectItem
+                        key={option.value}
                         value={option.value}
                         className="text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"
                       >
@@ -1022,20 +1026,20 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <Label>Celkový počet MioCoinů ve hře</Label>
-                    <Input 
-                      type="number" 
-                      min={1} 
-                      value={totalMioCoinsInput} 
-                      onChange={(e) => setTotalMioCoinsInput(Number(e.target.value))} 
+                    <Input
+                      type="number"
+                      min={1}
+                      value={totalMioCoinsInput}
+                      onChange={(e) => setTotalMioCoinsInput(Number(e.target.value))}
                     />
                   </div>
                   <div className="flex-1">
                     <Label>Hodnota jednoho bonusu (po kolika)</Label>
-                    <Input 
-                      type="number" 
-                      min={1} 
-                      value={stepValue} 
-                      onChange={(e) => setStepValue(Number(e.target.value))} 
+                    <Input
+                      type="number"
+                      min={1}
+                      value={stepValue}
+                      onChange={(e) => setStepValue(Number(e.target.value))}
                     />
                   </div>
                 </div>
@@ -1089,7 +1093,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
               {mioCoinBonuses.length > 0 && (
                 <div className="text-sm text-muted-foreground">
-                  Vygenerováno {mioCoinBonuses.length} pozic s celkovou hodnotou {totalMioCoins.toLocaleString("cs-CZ")} MioCoinů.
+                  Vygenerováno {mioCoinBonuses.length} pozic s celkovou hodnotou {totalMioCoins.toLocaleString("cs-CZ")}{" "}
+                  MioCoinů.
                 </div>
               )}
             </TabsContent>
@@ -1101,7 +1106,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               <div className="border border-dashed border-white/20 rounded-lg p-4 space-y-4">
                 <div>
                   <Label>Popis výhry</Label>
-                  <Input 
+                  <Input
                     value={newPhysicalPrize.description}
                     onChange={(e) => setNewPhysicalPrize((prev) => ({ ...prev, description: e.target.value }))}
                     placeholder="Např. iPhone 15 Pro"
@@ -1110,20 +1115,24 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
                 <div>
                   <Label>Pozice tiketu</Label>
-                  <Input 
+                  <Input
                     type="number"
                     min={1}
                     value={newPhysicalPrize.ticket_position}
-                    onChange={(e) => setNewPhysicalPrize((prev) => ({ ...prev, ticket_position: Number(e.target.value) }))}
+                    onChange={(e) =>
+                      setNewPhysicalPrize((prev) => ({ ...prev, ticket_position: Number(e.target.value) }))
+                    }
                   />
                 </div>
 
                 <div>
                   <Label>Obrázek výhry (volitelné)</Label>
-                  <Input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={(e) => setNewPhysicalPrize((prev) => ({ ...prev, image_file: e.target.files?.[0] || null }))}
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) =>
+                      setNewPhysicalPrize((prev) => ({ ...prev, image_file: e.target.files?.[0] || null }))
+                    }
                   />
                 </div>
 
@@ -1138,11 +1147,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   <Label>Přidané výhry ({physicalPrizes.length})</Label>
                   {physicalPrizes.map((prize, index) => {
                     // Prefer AI image, then original
-                    const thumbnailSrc = prize.ai_image_url 
-                      || (prize.image_file ? URL.createObjectURL(prize.image_file) : null)
-                      || prize.image_url 
-                      || null;
-                    
+                    const thumbnailSrc =
+                      prize.ai_image_url ||
+                      (prize.image_file ? URL.createObjectURL(prize.image_file) : null) ||
+                      prize.image_url ||
+                      null;
+
                     return (
                       <div key={index} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
                         <div className="flex items-center gap-3">
@@ -1152,9 +1162,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                             </div>
                           ) : thumbnailSrc ? (
                             <div className="relative">
-                              <img 
-                                src={thumbnailSrc} 
-                                alt={prize.description} 
+                              <img
+                                src={thumbnailSrc}
+                                alt={prize.description}
                                 className="w-10 h-10 rounded object-cover border border-white/10"
                               />
                               {prize.ai_image_url && (
@@ -1170,7 +1180,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                             )}
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => removePhysicalPrize(index)} disabled={prize.ai_generating}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removePhysicalPrize(index)}
+                          disabled={prize.ai_generating}
+                        >
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </div>
@@ -1190,16 +1205,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 <p className="text-xs text-muted-foreground">
                   Nahraj obrázek hlavní výhry. AI automaticky vytvoří stylizovaný hero obrázek a banner v OneMil stylu.
                 </p>
-                <Input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleFileChange("main_image_file")} 
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange("main_image_file")}
                   disabled={transformingImage}
                 />
                 {isEditing && editingContest?.main_image && !form.main_image_file && !form.main_image_url && (
                   <p className="text-xs text-muted-foreground">Aktuální: {editingContest.main_image}</p>
                 )}
-                
+
                 {transformingImage && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -1221,7 +1236,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                         variant="ghost"
                         size="sm"
                         onClick={handleRegenerateHero}
-                        disabled={regeneratingHero || transformingImage || (!form.main_image_file && !form.main_image_url && !editingContest?.main_image)}
+                        disabled={
+                          regeneratingHero ||
+                          transformingImage ||
+                          (!form.main_image_file && !form.main_image_url && !editingContest?.main_image)
+                        }
                         className="h-7 text-xs"
                       >
                         {regeneratingHero ? (
@@ -1235,9 +1254,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                       </Button>
                     </div>
                     {aiGeneratedImages.hero ? (
-                      <img 
-                        src={aiGeneratedImages.hero} 
-                        alt="AI Hero" 
+                      <img
+                        src={aiGeneratedImages.hero}
+                        alt="AI Hero"
                         className="w-full h-32 object-cover rounded-md border border-primary/20"
                       />
                     ) : (
@@ -1259,7 +1278,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                         variant="ghost"
                         size="sm"
                         onClick={handleRegenerateBanner}
-                        disabled={regeneratingBanner || transformingImage || (!form.main_image_file && !form.main_image_url && !editingContest?.main_image)}
+                        disabled={
+                          regeneratingBanner ||
+                          transformingImage ||
+                          (!form.main_image_file && !form.main_image_url && !editingContest?.main_image)
+                        }
                         className="h-7 text-xs"
                       >
                         {regeneratingBanner ? (
@@ -1273,9 +1296,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                       </Button>
                     </div>
                     {aiGeneratedImages.banner ? (
-                      <img 
-                        src={aiGeneratedImages.banner} 
-                        alt="AI Banner" 
+                      <img
+                        src={aiGeneratedImages.banner}
+                        alt="AI Banner"
                         className="w-full h-32 object-cover rounded-md border border-primary/20"
                       />
                     ) : (
@@ -1290,17 +1313,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               <div>
                 <Label>Detail obrázek (manuální override)</Label>
                 <Input type="file" accept="image/*" onChange={handleFileChange("detail_image_file")} />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Volitelné - přepíše AI vygenerovaný hero obrázek.
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">Volitelné - přepíše AI vygenerovaný hero obrázek.</p>
               </div>
 
               <div>
                 <Label>Banner obrázek (manuální override)</Label>
                 <Input type="file" accept="image/*" onChange={handleFileChange("banner_image_file")} />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Volitelné - přepíše AI vygenerovaný banner.
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">Volitelné - přepíše AI vygenerovaný banner.</p>
               </div>
 
               <div className="border border-dashed border-white/20 rounded-lg p-4 space-y-3">
@@ -1331,12 +1350,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   </Button>
                 </div>
 
-                {form.main_image_url && (
+                {(aiGeneratedImages.banner || form.banner_image_url) && (
                   <div className="mt-3">
                     <Label className="text-sm mb-2 block">Náhled AI banneru:</Label>
-                    <img 
-                      src={form.main_image_url} 
-                      alt="AI vygenerovaný banner" 
+                    <img
+                      src={aiGeneratedImages.banner || form.banner_image_url}
+                      alt="AI vygenerovaný banner"
                       className="w-full max-h-48 object-cover rounded-md border border-white/10"
                     />
                   </div>
@@ -1367,7 +1386,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">MioCoin bonusy:</span>
-                  <span className="font-medium">{totalMioCoins.toLocaleString("cs-CZ")} MC ({mioCoinBonuses.length} pozic)</span>
+                  <span className="font-medium">
+                    {totalMioCoins.toLocaleString("cs-CZ")} MC ({mioCoinBonuses.length} pozic)
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Věcné výhry:</span>
@@ -1375,7 +1396,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
-                  <span className="font-medium">{STATUS_OPTIONS.find((o) => o.value === form.status)?.label || form.status}</span>
+                  <span className="font-medium">
+                    {STATUS_OPTIONS.find((o) => o.value === form.status)?.label || form.status}
+                  </span>
                 </div>
               </div>
 
@@ -1491,17 +1514,14 @@ export const AdminContestManagement: React.FC = () => {
         throw new Error("Nejste přihlášeni.");
       }
 
-      const response = await fetch(
-        `https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/close-contest`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ contest_id: contestId }),
-        }
-      );
+      const response = await fetch(`https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/close-contest`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ contest_id: contestId }),
+      });
 
       const result = await response.json();
 
@@ -1541,7 +1561,12 @@ export const AdminContestManagement: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Správa soutěží</h2>
-        <Button onClick={() => { setEditingContest(null); setModalOpen(true); }}>
+        <Button
+          onClick={() => {
+            setEditingContest(null);
+            setModalOpen(true);
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" /> Nová soutěž
         </Button>
       </div>
@@ -1571,7 +1596,7 @@ export const AdminContestManagement: React.FC = () => {
 
                 <TableBody>
                   {contests.map((contest, index) => (
-                    <TableRow 
+                    <TableRow
                       key={contest.contest_id}
                       className={`border-b border-white/5 transition-colors hover:bg-white/5 ${index % 2 === 0 ? "bg-white/[0.02]" : ""}`}
                     >
@@ -1584,7 +1609,9 @@ export const AdminContestManagement: React.FC = () => {
 
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusBadgeClass(contest.status)}`}>
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusBadgeClass(contest.status)}`}
+                          >
                             {STATUS_OPTIONS.find((opt) => opt.value === contest.status)?.label || contest.status}
                           </span>
                           <Select
@@ -1601,8 +1628,8 @@ export const AdminContestManagement: React.FC = () => {
                             </SelectTrigger>
                             <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
                               {STATUS_OPTIONS.map((option) => (
-                                <SelectItem 
-                                  key={option.value} 
+                                <SelectItem
+                                  key={option.value}
                                   value={option.value}
                                   className="text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"
                                 >
@@ -1626,11 +1653,7 @@ export const AdminContestManagement: React.FC = () => {
 
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(contest)}
-                          >
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(contest)}>
                             <Pencil className="h-4 w-4 mr-1" />
                             Upravit
                           </Button>
