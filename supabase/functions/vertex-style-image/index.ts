@@ -181,7 +181,10 @@ serve(async (req) => {
 
     const stylePrompt = getStylePrompt(layout);
 
-    const vertexResponse = await fetch(vertexUrl, {
+    // Use Imagen 3 generate (not edit) - more reliable than edit mode
+    const imagen3Url = `https://${location}-aiplatform.googleapis.com/v1/projects/${serviceAccount.project_id}/locations/${location}/publishers/google/models/imagen-3.0-generate-002:predict`;
+
+    const vertexResponse = await fetch(imagen3Url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -190,20 +193,23 @@ serve(async (req) => {
       body: JSON.stringify({
         instances: [
           {
-            prompt: stylePrompt,
-            image: {
-              bytesBase64Encoded: cleanBase64,
-            },
+            prompt: `${stylePrompt} The product in the reference image must appear exactly as shown, only the background changes.`,
+            referenceImages: [
+              {
+                referenceType: 1, // REFERENCE_TYPE_RAW
+                referenceId: 1,
+                referenceImage: {
+                  bytesBase64Encoded: cleanBase64,
+                },
+              },
+            ],
           },
         ],
         parameters: {
           sampleCount: 1,
-          editMode: "product-image",
-          editConfig: {
-            baseSteps: 75,
-            guidanceScale: 60,
-          },
+          aspectRatio: layout === "banner" ? "16:9" : layout === "hero" ? "16:9" : "1:1",
           negativePrompt: "blurry, low quality, distorted product, deformed product, text, watermark, logo, signature, changed product shape, modified product",
+          personGeneration: "dont_allow",
         },
       }),
     });
