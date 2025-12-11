@@ -181,12 +181,12 @@ serve(async (req) => {
     // Imagen 3.0 generate with image input
     const imagen3Url = `https://${location}-aiplatform.googleapis.com/v1/projects/${serviceAccount.project_id}/locations/${location}/publishers/google/models/imagen-3.0-generate-002:predict`;
 
-    const finalPrompt = `${stylePrompt} The product in the image must appear exactly as shown, only enhance the background.`;
+    const prompt = `${stylePrompt} The product in the image must appear exactly as shown, only enhance the background.`;
 
     const requestBody = {
       instances: [
         {
-          prompt: finalPrompt,
+          prompt,
           image: { bytesBase64Encoded: cleanBase64 }
         }
       ],
