@@ -82,65 +82,30 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Sofinity payload:', JSON.stringify(sofinityPayload, null, 2));
 
-    // Get Sofinity API key from settings
-    const { data: settingsData, error: settingsError } = await supabase
-      .from('settings')
-      .select('value')
-      .eq('key', 'sofinity_api_key')
-      .single();
+    // Get Sofinity API credentials from environment variables
+    const sofinityApiUrl = Deno.env.get('SOFINITY_API_URL');
+    const sofinityApiKey = Deno.env.get('SOFINITY_API_KEY');
 
-    if (settingsError || !settingsData?.value) {
-      console.error('Failed to retrieve Sofinity API key from settings:', settingsError);
-      throw new Error('Sofinity API key not configured in settings');
+    if (!sofinityApiUrl) {
+      console.error('Missing SOFINITY_API_URL environment variable');
+      throw new Error('SOFINITY_API_URL not configured');
     }
 
-    const sofinityApiKey = settingsData.value;
-    const sofinityUrl = Deno.env.get('SOFINITY_URL');
-
-    if (!sofinityUrl) {
-      console.error('Missing Sofinity URL configuration');
-      throw new Error('Sofinity URL not found');
+    if (!sofinityApiKey) {
+      console.error('Missing SOFINITY_API_KEY environment variable');
+      throw new Error('SOFINITY_API_KEY not configured');
     }
 
-    // Generate security headers
-    const requestTimestamp = new Date().toISOString();
-    const idempotencyKey = crypto.randomUUID();
     const bodyString = JSON.stringify(sofinityPayload);
 
-    // Generate HMAC-SHA256 signature
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(sofinityApiKey);
-    const messageData = encoder.encode(bodyString + requestTimestamp);
-    
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      keyData,
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    );
-    
-    const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
-    const signatureArray = Array.from(new Uint8Array(signatureBuffer));
-    const signature = signatureArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    console.log('Sending to Sofinity API:', sofinityApiUrl);
 
-    console.log('Security headers:', {
-      timestamp: requestTimestamp,
-      idempotencyKey,
-      signatureLength: signature.length
-    });
-
-    // Send to Sofinity edge function endpoint
-    const sofinityResponse = await fetch(`${sofinityUrl}/functions/v1/sofinity-event`, {
+    // Send to Sofinity API with Bearer token authorization
+    const sofinityResponse = await fetch(sofinityApiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': sofinityApiKey,
-        'x-api-key': sofinityApiKey,
-        'x-signature': signature,
-        'x-timestamp': requestTimestamp,
-        'x-idempotency-key': idempotencyKey,
-        'Prefer': 'return=representation'
+        'Authorization': `Bearer ${sofinityApiKey}`
       },
       body: bodyString
     });
