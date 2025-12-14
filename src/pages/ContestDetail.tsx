@@ -179,7 +179,8 @@ export default function ContestDetail() {
 
       const typedBonus = (bonusData ?? []) as BonusPrize[];
 
-      setBonusPrizes(typedBonus.filter((b) => !b.amount || b.amount === 0));
+      // Display ALL bonus prizes without filtering, grouping, or deduplicating
+      setBonusPrizes(typedBonus);
 
       setBonusMiocoins(typedBonus.reduce((sum, b) => (b.amount ? sum + b.amount : sum), 0));
 
