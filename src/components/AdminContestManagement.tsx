@@ -9,9 +9,7 @@ import {
   Plus,
   Pencil,
   X,
-  Sparkles,
   ImagePlus,
-  Wand2,
   Trash2,
   Coins,
   AlertCircle,
@@ -681,53 +679,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }
 
     const prizeToAdd = { ...newPhysicalPrize };
-
-    // If image file is provided, generate AI styled version using image-to-image
-    if (prizeToAdd.image_file) {
-      prizeToAdd.ai_generating = true;
-      setPhysicalPrizes((prev) => [...prev, prizeToAdd]);
-      setNewPhysicalPrize({ ticket_position: 1, description: "", image_file: null });
-
-      toast({
-        title: "Generuji AI grafiku pro bonus…",
-        description: "Stylizuji nahraný obrázek bonusové výhry pomocí Vertex AI.",
-      });
-
-      try {
-        // Convert bonus image to base64 and use image-to-image
-        const bonusImageBase64 = await fileToBase64(prizeToAdd.image_file);
-        const prizeName = prizeToAdd.description || getPrizeName("Bonusová výhra");
-        const result = await styleImage("bonus", bonusImageBase64, prizeName);
-
-        setPhysicalPrizes((prev) =>
-          prev.map((p) =>
-            p.ticket_position === prizeToAdd.ticket_position && p.description === prizeToAdd.description
-              ? { ...p, ai_image_url: result.url, ai_generating: false }
-              : p,
-          ),
-        );
-
-        if (result.success) {
-          toast({
-            title: "AI grafika vytvořena",
-            description: "Bonusový obrázek byl stylizován pomocí Vertex AI.",
-          });
-        }
-      } catch (err) {
-        console.error("AI bonus image error:", err);
-        setPhysicalPrizes((prev) =>
-          prev.map((p) =>
-            p.ticket_position === prizeToAdd.ticket_position && p.description === prizeToAdd.description
-              ? { ...p, ai_generating: false }
-              : p,
-          ),
-        );
-      }
-    } else {
-      setPhysicalPrizes((prev) => [...prev, prizeToAdd]);
-      setNewPhysicalPrize({ ticket_position: 1, description: "", image_file: null });
-      toast({ title: "Výhra přidána", description: "Věcná výhra byla přidána." });
-    }
+    
+    // Add prize directly without AI processing
+    setPhysicalPrizes((prev) => [...prev, prizeToAdd]);
+    setNewPhysicalPrize({ ticket_position: 1, description: "", image_file: null });
+    toast({ title: "Výhra přidána", description: "Věcná výhra byla přidána." });
   };
 
   const removePhysicalPrize = (index: number) => {
@@ -777,28 +733,19 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       // Get contest_id for bonus saving and additional updates
       const contestId = isEditingContest ? editingContest.contest_id : (contestResult as any)?.contest_id;
 
-      // Update AI-generated images directly in contests table
-      // PRIORITY: AI-generated URLs ALWAYS override manual uploads
+      // Update images directly in contests table (manual uploads only)
       if (contestId) {
         const additionalUpdates: Record<string, string | null> = {};
 
-        // Handle secondary/detail image (hero layout)
-        // AI-generated URL has priority, then manual upload as fallback
-        if (aiGeneratedImages.hero) {
-          additionalUpdates.main_prize_secondary_image = aiGeneratedImages.hero;
-          console.log("Using AI hero image:", aiGeneratedImages.hero);
-        } else if (form.detail_image_file) {
+        // Handle secondary/detail image (hero layout) - manual upload only
+        if (form.detail_image_file) {
           const detailPath = await handleImageUpload(form.detail_image_file);
           additionalUpdates.main_prize_secondary_image = detailPath;
           console.log("Using uploaded detail image:", detailPath);
         }
 
-        // Handle banner image
-        // AI-generated URL has priority, then manual upload as fallback
-        if (aiGeneratedImages.banner) {
-          additionalUpdates.banner_image = aiGeneratedImages.banner;
-          console.log("Using AI banner image:", aiGeneratedImages.banner);
-        } else if (form.banner_image_file) {
+        // Handle banner image - manual upload only
+        if (form.banner_image_file) {
           const bannerPath = await handleImageUpload(form.banner_image_file);
           additionalUpdates.banner_image = bannerPath;
           console.log("Using uploaded banner image:", bannerPath);
@@ -810,7 +757,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           const { error: updateError } = await supabase.from("contests").update(additionalUpdates).eq("id", contestId);
 
           if (updateError) {
-            console.error("Error updating AI images:", updateError);
+            console.error("Error updating images:", updateError);
           } else {
             console.log("Contest images saved successfully");
           }
@@ -835,10 +782,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
         // Insert physical prizes
         for (const prize of physicalPrizes) {
-          // Prefer AI-generated image, then uploaded file, then existing URL
-          let imageUrl = prize.ai_image_url || prize.image_url;
+          // Use uploaded file or existing URL only (no AI)
+          let imageUrl = prize.image_url;
 
-          if (!imageUrl && prize.image_file) {
+          if (prize.image_file) {
             const ext = prize.image_file.name.split(".").pop();
             const fileName = `bonus-prizes/${contestId}/${crypto.randomUUID()}.${ext}`;
             await supabase.storage.from("contest-images").upload(fileName, prize.image_file);
@@ -944,40 +891,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 <p className="text-xs text-muted-foreground mt-1">Automaticky předvyplněno z názvu soutěže</p>
               </div>
 
-              {/* AI Popis hlavní výhry - moved here */}
-              <div className="border border-dashed border-white/20 rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Popis soutěže</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGenerateDescription}
-                    disabled={generatingDescription || (!form.title && !form.main_prize)}
-                  >
-                    {generatingDescription ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generuji…
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="mr-2 h-4 w-4" />
-                        Vygenerovat AI popis
-                      </>
-                    )}
-                  </Button>
-                </div>
+              {/* Popis soutěže */}
+              <div className="space-y-3">
+                <Label>Popis soutěže</Label>
                 <Textarea
                   value={form.description}
                   onChange={handleChange("description")}
                   placeholder="Stručný popis soutěže… Nebo klikni na tlačítko pro AI generování."
                   rows={4}
                 />
-                <p className="text-xs text-muted-foreground">
-                  <Sparkles className="inline h-3 w-3 mr-1" />
-                  AI generování vytvoří poutavý marketingový popis na základě názvu a hlavní výhry.
-                </p>
               </div>
 
               <div className="flex gap-4">
@@ -1145,10 +1067,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               {physicalPrizes.length > 0 && (
                 <div className="space-y-2">
                   <Label>Přidané výhry ({physicalPrizes.length})</Label>
-                  {physicalPrizes.map((prize, index) => {
-                    // Prefer AI image, then original
+                {physicalPrizes.map((prize, index) => {
                     const thumbnailSrc =
-                      prize.ai_image_url ||
                       (prize.image_file ? URL.createObjectURL(prize.image_file) : null) ||
                       prize.image_url ||
                       null;
@@ -1156,35 +1076,22 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                     return (
                       <div key={index} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
                         <div className="flex items-center gap-3">
-                          {prize.ai_generating ? (
-                            <div className="w-10 h-10 rounded bg-white/10 flex items-center justify-center">
-                              <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                            </div>
-                          ) : thumbnailSrc ? (
-                            <div className="relative">
-                              <img
-                                src={thumbnailSrc}
-                                alt={prize.description}
-                                className="w-10 h-10 rounded object-cover border border-white/10"
-                              />
-                              {prize.ai_image_url && (
-                                <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-primary" />
-                              )}
-                            </div>
-                          ) : null}
+                          {thumbnailSrc && (
+                            <img
+                              src={thumbnailSrc}
+                              alt={prize.description}
+                              className="w-10 h-10 rounded object-cover border border-white/10"
+                            />
+                          )}
                           <div>
                             <span className="font-medium">{prize.description}</span>
                             <span className="text-muted-foreground ml-2">Pozice #{prize.ticket_position}</span>
-                            {prize.ai_generating && (
-                              <span className="text-xs text-muted-foreground ml-2">(generuji AI…)</span>
-                            )}
                           </div>
                         </div>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => removePhysicalPrize(index)}
-                          disabled={prize.ai_generating}
                         >
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
@@ -1195,170 +1102,48 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               )}
             </TabsContent>
 
-            {/* Tab 4: Grafika (merged) */}
+            {/* Tab 4: Grafika */}
             <TabsContent value="graphics" className="space-y-6 mt-0">
-              <div className="border border-dashed border-primary/30 rounded-lg p-4 space-y-4 bg-primary/5">
+              <div className="border border-dashed border-white/20 rounded-lg p-4 space-y-4">
                 <div className="flex items-center gap-2">
-                  <Wand2 className="h-5 w-5 text-primary" />
-                  <Label className="text-base font-medium">Hlavní obrázek výhry + AI transformace</Label>
+                  <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                  <Label className="text-base font-medium">Hlavní obrázek výhry</Label>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Nahraj obrázek hlavní výhry. AI automaticky vytvoří stylizovaný hero obrázek a banner v OneMil stylu.
+                  Nahraj obrázek hlavní výhry pro zobrazení v seznamu soutěží.
                 </p>
                 <Input
                   type="file"
                   accept="image/*"
                   onChange={handleFileChange("main_image_file")}
-                  disabled={transformingImage}
                 />
-                {isEditing && editingContest?.main_image && !form.main_image_file && !form.main_image_url && (
+                {form.main_image_file && (
+                  <p className="text-xs text-green-500">Vybrán soubor: {form.main_image_file.name}</p>
+                )}
+                {isEditing && editingContest?.main_image && !form.main_image_file && (
                   <p className="text-xs text-muted-foreground">Aktuální: {editingContest.main_image}</p>
                 )}
-
-                {transformingImage && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Generuji AI grafiku (hero + banner)…
-                  </div>
-                )}
-
-                {/* AI Generated Images Preview with Regenerate Buttons */}
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  {/* Hero Image Section */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm flex items-center gap-1">
-                        <Sparkles className="h-3 w-3" />
-                        AI Hero (detail)
-                      </Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleRegenerateHero}
-                        disabled={
-                          regeneratingHero ||
-                          transformingImage ||
-                          (!form.main_image_file && !form.main_image_url && !editingContest?.main_image)
-                        }
-                        className="h-7 text-xs"
-                      >
-                        {regeneratingHero ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <>
-                            <Wand2 className="h-3 w-3 mr-1" />
-                            Regenerovat
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    {aiGeneratedImages.hero ? (
-                      <img
-                        src={aiGeneratedImages.hero}
-                        alt="AI Hero"
-                        className="w-full h-32 object-cover rounded-md border border-primary/20"
-                      />
-                    ) : (
-                      <div className="w-full h-32 rounded-md border border-dashed border-muted-foreground/30 flex items-center justify-center text-xs text-muted-foreground">
-                        Zatím nevygenerováno
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Banner Image Section */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm flex items-center gap-1">
-                        <Sparkles className="h-3 w-3" />
-                        AI Banner
-                      </Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleRegenerateBanner}
-                        disabled={
-                          regeneratingBanner ||
-                          transformingImage ||
-                          (!form.main_image_file && !form.main_image_url && !editingContest?.main_image)
-                        }
-                        className="h-7 text-xs"
-                      >
-                        {regeneratingBanner ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <>
-                            <Wand2 className="h-3 w-3 mr-1" />
-                            Regenerovat
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    {aiGeneratedImages.banner ? (
-                      <img
-                        src={aiGeneratedImages.banner}
-                        alt="AI Banner"
-                        className="w-full h-32 object-cover rounded-md border border-primary/20"
-                      />
-                    ) : (
-                      <div className="w-full h-32 rounded-md border border-dashed border-muted-foreground/30 flex items-center justify-center text-xs text-muted-foreground">
-                        Zatím nevygenerováno
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
 
-              <div>
-                <Label>Detail obrázek (manuální override)</Label>
+              <div className="border border-dashed border-white/20 rounded-lg p-4 space-y-4">
+                <Label className="text-base font-medium">Detail obrázek (hero)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Obrázek pro detail soutěže (main_prize_secondary_image).
+                </p>
                 <Input type="file" accept="image/*" onChange={handleFileChange("detail_image_file")} />
-                <p className="text-xs text-muted-foreground mt-1">Volitelné - přepíše AI vygenerovaný hero obrázek.</p>
+                {form.detail_image_file && (
+                  <p className="text-xs text-green-500">Vybrán soubor: {form.detail_image_file.name}</p>
+                )}
               </div>
 
-              <div>
-                <Label>Banner obrázek (manuální override)</Label>
+              <div className="border border-dashed border-white/20 rounded-lg p-4 space-y-4">
+                <Label className="text-base font-medium">Banner obrázek</Label>
+                <p className="text-xs text-muted-foreground">
+                  Obrázek banneru pro homepage a přehled soutěží.
+                </p>
                 <Input type="file" accept="image/*" onChange={handleFileChange("banner_image_file")} />
-                <p className="text-xs text-muted-foreground mt-1">Volitelné - přepíše AI vygenerovaný banner.</p>
-              </div>
-
-              <div className="border border-dashed border-white/20 rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base">AI Banner generátor</Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Automaticky vygeneruje banner pomocí AI na základě údajů soutěže.
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleGenerateBanner}
-                    disabled={generatingBanner || (!form.title && !form.main_prize)}
-                  >
-                    {generatingBanner ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generuji…
-                      </>
-                    ) : (
-                      <>
-                        <ImagePlus className="mr-2 h-4 w-4" />
-                        Vygenerovat banner (AI)
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                {(aiGeneratedImages.banner || form.banner_image_url) && (
-                  <div className="mt-3">
-                    <Label className="text-sm mb-2 block">Náhled AI banneru:</Label>
-                    <img
-                      src={aiGeneratedImages.banner || form.banner_image_url}
-                      alt="AI vygenerovaný banner"
-                      className="w-full max-h-48 object-cover rounded-md border border-white/10"
-                    />
-                  </div>
+                {form.banner_image_file && (
+                  <p className="text-xs text-green-500">Vybrán soubor: {form.banner_image_file.name}</p>
                 )}
               </div>
             </TabsContent>
