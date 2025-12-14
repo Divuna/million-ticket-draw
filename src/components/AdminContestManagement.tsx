@@ -16,6 +16,16 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -1226,6 +1236,9 @@ export const AdminContestManagement: React.FC = () => {
   const [editingContest, setEditingContest] = useState<ContestData | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [closingContest, setClosingContest] = useState<string | null>(null);
+  const [deletingContest, setDeletingContest] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [contestToDelete, setContestToDelete] = useState<ContestData | null>(null);
 
   const loadContests = async () => {
     setLoading(true);
@@ -1340,6 +1353,55 @@ export const AdminContestManagement: React.FC = () => {
   const handleCloseModal = () => {
     setModalOpen(false);
     setEditingContest(null);
+  };
+
+  const handleDeleteClick = (contest: ContestData) => {
+    setContestToDelete(contest);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!contestToDelete) return;
+
+    setDeletingContest(contestToDelete.contest_id);
+    setDeleteDialogOpen(false);
+
+    // Optimistic update - remove from list immediately
+    const previousContests = [...contests];
+    setContests((prev) => prev.filter((c) => c.contest_id !== contestToDelete.contest_id));
+
+    try {
+      const { error } = await supabase
+        .from("contests")
+        .delete()
+        .eq("id", contestToDelete.contest_id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Soutěž smazána",
+        description: `Soutěž "${contestToDelete.title}" byla úspěšně smazána.`,
+      });
+    } catch (err: any) {
+      console.error("Error deleting contest:", err);
+      // Revert optimistic update on error
+      setContests(previousContests);
+      toast({
+        title: "Chyba",
+        description: err?.message || "Nepodařilo se smazat soutěž.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingContest(null);
+      setContestToDelete(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setContestToDelete(null);
   };
 
   return (
@@ -1466,6 +1528,22 @@ export const AdminContestManagement: React.FC = () => {
                               )}
                             </Button>
                           )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteClick(contest)}
+                            disabled={deletingContest === contest.contest_id}
+                            className="text-red-400 border-red-500/30 hover:bg-red-500/10 hover:text-red-300"
+                          >
+                            {deletingContest === contest.contest_id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Smazat
+                              </>
+                            )}
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1483,6 +1561,26 @@ export const AdminContestManagement: React.FC = () => {
         onSaved={loadContests}
         editingContest={editingContest}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="bg-card border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat soutěž</AlertDialogTitle>
+            <AlertDialogDescription>
+              Opravdu chcete tuto soutěž smazat? Tuto akci nelze vrátit zpět.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleDeleteCancel}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
