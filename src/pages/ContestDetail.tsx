@@ -179,10 +179,12 @@ export default function ContestDetail() {
 
       const typedBonus = (bonusData ?? []) as BonusPrize[];
 
-      // Display ALL bonus prizes without filtering, grouping, or deduplicating
-      setBonusPrizes(typedBonus);
+      // Split into MioCoin bonuses (amount > 0) and physical bonuses (amount is null or 0)
+      const physicalPrizes = typedBonus.filter((b) => !b.amount || b.amount === 0);
+      const mioCoinTotal = typedBonus.reduce((sum, b) => (b.amount && b.amount > 0 ? sum + b.amount : sum), 0);
 
-      setBonusMiocoins(typedBonus.reduce((sum, b) => (b.amount ? sum + b.amount : sum), 0));
+      setBonusPrizes(physicalPrizes);
+      setBonusMiocoins(mioCoinTotal);
 
       const { data: wins } = await supabase.from("winners").select("*").eq("contest_id", id);
 
