@@ -178,6 +178,7 @@ export type Database = {
           image_url: string | null
           status: string
           ticket_position: number
+          title: string | null
         }
         Insert: {
           admin_notes?: string | null
@@ -189,6 +190,7 @@ export type Database = {
           image_url?: string | null
           status?: string
           ticket_position: number
+          title?: string | null
         }
         Update: {
           admin_notes?: string | null
@@ -200,6 +202,7 @@ export type Database = {
           image_url?: string | null
           status?: string
           ticket_position?: number
+          title?: string | null
         }
         Relationships: [
           {
