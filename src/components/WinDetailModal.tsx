@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Trophy, Gift, CheckCircle, Clock, Package, Calendar, Share2, Copy, Check } from 'lucide-react';
 import { MIOCOIN_IMAGE_URL } from '@/components/MioCoin';
 import { toast } from '@/hooks/use-toast';
+import Confetti from 'react-confetti';
 
 const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
 
@@ -45,7 +46,17 @@ interface WinDetailModalProps {
 }
 
 export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClose, onNavigateToContest }) => {
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  // Trigger confetti when modal opens
+  useEffect(() => {
+    if (open && win) {
+      setShowConfetti(true);
+      const timer = setTimeout(() => setShowConfetti(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [open, win]);
 
   if (!win) return null;
 
@@ -129,6 +140,18 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      {/* Confetti Animation */}
+      {showConfetti && (
+        <Confetti
+          width={window.innerWidth}
+          height={window.innerHeight}
+          recycle={false}
+          numberOfPieces={200}
+          gravity={0.3}
+          colors={['#FFD700', '#FFA500', '#FF6347', '#9370DB', '#00CED1']}
+          style={{ position: 'fixed', top: 0, left: 0, zIndex: 9999 }}
+        />
+      )}
       <DialogContent className="max-w-lg bg-card border-border p-0 overflow-hidden">
         {/* Image Section */}
         {imageUrl && (
