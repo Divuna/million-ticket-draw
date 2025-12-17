@@ -474,23 +474,25 @@ const AdminWinners: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="h-screen flex flex-col bg-background overflow-hidden">
+      <div className="min-h-screen bg-background">
         <Header />
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-muted-foreground">Načítám výhry...</p>
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center h-64">
+            <p className="text-muted-foreground">Načítám výhry...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="flex-1 flex flex-col min-h-0 container mx-auto px-4 py-4">
-        <div className="flex-1 flex flex-col min-h-0 max-w-7xl mx-auto w-full">
-          <Card className="flex-1 flex flex-col min-h-0">
-            <CardHeader className="flex-shrink-0">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-7xl mx-auto">
+          <Card>
+            <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-2xl">Správa výher</CardTitle>
                 <div className="flex items-center gap-4">
@@ -579,15 +581,15 @@ const AdminWinners: React.FC = () => {
               </div>
             </CardHeader>
             
-            <CardContent className="flex-1 min-h-0 overflow-hidden pb-4">
+            <CardContent>
               {filteredWinners.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>Žádné výhry k zobrazení.</p>
                 </div>
               ) : (
-                <div className="rounded-md border h-full overflow-auto">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-card z-10">
+                <div className="rounded-md border overflow-x-auto">
+                  <Table className="min-w-max">
+                    <TableHeader>
                       <TableRow>
                         <TableHead className="w-20">Obrázek</TableHead>
                         <TableHead>Email uživatele</TableHead>
