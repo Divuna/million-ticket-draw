@@ -80,6 +80,21 @@ const AdminWinners: React.FC = () => {
     { value: 'vyplaceno', label: 'Vyplaceno' }
   ];
 
+  const getStatusColor = (status: string | null) => {
+    switch (status) {
+      case 'čeká na potvrzení':
+        return { badge: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', trigger: 'border-yellow-500/50 text-yellow-400' };
+      case 'připraveno k odeslání':
+        return { badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30', trigger: 'border-blue-500/50 text-blue-400' };
+      case 'odesláno':
+        return { badge: 'bg-purple-500/20 text-purple-400 border-purple-500/30', trigger: 'border-purple-500/50 text-purple-400' };
+      case 'vyplaceno':
+        return { badge: 'bg-green-500/20 text-green-400 border-green-500/30', trigger: 'border-green-500/50 text-green-400' };
+      default:
+        return { badge: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', trigger: 'border-yellow-500/50 text-yellow-400' };
+    }
+  };
+
   // Check admin access
   const isAdmin = user?.email === 'divispavel2@gmail.com';
 
@@ -784,9 +799,9 @@ const AdminWinners: React.FC = () => {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm">
-                              {winner.status || 'čeká na potvrzení'}
-                            </span>
+                            <Badge className={`${getStatusColor(winner.status).badge} border`}>
+                              {winner.status || 'Čeká na potvrzení'}
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="relative">
@@ -845,14 +860,34 @@ const AdminWinners: React.FC = () => {
                               value={winner.status || 'čeká na potvrzení'}
                               onValueChange={(value) => updateWinnerStatus(winner.id, value)}
                             >
-                              <SelectTrigger className="w-48">
+                              <SelectTrigger className={`w-48 ${getStatusColor(winner.status).trigger}`}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="čeká na potvrzení">Čeká na potvrzení</SelectItem>
-                                <SelectItem value="připraveno k odeslání">Připraveno k odeslání</SelectItem>
-                                <SelectItem value="odesláno">Odesláno</SelectItem>
-                                <SelectItem value="vyplaceno">Vyplaceno</SelectItem>
+                                <SelectItem value="čeká na potvrzení">
+                                  <span className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                                    Čeká na potvrzení
+                                  </span>
+                                </SelectItem>
+                                <SelectItem value="připraveno k odeslání">
+                                  <span className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                                    Připraveno k odeslání
+                                  </span>
+                                </SelectItem>
+                                <SelectItem value="odesláno">
+                                  <span className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+                                    Odesláno
+                                  </span>
+                                </SelectItem>
+                                <SelectItem value="vyplaceno">
+                                  <span className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                                    Vyplaceno
+                                  </span>
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </TableCell>
