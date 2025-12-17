@@ -38,6 +38,7 @@ const Wins: React.FC = () => {
   const navigate = useNavigate();
   const [wins, setWins] = useState<Win[]>([]);
   const [loading, setLoading] = useState(true);
+  const [highlightedWins, setHighlightedWins] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user) {
@@ -62,12 +63,26 @@ const Wins: React.FC = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
+          const winId = payload.new.id as string;
+          
           // Update the specific win in state
           setWins(prev => prev.map(win => 
-            win.id === payload.new.id 
+            win.id === winId 
               ? { ...win, status: payload.new.status, delivered: payload.new.delivered }
               : win
           ));
+          
+          // Highlight the updated win
+          setHighlightedWins(prev => new Set(prev).add(winId));
+          
+          // Remove highlight after 2 seconds
+          setTimeout(() => {
+            setHighlightedWins(prev => {
+              const next = new Set(prev);
+              next.delete(winId);
+              return next;
+            });
+          }, 2000);
         }
       )
       .subscribe();
@@ -176,6 +191,7 @@ const Wins: React.FC = () => {
                 key={win.id}
                 win={win}
                 onClick={() => navigate(`/contest/${win.contest_id}`)}
+                isHighlighted={highlightedWins.has(win.id)}
               />
             ))}
           </div>

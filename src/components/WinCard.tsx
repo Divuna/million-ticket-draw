@@ -38,9 +38,10 @@ interface WinCardProps {
   win: Win;
   onClick: () => void;
   className?: string;
+  isHighlighted?: boolean;
 }
 
-export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '' }) => {
+export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', isHighlighted = false }) => {
   const getStatusBadge = () => {
     // Unified status colors matching AdminWinners
     if (win.delivered || win.status === 'vyplaceno') {
@@ -99,7 +100,7 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '' }
 
   return (
     <div 
-      className={`contest-card rounded-2xl overflow-hidden relative cursor-pointer ${className}`}
+      className={`contest-card rounded-2xl overflow-hidden relative cursor-pointer transition-all duration-300 ${isHighlighted ? 'ring-2 ring-primary/60 animate-pulse shadow-lg shadow-primary/20' : ''} ${className}`}
       onClick={onClick}
     >
       {/* Full-width image matching ContestCard h-64 */}
