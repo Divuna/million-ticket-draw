@@ -821,23 +821,24 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         // Delete existing bonuses for this contest
         await supabase.from("bonus_prizes").delete().eq("contest_id", contestId);
 
-        // Insert MioCoin bonuses with proper async handling
-        const mioCoinPromises = mioCoinBonuses.map(async (bonus) => {
-          const { error: insertError } = await supabase.from("bonus_prizes").insert({
+        // Insert MioCoin bonuses in a single bulk insert (ensures trigger sees all rows)
+        if (mioCoinBonuses.length > 0) {
+          const mioCoinRecords = mioCoinBonuses.map((bonus) => ({
             contest_id: contestId,
             ticket_position: bonus.ticket_position,
             amount: bonus.amount,
             description: `${bonus.amount} MioCoinů`,
             status: "pending",
-          });
-          
-          if (insertError) {
-            throw new Error(`Chyba při ukládání MioCoin bonusu: ${insertError.message}`);
+          }));
+
+          const { error: mioCoinInsertError } = await supabase
+            .from("bonus_prizes")
+            .insert(mioCoinRecords);
+
+          if (mioCoinInsertError) {
+            throw new Error(`Chyba při ukládání MioCoin bonusů: ${mioCoinInsertError.message}`);
           }
-        });
-        
-        // Wait for ALL MioCoin bonuses to be saved
-        await Promise.all(mioCoinPromises);
+        }
 
         // Note: total_miocoin_bonus is updated automatically by database trigger trg_sync_total_miocoin_bonus
         // after bonus_prizes are inserted
