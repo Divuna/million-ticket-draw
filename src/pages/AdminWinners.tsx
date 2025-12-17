@@ -86,6 +86,63 @@ const AdminWinners: React.FC = () => {
     }
   }, [isAdmin]);
 
+  // Pre-fetch last status change for all winners
+  useEffect(() => {
+    const fetchLastStatusChanges = async () => {
+      if (winners.length === 0) return;
+      
+      const winnerIds = winners.map(w => w.id);
+      
+      try {
+        // Fetch all history entries for these winners
+        const { data, error } = await supabase
+          .from('winner_status_history')
+          .select('id, winner_id, old_status, new_status, changed_by, created_at')
+          .in('winner_id', winnerIds)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Group by winner_id and get only the most recent entry for each
+        const groupedHistory: Record<string, StatusHistoryEntry[]> = {};
+        
+        // Fetch admin emails
+        const adminIds = [...new Set((data || []).map(h => h.changed_by).filter(Boolean))];
+        let adminEmails: Record<string, string> = {};
+        
+        if (adminIds.length > 0) {
+          const { data: admins } = await supabase
+            .from('users')
+            .select('id, email')
+            .in('id', adminIds);
+          
+          adminEmails = (admins || []).reduce((acc, a) => {
+            acc[a.id] = a.email;
+            return acc;
+          }, {} as Record<string, string>);
+        }
+
+        (data || []).forEach(entry => {
+          const historyEntry: StatusHistoryEntry = {
+            ...entry,
+            admin_email: entry.changed_by ? adminEmails[entry.changed_by] : undefined
+          };
+          
+          if (!groupedHistory[entry.winner_id]) {
+            groupedHistory[entry.winner_id] = [];
+          }
+          groupedHistory[entry.winner_id].push(historyEntry);
+        });
+
+        setHistoryData(prev => ({ ...prev, ...groupedHistory }));
+      } catch (error) {
+        console.error('Error fetching status history:', error);
+      }
+    };
+
+    fetchLastStatusChanges();
+  }, [winners]);
+
   useEffect(() => {
     if (statusFilter === 'all') {
       setFilteredWinners(winners);
@@ -682,15 +739,23 @@ const AdminWinners: React.FC = () => {
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                className="h-8 gap-1 text-xs"
+                                className="h-auto py-1 px-2 gap-1 text-xs max-w-[180px]"
                                 onClick={() => fetchHistory(winner.id)}
                               >
-                                <History className="h-3 w-3" />
-                                Historie
-                                {expandedHistory === winner.id ? (
-                                  <ChevronUp className="h-3 w-3" />
+                                {historyData[winner.id] && historyData[winner.id].length > 0 ? (
+                                  <span className="truncate text-left">
+                                    {historyData[winner.id][0].new_status} · {new Date(historyData[winner.id][0].created_at).toLocaleString('cs-CZ')}
+                                  </span>
                                 ) : (
-                                  <ChevronDown className="h-3 w-3" />
+                                  <>
+                                    <History className="h-3 w-3 flex-shrink-0" />
+                                    <span>Žádná historie</span>
+                                  </>
+                                )}
+                                {expandedHistory === winner.id ? (
+                                  <ChevronUp className="h-3 w-3 flex-shrink-0" />
+                                ) : (
+                                  <ChevronDown className="h-3 w-3 flex-shrink-0" />
                                 )}
                               </Button>
                               {expandedHistory === winner.id && historyData[winner.id] && (
