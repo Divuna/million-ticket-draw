@@ -11,6 +11,17 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+// Build full storage URL for bonus prize images stored in contest-images bucket
+const getStorageUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  // If already a full URL, return as-is
+  if (path.startsWith('http')) return path;
+  // Build full public URL for contest-images bucket
+  return `${SUPABASE_URL}/storage/v1/object/public/contest-images/${path}`;
+};
+
 interface Win {
   id: string;
   type: string;
@@ -198,7 +209,7 @@ const Wins: React.FC = () => {
                   {(() => {
                     const imageUrl = win.type === 'main'
                       ? (win.contest?.main_prize_secondary_image || win.contest?.main_image)
-                      : win.bonus_prize?.image_url;
+                      : getStorageUrl(win.bonus_prize?.image_url);
                     
                     return imageUrl ? (
                       <div className="mb-3 rounded-lg overflow-hidden">
