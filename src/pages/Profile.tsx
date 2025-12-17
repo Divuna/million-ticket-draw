@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,12 +10,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2 } from 'lucide-react';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { Switch } from '@/components/ui/switch';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 interface UserWallet {
   user_id: string;
@@ -31,6 +32,7 @@ interface UserProfile {
   last_name: string;
   address: string;
   phone: string;
+  avatar_url: string | null;
 }
 
 interface CoinPackage {
@@ -58,7 +60,8 @@ const Profile: React.FC = () => {
     first_name: '',
     last_name: '',
     address: '',
-    phone: ''
+    phone: '',
+    avatar_url: null
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -69,7 +72,8 @@ const Profile: React.FC = () => {
   const [profileSaving, setProfileSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [testingNotification, setTestingNotification] = useState(false);
-
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (user) {
       fetchUserWallet();
@@ -129,18 +133,102 @@ const Profile: React.FC = () => {
         console.error('Error fetching profile:', error);
         return;
       }
+      
+      // Also fetch avatar from profiles table
+      const profileResult = await supabase.from('profiles').select('avatar_url').eq('id', user?.id ?? '').maybeSingle();
+      const avatarUrl = profileResult.data?.avatar_url || null;
+      
       if (data) {
         setProfile({
           nickname: data.nickname || '',
           first_name: data.first_name || '',
           last_name: data.last_name || '',
           address: data.address || '',
-          phone: data.phone || ''
+          phone: data.phone || '',
+          avatar_url: avatarUrl
         });
       }
     } catch (error) {
       console.error('Error:', error);
     }
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Chyba",
+        description: "Vyberte prosím obrázek.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Chyba",
+        description: "Obrázek je příliš velký. Maximální velikost je 5 MB.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/avatar.${fileExt}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+      // Update profiles table
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .upsert({ id: user.id, avatar_url: avatarUrl, updated_at: new Date().toISOString() });
+
+      if (updateError) throw updateError;
+
+      setProfile(prev => ({ ...prev, avatar_url: avatarUrl }));
+      toast({
+        title: "Úspěch",
+        description: "Profilový obrázek byl nahrán."
+      });
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se nahrát obrázek. Zkuste to znovu.",
+        variant: "destructive"
+      });
+    } finally {
+      setAvatarUploading(false);
+      // Reset input
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
+    }
+  };
+
+  const getInitials = () => {
+    const first = profile.first_name?.[0] || '';
+    const last = profile.last_name?.[0] || '';
+    if (first || last) return (first + last).toUpperCase();
+    return wallet?.email?.[0]?.toUpperCase() || 'U';
   };
 
   const handleProfileSave = async () => {
@@ -325,10 +413,39 @@ const Profile: React.FC = () => {
       <Header />
       
       <div className="container mx-auto px-4 py-8">
-        {/* Page Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <User className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold text-foreground">Můj profil</h1>
+        {/* Page Header with Avatar */}
+        <div className="flex items-center gap-4 mb-8">
+          {/* Avatar with Upload */}
+          <div className="relative group">
+            <Avatar className="h-20 w-20 border-2 border-border/50">
+              <AvatarImage src={profile.avatar_url || undefined} alt="Avatar" />
+              <AvatarFallback className="bg-muted text-foreground text-xl">
+                {getInitials()}
+              </AvatarFallback>
+            </Avatar>
+            <button
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={avatarUploading}
+              className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            >
+              {avatarUploading ? (
+                <Loader2 className="h-6 w-6 text-white animate-spin" />
+              ) : (
+                <Camera className="h-6 w-6 text-white" />
+              )}
+            </button>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarUpload}
+              className="hidden"
+            />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Můj profil</h1>
+            <p className="text-sm text-muted-foreground">Kliknutím na avatar změníte obrázek</p>
+          </div>
         </div>
 
         <div className="max-w-2xl mx-auto space-y-6">
