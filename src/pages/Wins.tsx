@@ -6,7 +6,6 @@ import { AdminMenu } from '@/components/AdminMenu';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Trophy, Gift, Package, CheckCircle, Clock } from 'lucide-react';
-import { MIOCOIN_IMAGE_URL } from '@/components/MioCoin';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,6 +26,11 @@ interface Win {
     main_prize: string;
     main_image: string | null;
     main_prize_secondary_image: string | null;
+  } | null;
+  bonus_prize: {
+    id: string;
+    title: string | null;
+    image_url: string | null;
   } | null;
 }
 
@@ -60,7 +64,8 @@ const Wins: React.FC = () => {
           created_at,
           contest_id,
           prize_id,
-          contest:contests(id, title, main_prize, main_image, main_prize_secondary_image)
+          contest:contests(id, title, main_prize, main_image, main_prize_secondary_image),
+          bonus_prize:bonus_prizes(id, title, image_url)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -70,7 +75,8 @@ const Wins: React.FC = () => {
       // Transform data - Supabase returns joined data as arrays
       const transformedWins = (data || []).map((win: any) => ({
         ...win,
-        contest: Array.isArray(win.contest) ? win.contest[0] : win.contest
+        contest: Array.isArray(win.contest) ? win.contest[0] : win.contest,
+        bonus_prize: Array.isArray(win.bonus_prize) ? win.bonus_prize[0] : win.bonus_prize
       }));
       setWins(transformedWins);
     } catch (error) {
@@ -192,7 +198,7 @@ const Wins: React.FC = () => {
                   {(() => {
                     const imageUrl = win.type === 'main'
                       ? (win.contest?.main_prize_secondary_image || win.contest?.main_image)
-                      : MIOCOIN_IMAGE_URL;
+                      : win.bonus_prize?.image_url;
                     
                     return imageUrl ? (
                       <div className="mb-3 rounded-lg overflow-hidden">
