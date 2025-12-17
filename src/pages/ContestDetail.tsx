@@ -17,6 +17,7 @@ type Contest = {
   main_prize_secondary_image: string | null;
   main_image: string | null;
   banner_image: string | null;
+  total_miocoin_bonus: number | null;
 };
 
 type BonusPrize = {
@@ -55,7 +56,6 @@ export default function ContestDetail() {
   const [loading, setLoading] = useState(true);
 
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
-  const [bonusMiocoins, setBonusMiocoins] = useState(0);
   const [myWins, setMyWins] = useState<Winner[]>([]);
   const [balance, setBalance] = useState(0);
 
@@ -180,7 +180,11 @@ export default function ContestDetail() {
       if (!id) return;
       setLoading(true);
 
-      const { data: contestData } = await supabase.from("contests").select("*").eq("id", id).maybeSingle();
+      const { data: contestData } = await supabase
+        .from("contests")
+        .select("id, title, description, ticket_price, main_prize_secondary_image, main_image, banner_image, total_miocoin_bonus")
+        .eq("id", id)
+        .maybeSingle();
 
       if (!contestData) {
         setLoading(false);
@@ -189,16 +193,14 @@ export default function ContestDetail() {
 
       setContest(contestData as Contest);
 
-      const { data: bonusData } = await supabase.from("bonus_prizes").select("*").eq("contest_id", id);
+      // Load only physical bonus prizes (amount is null or 0)
+      const { data: bonusData } = await supabase
+        .from("bonus_prizes")
+        .select("*")
+        .eq("contest_id", id)
+        .or("amount.is.null,amount.eq.0");
 
-      const typedBonus = (bonusData ?? []) as BonusPrize[];
-
-      // Split into MioCoin bonuses (amount > 0) and physical bonuses (amount is null or 0)
-      const physicalPrizes = typedBonus.filter((b) => !b.amount || b.amount === 0);
-      const mioCoinTotal = typedBonus.reduce((sum, b) => (b.amount && b.amount > 0 ? sum + b.amount : sum), 0);
-
-      setBonusPrizes(physicalPrizes);
-      setBonusMiocoins(mioCoinTotal);
+      setBonusPrizes((bonusData ?? []) as BonusPrize[]);
 
       const { data: wins } = await supabase.from("winners").select("*").eq("contest_id", id);
 
@@ -314,7 +316,7 @@ export default function ContestDetail() {
           </div>
           <p className="text-sm text-gray-200 leading-relaxed">
             Do této soutěže jsme navíc přidali{" "}
-            <span className="text-yellow-400 font-bold">{bonusMiocoins.toLocaleString("cs-CZ")}</span>{" "}
+            <span className="text-yellow-400 font-bold">{(contest.total_miocoin_bonus || 0).toLocaleString("cs-CZ")}</span>{" "}
             MioCoinů jako bonusové výhry, které můžete během soutěže získat.
           </p>
         </section>
