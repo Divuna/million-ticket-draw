@@ -42,30 +42,37 @@ interface WinCardProps {
 
 export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '' }) => {
   const getStatusBadge = () => {
-    if (win.delivered) {
+    // Unified status colors matching AdminWinners
+    if (win.delivered || win.status === 'vyplaceno') {
       return (
-        <Badge className="bg-green-500/90 text-white border-0">
-          <CheckCircle className="w-3 h-3 mr-1" /> Doručeno
+        <Badge className="bg-green-500/20 text-green-400 border border-green-500/30">
+          <CheckCircle className="w-3 h-3 mr-1" /> {win.status === 'vyplaceno' ? 'Vyplaceno' : 'Doručeno'}
         </Badge>
       );
     }
     switch (win.status) {
       case 'čeká na potvrzení':
         return (
-          <Badge className="bg-yellow-500/90 text-white border-0">
+          <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
             <Clock className="w-3 h-3 mr-1" /> Čeká na potvrzení
           </Badge>
         );
-      case 'potvrzeno':
+      case 'připraveno k odeslání':
         return (
-          <Badge className="bg-blue-500/90 text-white border-0">
-            <Package className="w-3 h-3 mr-1" /> Potvrzeno
+          <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30">
+            <Package className="w-3 h-3 mr-1" /> Připraveno k odeslání
+          </Badge>
+        );
+      case 'odesláno':
+        return (
+          <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30">
+            <Package className="w-3 h-3 mr-1" /> Odesláno
           </Badge>
         );
       default:
         return (
-          <Badge variant="secondary" className="bg-muted/90 text-muted-foreground border-0">
-            <Clock className="w-3 h-3 mr-1" /> {win.status || 'Zpracovává se'}
+          <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+            <Clock className="w-3 h-3 mr-1" /> Čeká na potvrzení
           </Badge>
         );
     }
