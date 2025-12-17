@@ -237,117 +237,122 @@ export default function ContestDetail() {
   const isProcessing = processingContestId === contest.id;
 
   return (
-    <div className="p-6 w-full mx-auto space-y-8">
+    <div className="p-4 md:p-6 w-full max-w-5xl mx-auto space-y-6">
       {/* 1. HERO SECTION */}
-      <section className="w-full rounded-3xl relative overflow-hidden bg-[#0b0e12] border border-yellow-500/20 shadow-[0_0_60px_rgba(250,204,21,0.25)] p-10">
-        <div className="max-w-xl space-y-5 relative z-10">
-          <h1 className="text-5xl font-extrabold text-yellow-400">{contest.title}</h1>
-
-          {contest.description && (
-            <p className="text-gray-300 text-base leading-relaxed whitespace-pre-line">{contest.description}</p>
-          )}
-        </div>
-
-        <div className="absolute right-10 top-1/2 -translate-y-1/2">
-          <img
-            src={heroImage}
-            alt={contest.title}
-            className="w-[450px] object-contain pointer-events-none"
-            onError={(e) => (e.currentTarget.src = "/fallback-car.png")}
-          />
+      <section className="w-full rounded-2xl relative overflow-hidden bg-gradient-to-br from-[#0b0e12] to-[#151a20] border border-yellow-500/30 shadow-[0_0_40px_rgba(250,204,21,0.15)]">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-6 md:p-8">
+          {/* Text content */}
+          <div className="flex-1 space-y-4 z-10">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-yellow-400 leading-tight">
+              {contest.title}
+            </h1>
+            {contest.description && (
+              <p className="text-gray-300 text-sm md:text-base leading-relaxed whitespace-pre-line max-w-lg">
+                {contest.description}
+              </p>
+            )}
+          </div>
+          
+          {/* Hero image */}
+          <div className="flex-shrink-0 flex justify-center md:justify-end">
+            <img
+              src={heroImage}
+              alt={contest.title}
+              className="w-full max-w-[280px] md:max-w-[320px] lg:max-w-[380px] object-contain"
+              onError={(e) => (e.currentTarget.src = "/fallback-car.png")}
+            />
+          </div>
         </div>
       </section>
 
-      {/* 2. USER ACTION SECTION - Compact block */}
-      <section className="bg-[#111418] rounded-2xl p-5 border border-white/5 relative z-50">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex gap-3 flex-wrap">
+      {/* 2. USER ACTION SECTION */}
+      <section className="bg-[#111418]/80 backdrop-blur rounded-2xl p-4 md:p-5 border border-white/10">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Button
               onClick={handleUseMiocoins}
               disabled={isProcessing}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-2.5 rounded-xl disabled:opacity-50"
+              className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-5 py-2.5 rounded-xl disabled:opacity-50 transition-colors"
             >
               {isProcessing ? "Zpracovávám..." : `Uplatnit ${contest.ticket_price} MioCoinů`}
             </Button>
-
             <Button
               onClick={() => navigate("/profile")}
-              className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2.5 rounded-xl"
+              variant="outline"
+              className="bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-semibold px-5 py-2.5 rounded-xl transition-colors"
             >
               Dobít MioCoiny
             </Button>
           </div>
+          <div className="flex items-center gap-2 text-sm text-gray-300 bg-black/20 px-4 py-2 rounded-lg">
+            <img src={MIOCOIN_IMAGE_URL} className="w-5 h-5" alt="MioCoin" />
+            <span><strong className="text-white">{balance}</strong> MioCoinů</span>
+          </div>
+        </div>
+      </section>
 
-          <p className="text-gray-300 text-sm">
-            <strong>Zůstatek:</strong> {balance} MioCoinů
+      {/* 3. VE HŘE JE CELKEM */}
+      <section className="bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 rounded-2xl p-4 border border-yellow-500/20">
+        <div className="flex items-center gap-3">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <img 
+                  src={MIOCOIN_IMAGE_URL} 
+                  className="w-8 h-8 hover:scale-110 transition-transform cursor-pointer" 
+                  alt="MioCoin" 
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>MioCoiny můžeš vyhrát při nákupu tiketů</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <p className="text-yellow-300 font-semibold">
+            Ve hře je celkem: <span className="text-yellow-400 font-bold">{bonusMiocoins.toLocaleString("cs-CZ")}</span> MioCoinů
           </p>
         </div>
       </section>
 
-      {/* 3. VE HŘE JE CELKEM - Info block */}
-      <section className="bg-[#111418] rounded-2xl p-5 border border-yellow-500/20 flex items-center gap-4 shadow-[0_0_20px_rgba(250,204,21,0.1)]">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <img 
-                src={MIOCOIN_IMAGE_URL} 
-                className="w-10 h-10 hover:scale-110 transition-transform cursor-pointer" 
-                alt="MioCoin" 
-              />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>MioCoiny můžeš vyhrát při nákupu tiketů</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <p className="text-yellow-300 font-bold text-lg">
-          Ve hře je celkem: {bonusMiocoins.toLocaleString("cs-CZ")} MioCoinů
-        </p>
-      </section>
-
       {/* 4. CESTA K HLAVNÍ VÝHŘE */}
-      <section className="bg-black/40 rounded-2xl p-5 border border-yellow-500/20">
-        <h2 className="text-white font-semibold mb-4">Cesta k hlavní výhře</h2>
+      <section className="bg-[#111418]/60 rounded-2xl p-4 md:p-5 border border-yellow-500/15">
+        <h2 className="text-white font-semibold text-sm md:text-base mb-4">Cesta k hlavní výhře</h2>
         
-        {/* Static milestone labels with tick marks */}
-        <div className="flex justify-between mb-1 px-1">
-          {['0', '10 000', '50 000', '100 000', '250 000', '500 000', '750 000', '1 000 000'].map((label) => (
-            <div key={label} className="flex flex-col items-center">
-              <span className="text-xs text-yellow-400/80">{label}</span>
-              <div className="w-px h-2 bg-yellow-400/60 mt-1" />
+        {/* Milestone labels */}
+        <div className="flex justify-between mb-2 px-0.5 overflow-x-auto">
+          {['0', '10k', '50k', '100k', '250k', '500k', '750k', '1M'].map((label) => (
+            <div key={label} className="flex flex-col items-center min-w-[30px]">
+              <span className="text-[10px] md:text-xs text-yellow-400/70 font-medium">{label}</span>
+              <div className="w-px h-1.5 bg-yellow-400/40 mt-0.5" />
             </div>
           ))}
         </div>
         
-        {/* Static neon bar with pulse glow animation */}
+        {/* Progress bar */}
         <div 
-          className="w-full h-3 rounded-full animate-pulse"
+          className="w-full h-2.5 rounded-full"
           style={{
             background: 'linear-gradient(to right, #f6e27a, #d4a017)',
-            boxShadow: '0 0 25px rgba(255, 200, 0, 0.6)',
-            animationDuration: '2s'
+            boxShadow: '0 0 20px rgba(250, 204, 21, 0.4)'
           }}
         />
       </section>
 
       {/* 5. BONUSOVÉ VĚCNÉ VÝHRY */}
-      <section className="bg-[#111418] rounded-2xl p-5 border border-white/5">
-        <h2 className="text-white font-semibold mb-4">Bonusové věcné výhry</h2>
+      <section className="bg-[#111418]/60 rounded-2xl p-4 md:p-5 border border-white/10">
+        <h2 className="text-white font-semibold text-sm md:text-base mb-4">Bonusové věcné výhry</h2>
 
         {bonusPrizes.length === 0 ? (
-          <p className="text-gray-400 text-sm">Zatím nebyly přidány žádné věcné bonusové výhry.</p>
+          <p className="text-gray-500 text-sm py-4 text-center">Zatím nebyly přidány žádné věcné bonusové výhry.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {bonusPrizes.map((b) => {
-              // Image priority: image (http) → getPublicUrl(image) → image_url fallback
               let bonusImageUrl: string | null = null;
               
               if (b.image) {
-                if (b.image.startsWith('http')) {
-                  bonusImageUrl = b.image;
-                } else {
-                  bonusImageUrl = supabase.storage.from('contest-images').getPublicUrl(b.image).data.publicUrl;
-                }
+                bonusImageUrl = b.image.startsWith('http') 
+                  ? b.image 
+                  : supabase.storage.from('contest-images').getPublicUrl(b.image).data.publicUrl;
               } else if (b.image_url) {
                 bonusImageUrl = b.image_url.startsWith('http') 
                   ? b.image_url 
@@ -355,20 +360,25 @@ export default function ContestDetail() {
               }
               
               return (
-                <div key={b.id} className="p-4 rounded-xl bg-black/30 border border-white/5 flex flex-col gap-3">
+                <div 
+                  key={b.id} 
+                  className="p-3 rounded-xl bg-black/30 border border-white/5 hover:border-white/10 transition-colors"
+                >
                   {bonusImageUrl && (
-                    <img
-                      src={bonusImageUrl}
-                      alt={b.description ?? "Bonus prize"}
-                      className="w-full h-32 object-contain rounded-lg"
-                      onError={(e) => (e.currentTarget.style.display = "none")}
-                    />
+                    <div className="aspect-[4/3] mb-2 rounded-lg overflow-hidden bg-black/20">
+                      <img
+                        src={bonusImageUrl}
+                        alt={b.description ?? "Bonus prize"}
+                        className="w-full h-full object-contain"
+                        onError={(e) => (e.currentTarget.style.display = "none")}
+                      />
+                    </div>
                   )}
-                  
                   <p className="text-white text-sm font-medium">{b.description || "Bonusová výhra"}</p>
-
                   {myWins.some((w) => w.bonus_prize_id === b.id) && (
-                    <p className="text-green-400 text-xs">Moje výhra</p>
+                    <span className="inline-block mt-2 text-green-400 text-xs bg-green-500/10 px-2 py-0.5 rounded">
+                      Moje výhra
+                    </span>
                   )}
                 </div>
               );
@@ -376,8 +386,6 @@ export default function ContestDetail() {
           </div>
         )}
       </section>
-
-
       {/* TICKET RESULT MODAL */}
       <TicketResultModal
         isOpen={modalResult !== null}
