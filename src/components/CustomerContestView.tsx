@@ -396,42 +396,6 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
         );
       })()}
 
-      {/* MOJE VÝHRY */}
-      <Card className="rounded-3xl shadow-md border-border/70 bg-gradient-to-b from-background/90 via-background/70 to-background">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Crown className="w-5 h-5 text-primary" />
-            <CardTitle>Moje výhry</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {userWins.length > 0 ? (
-            <div className="space-y-3">
-              {userWins.map((win) => (
-                <div
-                  key={win.id}
-                  className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded-2xl border border-border/70 bg-card/80 px-3 py-2"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{win.type === "main" ? "Hlavní výhra" : "Bonusová výhra"}</p>
-                    <p className="text-sm text-muted-foreground">{win.description}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-xs text-muted-foreground">Stav: {win.status}</span>
-                    {win.delivered && (
-                      <Badge variant="outline" className="text-xs">
-                        Doručeno
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6 text-muted-foreground">Zatím nemáš v této soutěži žádné výhry.</div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 };
