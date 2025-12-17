@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User } from 'lucide-react';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -308,279 +308,281 @@ const Profile: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background dark pb-20">
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">Načítám profil...</p>
+            <div className="animate-pulse text-muted-foreground">Načítám profil...</div>
           </div>
         </div>
+        {isAdmin ? <AdminMenu /> : <BottomNavigation />}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background dark pb-20">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <Card className="ticket-profile ticket-perforations">
-            <CardHeader>
-              <CardTitle className="text-neon-cyan">Můj profil</CardTitle>
-              <CardDescription>
-                Přehled vašeho účtu a peněženky
-              </CardDescription>
-            </CardHeader>
-            
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">
-                    E-mail:
-                  </label>
-                  <p className="text-lg">{wallet?.email || user?.email}</p>
-                </div>
-                
-                {wallet?.name && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">
-                      Jméno:
-                    </label>
-                    <p className="text-lg">{wallet.name}</p>
-                  </div>
-                )}
+        {/* Page Header */}
+        <div className="flex items-center gap-3 mb-8">
+          <User className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl font-bold text-foreground">Můj profil</h1>
+        </div>
+
+        <div className="max-w-2xl mx-auto space-y-6">
+          
+          {/* Account Info Section */}
+          <div className="rounded-2xl bg-black/40 border border-border/50 p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Účet</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-sm text-muted-foreground">E-mail</label>
+                <p className="text-foreground">{wallet?.email || user?.email}</p>
               </div>
-              
-              {/* Profile Section */}
-              <div className="border-t pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Osobní údaje</h3>
-                  {!editMode && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setEditMode(true)}
-                    >
-                      Upravit profil
-                    </Button>
-                  )}
+              {wallet?.name && (
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground">Jméno</label>
+                  <p className="text-foreground">{wallet.name}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Personal Details Section */}
+          <div className="rounded-2xl bg-black/40 border border-border/50 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground">Osobní údaje</h2>
+              {!editMode && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setEditMode(true)}
+                  className="border-primary/30 hover:border-primary/50"
+                >
+                  Upravit profil
+                </Button>
+              )}
+            </div>
+            
+            {editMode ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nickname">Přezdívka</Label>
+                    <Input 
+                      id="nickname" 
+                      type="text" 
+                      value={profile.nickname} 
+                      onChange={e => setProfile(prev => ({
+                        ...prev,
+                        nickname: e.target.value
+                      }))} 
+                      placeholder="Zadejte přezdívku"
+                      className="bg-muted/30 border-border/50"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefon</Label>
+                    <Input 
+                      id="phone" 
+                      type="text" 
+                      value={profile.phone} 
+                      onChange={e => setProfile(prev => ({
+                        ...prev,
+                        phone: e.target.value
+                      }))} 
+                      placeholder="Zadejte telefon"
+                      className="bg-muted/30 border-border/50"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="first_name">Křestní jméno</Label>
+                    <Input 
+                      id="first_name" 
+                      type="text" 
+                      value={profile.first_name} 
+                      onChange={e => setProfile(prev => ({
+                        ...prev,
+                        first_name: e.target.value
+                      }))} 
+                      placeholder="Zadejte křestní jméno"
+                      className="bg-muted/30 border-border/50"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="last_name">Příjmení</Label>
+                    <Input 
+                      id="last_name" 
+                      type="text" 
+                      value={profile.last_name} 
+                      onChange={e => setProfile(prev => ({
+                        ...prev,
+                        last_name: e.target.value
+                      }))} 
+                      placeholder="Zadejte příjmení"
+                      className="bg-muted/30 border-border/50"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="address">Doručovací adresa výhry</Label>
+                    <Textarea 
+                      id="address" 
+                      value={profile.address} 
+                      onChange={e => setProfile(prev => ({
+                        ...prev,
+                        address: e.target.value
+                      }))} 
+                      placeholder="Zadejte doručovací adresu pro výhry" 
+                      rows={3}
+                      className="bg-muted/30 border-border/50"
+                    />
+                  </div>
                 </div>
                 
-                {editMode ? (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="nickname">Přezdívka</Label>
-                        <Input 
-                          id="nickname" 
-                          type="text" 
-                          value={profile.nickname} 
-                          onChange={e => setProfile(prev => ({
-                            ...prev,
-                            nickname: e.target.value
-                          }))} 
-                          placeholder="Zadejte přezdívku" 
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Telefon</Label>
-                        <Input 
-                          id="phone" 
-                          type="text" 
-                          value={profile.phone} 
-                          onChange={e => setProfile(prev => ({
-                            ...prev,
-                            phone: e.target.value
-                          }))} 
-                          placeholder="Zadejte telefon" 
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="first_name">Křestní jméno</Label>
-                        <Input 
-                          id="first_name" 
-                          type="text" 
-                          value={profile.first_name} 
-                          onChange={e => setProfile(prev => ({
-                            ...prev,
-                            first_name: e.target.value
-                          }))} 
-                          placeholder="Zadejte křestní jméno" 
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="last_name">Příjmení</Label>
-                        <Input 
-                          id="last_name" 
-                          type="text" 
-                          value={profile.last_name} 
-                          onChange={e => setProfile(prev => ({
-                            ...prev,
-                            last_name: e.target.value
-                          }))} 
-                          placeholder="Zadejte příjmení" 
-                        />
-                      </div>
-                      
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="address">Doručovací adresa výhry</Label>
-                        <Textarea 
-                          id="address" 
-                          value={profile.address} 
-                          onChange={e => setProfile(prev => ({
-                            ...prev,
-                            address: e.target.value
-                          }))} 
-                          placeholder="Zadejte doručovací adresu pro výhry" 
-                          rows={3} 
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2 mb-6">
-                      <Button onClick={handleProfileSave} disabled={profileSaving}>
-                        {profileSaving ? 'Ukládám...' : 'Uložit profil'}
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setEditMode(false)}
-                        disabled={profileSaving}
-                      >
-                        Zrušit
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="flex gap-2">
+                  <Button onClick={handleProfileSave} disabled={profileSaving}>
+                    {profileSaving ? 'Ukládám...' : 'Uložit profil'}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setEditMode(false)}
+                    disabled={profileSaving}
+                  >
+                    Zrušit
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                {(profile.nickname || profile.phone || profile.first_name || profile.last_name || profile.address) ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {profile.nickname && (
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          Přezdívka:
-                        </label>
-                        <p className="text-lg">{profile.nickname}</p>
+                      <div className="space-y-1">
+                        <label className="text-sm text-muted-foreground">Přezdívka</label>
+                        <p className="text-foreground">{profile.nickname}</p>
                       </div>
                     )}
                     
                     {profile.phone && (
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          Telefon:
-                        </label>
-                        <p className="text-lg">{profile.phone}</p>
+                      <div className="space-y-1">
+                        <label className="text-sm text-muted-foreground">Telefon</label>
+                        <p className="text-foreground">{profile.phone}</p>
                       </div>
                     )}
                     
                     {(profile.first_name || profile.last_name) && (
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          Jméno:
-                        </label>
-                        <p className="text-lg">
+                      <div className="space-y-1">
+                        <label className="text-sm text-muted-foreground">Jméno</label>
+                        <p className="text-foreground">
                           {[profile.first_name, profile.last_name].filter(Boolean).join(' ')}
                         </p>
                       </div>
                     )}
                     
                     {profile.address && (
-                      <div className="space-y-2 md:col-span-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          Doručovací adresa:
-                        </label>
-                        <p className="text-lg whitespace-pre-wrap">{profile.address}</p>
+                      <div className="space-y-1 md:col-span-2">
+                        <label className="text-sm text-muted-foreground">Doručovací adresa</label>
+                        <p className="text-foreground whitespace-pre-wrap">{profile.address}</p>
                       </div>
                     )}
-                    
-                    {!profile.nickname && !profile.phone && !profile.first_name && !profile.last_name && !profile.address && (
-                      <div className="md:col-span-2 text-center py-8 text-muted-foreground">
-                        <p>Zatím nemáte vyplněny osobní údaje.</p>
-                        <p className="text-sm">Klikněte na "Upravit profil" pro jejich zadání.</p>
-                      </div>
-                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <p>Zatím nemáte vyplněny osobní údaje.</p>
+                    <p className="text-sm mt-1">Klikněte na "Upravit profil" pro jejich zadání.</p>
                   </div>
                 )}
               </div>
+            )}
+          </div>
 
-              {/* Wallet Section - Only Coins */}
-              <div className="border-t pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Peněženka</h3>
-                  <Button variant="outline" size="sm" onClick={handleRefreshBalance} disabled={refreshing}>
-                    <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                    {refreshing ? 'Aktualizuji...' : 'Aktualizovat zůstatek'}
-                  </Button>
-                </div>
-                
-                <div className="mb-6">
-                  <Card className="ticket-game ticket-perforations">
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-muted-foreground">MioCoiny:</p>
-                        <p className="text-3xl font-bold text-neon-green">
-                          {wallet?.balance_coins?.toLocaleString('cs-CZ') || '0'}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button onClick={() => setShowTopUpModal(true)} size="lg">
-                    <Coins className="h-5 w-5 mr-2" />
-                    Dobít MioCoiny
-                  </Button>
-                  
-                  <Button onClick={() => navigate('/my-contests')} variant="outline" size="lg">
-                    <GamepadIcon className="h-5 w-5 mr-2" />
-                    Moje hry
-                  </Button>
-                </div>
+          {/* Wallet Section */}
+          <div className="rounded-2xl bg-black/40 border border-border/50 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-foreground">Peněženka</h2>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleRefreshBalance} 
+                disabled={refreshing}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Aktualizuji...' : 'Aktualizovat'}
+              </Button>
+            </div>
+            
+            {/* Balance Display */}
+            <div className="flex items-center justify-center gap-3 mb-6 py-4">
+              <Coins className="h-8 w-8 text-yellow-500" />
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">MioCoiny</p>
+                <p className="text-4xl font-bold text-yellow-500">
+                  {wallet?.balance_coins?.toLocaleString('cs-CZ') || '0'}
+                </p>
               </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button onClick={() => setShowTopUpModal(true)} className="flex-1" size="lg">
+                <Coins className="h-5 w-5 mr-2" />
+                Dobít MioCoiny
+              </Button>
+              
+              <Button onClick={() => navigate('/my-contests')} variant="outline" className="flex-1" size="lg">
+                <GamepadIcon className="h-5 w-5 mr-2" />
+                Moje hry
+              </Button>
+            </div>
+          </div>
 
-              {/* OneSignal Test Section */}
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold mb-4">Notifikace</h3>
-                
-                {/* Sound notification toggle */}
-                <div className="flex items-center justify-between mb-4 p-3 rounded-lg bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    {soundEnabled ? (
-                      <Volume2 className="h-5 w-5 text-primary" />
-                    ) : (
-                      <VolumeX className="h-5 w-5 text-muted-foreground" />
-                    )}
-                    <div>
-                      <p className="font-medium">Zvukové notifikace</p>
-                      <p className="text-sm text-muted-foreground">
-                        Přehrávat zvuk při změně stavu výhry
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={soundEnabled}
-                    onCheckedChange={toggleSound}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Otestujte si funkčnost push notifikací na vašem zařízení.
+          {/* Notifications Section */}
+          <div className="rounded-2xl bg-black/40 border border-border/50 p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Notifikace</h2>
+            
+            {/* Sound notification toggle */}
+            <div className="flex items-center justify-between mb-4 p-3 rounded-lg bg-muted/20 border border-border/30">
+              <div className="flex items-center gap-3">
+                {soundEnabled ? (
+                  <Volume2 className="h-5 w-5 text-primary" />
+                ) : (
+                  <VolumeX className="h-5 w-5 text-muted-foreground" />
+                )}
+                <div>
+                  <p className="font-medium text-foreground">Zvukové notifikace</p>
+                  <p className="text-sm text-muted-foreground">
+                    Přehrávat zvuk při změně stavu výhry
                   </p>
-                  <Button 
-                    onClick={handleTestNotification} 
-                    variant="outline" 
-                    disabled={testingNotification}
-                  >
-                    <Bell className={`h-4 w-4 mr-2 ${testingNotification ? 'animate-pulse' : ''}`} />
-                    {testingNotification ? 'Odesílám...' : 'Otestovat notifikaci'}
-                  </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+              <Switch
+                checked={soundEnabled}
+                onCheckedChange={toggleSound}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Otestujte si funkčnost push notifikací na vašem zařízení.
+              </p>
+              <Button 
+                onClick={handleTestNotification} 
+                variant="outline" 
+                disabled={testingNotification}
+                className="w-full sm:w-auto"
+              >
+                <Bell className={`h-4 w-4 mr-2 ${testingNotification ? 'animate-pulse' : ''}`} />
+                {testingNotification ? 'Odesílám...' : 'Otestovat notifikaci'}
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
