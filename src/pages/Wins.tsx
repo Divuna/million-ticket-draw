@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { WinCard } from '@/components/WinCard';
-
+import { toast } from '@/hooks/use-toast';
 interface Win {
   id: string;
   type: string;
@@ -39,7 +39,31 @@ const Wins: React.FC = () => {
   const [wins, setWins] = useState<Win[]>([]);
   const [loading, setLoading] = useState(true);
   const [highlightedWins, setHighlightedWins] = useState<Set<string>>(new Set());
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Play notification sound
+  const playNotificationSound = useCallback(() => {
+    try {
+      // Create audio context for a simple notification tone
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+      console.log('Could not play notification sound:', error);
+    }
+  }, []);
   useEffect(() => {
     if (user) {
       fetchWins();
@@ -64,13 +88,23 @@ const Wins: React.FC = () => {
         },
         (payload) => {
           const winId = payload.new.id as string;
+          const newStatus = payload.new.status as string;
           
           // Update the specific win in state
           setWins(prev => prev.map(win => 
             win.id === winId 
-              ? { ...win, status: payload.new.status, delivered: payload.new.delivered }
+              ? { ...win, status: newStatus, delivered: payload.new.delivered }
               : win
           ));
+          
+          // Play notification sound
+          playNotificationSound();
+          
+          // Show toast notification
+          toast({
+            title: "Stav výhry aktualizován",
+            description: `Nový stav: ${newStatus || 'Čeká na potvrzení'}`,
+          });
           
           // Highlight the updated win
           setHighlightedWins(prev => new Set(prev).add(winId));
