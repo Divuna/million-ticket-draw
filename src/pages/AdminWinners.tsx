@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
 import { AdminMenu } from '@/components/AdminMenu';
-import { ImageOff, X, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
+import { ImageOff, X, ChevronDown, ChevronUp, MapPin, History } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,15 @@ interface WinnerData {
   user_address: UserAddress;
 }
 
+interface StatusHistoryEntry {
+  id: string;
+  old_status: string | null;
+  new_status: string;
+  changed_by: string | null;
+  created_at: string;
+  admin_email?: string;
+}
+
 const AdminWinners: React.FC = () => {
   const { user, session } = useAuth();
   const [winners, setWinners] = useState<WinnerData[]>([]);
@@ -52,6 +61,8 @@ const AdminWinners: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [historyData, setHistoryData] = useState<Record<string, StatusHistoryEntry[]>>({});
+  const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
 
   const statusOptions = [
     { value: 'all', label: 'Všechny stavy' },
@@ -176,6 +187,55 @@ const AdminWinners: React.FC = () => {
     }
   };
 
+  const fetchHistory = async (winnerId: string) => {
+    if (historyData[winnerId]) {
+      // Toggle expand if already loaded
+      setExpandedHistory(expandedHistory === winnerId ? null : winnerId);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('winner_status_history')
+        .select('id, old_status, new_status, changed_by, created_at')
+        .eq('winner_id', winnerId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Fetch admin emails for changed_by
+      const adminIds = [...new Set((data || []).map(h => h.changed_by).filter(Boolean))];
+      let adminEmails: Record<string, string> = {};
+      
+      if (adminIds.length > 0) {
+        const { data: admins } = await supabase
+          .from('users')
+          .select('id, email')
+          .in('id', adminIds);
+        
+        adminEmails = (admins || []).reduce((acc, a) => {
+          acc[a.id] = a.email;
+          return acc;
+        }, {} as Record<string, string>);
+      }
+
+      const historyWithEmails = (data || []).map(h => ({
+        ...h,
+        admin_email: h.changed_by ? adminEmails[h.changed_by] : undefined
+      }));
+
+      setHistoryData(prev => ({ ...prev, [winnerId]: historyWithEmails }));
+      setExpandedHistory(winnerId);
+    } catch (error) {
+      console.error('Error fetching history:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se načíst historii změn.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const updateWinnerStatus = async (winnerId: string, newStatus: string) => {
     try {
       // Find the winner to get user_id and prize info
@@ -248,6 +308,13 @@ const AdminWinners: React.FC = () => {
           ? { ...w, status: newStatus, updated_at: new Date().toISOString() }
           : w
       ));
+
+      // Clear history cache for this winner so it refreshes on next view
+      setHistoryData(prev => {
+        const newData = { ...prev };
+        delete newData[winnerId];
+        return newData;
+      });
 
       toast({
         title: "Stav výhry aktualizován",
@@ -338,6 +405,7 @@ const AdminWinners: React.FC = () => {
                         <TableHead>Popis ceny</TableHead>
                         <TableHead>Typ</TableHead>
                         <TableHead>Stav</TableHead>
+                        <TableHead>Historie</TableHead>
                         <TableHead>Naposledy aktualizováno</TableHead>
                         <TableHead>Akce</TableHead>
                       </TableRow>
@@ -414,6 +482,50 @@ const AdminWinners: React.FC = () => {
                             <span className="text-sm">
                               {winner.status || 'čeká na potvrzení'}
                             </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="relative">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 gap-1 text-xs"
+                                onClick={() => fetchHistory(winner.id)}
+                              >
+                                <History className="h-3 w-3" />
+                                Historie
+                                {expandedHistory === winner.id ? (
+                                  <ChevronUp className="h-3 w-3" />
+                                ) : (
+                                  <ChevronDown className="h-3 w-3" />
+                                )}
+                              </Button>
+                              {expandedHistory === winner.id && historyData[winner.id] && (
+                                <div className="absolute z-10 top-full left-0 mt-1 w-72 bg-popover border rounded-md shadow-lg p-2 text-xs">
+                                  <div className="font-medium mb-2 text-foreground">Historie změn stavu</div>
+                                  {historyData[winner.id].length === 0 ? (
+                                    <p className="text-muted-foreground">Žádné změny</p>
+                                  ) : (
+                                    <div className="max-h-48 overflow-y-auto space-y-2">
+                                      {historyData[winner.id].map((entry) => (
+                                        <div key={entry.id} className="border-b border-border/50 pb-2 last:border-0">
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-muted-foreground">{entry.old_status || '(nový)'}</span>
+                                            <span className="mx-1">→</span>
+                                            <span className="font-medium text-foreground">{entry.new_status}</span>
+                                          </div>
+                                          <div className="text-muted-foreground mt-1">
+                                            {new Date(entry.created_at).toLocaleString('cs-CZ')}
+                                            {entry.admin_email && (
+                                              <span className="ml-1">({entry.admin_email})</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {winner.updated_at 
