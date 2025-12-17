@@ -9,6 +9,15 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
 import { AdminMenu } from '@/components/AdminMenu';
+import { ImageOff } from 'lucide-react';
+
+const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
+
+const getStorageUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${SUPABASE_URL}/storage/v1/object/public/contest-images/${path}`;
+};
 
 interface WinnerData {
   id: string;
@@ -99,7 +108,7 @@ const AdminWinners: React.FC = () => {
             .single();
           
           prizeDescription = bonusData?.description || 'Bonusová cena';
-          prizeImage = bonusData?.image_url || null;
+          prizeImage = getStorageUrl(bonusData?.image_url);
         }
 
         processedWinners.push({
@@ -244,12 +253,18 @@ const AdminWinners: React.FC = () => {
                                 src={winner.prize_image} 
                                 alt="Obrázek ceny"
                                 className="w-16 h-16 object-cover rounded-md"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                  const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                  if (placeholder) placeholder.style.display = 'flex';
+                                }}
                               />
-                            ) : (
-                              <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center">
-                                <span className="text-xs text-muted-foreground">—</span>
-                              </div>
-                            )}
+                            ) : null}
+                            <div 
+                              className={`w-16 h-16 bg-muted rounded-md items-center justify-center ${winner.prize_image ? 'hidden' : 'flex'}`}
+                            >
+                              <ImageOff className="w-6 h-6 text-muted-foreground" />
+                            </div>
                           </TableCell>
                           <TableCell className="font-medium">
                             {winner.user_email}
