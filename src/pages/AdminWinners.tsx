@@ -13,6 +13,7 @@ import { ImageOff, X, ChevronDown, ChevronUp, MapPin, History, Download } from '
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
 
@@ -64,6 +65,8 @@ const AdminWinners: React.FC = () => {
   const [historyData, setHistoryData] = useState<Record<string, StatusHistoryEntry[]>>({});
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
   const [exportingCsv, setExportingCsv] = useState(false);
+  const [exportDateFrom, setExportDateFrom] = useState<string>('');
+  const [exportDateTo, setExportDateTo] = useState<string>('');
 
   const statusOptions = [
     { value: 'all', label: 'Všechny stavy' },
@@ -240,10 +243,19 @@ const AdminWinners: React.FC = () => {
   const exportHistoryToCsv = async () => {
     setExportingCsv(true);
     try {
-      const { data: historyEntries, error: historyError } = await supabase
+      let query = supabase
         .from('winner_status_history')
         .select('id, winner_id, old_status, new_status, changed_by, created_at')
         .order('created_at', { ascending: false });
+
+      if (exportDateFrom) {
+        query = query.gte('created_at', `${exportDateFrom}T00:00:00`);
+      }
+      if (exportDateTo) {
+        query = query.lte('created_at', `${exportDateTo}T23:59:59`);
+      }
+
+      const { data: historyEntries, error: historyError } = await query;
 
       if (historyError) throw historyError;
 
@@ -425,6 +437,23 @@ const AdminWinners: React.FC = () => {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-2xl">Správa výher</CardTitle>
                 <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="date"
+                      value={exportDateFrom}
+                      onChange={(e) => setExportDateFrom(e.target.value)}
+                      className="w-36 h-9"
+                      placeholder="Od"
+                    />
+                    <span className="text-muted-foreground">–</span>
+                    <Input
+                      type="date"
+                      value={exportDateTo}
+                      onChange={(e) => setExportDateTo(e.target.value)}
+                      className="w-36 h-9"
+                      placeholder="Do"
+                    />
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"
