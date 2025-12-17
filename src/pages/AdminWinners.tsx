@@ -183,7 +183,23 @@ const AdminWinners: React.FC = () => {
         throw new Error('Winner not found');
       }
 
-      // Send message to user about status change
+      // First, update the status in the database
+      const { error: updateError } = await supabase
+        .from('winners')
+        .update({ status: newStatus })
+        .eq('id', winnerId);
+
+      if (updateError) {
+        console.error('Error updating winner status in database:', updateError);
+        toast({
+          title: "Chyba",
+          description: "Nepodařilo se aktualizovat stav výhry v databázi.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Only after successful DB update, send message to user
       const messageContent = getStatusMessage(newStatus, winner.prize_description);
       
       const { error: messageError } = await supabase
@@ -205,6 +221,7 @@ const AdminWinners: React.FC = () => {
 
       if (messageError) {
         console.error('Error sending message:', messageError);
+        // Message failed but DB update succeeded - still update UI
       }
       
       // Update local state
