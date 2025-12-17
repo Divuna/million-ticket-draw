@@ -336,6 +336,39 @@ const AdminWinners: React.FC = () => {
     }
   };
 
+  const exportWinnersToCsv = () => {
+    if (filteredWinners.length === 0) {
+      toast({ title: "Info", description: "Žádné výhry k exportu." });
+      return;
+    }
+
+    const headers = ['Email', 'Jméno', 'Příjmení', 'Adresa', 'Telefon', 'Soutěž', 'Cena', 'Typ', 'Stav', 'Datum výhry'];
+    const rows = filteredWinners.map(winner => [
+      winner.user_email,
+      winner.user_address.first_name || '',
+      winner.user_address.last_name || '',
+      winner.user_address.address || '',
+      winner.user_address.phone || '',
+      winner.contest_title,
+      winner.prize_description,
+      winner.type === 'main' ? 'Hlavní výhra' : 'Bonus',
+      winner.status || 'čeká na potvrzení',
+      new Date(winner.created_at).toLocaleString('cs-CZ')
+    ]);
+
+    const csvContent = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const statusLabel = statusFilter === 'all' ? 'vsechny' : statusFilter.replace(/\s+/g, '-');
+    link.download = `vyhry-${statusLabel}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast({ title: "Export dokončen", description: `Exportováno ${filteredWinners.length} výher.` });
+  };
+
   const updateWinnerStatus = async (winnerId: string, newStatus: string) => {
     try {
       // Find the winner to get user_id and prize info
@@ -514,22 +547,37 @@ const AdminWinners: React.FC = () => {
                 </div>
               </div>
               
-              <div className="flex items-center gap-4 mt-4">
-                <label htmlFor="status-filter" className="text-sm font-medium">
-                  Filtr podle stavu:
-                </label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center justify-between mt-4">
+                <div className="flex items-center gap-4">
+                  <label htmlFor="status-filter" className="text-sm font-medium">
+                    Filtr podle stavu:
+                  </label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Badge variant="secondary" className="text-xs">
+                    {filteredWinners.length} výher
+                  </Badge>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportWinnersToCsv}
+                  disabled={filteredWinners.length === 0}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Export výher (CSV)
+                </Button>
               </div>
             </CardHeader>
             
