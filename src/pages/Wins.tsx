@@ -10,8 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
+import { MIOCOIN_IMAGE_URL } from '@/components/MioCoin';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
 
 // Build full storage URL for bonus prize images stored in contest-images bucket
 const getStorageUrl = (path: string | null | undefined): string | null => {
@@ -209,7 +210,7 @@ const Wins: React.FC = () => {
                   {(() => {
                     const imageUrl = win.type === 'main'
                       ? (win.contest?.main_prize_secondary_image || win.contest?.main_image)
-                      : getStorageUrl(win.bonus_prize?.image_url);
+                      : (getStorageUrl(win.bonus_prize?.image_url) || MIOCOIN_IMAGE_URL);
                     
                     return imageUrl ? (
                       <div className="mb-3 rounded-lg overflow-hidden">
@@ -217,6 +218,12 @@ const Wins: React.FC = () => {
                           src={imageUrl} 
                           alt={win.contest?.title || 'Výhra'}
                           className="w-full h-32 object-cover"
+                          onError={(e) => {
+                            // Fallback to MioCoin if image fails to load
+                            if (win.type === 'bonus' && e.currentTarget.src !== MIOCOIN_IMAGE_URL) {
+                              e.currentTarget.src = MIOCOIN_IMAGE_URL;
+                            }
+                          }}
                         />
                       </div>
                     ) : null;
