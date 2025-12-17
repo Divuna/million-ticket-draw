@@ -701,10 +701,9 @@ const Homepage = () => {
                 </Card>
               </div>
             ) : (
-              // Duplicate content for infinite loop
-              [...contests, ...contests].map((contest, index) => (
+              contests.map((contest) => (
                 <ContestCard
-                  key={`${contest.id}-${index}`}
+                  key={contest.id}
                   contest={contest}
                   user={user}
                   isAdmin={isAdmin}
