@@ -492,7 +492,7 @@ const AdminWinners: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
           <Card>
-            <CardHeader>
+            <CardHeader className="sticky top-0 z-20 bg-card border-b">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-2xl">Správa výher</CardTitle>
                 <div className="flex items-center gap-4">
