@@ -17,7 +17,6 @@ type Contest = {
   main_prize_secondary_image: string | null;
   main_image: string | null;
   banner_image: string | null;
-  total_miocoin_bonus: number | null;
 };
 
 type BonusPrize = {
@@ -196,10 +195,10 @@ export default function ContestDetail() {
 
       // Split into MioCoin bonuses (amount > 0) and physical bonuses (amount is null or 0)
       const physicalPrizes = typedBonus.filter((b) => !b.amount || b.amount === 0);
+      const mioCoinTotal = typedBonus.reduce((sum, b) => (b.amount && b.amount > 0 ? sum + b.amount : sum), 0);
 
       setBonusPrizes(physicalPrizes);
-      // Use static contest-level total_miocoin_bonus (marketing value, never changes)
-      setBonusMiocoins(contestData.total_miocoin_bonus ?? 0);
+      setBonusMiocoins(mioCoinTotal);
 
       const { data: wins } = await supabase.from("winners").select("*").eq("contest_id", id);
 
