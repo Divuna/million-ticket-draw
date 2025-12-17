@@ -15,6 +15,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
 
@@ -41,6 +42,7 @@ interface WinnerData {
   created_at: string;
   updated_at: string | null;
   user_email: string;
+  user_avatar: string | null;
   contest_title: string;
   prize_description: string;
   prize_image: string | null;
@@ -219,6 +221,22 @@ const AdminWinners: React.FC = () => {
 
       if (error) throw error;
 
+      // Fetch all user avatars from profiles table
+      const userIds = [...new Set((data || []).map(w => w.user_id))];
+      let userAvatars: Record<string, string | null> = {};
+      
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, avatar_url')
+          .in('id', userIds);
+        
+        userAvatars = (profiles || []).reduce((acc, p) => {
+          acc[p.id] = p.avatar_url;
+          return acc;
+        }, {} as Record<string, string | null>);
+      }
+
       // Process the data and fetch bonus prize descriptions
       const processedWinners: WinnerData[] = [];
       
@@ -252,6 +270,7 @@ const AdminWinners: React.FC = () => {
           created_at: winner.created_at,
           updated_at: null,
           user_email: userData?.email || 'Neznámý uživatel',
+          user_avatar: userAvatars[winner.user_id] || null,
           contest_title: (winner.contests as any)?.title || 'Neznámá soutěž',
           prize_description: prizeDescription,
           prize_image: prizeImage,
@@ -721,8 +740,16 @@ const AdminWinners: React.FC = () => {
                               <ImageOff className="w-6 h-6 text-muted-foreground" />
                             </div>
                           </TableCell>
-                          <TableCell className="font-medium">
-                            {winner.user_email}
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={winner.user_avatar || undefined} alt={winner.user_email} />
+                                <AvatarFallback className="bg-muted text-xs">
+                                  {winner.user_email?.[0]?.toUpperCase() || 'U'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{winner.user_email}</span>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Collapsible>
