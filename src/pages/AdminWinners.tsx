@@ -64,6 +64,7 @@ const AdminWinners: React.FC = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [historyData, setHistoryData] = useState<Record<string, StatusHistoryEntry[]>>({});
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
+  const [expandedPrizeDescription, setExpandedPrizeDescription] = useState<string | null>(null);
   const [exportingCsv, setExportingCsv] = useState(false);
   const [exportDateFrom, setExportDateFrom] = useState<string>('');
   const [exportDateTo, setExportDateTo] = useState<string>('');
@@ -657,7 +658,6 @@ const AdminWinners: React.FC = () => {
                         <TableHead>Typ</TableHead>
                         <TableHead>Stav</TableHead>
                         <TableHead>Historie</TableHead>
-                        <TableHead>Naposledy aktualizováno</TableHead>
                         <TableHead>Akce</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -723,7 +723,39 @@ const AdminWinners: React.FC = () => {
                             </Collapsible>
                           </TableCell>
                           <TableCell>{winner.contest_title}</TableCell>
-                          <TableCell>{winner.prize_description}</TableCell>
+                          <TableCell>
+                            {winner.prize_description && winner.prize_description.length > 20 ? (
+                              <div className="relative">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-auto py-1 px-2 gap-1 text-xs max-w-[180px]"
+                                  onClick={() => setExpandedPrizeDescription(
+                                    expandedPrizeDescription === winner.id ? null : winner.id
+                                  )}
+                                >
+                                  <span className="truncate text-left">
+                                    {winner.prize_description.substring(0, 20)}…
+                                  </span>
+                                  {expandedPrizeDescription === winner.id ? (
+                                    <ChevronUp className="h-3 w-3 flex-shrink-0" />
+                                  ) : (
+                                    <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                                  )}
+                                </Button>
+                                {expandedPrizeDescription === winner.id && (
+                                  <div className="absolute z-10 top-full left-0 mt-1 w-64 bg-popover border rounded-md shadow-lg p-3 text-xs">
+                                    <div className="font-medium mb-1 text-foreground">Popis ceny</div>
+                                    <p className="text-muted-foreground whitespace-pre-wrap">
+                                      {winner.prize_description}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-sm">{winner.prize_description || '—'}</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <Badge variant={winner.type === 'main' ? 'default' : 'secondary'}>
                               {winner.type === 'main' ? 'Hlavní cena' : 'Bonusová cena'}
@@ -785,12 +817,6 @@ const AdminWinners: React.FC = () => {
                                 </div>
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {winner.updated_at 
-                              ? new Date(winner.updated_at).toLocaleString('cs-CZ')
-                              : 'Nikdy'
-                            }
                           </TableCell>
                           <TableCell>
                             <Select
