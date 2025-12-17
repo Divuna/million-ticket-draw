@@ -47,6 +47,36 @@ const Wins: React.FC = () => {
     }
   }, [user]);
 
+  // Realtime subscription for winner status updates
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('wins-status-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'winners',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          // Update the specific win in state
+          setWins(prev => prev.map(win => 
+            win.id === payload.new.id 
+              ? { ...win, status: payload.new.status, delivered: payload.new.delivered }
+              : win
+          ));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const fetchWins = async () => {
     if (!user) return;
 
