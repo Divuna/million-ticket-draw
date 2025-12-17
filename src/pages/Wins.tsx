@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -8,8 +8,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { WinCard } from '@/components/WinCard';
+import { WinDetailModal } from '@/components/WinDetailModal';
 import { toast } from '@/hooks/use-toast';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
+
 interface Win {
   id: string;
   type: string;
@@ -41,7 +43,7 @@ const Wins: React.FC = () => {
   const [wins, setWins] = useState<Win[]>([]);
   const [loading, setLoading] = useState(true);
   const [highlightedWins, setHighlightedWins] = useState<Set<string>>(new Set());
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [selectedWin, setSelectedWin] = useState<Win | null>(null);
 
   // Play notification sound
   const playNotificationSound = useCallback(() => {
@@ -228,12 +230,20 @@ const Wins: React.FC = () => {
               <WinCard
                 key={win.id}
                 win={win}
-                onClick={() => navigate(`/contest/${win.contest_id}`)}
+                onClick={() => setSelectedWin(win)}
                 isHighlighted={highlightedWins.has(win.id)}
               />
             ))}
           </div>
         )}
+
+        {/* Win Detail Modal */}
+        <WinDetailModal
+          win={selectedWin}
+          open={!!selectedWin}
+          onClose={() => setSelectedWin(null)}
+          onNavigateToContest={(contestId) => navigate(`/contest/${contestId}`)}
+        />
       </div>
 
       {isAdmin ? <AdminMenu /> : <BottomNavigation />}
