@@ -138,8 +138,22 @@ export default function ContestDetail() {
           return;
         }
 
+        console.log('🔥 RPC raw response:', JSON.stringify(result, null, 2));
+        
+        // Map with nullish coalescing for proper win detection
+        const mappedResult: UnlockTicketResult = {
+          ticket_number: result.ticket_number,
+          ticket_price: result.ticket_price ?? 1,
+          next_bonus_position: result.next_bonus_position ?? null,
+          distance_to_next_bonus: result.distance_to_next_bonus ?? null,
+          won_prize: result.won_prize ?? null,
+          won_type: result.won_type ?? null,
+          bonus_prize_id: result.bonus_prize_id ?? null,
+          remaining_tickets: result.remaining_tickets ?? 0
+        };
+        
         // Success - show modal
-        setModalResult(result);
+        setModalResult(mappedResult);
         setModalContestId(contest.id);
 
         // Reload balance

@@ -22,7 +22,10 @@ interface TicketResultModalProps {
     remaining_tickets?: number;
     won_type?: 'bonus' | 'main' | null;
     bonus_prize_id?: string | null;
-  } | null;
+    // Legacy boolean fields for backward compatibility
+    won_bonus?: boolean;
+    won_main?: boolean;
+  } | null | undefined;
 }
 
 const funnyMessages = [
@@ -44,16 +47,25 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
   if (!result) return null;
 
-  // Detection logic using won_type
-  const isBonusWin = result?.won_type === 'bonus';
-  const isMainPrize = result?.won_type === 'main';
+  // Derive won_type from legacy boolean fields if not present (backward compatibility)
+  const derivedWonType = result.won_type 
+    ?? (result.won_bonus ? 'bonus' : result.won_main ? 'main' : null);
+  
+  // Detection logic using derived won_type
+  const isBonusWin = derivedWonType === 'bonus';
+  const isMainPrize = derivedWonType === 'main';
   const isWinner = isBonusWin || isMainPrize;
 
-  // Development logging
-  if (import.meta.env.DEV && result) {
-    console.log('🎪 TicketResultModal - result:', result);
-    console.log('🎯 Win detection:', { isBonusWin, isMainPrize, isWinner });
-  }
+  // Always log for debugging (temporarily)
+  console.log('🎪 TicketResultModal - result:', JSON.stringify(result, null, 2));
+  console.log('🎯 Win detection:', { 
+    won_type: result.won_type, 
+    derivedWonType,
+    won_prize: result.won_prize,
+    isBonusWin, 
+    isMainPrize, 
+    isWinner 
+  });
 
   const handleShowBonusPrizes = () => {
     navigate(`/contest/${contestId}/bonus`);
