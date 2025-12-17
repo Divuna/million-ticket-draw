@@ -49,10 +49,50 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
   const [copied, setCopied] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  // Trigger confetti when modal opens
+  // Play victory sound for main prize
+  const playVictorySound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Create a triumphant fanfare sequence
+      const notes = [
+        { freq: 523.25, start: 0, duration: 0.15 },     // C5
+        { freq: 659.25, start: 0.15, duration: 0.15 },  // E5
+        { freq: 783.99, start: 0.30, duration: 0.15 },  // G5
+        { freq: 1046.50, start: 0.45, duration: 0.4 },  // C6 (longer final note)
+      ];
+
+      notes.forEach(note => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = note.freq;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.25, audioContext.currentTime + note.start);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + note.start + note.duration);
+        
+        oscillator.start(audioContext.currentTime + note.start);
+        oscillator.stop(audioContext.currentTime + note.start + note.duration);
+      });
+    } catch (error) {
+      console.log('Could not play victory sound:', error);
+    }
+  };
+
+  // Trigger confetti and sound when modal opens
   useEffect(() => {
     if (open && win) {
       setShowConfetti(true);
+      
+      // Play victory sound only for main prize
+      if (win.type === 'main') {
+        playVictorySound();
+      }
+      
       const timer = setTimeout(() => setShowConfetti(false), 4000);
       return () => clearTimeout(timer);
     }
