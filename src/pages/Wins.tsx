@@ -1,16 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { useUserRole } from '@/hooks/useUserRole';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Trophy } from 'lucide-react';
+import { Trophy, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { WinCard } from '@/components/WinCard';
 import { WinDetailModal } from '@/components/WinDetailModal';
 import { toast } from '@/hooks/use-toast';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
+import { Badge } from '@/components/ui/badge';
 
 interface Win {
   id: string;
@@ -35,6 +36,8 @@ interface Win {
   } | null;
 }
 
+type FilterStatus = 'all' | 'pending' | 'shipped' | 'delivered';
+
 const Wins: React.FC = () => {
   const { isAdmin } = useUserRole();
   const { user } = useAuth();
@@ -44,6 +47,33 @@ const Wins: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [highlightedWins, setHighlightedWins] = useState<Set<string>>(new Set());
   const [selectedWin, setSelectedWin] = useState<Win | null>(null);
+  const [filter, setFilter] = useState<FilterStatus>('all');
+
+  // Filter wins based on selected status
+  const filteredWins = useMemo(() => {
+    if (filter === 'all') return wins;
+    
+    return wins.filter(win => {
+      if (filter === 'delivered') {
+        return win.delivered || win.status === 'vyplaceno';
+      }
+      if (filter === 'shipped') {
+        return win.status === 'odesláno' || win.status === 'připraveno k odeslání';
+      }
+      if (filter === 'pending') {
+        return !win.delivered && win.status !== 'vyplaceno' && win.status !== 'odesláno' && win.status !== 'připraveno k odeslání';
+      }
+      return true;
+    });
+  }, [wins, filter]);
+
+  // Count wins by status for badges
+  const statusCounts = useMemo(() => ({
+    all: wins.length,
+    pending: wins.filter(w => !w.delivered && w.status !== 'vyplaceno' && w.status !== 'odesláno' && w.status !== 'připraveno k odeslání').length,
+    shipped: wins.filter(w => w.status === 'odesláno' || w.status === 'připraveno k odeslání').length,
+    delivered: wins.filter(w => w.delivered || w.status === 'vyplaceno').length,
+  }), [wins]);
 
   // Play notification sound
   const playNotificationSound = useCallback(() => {
@@ -205,10 +235,45 @@ const Wins: React.FC = () => {
     <div className="min-h-screen bg-background dark pb-20">
       <Header />
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-3 mb-6">
           <Trophy className="h-8 w-8 text-yellow-500" />
           <h1 className="text-2xl font-bold text-foreground">Moje výhry</h1>
         </div>
+
+        {/* Filter Buttons */}
+        {wins.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <Badge
+              variant={filter === 'all' ? 'default' : 'outline'}
+              className={`cursor-pointer transition-colors ${filter === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+              onClick={() => setFilter('all')}
+            >
+              Všechny ({statusCounts.all})
+            </Badge>
+            <Badge
+              variant={filter === 'pending' ? 'default' : 'outline'}
+              className={`cursor-pointer transition-colors ${filter === 'pending' ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20'}`}
+              onClick={() => setFilter('pending')}
+            >
+              Čeká ({statusCounts.pending})
+            </Badge>
+            <Badge
+              variant={filter === 'shipped' ? 'default' : 'outline'}
+              className={`cursor-pointer transition-colors ${filter === 'shipped' ? 'bg-blue-500 text-white border-blue-500' : 'bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20'}`}
+              onClick={() => setFilter('shipped')}
+            >
+              Odesláno ({statusCounts.shipped})
+            </Badge>
+            <Badge
+              variant={filter === 'delivered' ? 'default' : 'outline'}
+              className={`cursor-pointer transition-colors ${filter === 'delivered' ? 'bg-green-500 text-white border-green-500' : 'bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20'}`}
+              onClick={() => setFilter('delivered')}
+            >
+              Doručeno ({statusCounts.delivered})
+            </Badge>
+          </div>
+        )}
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -224,9 +289,15 @@ const Wins: React.FC = () => {
             <h3 className="text-xl font-semibold mb-2">Zatím nemáte žádné výhry</h3>
             <p className="text-muted-foreground">Kupte si tikety v soutěžích a vyhrajte skvělé ceny!</p>
           </div>
+        ) : filteredWins.length === 0 ? (
+          <div className="text-center py-12">
+            <Filter className="h-16 w-16 mx-auto mb-4 text-muted-foreground/30" />
+            <h3 className="text-xl font-semibold mb-2">Žádné výhry v této kategorii</h3>
+            <p className="text-muted-foreground">Zkuste jiný filtr pro zobrazení výher.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {wins.map((win) => (
+            {filteredWins.map((win) => (
               <WinCard
                 key={win.id}
                 win={win}
