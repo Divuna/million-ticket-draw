@@ -112,6 +112,11 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     Zbývá tiketů: <span className="font-semibold">{result.remaining_tickets.toLocaleString('cs-CZ')}</span>
                   </p>
                 )}
+                {result.distance_to_next_bonus && result.distance_to_next_bonus > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Do další bonusové výhry: <span className="font-semibold text-primary">{result.distance_to_next_bonus.toLocaleString('cs-CZ')} tiketů</span>
+                  </p>
+                )}
               </div>
             ) : isMainPrize ? (
               <div className="text-center space-y-3">
