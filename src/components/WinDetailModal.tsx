@@ -83,14 +83,48 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
     }
   };
 
+  // Play subtle chime for bonus prize
+  const playBonusSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Gentle two-note chime
+      const notes = [
+        { freq: 587.33, start: 0, duration: 0.2 },     // D5
+        { freq: 880.00, start: 0.12, duration: 0.3 },  // A5
+      ];
+
+      notes.forEach(note => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = note.freq;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.15, audioContext.currentTime + note.start);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + note.start + note.duration);
+        
+        oscillator.start(audioContext.currentTime + note.start);
+        oscillator.stop(audioContext.currentTime + note.start + note.duration);
+      });
+    } catch (error) {
+      console.log('Could not play bonus sound:', error);
+    }
+  };
+
   // Trigger confetti and sound when modal opens
   useEffect(() => {
     if (open && win) {
       setShowConfetti(true);
       
-      // Play victory sound only for main prize
+      // Play appropriate sound based on win type
       if (win.type === 'main') {
         playVictorySound();
+      } else {
+        playBonusSound();
       }
       
       const timer = setTimeout(() => setShowConfetti(false), 4000);
