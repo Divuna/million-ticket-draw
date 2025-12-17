@@ -65,31 +65,56 @@ const Wins: React.FC = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      // Step 1: Fetch winners without embedded JOINs (no FK constraints)
+      const { data: winsData, error: winsError } = await supabase
         .from('winners')
-        .select(`
-          id,
-          type,
-          status,
-          delivered,
-          notes,
-          created_at,
-          contest_id,
-          prize_id,
-          contest:contests(id, title, main_prize, main_image, main_prize_secondary_image),
-          bonus_prize:bonus_prizes(id, title, image_url)
-        `)
+        .select('id, type, status, delivered, notes, created_at, contest_id, prize_id')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      
-      // Transform data - Supabase returns joined data as arrays
-      const transformedWins = (data || []).map((win: any) => ({
+      if (winsError) throw winsError;
+      if (!winsData || winsData.length === 0) {
+        setWins([]);
+        return;
+      }
+
+      // Step 2: Get unique contest_ids and prize_ids
+      const contestIds = [...new Set(winsData.map(w => w.contest_id).filter(Boolean))] as string[];
+      const prizeIds = [...new Set(winsData.map(w => w.prize_id).filter(Boolean))] as string[];
+
+      // Step 3: Fetch contests separately
+      let contestsMap = new Map<string, any>();
+      if (contestIds.length > 0) {
+        const { data: contestsData } = await supabase
+          .from('contests')
+          .select('id, title, main_prize, main_image, main_prize_secondary_image')
+          .in('id', contestIds);
+        
+        if (contestsData) {
+          contestsMap = new Map(contestsData.map(c => [c.id, c]));
+        }
+      }
+
+      // Step 4: Fetch bonus_prizes separately
+      let prizesMap = new Map<string, any>();
+      if (prizeIds.length > 0) {
+        const { data: prizesData } = await supabase
+          .from('bonus_prizes')
+          .select('id, title, image_url')
+          .in('id', prizeIds);
+        
+        if (prizesData) {
+          prizesMap = new Map(prizesData.map(p => [p.id, p]));
+        }
+      }
+
+      // Step 5: Join data on frontend
+      const transformedWins: Win[] = winsData.map(win => ({
         ...win,
-        contest: Array.isArray(win.contest) ? win.contest[0] : win.contest,
-        bonus_prize: Array.isArray(win.bonus_prize) ? win.bonus_prize[0] : win.bonus_prize
+        contest: contestsMap.get(win.contest_id) || null,
+        bonus_prize: win.prize_id ? prizesMap.get(win.prize_id) || null : null
       }));
+
       setWins(transformedWins);
     } catch (error) {
       console.error('Error fetching wins:', error);
