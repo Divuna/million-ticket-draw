@@ -6,6 +6,7 @@ import { AdminMenu } from '@/components/AdminMenu';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Trophy, Gift, Package, CheckCircle, Clock } from 'lucide-react';
+import { MIOCOIN_IMAGE_URL } from '@/components/MioCoin';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,6 +26,7 @@ interface Win {
     title: string;
     main_prize: string;
     main_image: string | null;
+    main_prize_secondary_image: string | null;
   } | null;
 }
 
@@ -58,7 +60,7 @@ const Wins: React.FC = () => {
           created_at,
           contest_id,
           prize_id,
-          contest:contests(id, title, main_prize, main_image)
+          contest:contests(id, title, main_prize, main_image, main_prize_secondary_image)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -187,15 +189,21 @@ const Wins: React.FC = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {win.contest?.main_image && (
-                    <div className="mb-3 rounded-lg overflow-hidden">
-                      <img 
-                        src={win.contest.main_image} 
-                        alt={win.contest.title}
-                        className="w-full h-32 object-cover"
-                      />
-                    </div>
-                  )}
+                  {(() => {
+                    const imageUrl = win.type === 'main'
+                      ? (win.contest?.main_prize_secondary_image || win.contest?.main_image)
+                      : MIOCOIN_IMAGE_URL;
+                    
+                    return imageUrl ? (
+                      <div className="mb-3 rounded-lg overflow-hidden">
+                        <img 
+                          src={imageUrl} 
+                          alt={win.contest?.title || 'Výhra'}
+                          className="w-full h-32 object-cover"
+                        />
+                      </div>
+                    ) : null;
+                  })()}
                   <div className="flex items-center gap-2 text-sm">
                     <Gift className="h-4 w-4 text-muted-foreground" />
                     <span className="text-foreground font-medium">
