@@ -206,7 +206,7 @@ const AdminWinners: React.FC = () => {
         .from('messages')
         .insert({
           user_id: winner.user_id,
-          sender: 'Admin',
+          sender: 'admin',
           content: messageContent,
           read: false,
           topic: 'prize_status',
