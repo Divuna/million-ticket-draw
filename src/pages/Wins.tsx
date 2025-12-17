@@ -6,11 +6,17 @@ import { AdminMenu } from '@/components/AdminMenu';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Trophy, Gift, Package, CheckCircle, Clock } from 'lucide-react';
-import { MIOCOIN_IMAGE_URL } from '@/components/MioCoin';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
+
+interface BonusPrize {
+  id: string;
+  description: string;
+  image_url: string | null;
+  title: string | null;
+}
 
 interface Win {
   id: string;
@@ -35,6 +41,7 @@ const Wins: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [wins, setWins] = useState<Win[]>([]);
+  const [bonusPrizes, setBonusPrizes] = useState<Record<string, BonusPrize>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -73,6 +80,26 @@ const Wins: React.FC = () => {
         contest: Array.isArray(win.contest) ? win.contest[0] : win.contest
       }));
       setWins(transformedWins);
+
+      // Fetch bonus prize details for bonus wins
+      const bonusPrizeIds = transformedWins
+        .filter((w: Win) => w.type === 'bonus' && w.prize_id)
+        .map((w: Win) => w.prize_id as string);
+
+      if (bonusPrizeIds.length > 0) {
+        const { data: bonusData, error: bonusError } = await supabase
+          .from('bonus_prizes')
+          .select('id, description, image_url, title')
+          .in('id', bonusPrizeIds);
+
+        if (!bonusError && bonusData) {
+          const bonusMap: Record<string, BonusPrize> = {};
+          bonusData.forEach((bp) => {
+            bonusMap[bp.id] = bp;
+          });
+          setBonusPrizes(bonusMap);
+        }
+      }
     } catch (error) {
       console.error('Error fetching wins:', error);
     } finally {
@@ -114,6 +141,30 @@ const Wins: React.FC = () => {
       default:
         return 'Výhra';
     }
+  };
+
+  const getPrizeImage = (win: Win): string | null => {
+    if (win.type === 'main') {
+      return win.contest?.main_prize_secondary_image || win.contest?.main_image || null;
+    }
+    // For bonus wins, use the actual bonus prize image
+    if (win.type === 'bonus' && win.prize_id) {
+      const bonusPrize = bonusPrizes[win.prize_id];
+      return bonusPrize?.image_url || null;
+    }
+    return null;
+  };
+
+  const getPrizeName = (win: Win): string => {
+    if (win.type === 'main') {
+      return win.contest?.main_prize || 'Hlavní cena';
+    }
+    // For bonus wins, use the actual bonus prize title/description
+    if (win.type === 'bonus' && win.prize_id) {
+      const bonusPrize = bonusPrizes[win.prize_id];
+      return bonusPrize?.title || bonusPrize?.description || win.notes || 'Bonusová cena';
+    }
+    return win.notes || 'Bonusová cena';
   };
 
   if (!user) {
@@ -166,56 +217,55 @@ const Wins: React.FC = () => {
           </Card>
         ) : (
           <div className="space-y-4">
-            {wins.map((win) => (
-              <Card 
-                key={win.id} 
-                className="bg-card/50 hover:bg-card/70 transition-colors cursor-pointer"
-                onClick={() => navigate(`/contest/${win.contest_id}`)}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      {getTypeIcon(win.type)}
-                      <div>
-                        <CardTitle className="text-lg">
-                          {win.contest?.title || 'Soutěž'}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          {getTypeLabel(win.type)}
-                        </p>
+            {wins.map((win) => {
+              const imageUrl = getPrizeImage(win);
+              const prizeName = getPrizeName(win);
+              
+              return (
+                <Card 
+                  key={win.id} 
+                  className="bg-card/50 hover:bg-card/70 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/contest/${win.contest_id}`)}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        {getTypeIcon(win.type)}
+                        <div>
+                          <CardTitle className="text-lg">
+                            {win.contest?.title || 'Soutěž'}
+                          </CardTitle>
+                          <p className="text-sm text-muted-foreground">
+                            {getTypeLabel(win.type)}
+                          </p>
+                        </div>
                       </div>
+                      {getStatusBadge(win.status, win.delivered)}
                     </div>
-                    {getStatusBadge(win.status, win.delivered)}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {(() => {
-                    const imageUrl = win.type === 'main'
-                      ? (win.contest?.main_prize_secondary_image || win.contest?.main_image)
-                      : MIOCOIN_IMAGE_URL;
-                    
-                    return imageUrl ? (
+                  </CardHeader>
+                  <CardContent>
+                    {imageUrl && (
                       <div className="mb-3 rounded-lg overflow-hidden">
                         <img 
                           src={imageUrl} 
-                          alt={win.contest?.title || 'Výhra'}
+                          alt={prizeName}
                           className="w-full h-32 object-cover"
                         />
                       </div>
-                    ) : null;
-                  })()}
-                  <div className="flex items-center gap-2 text-sm">
-                    <Gift className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-foreground font-medium">
-                      {win.type === 'main' ? win.contest?.main_prize : win.notes || 'Bonusová cena'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Vyhráno: {new Date(win.created_at).toLocaleDateString('cs-CZ')}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+                    )}
+                    <div className="flex items-center gap-2 text-sm">
+                      <Gift className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-foreground font-medium">
+                        {prizeName}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Vyhráno: {new Date(win.created_at).toLocaleDateString('cs-CZ')}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </main>
