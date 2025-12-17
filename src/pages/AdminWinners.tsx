@@ -587,9 +587,9 @@ const AdminWinners: React.FC = () => {
                   <p>Žádné výhry k zobrazení.</p>
                 </div>
               ) : (
-                <div className="rounded-md border max-h-[500px] overflow-auto">
+                <div className="rounded-md border overflow-x-auto">
                   <Table className="min-w-max">
-                    <TableHeader className="sticky top-0 bg-card z-10">
+                    <TableHeader>
                       <TableRow>
                         <TableHead className="w-20">Obrázek</TableHead>
                         <TableHead>Email uživatele</TableHead>
