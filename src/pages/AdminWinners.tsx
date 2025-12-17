@@ -67,6 +67,7 @@ const AdminWinners: React.FC = () => {
   const [exportingCsv, setExportingCsv] = useState(false);
   const [exportDateFrom, setExportDateFrom] = useState<string>('');
   const [exportDateTo, setExportDateTo] = useState<string>('');
+  const [exportPreviewCount, setExportPreviewCount] = useState<number | null>(null);
 
   const statusOptions = [
     { value: 'all', label: 'Všechny stavy' },
@@ -95,6 +96,31 @@ const AdminWinners: React.FC = () => {
       setFilteredWinners(filtered);
     }
   }, [winners, statusFilter]);
+
+  // Fetch export preview count when date filters change
+  useEffect(() => {
+    const fetchExportCount = async () => {
+      try {
+        let query = supabase
+          .from('winner_status_history')
+          .select('id', { count: 'exact', head: true });
+
+        if (exportDateFrom) {
+          query = query.gte('created_at', `${exportDateFrom}T00:00:00`);
+        }
+        if (exportDateTo) {
+          query = query.lte('created_at', `${exportDateTo}T23:59:59`);
+        }
+
+        const { count } = await query;
+        setExportPreviewCount(count);
+      } catch (error) {
+        console.error('Error fetching export count:', error);
+      }
+    };
+
+    fetchExportCount();
+  }, [exportDateFrom, exportDateTo]);
 
   const fetchWinners = async () => {
     try {
@@ -454,16 +480,23 @@ const AdminWinners: React.FC = () => {
                       placeholder="Do"
                     />
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={exportHistoryToCsv}
-                    disabled={exportingCsv}
-                    className="gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    {exportingCsv ? 'Exportuji...' : 'Export historie (CSV)'}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {exportPreviewCount !== null && (
+                      <Badge variant="secondary" className="text-xs">
+                        {exportPreviewCount} záznamů
+                      </Badge>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={exportHistoryToCsv}
+                      disabled={exportingCsv || exportPreviewCount === 0}
+                      className="gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      {exportingCsv ? 'Exportuji...' : 'Export historie (CSV)'}
+                    </Button>
+                  </div>
                   <span className="text-sm text-muted-foreground">
                     Celkem výher: {winners.length}
                   </span>
