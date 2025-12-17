@@ -1515,9 +1515,10 @@ export const AdminContestManagement: React.FC = () => {
           ) : contests.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">Žádné soutěže nebyly nalezeny.</div>
           ) : (
-            <div className="w-full overflow-x-auto overflow-y-auto max-h-[70vh]">
-              <Table className="min-w-max">
-                <TableHeader className="sticky top-0 z-10 bg-card">
+            <div className="rounded-md border border-white/10 max-h-[550px] overflow-auto relative">
+              <div className="min-w-max">
+                <Table>
+                  <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow className="border-b border-white/10 hover:bg-transparent">
                     <TableHead className="bg-card">Název</TableHead>
                     <TableHead className="text-center bg-card">Hlavní výhra</TableHead>
@@ -1638,6 +1639,7 @@ export const AdminContestManagement: React.FC = () => {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </div>
           )}
         </CardContent>
