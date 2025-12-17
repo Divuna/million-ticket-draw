@@ -22,6 +22,7 @@ interface WinnerData {
   user_email: string;
   contest_title: string;
   prize_description: string;
+  prize_image: string | null;
 }
 
 const AdminWinners: React.FC = () => {
@@ -74,7 +75,7 @@ const AdminWinners: React.FC = () => {
           type,
           created_at,
           users!inner(email),
-          contests!inner(title, main_prize)
+          contests!inner(title, main_prize, main_prize_secondary_image, main_image)
         `)
         .order('created_at', { ascending: false });
 
@@ -85,18 +86,20 @@ const AdminWinners: React.FC = () => {
       
       for (const winner of data || []) {
         let prizeDescription = '';
+        let prizeImage: string | null = null;
         
         if (winner.type === 'main') {
           prizeDescription = (winner.contests as any)?.main_prize || 'Hlavní cena';
+          prizeImage = (winner.contests as any)?.main_prize_secondary_image || (winner.contests as any)?.main_image || null;
         } else if (winner.type === 'bonus' && winner.prize_id) {
-          // Fetch bonus prize description
           const { data: bonusData } = await supabase
             .from('bonus_prizes')
-            .select('description')
+            .select('description, image_url')
             .eq('id', winner.prize_id)
             .single();
           
           prizeDescription = bonusData?.description || 'Bonusová cena';
+          prizeImage = bonusData?.image_url || null;
         }
 
         processedWinners.push({
@@ -105,12 +108,13 @@ const AdminWinners: React.FC = () => {
           contest_id: winner.contest_id,
           prize_id: winner.prize_id,
           type: winner.type as 'main' | 'bonus',
-          status: null, // Mocked temporarily until DB column is added
+          status: null,
           created_at: winner.created_at,
-          updated_at: null, // Mocked temporarily until DB column is added
+          updated_at: null,
           user_email: (winner.users as any)?.email || 'Neznámý uživatel',
           contest_title: (winner.contests as any)?.title || 'Neznámá soutěž',
-          prize_description: prizeDescription
+          prize_description: prizeDescription,
+          prize_image: prizeImage
         });
       }
 
@@ -221,6 +225,7 @@ const AdminWinners: React.FC = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-20">Obrázek</TableHead>
                         <TableHead>Email uživatele</TableHead>
                         <TableHead>Název soutěže</TableHead>
                         <TableHead>Popis ceny</TableHead>
@@ -233,6 +238,19 @@ const AdminWinners: React.FC = () => {
                     <TableBody>
                       {filteredWinners.map((winner) => (
                         <TableRow key={winner.id}>
+                          <TableCell>
+                            {winner.prize_image ? (
+                              <img 
+                                src={winner.prize_image} 
+                                alt="Obrázek ceny"
+                                className="w-16 h-16 object-cover rounded-md"
+                              />
+                            ) : (
+                              <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center">
+                                <span className="text-xs text-muted-foreground">—</span>
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell className="font-medium">
                             {winner.user_email}
                           </TableCell>
