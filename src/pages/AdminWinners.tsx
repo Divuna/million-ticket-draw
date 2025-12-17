@@ -94,6 +94,7 @@ const AdminWinners: React.FC = () => {
           contest_id,
           prize_id,
           type,
+          status,
           created_at,
           users!inner(email, first_name, last_name, address, phone),
           contests!inner(title, main_prize, main_prize_secondary_image, main_image)
@@ -131,7 +132,7 @@ const AdminWinners: React.FC = () => {
           contest_id: winner.contest_id,
           prize_id: winner.prize_id,
           type: winner.type as 'main' | 'bonus',
-          status: null,
+          status: winner.status || 'čeká na potvrzení',
           created_at: winner.created_at,
           updated_at: null,
           user_email: userData?.email || 'Neznámý uživatel',
