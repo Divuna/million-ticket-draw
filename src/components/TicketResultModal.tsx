@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -9,7 +9,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
-import { supabase } from '@/integrations/supabase/client';
 
 interface TicketResultModalProps {
   isOpen: boolean;
@@ -24,12 +23,6 @@ interface TicketResultModalProps {
     won_type?: 'bonus' | 'main' | null;
     bonus_prize_id?: string | null;
   } | null;
-}
-
-interface BonusPrizeDetails {
-  image_url: string | null;
-  title: string | null;
-  description: string;
 }
 
 const funnyMessages = [
@@ -48,32 +41,6 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 }) => {
   const { width, height } = useWindowSize();
   const navigate = useNavigate();
-  const [bonusPrizeDetails, setBonusPrizeDetails] = useState<BonusPrizeDetails | null>(null);
-
-  // Fetch bonus prize details when modal opens with a bonus win
-  useEffect(() => {
-    if (isOpen && result?.bonus_prize_id && result?.won_type === 'bonus') {
-      fetchBonusPrizeDetails(result.bonus_prize_id);
-    } else {
-      setBonusPrizeDetails(null);
-    }
-  }, [isOpen, result?.bonus_prize_id, result?.won_type]);
-
-  const fetchBonusPrizeDetails = async (prizeId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('bonus_prizes')
-        .select('image_url, title, description')
-        .eq('id', prizeId)
-        .single();
-
-      if (!error && data) {
-        setBonusPrizeDetails(data);
-      }
-    } catch (error) {
-      console.error('Error fetching bonus prize details:', error);
-    }
-  };
 
   if (!result) return null;
 
@@ -97,22 +64,6 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     return funnyMessages[Math.floor(Math.random() * funnyMessages.length)];
   };
 
-  // Get prize name for display
-  const getPrizeName = (): string => {
-    if (isBonusWin) {
-      return bonusPrizeDetails?.title || bonusPrizeDetails?.description || result.won_prize || 'Bonusová výhra';
-    }
-    return result.won_prize || 'Hlavní cena';
-  };
-
-  // Get prize image for bonus wins
-  const getPrizeImage = (): string | null => {
-    if (isBonusWin && bonusPrizeDetails?.image_url) {
-      return bonusPrizeDetails.image_url;
-    }
-    return null;
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -129,7 +80,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         
         <DialogHeader>
           <DialogTitle className="text-center text-xl">
-            {isMainPrize ? '🏆 Hlavní výhra!' : isWinner ? '🎉 Výhra!' : 'Výsledek tiketu'}
+            {isMainPrize ? '' : isWinner ? 'Výhra! 🎉' : 'Výsledek tiketu'}
           </DialogTitle>
         </DialogHeader>
 
@@ -137,27 +88,10 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           {isWinner ? (
             isBonusWin ? (
               <div className="text-center space-y-3">
-                {/* Prize image for bonus wins */}
-                {getPrizeImage() && (
-                  <div className="mx-auto w-32 h-32 rounded-xl overflow-hidden border-2 border-green-500/30 shadow-lg">
-                    <img 
-                      src={getPrizeImage()!} 
-                      alt={getPrizeName()}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                {!getPrizeImage() && <div className="text-6xl">🎉</div>}
-                
-                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                  <p className="text-lg font-semibold text-green-500">
-                    Gratulujeme, vyhrál jsi!
-                  </p>
-                  <p className="text-foreground font-medium mt-1">
-                    {getPrizeName()}
-                  </p>
-                </div>
-                
+                <div className="text-6xl">🎉</div>
+                <p className="text-lg font-semibold text-green-600">
+                  Gratulujeme, vyhrál jsi bonus: {result.won_prize}
+                </p>
                 <p className="text-muted-foreground">
                   Tiket #{result.ticket_number.toLocaleString('cs-CZ')}
                 </p>
@@ -170,16 +104,9 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             ) : isMainPrize ? (
               <div className="text-center space-y-3">
                 <div className="text-6xl">🏆</div>
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-                  <p className="text-lg font-semibold text-yellow-500">
-                    Gratulujeme, vyhrál jsi hlavní cenu!
-                  </p>
-                  {result.won_prize && (
-                    <p className="text-foreground font-medium mt-1">
-                      {result.won_prize}
-                    </p>
-                  )}
-                </div>
+                <p className="text-lg font-semibold text-yellow-600">
+                  Gratulujeme, vyhrál jsi hlavní cenu!
+                </p>
                 <p className="text-muted-foreground">
                   Tiket #{result.ticket_number.toLocaleString('cs-CZ')}
                 </p>
