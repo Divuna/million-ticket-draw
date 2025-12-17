@@ -73,7 +73,8 @@ interface MioCoinBonus {
 interface PhysicalPrize {
   id?: string;
   ticket_position: number;
-  description: string;
+  description: string; // short name
+  title?: string | null; // detailed description
   image_url?: string | null;
   image_file?: File | null;
   ai_image_url?: string | null;
@@ -142,6 +143,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   const [newPhysicalPrize, setNewPhysicalPrize] = useState<PhysicalPrize>({
     ticket_position: 1,
     description: "",
+    title: "",
     image_file: null,
   });
 
@@ -207,6 +209,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           id: bonus.id,
           ticket_position: bonus.ticket_position,
           description: bonus.description || "",
+          title: bonus.title || "",
           image_url: bonus.image_url,
         });
       }
@@ -740,7 +743,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     
     // Add prize directly without AI processing
     setPhysicalPrizes((prev) => [...prev, prizeToAdd]);
-    setNewPhysicalPrize({ ticket_position: 1, description: "", image_file: null });
+    setNewPhysicalPrize({ ticket_position: 1, description: "", title: "", image_file: null });
     toast({ title: "Výhra přidána", description: "Věcná výhra byla přidána." });
   };
 
@@ -865,6 +868,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             contest_id: contestId,
             ticket_position: prize.ticket_position,
             description: prize.description,
+            title: prize.title || null,
             image_url: imageUrl,
             status: "pending",
           });
@@ -1118,11 +1122,21 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
               <div className="border border-dashed border-white/20 rounded-lg p-4 space-y-4">
                 <div>
-                  <Label>Popis výhry</Label>
+                  <Label>Název výhry</Label>
                   <Input
                     value={newPhysicalPrize.description}
                     onChange={(e) => setNewPhysicalPrize((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder="Např. iPhone 15 Pro"
+                    placeholder="Např. iPhone 15 Pro 256 GB"
+                  />
+                </div>
+
+                <div>
+                  <Label>Popis výhry</Label>
+                  <Textarea
+                    value={newPhysicalPrize.title || ""}
+                    onChange={(e) => setNewPhysicalPrize((prev) => ({ ...prev, title: e.target.value }))}
+                    placeholder="Detailní popis produktu..."
+                    rows={3}
                   />
                 </div>
 
