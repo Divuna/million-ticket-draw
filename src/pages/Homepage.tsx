@@ -775,8 +775,8 @@ const Homepage = () => {
                 </Card>
               </div>
             ) : (
-              [...homepageVouchers, ...homepageVouchers].map((voucher, index) => (
-                <div key={`${voucher.id}-${index}`} className="flex-none w-80">
+              homepageVouchers.map((voucher) => (
+                <div key={voucher.id} className="flex-none w-80">
                   <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30 transition-all duration-300 hover:opacity-90 hover:scale-[1.01]">
                     <div className="flex h-48 relative">
                       {/* Left side - Content */}
