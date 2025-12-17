@@ -9,8 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
 import { AdminMenu } from '@/components/AdminMenu';
-import { ImageOff, X } from 'lucide-react';
+import { ImageOff, X, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
 
 const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
 
@@ -19,6 +21,13 @@ const getStorageUrl = (path: string | null | undefined): string | null => {
   if (path.startsWith('http')) return path;
   return `${SUPABASE_URL}/storage/v1/object/public/contest-images/${path}`;
 };
+
+interface UserAddress {
+  first_name: string | null;
+  last_name: string | null;
+  address: string | null;
+  phone: string | null;
+}
 
 interface WinnerData {
   id: string;
@@ -33,6 +42,7 @@ interface WinnerData {
   contest_title: string;
   prize_description: string;
   prize_image: string | null;
+  user_address: UserAddress;
 }
 
 const AdminWinners: React.FC = () => {
@@ -85,7 +95,7 @@ const AdminWinners: React.FC = () => {
           prize_id,
           type,
           created_at,
-          users!inner(email),
+          users!inner(email, first_name, last_name, address, phone),
           contests!inner(title, main_prize, main_prize_secondary_image, main_image)
         `)
         .order('created_at', { ascending: false });
@@ -113,6 +123,8 @@ const AdminWinners: React.FC = () => {
           prizeImage = getStorageUrl(bonusData?.image_url);
         }
 
+        const userData = winner.users as any;
+
         processedWinners.push({
           id: winner.id,
           user_id: winner.user_id,
@@ -122,10 +134,16 @@ const AdminWinners: React.FC = () => {
           status: null,
           created_at: winner.created_at,
           updated_at: null,
-          user_email: (winner.users as any)?.email || 'Neznámý uživatel',
+          user_email: userData?.email || 'Neznámý uživatel',
           contest_title: (winner.contests as any)?.title || 'Neznámá soutěž',
           prize_description: prizeDescription,
-          prize_image: prizeImage
+          prize_image: prizeImage,
+          user_address: {
+            first_name: userData?.first_name || null,
+            last_name: userData?.last_name || null,
+            address: userData?.address || null,
+            phone: userData?.phone || null
+          }
         });
       }
 
@@ -238,6 +256,7 @@ const AdminWinners: React.FC = () => {
                       <TableRow>
                         <TableHead className="w-20">Obrázek</TableHead>
                         <TableHead>Email uživatele</TableHead>
+                        <TableHead>Adresa</TableHead>
                         <TableHead>Název soutěže</TableHead>
                         <TableHead>Popis ceny</TableHead>
                         <TableHead>Typ</TableHead>
@@ -271,6 +290,41 @@ const AdminWinners: React.FC = () => {
                           </TableCell>
                           <TableCell className="font-medium">
                             {winner.user_email}
+                          </TableCell>
+                          <TableCell>
+                            <Collapsible>
+                              <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs">
+                                  <MapPin className="h-3 w-3" />
+                                  Zobrazit adresu
+                                  <ChevronDown className="h-3 w-3 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                </Button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="mt-2 space-y-1 text-xs">
+                                <div className="grid gap-1 rounded-md bg-muted/50 p-2">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Jméno:</span>
+                                    <span className="font-medium">
+                                      {winner.user_address.first_name && winner.user_address.last_name 
+                                        ? `${winner.user_address.first_name} ${winner.user_address.last_name}`
+                                        : winner.user_address.first_name || winner.user_address.last_name || 'Nezadáno'}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Adresa:</span>
+                                    <span className="font-medium text-right max-w-[150px]">
+                                      {winner.user_address.address || 'Nezadáno'}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Telefon:</span>
+                                    <span className="font-medium">
+                                      {winner.user_address.phone || 'Nezadáno'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
                           </TableCell>
                           <TableCell>{winner.contest_title}</TableCell>
                           <TableCell>{winner.prize_description}</TableCell>
