@@ -8,6 +8,8 @@ import { MIOCOIN_IMAGE_URL } from "@/components/MioCoin";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { TicketResultModal } from "@/components/TicketResultModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { X } from "lucide-react";
 
 type Contest = {
   id: string;
@@ -24,6 +26,7 @@ type BonusPrize = {
   id: string;
   contest_id: string;
   description: string | null;
+  title: string | null; // detailed description
   amount: number | null;
   image?: string | null;
   image_url?: string | null;
@@ -62,6 +65,7 @@ export default function ContestDetail() {
   const [processingContestId, setProcessingContestId] = useState<string | null>(null);
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
   const [modalContestId, setModalContestId] = useState<string | null>(null);
+  const [selectedPrize, setSelectedPrize] = useState<BonusPrize | null>(null);
 
   async function loadUserBalance(userId: string) {
     const { data: wallet } = await supabase.from("wallets").select("balance_coins").eq("user_id", userId).maybeSingle();
@@ -353,7 +357,7 @@ export default function ContestDetail() {
         {bonusPrizes.length === 0 ? (
           <p className="text-gray-500 text-sm py-4 text-center">Zatím nebyly přidány žádné věcné bonusové výhry.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {bonusPrizes.map((b) => {
               let bonusImageUrl: string | null = null;
               
@@ -367,23 +371,26 @@ export default function ContestDetail() {
                   : supabase.storage.from('contest-images').getPublicUrl(b.image_url).data.publicUrl;
               }
               
+              const isWon = myWins.some((w) => w.bonus_prize_id === b.id);
+              
               return (
                 <div 
                   key={b.id} 
-                  className="p-3 rounded-xl bg-black/30 border border-white/5 hover:border-white/10 transition-colors"
+                  onClick={() => setSelectedPrize(b)}
+                  className="group p-3 rounded-xl bg-black/30 border border-white/5 hover:border-yellow-500/30 hover:bg-black/50 cursor-pointer transition-all duration-200 hover:scale-[1.02]"
                 >
                   {bonusImageUrl && (
-                    <div className="aspect-[4/3] mb-2 rounded-lg overflow-hidden bg-black/20">
+                    <div className="aspect-square mb-2 rounded-lg overflow-hidden bg-black/20">
                       <img
                         src={bonusImageUrl}
                         alt={b.description ?? "Bonus prize"}
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
                         onError={(e) => (e.currentTarget.style.display = "none")}
                       />
                     </div>
                   )}
-                  <p className="text-white text-sm font-medium">{b.description || "Bonusová výhra"}</p>
-                  {myWins.some((w) => w.bonus_prize_id === b.id) && (
+                  <p className="text-white text-sm font-medium line-clamp-2">{b.description || "Bonusová výhra"}</p>
+                  {isWon && (
                     <span className="inline-block mt-2 text-green-400 text-xs bg-green-500/10 px-2 py-0.5 rounded">
                       Moje výhra
                     </span>
@@ -394,6 +401,53 @@ export default function ContestDetail() {
           </div>
         )}
       </section>
+
+      {/* PRIZE DETAIL MODAL */}
+      <Dialog open={!!selectedPrize} onOpenChange={(open) => !open && setSelectedPrize(null)}>
+        <DialogContent className="sm:max-w-md bg-[#0d1117] border-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-white text-lg font-semibold">
+              {selectedPrize?.description || "Detail výhry"}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedPrize && (
+            <div className="space-y-4">
+              {(() => {
+                let imgUrl: string | null = null;
+                if (selectedPrize.image) {
+                  imgUrl = selectedPrize.image.startsWith('http') 
+                    ? selectedPrize.image 
+                    : supabase.storage.from('contest-images').getPublicUrl(selectedPrize.image).data.publicUrl;
+                } else if (selectedPrize.image_url) {
+                  imgUrl = selectedPrize.image_url.startsWith('http') 
+                    ? selectedPrize.image_url 
+                    : supabase.storage.from('contest-images').getPublicUrl(selectedPrize.image_url).data.publicUrl;
+                }
+                return imgUrl ? (
+                  <div className="aspect-square w-full max-w-[280px] mx-auto rounded-xl overflow-hidden bg-black/30">
+                    <img
+                      src={imgUrl}
+                      alt={selectedPrize.description ?? "Prize"}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                ) : null;
+              })()}
+              {selectedPrize.title && (
+                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+                  {selectedPrize.title}
+                </p>
+              )}
+              {myWins.some((w) => w.bonus_prize_id === selectedPrize.id) && (
+                <div className="flex items-center gap-2 text-green-400 text-sm bg-green-500/10 px-3 py-2 rounded-lg">
+                  <span className="text-lg">🎉</span>
+                  <span>Tuto výhru jsi vyhrál!</span>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       {/* TICKET RESULT MODAL */}
       <TicketResultModal
         isOpen={modalResult !== null}

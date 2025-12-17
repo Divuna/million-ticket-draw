@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Coins, Crown, Gift, Info } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 
 
@@ -25,6 +26,7 @@ interface Contest {
 interface BonusPrize {
   id: string;
   description: string;
+  title?: string | null; // detailed description
   ticket_position: number;
   status: string;
   image_url?: string | null;
@@ -60,6 +62,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
   onBuyTicket,
 }) => {
   const navigate = useNavigate();
+  const [selectedPrize, setSelectedPrize] = useState<BonusPrize | null>(null);
 
   const handleBuyTicket = () => {
     if (userWallet.balance_coins < contest.ticket_price) {
@@ -356,43 +359,73 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
         });
 
         return (
-          <Card className="rounded-3xl shadow-md border-border/70 bg-gradient-to-b from-background/90 via-background/70 to-background">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Gift className="w-5 h-5 text-primary" />
-                <CardTitle>Bonusové věcné výhry</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {physicalPrizes.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {physicalPrizes.map((prize) => (
-                    <div
-                      key={prize.id}
-                      className="rounded-2xl border border-border/70 bg-card/80 overflow-hidden"
-                    >
-                      {prize.image_url && (
-                        <div className="aspect-[4/3] w-full overflow-hidden">
-                          <img 
-                            src={prize.image_url} 
-                            alt={prize.description}
-                            className="w-full h-full object-cover"
-                          />
+          <>
+            <Card className="rounded-3xl shadow-md border-border/70 bg-gradient-to-b from-background/90 via-background/70 to-background">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Gift className="w-5 h-5 text-primary" />
+                  <CardTitle>Bonusové věcné výhry</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {physicalPrizes.length > 0 ? (
+                  <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+                    {physicalPrizes.map((prize) => (
+                      <div
+                        key={prize.id}
+                        onClick={() => setSelectedPrize(prize)}
+                        className="group rounded-2xl border border-border/70 bg-card/80 overflow-hidden cursor-pointer hover:border-primary/50 hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
+                      >
+                        {prize.image_url && (
+                          <div className="aspect-square w-full overflow-hidden">
+                            <img 
+                              src={prize.image_url} 
+                              alt={prize.description}
+                              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                            />
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <p className="text-sm font-medium text-foreground line-clamp-2">{prize.description}</p>
                         </div>
-                      )}
-                      <div className="p-4">
-                        <p className="text-sm font-medium text-foreground">{prize.description}</p>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-muted-foreground">
-                  Zatím nebyly přidány žádné věcné bonusové výhry.
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground">
+                    Zatím nebyly přidány žádné věcné bonusové výhry.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Prize Detail Modal */}
+            <Dialog open={!!selectedPrize} onOpenChange={(open) => !open && setSelectedPrize(null)}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>{selectedPrize?.description || "Detail výhry"}</DialogTitle>
+                </DialogHeader>
+                {selectedPrize && (
+                  <div className="space-y-4">
+                    {selectedPrize.image_url && (
+                      <div className="aspect-square w-full max-w-[280px] mx-auto rounded-xl overflow-hidden bg-muted/20">
+                        <img
+                          src={selectedPrize.image_url}
+                          alt={selectedPrize.description}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    )}
+                    {selectedPrize.title && (
+                      <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap">
+                        {selectedPrize.title}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+          </>
         );
       })()}
 
