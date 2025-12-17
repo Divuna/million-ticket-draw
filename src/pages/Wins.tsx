@@ -26,6 +26,12 @@ interface Win {
     main_prize: string;
     main_image: string | null;
   } | null;
+  bonus_prize: {
+    id: string;
+    description: string;
+    title: string | null;
+    image_url: string | null;
+  } | null;
 }
 
 const Wins: React.FC = () => {
@@ -58,7 +64,8 @@ const Wins: React.FC = () => {
           created_at,
           contest_id,
           prize_id,
-          contest:contests(id, title, main_prize, main_image)
+          contest:contests(id, title, main_prize, main_image),
+          bonus_prize:bonus_prizes(id, description, title, image_url)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -68,7 +75,8 @@ const Wins: React.FC = () => {
       // Transform data - Supabase returns joined data as arrays
       const transformedWins = (data || []).map((win: any) => ({
         ...win,
-        contest: Array.isArray(win.contest) ? win.contest[0] : win.contest
+        contest: Array.isArray(win.contest) ? win.contest[0] : win.contest,
+        bonus_prize: Array.isArray(win.bonus_prize) ? win.bonus_prize[0] : win.bonus_prize
       }));
       setWins(transformedWins);
     } catch (error) {
@@ -187,7 +195,16 @@ const Wins: React.FC = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {win.contest?.main_image && (
+                  {/* Show bonus prize image for bonus wins, or contest main_image for main wins */}
+                  {(win.type === 'bonus' && win.bonus_prize?.image_url) ? (
+                    <div className="mb-3 rounded-lg overflow-hidden">
+                      <img 
+                        src={win.bonus_prize.image_url} 
+                        alt={win.bonus_prize.title || win.bonus_prize.description}
+                        className="w-full h-32 object-cover"
+                      />
+                    </div>
+                  ) : (win.type === 'main' && win.contest?.main_image) ? (
                     <div className="mb-3 rounded-lg overflow-hidden">
                       <img 
                         src={win.contest.main_image} 
@@ -195,11 +212,13 @@ const Wins: React.FC = () => {
                         className="w-full h-32 object-cover"
                       />
                     </div>
-                  )}
+                  ) : null}
                   <div className="flex items-center gap-2 text-sm">
                     <Gift className="h-4 w-4 text-muted-foreground" />
                     <span className="text-foreground font-medium">
-                      {win.type === 'main' ? win.contest?.main_prize : win.notes || 'Bonusová cena'}
+                      {win.type === 'main' 
+                        ? win.contest?.main_prize 
+                        : win.bonus_prize?.title || win.bonus_prize?.description || win.notes || 'Bonusová cena'}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
