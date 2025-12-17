@@ -5,7 +5,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Trophy, Filter, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Trophy, Filter, ArrowUp, ArrowDown, Gift } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { WinCard } from '@/components/WinCard';
 import { WinDetailModal } from '@/components/WinDetailModal';
@@ -37,6 +37,7 @@ interface Win {
 }
 
 type FilterStatus = 'all' | 'pending' | 'shipped' | 'delivered';
+type FilterType = 'all' | 'main' | 'bonus';
 type SortOrder = 'newest' | 'oldest';
 
 const Wins: React.FC = () => {
@@ -49,13 +50,19 @@ const Wins: React.FC = () => {
   const [highlightedWins, setHighlightedWins] = useState<Set<string>>(new Set());
   const [selectedWin, setSelectedWin] = useState<Win | null>(null);
   const [filter, setFilter] = useState<FilterStatus>('all');
+  const [typeFilter, setTypeFilter] = useState<FilterType>('all');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
 
   // Filter and sort wins
   const filteredWins = useMemo(() => {
     let result = wins;
     
-    // Apply filter
+    // Apply type filter
+    if (typeFilter !== 'all') {
+      result = result.filter(win => win.type === typeFilter);
+    }
+    
+    // Apply status filter
     if (filter !== 'all') {
       result = result.filter(win => {
         if (filter === 'delivered') {
@@ -77,7 +84,7 @@ const Wins: React.FC = () => {
       const dateB = new Date(b.created_at).getTime();
       return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
     });
-  }, [wins, filter, sortOrder]);
+  }, [wins, filter, typeFilter, sortOrder]);
 
   // Count wins by status for badges
   const statusCounts = useMemo(() => ({
@@ -85,6 +92,13 @@ const Wins: React.FC = () => {
     pending: wins.filter(w => !w.delivered && w.status !== 'vyplaceno' && w.status !== 'odesláno' && w.status !== 'připraveno k odeslání').length,
     shipped: wins.filter(w => w.status === 'odesláno' || w.status === 'připraveno k odeslání').length,
     delivered: wins.filter(w => w.delivered || w.status === 'vyplaceno').length,
+  }), [wins]);
+
+  // Count wins by type for badges
+  const typeCounts = useMemo(() => ({
+    all: wins.length,
+    main: wins.filter(w => w.type === 'main').length,
+    bonus: wins.filter(w => w.type === 'bonus').length,
   }), [wins]);
 
   // Play notification sound
@@ -254,52 +268,83 @@ const Wins: React.FC = () => {
 
         {/* Filter and Sort Controls */}
         {wins.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            {/* Filter Buttons */}
+          <div className="space-y-4 mb-6">
+            {/* Type Filter */}
             <div className="flex flex-wrap items-center gap-2">
-              <Filter className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground mr-1">Typ:</span>
               <Badge
-                variant={filter === 'all' ? 'default' : 'outline'}
-                className={`cursor-pointer transition-colors ${filter === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-                onClick={() => setFilter('all')}
+                variant={typeFilter === 'all' ? 'default' : 'outline'}
+                className={`cursor-pointer transition-colors ${typeFilter === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                onClick={() => setTypeFilter('all')}
               >
-                Všechny ({statusCounts.all})
+                Všechny ({typeCounts.all})
               </Badge>
               <Badge
-                variant={filter === 'pending' ? 'default' : 'outline'}
-                className={`cursor-pointer transition-colors ${filter === 'pending' ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20'}`}
-                onClick={() => setFilter('pending')}
+                variant={typeFilter === 'main' ? 'default' : 'outline'}
+                className={`cursor-pointer transition-colors ${typeFilter === 'main' ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20'}`}
+                onClick={() => setTypeFilter('main')}
               >
-                Čeká ({statusCounts.pending})
+                <Trophy className="w-3 h-3 mr-1" />
+                Hlavní ({typeCounts.main})
               </Badge>
               <Badge
-                variant={filter === 'shipped' ? 'default' : 'outline'}
-                className={`cursor-pointer transition-colors ${filter === 'shipped' ? 'bg-blue-500 text-white border-blue-500' : 'bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20'}`}
-                onClick={() => setFilter('shipped')}
+                variant={typeFilter === 'bonus' ? 'default' : 'outline'}
+                className={`cursor-pointer transition-colors ${typeFilter === 'bonus' ? 'bg-purple-500 text-white border-purple-500' : 'bg-purple-500/10 text-purple-400 border-purple-500/30 hover:bg-purple-500/20'}`}
+                onClick={() => setTypeFilter('bonus')}
               >
-                Odesláno ({statusCounts.shipped})
-              </Badge>
-              <Badge
-                variant={filter === 'delivered' ? 'default' : 'outline'}
-                className={`cursor-pointer transition-colors ${filter === 'delivered' ? 'bg-green-500 text-white border-green-500' : 'bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20'}`}
-                onClick={() => setFilter('delivered')}
-              >
-                Doručeno ({statusCounts.delivered})
+                <Gift className="w-3 h-3 mr-1" />
+                Bonus ({typeCounts.bonus})
               </Badge>
             </div>
 
-            {/* Sort Toggle */}
-            <button
-              onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 hover:bg-muted transition-colors text-sm text-muted-foreground hover:text-foreground"
-            >
-              {sortOrder === 'newest' ? (
-                <ArrowDown className="w-4 h-4" />
-              ) : (
-                <ArrowUp className="w-4 h-4" />
-              )}
-              {sortOrder === 'newest' ? 'Nejnovější' : 'Nejstarší'}
-            </button>
+            {/* Status Filter and Sort */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              {/* Status Filter Buttons */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <Badge
+                  variant={filter === 'all' ? 'default' : 'outline'}
+                  className={`cursor-pointer transition-colors ${filter === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                  onClick={() => setFilter('all')}
+                >
+                  Všechny ({statusCounts.all})
+                </Badge>
+                <Badge
+                  variant={filter === 'pending' ? 'default' : 'outline'}
+                  className={`cursor-pointer transition-colors ${filter === 'pending' ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20'}`}
+                  onClick={() => setFilter('pending')}
+                >
+                  Čeká ({statusCounts.pending})
+                </Badge>
+                <Badge
+                  variant={filter === 'shipped' ? 'default' : 'outline'}
+                  className={`cursor-pointer transition-colors ${filter === 'shipped' ? 'bg-blue-500 text-white border-blue-500' : 'bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20'}`}
+                  onClick={() => setFilter('shipped')}
+                >
+                  Odesláno ({statusCounts.shipped})
+                </Badge>
+                <Badge
+                  variant={filter === 'delivered' ? 'default' : 'outline'}
+                  className={`cursor-pointer transition-colors ${filter === 'delivered' ? 'bg-green-500 text-white border-green-500' : 'bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20'}`}
+                  onClick={() => setFilter('delivered')}
+                >
+                  Doručeno ({statusCounts.delivered})
+                </Badge>
+              </div>
+
+              {/* Sort Toggle */}
+              <button
+                onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 hover:bg-muted transition-colors text-sm text-muted-foreground hover:text-foreground"
+              >
+                {sortOrder === 'newest' ? (
+                  <ArrowDown className="w-4 h-4" />
+                ) : (
+                  <ArrowUp className="w-4 h-4" />
+                )}
+                {sortOrder === 'newest' ? 'Nejnovější' : 'Nejstarší'}
+              </button>
+            </div>
           </div>
         )}
 
