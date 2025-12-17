@@ -160,21 +160,63 @@ const AdminWinners: React.FC = () => {
     }
   };
 
+  const getStatusMessage = (status: string, prizeName: string): string => {
+    switch (status) {
+      case 'čeká na potvrzení':
+        return `Vaše výhra "${prizeName}" čeká na potvrzení.`;
+      case 'připraveno k odeslání':
+        return `Vaše výhra "${prizeName}" je připravena k odeslání.`;
+      case 'odesláno':
+        return `Vaše výhra "${prizeName}" byla odeslána.`;
+      case 'vyplaceno':
+        return `Vaše výhra "${prizeName}" byla vyplacena.`;
+      default:
+        return `Stav vaší výhry "${prizeName}" byl aktualizován na: ${status}.`;
+    }
+  };
+
   const updateWinnerStatus = async (winnerId: string, newStatus: string) => {
     try {
-      // For now, just show success message since status column doesn't exist yet
-      // When DB is updated, this will actually update the database
+      // Find the winner to get user_id and prize info
+      const winner = winners.find(w => w.id === winnerId);
+      if (!winner) {
+        throw new Error('Winner not found');
+      }
+
+      // Send message to user about status change
+      const messageContent = getStatusMessage(newStatus, winner.prize_description);
+      
+      const { error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          user_id: winner.user_id,
+          sender: 'Admin',
+          content: messageContent,
+          read: false,
+          topic: 'prize_status',
+          event: 'prize_status_change',
+          payload: {
+            winner_id: winnerId,
+            prize_description: winner.prize_description,
+            new_status: newStatus,
+            contest_title: winner.contest_title
+          }
+        });
+
+      if (messageError) {
+        console.error('Error sending message:', messageError);
+      }
       
       // Update local state
-      setWinners(prev => prev.map(winner => 
-        winner.id === winnerId 
-          ? { ...winner, status: newStatus, updated_at: new Date().toISOString() }
-          : winner
+      setWinners(prev => prev.map(w => 
+        w.id === winnerId 
+          ? { ...w, status: newStatus, updated_at: new Date().toISOString() }
+          : w
       ));
 
       toast({
         title: "Stav výhry aktualizován",
-        description: "Stav výhry byl úspěšně změněn.",
+        description: "Stav výhry byl úspěšně změněn a uživatel byl informován.",
       });
 
     } catch (error) {
