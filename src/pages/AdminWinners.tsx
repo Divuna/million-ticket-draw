@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
 import { AdminMenu } from '@/components/AdminMenu';
-import { ImageOff, X, ChevronDown, ChevronUp, MapPin, History, Download } from 'lucide-react';
+import { ImageOff, X, ChevronDown, ChevronUp, MapPin, History, Download, Check } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
@@ -65,6 +66,7 @@ const AdminWinners: React.FC = () => {
   const [historyData, setHistoryData] = useState<Record<string, StatusHistoryEntry[]>>({});
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
   const [expandedPrizeDescription, setExpandedPrizeDescription] = useState<string | null>(null);
+  const [selectedWinners, setSelectedWinners] = useState<Set<string>>(new Set());
   const [exportingCsv, setExportingCsv] = useState(false);
   const [exportDateFrom, setExportDateFrom] = useState<string>('');
   const [exportDateTo, setExportDateTo] = useState<string>('');
@@ -650,6 +652,7 @@ const AdminWinners: React.FC = () => {
                     <Table>
                       <TableHeader className="sticky top-0 bg-card z-10">
                       <TableRow>
+                        <TableHead className="w-10"></TableHead>
                         <TableHead className="w-20">Obrázek</TableHead>
                         <TableHead>Email uživatele</TableHead>
                         <TableHead>Adresa</TableHead>
@@ -663,7 +666,26 @@ const AdminWinners: React.FC = () => {
                     </TableHeader>
                     <TableBody>
                       {filteredWinners.map((winner) => (
-                        <TableRow key={winner.id}>
+                        <TableRow 
+                          key={winner.id}
+                          className={selectedWinners.has(winner.id) ? 'bg-primary/10 ring-1 ring-primary/30' : ''}
+                        >
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedWinners.has(winner.id)}
+                              onCheckedChange={(checked) => {
+                                setSelectedWinners(prev => {
+                                  const next = new Set(prev);
+                                  if (checked) {
+                                    next.add(winner.id);
+                                  } else {
+                                    next.delete(winner.id);
+                                  }
+                                  return next;
+                                });
+                              }}
+                            />
+                          </TableCell>
                           <TableCell>
                             {winner.prize_image ? (
                               <img 
