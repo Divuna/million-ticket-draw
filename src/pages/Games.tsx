@@ -199,15 +199,17 @@ const Index = () => {
         return;
       }
 
+      console.log('🔥 RPC raw response:', JSON.stringify(rpcResult, null, 2));
+      
       const result: UnlockTicketResult = {
         ticket_number: rpcResult.ticket_number,
-        ticket_price: rpcResult.ticket_price || 1,
-        next_bonus_position: rpcResult.next_bonus_position || null,
-        distance_to_next_bonus: rpcResult.distance_to_next_bonus || null,
-        won_prize: rpcResult.won_prize || null,
-        won_type: rpcResult.won_type || null,
-        bonus_prize_id: rpcResult.bonus_prize_id || null,
-        remaining_tickets: rpcResult.remaining_tickets || 0
+        ticket_price: rpcResult.ticket_price ?? 1,
+        next_bonus_position: rpcResult.next_bonus_position ?? null,
+        distance_to_next_bonus: rpcResult.distance_to_next_bonus ?? null,
+        won_prize: rpcResult.won_prize ?? null,
+        won_type: rpcResult.won_type ?? null,
+        bonus_prize_id: rpcResult.bonus_prize_id ?? null,
+        remaining_tickets: rpcResult.remaining_tickets ?? 0
       };
 
       // Send event to Sofinity
