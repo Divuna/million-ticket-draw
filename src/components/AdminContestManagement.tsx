@@ -588,8 +588,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   // Computed number of positions
   const computedPositionCount = stepValue > 0 ? Math.floor(totalMioCoinsInput / stepValue) : 0;
 
-  // MioCoin bonus generation
-  const generateMioCoinBonuses = () => {
+  // MioCoin bonus generation - saves immediately to DB when editing existing contest
+  const generateMioCoinBonuses = async () => {
     if (totalMioCoinsInput <= 0 || stepValue <= 0) {
       toast({
         title: "Chyba",
@@ -652,11 +652,58 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       });
     }
 
+    // If editing existing contest, save immediately to DB
+    if (editingContest?.contest_id) {
+      try {
+        const contestId = editingContest.contest_id;
+        
+        // Delete existing MioCoin bonuses (only those with amount > 0)
+        await supabase
+          .from("bonus_prizes")
+          .delete()
+          .eq("contest_id", contestId)
+          .gt("amount", 0);
+
+        // Insert new MioCoin bonuses
+        for (const bonus of newBonuses) {
+          await supabase.from("bonus_prizes").insert({
+            contest_id: contestId,
+            ticket_position: bonus.ticket_position,
+            amount: bonus.amount,
+            description: `${bonus.amount} MioCoinů`,
+            status: "pending",
+          });
+        }
+
+        // Calculate total and update contests.total_miocoin_bonus
+        const totalMioCoins = newBonuses.reduce((sum, b) => sum + b.amount, 0);
+        await supabase
+          .from("contests")
+          .update({ total_miocoin_bonus: totalMioCoins })
+          .eq("id", contestId);
+
+        console.log("Saved total_miocoin_bonus:", totalMioCoins);
+        
+        toast({
+          title: "MioCoiny uloženy",
+          description: `${newBonuses.length} MioCoin bonusů (celkem ${totalMioCoins}) bylo uloženo do databáze.`,
+        });
+      } catch (err) {
+        console.error("Error saving MioCoin bonuses:", err);
+        toast({
+          title: "Chyba při ukládání",
+          description: "MioCoiny byly vygenerovány, ale nepodařilo se je uložit.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "MioCoiny vygenerovány",
+        description: `Přidáno ${newBonuses.length} MioCoin bonusů. Budou uloženy po vytvoření soutěže.`,
+      });
+    }
+
     setMioCoinBonuses((prev) => [...prev, ...newBonuses]);
-    toast({
-      title: "MioCoiny vygenerovány",
-      description: `Přidáno ${newBonuses.length} MioCoin bonusů.`,
-    });
   };
 
   const clearMioCoinBonuses = () => {
@@ -791,15 +838,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           });
         }
 
-        // Update total_miocoin_bonus ONLY when MioCoin bonuses are explicitly set
-        // This is a static marketing value that doesn't change during the contest
-        if (mioCoinBonuses.length > 0) {
+        // Note: total_miocoin_bonus is saved immediately when "Vygenerovat MioCoiny" is clicked
+        // For NEW contests, we need to update it here after contest creation
+        if (mioCoinBonuses.length > 0 && !editingContest) {
           const totalMioCoinsToSave = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
           await supabase
             .from("contests")
             .update({ total_miocoin_bonus: totalMioCoinsToSave })
             .eq("id", contestId);
-          console.log("Saved total_miocoin_bonus:", totalMioCoinsToSave);
+          console.log("Saved total_miocoin_bonus for new contest:", totalMioCoinsToSave);
         }
 
         // Insert physical prizes
