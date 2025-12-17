@@ -474,25 +474,23 @@ const AdminWinners: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="h-screen flex flex-col bg-background overflow-hidden">
         <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">Načítám výhry...</p>
-          </div>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-muted-foreground">Načítám výhry...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
       <Header />
       
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-7xl mx-auto">
-          <Card>
-            <CardHeader>
+      <div className="flex-1 flex flex-col min-h-0 container mx-auto px-4 py-4">
+        <div className="flex-1 flex flex-col min-h-0 max-w-7xl mx-auto w-full">
+          <Card className="flex flex-col h-full">
+            <CardHeader className="flex-shrink-0">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-2xl">Správa výher</CardTitle>
                 <div className="flex items-center gap-4">
@@ -581,15 +579,15 @@ const AdminWinners: React.FC = () => {
               </div>
             </CardHeader>
             
-            <CardContent>
+            <CardContent className="flex-1 min-h-0 pb-4">
               {filteredWinners.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>Žádné výhry k zobrazení.</p>
                 </div>
               ) : (
-                <div className="rounded-md border overflow-x-auto">
+                <div className="rounded-md border h-full overflow-auto">
                   <Table className="min-w-max">
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 bg-card z-10">
                       <TableRow>
                         <TableHead className="w-20">Obrázek</TableHead>
                         <TableHead>Email uživatele</TableHead>
