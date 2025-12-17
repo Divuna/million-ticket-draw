@@ -184,6 +184,8 @@ const AdminWinners: React.FC = () => {
         throw new Error('Winner not found');
       }
 
+      const oldStatus = winner.status || 'čeká na potvrzení';
+
       // First, update the status in the database
       const { error: updateError } = await supabase
         .from('winners')
@@ -198,6 +200,21 @@ const AdminWinners: React.FC = () => {
           variant: "destructive"
         });
         return;
+      }
+
+      // Log status change to history table
+      const { error: historyError } = await supabase
+        .from('winner_status_history')
+        .insert({
+          winner_id: winnerId,
+          old_status: oldStatus,
+          new_status: newStatus,
+          changed_by: user?.id || null
+        });
+
+      if (historyError) {
+        console.error('Error logging status history:', historyError);
+        // Continue anyway - main update succeeded
       }
 
       // Only after successful DB update, send message to user
