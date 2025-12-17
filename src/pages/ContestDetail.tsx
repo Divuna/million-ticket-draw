@@ -268,7 +268,7 @@ export default function ContestDetail() {
       {/* 2. INFO BOXES - Side by side on desktop, stacked on mobile */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Box 1: Stav MioCoinů + akce */}
-        <section className="bg-[#111418]/80 backdrop-blur rounded-2xl p-5 border border-white/10 flex flex-col gap-4">
+        <section className="bg-[#111418]/80 backdrop-blur rounded-2xl p-5 border border-white/10 flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <div className="flex items-center gap-3">
             <img src={MIOCOIN_IMAGE_URL} className="w-7 h-7" alt="MioCoin" />
             <div>
@@ -295,7 +295,7 @@ export default function ContestDetail() {
         </section>
 
         {/* Box 2: Bonusové MioCoiny v soutěži */}
-        <section className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 rounded-2xl p-5 border border-yellow-500/20 flex items-start gap-4">
+        <section className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 rounded-2xl p-5 border border-yellow-500/20 flex items-start gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
           <div className="flex-shrink-0">
             <TooltipProvider>
               <Tooltip>
