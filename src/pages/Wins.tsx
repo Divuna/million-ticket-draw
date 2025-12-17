@@ -9,6 +9,7 @@ import { Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { WinCard } from '@/components/WinCard';
 import { toast } from '@/hooks/use-toast';
+import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 interface Win {
   id: string;
   type: string;
@@ -36,6 +37,7 @@ const Wins: React.FC = () => {
   const { isAdmin } = useUserRole();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { soundEnabled } = useNotificationSettings();
   const [wins, setWins] = useState<Win[]>([]);
   const [loading, setLoading] = useState(true);
   const [highlightedWins, setHighlightedWins] = useState<Set<string>>(new Set());
@@ -97,8 +99,10 @@ const Wins: React.FC = () => {
               : win
           ));
           
-          // Play notification sound
-          playNotificationSound();
+          // Play notification sound (if enabled)
+          if (soundEnabled) {
+            playNotificationSound();
+          }
           
           // Show toast notification
           toast({
