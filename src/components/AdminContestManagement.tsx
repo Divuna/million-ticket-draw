@@ -664,24 +664,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           .eq("contest_id", contestId)
           .gt("amount", 0);
 
-        // Insert new MioCoin bonuses (batch insert to avoid statement timeouts)
-        if (newBonuses.length > 0) {
-          const mioCoinRecords = newBonuses.map((bonus) => ({
+        // Insert new MioCoin bonuses sequentially
+        for (const bonus of newBonuses) {
+          await supabase.from("bonus_prizes").insert({
             contest_id: contestId,
             ticket_position: bonus.ticket_position,
             amount: bonus.amount,
             description: `${bonus.amount} MioCoinů`,
             status: "pending",
-          }));
-
-          const batchSize = 250;
-          for (let i = 0; i < mioCoinRecords.length; i += batchSize) {
-            const batch = mioCoinRecords.slice(i, i + batchSize);
-            const { error: batchError } = await supabase.from("bonus_prizes").insert(batch);
-            if (batchError) {
-              throw new Error(batchError.message);
-            }
-          }
+          });
         }
 
         // Note: total_miocoin_bonus is updated automatically by database trigger trg_sync_total_miocoin_bonus
@@ -830,24 +821,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         // Delete existing bonuses for this contest
         await supabase.from("bonus_prizes").delete().eq("contest_id", contestId);
 
-        // Insert MioCoin bonuses in batches (avoids statement timeouts while keeping trigger sync correct)
-        if (mioCoinBonuses.length > 0) {
-          const mioCoinRecords = mioCoinBonuses.map((bonus) => ({
+        // Insert MioCoin bonuses sequentially
+        for (const bonus of mioCoinBonuses) {
+          await supabase.from("bonus_prizes").insert({
             contest_id: contestId,
             ticket_position: bonus.ticket_position,
             amount: bonus.amount,
             description: `${bonus.amount} MioCoinů`,
             status: "pending",
-          }));
-
-          const batchSize = 250;
-          for (let i = 0; i < mioCoinRecords.length; i += batchSize) {
-            const batch = mioCoinRecords.slice(i, i + batchSize);
-            const { error: batchError } = await supabase.from("bonus_prizes").insert(batch);
-            if (batchError) {
-              throw new Error(`Chyba při ukládání MioCoin bonusů: ${batchError.message}`);
-            }
-          }
+          });
         }
 
         // Insert physical prizes with proper async handling
