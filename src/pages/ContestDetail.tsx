@@ -375,20 +375,6 @@ export default function ContestDetail() {
         )}
       </div>
 
-      {/* MOJE VÝHRY */}
-      <div className="bg-[#111418] rounded-2xl p-6 border border-white/5">
-        <h2 className="text-white font-semibold mb-4">Moje výhry</h2>
-
-        {myWins.length === 0 ? (
-          <p className="text-gray-400 text-sm">Nemáš žádné výhry.</p>
-        ) : (
-          <ul className="text-gray-300 text-sm space-y-1">
-            {myWins.map((w) => (
-              <li key={w.id}>{w.prize}</li>
-            ))}
-          </ul>
-        )}
-      </div>
 
       {/* TICKET RESULT MODAL */}
       <TicketResultModal
