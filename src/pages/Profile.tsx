@@ -10,10 +10,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon, Bell, Coins, Check } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX } from 'lucide-react';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useNotificationSettings } from '@/hooks/useNotificationSettings';
+import { Switch } from '@/components/ui/switch';
 
 interface UserWallet {
   user_id: string;
@@ -48,6 +50,7 @@ const COIN_PACKAGES: CoinPackage[] = [
 const Profile: React.FC = () => {
   const { user, session } = useAuth();
   const { isAdmin } = useUserRole();
+  const { soundEnabled, toggleSound } = useNotificationSettings();
   const navigate = useNavigate();
   const [wallet, setWallet] = useState<UserWallet | null>(null);
   const [profile, setProfile] = useState<UserProfile>({
@@ -540,6 +543,28 @@ const Profile: React.FC = () => {
               {/* OneSignal Test Section */}
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold mb-4">Notifikace</h3>
+                
+                {/* Sound notification toggle */}
+                <div className="flex items-center justify-between mb-4 p-3 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    {soundEnabled ? (
+                      <Volume2 className="h-5 w-5 text-primary" />
+                    ) : (
+                      <VolumeX className="h-5 w-5 text-muted-foreground" />
+                    )}
+                    <div>
+                      <p className="font-medium">Zvukové notifikace</p>
+                      <p className="text-sm text-muted-foreground">
+                        Přehrávat zvuk při změně stavu výhry
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={soundEnabled}
+                    onCheckedChange={toggleSound}
+                  />
+                </div>
+
                 <div className="flex flex-col gap-2">
                   <p className="text-sm text-muted-foreground mb-2">
                     Otestujte si funkčnost push notifikací na vašem zařízení.
