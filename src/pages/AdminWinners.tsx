@@ -588,7 +588,7 @@ const AdminWinners: React.FC = () => {
                 </div>
               ) : (
                 <div className="rounded-md border overflow-scroll max-h-[450px]">
-                  <Table className="min-w-[1400px]">
+                  <Table className="min-w-max">
                     <TableHeader className="sticky top-0 bg-card z-10">
                       <TableRow>
                         <TableHead className="w-20">Obrázek</TableHead>
