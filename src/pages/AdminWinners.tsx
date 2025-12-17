@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
 import { AdminMenu } from '@/components/AdminMenu';
-import { ImageOff, X, ChevronDown, ChevronUp, MapPin, History } from 'lucide-react';
+import { ImageOff, X, ChevronDown, ChevronUp, MapPin, History, Download } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
@@ -63,6 +63,7 @@ const AdminWinners: React.FC = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [historyData, setHistoryData] = useState<Record<string, StatusHistoryEntry[]>>({});
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
+  const [exportingCsv, setExportingCsv] = useState(false);
 
   const statusOptions = [
     { value: 'all', label: 'Všechny stavy' },
@@ -236,6 +237,67 @@ const AdminWinners: React.FC = () => {
     }
   };
 
+  const exportHistoryToCsv = async () => {
+    setExportingCsv(true);
+    try {
+      const { data: historyEntries, error: historyError } = await supabase
+        .from('winner_status_history')
+        .select('id, winner_id, old_status, new_status, changed_by, created_at')
+        .order('created_at', { ascending: false });
+
+      if (historyError) throw historyError;
+
+      if (!historyEntries || historyEntries.length === 0) {
+        toast({ title: "Info", description: "Žádné záznamy historie k exportu." });
+        setExportingCsv(false);
+        return;
+      }
+
+      const adminIds = [...new Set(historyEntries.map(h => h.changed_by).filter(Boolean))];
+      let adminEmails: Record<string, string> = {};
+      
+      if (adminIds.length > 0) {
+        const { data: admins } = await supabase.from('users').select('id, email').in('id', adminIds);
+        adminEmails = (admins || []).reduce((acc, a) => { acc[a.id] = a.email; return acc; }, {} as Record<string, string>);
+      }
+
+      const winnerInfo: Record<string, { user_email: string; contest_title: string; prize_description: string }> = {};
+      for (const winnerId of [...new Set(historyEntries.map(h => h.winner_id))]) {
+        const winner = winners.find(w => w.id === winnerId);
+        if (winner) {
+          winnerInfo[winnerId] = { user_email: winner.user_email, contest_title: winner.contest_title, prize_description: winner.prize_description };
+        }
+      }
+
+      const headers = ['Datum', 'Uživatel', 'Soutěž', 'Cena', 'Starý stav', 'Nový stav', 'Změnil admin'];
+      const rows = historyEntries.map(entry => {
+        const info = winnerInfo[entry.winner_id] || { user_email: 'Neznámý', contest_title: 'Neznámá', prize_description: 'Neznámá' };
+        return [
+          new Date(entry.created_at).toLocaleString('cs-CZ'),
+          info.user_email, info.contest_title, info.prize_description,
+          entry.old_status || '(nový)', entry.new_status,
+          entry.changed_by ? (adminEmails[entry.changed_by] || entry.changed_by) : ''
+        ];
+      });
+
+      const csvContent = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `historie-stavu-vyher-${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      toast({ title: "Export dokončen", description: `Exportováno ${historyEntries.length} záznamů.` });
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      toast({ title: "Chyba", description: "Nepodařilo se exportovat historii.", variant: "destructive" });
+    } finally {
+      setExportingCsv(false);
+    }
+  };
+
   const updateWinnerStatus = async (winnerId: string, newStatus: string) => {
     try {
       // Find the winner to get user_id and prize info
@@ -363,6 +425,16 @@ const AdminWinners: React.FC = () => {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-2xl">Správa výher</CardTitle>
                 <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportHistoryToCsv}
+                    disabled={exportingCsv}
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    {exportingCsv ? 'Exportuji...' : 'Export historie (CSV)'}
+                  </Button>
                   <span className="text-sm text-muted-foreground">
                     Celkem výher: {winners.length}
                   </span>
