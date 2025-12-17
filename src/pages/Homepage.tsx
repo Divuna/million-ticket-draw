@@ -667,21 +667,36 @@ const Homepage = () => {
             }}
           >
             {loading ? (
-              // Loading placeholder
-              <div className="flex-none w-72">
-                <Card className="coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden h-full">
-                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
-                  <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
-                  <CardHeader className="pb-2">
-                    <div className="h-4 bg-amber-200 dark:bg-amber-800 rounded animate-pulse mb-2" />
-                    <div className="h-3 bg-amber-100 dark:bg-amber-900 rounded animate-pulse w-20" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-16 bg-amber-100 dark:bg-amber-900 rounded animate-pulse mb-2" />
-                    <div className="h-3 bg-amber-200 dark:bg-amber-800 rounded animate-pulse" />
-                  </CardContent>
-                </Card>
-              </div>
+              // Skeleton placeholders matching ContestCard design
+              Array(3).fill(0).map((_, index) => (
+                <div key={`skeleton-${index}`} className="flex-shrink-0 w-[280px] md:w-[320px]">
+                  <div className="contest-card rounded-2xl overflow-hidden relative">
+                    {/* Skeleton image area - matches h-64 from ContestCard */}
+                    <div className="w-full h-64 bg-muted/40 animate-pulse" />
+                    
+                    {/* Dark gradient overlay - same as ContestCard */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
+                    
+                    {/* Skeleton badge - top right position */}
+                    <div className="absolute top-3 right-3">
+                      <div className="h-6 w-16 bg-muted/60 rounded-full animate-pulse" />
+                    </div>
+                    
+                    {/* Skeleton content - bottom area matching ContestCard layout */}
+                    <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-2">
+                      {/* Title skeleton */}
+                      <div className="h-5 bg-white/20 rounded animate-pulse w-3/4" />
+                      {/* Prize skeleton */}
+                      <div className="h-4 bg-white/15 rounded animate-pulse w-1/2" />
+                      {/* Buttons skeleton */}
+                      <div className="flex gap-2 mt-2">
+                        <div className="flex-1 h-10 bg-primary/30 rounded-lg animate-pulse" />
+                        <div className="h-10 w-16 bg-white/10 rounded-lg animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
             ) : contests.length === 0 ? (
               // No contests message
               <div className="flex-none w-72">
