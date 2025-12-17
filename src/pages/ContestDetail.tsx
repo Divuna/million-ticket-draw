@@ -237,9 +237,9 @@ export default function ContestDetail() {
   const isProcessing = processingContestId === contest.id;
 
   return (
-    <div className="p-6 w-full mx-auto space-y-10">
-      {/* HLAVNÍ BANNER */}
-      <div className="w-full rounded-3xl relative overflow-hidden bg-[#0b0e12] border border-yellow-500/20 shadow-[0_0_60px_rgba(250,204,21,0.25)] p-10">
+    <div className="p-6 w-full mx-auto space-y-8">
+      {/* 1. HERO SECTION */}
+      <section className="w-full rounded-3xl relative overflow-hidden bg-[#0b0e12] border border-yellow-500/20 shadow-[0_0_60px_rgba(250,204,21,0.25)] p-10">
         <div className="max-w-xl space-y-5 relative z-10">
           <h1 className="text-5xl font-extrabold text-yellow-400">{contest.title}</h1>
 
@@ -256,55 +256,57 @@ export default function ContestDetail() {
             onError={(e) => (e.currentTarget.src = "/fallback-car.png")}
           />
         </div>
-      </div>
+      </section>
 
-      {/* CTA */}
-      <div className="bg-[#111418] rounded-2xl p-6 border border-white/5 flex flex-col gap-4 relative z-50">
-        <div className="flex gap-4 flex-wrap">
-          <Button
-            onClick={handleUseMiocoins}
-            disabled={isProcessing}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3 rounded-xl disabled:opacity-50"
-          >
-            {isProcessing ? "Zpracovávám..." : `Uplatnit ${contest.ticket_price} MioCoinů`}
-          </Button>
+      {/* 2. USER ACTION SECTION - Compact block */}
+      <section className="bg-[#111418] rounded-2xl p-5 border border-white/5 relative z-50">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex gap-3 flex-wrap">
+            <Button
+              onClick={handleUseMiocoins}
+              disabled={isProcessing}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-2.5 rounded-xl disabled:opacity-50"
+            >
+              {isProcessing ? "Zpracovávám..." : `Uplatnit ${contest.ticket_price} MioCoinů`}
+            </Button>
 
-          <Button
-            onClick={() => navigate("/profile")}
-            className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-8 py-3 rounded-xl"
-          >
-            Dobít MioCoiny
-          </Button>
+            <Button
+              onClick={() => navigate("/profile")}
+              className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold px-6 py-2.5 rounded-xl"
+            >
+              Dobít MioCoiny
+            </Button>
+          </div>
+
+          <p className="text-gray-300 text-sm">
+            <strong>Zůstatek:</strong> {balance} MioCoinů
+          </p>
         </div>
+      </section>
 
-        <p className="text-gray-300 text-sm">
-          <strong>Zůstatek:</strong> {balance} MioCoinů
-        </p>
-      </div>
-
-      {/* MIOCOIN SEKCE */}
-      <div className="bg-[#111418] rounded-2xl p-6 border border-yellow-500/20 flex items-center gap-4 shadow-[0_0_20px_rgba(250,204,21,0.1)]">
-<TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <img 
-                      src={MIOCOIN_IMAGE_URL} 
-                      className="w-12 h-12 hover-scale cursor-pointer" 
-                      alt="MioCoin" 
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>MioCoiny můžeš vyhrát při nákupu tiketů</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+      {/* 3. VE HŘE JE CELKEM - Info block */}
+      <section className="bg-[#111418] rounded-2xl p-5 border border-yellow-500/20 flex items-center gap-4 shadow-[0_0_20px_rgba(250,204,21,0.1)]">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <img 
+                src={MIOCOIN_IMAGE_URL} 
+                className="w-10 h-10 hover:scale-110 transition-transform cursor-pointer" 
+                alt="MioCoin" 
+              />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>MioCoiny můžeš vyhrát při nákupu tiketů</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <p className="text-yellow-300 font-bold text-lg">
           Ve hře je celkem: {bonusMiocoins.toLocaleString("cs-CZ")} MioCoinů
         </p>
-      </div>
+      </section>
 
-      {/* CESTA K HLAVNÍ VÝHŘE */}
-      <div className="bg-black/40 rounded-xl p-4 border border-yellow-500/20">
+      {/* 4. CESTA K HLAVNÍ VÝHŘE */}
+      <section className="bg-black/40 rounded-2xl p-5 border border-yellow-500/20">
         <h2 className="text-white font-semibold mb-4">Cesta k hlavní výhře</h2>
         
         {/* Static milestone labels with tick marks */}
@@ -326,10 +328,10 @@ export default function ContestDetail() {
             animationDuration: '2s'
           }}
         />
-      </div>
+      </section>
 
-      {/* BONUSOVÉ VĚCNÉ VÝHRY */}
-      <div className="bg-[#111418] rounded-2xl p-6 border border-white/5">
+      {/* 5. BONUSOVÉ VĚCNÉ VÝHRY */}
+      <section className="bg-[#111418] rounded-2xl p-5 border border-white/5">
         <h2 className="text-white font-semibold mb-4">Bonusové věcné výhry</h2>
 
         {bonusPrizes.length === 0 ? (
@@ -373,7 +375,7 @@ export default function ContestDetail() {
             })}
           </div>
         )}
-      </div>
+      </section>
 
 
       {/* TICKET RESULT MODAL */}
