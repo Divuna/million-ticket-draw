@@ -675,14 +675,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           });
         }
 
-        // Calculate total and update contests.total_miocoin_bonus
+        // Note: total_miocoin_bonus is updated automatically by database trigger trg_sync_total_miocoin_bonus
         const totalMioCoins = newBonuses.reduce((sum, b) => sum + b.amount, 0);
-        await supabase
-          .from("contests")
-          .update({ total_miocoin_bonus: totalMioCoins })
-          .eq("id", contestId);
-
-        console.log("Saved total_miocoin_bonus:", totalMioCoins);
         
         toast({
           title: "MioCoiny uloženy",
@@ -838,16 +832,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           });
         }
 
-        // Note: total_miocoin_bonus is saved immediately when "Vygenerovat MioCoiny" is clicked
-        // For NEW contests, we need to update it here after contest creation
-        if (mioCoinBonuses.length > 0 && !editingContest) {
-          const totalMioCoinsToSave = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
-          await supabase
-            .from("contests")
-            .update({ total_miocoin_bonus: totalMioCoinsToSave })
-            .eq("id", contestId);
-          console.log("Saved total_miocoin_bonus for new contest:", totalMioCoinsToSave);
-        }
+        // Note: total_miocoin_bonus is updated automatically by database trigger trg_sync_total_miocoin_bonus
+        // after bonus_prizes are inserted
 
         // Insert physical prizes
         for (const prize of physicalPrizes) {
