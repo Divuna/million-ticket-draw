@@ -138,17 +138,22 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
 
   const imageUrl = getImageUrl();
 
+  // Different confetti settings based on win type
+  const confettiConfig = win.type === 'main' 
+    ? { pieces: 350, gravity: 0.25, colors: ['#FFD700', '#FFA500', '#FFEC8B', '#FFE135', '#F0E68C'] } // Gold theme for main prize
+    : { pieces: 120, gravity: 0.35, colors: ['#9370DB', '#BA55D3', '#DDA0DD', '#E6E6FA', '#D8BFD8'] }; // Purple theme for bonus
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      {/* Confetti Animation */}
+      {/* Confetti Animation - intensity based on win type */}
       {showConfetti && (
         <Confetti
           width={window.innerWidth}
           height={window.innerHeight}
           recycle={false}
-          numberOfPieces={200}
-          gravity={0.3}
-          colors={['#FFD700', '#FFA500', '#FF6347', '#9370DB', '#00CED1']}
+          numberOfPieces={confettiConfig.pieces}
+          gravity={confettiConfig.gravity}
+          colors={confettiConfig.colors}
           style={{ position: 'fixed', top: 0, left: 0, zIndex: 9999 }}
         />
       )}
