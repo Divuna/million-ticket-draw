@@ -265,54 +265,60 @@ export default function ContestDetail() {
         </div>
       </section>
 
-      {/* 2. USER ACTION SECTION */}
-      <section className="bg-[#111418]/80 backdrop-blur rounded-2xl p-4 md:p-5 border border-white/10">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex flex-col sm:flex-row gap-3">
+      {/* 2. INFO BOXES - Side by side on desktop, stacked on mobile */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Box 1: Stav MioCoinů + akce */}
+        <section className="bg-[#111418]/80 backdrop-blur rounded-2xl p-5 border border-white/10 flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <img src={MIOCOIN_IMAGE_URL} className="w-7 h-7" alt="MioCoin" />
+            <div>
+              <p className="text-xs text-gray-400">Tvůj stav MioCoinů</p>
+              <p className="text-xl font-bold text-white">{balance.toLocaleString("cs-CZ")}</p>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 mt-auto">
             <Button
               onClick={handleUseMiocoins}
               disabled={isProcessing}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-5 py-2.5 rounded-xl disabled:opacity-50 transition-colors"
+              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 transition-colors"
             >
-              {isProcessing ? "Zpracovávám..." : `Uplatnit ${contest.ticket_price} MioCoinů`}
+              {isProcessing ? "Zpracovávám..." : `Uplatnit ${contest.ticket_price} MioCoin`}
             </Button>
             <Button
               onClick={() => navigate("/profile")}
               variant="outline"
-              className="bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-semibold px-5 py-2.5 rounded-xl transition-colors"
+              className="flex-1 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-semibold px-4 py-2.5 rounded-xl transition-colors"
             >
               Dobít MioCoiny
             </Button>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-300 bg-black/20 px-4 py-2 rounded-lg">
-            <img src={MIOCOIN_IMAGE_URL} className="w-5 h-5" alt="MioCoin" />
-            <span><strong className="text-white">{balance}</strong> MioCoinů</span>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* 3. VE HŘE JE CELKEM */}
-      <section className="bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 rounded-2xl p-4 border border-yellow-500/20">
-        <div className="flex items-center gap-3">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <img 
-                  src={MIOCOIN_IMAGE_URL} 
-                  className="w-8 h-8 hover:scale-110 transition-transform cursor-pointer" 
-                  alt="MioCoin" 
-                />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>MioCoiny můžeš vyhrát při nákupu tiketů</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <p className="text-yellow-300 font-semibold">
-            Ve hře je celkem: <span className="text-yellow-400 font-bold">{bonusMiocoins.toLocaleString("cs-CZ")}</span> MioCoinů
+        {/* Box 2: Bonusové MioCoiny v soutěži */}
+        <section className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 rounded-2xl p-5 border border-yellow-500/20 flex items-start gap-4">
+          <div className="flex-shrink-0">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <img 
+                    src={MIOCOIN_IMAGE_URL} 
+                    className="w-10 h-10 hover:scale-110 transition-transform cursor-pointer" 
+                    alt="MioCoin" 
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>MioCoiny můžeš vyhrát při nákupu tiketů</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <p className="text-sm text-gray-200 leading-relaxed">
+            Do této soutěže jsme navíc přidali{" "}
+            <span className="text-yellow-400 font-bold">{bonusMiocoins.toLocaleString("cs-CZ")}</span>{" "}
+            MioCoinů jako bonusové výhry, které můžete během soutěže získat.
           </p>
-        </div>
-      </section>
+        </section>
+      </div>
 
       {/* 4. CESTA K HLAVNÍ VÝHŘE */}
       <section className="bg-[#111418]/60 rounded-2xl p-4 md:p-5 border border-yellow-500/15">
