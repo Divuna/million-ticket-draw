@@ -791,6 +791,17 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           });
         }
 
+        // Update total_miocoin_bonus ONLY when MioCoin bonuses are explicitly set
+        // This is a static marketing value that doesn't change during the contest
+        if (mioCoinBonuses.length > 0) {
+          const totalMioCoinsToSave = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
+          await supabase
+            .from("contests")
+            .update({ total_miocoin_bonus: totalMioCoinsToSave })
+            .eq("id", contestId);
+          console.log("Saved total_miocoin_bonus:", totalMioCoinsToSave);
+        }
+
         // Insert physical prizes
         for (const prize of physicalPrizes) {
           // Use uploaded file or existing URL only (no AI)
