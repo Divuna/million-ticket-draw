@@ -14,6 +14,7 @@ import {
   Coins,
   AlertCircle,
   CheckCircle2,
+  Sparkles,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
@@ -903,7 +904,29 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
               {/* Popis soutěže */}
               <div className="space-y-3">
-                <Label>Popis soutěže</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Popis soutěže</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateDescription}
+                    disabled={generatingDescription || (!form.title && !form.main_prize)}
+                    className="text-xs"
+                  >
+                    {generatingDescription ? (
+                      <>
+                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                        Generuji…
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-1.5 h-3 w-3" />
+                        Vygenerovat AI popis
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <Textarea
                   value={form.description}
                   onChange={handleChange("description")}
