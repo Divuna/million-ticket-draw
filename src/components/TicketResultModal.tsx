@@ -56,16 +56,6 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const isMainPrize = derivedWonType === 'main';
   const isWinner = isBonusWin || isMainPrize;
 
-  // Always log for debugging (temporarily)
-  console.log('🎪 TicketResultModal - result:', JSON.stringify(result, null, 2));
-  console.log('🎯 Win detection:', { 
-    won_type: result.won_type, 
-    derivedWonType,
-    won_prize: result.won_prize,
-    isBonusWin, 
-    isMainPrize, 
-    isWinner 
-  });
 
   const handleShowBonusPrizes = () => {
     navigate(`/contest/${contestId}/bonus`);
