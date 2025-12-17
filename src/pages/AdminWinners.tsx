@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
 import { AdminMenu } from '@/components/AdminMenu';
-import { ImageOff } from 'lucide-react';
+import { ImageOff, X } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
 
@@ -40,6 +41,7 @@ const AdminWinners: React.FC = () => {
   const [filteredWinners, setFilteredWinners] = useState<WinnerData[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const statusOptions = [
     { value: 'all', label: 'Všechny stavy' },
@@ -252,7 +254,8 @@ const AdminWinners: React.FC = () => {
                               <img 
                                 src={winner.prize_image} 
                                 alt="Obrázek ceny"
-                                className="w-16 h-16 object-cover rounded-md"
+                                className="w-16 h-16 object-cover rounded-md cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => setPreviewImage(winner.prize_image)}
                                 onError={(e) => {
                                   (e.currentTarget as HTMLImageElement).style.display = 'none';
                                   const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
@@ -314,6 +317,25 @@ const AdminWinners: React.FC = () => {
         </div>
       </div>
       <AdminMenu />
+      
+      {/* Image Preview Dialog */}
+      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="max-w-3xl p-2 bg-background/95 backdrop-blur">
+          <button 
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-2 right-2 z-10 p-1 rounded-full bg-background/80 hover:bg-background transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          {previewImage && (
+            <img 
+              src={previewImage} 
+              alt="Náhled obrázku ceny"
+              className="w-full h-auto max-h-[80vh] object-contain rounded-md"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
