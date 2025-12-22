@@ -336,7 +336,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     return `Zahrál jsem si na OneMil 🎟️ Ticket #${result.ticket_number.toLocaleString('cs-CZ')}. Každý ticket tě blíží k výhře 👉 onemil.cz`;
   };
 
-  const handleShare = async (platform: 'facebook' | 'instagram' | 'tiktok' | 'x') => {
+  const handleShare = (platform: 'facebook' | 'instagram' | 'tiktok' | 'x') => {
     const shareText = getShareText();
     
     if (!previewBlob) {
@@ -348,67 +348,35 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       return;
     }
 
-    try {
-      // Try native share API first (works on mobile)
-      if (navigator.share && navigator.canShare) {
-        const file = new File([previewBlob], 'onemil-ticket.png', { type: 'image/png' });
-        const shareData = {
-          title: 'OneMil Ticket',
-          text: shareText,
-          url: SHARE_URL,
-          files: [file]
-        };
-
-        if (navigator.canShare(shareData)) {
-          await navigator.share(shareData);
-          toast({
-            title: 'Sdíleno!',
-            description: 'Výsledek byl úspěšně sdílen.'
-          });
-          return;
-        }
-      }
-
-      // Fallback to platform-specific sharing
-      switch (platform) {
-        case 'facebook':
-          window.open(
-            `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(SHARE_URL)}&quote=${encodeURIComponent(shareText)}`,
-            '_blank',
-            'width=600,height=400'
-          );
-          break;
-        case 'instagram':
-          // Instagram doesn't support direct web sharing, download image instead
-          downloadImage(previewBlob);
-          toast({
-            title: 'Obrázek stažen',
-            description: 'Otevři Instagram a nahraj obrázek jako příspěvek nebo příběh.'
-          });
-          break;
-        case 'tiktok':
-          // TikTok doesn't support direct web sharing, download image instead
-          downloadImage(previewBlob);
-          toast({
-            title: 'Obrázek stažen',
-            description: 'Otevři TikTok a použij obrázek pro tvorbu videa.'
-          });
-          break;
-        case 'x':
-          window.open(
-            `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(SHARE_URL)}`,
-            '_blank',
-            'width=600,height=400'
-          );
-          break;
-      }
-    } catch (error) {
-      console.error('Error sharing:', error);
-      toast({
-        title: 'Chyba',
-        description: 'Nepodařilo se sdílet výsledek.',
-        variant: 'destructive'
-      });
+    switch (platform) {
+      case 'facebook':
+        window.open(
+          `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(SHARE_URL)}&quote=${encodeURIComponent(shareText)}`,
+          '_blank',
+          'width=600,height=400'
+        );
+        break;
+      case 'instagram':
+        downloadImage(previewBlob);
+        toast({
+          title: 'Obrázek stažen',
+          description: 'Nahraj ručně do IG/TikTok.'
+        });
+        break;
+      case 'tiktok':
+        downloadImage(previewBlob);
+        toast({
+          title: 'Obrázek stažen',
+          description: 'Nahraj ručně do IG/TikTok.'
+        });
+        break;
+      case 'x':
+        window.open(
+          `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(SHARE_URL)}`,
+          '_blank',
+          'width=600,height=400'
+        );
+        break;
     }
   };
 
