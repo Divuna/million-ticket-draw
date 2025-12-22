@@ -347,7 +347,7 @@ export default function ContestDetail() {
       </section>
 
       {/* 5. BONUSOVÉ VĚCNÉ VÝHRY */}
-      <section id="bonus-prizes" className="bg-[#111418]/60 rounded-2xl p-4 md:p-5 border border-white/10">
+      <section className="bg-[#111418]/60 rounded-2xl p-4 md:p-5 border border-white/10">
         <h2 className="text-white font-semibold text-sm md:text-base mb-4">Bonusové věcné výhry</h2>
 
         {bonusPrizes.length === 0 ? (

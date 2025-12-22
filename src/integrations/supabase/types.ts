@@ -1504,7 +1504,6 @@ export type Database = {
           status_code: number
         }[]
       }
-      recalculate_bonus_wallet: { Args: never; Returns: undefined }
       redeem_miocoin: {
         Args: {
           p_contest_id: string
