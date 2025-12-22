@@ -160,8 +160,14 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   };
 
   const handleShowBonusPrizes = () => {
-    navigate(`/contest/${contestId}/bonus`);
     onClose();
+    // Scroll to bonus prizes section after modal closes
+    setTimeout(() => {
+      const bonusSection = document.getElementById('bonus-prizes');
+      if (bonusSection) {
+        bonusSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   };
 
   return (
