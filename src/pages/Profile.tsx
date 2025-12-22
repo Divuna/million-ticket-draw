@@ -74,6 +74,7 @@ const Profile: React.FC = () => {
   const [editMode, setEditMode] = useState(false);
   const [testingNotification, setTestingNotification] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [transferring, setTransferring] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (user) {
@@ -264,6 +265,30 @@ const Profile: React.FC = () => {
       });
     } finally {
       setProfileSaving(false);
+    }
+  };
+
+  const handleTransferBonus = async () => {
+    setTransferring(true);
+    try {
+      const { error } = await supabase.rpc('transfer_bonus_to_main');
+      if (error) throw error;
+      
+      toast({
+        title: "Úspěch",
+        description: "Bonusové MioCoiny byly převedeny do hlavní peněženky."
+      });
+      
+      await fetchUserWallet();
+    } catch (error) {
+      console.error('Error transferring bonus:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se převést bonusové MioCoiny.",
+        variant: "destructive"
+      });
+    } finally {
+      setTransferring(false);
     }
   };
 
@@ -660,6 +685,18 @@ const Profile: React.FC = () => {
                       {wallet?.bonus_balance_coins?.toLocaleString('cs-CZ') || '0'}
                     </p>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleTransferBonus}
+                    disabled={transferring || (wallet?.bonus_balance_coins ?? 0) === 0}
+                    className="ml-2"
+                  >
+                    {transferring ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : null}
+                    Převést bonusové MioCoiny
+                  </Button>
                 </div>
               )}
             </div>

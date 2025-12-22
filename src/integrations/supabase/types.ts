@@ -1566,10 +1566,9 @@ export type Database = {
         Returns: Json
       }
       test_sofinity_player_sync: { Args: never; Returns: Json }
-      transfer_bonus_to_main: {
-        Args: { p_user_id: string }
-        Returns: undefined
-      }
+      transfer_bonus_to_main:
+        | { Args: never; Returns: undefined }
+        | { Args: { p_user_id: string }; Returns: undefined }
       unlock_ticket: {
         Args: { contest_id: string; user_id: string }
         Returns: Json
