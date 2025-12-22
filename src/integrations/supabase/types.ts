@@ -1327,6 +1327,10 @@ export type Database = {
         Args: { p_contest_id: string; p_user_id: string }
         Returns: Json
       }
+      claim_miocoin_bonus: {
+        Args: { p_bonus_id: string; p_user_id: string }
+        Returns: undefined
+      }
       create_test_result: {
         Args: {
           p_details?: Json
