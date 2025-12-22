@@ -1087,7 +1087,6 @@ export type Database = {
         Row: {
           balance_coins: number
           balance_vouchers: number
-          bonus_balance_coins: number
           created_at: string
           id: string
           user_id: string
@@ -1095,7 +1094,6 @@ export type Database = {
         Insert: {
           balance_coins?: number
           balance_vouchers?: number
-          bonus_balance_coins?: number
           created_at?: string
           id?: string
           user_id: string
@@ -1103,7 +1101,6 @@ export type Database = {
         Update: {
           balance_coins?: number
           balance_vouchers?: number
-          bonus_balance_coins?: number
           created_at?: string
           id?: string
           user_id?: string
@@ -1504,7 +1501,6 @@ export type Database = {
           status_code: number
         }[]
       }
-      recalculate_bonus_wallet: { Args: never; Returns: undefined }
       redeem_miocoin: {
         Args: {
           p_contest_id: string
@@ -1566,10 +1562,6 @@ export type Database = {
         Returns: Json
       }
       test_sofinity_player_sync: { Args: never; Returns: Json }
-      transfer_bonus_to_main: {
-        Args: { p_user_id: string }
-        Returns: undefined
-      }
       unlock_ticket: {
         Args: { contest_id: string; user_id: string }
         Returns: Json

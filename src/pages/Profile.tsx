@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2, Gift, ArrowRight } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2 } from 'lucide-react';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -18,13 +18,11 @@ import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
-
 interface UserWallet {
   user_id: string;
   email: string;
   name: string;
   balance_coins: number;
-  bonus_balance_coins: number;
   created_at: string;
 }
 
@@ -55,7 +53,6 @@ const Profile: React.FC = () => {
   const { user, session } = useAuth();
   const { isAdmin } = useUserRole();
   const { soundEnabled, toggleSound } = useNotificationSettings();
-  const [transferringBonus, setTransferringBonus] = useState(false);
   const navigate = useNavigate();
   const [wallet, setWallet] = useState<UserWallet | null>(null);
   const [profile, setProfile] = useState<UserProfile>({
@@ -94,7 +91,6 @@ const Profile: React.FC = () => {
           email: user?.email || '',
           name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
           balance_coins: 0,
-          bonus_balance_coins: 0,
           created_at: new Date().toISOString()
         });
       } else if (data) {
@@ -103,7 +99,6 @@ const Profile: React.FC = () => {
           email: user?.email || '',
           name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
           balance_coins: Number(data.balance_coins) || 0,
-          bonus_balance_coins: Number(data.bonus_balance_coins) || 0,
           created_at: data.created_at || new Date().toISOString()
         });
       } else {
@@ -112,7 +107,6 @@ const Profile: React.FC = () => {
           email: user?.email || '',
           name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
           balance_coins: 0,
-          bonus_balance_coins: 0,
           created_at: new Date().toISOString()
         });
       }
@@ -123,7 +117,6 @@ const Profile: React.FC = () => {
         email: user?.email || '',
         name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
         balance_coins: 0,
-        bonus_balance_coins: 0,
         created_at: new Date().toISOString()
       });
     } finally {
@@ -286,44 +279,6 @@ const Profile: React.FC = () => {
       });
     } finally {
       setRefreshing(false);
-    }
-  };
-
-  const handleTransferBonus = async () => {
-    if (!user?.id) return;
-    
-    setTransferringBonus(true);
-    try {
-      const { error } = await supabase.rpc('transfer_bonus_to_main', {
-        p_user_id: user.id
-      });
-
-      if (error) {
-        console.error('Error transferring bonus:', error);
-        toast({
-          title: "Chyba",
-          description: "Nepodařilo se převést bonus. Zkuste to znovu.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      toast({
-        title: "Úspěch!",
-        description: "Bonusové MioCoiny byly úspěšně převedeny do vaší peněženky."
-      });
-
-      // Refresh wallet to show updated balances
-      await fetchUserWallet();
-    } catch (error) {
-      console.error('Error transferring bonus:', error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se převést bonus. Zkuste to znovu.",
-        variant: "destructive"
-      });
-    } finally {
-      setTransferringBonus(false);
     }
   };
 
@@ -690,39 +645,6 @@ const Profile: React.FC = () => {
                 </p>
               </div>
             </div>
-
-            {/* Bonus MioCoins Section */}
-            {wallet && wallet.bonus_balance_coins > 0 && (
-              <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/30">
-                <div className="flex items-center gap-2 mb-3">
-                  <Gift className="h-5 w-5 text-purple-400" />
-                  <h3 className="font-semibold text-foreground">Bonusové MioCoiny</h3>
-                </div>
-                
-                {/* Bonus Balance */}
-                <div className="flex items-center justify-center gap-2 mb-4 py-2">
-                  <Coins className="h-6 w-6 text-purple-400" />
-                  <p className="text-2xl font-bold text-purple-400">
-                    {wallet.bonus_balance_coins.toLocaleString('cs-CZ')}
-                  </p>
-                </div>
-
-                {/* Transfer Button */}
-                <Button
-                  onClick={handleTransferBonus}
-                  disabled={transferringBonus}
-                  className="w-full border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
-                  variant="outline"
-                >
-                  {transferringBonus ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <ArrowRight className="h-4 w-4 mr-2" />
-                  )}
-                  Převést do MioCoinů
-                </Button>
-              </div>
-            )}
             
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
