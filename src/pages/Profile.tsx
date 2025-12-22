@@ -23,6 +23,7 @@ interface UserWallet {
   email: string;
   name: string;
   balance_coins: number;
+  bonus_balance_coins: number;
   created_at: string;
 }
 
@@ -91,6 +92,7 @@ const Profile: React.FC = () => {
           email: user?.email || '',
           name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
           balance_coins: 0,
+          bonus_balance_coins: 0,
           created_at: new Date().toISOString()
         });
       } else if (data) {
@@ -99,6 +101,7 @@ const Profile: React.FC = () => {
           email: user?.email || '',
           name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
           balance_coins: Number(data.balance_coins) || 0,
+          bonus_balance_coins: Number(data.bonus_balance_coins) || 0,
           created_at: data.created_at || new Date().toISOString()
         });
       } else {
@@ -107,6 +110,7 @@ const Profile: React.FC = () => {
           email: user?.email || '',
           name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
           balance_coins: 0,
+          bonus_balance_coins: 0,
           created_at: new Date().toISOString()
         });
       }
@@ -117,6 +121,7 @@ const Profile: React.FC = () => {
         email: user?.email || '',
         name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
         balance_coins: 0,
+        bonus_balance_coins: 0,
         created_at: new Date().toISOString()
       });
     } finally {
@@ -636,14 +641,27 @@ const Profile: React.FC = () => {
             </div>
             
             {/* Balance Display */}
-            <div className="flex items-center justify-center gap-3 mb-6 py-4">
-              <Coins className="h-8 w-8 text-yellow-500" />
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">MioCoiny</p>
-                <p className="text-4xl font-bold text-yellow-500">
-                  {wallet?.balance_coins?.toLocaleString('cs-CZ') || '0'}
-                </p>
+            <div className="flex items-center justify-center gap-6 mb-6 py-4">
+              <div className="flex items-center gap-3">
+                <Coins className="h-8 w-8 text-yellow-500" />
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">MioCoiny</p>
+                  <p className="text-4xl font-bold text-yellow-500">
+                    {wallet?.balance_coins?.toLocaleString('cs-CZ') || '0'}
+                  </p>
+                </div>
               </div>
+              {(wallet?.bonus_balance_coins ?? 0) > 0 && (
+                <div className="flex items-center gap-3 pl-6 border-l border-border/50">
+                  <Coins className="h-6 w-6 text-green-500" />
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground">Bonusové</p>
+                    <p className="text-2xl font-bold text-green-500">
+                      {wallet?.bonus_balance_coins?.toLocaleString('cs-CZ') || '0'}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
             
             {/* Action Buttons */}
