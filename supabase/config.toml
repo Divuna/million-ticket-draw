@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.vertex-style-image]
 verify_jwt = false
+
+[functions.upload-ticket-share]
+verify_jwt = false

@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/components/AuthProvider";
 import TestAuthProvider from "@/components/TestAuthProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -43,6 +44,7 @@ import TestLogin from "@/pages/TestLogin";
 import Winners from "@/pages/Winners";
 import Wins from "@/pages/Wins";
 import FavoriteGames from "@/pages/FavoriteGames";
+import ShareTicket from "@/pages/ShareTicket";
 import NotFound from "@/pages/NotFound";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -79,6 +81,7 @@ function AppContent() {
         <Route path="/payment/cancel" element={<PaymentCancel />} />
         <Route path="/winners" element={<Winners />} />
         <Route path="/wins" element={<Wins />} />
+        <Route path="/share/ticket/:ticketId" element={<ShareTicket />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/banners" element={<AdminBanners />} />
@@ -107,19 +110,21 @@ function AppContent() {
 function App() {
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <TestAuthProvider>
-            <TooltipProvider>
-              <BrowserRouter>
-                <AppContent />
-                <Toaster />
-                <Sonner />
-              </BrowserRouter>
-            </TooltipProvider>
-          </TestAuthProvider>
-        </AuthProvider>
-      </QueryClientProvider>
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <TestAuthProvider>
+              <TooltipProvider>
+                <BrowserRouter>
+                  <AppContent />
+                  <Toaster />
+                  <Sonner />
+                </BrowserRouter>
+              </TooltipProvider>
+            </TestAuthProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </HelmetProvider>
     </ErrorBoundary>
   );
 }
