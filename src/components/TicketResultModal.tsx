@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -9,6 +9,14 @@ import {
 import { useNavigate } from 'react-router-dom';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
+import { supabase } from '@/integrations/supabase/client';
+
+interface BonusPrizeData {
+  id: string;
+  title: string | null;
+  description: string;
+  amount: number | null;
+}
 
 interface TicketResultModalProps {
   isOpen: boolean;
@@ -44,26 +52,64 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 }) => {
   const { width, height } = useWindowSize();
   const navigate = useNavigate();
+  const [bonusPrize, setBonusPrize] = useState<BonusPrizeData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Query bonus_prizes when modal opens
+  useEffect(() => {
+    if (!isOpen || !result || !contestId) {
+      setBonusPrize(null);
+      return;
+    }
+
+    const fetchBonusPrize = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('bonus_prizes')
+          .select('id, title, description, amount')
+          .eq('contest_id', contestId)
+          .eq('ticket_position', result.ticket_number)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching bonus prize:', error);
+          setBonusPrize(null);
+        } else {
+          setBonusPrize(data);
+        }
+      } catch (err) {
+        console.error('Error in bonus prize query:', err);
+        setBonusPrize(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBonusPrize();
+  }, [isOpen, result, contestId]);
+
+  // Memoize random message to prevent re-renders changing it
+  const funnyMessage = useMemo(() => {
+    return funnyMessages[Math.floor(Math.random() * funnyMessages.length)];
+  }, [result?.ticket_number]);
 
   if (!result) return null;
 
-  // Derive won_type from legacy boolean fields if not present (backward compatibility)
-  const derivedWonType = result.won_type 
-    ?? (result.won_bonus ? 'bonus' : result.won_main ? 'main' : null);
-  
-  // Detection logic using derived won_type
-  const isBonusWin = derivedWonType === 'bonus';
-  const isMainPrize = derivedWonType === 'main';
+  // Detection logic: bonus win if bonus_prizes record exists
+  const isBonusWin = bonusPrize !== null;
+  // Main prize detection from won_type or legacy fields
+  const isMainPrize = result.won_type === 'main' || result.won_main === true;
   const isWinner = isBonusWin || isMainPrize;
 
+  const handleGoToWins = () => {
+    navigate('/wins');
+    onClose();
+  };
 
   const handleShowBonusPrizes = () => {
     navigate(`/contest/${contestId}/bonus`);
     onClose();
-  };
-
-  const getRandomFunnyMessage = () => {
-    return funnyMessages[Math.floor(Math.random() * funnyMessages.length)];
   };
 
   return (
@@ -88,12 +134,17 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
         <div className="space-y-4 py-4">
           {isWinner ? (
-            isBonusWin ? (
+            isBonusWin && bonusPrize ? (
               <div className="text-center space-y-3">
                 <div className="text-6xl">🎉</div>
                 <p className="text-lg font-semibold text-green-600">
-                  Gratulujeme, vyhrál jsi bonus: {result.won_prize}
+                  Gratulujeme, vyhrál jsi bonus: {bonusPrize.title || bonusPrize.description}
                 </p>
+                {bonusPrize.amount && bonusPrize.amount > 0 && (
+                  <p className="text-md text-muted-foreground">
+                    MioCoin: <span className="font-semibold text-primary">{bonusPrize.amount.toLocaleString('cs-CZ')}</span>
+                  </p>
+                )}
                 <p className="text-muted-foreground">
                   Tiket #{result.ticket_number.toLocaleString('cs-CZ')}
                 </p>
@@ -107,6 +158,12 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     Do další bonusové výhry: <span className="font-semibold text-primary">{result.distance_to_next_bonus.toLocaleString('cs-CZ')} tiketů</span>
                   </p>
                 )}
+                <Button 
+                  onClick={handleGoToWins}
+                  className="w-full mt-2"
+                >
+                  Přejít do výher
+                </Button>
               </div>
             ) : isMainPrize ? (
               <div className="text-center space-y-3">
@@ -119,11 +176,16 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 </p>
               </div>
             ) : null
+          ) : isLoading ? (
+            <div className="text-center space-y-4">
+              <div className="text-4xl">⏳</div>
+              <p className="text-lg font-medium">Kontroluji výhru...</p>
+            </div>
           ) : (
             <div className="text-center space-y-4">
               <div className="text-4xl">🎯</div>
               <p className="text-lg font-medium">
-                {getRandomFunnyMessage()}
+                {funnyMessage}
               </p>
               <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                 <p className="text-sm text-muted-foreground">
