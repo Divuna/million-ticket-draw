@@ -151,8 +151,8 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const isMainPrize = result.won_type === 'main' || result.won_main === true;
   const isWinner = isBonusWin || isMainPrize;
 
-  // Check if bonus is already claimed
-  const isBonusClaimed = bonusPrize?.status === 'won';
+  // Check if bonus is already claimed (status = 'delivered' means claimed)
+  const isBonusClaimed = bonusPrize?.status === 'delivered';
 
   const handleGoToWins = () => {
     navigate('/wins');

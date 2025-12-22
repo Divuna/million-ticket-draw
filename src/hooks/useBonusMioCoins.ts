@@ -61,12 +61,13 @@ export const useBonusMioCoins = (userId: string | undefined): UseBonusMioCoinsRe
         return;
       }
 
-      // Fetch all pending bonus prizes (regardless of amount - even 0 or 1 MioCoin bonuses should appear)
+      // Fetch all won bonus prizes (regardless of amount - even 0 or 1 MioCoin bonuses should appear)
+      // Status 'won' means user has won but not yet claimed; 'delivered' means already claimed
       const { data: bonusData, error: bonusError } = await supabase
         .from('bonus_prizes')
         .select('id, description, amount, title, contest_id, ticket_position')
         .in('id', prizeIds)
-        .eq('status', 'pending');
+        .eq('status', 'won');
 
       if (bonusError) {
         console.error('Error fetching bonus prizes:', bonusError);
