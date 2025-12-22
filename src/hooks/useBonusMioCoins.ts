@@ -61,13 +61,12 @@ export const useBonusMioCoins = (userId: string | undefined): UseBonusMioCoinsRe
         return;
       }
 
-      // Fetch pending bonus prizes with amount > 0
+      // Fetch all pending bonus prizes (regardless of amount - even 0 or 1 MioCoin bonuses should appear)
       const { data: bonusData, error: bonusError } = await supabase
         .from('bonus_prizes')
         .select('id, description, amount, title, contest_id, ticket_position')
         .in('id', prizeIds)
-        .eq('status', 'pending')
-        .gt('amount', 0);
+        .eq('status', 'pending');
 
       if (bonusError) {
         console.error('Error fetching bonus prizes:', bonusError);

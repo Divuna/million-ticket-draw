@@ -100,15 +100,19 @@ serve(async (req) => {
     }
 
     // 6. Check if this ticket won a bonus prize
+    // Only match pending bonus prizes (not already won)
     const { data: bonusPrize } = await supabaseClient
       .from('bonus_prizes')
       .select('*')
       .eq('contest_id', contest_id)
       .eq('ticket_position', nextTicketNumber)
+      .eq('status', 'pending')
       .single()
 
     if (bonusPrize) {
-      // Create winner record
+      // Create winner record linking user to this bonus prize
+      // The bonus stays in 'pending' status until user claims it via claim_miocoin_bonus RPC
+      // This ensures MioCoins are NEVER added directly to wallet - only via explicit claim
       await supabaseClient
         .from('winners')
         .insert({
@@ -116,6 +120,8 @@ serve(async (req) => {
           user_id: user.id,
           prize_id: bonusPrize.id,
           type: 'bonus',
+          status: 'čeká na potvrzení',
+          delivered: false,
           notes: `Bonus prize won with ticket #${nextTicketNumber}`
         })
     }
