@@ -159,11 +159,6 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     onClose();
   };
 
-  const handleShowBonusPrizes = () => {
-    navigate(`/contest/${contestId}/bonus`);
-    onClose();
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -264,13 +259,6 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                   </p>
                 )}
               </div>
-              <Button 
-                variant="outline" 
-                onClick={handleShowBonusPrizes}
-                className="w-full"
-              >
-                Zobrazit bonusové ceny
-              </Button>
             </div>
           )}
         </div>
