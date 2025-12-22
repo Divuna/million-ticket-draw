@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import type { Database } from '../_shared/database.types.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,15 +22,13 @@ function generateRandomPositions(count: number, maxPosition: number, excludeSet:
   const positions: number[] = []
   const selectedPositions = new Set<number>(excludeSet)
   
-  // Calculate available positions
   const availableCount = maxPosition - excludeSet.size
   if (count > availableCount) {
     throw new Error(`Not enough available positions. Requested: ${count}, Available: ${availableCount}`)
   }
   
-  // Use efficient random selection
   let attempts = 0
-  const maxAttempts = count * 10 // Prevent infinite loops
+  const maxAttempts = count * 10
   
   while (positions.length < count && attempts < maxAttempts) {
     const randomPos = Math.floor(Math.random() * maxPosition) + 1
@@ -55,7 +52,6 @@ function generateStepPositions(count: number, maxPosition: number, excludeSet: S
   const positions: number[] = []
   const selectedPositions = new Set<number>(excludeSet)
   
-  // Generate step-based positions
   const stepSize = Math.floor(Math.random() * (stepMax - stepMin + 1)) + stepMin
   let currentPos = stepSize
   
@@ -67,7 +63,6 @@ function generateStepPositions(count: number, maxPosition: number, excludeSet: S
     currentPos += stepSize
   }
   
-  // Fill remaining with random positions if needed
   if (positions.length < count) {
     const remainingCount = count - positions.length
     const availablePositions: number[] = []
@@ -78,7 +73,6 @@ function generateStepPositions(count: number, maxPosition: number, excludeSet: S
       }
     }
     
-    // Shuffle and take what we need
     for (let i = availablePositions.length - 1; i > 0 && positions.length < count; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [availablePositions[i], availablePositions[j]] = [availablePositions[j], availablePositions[i]]
@@ -89,15 +83,16 @@ function generateStepPositions(count: number, maxPosition: number, excludeSet: S
   return positions.sort((a, b) => a - b)
 }
 
-// Process bonus prizes in batches using user-scoped client for auth.uid() propagation
-async function processBonusBatch(
+// Process bonus prizes in batches with retry logic
+async function processBonusBatchWithRetry(
   supabase: any,
   contestId: string,
   positions: number[],
   bonusType: string,
   amountPerUnit: number,
-  batchNumber: number
-) {
+  batchNumber: number,
+  maxRetries: number = 3
+): Promise<any[]> {
   const bonusesToInsert = positions.map(position => ({
     contest_id: contestId,
     description: `${bonusType} - ${amountPerUnit}${bonusType === 'MioCoin' ? ' MioCoins' : ' ks'}`,
@@ -106,16 +101,34 @@ async function processBonusBatch(
     amount: bonusType === 'MioCoin' ? amountPerUnit : 1
   }))
 
-  const { data: insertedBonuses, error: insertError } = await supabase
-    .from('bonus_prizes')
-    .insert(bonusesToInsert)
-    .select()
+  let lastError: Error | null = null
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const { data: insertedBonuses, error: insertError } = await supabase
+        .from('bonus_prizes')
+        .insert(bonusesToInsert)
+        .select('id')
 
-  if (insertError) {
-    throw new Error(`Failed to insert batch ${batchNumber}: ${insertError.message}`)
+      if (insertError) {
+        throw new Error(insertError.message)
+      }
+
+      return insertedBonuses || []
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Unknown error')
+      console.warn(`Batch ${batchNumber} attempt ${attempt}/${maxRetries} failed: ${lastError.message}`)
+      
+      if (attempt < maxRetries) {
+        // Exponential backoff: 500ms, 1000ms, 2000ms
+        const delay = 500 * Math.pow(2, attempt - 1)
+        console.log(`Retrying batch ${batchNumber} in ${delay}ms...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
   }
 
-  return insertedBonuses || []
+  throw new Error(`Failed to insert batch ${batchNumber} after ${maxRetries} attempts: ${lastError?.message}`)
 }
 
 serve(async (req) => {
@@ -127,13 +140,11 @@ serve(async (req) => {
   let warnings: string[] = []
 
   try {
-    // Create admin client for auth verification
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    // Create user-scoped client for DB writes (auth.uid propagation)
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -146,7 +157,6 @@ serve(async (req) => {
       }
     )
 
-    // Get user from JWT
     const authHeader = req.headers.get('Authorization')!
     const token = authHeader.replace('Bearer ', '')
     const { data: { user } } = await supabaseAdmin.auth.getUser(token)
@@ -155,14 +165,13 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    // Check if user is admin using admin client
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select('role')
       .eq('id', user.id)
       .maybeSingle()
 
-    if (userError || !userData || userData.role !== 'admin') {
+    if (userError || !userData || (userData.role !== 'admin' && userData.role !== 'superadmin')) {
       throw new Error('Admin access required')
     }
 
@@ -173,21 +182,22 @@ serve(async (req) => {
       total_value, 
       amount_per_unit, 
       distribution_rule, 
-      batch_size = 3000,
+      batch_size = 500, // Reduced from 3000 to prevent timeouts
       step_min = 3, 
       step_max = 5 
     } = request
 
-    // Validate input
     if (!contest_id || !bonus_type || !total_value || !amount_per_unit || !distribution_rule) {
       throw new Error('All required fields must be provided')
     }
 
-    if (batch_size <= 0 || batch_size > 10000) {
-      throw new Error('Batch size must be between 1 and 10000')
+    // Limit batch size to prevent timeouts
+    const effectiveBatchSize = Math.min(batch_size, 500)
+    
+    if (effectiveBatchSize !== batch_size) {
+      console.log(`Batch size reduced from ${batch_size} to ${effectiveBatchSize} to prevent timeouts`)
     }
 
-    // Get contest details using admin client
     const { data: contest, error: contestError } = await supabaseAdmin
       .from('contests')
       .select('id, ticket_count, title')
@@ -198,10 +208,8 @@ serve(async (req) => {
       throw new Error('Contest not found')
     }
 
-    // Calculate number of bonuses to create
     const maxBonuses = Math.floor(total_value / amount_per_unit)
     
-    // Get existing bonus positions for this contest using admin client
     const { data: existingBonuses } = await supabaseAdmin
       .from('bonus_prizes')
       .select('ticket_position')
@@ -210,7 +218,6 @@ serve(async (req) => {
     const existingPositions = new Set(existingBonuses?.map((b: any) => b.ticket_position) || [])
     const availablePositions = contest.ticket_count - existingPositions.size
     
-    // Calculate actual number of bonuses we can create
     const numberOfBonuses = Math.min(maxBonuses, availablePositions)
     
     if (numberOfBonuses === 0) {
@@ -223,7 +230,6 @@ serve(async (req) => {
 
     console.log(`Processing ${numberOfBonuses} bonuses for contest ${contest_id} using ${distribution_rule} distribution`)
 
-    // Generate all positions at once using optimized algorithms
     let allPositions: number[] = []
     
     if (distribution_rule === 'random') {
@@ -236,90 +242,86 @@ serve(async (req) => {
       warnings.push(`Could only generate ${allPositions.length} positions out of ${numberOfBonuses} requested`)
     }
 
-    // Process in batches
-    const totalBatches = Math.ceil(allPositions.length / batch_size)
+    const totalBatches = Math.ceil(allPositions.length / effectiveBatchSize)
     let totalCreated = 0
-    const allCreatedBonuses: any[] = []
+    let successfulBatches = 0
+    let failedBatches = 0
 
-    console.log(`Processing ${allPositions.length} positions in ${totalBatches} batches of size ${batch_size}`)
+    console.log(`Processing ${allPositions.length} positions in ${totalBatches} batches of size ${effectiveBatchSize}`)
 
     for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-      const startIdx = batchIndex * batch_size
-      const endIdx = Math.min(startIdx + batch_size, allPositions.length)
+      const startIdx = batchIndex * effectiveBatchSize
+      const endIdx = Math.min(startIdx + effectiveBatchSize, allPositions.length)
       const batchPositions = allPositions.slice(startIdx, endIdx)
       
       console.log(`Processing batch ${batchIndex + 1}/${totalBatches} with ${batchPositions.length} positions`)
 
       try {
-        // Insert batch using user-scoped client for auth.uid() propagation
-        const batchBonuses = await processBonusBatch(
+        const batchBonuses = await processBonusBatchWithRetry(
           supabase,
           contest_id,
           batchPositions,
           bonus_type,
           amount_per_unit,
-          batchIndex + 1
+          batchIndex + 1,
+          3 // Max retries
         )
 
-        allCreatedBonuses.push(...batchBonuses)
         totalCreated += batchBonuses.length
+        successfulBatches++
 
-        // Send aggregated Sofinity event for this batch
-        try {
-          const { error: sofinityError } = await supabaseAdmin.functions.invoke('send_event_to_sofinity', {
-            body: {
-              event_name: 'bonus_prizes_batch_added',
-              user_id: user.id,
-              contest_id: contest_id,
-              metadata: {
-                batch_number: batchIndex + 1,
-                total_batches: totalBatches,
-                batch_size: batchBonuses.length,
-                positions_range: `${Math.min(...batchPositions)}-${Math.max(...batchPositions)}`,
-                bonus_type,
-                amount_per_unit,
-                distribution_rule
-              }
-            }
-          })
-          
-          if (sofinityError) {
-            console.error(`Sofinity event error for batch ${batchIndex + 1}:`, sofinityError)
-            warnings.push(`Failed to send Sofinity event for batch ${batchIndex + 1}`)
-          }
-        } catch (err) {
-          console.error(`Failed to send Sofinity event for batch ${batchIndex + 1}:`, err)
-          warnings.push(`Failed to send Sofinity event for batch ${batchIndex + 1}`)
-        }
-
-        // Small delay between batches to avoid overwhelming the system
+        // Small delay between batches to avoid overwhelming the database
         if (batchIndex < totalBatches - 1) {
-          await new Promise(resolve => setTimeout(resolve, 50))
+          await new Promise(resolve => setTimeout(resolve, 100))
         }
 
-        } catch (error) {
-          console.error(`Error processing batch ${batchIndex + 1}:`, error)
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-          warnings.push(`Failed to process batch ${batchIndex + 1}: ${errorMessage}`)
-          // Continue with next batch instead of failing completely
+      } catch (error) {
+        console.error(`Error processing batch ${batchIndex + 1}:`, error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+        warnings.push(`Failed batch ${batchIndex + 1}: ${errorMessage}`)
+        failedBatches++
+        // Continue with next batch instead of failing completely
+      }
+    }
+
+    // Send summary Sofinity event
+    try {
+      await supabaseAdmin.functions.invoke('send_event_to_sofinity', {
+        body: {
+          event_name: 'bonus_prizes_distribution_complete',
+          user_id: user.id,
+          contest_id: contest_id,
+          metadata: {
+            total_bonuses: totalCreated,
+            total_batches: totalBatches,
+            successful_batches: successfulBatches,
+            failed_batches: failedBatches,
+            bonus_type,
+            amount_per_unit,
+            distribution_rule
+          }
         }
+      })
+    } catch (err) {
+      console.error('Failed to send summary Sofinity event:', err)
     }
 
     const elapsedMs = Date.now() - startTime
     
-    console.log(`Completed processing: ${totalCreated} bonuses created in ${elapsedMs}ms`)
+    console.log(`Completed: ${totalCreated}/${allPositions.length} bonuses created in ${elapsedMs}ms (${successfulBatches} successful, ${failedBatches} failed batches)`)
 
-    // Generate sample positions for response (max 10)
     const samplePositions = allPositions.slice(0, Math.min(10, allPositions.length))
 
     return new Response(
       JSON.stringify({ 
-        success: true, 
+        success: totalCreated > 0,
         created_bonuses: totalCreated,
         total_requested: numberOfBonuses,
         positions_count: allPositions.length,
         sample_positions: samplePositions,
         batches_processed: totalBatches,
+        successful_batches: successfulBatches,
+        failed_batches: failedBatches,
         elapsed_ms: elapsedMs,
         warnings: warnings.length > 0 ? warnings : undefined
       }),
@@ -337,6 +339,7 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ 
+        success: false,
         error: errorMessage,
         elapsed_ms: elapsedMs,
         warnings: warnings.length > 0 ? warnings : undefined 
