@@ -191,6 +191,8 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
 
   // Query bonus_prizes when modal opens
   useEffect(() => {
@@ -225,6 +227,53 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
     fetchBonusPrize();
   }, [isOpen, result, contestId]);
+
+  // Generate preview image when modal opens and data is ready
+  useEffect(() => {
+    if (!isOpen || !result || isLoading) {
+      return;
+    }
+
+    // Clean up previous preview
+    if (previewImageUrl) {
+      URL.revokeObjectURL(previewImageUrl);
+      setPreviewImageUrl(null);
+      setPreviewBlob(null);
+    }
+
+    const isBonusWinCheck = bonusPrize !== null;
+    const isMainPrizeCheck = result.won_type === 'main' || result.won_main === true;
+    const isWinnerCheck = isBonusWinCheck || isMainPrizeCheck;
+
+    const generatePreview = async () => {
+      setIsGeneratingImage(true);
+      try {
+        const blob = await generateTicketCard(
+          result.ticket_number,
+          isWinnerCheck,
+          isMainPrizeCheck,
+          bonusPrize?.amount || null,
+          result.remaining_tickets
+        );
+        const url = URL.createObjectURL(blob);
+        setPreviewImageUrl(url);
+        setPreviewBlob(blob);
+      } catch (err) {
+        console.error('Error generating preview:', err);
+      } finally {
+        setIsGeneratingImage(false);
+      }
+    };
+
+    generatePreview();
+
+    // Cleanup on unmount
+    return () => {
+      if (previewImageUrl) {
+        URL.revokeObjectURL(previewImageUrl);
+      }
+    };
+  }, [isOpen, result, isLoading, bonusPrize]);
 
   // Memoize random message to prevent re-renders changing it
   const funnyMessage = useMemo(() => {
@@ -290,19 +339,19 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const handleShare = async (platform: 'facebook' | 'instagram' | 'tiktok' | 'x') => {
     const shareText = getShareText();
     
-    setIsGeneratingImage(true);
-    try {
-      const imageBlob = await generateTicketCard(
-        result.ticket_number,
-        isWinner,
-        isMainPrize,
-        bonusPrize?.amount || null,
-        result.remaining_tickets
-      );
+    if (!previewBlob) {
+      toast({
+        title: 'Chyba',
+        description: 'Obrázek ještě není připraven.',
+        variant: 'destructive'
+      });
+      return;
+    }
 
+    try {
       // Try native share API first (works on mobile)
       if (navigator.share && navigator.canShare) {
-        const file = new File([imageBlob], 'onemil-ticket.png', { type: 'image/png' });
+        const file = new File([previewBlob], 'onemil-ticket.png', { type: 'image/png' });
         const shareData = {
           title: 'OneMil Ticket',
           text: shareText,
@@ -331,7 +380,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           break;
         case 'instagram':
           // Instagram doesn't support direct web sharing, download image instead
-          downloadImage(imageBlob);
+          downloadImage(previewBlob);
           toast({
             title: 'Obrázek stažen',
             description: 'Otevři Instagram a nahraj obrázek jako příspěvek nebo příběh.'
@@ -339,7 +388,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           break;
         case 'tiktok':
           // TikTok doesn't support direct web sharing, download image instead
-          downloadImage(imageBlob);
+          downloadImage(previewBlob);
           toast({
             title: 'Obrázek stažen',
             description: 'Otevři TikTok a použij obrázek pro tvorbu videa.'
@@ -360,8 +409,6 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         description: 'Nepodařilo se sdílet výsledek.',
         variant: 'destructive'
       });
-    } finally {
-      setIsGeneratingImage(false);
     }
   };
 
@@ -376,31 +423,20 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  const handleDownloadCard = async () => {
-    setIsGeneratingImage(true);
-    try {
-      const imageBlob = await generateTicketCard(
-        result.ticket_number,
-        isWinner,
-        isMainPrize,
-        bonusPrize?.amount || null,
-        result.remaining_tickets
-      );
-      downloadImage(imageBlob);
-      toast({
-        title: 'Staženo!',
-        description: 'Obrázek tiketu byl uložen.'
-      });
-    } catch (error) {
-      console.error('Error downloading:', error);
+  const handleDownloadCard = () => {
+    if (!previewBlob) {
       toast({
         title: 'Chyba',
-        description: 'Nepodařilo se stáhnout obrázek.',
+        description: 'Obrázek ještě není připraven.',
         variant: 'destructive'
       });
-    } finally {
-      setIsGeneratingImage(false);
+      return;
     }
+    downloadImage(previewBlob);
+    toast({
+      title: 'Staženo!',
+      description: 'Obrázek tiketu byl uložen.'
+    });
   };
 
   const handleGoToWins = () => {
@@ -512,9 +548,30 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           )}
         </div>
 
-        {/* Social Sharing Section */}
+        {/* Social Sharing Section with Preview */}
         <div className="border-t border-border/30 pt-4 mt-2">
           <p className="text-sm text-muted-foreground text-center mb-3">Sdílet výsledek</p>
+          
+          {/* Preview Image */}
+          <div className="flex justify-center mb-4">
+            {isGeneratingImage ? (
+              <div className="w-full max-w-[300px] aspect-[1200/630] bg-muted/30 rounded-lg flex items-center justify-center">
+                <div className="text-sm text-muted-foreground">Generuji náhled...</div>
+              </div>
+            ) : previewImageUrl ? (
+              <img 
+                src={previewImageUrl} 
+                alt="Náhled sdílení" 
+                className="w-full max-w-[300px] rounded-lg shadow-lg border border-border/30"
+              />
+            ) : (
+              <div className="w-full max-w-[300px] aspect-[1200/630] bg-muted/30 rounded-lg flex items-center justify-center">
+                <div className="text-sm text-muted-foreground">Načítám...</div>
+              </div>
+            )}
+          </div>
+
+          {/* Share Buttons */}
           <div className="flex justify-center gap-3">
             {/* Facebook */}
             <Button
@@ -522,7 +579,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               size="icon"
               className="h-10 w-10 rounded-full"
               onClick={() => handleShare('facebook')}
-              disabled={isGeneratingImage}
+              disabled={isGeneratingImage || !previewBlob}
               title="Sdílet na Facebook"
             >
               <Facebook className="h-5 w-5 text-[#1877F2]" />
@@ -534,7 +591,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               size="icon"
               className="h-10 w-10 rounded-full"
               onClick={() => handleShare('instagram')}
-              disabled={isGeneratingImage}
+              disabled={isGeneratingImage || !previewBlob}
               title="Sdílet na Instagram"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="url(#instagram-gradient)">
@@ -557,7 +614,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               size="icon"
               className="h-10 w-10 rounded-full"
               onClick={() => handleShare('tiktok')}
-              disabled={isGeneratingImage}
+              disabled={isGeneratingImage || !previewBlob}
               title="Sdílet na TikTok"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -571,7 +628,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               size="icon"
               className="h-10 w-10 rounded-full"
               onClick={() => handleShare('x')}
-              disabled={isGeneratingImage}
+              disabled={isGeneratingImage || !previewBlob}
               title="Sdílet na X"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -585,7 +642,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               size="icon"
               className="h-10 w-10 rounded-full"
               onClick={handleDownloadCard}
-              disabled={isGeneratingImage}
+              disabled={isGeneratingImage || !previewBlob}
               title="Stáhnout obrázek"
             >
               <Download className="h-4 w-4" />
