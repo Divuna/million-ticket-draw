@@ -64,7 +64,6 @@ function generateStepPositions(count: number, maxPosition: number, excludeSet: S
   }
   
   if (positions.length < count) {
-    const remainingCount = count - positions.length
     const availablePositions: number[] = []
     
     for (let i = 1; i <= maxPosition; i++) {
@@ -83,21 +82,21 @@ function generateStepPositions(count: number, maxPosition: number, excludeSet: S
   return positions.sort((a, b) => a - b)
 }
 
-// Process bonus prizes in batches with retry logic
+// Process bonus prizes in smaller batches with retry logic using SERVICE ROLE (faster, no RLS)
 async function processBonusBatchWithRetry(
-  supabase: any,
+  supabaseAdmin: any,
   contestId: string,
   positions: number[],
   bonusType: string,
   amountPerUnit: number,
   batchNumber: number,
   maxRetries: number = 3
-): Promise<any[]> {
+): Promise<number> {
   const bonusesToInsert = positions.map(position => ({
     contest_id: contestId,
-    description: `${bonusType} - ${amountPerUnit}${bonusType === 'MioCoin' ? ' MioCoins' : ' ks'}`,
+    description: `${amountPerUnit} MioCoinů`,
     ticket_position: position,
-    status: 'pending' as const,
+    status: 'pending',
     amount: bonusType === 'MioCoin' ? amountPerUnit : 1
   }))
 
@@ -105,23 +104,23 @@ async function processBonusBatchWithRetry(
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const { data: insertedBonuses, error: insertError } = await supabase
+      // Use service role client for faster inserts (bypasses RLS)
+      const { error: insertError } = await supabaseAdmin
         .from('bonus_prizes')
         .insert(bonusesToInsert)
-        .select('id')
 
       if (insertError) {
         throw new Error(insertError.message)
       }
 
-      return insertedBonuses || []
+      return positions.length
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown error')
       console.warn(`Batch ${batchNumber} attempt ${attempt}/${maxRetries} failed: ${lastError.message}`)
       
       if (attempt < maxRetries) {
-        // Exponential backoff: 500ms, 1000ms, 2000ms
-        const delay = 500 * Math.pow(2, attempt - 1)
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = 1000 * Math.pow(2, attempt - 1)
         console.log(`Retrying batch ${batchNumber} in ${delay}ms...`)
         await new Promise(resolve => setTimeout(resolve, delay))
       }
@@ -140,24 +139,18 @@ serve(async (req) => {
   let warnings: string[] = []
 
   try {
+    // Service role client for all operations (faster, bypasses RLS)
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: {
-            Authorization: req.headers.get('Authorization') ?? ''
-          }
-        }
-      }
-    )
-
-    const authHeader = req.headers.get('Authorization')!
+    // Verify auth
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      throw new Error('Missing authorization header')
+    }
+    
     const token = authHeader.replace('Bearer ', '')
     const { data: { user } } = await supabaseAdmin.auth.getUser(token)
 
@@ -182,7 +175,7 @@ serve(async (req) => {
       total_value, 
       amount_per_unit, 
       distribution_rule, 
-      batch_size = 500, // Reduced from 3000 to prevent timeouts
+      batch_size = 100, // Reduced to 100 to prevent timeouts
       step_min = 3, 
       step_max = 5 
     } = request
@@ -191,12 +184,10 @@ serve(async (req) => {
       throw new Error('All required fields must be provided')
     }
 
-    // Limit batch size to prevent timeouts
-    const effectiveBatchSize = Math.min(batch_size, 500)
+    // Hard limit batch size to 100 to prevent statement timeouts
+    const effectiveBatchSize = Math.min(batch_size, 100)
     
-    if (effectiveBatchSize !== batch_size) {
-      console.log(`Batch size reduced from ${batch_size} to ${effectiveBatchSize} to prevent timeouts`)
-    }
+    console.log(`Using batch size: ${effectiveBatchSize}`)
 
     const { data: contest, error: contestError } = await supabaseAdmin
       .from('contests')
@@ -228,7 +219,7 @@ serve(async (req) => {
       warnings.push(`Reduced from ${maxBonuses} to ${numberOfBonuses} bonuses due to insufficient available positions`)
     }
 
-    console.log(`Processing ${numberOfBonuses} bonuses for contest ${contest_id} using ${distribution_rule} distribution`)
+    console.log(`Generating ${numberOfBonuses} positions for contest ${contest_id}...`)
 
     let allPositions: number[] = []
     
@@ -247,68 +238,59 @@ serve(async (req) => {
     let successfulBatches = 0
     let failedBatches = 0
 
-    console.log(`Processing ${allPositions.length} positions in ${totalBatches} batches of size ${effectiveBatchSize}`)
+    console.log(`Inserting ${allPositions.length} bonuses in ${totalBatches} batches of ${effectiveBatchSize}`)
 
     for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
       const startIdx = batchIndex * effectiveBatchSize
       const endIdx = Math.min(startIdx + effectiveBatchSize, allPositions.length)
       const batchPositions = allPositions.slice(startIdx, endIdx)
       
-      console.log(`Processing batch ${batchIndex + 1}/${totalBatches} with ${batchPositions.length} positions`)
+      // Log progress every 50 batches
+      if (batchIndex % 50 === 0 || batchIndex === totalBatches - 1) {
+        console.log(`Batch ${batchIndex + 1}/${totalBatches} (${Math.round((batchIndex / totalBatches) * 100)}%)`)
+      }
 
       try {
-        const batchBonuses = await processBonusBatchWithRetry(
-          supabase,
+        const insertedCount = await processBonusBatchWithRetry(
+          supabaseAdmin,
           contest_id,
           batchPositions,
           bonus_type,
           amount_per_unit,
           batchIndex + 1,
-          3 // Max retries
+          3
         )
 
-        totalCreated += batchBonuses.length
+        totalCreated += insertedCount
         successfulBatches++
 
         // Small delay between batches to avoid overwhelming the database
         if (batchIndex < totalBatches - 1) {
-          await new Promise(resolve => setTimeout(resolve, 100))
+          await new Promise(resolve => setTimeout(resolve, 50))
         }
 
       } catch (error) {
-        console.error(`Error processing batch ${batchIndex + 1}:`, error)
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+        console.error(`Batch ${batchIndex + 1} failed:`, error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         warnings.push(`Failed batch ${batchIndex + 1}: ${errorMessage}`)
         failedBatches++
-        // Continue with next batch instead of failing completely
       }
     }
 
-    // Send summary Sofinity event
-    try {
-      await supabaseAdmin.functions.invoke('send_event_to_sofinity', {
-        body: {
-          event_name: 'bonus_prizes_distribution_complete',
-          user_id: user.id,
-          contest_id: contest_id,
-          metadata: {
-            total_bonuses: totalCreated,
-            total_batches: totalBatches,
-            successful_batches: successfulBatches,
-            failed_batches: failedBatches,
-            bonus_type,
-            amount_per_unit,
-            distribution_rule
-          }
-        }
-      })
-    } catch (err) {
-      console.error('Failed to send summary Sofinity event:', err)
+    // Update contest total_miocoin_bonus
+    if (bonus_type === 'MioCoin' && totalCreated > 0) {
+      const totalMioCoins = totalCreated * amount_per_unit
+      console.log(`Updating contest total_miocoin_bonus to ${totalMioCoins}`)
+      
+      await supabaseAdmin
+        .from('contests')
+        .update({ total_miocoin_bonus: totalMioCoins })
+        .eq('id', contest_id)
     }
 
     const elapsedMs = Date.now() - startTime
     
-    console.log(`Completed: ${totalCreated}/${allPositions.length} bonuses created in ${elapsedMs}ms (${successfulBatches} successful, ${failedBatches} failed batches)`)
+    console.log(`Complete: ${totalCreated}/${allPositions.length} bonuses in ${elapsedMs}ms (${successfulBatches} OK, ${failedBatches} failed)`)
 
     const samplePositions = allPositions.slice(0, Math.min(10, allPositions.length))
 
