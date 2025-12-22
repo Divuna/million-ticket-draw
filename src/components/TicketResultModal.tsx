@@ -10,12 +10,16 @@ import { useNavigate } from 'react-router-dom';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface BonusPrizeData {
   id: string;
   title: string | null;
   description: string;
   amount: number | null;
+  status: string;
 }
 
 interface TicketResultModalProps {
@@ -52,8 +56,12 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 }) => {
   const { width, height } = useWindowSize();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [bonusPrize, setBonusPrize] = useState<BonusPrizeData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
 
   // Query bonus_prizes when modal opens
   useEffect(() => {
@@ -67,7 +75,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       try {
         const { data, error } = await supabase
           .from('bonus_prizes')
-          .select('id, title, description, amount')
+          .select('id, title, description, amount, status')
           .eq('contest_id', contestId)
           .eq('ticket_position', result.ticket_number)
           .maybeSingle();
@@ -94,6 +102,47 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     return funnyMessages[Math.floor(Math.random() * funnyMessages.length)];
   }, [result?.ticket_number]);
 
+  const handleClaimBonus = async () => {
+    if (!bonusPrize || !user) return;
+    
+    setIsClaiming(true);
+    try {
+      const { error } = await supabase.rpc('claim_miocoin_bonus', {
+        p_bonus_id: bonusPrize.id,
+        p_user_id: user.id
+      });
+
+      if (error) {
+        toast({
+          title: 'Chyba',
+          description: error.message || 'Nepodařilo se uplatnit výhru.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      toast({
+        title: 'Výhra uplatněna!',
+        description: `MioCoiny byly připsány na tvůj účet.`
+      });
+
+      // Refresh wallet balance
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['wallets'] });
+
+      onClose();
+    } catch (err) {
+      console.error('Error claiming bonus:', err);
+      toast({
+        title: 'Chyba',
+        description: 'Nepodařilo se uplatnit výhru.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
   if (!result) return null;
 
   // Detection logic: bonus win if bonus_prizes record exists
@@ -101,6 +150,9 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   // Main prize detection from won_type or legacy fields
   const isMainPrize = result.won_type === 'main' || result.won_main === true;
   const isWinner = isBonusWin || isMainPrize;
+
+  // Check if bonus is already claimed
+  const isBonusClaimed = bonusPrize?.status === 'won';
 
   const handleGoToWins = () => {
     navigate('/wins');
@@ -158,12 +210,22 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     Do další bonusové výhry: <span className="font-semibold text-primary">{result.distance_to_next_bonus.toLocaleString('cs-CZ')} tiketů</span>
                   </p>
                 )}
-                <Button 
-                  onClick={handleGoToWins}
-                  className="w-full mt-2"
-                >
-                  Přejít do výher
-                </Button>
+                {isBonusClaimed ? (
+                  <Button 
+                    onClick={handleGoToWins}
+                    className="w-full mt-2"
+                  >
+                    Přejít do výher
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={handleClaimBonus}
+                    disabled={isClaiming || !user}
+                    className="w-full mt-2"
+                  >
+                    {isClaiming ? 'Uplatňuji...' : 'Uplatnit výhru'}
+                  </Button>
+                )}
               </div>
             ) : isMainPrize ? (
               <div className="text-center space-y-3">
