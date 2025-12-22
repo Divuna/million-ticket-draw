@@ -17,13 +17,14 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useBonusMioCoins } from '@/hooks/useBonusMioCoins';
+
 
 interface UserWallet {
   user_id: string;
   email: string;
   name: string;
   balance_coins: number;
+  bonus_balance_coins: number;
   created_at: string;
 }
 
@@ -54,7 +55,7 @@ const Profile: React.FC = () => {
   const { user, session } = useAuth();
   const { isAdmin } = useUserRole();
   const { soundEnabled, toggleSound } = useNotificationSettings();
-  const { bonuses, totalBonusBalance, loading: bonusLoading, claiming, claimBonus, refresh: refreshBonuses } = useBonusMioCoins(user?.id);
+  const [transferringBonus, setTransferringBonus] = useState(false);
   const navigate = useNavigate();
   const [wallet, setWallet] = useState<UserWallet | null>(null);
   const [profile, setProfile] = useState<UserProfile>({
@@ -93,6 +94,7 @@ const Profile: React.FC = () => {
           email: user?.email || '',
           name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
           balance_coins: 0,
+          bonus_balance_coins: 0,
           created_at: new Date().toISOString()
         });
       } else if (data) {
@@ -101,6 +103,7 @@ const Profile: React.FC = () => {
           email: user?.email || '',
           name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
           balance_coins: Number(data.balance_coins) || 0,
+          bonus_balance_coins: Number(data.bonus_balance_coins) || 0,
           created_at: data.created_at || new Date().toISOString()
         });
       } else {
@@ -109,6 +112,7 @@ const Profile: React.FC = () => {
           email: user?.email || '',
           name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
           balance_coins: 0,
+          bonus_balance_coins: 0,
           created_at: new Date().toISOString()
         });
       }
@@ -119,6 +123,7 @@ const Profile: React.FC = () => {
         email: user?.email || '',
         name: user?.user_metadata?.name || user?.user_metadata?.full_name || '',
         balance_coins: 0,
+        bonus_balance_coins: 0,
         created_at: new Date().toISOString()
       });
     } finally {
@@ -267,7 +272,7 @@ const Profile: React.FC = () => {
   const handleRefreshBalance = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([fetchUserWallet(), refreshBonuses()]);
+      await fetchUserWallet();
       toast({
         title: "Úspěch",
         description: "Zůstatek byl aktualizován."
@@ -284,11 +289,41 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleClaimBonus = async (bonusId: string) => {
-    const success = await claimBonus(bonusId);
-    if (success) {
-      // Refresh main wallet balance after successful claim
+  const handleTransferBonus = async () => {
+    if (!user?.id) return;
+    
+    setTransferringBonus(true);
+    try {
+      const { error } = await supabase.rpc('transfer_bonus_to_main', {
+        p_user_id: user.id
+      });
+
+      if (error) {
+        console.error('Error transferring bonus:', error);
+        toast({
+          title: "Chyba",
+          description: "Nepodařilo se převést bonus. Zkuste to znovu.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Úspěch!",
+        description: "Bonusové MioCoiny byly úspěšně převedeny do vaší peněženky."
+      });
+
+      // Refresh wallet to show updated balances
       await fetchUserWallet();
+    } catch (error) {
+      console.error('Error transferring bonus:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se převést bonus. Zkuste to znovu.",
+        variant: "destructive"
+      });
+    } finally {
+      setTransferringBonus(false);
     }
   };
 
@@ -657,7 +692,7 @@ const Profile: React.FC = () => {
             </div>
 
             {/* Bonus MioCoins Section */}
-            {!bonusLoading && (bonuses.length > 0 || totalBonusBalance > 0) && (
+            {wallet && wallet.bonus_balance_coins > 0 && (
               <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/30">
                 <div className="flex items-center gap-2 mb-3">
                   <Gift className="h-5 w-5 text-purple-400" />
@@ -668,46 +703,24 @@ const Profile: React.FC = () => {
                 <div className="flex items-center justify-center gap-2 mb-4 py-2">
                   <Coins className="h-6 w-6 text-purple-400" />
                   <p className="text-2xl font-bold text-purple-400">
-                    {totalBonusBalance.toLocaleString('cs-CZ')}
+                    {wallet.bonus_balance_coins.toLocaleString('cs-CZ')}
                   </p>
                 </div>
 
-                {/* Pending Bonuses List */}
-                {bonuses.length > 0 && (
-                  <div className="space-y-2">
-                    {bonuses.map((bonus) => (
-                      <div 
-                        key={bonus.id} 
-                        className="flex items-center justify-between p-3 rounded-lg bg-black/30 border border-border/30"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground truncate">
-                            {bonus.title || bonus.description}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {bonus.amount.toLocaleString('cs-CZ')} MioCoinů
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleClaimBonus(bonus.id)}
-                          disabled={claiming === bonus.id}
-                          className="ml-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
-                        >
-                          {claiming === bonus.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <>
-                              <ArrowRight className="h-4 w-4 mr-1" />
-                              Převést do hry
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {/* Transfer Button */}
+                <Button
+                  onClick={handleTransferBonus}
+                  disabled={transferringBonus}
+                  className="w-full border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+                  variant="outline"
+                >
+                  {transferringBonus ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <ArrowRight className="h-4 w-4 mr-2" />
+                  )}
+                  Převést do MioCoinů
+                </Button>
               </div>
             )}
             
