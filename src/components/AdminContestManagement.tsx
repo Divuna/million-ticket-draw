@@ -821,18 +821,38 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         // Delete existing bonuses for this contest
         await supabase.from("bonus_prizes").delete().eq("contest_id", contestId);
 
-        // Insert MioCoin bonuses sequentially
-        for (const bonus of mioCoinBonuses) {
-          const { error: insertError } = await supabase.from("bonus_prizes").insert({
-            contest_id: contestId,
-            ticket_position: bonus.ticket_position,
-            amount: bonus.amount,
-            description: `${bonus.amount} MioCoinů`,
-            status: "pending",
-          });
+        // Generate MioCoin bonuses via edge function (handles batching server-side)
+        if (mioCoinBonuses.length > 0) {
+          const totalMioCoinValue = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
           
-          if (insertError) {
-            throw new Error(`Chyba při ukládání MioCoin bonusu: ${insertError.message}`);
+          console.log(`Calling distribute-bonus-prizes for ${totalMioCoinValue} MioCoins`);
+          
+          const { data: distributionResult, error: distributionError } = await supabase.functions.invoke(
+            'distribute-bonus-prizes',
+            {
+              body: {
+                contest_id: contestId,
+                bonus_type: 'MioCoin',
+                total_value: totalMioCoinValue,
+                amount_per_unit: 1, // Each position gets 1 MioCoin
+                distribution_rule: 'random',
+                batch_size: 3000,
+              },
+            }
+          );
+
+          if (distributionError) {
+            throw new Error(`Chyba při generování MioCoin bonusů: ${distributionError.message}`);
+          }
+
+          if (!distributionResult?.success) {
+            throw new Error(distributionResult?.error || 'Nepodařilo se vygenerovat MioCoin bonusy');
+          }
+
+          console.log(`MioCoin distribution complete: ${distributionResult.created_bonuses} bonuses created in ${distributionResult.elapsed_ms}ms`);
+          
+          if (distributionResult.warnings?.length > 0) {
+            console.warn('Distribution warnings:', distributionResult.warnings);
           }
         }
 
