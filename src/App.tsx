@@ -42,6 +42,7 @@ import OneMilAudit from "@/pages/OneMilAudit";
 import TestLogin from "@/pages/TestLogin";
 import Winners from "@/pages/Winners";
 import Wins from "@/pages/Wins";
+import BonusWallet from "@/pages/BonusWallet";
 import FavoriteGames from "@/pages/FavoriteGames";
 import NotFound from "@/pages/NotFound";
 
@@ -79,6 +80,7 @@ function AppContent() {
         <Route path="/payment/cancel" element={<PaymentCancel />} />
         <Route path="/winners" element={<Winners />} />
         <Route path="/wins" element={<Wins />} />
+        <Route path="/bonus-wallet" element={<BonusWallet />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/banners" element={<AdminBanners />} />
