@@ -221,6 +221,27 @@ export type Database = {
           },
         ]
       }
+      bonus_transfer_history: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       coming_soon_banners: {
         Row: {
           created_at: string

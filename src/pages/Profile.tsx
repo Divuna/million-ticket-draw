@@ -27,6 +27,12 @@ interface UserWallet {
   created_at: string;
 }
 
+interface BonusTransfer {
+  id: string;
+  amount: number;
+  created_at: string;
+}
+
 interface UserProfile {
   nickname: string;
   first_name: string;
@@ -75,13 +81,40 @@ const Profile: React.FC = () => {
   const [testingNotification, setTestingNotification] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [transferring, setTransferring] = useState(false);
+  const [bonusTransfers, setBonusTransfers] = useState<BonusTransfer[]>([]);
+  const [bonusTransfersLoading, setBonusTransfersLoading] = useState(true);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (user) {
       fetchUserWallet();
       fetchUserProfile();
+      fetchBonusTransfers();
     }
   }, [user]);
+
+  const fetchBonusTransfers = async () => {
+    if (!user?.id) return;
+    setBonusTransfersLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('bonus_transfer_history')
+        .select('id, amount, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching bonus transfers:', error);
+        setBonusTransfers([]);
+      } else {
+        setBonusTransfers(data || []);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setBonusTransfers([]);
+    } finally {
+      setBonusTransfersLoading(false);
+    }
+  };
 
   const fetchUserWallet = async () => {
     try {
@@ -280,6 +313,7 @@ const Profile: React.FC = () => {
       });
       
       await fetchUserWallet();
+      await fetchBonusTransfers();
     } catch (error) {
       console.error('Error transferring bonus:', error);
       toast({
@@ -712,6 +746,39 @@ const Profile: React.FC = () => {
                 <GamepadIcon className="h-5 w-5 mr-2" />
                 Moje hry
               </Button>
+            </div>
+
+            {/* Bonus Transfer History */}
+            <div className="mt-6 pt-6 border-t border-border/30">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">Historie převodů bonusových MioCoinů</h3>
+              {bonusTransfersLoading ? (
+                <div className="text-sm text-muted-foreground">Načítám...</div>
+              ) : bonusTransfers.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Zatím žádné převody bonusových MioCoinů</p>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {bonusTransfers.map((transfer) => (
+                    <div key={transfer.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/20 border border-border/30">
+                      <div className="flex items-center gap-2">
+                        <Coins className="h-4 w-4 text-green-500" />
+                        <span className="text-sm text-foreground">Převod bonusových MioCoinů</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-green-500">+{transfer.amount} MioCoinů</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(transfer.created_at).toLocaleString('cs-CZ', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
