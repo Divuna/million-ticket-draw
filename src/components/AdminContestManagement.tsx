@@ -65,8 +65,10 @@ interface ContestFormData {
   detail_image_url: string;
 }
 
-// MioCoin bonuses are stored as a single total in contests.total_miocoin_bonus
-// No individual bonus_prizes records are created for MioCoins
+interface MioCoinBonus {
+  ticket_position: number;
+  amount: number;
+}
 
 interface PhysicalPrize {
   id?: string;
@@ -129,8 +131,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   // Store original product image base64 for regeneration
   const [productImageBase64, setProductImageBase64] = useState<string | null>(null);
 
-  // MioCoin bonus state - stored as single total value in contests.total_miocoin_bonus
-  const [totalMioCoins, setTotalMioCoins] = useState<number>(0);
+  // MioCoin bonus state
+  const [mioCoinBonuses, setMioCoinBonuses] = useState<MioCoinBonus[]>([]);
+  const [totalMioCoinsInput, setTotalMioCoinsInput] = useState<number>(1000);
+  const [stepValue, setStepValue] = useState<number>(10);
+  const [distributionType, setDistributionType] = useState<"even" | "random">("even");
 
   // Physical prize state
   const [physicalPrizes, setPhysicalPrizes] = useState<PhysicalPrize[]>([]);
@@ -157,10 +162,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         banner_image_url: "",
         detail_image_url: "",
       });
-      // Load MioCoin total from contest
-      setTotalMioCoins(editingContest.total_miocoin_bonus || 0);
-      // Load existing physical prizes for editing
-      loadExistingPhysicalPrizes(editingContest.contest_id);
+      // Load existing bonuses for editing
+      loadExistingBonuses(editingContest.contest_id);
     } else {
       setForm({
         title: "",
@@ -176,32 +179,40 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         banner_image_url: "",
         detail_image_url: "",
       });
-      setTotalMioCoins(0);
+      setMioCoinBonuses([]);
       setPhysicalPrizes([]);
     }
     setActiveTab("basic");
   }, [editingContest, open]);
 
-  // Load only physical prizes from bonus_prizes (MioCoins are stored in contests.total_miocoin_bonus)
-  const loadExistingPhysicalPrizes = async (contestId: string) => {
-    const { data, error } = await supabase
-      .from("bonus_prizes")
-      .select("*")
-      .eq("contest_id", contestId)
-      .is("amount", null); // Physical prizes have no amount
+  const loadExistingBonuses = async (contestId: string) => {
+    const { data, error } = await supabase.from("bonus_prizes").select("*").eq("contest_id", contestId);
 
     if (error) {
-      console.error("Error loading physical prizes:", error);
+      console.error("Error loading bonuses:", error);
       return;
     }
 
-    const physical: PhysicalPrize[] = (data || []).map((bonus: any) => ({
-      id: bonus.id,
-      ticket_position: bonus.ticket_position,
-      description: bonus.description || "",
-      image_url: bonus.image_url,
-    }));
+    const mioCoins: MioCoinBonus[] = [];
+    const physical: PhysicalPrize[] = [];
 
+    (data || []).forEach((bonus: any) => {
+      if (bonus.amount && bonus.amount > 0) {
+        mioCoins.push({
+          ticket_position: bonus.ticket_position,
+          amount: bonus.amount,
+        });
+      } else {
+        physical.push({
+          id: bonus.id,
+          ticket_position: bonus.ticket_position,
+          description: bonus.description || "",
+          image_url: bonus.image_url,
+        });
+      }
+    });
+
+    setMioCoinBonuses(mioCoins);
     setPhysicalPrizes(physical);
   };
 
@@ -574,7 +585,125 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }));
   };
 
-  // MioCoin total is simply stored as a number - no generation needed
+  // Computed number of positions
+  const computedPositionCount = stepValue > 0 ? Math.floor(totalMioCoinsInput / stepValue) : 0;
+
+  // MioCoin bonus generation - saves immediately to DB when editing existing contest
+  const generateMioCoinBonuses = async () => {
+    if (totalMioCoinsInput <= 0 || stepValue <= 0) {
+      toast({
+        title: "Chyba",
+        description: "Zadej platný celkový počet MioCoinů a hodnotu bonusu.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (computedPositionCount <= 0) {
+      toast({
+        title: "Chyba",
+        description: "Počet pozic musí být alespoň 1.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const usedPositions = new Set([
+      ...mioCoinBonuses.map((b) => b.ticket_position),
+      ...physicalPrizes.map((p) => p.ticket_position),
+    ]);
+
+    const newBonuses: MioCoinBonus[] = [];
+    const ticketCount = form.ticket_count || 1000000;
+
+    if (distributionType === "even") {
+      // Evenly spaced positions
+      const spacing = Math.floor(ticketCount / (computedPositionCount + 1));
+      for (let i = 1; i <= computedPositionCount; i++) {
+        let position = spacing * i;
+        // Adjust if position is already used
+        while (usedPositions.has(position) && position <= ticketCount) {
+          position++;
+        }
+        if (position <= ticketCount && !usedPositions.has(position)) {
+          usedPositions.add(position);
+          newBonuses.push({ ticket_position: position, amount: stepValue });
+        }
+      }
+    } else {
+      // Random positions
+      let attempts = 0;
+      const maxAttempts = computedPositionCount * 10;
+
+      while (newBonuses.length < computedPositionCount && attempts < maxAttempts) {
+        const position = Math.floor(Math.random() * ticketCount) + 1;
+        if (!usedPositions.has(position)) {
+          usedPositions.add(position);
+          newBonuses.push({ ticket_position: position, amount: stepValue });
+        }
+        attempts++;
+      }
+    }
+
+    if (newBonuses.length < computedPositionCount) {
+      toast({
+        title: "Upozornění",
+        description: `Podařilo se vygenerovat pouze ${newBonuses.length} z ${computedPositionCount} bonusů.`,
+      });
+    }
+
+    // If editing existing contest, save immediately to DB
+    if (editingContest?.contest_id) {
+      try {
+        const contestId = editingContest.contest_id;
+        
+        // Delete existing MioCoin bonuses (only those with amount > 0)
+        await supabase
+          .from("bonus_prizes")
+          .delete()
+          .eq("contest_id", contestId)
+          .gt("amount", 0);
+
+        // Insert new MioCoin bonuses
+        for (const bonus of newBonuses) {
+          await supabase.from("bonus_prizes").insert({
+            contest_id: contestId,
+            ticket_position: bonus.ticket_position,
+            amount: bonus.amount,
+            description: `${bonus.amount} MioCoinů`,
+            status: "pending",
+          });
+        }
+
+        // Note: total_miocoin_bonus is updated automatically by database trigger trg_sync_total_miocoin_bonus
+        const totalMioCoins = newBonuses.reduce((sum, b) => sum + b.amount, 0);
+        
+        toast({
+          title: "MioCoiny uloženy",
+          description: `${newBonuses.length} MioCoin bonusů (celkem ${totalMioCoins}) bylo uloženo do databáze.`,
+        });
+      } catch (err) {
+        console.error("Error saving MioCoin bonuses:", err);
+        toast({
+          title: "Chyba při ukládání",
+          description: "MioCoiny byly vygenerovány, ale nepodařilo se je uložit.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "MioCoiny vygenerovány",
+        description: `Přidáno ${newBonuses.length} MioCoin bonusů. Budou uloženy po vytvoření soutěže.`,
+      });
+    }
+
+    setMioCoinBonuses((prev) => [...prev, ...newBonuses]);
+  };
+
+  const clearMioCoinBonuses = () => {
+    setMioCoinBonuses([]);
+    toast({ title: "MioCoiny smazány", description: "Všechny MioCoin bonusy byly odstraněny." });
+  };
 
   // Physical prize management
   const addPhysicalPrize = async () => {
@@ -588,6 +717,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }
 
     const usedPositions = new Set([
+      ...mioCoinBonuses.map((b) => b.ticket_position),
       ...physicalPrizes.map((p) => p.ticket_position),
     ]);
 
@@ -688,18 +818,46 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
       // Save bonuses if we have a contest ID
       if (contestId) {
-        // Update total_miocoin_bonus directly on the contest
-        const { error: mioCoinError } = await supabase
-          .from("contests")
-          .update({ total_miocoin_bonus: totalMioCoins })
-          .eq("id", contestId);
+        // Delete existing bonuses for this contest
+        await supabase.from("bonus_prizes").delete().eq("contest_id", contestId);
 
-        if (mioCoinError) {
-          console.error("Error updating total_miocoin_bonus:", mioCoinError);
+        // Generate MioCoin bonuses via edge function (handles batching server-side)
+        if (mioCoinBonuses.length > 0) {
+          const totalMioCoinValue = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
+          
+          console.log(`Calling distribute-bonus-prizes for ${totalMioCoinValue} MioCoins`);
+          
+          const { data: distributionResult, error: distributionError } = await supabase.functions.invoke(
+            'distribute-bonus-prizes',
+            {
+              body: {
+                contest_id: contestId,
+                bonus_type: 'MioCoin',
+                total_value: totalMioCoinValue,
+                amount_per_unit: 1, // Each position gets 1 MioCoin
+                distribution_rule: 'random',
+                batch_size: 3000,
+              },
+            }
+          );
+
+          if (distributionError) {
+            throw new Error(`Chyba při generování MioCoin bonusů: ${distributionError.message}`);
+          }
+
+          if (!distributionResult?.success) {
+            throw new Error(distributionResult?.error || 'Nepodařilo se vygenerovat MioCoin bonusy');
+          }
+
+          console.log(`MioCoin distribution complete: ${distributionResult.created_bonuses} bonuses created in ${distributionResult.elapsed_ms}ms`);
+          
+          if (distributionResult.warnings?.length > 0) {
+            console.warn('Distribution warnings:', distributionResult.warnings);
+          }
         }
 
-        // Delete existing physical prizes for this contest (MioCoins are not stored in bonus_prizes)
-        await supabase.from("bonus_prizes").delete().eq("contest_id", contestId);
+        // Note: total_miocoin_bonus is updated automatically by database trigger trg_sync_total_miocoin_bonus
+        // after bonus_prizes are inserted
 
         // Insert physical prizes sequentially
         for (const prize of physicalPrizes) {
@@ -754,6 +912,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   };
 
   const isEditing = !!editingContest;
+  const totalMioCoins = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
 
   // Validation logic for each tab
   const hasMainImage = !!(form.main_image_file || form.main_image_url || (isEditing && editingContest?.main_image));
@@ -893,30 +1052,83 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 <Coins className="h-5 w-5 text-yellow-500" />
                 <span className="font-medium">MioCoin bonusy</span>
                 <Badge variant="secondary" className="ml-auto">
-                  Celkem: {totalMioCoins.toLocaleString("cs-CZ")} MC
+                  Celkem: {totalMioCoins.toLocaleString("cs-CZ")} MC ({mioCoinBonuses.length} pozic)
                 </Badge>
               </div>
 
               <div className="border border-dashed border-white/20 rounded-lg p-4 space-y-4">
-                <div>
-                  <Label>Celkový počet MioCoinů ve hře</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={totalMioCoins}
-                    onChange={(e) => setTotalMioCoins(Number(e.target.value) || 0)}
-                    placeholder="Např. 50000"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Zadejte celkový počet MioCoinů, které budou ve hře jako bonusový pool.
-                    Tato hodnota se uloží přímo do soutěže a zobrazí se uživatelům.
-                  </p>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <Label>Celkový počet MioCoinů ve hře</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={totalMioCoinsInput}
+                      onChange={(e) => setTotalMioCoinsInput(Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label>Hodnota jednoho bonusu (po kolika)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={stepValue}
+                      onChange={(e) => setStepValue(Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+
+                {totalMioCoinsInput > 0 && stepValue > 0 && (
+                  <div className="bg-muted/30 rounded-md p-3 text-sm">
+                    <span className="text-muted-foreground">Počet pozic: </span>
+                    <span className="font-medium text-foreground">{computedPositionCount.toLocaleString("cs-CZ")}</span>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>Typ rozmístění</Label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="distributionType"
+                        value="even"
+                        checked={distributionType === "even"}
+                        onChange={() => setDistributionType("even")}
+                        className="w-4 h-4 accent-primary"
+                      />
+                      <span>Rovnoměrně</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="distributionType"
+                        value="random"
+                        checked={distributionType === "random"}
+                        onChange={() => setDistributionType("random")}
+                        className="w-4 h-4 accent-primary"
+                      />
+                      <span>Náhodně</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button onClick={generateMioCoinBonuses} className="flex-1" disabled={computedPositionCount <= 0}>
+                    <Coins className="mr-2 h-4 w-4" />
+                    Vygenerovat MioCoiny
+                  </Button>
+                  <Button variant="outline" onClick={clearMioCoinBonuses} disabled={mioCoinBonuses.length === 0}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Smazat vše
+                  </Button>
                 </div>
               </div>
 
-              {totalMioCoins > 0 && (
+              {mioCoinBonuses.length > 0 && (
                 <div className="text-sm text-muted-foreground">
-                  V soutěži bude celkem {totalMioCoins.toLocaleString("cs-CZ")} MioCoinů jako bonusový pool.
+                  Vygenerováno {mioCoinBonuses.length} pozic s celkovou hodnotou {totalMioCoins.toLocaleString("cs-CZ")}{" "}
+                  MioCoinů.
                 </div>
               )}
             </TabsContent>
@@ -1072,7 +1284,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">MioCoin bonusy:</span>
                   <span className="font-medium">
-                    {totalMioCoins.toLocaleString("cs-CZ")} MC
+                    {totalMioCoins.toLocaleString("cs-CZ")} MC ({mioCoinBonuses.length} pozic)
                   </span>
                 </div>
                 <div className="flex justify-between">
