@@ -72,6 +72,7 @@ function AppContent() {
         <Route path="/my-contests" element={<MyContests />} />
         <Route path="/my-contest/:id" element={<MyContestDetail />} />
         <Route path="/bonus/:id" element={<BonusDetail />} />
+        <Route path="/contest/:id/bonus" element={<BonusDetail />} />
         <Route path="/vouchers" element={<Vouchers />} />
         <Route path="/messages" element={<Messages />} />
         <Route path="/messages/:id" element={<MessageDetail />} />
