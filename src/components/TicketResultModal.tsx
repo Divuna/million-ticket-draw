@@ -14,8 +14,20 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { Facebook, Download } from 'lucide-react';
+import logoOnemil from '@/assets/logo-onemil.png';
 
 const SHARE_URL = "https://onemil.cz";
+
+// Preload logo image
+const loadLogoImage = (): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = logoOnemil;
+  });
+};
 
 interface BonusPrizeData {
   id: string;
@@ -51,101 +63,109 @@ const funnyMessages = [
 ];
 
 // Generate ticket card image using Canvas API
-const generateTicketCard = (
+const generateTicketCard = async (
   ticketNumber: number,
   isWinner: boolean,
   isMainPrize: boolean,
   bonusAmount: number | null,
   remainingTickets: number | undefined
 ): Promise<Blob> => {
-  return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      reject(new Error('Cannot get canvas context'));
-      return;
-    }
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Cannot get canvas context');
+  }
 
-    // Card dimensions (1200x630 for optimal OG preview)
-    canvas.width = 1200;
-    canvas.height = 630;
+  // Card dimensions (1200x630 for optimal OG preview)
+  canvas.width = 1200;
+  canvas.height = 630;
 
-    // Dark premium gradient background
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    gradient.addColorStop(0, '#0a0a0a');
-    gradient.addColorStop(0.5, '#1a1a2e');
-    gradient.addColorStop(1, '#16213e');
-    ctx.fillStyle = gradient;
+  // Dark premium gradient background
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  gradient.addColorStop(0, '#0a0a0a');
+  gradient.addColorStop(0.5, '#1a1a2e');
+  gradient.addColorStop(1, '#16213e');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Decorative border
+  ctx.strokeStyle = isWinner ? '#ffd700' : '#333';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+  // Inner glow for winners
+  if (isWinner) {
+    const glowGradient = ctx.createRadialGradient(
+      canvas.width / 2, canvas.height / 2, 0,
+      canvas.width / 2, canvas.height / 2, 400
+    );
+    glowGradient.addColorStop(0, 'rgba(255, 215, 0, 0.15)');
+    glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+    ctx.fillStyle = glowGradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
 
-    // Decorative border
-    ctx.strokeStyle = isWinner ? '#ffd700' : '#333';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
-
-    // Inner glow for winners
-    if (isWinner) {
-      const glowGradient = ctx.createRadialGradient(
-        canvas.width / 2, canvas.height / 2, 0,
-        canvas.width / 2, canvas.height / 2, 400
-      );
-      glowGradient.addColorStop(0, 'rgba(255, 215, 0, 0.15)');
-      glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
-      ctx.fillStyle = glowGradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-
-    // OneMil Logo text
+  // Draw OneMil Logo
+  try {
+    const logoImg = await loadLogoImage();
+    const logoHeight = 70;
+    const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
+    ctx.drawImage(logoImg, (canvas.width - logoWidth) / 2, 40, logoWidth, logoHeight);
+  } catch (err) {
+    // Fallback to text if logo fails to load
     ctx.font = 'bold 48px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
     ctx.fillText('OneMil', canvas.width / 2, 80);
+  }
 
-    // Subtitle
-    ctx.font = '20px system-ui, -apple-system, sans-serif';
+  // Subtitle
+  ctx.font = '20px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = '#888';
+  ctx.textAlign = 'center';
+  ctx.fillText('Zkus štěstí a vyhraj!', canvas.width / 2, 130);
+
+  // Result emoji
+  const emoji = isMainPrize ? '🏆' : isWinner ? '🎉' : '🎟️';
+  ctx.font = '120px system-ui, -apple-system, sans-serif';
+  ctx.fillText(emoji, canvas.width / 2, 275);
+
+  // Result text
+  ctx.font = 'bold 42px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = isMainPrize ? '#ffd700' : isWinner ? '#22c55e' : '#ffffff';
+  const resultText = isMainPrize 
+    ? 'HLAVNÍ VÝHRA!' 
+    : isWinner 
+      ? 'VÝHRA!' 
+      : 'Zkusil jsem štěstí!';
+  ctx.fillText(resultText, canvas.width / 2, 355);
+
+  // Ticket number
+  ctx.font = 'bold 64px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(`Ticket #${ticketNumber.toLocaleString('cs-CZ')}`, canvas.width / 2, 435);
+
+  // Bonus amount if winner
+  if (isWinner && bonusAmount && bonusAmount > 0) {
+    ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText(`+${bonusAmount.toLocaleString('cs-CZ')} MioCoinů`, canvas.width / 2, 495);
+  }
+
+  // Remaining tickets
+  if (remainingTickets !== undefined) {
+    ctx.font = '24px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = '#888';
-    ctx.fillText('Zkus štěstí a vyhraj!', canvas.width / 2, 115);
+    ctx.fillText(`Zbývá tiketů: ${remainingTickets.toLocaleString('cs-CZ')}`, canvas.width / 2, 545);
+  }
 
-    // Result emoji
-    const emoji = isMainPrize ? '🏆' : isWinner ? '🎉' : '🎟️';
-    ctx.font = '120px system-ui, -apple-system, sans-serif';
-    ctx.fillText(emoji, canvas.width / 2, 260);
+  // Footer with URL
+  ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = '#666';
+  ctx.fillText('👉 onemil.cz', canvas.width / 2, 600);
 
-    // Result text
-    ctx.font = 'bold 42px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = isMainPrize ? '#ffd700' : isWinner ? '#22c55e' : '#ffffff';
-    const resultText = isMainPrize 
-      ? 'HLAVNÍ VÝHRA!' 
-      : isWinner 
-        ? 'VÝHRA!' 
-        : 'Zkusil jsem štěstí!';
-    ctx.fillText(resultText, canvas.width / 2, 340);
-
-    // Ticket number
-    ctx.font = 'bold 64px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(`Ticket #${ticketNumber.toLocaleString('cs-CZ')}`, canvas.width / 2, 420);
-
-    // Bonus amount if winner
-    if (isWinner && bonusAmount && bonusAmount > 0) {
-      ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
-      ctx.fillStyle = '#ffd700';
-      ctx.fillText(`+${bonusAmount.toLocaleString('cs-CZ')} MioCoinů`, canvas.width / 2, 480);
-    }
-
-    // Remaining tickets
-    if (remainingTickets !== undefined) {
-      ctx.font = '24px system-ui, -apple-system, sans-serif';
-      ctx.fillStyle = '#888';
-      ctx.fillText(`Zbývá tiketů: ${remainingTickets.toLocaleString('cs-CZ')}`, canvas.width / 2, 530);
-    }
-
-    // Footer with URL
-    ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#666';
-    ctx.fillText('👉 onemil.cz', canvas.width / 2, 590);
-
-    // Convert to blob
+  // Convert to blob
+  return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (blob) {
         resolve(blob);
