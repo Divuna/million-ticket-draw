@@ -1087,6 +1087,7 @@ export type Database = {
         Row: {
           balance_coins: number
           balance_vouchers: number
+          bonus_balance_coins: number
           created_at: string
           id: string
           user_id: string
@@ -1094,6 +1095,7 @@ export type Database = {
         Insert: {
           balance_coins?: number
           balance_vouchers?: number
+          bonus_balance_coins?: number
           created_at?: string
           id?: string
           user_id: string
@@ -1101,6 +1103,7 @@ export type Database = {
         Update: {
           balance_coins?: number
           balance_vouchers?: number
+          bonus_balance_coins?: number
           created_at?: string
           id?: string
           user_id?: string
