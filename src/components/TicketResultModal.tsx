@@ -16,7 +16,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Facebook, Download } from 'lucide-react';
 import logoOnemil from '@/assets/logo-onemil.png';
 
-const SHARE_URL = "https://onemil.cz";
+const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
 
 // Preload logo image
 const loadLogoImage = (): Promise<HTMLImageElement> => {
@@ -193,6 +193,8 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
+  const [publicShareUrl, setPublicShareUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Query bonus_prizes when modal opens
   useEffect(() => {
@@ -228,7 +230,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     fetchBonusPrize();
   }, [isOpen, result, contestId]);
 
-  // Generate preview image when modal opens and data is ready
+  // Generate preview image and upload to storage when modal opens
   useEffect(() => {
     if (!isOpen || !result || isLoading) {
       return;
@@ -239,14 +241,16 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       URL.revokeObjectURL(previewImageUrl);
       setPreviewImageUrl(null);
       setPreviewBlob(null);
+      setPublicShareUrl(null);
     }
 
     const isBonusWinCheck = bonusPrize !== null;
     const isMainPrizeCheck = result.won_type === 'main' || result.won_main === true;
     const isWinnerCheck = isBonusWinCheck || isMainPrizeCheck;
 
-    const generatePreview = async () => {
+    const generateAndUpload = async () => {
       setIsGeneratingImage(true);
+      setIsUploading(true);
       try {
         const blob = await generateTicketCard(
           result.ticket_number,
@@ -258,14 +262,54 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         const url = URL.createObjectURL(blob);
         setPreviewImageUrl(url);
         setPreviewBlob(blob);
+
+        // Generate unique ticket ID for sharing
+        const ticketShareId = `${contestId}-${result.ticket_number}`;
+
+        // Convert blob to base64 for upload
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64 = reader.result as string;
+          
+          try {
+            // Upload via edge function
+            const response = await fetch(
+              `${SUPABASE_URL}/functions/v1/upload-ticket-share`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  ticketId: ticketShareId,
+                  imageBase64: base64
+                })
+              }
+            );
+
+            if (response.ok) {
+              const data = await response.json();
+              console.log('Image uploaded:', data.publicUrl);
+              setPublicShareUrl(`https://onemil.cz/share/ticket/${ticketShareId}`);
+            } else {
+              console.error('Upload failed:', await response.text());
+            }
+          } catch (uploadErr) {
+            console.error('Upload error:', uploadErr);
+          } finally {
+            setIsUploading(false);
+          }
+        };
+        reader.readAsDataURL(blob);
       } catch (err) {
         console.error('Error generating preview:', err);
+        setIsUploading(false);
       } finally {
         setIsGeneratingImage(false);
       }
     };
 
-    generatePreview();
+    generateAndUpload();
 
     // Cleanup on unmount
     return () => {
@@ -273,7 +317,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         URL.revokeObjectURL(previewImageUrl);
       }
     };
-  }, [isOpen, result, isLoading, bonusPrize]);
+  }, [isOpen, result, isLoading, bonusPrize, contestId]);
 
   // Memoize random message to prevent re-renders changing it
   const funnyMessage = useMemo(() => {
@@ -339,6 +383,15 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const handleShare = (platform: 'facebook' | 'instagram' | 'tiktok' | 'x') => {
     const shareText = getShareText();
     
+    // For FB/X, we need the public share URL
+    if ((platform === 'facebook' || platform === 'x') && !publicShareUrl) {
+      toast({
+        title: 'Čekejte',
+        description: 'Obrázek se nahrává...',
+      });
+      return;
+    }
+
     if (!previewBlob) {
       toast({
         title: 'Chyba',
@@ -350,8 +403,9 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
     switch (platform) {
       case 'facebook':
+        // Open public share page URL (with OG tags)
         window.open(
-          `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(SHARE_URL)}&quote=${encodeURIComponent(shareText)}`,
+          `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(publicShareUrl!)}`,
           '_blank',
           'width=600,height=400'
         );
@@ -371,8 +425,9 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         });
         break;
       case 'x':
+        // Open public share page URL (with OG tags)
         window.open(
-          `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(SHARE_URL)}`,
+          `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(publicShareUrl!)}`,
           '_blank',
           'width=600,height=400'
         );
@@ -518,7 +573,10 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
         {/* Social Sharing Section with Preview */}
         <div className="border-t border-border/30 pt-4 mt-2">
-          <p className="text-sm text-muted-foreground text-center mb-3">Sdílet výsledek</p>
+          <p className="text-sm text-muted-foreground text-center mb-3">
+            Sdílet výsledek
+            {isUploading && <span className="ml-2 text-xs">(nahrávám...)</span>}
+          </p>
           
           {/* Preview Image */}
           <div className="flex justify-center mb-4">
@@ -541,14 +599,14 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
           {/* Share Buttons */}
           <div className="flex justify-center gap-3">
-            {/* Facebook */}
+            {/* Facebook - needs publicShareUrl */}
             <Button
               variant="outline"
               size="icon"
               className="h-10 w-10 rounded-full"
               onClick={() => handleShare('facebook')}
-              disabled={isGeneratingImage || !previewBlob}
-              title="Sdílet na Facebook"
+              disabled={isGeneratingImage || isUploading || !publicShareUrl}
+              title={isUploading ? "Nahrávám obrázek..." : "Sdílet na Facebook"}
             >
               <Facebook className="h-5 w-5 text-[#1877F2]" />
             </Button>
@@ -590,14 +648,14 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               </svg>
             </Button>
             
-            {/* X (Twitter) */}
+            {/* X (Twitter) - needs publicShareUrl */}
             <Button
               variant="outline"
               size="icon"
               className="h-10 w-10 rounded-full"
               onClick={() => handleShare('x')}
-              disabled={isGeneratingImage || !previewBlob}
-              title="Sdílet na X"
+              disabled={isGeneratingImage || isUploading || !publicShareUrl}
+              title={isUploading ? "Nahrávám obrázek..." : "Sdílet na X"}
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
