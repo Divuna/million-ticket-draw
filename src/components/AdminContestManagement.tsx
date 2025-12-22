@@ -839,8 +839,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         // Note: total_miocoin_bonus is updated automatically by database trigger trg_sync_total_miocoin_bonus
         // after bonus_prizes are inserted
 
-        // Insert physical prizes with proper async handling
-        const physicalPrizePromises = physicalPrizes.map(async (prize) => {
+        // Insert physical prizes sequentially
+        for (const prize of physicalPrizes) {
           let imageUrl = prize.image_url;
 
           // Upload image if file exists
@@ -869,10 +869,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           if (insertError) {
             throw new Error(`Chyba při ukládání výhry: ${insertError.message}`);
           }
-        });
-
-        // Wait for ALL physical prizes to be saved before continuing
-        await Promise.all(physicalPrizePromises);
+        }
       }
 
       toast({
