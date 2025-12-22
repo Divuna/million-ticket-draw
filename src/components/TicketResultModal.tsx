@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -13,9 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Facebook } from 'lucide-react';
+import { Facebook, Download } from 'lucide-react';
 
-const SHARE_TEXT = "Zahrál jsem si na OneMil 🎟️ a právě teď jsem zkusil štěstí! 🍀 Přidej se taky 👉 onemil.cz";
 const SHARE_URL = "https://onemil.cz";
 
 interface BonusPrizeData {
@@ -38,7 +37,6 @@ interface TicketResultModalProps {
     remaining_tickets?: number;
     won_type?: 'bonus' | 'main' | null;
     bonus_prize_id?: string | null;
-    // Legacy boolean fields for backward compatibility
     won_bonus?: boolean;
     won_main?: boolean;
   } | null | undefined;
@@ -51,6 +49,112 @@ const funnyMessages = [
   "Každý tiket tě přibližuje k výhře! 🎪",
   "Neúspěch je jen začátek úspěchu! 🌟"
 ];
+
+// Generate ticket card image using Canvas API
+const generateTicketCard = (
+  ticketNumber: number,
+  isWinner: boolean,
+  isMainPrize: boolean,
+  bonusAmount: number | null,
+  remainingTickets: number | undefined
+): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      reject(new Error('Cannot get canvas context'));
+      return;
+    }
+
+    // Card dimensions (1200x630 for optimal OG preview)
+    canvas.width = 1200;
+    canvas.height = 630;
+
+    // Dark premium gradient background
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, '#0a0a0a');
+    gradient.addColorStop(0.5, '#1a1a2e');
+    gradient.addColorStop(1, '#16213e');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Decorative border
+    ctx.strokeStyle = isWinner ? '#ffd700' : '#333';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+    // Inner glow for winners
+    if (isWinner) {
+      const glowGradient = ctx.createRadialGradient(
+        canvas.width / 2, canvas.height / 2, 0,
+        canvas.width / 2, canvas.height / 2, 400
+      );
+      glowGradient.addColorStop(0, 'rgba(255, 215, 0, 0.15)');
+      glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+      ctx.fillStyle = glowGradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // OneMil Logo text
+    ctx.font = 'bold 48px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.fillText('OneMil', canvas.width / 2, 80);
+
+    // Subtitle
+    ctx.font = '20px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#888';
+    ctx.fillText('Zkus štěstí a vyhraj!', canvas.width / 2, 115);
+
+    // Result emoji
+    const emoji = isMainPrize ? '🏆' : isWinner ? '🎉' : '🎟️';
+    ctx.font = '120px system-ui, -apple-system, sans-serif';
+    ctx.fillText(emoji, canvas.width / 2, 260);
+
+    // Result text
+    ctx.font = 'bold 42px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = isMainPrize ? '#ffd700' : isWinner ? '#22c55e' : '#ffffff';
+    const resultText = isMainPrize 
+      ? 'HLAVNÍ VÝHRA!' 
+      : isWinner 
+        ? 'VÝHRA!' 
+        : 'Zkusil jsem štěstí!';
+    ctx.fillText(resultText, canvas.width / 2, 340);
+
+    // Ticket number
+    ctx.font = 'bold 64px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`Ticket #${ticketNumber.toLocaleString('cs-CZ')}`, canvas.width / 2, 420);
+
+    // Bonus amount if winner
+    if (isWinner && bonusAmount && bonusAmount > 0) {
+      ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = '#ffd700';
+      ctx.fillText(`+${bonusAmount.toLocaleString('cs-CZ')} MioCoinů`, canvas.width / 2, 480);
+    }
+
+    // Remaining tickets
+    if (remainingTickets !== undefined) {
+      ctx.font = '24px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = '#888';
+      ctx.fillText(`Zbývá tiketů: ${remainingTickets.toLocaleString('cs-CZ')}`, canvas.width / 2, 530);
+    }
+
+    // Footer with URL
+    ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#666';
+    ctx.fillText('👉 onemil.cz', canvas.width / 2, 590);
+
+    // Convert to blob
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error('Failed to create blob'));
+      }
+    }, 'image/png', 1.0);
+  });
+};
 
 export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   isOpen,
@@ -66,6 +170,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const [bonusPrize, setBonusPrize] = useState<BonusPrizeData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   // Query bonus_prizes when modal opens
   useEffect(() => {
@@ -127,10 +232,9 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
       toast({
         title: 'Výhra uplatněna!',
-        description: `MioCoiny byly připsány na tvůj účet.`
+        description: 'MioCoiny byly připsány na tvůj účet.'
       });
 
-      // Refresh wallet balance
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['wallets'] });
 
@@ -149,14 +253,135 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
   if (!result) return null;
 
-  // Detection logic: bonus win if bonus_prizes record exists
+  // Detection logic
   const isBonusWin = bonusPrize !== null;
-  // Main prize detection from won_type or legacy fields
   const isMainPrize = result.won_type === 'main' || result.won_main === true;
   const isWinner = isBonusWin || isMainPrize;
-
-  // Check if bonus is already claimed
   const isBonusClaimed = bonusPrize?.status === 'won';
+
+  // Dynamic share text based on result
+  const getShareText = () => {
+    if (isWinner) {
+      return `Vyhrál jsem na OneMil 🎉🎟️ Ticket #${result.ticket_number.toLocaleString('cs-CZ')}. Zkus štěstí taky 👉 onemil.cz`;
+    }
+    return `Zahrál jsem si na OneMil 🎟️ Ticket #${result.ticket_number.toLocaleString('cs-CZ')}. Každý ticket tě blíží k výhře 👉 onemil.cz`;
+  };
+
+  const handleShare = async (platform: 'facebook' | 'instagram' | 'tiktok' | 'x') => {
+    const shareText = getShareText();
+    
+    setIsGeneratingImage(true);
+    try {
+      const imageBlob = await generateTicketCard(
+        result.ticket_number,
+        isWinner,
+        isMainPrize,
+        bonusPrize?.amount || null,
+        result.remaining_tickets
+      );
+
+      // Try native share API first (works on mobile)
+      if (navigator.share && navigator.canShare) {
+        const file = new File([imageBlob], 'onemil-ticket.png', { type: 'image/png' });
+        const shareData = {
+          title: 'OneMil Ticket',
+          text: shareText,
+          url: SHARE_URL,
+          files: [file]
+        };
+
+        if (navigator.canShare(shareData)) {
+          await navigator.share(shareData);
+          toast({
+            title: 'Sdíleno!',
+            description: 'Výsledek byl úspěšně sdílen.'
+          });
+          return;
+        }
+      }
+
+      // Fallback to platform-specific sharing
+      switch (platform) {
+        case 'facebook':
+          window.open(
+            `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(SHARE_URL)}&quote=${encodeURIComponent(shareText)}`,
+            '_blank',
+            'width=600,height=400'
+          );
+          break;
+        case 'instagram':
+          // Instagram doesn't support direct web sharing, download image instead
+          downloadImage(imageBlob);
+          toast({
+            title: 'Obrázek stažen',
+            description: 'Otevři Instagram a nahraj obrázek jako příspěvek nebo příběh.'
+          });
+          break;
+        case 'tiktok':
+          // TikTok doesn't support direct web sharing, download image instead
+          downloadImage(imageBlob);
+          toast({
+            title: 'Obrázek stažen',
+            description: 'Otevři TikTok a použij obrázek pro tvorbu videa.'
+          });
+          break;
+        case 'x':
+          window.open(
+            `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(SHARE_URL)}`,
+            '_blank',
+            'width=600,height=400'
+          );
+          break;
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      toast({
+        title: 'Chyba',
+        description: 'Nepodařilo se sdílet výsledek.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  const downloadImage = (blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `onemil-ticket-${result.ticket_number}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadCard = async () => {
+    setIsGeneratingImage(true);
+    try {
+      const imageBlob = await generateTicketCard(
+        result.ticket_number,
+        isWinner,
+        isMainPrize,
+        bonusPrize?.amount || null,
+        result.remaining_tickets
+      );
+      downloadImage(imageBlob);
+      toast({
+        title: 'Staženo!',
+        description: 'Obrázek tiketu byl uložen.'
+      });
+    } catch (error) {
+      console.error('Error downloading:', error);
+      toast({
+        title: 'Chyba',
+        description: 'Nepodařilo se stáhnout obrázek.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
 
   const handleGoToWins = () => {
     navigate('/wins');
@@ -276,7 +501,8 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               variant="outline"
               size="icon"
               className="h-10 w-10 rounded-full"
-              onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(SHARE_URL)}&quote=${encodeURIComponent(SHARE_TEXT)}`, '_blank', 'width=600,height=400')}
+              onClick={() => handleShare('facebook')}
+              disabled={isGeneratingImage}
               title="Sdílet na Facebook"
             >
               <Facebook className="h-5 w-5 text-[#1877F2]" />
@@ -287,7 +513,8 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               variant="outline"
               size="icon"
               className="h-10 w-10 rounded-full"
-              onClick={() => window.open('https://www.instagram.com/', '_blank')}
+              onClick={() => handleShare('instagram')}
+              disabled={isGeneratingImage}
               title="Sdílet na Instagram"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="url(#instagram-gradient)">
@@ -309,7 +536,8 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               variant="outline"
               size="icon"
               className="h-10 w-10 rounded-full"
-              onClick={() => window.open('https://www.tiktok.com/', '_blank')}
+              onClick={() => handleShare('tiktok')}
+              disabled={isGeneratingImage}
               title="Sdílet na TikTok"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -322,12 +550,25 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               variant="outline"
               size="icon"
               className="h-10 w-10 rounded-full"
-              onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(SHARE_TEXT)}&url=${encodeURIComponent(SHARE_URL)}`, '_blank', 'width=600,height=400')}
+              onClick={() => handleShare('x')}
+              disabled={isGeneratingImage}
               title="Sdílet na X"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
               </svg>
+            </Button>
+
+            {/* Download */}
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-full"
+              onClick={handleDownloadCard}
+              disabled={isGeneratingImage}
+              title="Stáhnout obrázek"
+            >
+              <Download className="h-4 w-4" />
             </Button>
           </div>
         </div>
