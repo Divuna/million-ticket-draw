@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2 } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2, ChevronDown } from 'lucide-react';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -758,9 +758,12 @@ const Profile: React.FC = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => setHistoryExpanded(!historyExpanded)}
-                    className="text-xs text-muted-foreground hover:text-foreground"
+                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                   >
                     {historyExpanded ? 'Skrýt historii' : 'Zobrazit celou historii'}
+                    <ChevronDown 
+                      className={`h-4 w-4 transition-transform duration-300 ${historyExpanded ? 'rotate-180' : ''}`} 
+                    />
                   </Button>
                 )}
               </div>
