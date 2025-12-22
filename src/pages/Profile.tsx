@@ -80,6 +80,7 @@ const Profile: React.FC = () => {
   const [editMode, setEditMode] = useState(false);
   const [testingNotification, setTestingNotification] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const [transferring, setTransferring] = useState(false);
   const [bonusTransfers, setBonusTransfers] = useState<BonusTransfer[]>([]);
   const [bonusTransfersLoading, setBonusTransfersLoading] = useState(true);
@@ -750,15 +751,35 @@ const Profile: React.FC = () => {
 
             {/* Bonus Transfer History */}
             <div className="mt-6 pt-6 border-t border-border/30">
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">Historie převodů bonusových MioCoinů</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium text-muted-foreground">Historie převodů bonusových MioCoinů</h3>
+                {bonusTransfers.length > 3 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setHistoryExpanded(!historyExpanded)}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    {historyExpanded ? 'Skrýt historii' : 'Zobrazit celou historii'}
+                  </Button>
+                )}
+              </div>
               {bonusTransfersLoading ? (
                 <div className="text-sm text-muted-foreground">Načítám...</div>
               ) : bonusTransfers.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Zatím žádné převody bonusových MioCoinů</p>
               ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {bonusTransfers.map((transfer) => (
-                    <div key={transfer.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/20 border border-border/30">
+                <div 
+                  className={`space-y-2 transition-all duration-300 ease-out ${
+                    historyExpanded ? 'max-h-64 overflow-y-auto' : 'max-h-none overflow-hidden'
+                  }`}
+                >
+                  {(historyExpanded ? bonusTransfers : bonusTransfers.slice(0, 3)).map((transfer, index) => (
+                    <div 
+                      key={transfer.id} 
+                      className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/20 border border-border/30 animate-fade-in"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
                       <div className="flex items-center gap-2">
                         <Coins className="h-4 w-4 text-green-500" />
                         <span className="text-sm text-foreground">Převod bonusových MioCoinů</span>
