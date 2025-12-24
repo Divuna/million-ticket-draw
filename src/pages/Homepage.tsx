@@ -1049,16 +1049,6 @@ const Homepage = () => {
                     Naše mise
                   </a>
                 </li>
-                <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
-                    Kariéra
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
-                    Tiskové zprávy
-                  </a>
-                </li>
               </ul>
             </div>
 
