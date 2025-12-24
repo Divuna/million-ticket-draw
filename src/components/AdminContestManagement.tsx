@@ -824,10 +824,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         // Generate MioCoin bonuses via edge function (handles batching server-side)
         if (mioCoinBonuses.length > 0) {
           const totalMioCoinValue = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
-          // Use the step value (amount per bonus) from the generated bonuses
-          const amountPerBonus = mioCoinBonuses[0]?.amount || stepValue || 1;
           
-          console.log(`Calling distribute-bonus-prizes for ${totalMioCoinValue} MioCoins (${mioCoinBonuses.length} positions × ${amountPerBonus} MC each)`);
+          console.log(`Calling distribute-bonus-prizes for ${totalMioCoinValue} MioCoins`);
           
           const { data: distributionResult, error: distributionError } = await supabase.functions.invoke(
             'distribute-bonus-prizes',
@@ -836,9 +834,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 contest_id: contestId,
                 bonus_type: 'MioCoin',
                 total_value: totalMioCoinValue,
-                amount_per_unit: amountPerBonus, // Use actual step value (e.g., 10 MC per position)
-                distribution_rule: distributionType === 'even' ? 'step_interval' : 'random',
-                batch_size: 500,
+                amount_per_unit: 1, // Each position gets 1 MioCoin
+                distribution_rule: 'random',
+                batch_size: 3000,
               },
             }
           );
@@ -851,20 +849,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             throw new Error(distributionResult?.error || 'Nepodařilo se vygenerovat MioCoin bonusy');
           }
 
-          // Verify the created bonuses match expected count
-          const expectedCount = mioCoinBonuses.length;
-          const createdCount = distributionResult.created_bonuses;
-          
-          if (createdCount < expectedCount) {
-            console.warn(`Warning: Created ${createdCount}/${expectedCount} bonuses`);
-            toast({
-              title: "Upozornění",
-              description: `Vytvořeno pouze ${createdCount} z ${expectedCount} MioCoin bonusů.`,
-              variant: "destructive",
-            });
-          }
-
-          console.log(`MioCoin distribution complete: ${createdCount} bonuses created in ${distributionResult.elapsed_ms}ms`);
+          console.log(`MioCoin distribution complete: ${distributionResult.created_bonuses} bonuses created in ${distributionResult.elapsed_ms}ms`);
           
           if (distributionResult.warnings?.length > 0) {
             console.warn('Distribution warnings:', distributionResult.warnings);

@@ -1455,10 +1455,6 @@ export type Database = {
           updated_at: string
         }[]
       }
-      get_contest_miocoin_bonus: {
-        Args: { p_contest_id: string }
-        Returns: number
-      }
       get_contests_json: { Args: never; Returns: Json }
       get_current_user_role: { Args: never; Returns: string }
       get_pending_event_forward_log: {
