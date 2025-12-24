@@ -58,6 +58,7 @@ export default function ContestDetail() {
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [myWins, setMyWins] = useState<Winner[]>([]);
   const [balance, setBalance] = useState(0);
+  const [computedMiocoinBonus, setComputedMiocoinBonus] = useState(0);
 
   const [processingContestId, setProcessingContestId] = useState<string | null>(null);
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
@@ -202,6 +203,19 @@ export default function ContestDetail() {
 
       setBonusPrizes((bonusData ?? []) as BonusPrize[]);
 
+      // Compute total MioCoin bonus from bonus_prizes where amount > 0
+      const { data: miocoinBonusData } = await supabase
+        .from("bonus_prizes")
+        .select("amount")
+        .eq("contest_id", id)
+        .gt("amount", 0);
+
+      const totalMiocoinBonus = (miocoinBonusData ?? []).reduce(
+        (sum, item) => sum + (item.amount ?? 0),
+        0
+      );
+      setComputedMiocoinBonus(totalMiocoinBonus);
+
       const { data: wins } = await supabase.from("winners").select("*").eq("contest_id", id);
 
       setMyWins((wins ?? []) as Winner[]);
@@ -316,7 +330,7 @@ export default function ContestDetail() {
           </div>
           <p className="text-sm text-gray-200 leading-relaxed">
             Do této soutěže jsme navíc přidali{" "}
-            <span className="text-yellow-400 font-bold">{(contest.total_miocoin_bonus || 0).toLocaleString("cs-CZ")}</span>{" "}
+            <span className="text-yellow-400 font-bold">{computedMiocoinBonus.toLocaleString("cs-CZ")}</span>{" "}
             MioCoinů jako bonusové výhry, které můžete během soutěže získat.
           </p>
         </section>
