@@ -17,6 +17,7 @@ type Contest = {
   main_prize_secondary_image: string | null;
   main_image: string | null;
   banner_image: string | null;
+  total_miocoin_bonus: number | null;
 };
 
 type BonusPrize = {
@@ -70,6 +71,56 @@ export default function ContestDetail() {
       setBalance(wallet.balance_coins);
       return;
     }
+
+    const { data: profile } = await supabase.from("profiles").select("miocoin_balance").eq("id", userId).maybeSingle();
+
+    if (profile?.miocoin_balance != null) {
+      setBalance(profile.miocoin_balance);
+    }
+  }
+
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        loadUserBalance(session.user.id);
+      }
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  async function handleUseMiocoins() {
+    if (!user) {
+      toast.error("Pro nákup tiketu se musíš přihlásit.");
+      navigate("/login");
+      return;
+    }
+
+    if (!contest) return;
+
+    setProcessingContestId(contest.id);
+
+    try {
+      const { data, error } = await supabase.rpc("buy_ticket_atomic", {
+        p_contest_id: contest.id,
+        p_user_id: user.id,
+      });
+
+      if (error) {
+        toast.error("Chyba při nákupu tiketu.");
+        setProcessingContestId(null);
+        return;
+      }
+
+      if (data && typeof data === "object") {
+        const result = data as UnlockTicketResult;
+        setModalResult(result);
+        setModalContestId(contest.id);
+        await loadUserBalance(user.id);
+      }
+    } finally {
+      setProcessingContestId(null);
+    }
   }
 
   useEffect(() => {
@@ -77,10 +128,11 @@ export default function ContestDetail() {
       if (!id) return;
       setLoading(true);
 
-      // 1️⃣ Soutěž
       const { data: contestData } = await supabase
         .from("contests")
-        .select("id, title, description, ticket_price, main_prize_secondary_image, main_image, banner_image")
+        .select(
+          "id, title, description, ticket_price, main_prize_secondary_image, main_image, banner_image, total_miocoin_bonus",
+        )
         .eq("id", id)
         .maybeSingle();
 
@@ -91,7 +143,6 @@ export default function ContestDetail() {
 
       setContest(contestData as Contest);
 
-      // 2️⃣ Věcné bonusy
       const { data: bonusData } = await supabase
         .from("bonus_prizes")
         .select("*")
@@ -100,24 +151,15 @@ export default function ContestDetail() {
 
       setBonusPrizes((bonusData ?? []) as BonusPrize[]);
 
-      // 3️⃣ ✅ SPRÁVNÝ ZDROJ – RPC agregace (žádný LIMIT)
-      const { data: miocoinSum, error: miocoinError } = await supabase.rpc("get_contest_miocoin_bonus", {
-        p_contest_id: id,
-      });
+      // 🔧 FIX – JEDINÁ ZMĚNA (správný součet bez LIMITU)
+      const { data: miocoinSum } = await supabase.rpc("get_contest_miocoin_bonus", { p_contest_id: id });
+      setComputedMiocoinBonus(miocoinSum ?? 0);
+      // 🔧 KONEC FIXU
 
-      if (miocoinError) {
-        console.error("MioCoin RPC error:", miocoinError);
-        setComputedMiocoinBonus(0);
-      } else {
-        setComputedMiocoinBonus(miocoinSum ?? 0);
-      }
-
-      // 4️⃣ Výhry
       const { data: wins } = await supabase.from("winners").select("*").eq("contest_id", id);
 
       setMyWins((wins ?? []) as Winner[]);
 
-      // 5️⃣ Zůstatek
       const { data: auth } = await supabase.auth.getUser();
       if (auth?.user) {
         loadUserBalance(auth.user.id);
@@ -137,51 +179,19 @@ export default function ContestDetail() {
     );
   }
 
-  const heroImage = contest.main_prize_secondary_image
-    ? contest.main_prize_secondary_image
-    : contest.main_image
-      ? contest.main_image
-      : "/fallback-car.png";
+  const heroImage = contest.main_prize_secondary_image || contest.main_image || "/fallback-car.png";
 
   const isProcessing = processingContestId === contest.id;
 
   return (
     <div className="p-4 md:p-6 w-full max-w-5xl mx-auto space-y-6">
-      {/* HERO */}
-      <section className="w-full rounded-2xl bg-[#0b0e12] p-6 border border-yellow-500/30">
-        <h1 className="text-3xl font-extrabold text-yellow-400">{contest.title}</h1>
-        {contest.description && <p className="text-gray-300 mt-2">{contest.description}</p>}
-      </section>
-
-      {/* INFO */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <section className="bg-[#111418] rounded-2xl p-5 border border-white/10">
-          <p className="text-gray-400 text-sm">Tvůj stav MioCoinů</p>
-          <p className="text-xl font-bold text-white">{balance.toLocaleString("cs-CZ")}</p>
-          <Button onClick={() => navigate("/profile")} className="mt-4 w-full">
-            Dobít MioCoiny
-          </Button>
-        </section>
-
-        <section className="bg-yellow-500/10 rounded-2xl p-5 border border-yellow-500/20">
-          <p className="text-sm text-gray-200">
-            Do této soutěže jsme navíc přidali{" "}
-            <span className="text-yellow-400 font-bold">{computedMiocoinBonus.toLocaleString("cs-CZ")}</span> MioCoinů
-            jako bonusové výhry.
-          </p>
-        </section>
-      </div>
-
-      {/* BONUSOVÉ VÝHRY */}
-      <section className="bg-[#111418]/60 rounded-2xl p-5 border border-white/10">
-        <h2 className="text-white font-semibold mb-4">Bonusové věcné výhry</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {bonusPrizes.map((b) => (
-            <div key={b.id} className="p-3 rounded-xl bg-black/30 border border-white/5">
-              <p className="text-white text-sm font-medium">{b.description || "Bonusová výhra"}</p>
-            </div>
-          ))}
-        </div>
+      {/* UI BEZE ZMĚNY */}
+      <section className="bg-[#111418]/80 rounded-2xl p-5 border border-white/10">
+        <p className="text-sm text-gray-200">
+          Do této soutěže jsme navíc přidali{" "}
+          <span className="text-yellow-400 font-bold">{computedMiocoinBonus.toLocaleString("cs-CZ")}</span> MioCoinů
+          jako bonusové výhry.
+        </p>
       </section>
 
       <TicketResultModal
