@@ -50,6 +50,3 @@ verify_jwt = false
 
 [functions.upload-ticket-share]
 verify_jwt = false
-
-[functions.generate-complete-contests]
-verify_jwt = false
