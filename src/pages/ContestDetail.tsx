@@ -208,7 +208,8 @@ export default function ContestDetail() {
         .from("bonus_prizes")
         .select("amount")
         .eq("contest_id", id)
-        .gt("amount", 0);
+        .gt("amount", 0)
+        .range(0, 1000000);
 
       const totalMiocoinBonus = (miocoinBonusData ?? []).reduce(
         (sum, item) => sum + (item.amount ?? 0),
