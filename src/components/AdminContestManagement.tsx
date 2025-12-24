@@ -907,10 +907,30 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         }
       }
 
-      toast({
-        title: isEditing ? "Soutěž aktualizována" : "Soutěž vytvořena",
-        description: isEditing ? "Změny byly úspěšně uloženy." : "Nová soutěž byla úspěšně uložena.",
-      });
+      // Post-save verification: check actual bonus_prizes in DB
+      if (contestId && mioCoinBonuses.length > 0) {
+        const { data: verifyData } = await supabase
+          .from("bonus_prizes")
+          .select("amount")
+          .eq("contest_id", contestId)
+          .gt("amount", 0);
+        
+        const actualCount = verifyData?.length || 0;
+        const actualSum = verifyData?.reduce((sum, b) => sum + (b.amount || 0), 0) || 0;
+        const expectedSum = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
+        
+        console.log(`DB Verification: ${actualCount} bonuses, SUM=${actualSum} (expected ${mioCoinBonuses.length} bonuses, SUM=${expectedSum})`);
+        
+        toast({
+          title: isEditing ? "Soutěž aktualizována" : "Soutěž vytvořena",
+          description: `MioCoiny: ${actualCount} pozic × ${actualSum > 0 && actualCount > 0 ? Math.round(actualSum / actualCount) : 0} MC = ${actualSum.toLocaleString()} MC celkem`,
+        });
+      } else {
+        toast({
+          title: isEditing ? "Soutěž aktualizována" : "Soutěž vytvořena",
+          description: isEditing ? "Změny byly úspěšně uloženy." : "Nová soutěž byla úspěšně uložena.",
+        });
+      }
 
       onSaved();
       onClose();
