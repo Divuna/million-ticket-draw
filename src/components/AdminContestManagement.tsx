@@ -821,39 +821,22 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         // Delete existing bonuses for this contest
         await supabase.from("bonus_prizes").delete().eq("contest_id", contestId);
 
-        // Generate MioCoin bonuses via edge function (handles batching server-side)
+        // Generate MioCoin bonuses via RPC (single call, handles everything server-side)
         if (mioCoinBonuses.length > 0) {
-          const totalMioCoinValue = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
+          const totalMioCoinCount = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
           
-          console.log(`Calling distribute-bonus-prizes for ${totalMioCoinValue} MioCoins`);
+          console.log(`Calling generate_miocoin_bonus RPC for ${totalMioCoinCount} MioCoins`);
           
-          const { data: distributionResult, error: distributionError } = await supabase.functions.invoke(
-            'distribute-bonus-prizes',
-            {
-              body: {
-                contest_id: contestId,
-                bonus_type: 'MioCoin',
-                total_value: totalMioCoinValue,
-                amount_per_unit: 1, // Each position gets 1 MioCoin
-                distribution_rule: 'random',
-                batch_size: 3000,
-              },
-            }
-          );
+          const { error: rpcError } = await supabase.rpc("generate_miocoin_bonus", {
+            p_contest_id: contestId,
+            p_count: totalMioCoinCount,
+          });
 
-          if (distributionError) {
-            throw new Error(`Chyba při generování MioCoin bonusů: ${distributionError.message}`);
+          if (rpcError) {
+            throw new Error(`Chyba při generování MioCoin bonusů: ${rpcError.message}`);
           }
 
-          if (!distributionResult?.success) {
-            throw new Error(distributionResult?.error || 'Nepodařilo se vygenerovat MioCoin bonusy');
-          }
-
-          console.log(`MioCoin distribution complete: ${distributionResult.created_bonuses} bonuses created in ${distributionResult.elapsed_ms}ms`);
-          
-          if (distributionResult.warnings?.length > 0) {
-            console.warn('Distribution warnings:', distributionResult.warnings);
-          }
+          console.log(`MioCoin generation complete: ${totalMioCoinCount} bonuses created`);
         }
 
         // Note: total_miocoin_bonus is updated automatically by database trigger trg_sync_total_miocoin_bonus
