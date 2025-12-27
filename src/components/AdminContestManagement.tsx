@@ -1342,7 +1342,30 @@ export const AdminContestManagement: React.FC = () => {
       return;
     }
 
-    setContests((data || []) as ContestData[]);
+    const contestsData = (data || []) as ContestData[];
+
+    // Fetch MioCoin aggregates from bonus_prizes (title = 'MioCoin', sum amount)
+    const { data: bonusData, error: bonusError } = await supabase
+      .from("bonus_prizes")
+      .select("contest_id, amount")
+      .eq("title", "MioCoin");
+
+    if (!bonusError && bonusData) {
+      // Aggregate amounts by contest_id
+      const mioCoinTotals: Record<string, number> = {};
+      bonusData.forEach((row) => {
+        if (row.contest_id && row.amount) {
+          mioCoinTotals[row.contest_id] = (mioCoinTotals[row.contest_id] || 0) + Number(row.amount);
+        }
+      });
+
+      // Merge into contests data
+      contestsData.forEach((contest) => {
+        contest.total_miocoin_bonus = mioCoinTotals[contest.contest_id] || 0;
+      });
+    }
+
+    setContests(contestsData);
     setLoading(false);
   };
 
