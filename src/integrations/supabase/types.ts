@@ -1370,6 +1370,10 @@ export type Database = {
         Args: { v_payload: Json }
         Returns: undefined
       }
+      generate_miocoin_bonus: {
+        Args: { p_contest_id: string; p_count: number }
+        Returns: undefined
+      }
       get_active_banners_summary: { Args: never; Returns: string }
       get_admin_actions_summary: {
         Args: {
