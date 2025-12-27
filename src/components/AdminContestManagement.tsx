@@ -1344,20 +1344,21 @@ export const AdminContestManagement: React.FC = () => {
 
     const contestsData = (data || []) as ContestData[];
 
-    // Fetch MioCoin aggregates from bonus_prizes (title = 'MioCoin', sum amount)
-    const { data: bonusData, error: bonusError } = await supabase
-      .from("bonus_prizes")
-      .select("contest_id, amount")
-      .eq("title", "MioCoin");
-
-    if (!bonusError && bonusData) {
-      // Aggregate amounts by contest_id
+    // Fetch MioCoin counts per contest using count query (bypasses 1000 row limit)
+    const contestIds = contestsData.map(c => c.contest_id);
+    
+    if (contestIds.length > 0) {
       const mioCoinTotals: Record<string, number> = {};
-      bonusData.forEach((row) => {
-        if (row.contest_id && row.amount) {
-          mioCoinTotals[row.contest_id] = (mioCoinTotals[row.contest_id] || 0) + Number(row.amount);
-        }
-      });
+      await Promise.all(
+        contestIds.map(async (contestId) => {
+          const { count } = await supabase
+            .from("bonus_prizes")
+            .select("*", { count: "exact", head: true })
+            .eq("contest_id", contestId)
+            .eq("title", "MioCoin");
+          mioCoinTotals[contestId] = count || 0;
+        })
+      );
 
       // Merge into contests data
       contestsData.forEach((contest) => {
