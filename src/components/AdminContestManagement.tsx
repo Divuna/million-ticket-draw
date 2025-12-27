@@ -854,10 +854,19 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           if (distributionResult.warnings?.length > 0) {
             console.warn('Distribution warnings:', distributionResult.warnings);
           }
-        }
 
-        // Note: total_miocoin_bonus is updated automatically by database trigger trg_sync_total_miocoin_bonus
-        // after bonus_prizes are inserted
+          // Explicitly set total_miocoin_bonus in contests table
+          const { error: updateMioCoinError } = await supabase
+            .from("contests")
+            .update({ total_miocoin_bonus: totalMioCoinCount })
+            .eq("id", contestId);
+
+          if (updateMioCoinError) {
+            console.error("Error updating total_miocoin_bonus:", updateMioCoinError);
+          } else {
+            console.log(`Contest total_miocoin_bonus set to ${totalMioCoinCount}`);
+          }
+        }
 
         // Insert physical prizes sequentially
         for (const prize of physicalPrizes) {

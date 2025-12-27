@@ -1288,6 +1288,28 @@ export type Database = {
         }
         Relationships: []
       }
+      contest_miocoin_totals: {
+        Row: {
+          contest_id: string | null
+          total_miocoin: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bonus_prizes_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "admin_contest_status"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "bonus_prizes_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_user_wallets: {
         Row: {
           balance_coins: number | null
@@ -1523,6 +1545,7 @@ export type Database = {
         }
         Returns: string
       }
+      process_event_queue_miocoin: { Args: never; Returns: undefined }
       process_push_retries: { Args: never; Returns: undefined }
       proxy_post_to_onesignal: {
         Args: {
