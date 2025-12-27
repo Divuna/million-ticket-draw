@@ -95,6 +95,7 @@ async function processBonusBatchWithRetry(
 ): Promise<any[]> {
   const bonusesToInsert = positions.map(position => ({
     contest_id: contestId,
+    title: bonusType,
     description: `${bonusType} - ${amountPerUnit}${bonusType === 'MioCoin' ? ' MioCoins' : ' ks'}`,
     ticket_position: position,
     status: 'pending' as const,
