@@ -78,6 +78,7 @@ interface PhysicalPrize {
   image_file?: File | null;
   ai_image_url?: string | null;
   ai_generating?: boolean;
+  guardian_required?: boolean;
 }
 
 interface ContestModalProps {
@@ -143,6 +144,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     ticket_position: 1,
     description: "",
     image_file: null,
+    guardian_required: undefined,
   });
 
   // Reset form when modal opens or editingContest changes
@@ -208,6 +210,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           ticket_position: bonus.ticket_position,
           description: bonus.description || "",
           image_url: bonus.image_url,
+          guardian_required: bonus.guardian_required ?? false,
         });
       }
     });
@@ -716,6 +719,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       return;
     }
 
+    // Validate guardian_required selection
+    if (newPhysicalPrize.guardian_required === undefined) {
+      toast({
+        title: "Chyba",
+        description: "Vyberte, zda výhra vyžaduje nebo nevyžaduje přítomnost zákonného zástupce.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const usedPositions = new Set([
       ...mioCoinBonuses.map((b) => b.ticket_position),
       ...physicalPrizes.map((p) => p.ticket_position),
@@ -734,7 +747,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     
     // Add prize directly without AI processing
     setPhysicalPrizes((prev) => [...prev, prizeToAdd]);
-    setNewPhysicalPrize({ ticket_position: 1, description: "", image_file: null });
+    setNewPhysicalPrize({ ticket_position: 1, description: "", image_file: null, guardian_required: undefined });
     toast({ title: "Výhra přidána", description: "Věcná výhra byla přidána." });
   };
 
@@ -893,6 +906,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             description: prize.description,
             image_url: imageUrl,
             status: "pending",
+            guardian_required: prize.guardian_required ?? false,
           });
 
           if (insertError) {
@@ -1179,6 +1193,35 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   />
                 </div>
 
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg border border-border/50">
+                  <Label className="text-sm font-medium">Přítomnost zákonného zástupce</Label>
+                  <div className="space-y-2">
+                    <label className="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-muted/50 transition-colors">
+                      <input
+                        type="radio"
+                        name="guardian_required"
+                        checked={newPhysicalPrize.guardian_required === true}
+                        onChange={() => setNewPhysicalPrize((prev) => ({ ...prev, guardian_required: true }))}
+                        className="w-4 h-4 mt-0.5 accent-primary"
+                      />
+                      <span className="text-sm">Výhra vyžaduje přítomnost zákonného zástupce při převzetí (např. auto, motocykl)</span>
+                    </label>
+                    <label className="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-muted/50 transition-colors">
+                      <input
+                        type="radio"
+                        name="guardian_required"
+                        checked={newPhysicalPrize.guardian_required === false}
+                        onChange={() => setNewPhysicalPrize((prev) => ({ ...prev, guardian_required: false }))}
+                        className="w-4 h-4 mt-0.5 accent-primary"
+                      />
+                      <span className="text-sm">Výhra nevyžaduje zvláštní převzetí – mohou převzít uživatelé 15+ bez doprovodu</span>
+                    </label>
+                  </div>
+                  {newPhysicalPrize.guardian_required === undefined && (
+                    <p className="text-xs text-orange-500">Povinné: vyberte jednu z možností</p>
+                  )}
+                </div>
+
                 <Button onClick={addPhysicalPrize} className="w-full">
                   <Plus className="mr-2 h-4 w-4" />
                   Přidat věcnou výhru
@@ -1204,9 +1247,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                               className="w-10 h-10 rounded object-cover border border-white/10"
                             />
                           )}
-                          <div>
-                            <span className="font-medium">{prize.description}</span>
-                            <span className="text-muted-foreground ml-2">Pozice #{prize.ticket_position}</span>
+                          <div className="flex flex-col">
+                            <div>
+                              <span className="font-medium">{prize.description}</span>
+                              <span className="text-muted-foreground ml-2">Pozice #{prize.ticket_position}</span>
+                            </div>
+                            <span className={`text-xs ${prize.guardian_required ? 'text-orange-400' : 'text-green-400'}`}>
+                              {prize.guardian_required ? '⚠ Vyžaduje zákonného zástupce' : '✓ Bez doprovodu (15+)'}
+                            </span>
                           </div>
                         </div>
                         <Button
