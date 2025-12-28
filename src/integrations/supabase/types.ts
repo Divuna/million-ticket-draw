@@ -973,6 +973,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_legal_acceptances: {
+        Row: {
+          accepted_at: string
+          document_slug: string
+          document_version: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          document_slug: string
+          document_version: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          document_slug?: string
+          document_version?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
