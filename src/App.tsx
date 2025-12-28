@@ -48,6 +48,7 @@ import Winners from "@/pages/Winners";
 import Wins from "@/pages/Wins";
 import FavoriteGames from "@/pages/FavoriteGames";
 import ShareTicket from "@/pages/ShareTicket";
+import UnsubscribeMarketing from "@/pages/UnsubscribeMarketing";
 import NotFound from "@/pages/NotFound";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -103,6 +104,7 @@ function AppContent() {
         <Route path="/admin/contest/:contestId" element={<ContestDetailAdmin />} />
         <Route path="/admin/content" element={<AdminContentPages />} />
         <Route path="/admin/legal-acceptances" element={<AdminLegalAcceptances />} />
+        <Route path="/unsubscribe/marketing" element={<UnsubscribeMarketing />} />
         <Route path="/test-login" element={<TestLogin />} />
         <Route path="/:section/:slug" element={<ContentPage />} />
         <Route path="*" element={<NotFound />} />
