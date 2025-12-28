@@ -6,12 +6,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-onemil.png';
 
 const Register: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [dateOfBirthError, setDateOfBirthError] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [gdprAccepted, setGdprAccepted] = useState(false);
   const [marketingAccepted, setMarketingAccepted] = useState(false);
@@ -19,8 +22,31 @@ const Register: React.FC = () => {
   const { signUp, signInWithOAuth } = useAuth();
   const navigate = useNavigate();
 
+  const validateAge = (dob: string): boolean => {
+    if (!dob) return false;
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 15;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setDateOfBirthError('');
+    
+    if (!dateOfBirth) {
+      setDateOfBirthError('Datum narození je povinné.');
+      return;
+    }
+
+    if (!validateAge(dateOfBirth)) {
+      setDateOfBirthError('Pro registraci musíte mít alespoň 15 let.');
+      return;
+    }
     
     if (!termsAccepted || !gdprAccepted) {
       toast({
@@ -61,6 +87,16 @@ const Register: React.FC = () => {
           variant: "destructive"
         });
       } else {
+        // Store date of birth in profiles table
+        const { data: { user: newUser } } = await supabase.auth.getUser();
+        if (newUser) {
+          await supabase
+            .from('profiles')
+            .upsert({
+              id: newUser.id,
+              date_of_birth: dateOfBirth
+            }, { onConflict: 'id' });
+        }
         navigate('/profile');
       }
     } catch (error) {
@@ -144,6 +180,26 @@ const Register: React.FC = () => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="dateOfBirth" className="text-sm font-medium">
+                Datum narození *
+              </label>
+              <Input
+                id="dateOfBirth"
+                type="date"
+                value={dateOfBirth}
+                onChange={(e) => {
+                  setDateOfBirth(e.target.value);
+                  setDateOfBirthError('');
+                }}
+                required
+                max={new Date().toISOString().split('T')[0]}
+              />
+              {dateOfBirthError && (
+                <p className="text-sm text-destructive">{dateOfBirthError}</p>
+              )}
             </div>
             
             <div className="flex items-start space-x-2">
