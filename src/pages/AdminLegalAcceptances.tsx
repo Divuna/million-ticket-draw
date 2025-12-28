@@ -25,7 +25,8 @@ import {
 } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Download, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight, Search, XCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface LegalAcceptance {
   id: string;
@@ -34,6 +35,7 @@ interface LegalAcceptance {
   document_version: string;
   accepted_at: string;
   user_email?: string;
+  isRevoked?: boolean;
 }
 
 const DOCUMENT_OPTIONS = [
@@ -74,10 +76,11 @@ const AdminLegalAcceptances: React.FC = () => {
       // Create a map for quick email lookup
       const emailMap = new Map(usersData?.map(u => [u.id, u.email]) || []);
 
-      // Join the data
+      // Join the data and mark revoked entries
       return (acceptancesData || []).map(acceptance => ({
         ...acceptance,
-        user_email: emailMap.get(acceptance.user_id) || 'Neznámý'
+        user_email: emailMap.get(acceptance.user_id) || 'Neznámý',
+        isRevoked: acceptance.document_slug === 'marketing' && acceptance.document_version === 'revoked'
       })) as LegalAcceptance[];
     },
     enabled: role === 'admin' || role === 'superadmin',
@@ -135,11 +138,12 @@ const AdminLegalAcceptances: React.FC = () => {
   const handleExportCSV = () => {
     if (!filteredAcceptances.length) return;
 
-    const headers = ['Email', 'Dokument', 'Verze', 'Datum souhlasu'];
+    const headers = ['Email', 'Dokument', 'Verze', 'Stav', 'Datum'];
     const rows = filteredAcceptances.map(a => [
       a.user_email || a.user_id,
       a.document_slug,
       a.document_version,
+      a.isRevoked ? 'Odvoláno' : 'Aktivní',
       format(new Date(a.accepted_at), 'dd.MM.yyyy HH:mm', { locale: cs })
     ]);
 
@@ -249,15 +253,26 @@ const AdminLegalAcceptances: React.FC = () => {
                       <TableHead>Email uživatele</TableHead>
                       <TableHead>Dokument</TableHead>
                       <TableHead>Verze</TableHead>
-                      <TableHead>Datum souhlasu</TableHead>
+                      <TableHead>Stav</TableHead>
+                      <TableHead>Datum</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedAcceptances.map((acceptance) => (
-                      <TableRow key={acceptance.id}>
+                      <TableRow key={acceptance.id} className={acceptance.isRevoked ? 'bg-destructive/10' : ''}>
                         <TableCell>{acceptance.user_email}</TableCell>
                         <TableCell>{acceptance.document_slug}</TableCell>
                         <TableCell>{acceptance.document_version}</TableCell>
+                        <TableCell>
+                          {acceptance.isRevoked ? (
+                            <Badge variant="destructive" className="gap-1">
+                              <XCircle className="h-3 w-3" />
+                              Odvoláno
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">Aktivní</Badge>
+                          )}
+                        </TableCell>
                         <TableCell>
                           {format(new Date(acceptance.accepted_at), 'dd.MM.yyyy HH:mm', { locale: cs })}
                         </TableCell>
