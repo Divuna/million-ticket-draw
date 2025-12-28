@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Truck, Package, Clock, CheckCircle, AlertCircle, UserCheck, Users } from 'lucide-react';
+import { Truck, Package, Clock, CheckCircle, AlertCircle, UserCheck, Users, Download } from 'lucide-react';
 
 interface Contest {
   id: string;
@@ -27,6 +27,7 @@ interface BonusPrize {
   admin_notes?: string;
   created_at: string;
   guardian_required?: boolean;
+  winner_email?: string;
   contest?: {
     title: string;
   }[] | { title: string };
@@ -42,6 +43,8 @@ interface DeliverySummary {
   summary_text: string;
 }
 
+type GuardianFilter = 'all' | 'required' | 'not_required';
+
 export const AdminPrizeDelivery: React.FC = () => {
   const [contests, setContests] = useState<Contest[]>([]);
   const [selectedContestId, setSelectedContestId] = useState<string>('');
@@ -51,6 +54,7 @@ export const AdminPrizeDelivery: React.FC = () => {
   const [editingPrize, setEditingPrize] = useState<BonusPrize | null>(null);
   const [newStatus, setNewStatus] = useState<string>('');
   const [newNotes, setNewNotes] = useState<string>('');
+  const [guardianFilter, setGuardianFilter] = useState<GuardianFilter>('all');
 
   // Fetch contests on component mount
   useEffect(() => {
@@ -87,7 +91,8 @@ export const AdminPrizeDelivery: React.FC = () => {
   const fetchBonusPrizes = async (contestId: string) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // First get bonus prizes
+      const { data: prizesData, error: prizesError } = await supabase
         .from('bonus_prizes')
         .select(`
           id, contest_id, description, ticket_position, status, amount, admin_notes, created_at, guardian_required,
@@ -96,8 +101,32 @@ export const AdminPrizeDelivery: React.FC = () => {
         .eq('contest_id', contestId)
         .order('ticket_position', { ascending: true });
 
-      if (error) throw error;
-      setBonusPrizes(data || []);
+      if (prizesError) throw prizesError;
+
+      // Get tickets with user emails for won prizes
+      const { data: ticketsData, error: ticketsError } = await supabase
+        .from('tickets')
+        .select('number, user:users(email)')
+        .eq('contest_id', contestId);
+
+      if (ticketsError) throw ticketsError;
+
+      // Map ticket positions to user emails
+      const ticketEmailMap = new Map<number, string>();
+      ticketsData?.forEach((ticket: any) => {
+        const email = Array.isArray(ticket.user) ? ticket.user[0]?.email : ticket.user?.email;
+        if (email) {
+          ticketEmailMap.set(ticket.number, email);
+        }
+      });
+
+      // Enrich prizes with winner emails
+      const enrichedPrizes = (prizesData || []).map(prize => ({
+        ...prize,
+        winner_email: ticketEmailMap.get(prize.ticket_position) || ''
+      }));
+
+      setBonusPrizes(enrichedPrizes);
     } catch (error) {
       console.error('Error fetching bonus prizes:', error);
       toast({
@@ -108,6 +137,73 @@ export const AdminPrizeDelivery: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Check if there are any physical prizes
+  const hasPhysicalPrizes = useMemo(() => {
+    return bonusPrizes.some(p => !p.amount || p.amount === 0);
+  }, [bonusPrizes]);
+
+  // Filter prizes based on guardian filter
+  const filteredPrizes = useMemo(() => {
+    if (guardianFilter === 'all') return bonusPrizes;
+    
+    return bonusPrizes.filter(prize => {
+      // Only filter physical prizes
+      if (prize.amount && prize.amount > 0) return true;
+      
+      if (guardianFilter === 'required') {
+        return prize.guardian_required === true;
+      } else if (guardianFilter === 'not_required') {
+        return prize.guardian_required === false;
+      }
+      return true;
+    });
+  }, [bonusPrizes, guardianFilter]);
+
+  // Export guardian-required prizes to CSV
+  const handleExportGuardianCSV = () => {
+    const guardianPrizes = bonusPrizes.filter(
+      prize => (!prize.amount || prize.amount === 0) && prize.guardian_required === true
+    );
+
+    if (guardianPrizes.length === 0) {
+      toast({
+        title: "Žádné výhry",
+        description: "Nejsou žádné fyzické výhry vyžadující zákonného zástupce.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const headers = ['Email', 'Popis', 'Pozice tiketu', 'Stav', 'Datum'];
+    const rows = guardianPrizes.map(prize => [
+      prize.winner_email || '',
+      prize.description,
+      prize.ticket_position.toString(),
+      prize.status,
+      new Date(prize.created_at).toLocaleDateString('cs-CZ')
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `vyhry-s-doprovodem-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export dokončen",
+      description: `Exportováno ${guardianPrizes.length} výher.`,
+    });
   };
 
   const fetchDeliverySummary = async () => {
@@ -281,6 +377,29 @@ export const AdminPrizeDelivery: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Guardian Filter and Export */}
+            {hasPhysicalPrizes && (
+              <div className="flex flex-wrap gap-4 items-end mb-4">
+                <div className="min-w-[200px]">
+                  <Label htmlFor="guardian-filter">Doprovod</Label>
+                  <Select value={guardianFilter} onValueChange={(v) => setGuardianFilter(v as GuardianFilter)}>
+                    <SelectTrigger id="guardian-filter">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Všechny</SelectItem>
+                      <SelectItem value="required">Vyžaduje zákonného zástupce</SelectItem>
+                      <SelectItem value="not_required">Bez doprovodu (15+)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button variant="outline" onClick={handleExportGuardianCSV}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportovat výhry s požadavkem na doprovod (CSV)
+                </Button>
+              </div>
+            )}
+
             {loading ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">Načítám výhry...</p>
@@ -303,7 +422,7 @@ export const AdminPrizeDelivery: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {bonusPrizes.map((prize) => (
+                  {filteredPrizes.map((prize) => (
                     <TableRow 
                       key={prize.id}
                       className="cursor-pointer hover:bg-muted/50"
