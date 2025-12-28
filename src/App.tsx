@@ -42,6 +42,7 @@ import AdminMessages from "@/pages/AdminMessages";
 import AdminMessageThread from "@/pages/AdminMessageThread";
 import AdminContentPages from "@/pages/AdminContentPages";
 import AdminLegalAcceptances from "@/pages/AdminLegalAcceptances";
+import AdminOnboardingIncomplete from "@/pages/AdminOnboardingIncomplete";
 import ContentPage from "@/pages/ContentPage";
 import OneMilAudit from "@/pages/OneMilAudit";
 import TestLogin from "@/pages/TestLogin";
@@ -107,6 +108,7 @@ function AppContent() {
         <Route path="/admin/contest/:contestId" element={<ContestDetailAdmin />} />
         <Route path="/admin/content" element={<AdminContentPages />} />
         <Route path="/admin/legal-acceptances" element={<AdminLegalAcceptances />} />
+        <Route path="/admin/onboarding-incomplete" element={<AdminOnboardingIncomplete />} />
         <Route path="/unsubscribe/marketing" element={<UnsubscribeMarketing />} />
         <Route path="/test-login" element={<TestLogin />} />
         <Route path="/:section/:slug" element={<ContentPage />} />
