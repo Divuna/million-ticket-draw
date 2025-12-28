@@ -40,6 +40,11 @@ const UnsubscribeMarketing: React.FC = () => {
         title: "Odhlášení úspěšné",
         description: "Byli jste odhlášeni z marketingových sdělení."
       });
+
+      // Send notification (non-blocking)
+      supabase.functions.invoke('send-marketing-consent-notification', {
+        body: { action: 'unsubscribe' }
+      }).catch(err => console.error('Notification error:', err));
     } catch (error: any) {
       toast({
         title: "Chyba",

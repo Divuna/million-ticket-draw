@@ -164,6 +164,11 @@ const Profile: React.FC = () => {
         title: "Úspěch",
         description: "Byli jste přihlášeni k odběru marketingových sdělení."
       });
+
+      // Send notification (non-blocking)
+      supabase.functions.invoke('send-marketing-consent-notification', {
+        body: { action: 'subscribe' }
+      }).catch(err => console.error('Notification error:', err));
     } catch (error: any) {
       console.error('Error subscribing to marketing:', error);
       toast({
