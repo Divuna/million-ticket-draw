@@ -10,7 +10,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2, ChevronDown } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2, ChevronDown, Mail } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -844,6 +845,26 @@ const Profile: React.FC = () => {
                 <Bell className={`h-4 w-4 mr-2 ${testingNotification ? 'animate-pulse' : ''}`} />
                 {testingNotification ? 'Odesílám...' : 'Otestovat notifikaci'}
               </Button>
+            </div>
+          </div>
+
+          {/* Marketing Section */}
+          <div className="rounded-2xl bg-black/40 border border-border/50 p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Marketingová sdělení</h2>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                V rámci vašeho účtu můžete dostávat informace o nových soutěžích, 
+                speciálních akcích a dalších novinkách prostřednictvím e-mailu.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Pokud si již nepřejete dostávat marketingová sdělení, můžete se odhlásit.
+              </p>
+              <Link to="/unsubscribe/marketing">
+                <Button variant="outline" className="w-full sm:w-auto mt-2">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Odhlásit marketing
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
