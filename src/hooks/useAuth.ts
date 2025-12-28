@@ -6,7 +6,7 @@ import { toast } from '@/hooks/use-toast';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, marketingConsent?: boolean) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   signInWithOAuth: (provider: 'google' | 'apple') => Promise<void>;
@@ -44,7 +44,7 @@ export const useAuthState = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, marketingConsent: boolean = false) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { data, error } = await supabase.auth.signUp({
@@ -56,8 +56,8 @@ export const useAuthState = () => {
     });
 
     if (!error && data.user) {
-      // Store terms and GDPR acceptances
-      await supabase.from('user_legal_acceptances').insert([
+      // Store required legal acceptances
+      const acceptances = [
         {
           user_id: data.user.id,
           document_slug: 'obchodni-podminky',
@@ -68,7 +68,18 @@ export const useAuthState = () => {
           document_slug: 'gdpr',
           document_version: '1.0'
         }
-      ]);
+      ];
+      
+      // Add marketing consent only if accepted
+      if (marketingConsent) {
+        acceptances.push({
+          user_id: data.user.id,
+          document_slug: 'marketing',
+          document_version: '1.0'
+        });
+      }
+      
+      await supabase.from('user_legal_acceptances').insert(acceptances);
       
       toast({
         title: "Registrace úspěšná",
