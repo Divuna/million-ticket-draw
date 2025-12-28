@@ -86,6 +86,7 @@ const Profile: React.FC = () => {
   const [bonusTransfers, setBonusTransfers] = useState<BonusTransfer[]>([]);
   const [bonusTransfersLoading, setBonusTransfersLoading] = useState(true);
   const [marketingStatus, setMarketingStatus] = useState<'active' | 'revoked' | 'none' | null>(null);
+  const [marketingSubscribing, setMarketingSubscribing] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (user) {
@@ -143,6 +144,35 @@ const Profile: React.FC = () => {
     } catch (error) {
       console.error('Error:', error);
       setMarketingStatus(null);
+    }
+  };
+
+  const handleSubscribeMarketing = async () => {
+    if (!user?.id) return;
+    setMarketingSubscribing(true);
+    try {
+      const { error } = await supabase.from('user_legal_acceptances').insert({
+        user_id: user.id,
+        document_slug: 'marketing',
+        document_version: '1.0'
+      });
+
+      if (error) throw error;
+
+      setMarketingStatus('active');
+      toast({
+        title: "Úspěch",
+        description: "Byli jste přihlášeni k odběru marketingových sdělení."
+      });
+    } catch (error: any) {
+      console.error('Error subscribing to marketing:', error);
+      toast({
+        title: "Chyba",
+        description: error.message || "Nepodařilo se přihlásit k marketingu.",
+        variant: "destructive"
+      });
+    } finally {
+      setMarketingSubscribing(false);
     }
   };
 
@@ -918,6 +948,23 @@ const Profile: React.FC = () => {
                       Odhlásit marketing
                     </Button>
                   </Link>
+                </>
+              )}
+
+              {(marketingStatus === 'revoked' || marketingStatus === 'none') && (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Chcete-li dostávat marketingová sdělení, můžete se přihlásit.
+                  </p>
+                  <Button 
+                    variant="default" 
+                    className="w-full sm:w-auto"
+                    onClick={handleSubscribeMarketing}
+                    disabled={marketingSubscribing}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    {marketingSubscribing ? 'Přihlašuji...' : 'Přihlásit marketing'}
+                  </Button>
                 </>
               )}
             </div>
