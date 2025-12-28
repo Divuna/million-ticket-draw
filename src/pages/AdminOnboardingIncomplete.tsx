@@ -14,7 +14,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, AlertCircle, Calendar, RefreshCw, Mail, Send } from 'lucide-react';
+import { Loader2, AlertCircle, Calendar, RefreshCw, Mail, Send, Download } from 'lucide-react';
 
 interface IncompleteUser {
   id: string;
@@ -149,6 +149,37 @@ const AdminOnboardingIncomplete: React.FC = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    if (users.length === 0) return;
+    
+    const headers = ['email', 'user_id', 'created_at'];
+    const csvRows = [
+      headers.join(','),
+      ...users.map(u => [
+        `"${u.email}"`,
+        u.id,
+        u.created_at
+      ].join(','))
+    ];
+    
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'incomplete-onboarding.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "CSV exportován",
+      description: `Exportováno ${users.length} uživatelů.`
+    });
+  };
+
   if (roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -179,6 +210,15 @@ const AdminOnboardingIncomplete: React.FC = () => {
                 </CardDescription>
               </div>
               <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportCSV}
+                  disabled={loading || users.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportovat CSV
+                </Button>
                 <Button
                   variant="default"
                   size="sm"
