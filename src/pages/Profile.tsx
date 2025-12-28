@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2, ChevronDown, Mail } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2, ChevronDown, Mail, CheckCircle, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
@@ -85,12 +85,14 @@ const Profile: React.FC = () => {
   const [transferring, setTransferring] = useState(false);
   const [bonusTransfers, setBonusTransfers] = useState<BonusTransfer[]>([]);
   const [bonusTransfersLoading, setBonusTransfersLoading] = useState(true);
+  const [marketingStatus, setMarketingStatus] = useState<'active' | 'revoked' | 'none' | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (user) {
       fetchUserWallet();
       fetchUserProfile();
       fetchBonusTransfers();
+      fetchMarketingStatus();
     }
   }, [user]);
 
@@ -115,6 +117,32 @@ const Profile: React.FC = () => {
       setBonusTransfers([]);
     } finally {
       setBonusTransfersLoading(false);
+    }
+  };
+
+  const fetchMarketingStatus = async () => {
+    if (!user?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('user_legal_acceptances')
+        .select('document_version')
+        .eq('user_id', user.id)
+        .eq('document_slug', 'marketing')
+        .order('accepted_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error fetching marketing status:', error);
+        setMarketingStatus(null);
+      } else if (!data) {
+        setMarketingStatus('none');
+      } else {
+        setMarketingStatus(data.document_version === 'revoked' ? 'revoked' : 'active');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setMarketingStatus(null);
     }
   };
 
@@ -851,20 +879,47 @@ const Profile: React.FC = () => {
           {/* Marketing Section */}
           <div className="rounded-2xl bg-black/40 border border-border/50 p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4">Marketingová sdělení</h2>
-            <div className="space-y-3">
+            <div className="space-y-4">
+              {/* Status Display */}
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/20 border border-border/30">
+                {marketingStatus === 'active' ? (
+                  <>
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <span className="font-medium text-foreground">Marketing: Aktivní</span>
+                  </>
+                ) : marketingStatus === 'revoked' ? (
+                  <>
+                    <XCircle className="h-5 w-5 text-destructive" />
+                    <span className="font-medium text-foreground">Marketing: Odhlášeno</span>
+                  </>
+                ) : marketingStatus === 'none' ? (
+                  <>
+                    <XCircle className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium text-muted-foreground">Marketing: Nepřihlášeno</span>
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">Načítám...</span>
+                )}
+              </div>
+
               <p className="text-sm text-muted-foreground">
                 V rámci vašeho účtu můžete dostávat informace o nových soutěžích, 
                 speciálních akcích a dalších novinkách prostřednictvím e-mailu.
               </p>
-              <p className="text-sm text-muted-foreground">
-                Pokud si již nepřejete dostávat marketingová sdělení, můžete se odhlásit.
-              </p>
-              <Link to="/unsubscribe/marketing">
-                <Button variant="outline" className="w-full sm:w-auto mt-2">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Odhlásit marketing
-                </Button>
-              </Link>
+              
+              {marketingStatus === 'active' && (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Pokud si již nepřejete dostávat marketingová sdělení, můžete se odhlásit.
+                  </p>
+                  <Link to="/unsubscribe/marketing">
+                    <Button variant="outline" className="w-full sm:w-auto">
+                      <Mail className="h-4 w-4 mr-2" />
+                      Odhlásit marketing
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
