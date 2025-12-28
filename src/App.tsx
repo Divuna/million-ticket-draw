@@ -40,6 +40,7 @@ import AdminAuditRepair from "@/pages/AdminAuditRepair";
 import AdminMessages from "@/pages/AdminMessages";
 import AdminMessageThread from "@/pages/AdminMessageThread";
 import AdminContentPages from "@/pages/AdminContentPages";
+import AdminLegalAcceptances from "@/pages/AdminLegalAcceptances";
 import ContentPage from "@/pages/ContentPage";
 import OneMilAudit from "@/pages/OneMilAudit";
 import TestLogin from "@/pages/TestLogin";
@@ -101,6 +102,7 @@ function AppContent() {
         <Route path="/admin/onemil-audit" element={<OneMilAudit />} />
         <Route path="/admin/contest/:contestId" element={<ContestDetailAdmin />} />
         <Route path="/admin/content" element={<AdminContentPages />} />
+        <Route path="/admin/legal-acceptances" element={<AdminLegalAcceptances />} />
         <Route path="/test-login" element={<TestLogin />} />
         <Route path="/:section/:slug" element={<ContentPage />} />
         <Route path="*" element={<NotFound />} />
