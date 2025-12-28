@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Truck, Package, Clock, CheckCircle, AlertCircle, UserCheck, Users, Download } from 'lucide-react';
@@ -55,6 +56,9 @@ export const AdminPrizeDelivery: React.FC = () => {
   const [newStatus, setNewStatus] = useState<string>('');
   const [newNotes, setNewNotes] = useState<string>('');
   const [guardianFilter, setGuardianFilter] = useState<GuardianFilter>('all');
+  const [selectedPrizeIds, setSelectedPrizeIds] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState<string>('');
+  const [bulkUpdating, setBulkUpdating] = useState(false);
 
   // Fetch contests on component mount
   useEffect(() => {
@@ -160,6 +164,74 @@ export const AdminPrizeDelivery: React.FC = () => {
       return true;
     });
   }, [bonusPrizes, guardianFilter]);
+
+  // Get only physical prizes from filtered list
+  const physicalPrizes = useMemo(() => {
+    return filteredPrizes.filter(p => !p.amount || p.amount === 0);
+  }, [filteredPrizes]);
+
+  // Handle checkbox selection
+  const handleSelectPrize = (prizeId: string, checked: boolean) => {
+    const newSelected = new Set(selectedPrizeIds);
+    if (checked) {
+      newSelected.add(prizeId);
+    } else {
+      newSelected.delete(prizeId);
+    }
+    setSelectedPrizeIds(newSelected);
+  };
+
+  // Handle select all for physical prizes
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allPhysicalIds = new Set(physicalPrizes.map(p => p.id));
+      setSelectedPrizeIds(allPhysicalIds);
+    } else {
+      setSelectedPrizeIds(new Set());
+    }
+  };
+
+  // Check if all physical prizes are selected
+  const allPhysicalSelected = physicalPrizes.length > 0 && physicalPrizes.every(p => selectedPrizeIds.has(p.id));
+  const somePhysicalSelected = physicalPrizes.some(p => selectedPrizeIds.has(p.id));
+
+  // Handle bulk status update
+  const handleBulkUpdate = async () => {
+    if (selectedPrizeIds.size === 0 || !bulkStatus) return;
+
+    setBulkUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('bonus_prizes')
+        .update({ status: bulkStatus })
+        .in('id', Array.from(selectedPrizeIds));
+
+      if (error) throw error;
+
+      toast({
+        title: "Úspěch",
+        description: `Stav ${selectedPrizeIds.size} výher byl hromadně aktualizován.`,
+      });
+
+      // Refresh data and clear selection
+      if (selectedContestId) {
+        fetchBonusPrizes(selectedContestId);
+      }
+      fetchDeliverySummary();
+      setSelectedPrizeIds(new Set());
+      setBulkStatus('');
+
+    } catch (error) {
+      console.error('Error bulk updating prizes:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se hromadně aktualizovat výhry.",
+        variant: "destructive"
+      });
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
 
   // Export guardian-required prizes to CSV
   const handleExportGuardianCSV = () => {
@@ -400,6 +472,42 @@ export const AdminPrizeDelivery: React.FC = () => {
               </div>
             )}
 
+            {/* Bulk Action Panel */}
+            {selectedPrizeIds.size > 0 && (
+              <div className="flex flex-wrap gap-4 items-center mb-4 p-4 bg-muted/50 rounded-lg border">
+                <span className="text-sm font-medium">
+                  Vybráno: {selectedPrizeIds.size} výher
+                </span>
+                <div className="min-w-[180px]">
+                  <Select value={bulkStatus} onValueChange={setBulkStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Nový stav..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Čeká na předání</SelectItem>
+                      <SelectItem value="won">Vyhráno</SelectItem>
+                      <SelectItem value="delivered">Předáno</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button 
+                  onClick={handleBulkUpdate} 
+                  disabled={!bulkStatus || bulkUpdating}
+                >
+                  {bulkUpdating ? 'Ukládám...' : 'Uložit hromadně'}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSelectedPrizeIds(new Set());
+                    setBulkStatus('');
+                  }}
+                >
+                  Zrušit výběr
+                </Button>
+              </div>
+            )}
+
             {loading ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">Načítám výhry...</p>
@@ -412,6 +520,15 @@ export const AdminPrizeDelivery: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {hasPhysicalPrizes && (
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={allPhysicalSelected}
+                          onCheckedChange={handleSelectAll}
+                          aria-label="Vybrat všechny fyzické výhry"
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Pozice tiketu</TableHead>
                     <TableHead>Popis výhry</TableHead>
                     <TableHead>Hodnota</TableHead>
@@ -422,50 +539,64 @@ export const AdminPrizeDelivery: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPrizes.map((prize) => (
-                    <TableRow 
-                      key={prize.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleEditPrize(prize)}
-                    >
-                      <TableCell className="font-medium">#{prize.ticket_position}</TableCell>
-                      <TableCell>{prize.description}</TableCell>
-                      <TableCell>
-                        {prize.amount && prize.amount > 0 ? `${prize.amount} MioCoins` : 'Fyzická výhra'}
-                      </TableCell>
-                      <TableCell>
-                        {prize.amount && prize.amount > 0 ? null : (
-                          prize.guardian_required ? (
-                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
-                              <Users className="w-3 h-3 mr-1" />
-                              ⚠️ Vyžaduje zákonného zástupce
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-                              <UserCheck className="w-3 h-3 mr-1" />
-                              ✓ Převzetí možné od 15+ bez doprovodu
-                            </Badge>
-                          )
+                  {filteredPrizes.map((prize) => {
+                    const isPhysical = !prize.amount || prize.amount === 0;
+                    return (
+                      <TableRow 
+                        key={prize.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleEditPrize(prize)}
+                      >
+                        {hasPhysicalPrizes && (
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            {isPhysical ? (
+                              <Checkbox
+                                checked={selectedPrizeIds.has(prize.id)}
+                                onCheckedChange={(checked) => handleSelectPrize(prize.id, checked as boolean)}
+                                aria-label={`Vybrat výhru ${prize.description}`}
+                              />
+                            ) : null}
+                          </TableCell>
                         )}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(prize.status)}</TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {prize.admin_notes || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditPrize(prize);
-                          }}
-                        >
-                          Upravit
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        <TableCell className="font-medium">#{prize.ticket_position}</TableCell>
+                        <TableCell>{prize.description}</TableCell>
+                        <TableCell>
+                          {prize.amount && prize.amount > 0 ? `${prize.amount} MioCoins` : 'Fyzická výhra'}
+                        </TableCell>
+                        <TableCell>
+                          {prize.amount && prize.amount > 0 ? null : (
+                            prize.guardian_required ? (
+                              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                                <Users className="w-3 h-3 mr-1" />
+                                ⚠️ Vyžaduje zákonného zástupce
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                                <UserCheck className="w-3 h-3 mr-1" />
+                                ✓ Převzetí možné od 15+ bez doprovodu
+                              </Badge>
+                            )
+                          )}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(prize.status)}</TableCell>
+                        <TableCell className="max-w-xs truncate">
+                          {prize.admin_notes || '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditPrize(prize);
+                            }}
+                          >
+                            Upravit
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
