@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +44,7 @@ interface UserProfile {
   address: string;
   phone: string;
   avatar_url: string | null;
+  date_of_birth: string | null;
 }
 
 interface CoinPackage {
@@ -70,7 +73,8 @@ const Profile: React.FC = () => {
     last_name: '',
     address: '',
     phone: '',
-    avatar_url: null
+    avatar_url: null,
+    date_of_birth: null
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -241,9 +245,10 @@ const Profile: React.FC = () => {
         return;
       }
       
-      // Also fetch avatar from profiles table
-      const profileResult = await supabase.from('profiles').select('avatar_url').eq('id', user?.id ?? '').maybeSingle();
+      // Also fetch avatar and date_of_birth from profiles table
+      const profileResult = await supabase.from('profiles').select('avatar_url, date_of_birth').eq('id', user?.id ?? '').maybeSingle();
       const avatarUrl = profileResult.data?.avatar_url || null;
+      const dateOfBirth = (profileResult.data as any)?.date_of_birth || null;
       
       if (data) {
         setProfile({
@@ -252,7 +257,8 @@ const Profile: React.FC = () => {
           last_name: data.last_name || '',
           address: data.address || '',
           phone: data.phone || '',
-          avatar_url: avatarUrl
+          avatar_url: avatarUrl,
+          date_of_birth: dateOfBirth
         });
       }
     } catch (error) {
@@ -740,6 +746,15 @@ const Profile: React.FC = () => {
                         <p className="text-foreground whitespace-pre-wrap">{profile.address}</p>
                       </div>
                     )}
+                    
+                    <div className="space-y-1">
+                      <label className="text-sm text-muted-foreground">Datum narození</label>
+                      <p className="text-foreground">
+                        {profile.date_of_birth 
+                          ? format(new Date(profile.date_of_birth), 'dd.MM.yyyy', { locale: cs })
+                          : 'Neuvedeno'}
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-6 text-muted-foreground">
