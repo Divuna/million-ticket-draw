@@ -56,12 +56,19 @@ export const useAuthState = () => {
     });
 
     if (!error && data.user) {
-      // Store terms acceptance
-      await supabase.from('user_legal_acceptances').insert({
-        user_id: data.user.id,
-        document_slug: 'obchodni-podminky',
-        document_version: '1.0'
-      });
+      // Store terms and GDPR acceptances
+      await supabase.from('user_legal_acceptances').insert([
+        {
+          user_id: data.user.id,
+          document_slug: 'obchodni-podminky',
+          document_version: '1.0'
+        },
+        {
+          user_id: data.user.id,
+          document_slug: 'gdpr',
+          document_version: '1.0'
+        }
+      ]);
       
       toast({
         title: "Registrace úspěšná",
