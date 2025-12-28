@@ -47,7 +47,7 @@ export const useAuthState = () => {
   const signUp = async (email: string, password: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -55,7 +55,14 @@ export const useAuthState = () => {
       }
     });
 
-    if (!error) {
+    if (!error && data.user) {
+      // Store terms acceptance
+      await supabase.from('user_legal_acceptances').insert({
+        user_id: data.user.id,
+        document_slug: 'obchodni-podminky',
+        document_version: '1.0'
+      });
+      
       toast({
         title: "Registrace úspěšná",
         description: "Váš účet byl úspěšně vytvořen."
