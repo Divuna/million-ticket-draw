@@ -32,6 +32,7 @@ export const AdminMenu: React.FC = () => {
     { label: 'Bannery', icon: Image, path: '/admin/banners' },
     { label: 'Partneři', icon: Handshake, path: '/admin/partners' },
     { label: 'Obsah', icon: BookOpen, path: '/admin/content' },
+    { label: 'Souhlasy', icon: FileText, path: '/admin/legal-acceptances' },
     { label: 'Notifikace', icon: Bell, path: '/admin/notifications' },
     { label: 'Statistiky', icon: BarChart3, path: '/admin/statistics' },
     { label: 'Audit', icon: FileText, path: '/admin/audit-logs' },
