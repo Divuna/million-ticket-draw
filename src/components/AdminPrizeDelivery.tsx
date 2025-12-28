@@ -10,7 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Truck, Package, Clock, CheckCircle, AlertCircle, UserCheck, Users, Download } from 'lucide-react';
+import { Truck, Package, Clock, CheckCircle, AlertCircle, UserCheck, Users, Download, AlertTriangle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Contest {
   id: string;
@@ -29,10 +30,24 @@ interface BonusPrize {
   created_at: string;
   guardian_required?: boolean;
   winner_email?: string;
+  winner_age?: number | null; // null = unknown, number = computed age
   contest?: {
     title: string;
   }[] | { title: string };
 }
+
+// Helper to compute age from date of birth
+const computeAge = (dateOfBirth: string | null): number | null => {
+  if (!dateOfBirth) return null;
+  const today = new Date();
+  const birth = new Date(dateOfBirth);
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+};
 
 interface DeliverySummary {
   contest_title: string;
@@ -107,28 +122,58 @@ export const AdminPrizeDelivery: React.FC = () => {
 
       if (prizesError) throw prizesError;
 
-      // Get tickets with user emails for won prizes
+      // Get tickets with user emails and user_id for won prizes
       const { data: ticketsData, error: ticketsError } = await supabase
         .from('tickets')
-        .select('number, user:users(email)')
+        .select('number, user_id, user:users(email)')
         .eq('contest_id', contestId);
 
       if (ticketsError) throw ticketsError;
 
-      // Map ticket positions to user emails
+      // Map ticket positions to user emails and user_ids
       const ticketEmailMap = new Map<number, string>();
+      const ticketUserIdMap = new Map<number, string>();
       ticketsData?.forEach((ticket: any) => {
         const email = Array.isArray(ticket.user) ? ticket.user[0]?.email : ticket.user?.email;
         if (email) {
           ticketEmailMap.set(ticket.number, email);
         }
+        if (ticket.user_id) {
+          ticketUserIdMap.set(ticket.number, ticket.user_id);
+        }
       });
 
-      // Enrich prizes with winner emails
-      const enrichedPrizes = (prizesData || []).map(prize => ({
-        ...prize,
-        winner_email: ticketEmailMap.get(prize.ticket_position) || ''
-      }));
+      // Find guardian-required prizes with winners to fetch their ages
+      const guardianPrizesWithWinners = (prizesData || []).filter(
+        prize => prize.guardian_required && ticketUserIdMap.has(prize.ticket_position)
+      );
+      
+      // Fetch profiles for these users
+      const userIdsToFetch = [...new Set(guardianPrizesWithWinners.map(p => ticketUserIdMap.get(p.ticket_position)!))];
+      const userAgeMap = new Map<string, number | null>();
+      
+      if (userIdsToFetch.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, date_of_birth')
+          .in('id', userIdsToFetch);
+        
+        if (!profilesError && profilesData) {
+          profilesData.forEach(profile => {
+            userAgeMap.set(profile.id, computeAge(profile.date_of_birth));
+          });
+        }
+      }
+
+      // Enrich prizes with winner emails and ages
+      const enrichedPrizes = (prizesData || []).map(prize => {
+        const userId = ticketUserIdMap.get(prize.ticket_position);
+        return {
+          ...prize,
+          winner_email: ticketEmailMap.get(prize.ticket_position) || '',
+          winner_age: userId && prize.guardian_required ? (userAgeMap.get(userId) ?? null) : null
+        };
+      });
 
       setBonusPrizes(enrichedPrizes);
     } catch (error) {
@@ -539,64 +584,83 @@ export const AdminPrizeDelivery: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPrizes.map((prize) => {
-                    const isPhysical = !prize.amount || prize.amount === 0;
-                    return (
-                      <TableRow 
-                        key={prize.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleEditPrize(prize)}
-                      >
-                        {hasPhysicalPrizes && (
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            {isPhysical ? (
-                              <Checkbox
-                                checked={selectedPrizeIds.has(prize.id)}
-                                onCheckedChange={(checked) => handleSelectPrize(prize.id, checked as boolean)}
-                                aria-label={`Vybrat výhru ${prize.description}`}
-                              />
-                            ) : null}
-                          </TableCell>
-                        )}
-                        <TableCell className="font-medium">#{prize.ticket_position}</TableCell>
-                        <TableCell>{prize.description}</TableCell>
-                        <TableCell>
-                          {prize.amount && prize.amount > 0 ? `${prize.amount} MioCoins` : 'Fyzická výhra'}
-                        </TableCell>
-                        <TableCell>
-                          {prize.amount && prize.amount > 0 ? null : (
-                            prize.guardian_required ? (
-                              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
-                                <Users className="w-3 h-3 mr-1" />
-                                ⚠️ Vyžaduje zákonného zástupce
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-                                <UserCheck className="w-3 h-3 mr-1" />
-                                ✓ Převzetí možné od 15+ bez doprovodu
-                              </Badge>
-                            )
+                  <TooltipProvider>
+                    {filteredPrizes.map((prize) => {
+                      const isPhysical = !prize.amount || prize.amount === 0;
+                      const isUnder18Guardian = prize.guardian_required && prize.winner_age !== null && prize.winner_age < 18;
+                      return (
+                        <TableRow 
+                          key={prize.id}
+                          className={`cursor-pointer hover:bg-muted/50 ${isUnder18Guardian ? 'bg-yellow-50' : ''}`}
+                          onClick={() => handleEditPrize(prize)}
+                        >
+                          {hasPhysicalPrizes && (
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              {isPhysical ? (
+                                <Checkbox
+                                  checked={selectedPrizeIds.has(prize.id)}
+                                  onCheckedChange={(checked) => handleSelectPrize(prize.id, checked as boolean)}
+                                  aria-label={`Vybrat výhru ${prize.description}`}
+                                />
+                              ) : null}
+                            </TableCell>
                           )}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(prize.status)}</TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {prize.admin_notes || '-'}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditPrize(prize);
-                            }}
-                          >
-                            Upravit
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              #{prize.ticket_position}
+                              {isUnder18Guardian && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-help">
+                                      <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Uživatel mladší 18 let – nutný kontakt zákonného zástupce</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{prize.description}</TableCell>
+                          <TableCell>
+                            {prize.amount && prize.amount > 0 ? `${prize.amount} MioCoins` : 'Fyzická výhra'}
+                          </TableCell>
+                          <TableCell>
+                            {prize.amount && prize.amount > 0 ? null : (
+                              prize.guardian_required ? (
+                                <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                                  <Users className="w-3 h-3 mr-1" />
+                                  ⚠️ Vyžaduje zákonného zástupce
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                                  <UserCheck className="w-3 h-3 mr-1" />
+                                  ✓ Převzetí možné od 15+ bez doprovodu
+                                </Badge>
+                              )
+                            )}
+                          </TableCell>
+                          <TableCell>{getStatusBadge(prize.status)}</TableCell>
+                          <TableCell className="max-w-xs truncate">
+                            {prize.admin_notes || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditPrize(prize);
+                              }}
+                            >
+                              Upravit
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TooltipProvider>
                 </TableBody>
               </Table>
             )}
