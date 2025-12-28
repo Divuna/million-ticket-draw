@@ -1439,9 +1439,14 @@ export type Database = {
         Args: { p_contest_id: string; p_user_id: string }
         Returns: Json
       }
+      check_guardian_notifications_batch: { Args: never; Returns: Json }
       claim_miocoin_bonus: {
         Args: { p_bonus_id: string; p_user_id: string }
         Returns: undefined
+      }
+      create_guardian_notification_if_needed: {
+        Args: { p_contest_id: string; p_prize_id: string; p_user_id: string }
+        Returns: Json
       }
       create_test_result: {
         Args: {

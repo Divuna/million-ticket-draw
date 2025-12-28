@@ -118,6 +118,21 @@ serve(async (req) => {
           type: 'bonus',
           notes: `Bonus prize won with ticket #${nextTicketNumber}`
         })
+
+      // Check if guardian notification is needed (physical prize, guardian required, user under 18)
+      if (bonusPrize.guardian_required && (!bonusPrize.amount || bonusPrize.amount === 0)) {
+        try {
+          await supabaseClient.rpc('create_guardian_notification_if_needed', {
+            p_prize_id: bonusPrize.id,
+            p_user_id: user.id,
+            p_contest_id: contest_id
+          })
+          console.log(`Guardian notification check completed for prize ${bonusPrize.id}`)
+        } catch (guardianError) {
+          console.error('Error creating guardian notification:', guardianError)
+          // Don't fail the ticket purchase if notification fails
+        }
+      }
     }
 
     // 7. Check if this is the main prize (last ticket)
