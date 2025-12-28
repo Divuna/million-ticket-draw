@@ -174,6 +174,7 @@ export type Database = {
           contest_id: string
           created_at: string
           description: string
+          guardian_required: boolean
           id: string
           image_url: string | null
           status: string
@@ -186,6 +187,7 @@ export type Database = {
           contest_id: string
           created_at?: string
           description: string
+          guardian_required?: boolean
           id?: string
           image_url?: string | null
           status?: string
@@ -198,6 +200,7 @@ export type Database = {
           contest_id?: string
           created_at?: string
           description?: string
+          guardian_required?: boolean
           id?: string
           image_url?: string | null
           status?: string
