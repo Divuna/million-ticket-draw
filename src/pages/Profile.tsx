@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
@@ -88,7 +87,6 @@ const Profile: React.FC = () => {
   const [bonusTransfersLoading, setBonusTransfersLoading] = useState(true);
   const [marketingStatus, setMarketingStatus] = useState<'active' | 'revoked' | 'none' | null>(null);
   const [marketingSubscribing, setMarketingSubscribing] = useState(false);
-  const [pendingMarketingAction, setPendingMarketingAction] = useState<'subscribe' | 'unsubscribe' | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (user) {
@@ -949,14 +947,12 @@ const Profile: React.FC = () => {
                   <p className="text-sm text-muted-foreground">
                     Pokud si již nepřejete dostávat marketingová sdělení, můžete se odhlásit.
                   </p>
-                  <Button 
-                    variant="outline" 
-                    className="w-full sm:w-auto"
-                    onClick={() => setPendingMarketingAction('unsubscribe')}
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    Odhlásit marketing
-                  </Button>
+                  <Link to="/unsubscribe/marketing">
+                    <Button variant="outline" className="w-full sm:w-auto">
+                      <Mail className="h-4 w-4 mr-2" />
+                      Odhlásit marketing
+                    </Button>
+                  </Link>
                 </>
               )}
 
@@ -968,7 +964,7 @@ const Profile: React.FC = () => {
                   <Button 
                     variant="default" 
                     className="w-full sm:w-auto"
-                    onClick={() => setPendingMarketingAction('subscribe')}
+                    onClick={handleSubscribeMarketing}
                     disabled={marketingSubscribing}
                   >
                     <Mail className="h-4 w-4 mr-2" />
@@ -1068,29 +1064,6 @@ const Profile: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Marketing Consent Confirmation Dialog */}
-      <AlertDialog open={pendingMarketingAction !== null} onOpenChange={(open) => !open && setPendingMarketingAction(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Potvrzení změny</AlertDialogTitle>
-            <AlertDialogDescription>
-              Opravdu chcete změnit nastavení marketingových sdělení? Tuto volbu můžete kdykoliv změnit.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingMarketingAction(null)}>Zrušit</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (pendingMarketingAction === 'subscribe') {
-                handleSubscribeMarketing();
-              } else if (pendingMarketingAction === 'unsubscribe') {
-                navigate('/unsubscribe/marketing');
-              }
-              setPendingMarketingAction(null);
-            }}>Potvrdit</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {isAdmin ? <AdminMenu /> : <BottomNavigation />}
     </div>
