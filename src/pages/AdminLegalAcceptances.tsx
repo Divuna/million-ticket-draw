@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Download } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 
 interface LegalAcceptance {
   id: string;
@@ -43,11 +43,15 @@ const DOCUMENT_OPTIONS = [
   { value: 'marketing', label: 'Marketing' },
 ];
 
+const PAGE_SIZE = 25;
+
 const AdminLegalAcceptances: React.FC = () => {
   const { role, loading: roleLoading } = useUserRole();
   const [documentFilter, setDocumentFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+  const [emailSearch, setEmailSearch] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   const { data: acceptances, isLoading } = useQuery({
     queryKey: ['admin-legal-acceptances'],
@@ -84,6 +88,13 @@ const AdminLegalAcceptances: React.FC = () => {
     if (!acceptances) return [];
     
     return acceptances.filter(acceptance => {
+      // Email search filter (case-insensitive)
+      if (emailSearch) {
+        const searchLower = emailSearch.toLowerCase();
+        const emailLower = (acceptance.user_email || '').toLowerCase();
+        if (!emailLower.includes(searchLower)) return false;
+      }
+      
       // Document filter
       if (documentFilter !== 'all' && acceptance.document_slug !== documentFilter) {
         return false;
@@ -107,7 +118,19 @@ const AdminLegalAcceptances: React.FC = () => {
       
       return true;
     });
-  }, [acceptances, documentFilter, dateFrom, dateTo]);
+  }, [acceptances, documentFilter, dateFrom, dateTo, emailSearch]);
+
+  // Reset to page 1 when filters change
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [documentFilter, dateFrom, dateTo, emailSearch]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredAcceptances.length / PAGE_SIZE);
+  const paginatedAcceptances = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredAcceptances.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredAcceptances, currentPage]);
 
   const handleExportCSV = () => {
     if (!filteredAcceptances.length) return;
@@ -154,12 +177,26 @@ const AdminLegalAcceptances: React.FC = () => {
               disabled={!filteredAcceptances.length}
             >
               <Download className="h-4 w-4 mr-2" />
-              Export CSV
+              Export CSV ({filteredAcceptances.length})
             </Button>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="space-y-2">
+                <Label htmlFor="email-search">Hledat email</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email-search"
+                    type="text"
+                    placeholder="Zadejte email..."
+                    value={emailSearch}
+                    onChange={(e) => setEmailSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="document-filter">Dokument</Label>
                 <Select value={documentFilter} onValueChange={setDocumentFilter}>
@@ -197,13 +234,14 @@ const AdminLegalAcceptances: React.FC = () => {
 
             {/* Results count */}
             <div className="text-sm text-muted-foreground">
-              Zobrazeno: {filteredAcceptances.length} záznamů
+              Zobrazeno: {paginatedAcceptances.length} z {filteredAcceptances.length} záznamů
+              {totalPages > 1 && ` (stránka ${currentPage} z ${totalPages})`}
             </div>
 
             {/* Table */}
             {isLoading ? (
               <div className="text-center py-8">Načítám data...</div>
-            ) : filteredAcceptances.length > 0 ? (
+            ) : paginatedAcceptances.length > 0 ? (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -215,7 +253,7 @@ const AdminLegalAcceptances: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAcceptances.map((acceptance) => (
+                    {paginatedAcceptances.map((acceptance) => (
                       <TableRow key={acceptance.id}>
                         <TableCell>{acceptance.user_email}</TableCell>
                         <TableCell>{acceptance.document_slug}</TableCell>
@@ -231,6 +269,55 @@ const AdminLegalAcceptances: React.FC = () => {
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 {acceptances?.length ? 'Žádné záznamy neodpovídají filtrům.' : 'Zatím nejsou zaznamenány žádné souhlasy.'}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Předchozí
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum: number;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className="w-10"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Další
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             )}
           </CardContent>
