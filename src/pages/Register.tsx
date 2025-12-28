@@ -13,6 +13,7 @@ const Register: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [gdprAccepted, setGdprAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signUp, signInWithOAuth } = useAuth();
   const navigate = useNavigate();
@@ -20,10 +21,10 @@ const Register: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!termsAccepted) {
+    if (!termsAccepted || !gdprAccepted) {
       toast({
         title: "Chyba",
-        description: "Pro registraci musíte souhlasit s obchodními podmínkami.",
+        description: "Pro registraci musíte souhlasit s obchodními podmínkami a zásadami ochrany osobních údajů.",
         variant: "destructive"
       });
       return;
@@ -158,6 +159,24 @@ const Register: React.FC = () => {
                   target="_blank"
                 >
                   Všeobecnými obchodními podmínkami
+                </Link>
+              </label>
+            </div>
+            
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="gdpr"
+                checked={gdprAccepted}
+                onCheckedChange={(checked) => setGdprAccepted(checked === true)}
+              />
+              <label htmlFor="gdpr" className="text-sm leading-tight cursor-pointer">
+                Beru na vědomí{' '}
+                <Link 
+                  to="/legal/ochrana-osobnich-udaju" 
+                  className="text-primary hover:underline"
+                  target="_blank"
+                >
+                  Zásady ochrany osobních údajů
                 </Link>
               </label>
             </div>
