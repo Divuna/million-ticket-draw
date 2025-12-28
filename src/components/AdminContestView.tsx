@@ -22,6 +22,8 @@ interface BonusPrize {
   description: string;
   ticket_position: number;
   status: string;
+  guardian_required?: boolean;
+  amount?: number;
 }
 
 interface UserWallet {
@@ -154,6 +156,11 @@ export const AdminContestView: React.FC<AdminContestViewProps> = ({
                   <p className="text-sm text-muted-foreground">
                     Tiket #{prize.ticket_position.toLocaleString('cs-CZ')} - Status: {prize.status}
                   </p>
+                  {!prize.amount && prize.guardian_required !== undefined && (
+                    <p className={`text-xs mt-1 ${prize.guardian_required ? 'text-amber-500' : 'text-green-500'}`}>
+                      {prize.guardian_required ? '⚠ Vyžaduje zákonného zástupce' : '✓ Převzetí možné od 15+ bez doprovodu'}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

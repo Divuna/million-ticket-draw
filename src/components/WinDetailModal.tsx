@@ -35,6 +35,7 @@ interface Win {
     id: string;
     title: string | null;
     image_url: string | null;
+    guardian_required: boolean | null;
   } | null;
 }
 
@@ -43,9 +44,10 @@ interface WinDetailModalProps {
   open: boolean;
   onClose: () => void;
   onNavigateToContest: (contestId: string) => void;
+  userAge?: number | null;
 }
 
-export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClose, onNavigateToContest }) => {
+export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClose, onNavigateToContest, userAge }) => {
   const [copied, setCopied] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
@@ -133,6 +135,12 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
   }, [open, win]);
 
   if (!win) return null;
+
+  // Check if guardian is required and user is under 18
+  const needsGuardian = win.type === 'bonus' && 
+    win.bonus_prize?.guardian_required === true && 
+    userAge !== null && 
+    userAge < 18;
 
   const prizeName = win.type === 'main' 
     ? win.contest?.main_prize 
@@ -285,6 +293,15 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
               <p className="text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">Poznámka: </span>
                 {win.notes}
+              </p>
+            </div>
+          )}
+
+          {/* Guardian Required Notice */}
+          {needsGuardian && (
+            <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/30">
+              <p className="text-sm text-amber-400 font-medium">
+                ⚠ Pro převzetí této výhry je nutný doprovod zákonného zástupce. Kontaktujte nás přes chat.
               </p>
             </div>
           )}

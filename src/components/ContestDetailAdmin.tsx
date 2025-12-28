@@ -37,6 +37,7 @@ interface BonusPrize {
   ticket_position: number;
   status: string;
   amount?: number;
+  guardian_required?: boolean;
 }
 
 interface Ticket {
@@ -181,7 +182,7 @@ const ContestDetailAdmin: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('bonus_prizes')
-        .select('id, contest_id, description, ticket_position, amount, status')
+        .select('id, contest_id, description, ticket_position, amount, status, guardian_required')
         .eq('contest_id', contestId)
         .order('ticket_position', { ascending: true });
 
@@ -638,6 +639,7 @@ const ContestDetailAdmin: React.FC = () => {
                     <TableHead>Pozice tiketu</TableHead>
                     <TableHead>Popis</TableHead>
                     <TableHead>Hodnota</TableHead>
+                    <TableHead>Převzetí</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -648,6 +650,15 @@ const ContestDetailAdmin: React.FC = () => {
                       <TableCell>{prize.description}</TableCell>
                       <TableCell>
                         {prize.amount ? `${prize.amount} Miocoin` : 'Fyzická cena'}
+                      </TableCell>
+                      <TableCell>
+                        {!prize.amount && prize.guardian_required ? (
+                          <span className="text-amber-500 text-sm">⚠ Zákonný zástupce</span>
+                        ) : !prize.amount ? (
+                          <span className="text-green-500 text-sm">✓ 15+ bez doprovodu</span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={getStatusBadge(prize.status).variant}>
