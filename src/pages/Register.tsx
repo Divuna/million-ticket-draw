@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import logo from '@/assets/logo-onemil.png';
@@ -11,12 +12,22 @@ const Register: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signUp, signInWithOAuth } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!termsAccepted) {
+      toast({
+        title: "Chyba",
+        description: "Pro registraci musíte souhlasit s obchodními podmínkami.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     if (password !== confirmPassword) {
       toast({
@@ -131,6 +142,24 @@ const Register: React.FC = () => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
               />
+            </div>
+            
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="terms"
+                checked={termsAccepted}
+                onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+              />
+              <label htmlFor="terms" className="text-sm leading-tight cursor-pointer">
+                Souhlasím s{' '}
+                <Link 
+                  to="/legal/obchodni-podminky" 
+                  className="text-primary hover:underline"
+                  target="_blank"
+                >
+                  Všeobecnými obchodními podmínkami
+                </Link>
+              </label>
             </div>
           </CardContent>
           
