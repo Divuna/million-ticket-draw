@@ -13,7 +13,8 @@ import {
   Image,
   Handshake,
   Wrench,
-  MessageSquare
+  MessageSquare,
+  BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -30,10 +31,10 @@ export const AdminMenu: React.FC = () => {
     { label: 'Vouchery', icon: Gift, path: '/admin/vouchers' },
     { label: 'Bannery', icon: Image, path: '/admin/banners' },
     { label: 'Partneři', icon: Handshake, path: '/admin/partners' },
+    { label: 'Obsah', icon: BookOpen, path: '/admin/content' },
     { label: 'Notifikace', icon: Bell, path: '/admin/notifications' },
     { label: 'Statistiky', icon: BarChart3, path: '/admin/statistics' },
     { label: 'Audit', icon: FileText, path: '/admin/audit-logs' },
-    { label: 'Audit & Repair', icon: Wrench, path: '/admin/audit-repair' },
     { label: 'Testy', icon: Trophy, path: '/admin/tests' },
   ];
 
