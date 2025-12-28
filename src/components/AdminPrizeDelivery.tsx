@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Truck, Package, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Truck, Package, Clock, CheckCircle, AlertCircle, UserCheck, Users } from 'lucide-react';
 
 interface Contest {
   id: string;
@@ -26,9 +26,10 @@ interface BonusPrize {
   amount?: number;
   admin_notes?: string;
   created_at: string;
+  guardian_required?: boolean;
   contest?: {
     title: string;
-  };
+  }[] | { title: string };
 }
 
 interface DeliverySummary {
@@ -89,7 +90,7 @@ export const AdminPrizeDelivery: React.FC = () => {
       const { data, error } = await supabase
         .from('bonus_prizes')
         .select(`
-          *,
+          id, contest_id, description, ticket_position, status, amount, admin_notes, created_at, guardian_required,
           contest:contests(title)
         `)
         .eq('contest_id', contestId)
@@ -295,6 +296,7 @@ export const AdminPrizeDelivery: React.FC = () => {
                     <TableHead>Pozice tiketu</TableHead>
                     <TableHead>Popis výhry</TableHead>
                     <TableHead>Hodnota</TableHead>
+                    <TableHead>Doprovod</TableHead>
                     <TableHead>Stav</TableHead>
                     <TableHead>Poznámky admina</TableHead>
                     <TableHead>Akce</TableHead>
@@ -311,6 +313,21 @@ export const AdminPrizeDelivery: React.FC = () => {
                       <TableCell>{prize.description}</TableCell>
                       <TableCell>
                         {prize.amount && prize.amount > 0 ? `${prize.amount} MioCoins` : 'Fyzická výhra'}
+                      </TableCell>
+                      <TableCell>
+                        {prize.amount && prize.amount > 0 ? null : (
+                          prize.guardian_required ? (
+                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                              <Users className="w-3 h-3 mr-1" />
+                              ⚠️ Vyžaduje zákonného zástupce
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                              <UserCheck className="w-3 h-3 mr-1" />
+                              ✓ Převzetí možné od 15+ bez doprovodu
+                            </Badge>
+                          )
+                        )}
                       </TableCell>
                       <TableCell>{getStatusBadge(prize.status)}</TableCell>
                       <TableCell className="max-w-xs truncate">
