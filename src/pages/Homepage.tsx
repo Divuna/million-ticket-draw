@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1035,19 +1035,19 @@ const Homepage = () => {
               <h4 className="font-semibold text-lg text-primary mb-6">Informace</h4>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
+                  <Link to="/info/o-spolecnosti" className="hover:text-primary transition-colors duration-200 story-link">
                     O společnosti
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
+                  <Link to="/info/jak-to-funguje" className="hover:text-primary transition-colors duration-200 story-link">
                     Jak to funguje
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
+                  <Link to="/info/nase-mise" className="hover:text-primary transition-colors duration-200 story-link">
                     Naše mise
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -1057,29 +1057,29 @@ const Homepage = () => {
               <h4 className="font-semibold text-lg text-primary mb-6">Podpora</h4>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
+                  <Link to="/support/faq" className="hover:text-primary transition-colors duration-200 story-link">
                     Často kladené otázky
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
+                  <Link to="/support/napoveda" className="hover:text-primary transition-colors duration-200 story-link">
                     Centrum nápovědy
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
+                  <Link to="/support/kontakt" className="hover:text-primary transition-colors duration-200 story-link">
                     Kontaktujte nás
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
+                  <Link to="/support/nahlasit-problem" className="hover:text-primary transition-colors duration-200 story-link">
                     Nahlásit problém
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
+                  <Link to="/support/zivy-chat" className="hover:text-primary transition-colors duration-200 story-link">
                     Živý chat
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -1089,29 +1089,29 @@ const Homepage = () => {
               <h4 className="font-semibold text-lg text-primary mb-6">Právní podmínky</h4>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
+                  <Link to="/legal/obchodni-podminky" className="hover:text-primary transition-colors duration-200 story-link">
                     Všeobecné obchodní podmínky
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
+                  <Link to="/legal/ochrana-osobnich-udaju" className="hover:text-primary transition-colors duration-200 story-link">
                     Ochrana osobních údajů
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
+                  <Link to="/legal/pravidla-soutezi" className="hover:text-primary transition-colors duration-200 story-link">
                     Pravidla soutěží
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
+                  <Link to="/legal/cookies" className="hover:text-primary transition-colors duration-200 story-link">
                     Zásady použití cookies
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-primary transition-colors duration-200 story-link">
+                  <Link to="/legal/autorska-prava" className="hover:text-primary transition-colors duration-200 story-link">
                     Autorská práva
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
