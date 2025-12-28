@@ -7,7 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Header } from '@/components/Header';
 import { AdminMenu } from '@/components/AdminMenu';
-import { BarChart3, Users, CreditCard, Trophy, Gift, Ticket } from 'lucide-react';
+import { BarChart3, Users, CreditCard, Trophy, Gift, Ticket, UserX } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface Statistics {
   totalUsers: number;
@@ -18,11 +19,13 @@ interface Statistics {
   totalBonusPrizes: number;
   revenueThisMonth: number;
   activeContests: number;
+  incompleteOnboarding: number;
 }
 
 const AdminStatistics: React.FC = () => {
   const { user } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Statistics>({
     totalUsers: 0,
     totalContests: 0,
@@ -31,7 +34,8 @@ const AdminStatistics: React.FC = () => {
     totalVouchers: 0,
     totalBonusPrizes: 0,
     revenueThisMonth: 0,
-    activeContests: 0
+    activeContests: 0,
+    incompleteOnboarding: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -52,7 +56,8 @@ const AdminStatistics: React.FC = () => {
         { count: vouchersCount },
         { count: bonusPrizesCount },
         { count: activeContestsCount },
-        { data: revenueData }
+        { data: revenueData },
+        { count: incompleteOnboardingCount }
       ] = await Promise.all([
         supabase.from('users').select('*', { count: 'exact', head: true }),
         supabase.from('contests').select('*', { count: 'exact', head: true }),
@@ -65,7 +70,11 @@ const AdminStatistics: React.FC = () => {
           .from('payments')
           .select('amount')
           .eq('status', 'completed')
-          .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+          .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
+        supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .is('date_of_birth', null)
       ]);
 
       const revenueThisMonth = revenueData?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
@@ -78,7 +87,8 @@ const AdminStatistics: React.FC = () => {
         totalVouchers: vouchersCount || 0,
         totalBonusPrizes: bonusPrizesCount || 0,
         revenueThisMonth,
-        activeContests: activeContestsCount || 0
+        activeContests: activeContestsCount || 0,
+        incompleteOnboarding: incompleteOnboardingCount || 0
       });
     } catch (error) {
       console.error('Error fetching statistics:', error);
@@ -148,6 +158,14 @@ const AdminStatistics: React.FC = () => {
       value: `${stats.revenueThisMonth} Kč`,
       icon: CreditCard,
       description: "Dokončené platby"
+    },
+    {
+      title: "Nedokončený onboarding",
+      value: stats.incompleteOnboarding,
+      icon: UserX,
+      description: "Uživatelé bez data narození",
+      link: "/admin/onboarding-incomplete",
+      highlight: stats.incompleteOnboarding > 0
     }
   ];
 
@@ -173,19 +191,24 @@ const AdminStatistics: React.FC = () => {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {statsCards.map((card, index) => {
               const Icon = card.icon;
+              const isClickable = 'link' in card && card.link;
               return (
-                <Card key={index} className="luxury-card admin-card-hover overflow-hidden">
+                <Card 
+                  key={index} 
+                  className={`luxury-card admin-card-hover overflow-hidden ${isClickable ? 'cursor-pointer' : ''} ${card.highlight ? 'ring-2 ring-orange-500/50' : ''}`}
+                  onClick={() => isClickable && navigate(card.link)}
+                >
                   <div className="absolute top-0 right-0 w-32 h-32 luxury-gradient-bg opacity-30 blur-2xl rounded-full"></div>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
                     <CardTitle className="text-sm font-medium">
                       {card.title}
                     </CardTitle>
-                    <div className="luxury-stat-icon p-2 rounded-lg">
-                      <Icon className="h-4 w-4 text-neon-gold" />
+                    <div className={`luxury-stat-icon p-2 rounded-lg ${card.highlight ? 'bg-orange-500/20' : ''}`}>
+                      <Icon className={`h-4 w-4 ${card.highlight ? 'text-orange-500' : 'text-neon-gold'}`} />
                     </div>
                   </CardHeader>
                   <CardContent className="relative z-10">
-                    <div className="text-2xl font-bold text-primary">{card.value}</div>
+                    <div className={`text-2xl font-bold ${card.highlight ? 'text-orange-500' : 'text-primary'}`}>{card.value}</div>
                     <p className="text-xs text-muted-foreground">
                       {card.description}
                     </p>
