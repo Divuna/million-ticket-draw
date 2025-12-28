@@ -7,6 +7,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/components/AuthProvider";
 import TestAuthProvider from "@/components/TestAuthProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { DateOfBirthGuard } from "@/components/DateOfBirthGuard";
 import { useOneSignal } from "@/hooks/useOneSignal";
 import { useAuth } from "@/hooks/useAuth";
 import ContestDetailAdmin from "@/components/ContestDetailAdmin";
@@ -49,6 +50,7 @@ import Wins from "@/pages/Wins";
 import FavoriteGames from "@/pages/FavoriteGames";
 import ShareTicket from "@/pages/ShareTicket";
 import UnsubscribeMarketing from "@/pages/UnsubscribeMarketing";
+import OnboardingDateOfBirth from "@/pages/OnboardingDateOfBirth";
 import NotFound from "@/pages/NotFound";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -66,7 +68,7 @@ function AppContent() {
   useOneSignal();
 
   return (
-    <>
+    <DateOfBirthGuard>
       <Routes>
         <Route path="/" element={<Homepage />} />
         <Route path="/login" element={<Login />} />
@@ -86,6 +88,7 @@ function AppContent() {
         <Route path="/winners" element={<Winners />} />
         <Route path="/wins" element={<Wins />} />
         <Route path="/share/ticket/:ticketId" element={<ShareTicket />} />
+        <Route path="/onboarding/date-of-birth" element={<OnboardingDateOfBirth />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/banners" element={<AdminBanners />} />
@@ -111,7 +114,7 @@ function AppContent() {
       </Routes>
       
       {isAdmin && isAdminRoute ? <AdminMenu /> : <BottomNavigation />}
-    </>
+    </DateOfBirthGuard>
   );
 }
 
