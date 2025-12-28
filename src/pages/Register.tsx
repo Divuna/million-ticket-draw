@@ -14,6 +14,7 @@ const Register: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [gdprAccepted, setGdprAccepted] = useState(false);
+  const [marketingAccepted, setMarketingAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signUp, signInWithOAuth } = useAuth();
   const navigate = useNavigate();
@@ -51,7 +52,7 @@ const Register: React.FC = () => {
     setLoading(true);
 
     try {
-      const { error } = await signUp(email, password);
+      const { error } = await signUp(email, password, marketingAccepted);
       
       if (error) {
         toast({
@@ -178,6 +179,17 @@ const Register: React.FC = () => {
                 >
                   Zásady ochrany osobních údajů
                 </Link>
+              </label>
+            </div>
+            
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="marketing"
+                checked={marketingAccepted}
+                onCheckedChange={(checked) => setMarketingAccepted(checked === true)}
+              />
+              <label htmlFor="marketing" className="text-sm leading-tight cursor-pointer text-muted-foreground">
+                Souhlasím se zasíláním marketingových sdělení
               </label>
             </div>
           </CardContent>
