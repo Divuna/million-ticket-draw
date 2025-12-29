@@ -108,19 +108,32 @@ export default function MessagesPage() {
     <div className="flex flex-col h-[calc(100vh-80px)] p-4 pb-24">
       {/* MESSAGE LIST */}
       <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto h-full pr-1">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`max-w-[70%] p-3 rounded-xl ${
-              msg.sender === "user"
-                ? "bg-blue-600/20 text-blue-100 self-end"
-                : "bg-gray-700/40 text-gray-100 self-start"
-            }`}
-          >
-            <p>{msg.content}</p>
-            <p className="text-xs text-gray-400 mt-1">{new Date(msg.created_at).toLocaleString()}</p>
-          </div>
-        ))}
+        {messages.map((msg) => {
+          const isSystemMessage = msg.content.includes("🎉") || msg.content.includes("zákonný zástupce");
+          const isUserMessage = msg.sender === "user";
+          
+          return (
+            <div
+              key={msg.id}
+              className={`max-w-[70%] p-3 rounded-xl ${
+                isUserMessage
+                  ? "bg-blue-600/20 text-blue-100 self-end"
+                  : isSystemMessage
+                    ? "bg-amber-500/20 text-amber-100 self-start border border-amber-500/30"
+                    : "bg-gray-700/40 text-gray-100 self-start"
+              }`}
+            >
+              {isSystemMessage && !isUserMessage && (
+                <div className="flex items-center gap-1.5 text-amber-400 text-xs font-medium mb-1">
+                  <span>🤖</span>
+                  <span>Systémová zpráva</span>
+                </div>
+              )}
+              <p>{msg.content}</p>
+              <p className="text-xs text-gray-400 mt-1">{new Date(msg.created_at).toLocaleString()}</p>
+            </div>
+          );
+        })}
       </div>
 
       {/* INPUT BAR — ALWAYS VISIBLE */}
