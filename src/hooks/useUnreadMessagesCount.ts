@@ -22,8 +22,8 @@ export const useUnreadMessagesCount = () => {
         // ADMIN → UNREAD OD UŽIVATELŮ
         query.eq("sender", "user");
       } else {
-        // USER → UNREAD OD ADMINA NEBO SYSTÉMU
-        query.in("sender", ["admin", "system"]).eq("user_id", user.id);
+        // USER → UNREAD OD ADMINA
+        query.eq("sender", "admin").eq("user_id", user.id);
       }
 
       const { count } = await query;
