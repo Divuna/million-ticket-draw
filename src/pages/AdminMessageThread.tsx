@@ -107,20 +107,33 @@ export default function AdminMessageThread() {
         ) : messages.length === 0 ? (
           <p className="text-gray-500 mt-10 text-center">Zatím žádné zprávy.</p>
         ) : (
-          messages.map((msg) => (
-            <div key={msg.id} className={`flex w-full ${msg.sender === "admin" ? "justify-end" : "justify-start"}`}>
-              <div
-                className={`relative max-w-[75%] px-4 py-2 rounded-2xl shadow-sm transition-all ${
-                  msg.sender === "admin"
-                    ? "bg-blue-600/30 text-blue-100 rounded-br-none"
-                    : "bg-gray-700/50 text-gray-100 rounded-bl-none"
-                }`}
-              >
-                <p className="break-words leading-relaxed">{msg.content}</p>
-                <p className="text-xs text-gray-400 mt-1 text-right">{new Date(msg.created_at).toLocaleString()}</p>
+          messages.map((msg) => {
+            const isSystemMessage = msg.content.includes("🎉") || msg.content.includes("zákonný zástupce");
+            const isAdminMessage = msg.sender === "admin";
+            
+            return (
+              <div key={msg.id} className={`flex w-full ${isAdminMessage ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`relative max-w-[75%] px-4 py-2 rounded-2xl shadow-sm transition-all ${
+                    isAdminMessage
+                      ? isSystemMessage
+                        ? "bg-amber-500/30 text-amber-100 rounded-br-none border border-amber-500/30"
+                        : "bg-blue-600/30 text-blue-100 rounded-br-none"
+                      : "bg-gray-700/50 text-gray-100 rounded-bl-none"
+                  }`}
+                >
+                  {isSystemMessage && isAdminMessage && (
+                    <div className="flex items-center gap-1.5 text-amber-400 text-xs font-medium mb-1">
+                      <span>🤖</span>
+                      <span>Systémová zpráva</span>
+                    </div>
+                  )}
+                  <p className="break-words leading-relaxed">{msg.content}</p>
+                  <p className="text-xs text-gray-400 mt-1 text-right">{new Date(msg.created_at).toLocaleString()}</p>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
