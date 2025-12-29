@@ -903,7 +903,7 @@ const Profile: React.FC = () => {
                 <div>
                   <p className="font-medium text-foreground">Zvukové notifikace</p>
                   <p className="text-sm text-muted-foreground">
-                    Přehrávat zvuk při změně stavu výhry
+                    Přehrávat zvuk při nových zprávách a výhrách
                   </p>
                 </div>
               </div>
