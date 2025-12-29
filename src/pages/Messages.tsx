@@ -58,12 +58,15 @@ export default function MessagesPage() {
 
       setMessages(data || []);
       setLoading(false);
+    };
 
-      // Mark admin messages as read after loading
+    const initMessages = async () => {
+      await loadMessages();
+      // Mark admin messages as read only on initial page load
       await markAdminMessagesAsRead();
     };
 
-    loadMessages();
+    initMessages();
 
     const channel = supabase
       .channel("messages-user-thread")
