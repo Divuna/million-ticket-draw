@@ -8,6 +8,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import TestAuthProvider from "@/components/TestAuthProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { DateOfBirthGuard } from "@/components/DateOfBirthGuard";
+import { DateOfBirthProvider } from "@/hooks/useDateOfBirthCheck";
 import { useOneSignal } from "@/hooks/useOneSignal";
 import { useAuth } from "@/hooks/useAuth";
 import ContestDetailAdmin from "@/components/ContestDetailAdmin";
@@ -126,15 +127,17 @@ function App() {
       <HelmetProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <TestAuthProvider>
-              <TooltipProvider>
-                <BrowserRouter>
-                  <AppContent />
-                  <Toaster />
-                  <Sonner />
-                </BrowserRouter>
-              </TooltipProvider>
-            </TestAuthProvider>
+            <DateOfBirthProvider>
+              <TestAuthProvider>
+                <TooltipProvider>
+                  <BrowserRouter>
+                    <AppContent />
+                    <Toaster />
+                    <Sonner />
+                  </BrowserRouter>
+                </TooltipProvider>
+              </TestAuthProvider>
+            </DateOfBirthProvider>
           </AuthProvider>
         </QueryClientProvider>
       </HelmetProvider>
