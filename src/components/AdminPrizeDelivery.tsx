@@ -591,7 +591,7 @@ export const AdminPrizeDelivery: React.FC = () => {
                       return (
                         <TableRow 
                           key={prize.id}
-                          className={`cursor-pointer hover:bg-muted/50 ${isUnder18Guardian ? 'bg-yellow-50' : ''}`}
+                          className={`cursor-pointer hover:bg-muted/50 ${isUnder18Guardian ? 'bg-yellow-500/10 border-l-4 border-l-yellow-500/60' : ''}`}
                           onClick={() => handleEditPrize(prize)}
                         >
                           {hasPhysicalPrizes && (
@@ -629,12 +629,12 @@ export const AdminPrizeDelivery: React.FC = () => {
                           <TableCell>
                             {prize.amount && prize.amount > 0 ? null : (
                               prize.guardian_required ? (
-                                <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                                <Badge variant="outline" className="bg-yellow-500/15 text-yellow-400 border-yellow-500/40">
                                   <Users className="w-3 h-3 mr-1" />
                                   ⚠️ Vyžaduje zákonného zástupce
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                                <Badge variant="outline" className="bg-green-500/15 text-green-400 border-green-500/40">
                                   <UserCheck className="w-3 h-3 mr-1" />
                                   ✓ Převzetí možné od 15+ bez doprovodu
                                 </Badge>
