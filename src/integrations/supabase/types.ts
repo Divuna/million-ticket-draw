@@ -1258,6 +1258,7 @@ export type Database = {
           status: string | null
           type: string
           user_id: string
+          user_seen: boolean
         }
         Insert: {
           contest_id: string
@@ -1269,6 +1270,7 @@ export type Database = {
           status?: string | null
           type: string
           user_id: string
+          user_seen?: boolean
         }
         Update: {
           contest_id?: string
@@ -1280,6 +1282,7 @@ export type Database = {
           status?: string | null
           type?: string
           user_id?: string
+          user_seen?: boolean
         }
         Relationships: [
           {
