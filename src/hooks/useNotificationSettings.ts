@@ -4,10 +4,14 @@ const STORAGE_KEY = 'notification_settings';
 
 interface NotificationSettings {
   soundEnabled: boolean;
+  messageSoundEnabled: boolean;
+  winSoundEnabled: boolean;
 }
 
 const defaultSettings: NotificationSettings = {
   soundEnabled: true,
+  messageSoundEnabled: true,
+  winSoundEnabled: true,
 };
 
 export const useNotificationSettings = () => {
@@ -17,7 +21,13 @@ export const useNotificationSettings = () => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        setSettings(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        // Migration: if old format, convert to new
+        setSettings({
+          soundEnabled: parsed.soundEnabled ?? true,
+          messageSoundEnabled: parsed.messageSoundEnabled ?? parsed.soundEnabled ?? true,
+          winSoundEnabled: parsed.winSoundEnabled ?? parsed.soundEnabled ?? true,
+        });
       }
     } catch (error) {
       console.error('Error loading notification settings:', error);
@@ -37,13 +47,30 @@ export const useNotificationSettings = () => {
   }, []);
 
   const toggleSound = useCallback(() => {
-    updateSettings({ soundEnabled: !settings.soundEnabled });
+    const newValue = !settings.soundEnabled;
+    updateSettings({ 
+      soundEnabled: newValue,
+      messageSoundEnabled: newValue,
+      winSoundEnabled: newValue,
+    });
   }, [settings.soundEnabled, updateSettings]);
+
+  const toggleMessageSound = useCallback(() => {
+    updateSettings({ messageSoundEnabled: !settings.messageSoundEnabled });
+  }, [settings.messageSoundEnabled, updateSettings]);
+
+  const toggleWinSound = useCallback(() => {
+    updateSettings({ winSoundEnabled: !settings.winSoundEnabled });
+  }, [settings.winSoundEnabled, updateSettings]);
 
   return {
     settings,
     updateSettings,
     toggleSound,
+    toggleMessageSound,
+    toggleWinSound,
     soundEnabled: settings.soundEnabled,
+    messageSoundEnabled: settings.messageSoundEnabled,
+    winSoundEnabled: settings.winSoundEnabled,
   };
 };
