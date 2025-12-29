@@ -47,7 +47,11 @@ export default function AdminMessageThread() {
       return;
     }
 
-    setMessages(data || []);
+    // Filter out automatic winner messages in admin view
+    const filtered = (data || []).filter(
+      (msg) => !msg.content.includes("Gratulujeme k výhře")
+    );
+    setMessages(filtered);
 
     // Mark all user messages as read
     await supabase.from("messages").update({ read: true }).eq("user_id", userId).eq("sender", "user").eq("read", false);
