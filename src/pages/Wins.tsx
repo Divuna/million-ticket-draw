@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -105,6 +105,9 @@ const Wins: React.FC = () => {
     bonus: wins.filter(w => w.type === 'bonus').length,
   }), [wins]);
 
+  // Ref to ensure mark-as-seen runs only once on page entry
+  const hasMarkedSeenRef = useRef(false);
+
   // Play notification sound
   const playNotificationSound = useCallback(() => {
     try {
@@ -128,25 +131,33 @@ const Wins: React.FC = () => {
       console.log('Could not play notification sound:', error);
     }
   }, []);
-  // Mark wins as seen when page loads
-  const markWinsAsSeen = useCallback(async () => {
-    if (!user) return;
+
+  // Mark wins as seen on initial page load only
+  useEffect(() => {
+    if (!user || hasMarkedSeenRef.current) return;
     
-    await supabase
-      .from('winners')
-      .update({ user_seen: true })
-      .eq('user_id', user.id)
-      .eq('user_seen', false);
+    const markWinsAsSeen = async () => {
+      hasMarkedSeenRef.current = true;
+      
+      const { error } = await supabase
+        .from('winners')
+        .update({ user_seen: true })
+        .eq('user_id', user.id)
+        .eq('user_seen', false);
+      
+      if (!error) {
+        // Refresh the badge count immediately after successful update
+        refreshUnseenWins();
+      }
+    };
     
-    // Refresh the badge count
-    refreshUnseenWins();
+    markWinsAsSeen();
   }, [user, refreshUnseenWins]);
 
   useEffect(() => {
     if (user) {
       fetchWins();
       fetchUserAge();
-      markWinsAsSeen();
     } else {
       setLoading(false);
     }
