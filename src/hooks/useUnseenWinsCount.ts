@@ -1,6 +1,36 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+// --- Notification sound ---
+const NOTIFICATION_SOUND_URL = "/sounds/notification.mp3";
+let _audioInstance: HTMLAudioElement | null = null;
+
+const getNotificationSound = () => {
+  if (!_audioInstance && typeof window !== "undefined") {
+    _audioInstance = new Audio(NOTIFICATION_SOUND_URL);
+    _audioInstance.volume = 0.5;
+  }
+  return _audioInstance;
+};
+
+const playNotificationSound = () => {
+  try {
+    const stored = localStorage.getItem("notification_settings");
+    const settings = stored ? JSON.parse(stored) : { soundEnabled: true };
+    if (!settings.soundEnabled) return;
+
+    const audio = getNotificationSound();
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {
+        // Autoplay blocked - ignore
+      });
+    }
+  } catch {
+    // Ignore errors
+  }
+};
+
 // Single source of truth for unseen wins count
 let _unseenCount = 0;
 let _listeners: (() => void)[] = [];
@@ -97,7 +127,8 @@ const setupRealtimeSubscription = async () => {
         filter: `user_id=eq.${user.id}`,
       },
       () => {
-        // New win added - refetch count
+        // New win added - play sound and refetch count
+        playNotificationSound();
         fetchCount();
       }
     )
