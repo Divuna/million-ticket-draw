@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -20,7 +20,7 @@ export default function AdminMessages() {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const loadThreads = useCallback(async () => {
+  const loadThreads = async () => {
     setLoading(true);
 
     // Fetch messages
@@ -85,29 +85,20 @@ export default function AdminMessages() {
 
     setThreads(result);
     setLoading(false);
-  }, []);
+  };
 
   useEffect(() => {
     loadThreads();
 
     const channel = supabase
-      .channel("admin-messages-list-realtime")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
-        () => loadThreads()
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "messages" },
-        () => loadThreads()
-      )
+      .channel("admin-message-thread-list")
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => loadThreads())
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      channel.unsubscribe();
     };
-  }, [loadThreads]);
+  }, []);
 
   return (
     <div className="flex flex-col p-6 gap-6 h-full pb-24">

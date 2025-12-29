@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -30,18 +30,7 @@ export default function AdminMessageThread() {
     scrollToBottom();
   }, [messages]);
 
-  const markMessagesAsRead = useCallback(async () => {
-    if (!userId) return;
-    
-    await supabase
-      .from("messages")
-      .update({ read: true })
-      .eq("user_id", userId)
-      .eq("sender", "user")
-      .eq("read", false);
-  }, [userId]);
-
-  const loadMessages = useCallback(async () => {
+  const loadMessages = async () => {
     if (!userId) return;
 
     setLoading(true);
@@ -59,35 +48,27 @@ export default function AdminMessageThread() {
     }
 
     setMessages(data || []);
+
+    // Mark all user messages as read
+    await supabase.from("messages").update({ read: true }).eq("user_id", userId).eq("sender", "user").eq("read", false);
+
     setLoading(false);
-    
-    // Mark messages as read after loading
-    markMessagesAsRead();
-  }, [userId, markMessagesAsRead]);
+  };
 
   useEffect(() => {
     loadMessages();
 
     const channel = supabase
-      .channel(`admin-thread-${userId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${userId}` },
-        (payload) => {
-          // Add new message directly without full reload
-          setMessages((prev) => [...prev, payload.new as Message]);
-          // Mark as read if from user
-          if ((payload.new as Message).sender === "user") {
-            markMessagesAsRead();
-          }
-        }
+      .channel("admin-thread")
+      .on("postgres_changes", { event: "*", table: "messages", schema: "public", filter: `user_id=eq.${userId}` }, () =>
+        loadMessages(),
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      channel.unsubscribe();
     };
-  }, [userId, loadMessages, markMessagesAsRead]);
+  }, [userId]);
 
   const handleSend = async () => {
     if (!newMessage.trim()) return;
