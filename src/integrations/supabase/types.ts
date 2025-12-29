@@ -1444,10 +1444,23 @@ export type Database = {
         Args: { p_bonus_id: string; p_user_id: string }
         Returns: undefined
       }
-      create_guardian_message_for_user: {
-        Args: { p_contest_id: string; p_prize_title: string; p_user_id: string }
-        Returns: undefined
-      }
+      create_guardian_message_for_user:
+        | {
+            Args: {
+              p_contest_id: string
+              p_prize_title: string
+              p_user_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_contest_id: string
+              p_prize_title: string
+              p_user_id: string
+            }
+            Returns: undefined
+          }
       create_guardian_notification_if_needed: {
         Args: { p_contest_id: string; p_prize_id: string; p_user_id: string }
         Returns: Json

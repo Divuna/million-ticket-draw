@@ -89,8 +89,8 @@ const fetchCount = async () => {
       // ADMIN → UNREAD OD UŽIVATELŮ
       query = query.eq("sender", "user");
     } else {
-      // USER → UNREAD OD ADMINA NEBO SYSTÉMU
-      query = query.in("sender", ["admin", "system"]).eq("user_id", user.id);
+      // USER → UNREAD OD ADMINA (systémové zprávy nyní mají sender='admin')
+      query = query.eq("sender", "admin").eq("user_id", user.id);
     }
 
     const { count, error } = await query;
@@ -111,9 +111,9 @@ const handleRealtimeMessage = (payload: any) => {
     const sender = newRecord.sender;
     const messageUserId = newRecord.user_id;
 
-    // User receives sound for admin/system messages addressed to them
+    // User receives sound for admin messages addressed to them
     if (!_isCurrentUserAdmin && _currentUserId === messageUserId) {
-      if (sender === "admin" || sender === "system") {
+      if (sender === "admin") {
         playNotificationSound();
       }
     }
