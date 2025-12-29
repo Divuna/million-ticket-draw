@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
+import { useUnseenWinsCount } from "@/hooks/useUnseenWinsCount";
 import { useUserRole } from "@/hooks/useUserRole";
 
 import { Home, User, Ticket, Gamepad2, Trophy, MessageCircle } from "lucide-react";
@@ -8,6 +9,7 @@ export const BottomNavigation: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { unreadCount } = useUnreadMessagesCount();
+  const { unseenCount: unseenWinsCount } = useUnseenWinsCount();
   const { isAdmin } = useUserRole();
 
   // ❗ ADMIN NESMÍ VIDĚT ZÁKAZNICKOU NAVIGACI
@@ -27,7 +29,9 @@ export const BottomNavigation: React.FC = () => {
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = location.pathname === item.path;
-        const showBadge = item.path === "/messages" && unreadCount > 0;
+        const showMessagesBadge = item.path === "/messages" && unreadCount > 0;
+        const showWinsBadge = item.path === "/wins" && unseenWinsCount > 0;
+        const badgeCount = item.path === "/messages" ? unreadCount : item.path === "/wins" ? unseenWinsCount : 0;
 
         return (
           <button
@@ -39,12 +43,12 @@ export const BottomNavigation: React.FC = () => {
             <div className="relative">
               <Icon size={22} />
 
-              {showBadge && (
+              {(showMessagesBadge || showWinsBadge) && (
                 <span
                   className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold 
                     rounded-full px-[6px] py-[1px] shadow-lg"
                 >
-                  {unreadCount}
+                  {badgeCount}
                 </span>
               )}
             </div>

@@ -12,6 +12,7 @@ import { WinDetailModal } from '@/components/WinDetailModal';
 import { toast } from '@/hooks/use-toast';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { Badge } from '@/components/ui/badge';
+import { useUnseenWinsCount } from '@/hooks/useUnseenWinsCount';
 
 interface Win {
   id: string;
@@ -46,6 +47,7 @@ const Wins: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { soundEnabled } = useNotificationSettings();
+  const { refresh: refreshUnseenWins } = useUnseenWinsCount();
   const [wins, setWins] = useState<Win[]>([]);
   const [loading, setLoading] = useState(true);
   const [highlightedWins, setHighlightedWins] = useState<Set<string>>(new Set());
@@ -126,10 +128,25 @@ const Wins: React.FC = () => {
       console.log('Could not play notification sound:', error);
     }
   }, []);
+  // Mark wins as seen when page loads
+  const markWinsAsSeen = useCallback(async () => {
+    if (!user) return;
+    
+    await supabase
+      .from('winners')
+      .update({ user_seen: true })
+      .eq('user_id', user.id)
+      .eq('user_seen', false);
+    
+    // Refresh the badge count
+    refreshUnseenWins();
+  }, [user, refreshUnseenWins]);
+
   useEffect(() => {
     if (user) {
       fetchWins();
       fetchUserAge();
+      markWinsAsSeen();
     } else {
       setLoading(false);
     }
