@@ -33,6 +33,17 @@ export default function MessagesPage() {
     scrollToBottom();
   }, [messages]);
 
+  // Mark admin messages as read
+  const markAdminMessagesAsRead = async () => {
+    if (!user) return;
+    await supabase
+      .from("messages")
+      .update({ read: true })
+      .eq("user_id", user.id)
+      .eq("sender", "admin")
+      .eq("read", false);
+  };
+
   // LOAD MESSAGES
   useEffect(() => {
     const loadMessages = async () => {
@@ -47,6 +58,9 @@ export default function MessagesPage() {
 
       setMessages(data || []);
       setLoading(false);
+
+      // Mark admin messages as read after loading
+      await markAdminMessagesAsRead();
     };
 
     loadMessages();
