@@ -14,7 +14,7 @@ export const useUnreadMessagesCount = () => {
       // ZJISTÍME ROLE ADMIN / USER
       const { data: role } = await supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
 
-      const isAdmin = role?.role === "admin";
+      const isAdmin = role?.role === "admin" || role?.role === "superadmin";
 
       const query = supabase.from("messages").select("*", { count: "exact", head: true }).eq("read", false);
 
@@ -37,12 +37,17 @@ export const useUnreadMessagesCount = () => {
   useEffect(() => {
     fetchCount();
 
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      fetchCount();
+    });
+
     const channel = supabase
       .channel("unread-msgs")
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => fetchCount())
       .subscribe();
 
     return () => {
+      subscription.unsubscribe();
       channel.unsubscribe();
     };
   }, []);
