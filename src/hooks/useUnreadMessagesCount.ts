@@ -1,6 +1,36 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+// --- Notification sound ---
+const NOTIFICATION_SOUND_URL = "/sounds/notification.mp3";
+let _audioInstance: HTMLAudioElement | null = null;
+
+const getNotificationSound = () => {
+  if (!_audioInstance && typeof window !== "undefined") {
+    _audioInstance = new Audio(NOTIFICATION_SOUND_URL);
+    _audioInstance.volume = 0.5;
+  }
+  return _audioInstance;
+};
+
+const playNotificationSound = () => {
+  try {
+    const stored = localStorage.getItem("notification_settings");
+    const settings = stored ? JSON.parse(stored) : { soundEnabled: true };
+    if (!settings.soundEnabled) return;
+
+    const audio = getNotificationSound();
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {
+        // Autoplay blocked - ignore
+      });
+    }
+  } catch {
+    // Ignore errors
+  }
+};
+
 /**
  * Single-source-of-truth store for unread messages count.
  * Fixes cases where multiple hook instances would each keep their own state,
@@ -8,6 +38,8 @@ import { supabase } from "@/integrations/supabase/client";
  */
 let _unreadCount = 0;
 let _started = false;
+let _currentUserId: string | null = null;
+let _isCurrentUserAdmin = false;
 let _authUnsub: { unsubscribe: () => void } | null = null;
 let _channel: { unsubscribe: () => void } | null = null;
 const _listeners = new Set<() => void>();
@@ -30,9 +62,13 @@ const fetchCount = async () => {
     } = await supabase.auth.getUser();
 
     if (!user) {
+      _currentUserId = null;
+      _isCurrentUserAdmin = false;
       setUnreadCount(0);
       return;
     }
+
+    _currentUserId = user.id;
 
     // ZJISTÍME ROLE ADMIN / USER
     const { data: role } = await supabase
@@ -42,6 +78,7 @@ const fetchCount = async () => {
       .maybeSingle();
 
     const isAdmin = role?.role === "admin" || role?.role === "superadmin";
+    _isCurrentUserAdmin = isAdmin;
 
     let query = supabase
       .from("messages")
@@ -66,6 +103,30 @@ const fetchCount = async () => {
   }
 };
 
+const handleRealtimeMessage = (payload: any) => {
+  const { eventType, new: newRecord } = payload;
+
+  // Only play sound on INSERT
+  if (eventType === "INSERT" && newRecord) {
+    const sender = newRecord.sender;
+    const messageUserId = newRecord.user_id;
+
+    // User receives sound for admin/system messages addressed to them
+    if (!_isCurrentUserAdmin && _currentUserId === messageUserId) {
+      if (sender === "admin" || sender === "system") {
+        playNotificationSound();
+      }
+    }
+
+    // Admin receives sound for user messages
+    if (_isCurrentUserAdmin && sender === "user") {
+      playNotificationSound();
+    }
+  }
+
+  fetchCount();
+};
+
 const startUnreadCountStore = () => {
   if (_started) return;
   _started = true;
@@ -82,7 +143,7 @@ const startUnreadCountStore = () => {
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "messages" },
-      () => fetchCount()
+      handleRealtimeMessage
     )
     .subscribe();
 };
