@@ -33,8 +33,14 @@ export const useAdminMessages = () => {
     }
 
     const convMap = {};
+    
+    // Helper to detect automatic winner messages
+    const isAutoWinnerMessage = (content: string) => content.includes("Gratulujeme k výhře");
 
     data.forEach((msg) => {
+      // Skip automatic winner messages in admin conversation list
+      if (isAutoWinnerMessage(msg.content)) return;
+      
       if (!convMap[msg.user_id]) {
         convMap[msg.user_id] = {
           user_id: msg.user_id,
@@ -95,7 +101,11 @@ export const useAdminMessageThread = (userId: string) => {
       .order("created_at", { ascending: true });
 
     if (!error) {
-      setMessages(data || []);
+      // Filter out automatic winner messages in admin thread view
+      const filtered = (data || []).filter(
+        (msg) => !msg.content.includes("Gratulujeme k výhře")
+      );
+      setMessages(filtered);
       
       // Mark user messages as read
       await supabase
