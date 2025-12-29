@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, createContext, useContext, ReactNode } from 'react';
+import React, { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -11,7 +11,7 @@ interface DateOfBirthCheckResult {
 
 const DateOfBirthContext = createContext<DateOfBirthCheckResult | null>(null);
 
-export const DateOfBirthProvider = ({ children }: { children: ReactNode }) => {
+export const DateOfBirthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [hasDateOfBirth, setHasDateOfBirth] = useState<boolean | null>(null);
@@ -63,11 +63,14 @@ export const DateOfBirthProvider = ({ children }: { children: ReactNode }) => {
     checkDateOfBirth();
   }, [user?.id]);
 
-  return (
-    <DateOfBirthContext.Provider value={{ isLoading, hasDateOfBirth, dateOfBirth, setDateOfBirthOptimistic }}>
-      {children}
-    </DateOfBirthContext.Provider>
-  );
+  const value: DateOfBirthCheckResult = {
+    isLoading,
+    hasDateOfBirth,
+    dateOfBirth,
+    setDateOfBirthOptimistic
+  };
+
+  return React.createElement(DateOfBirthContext.Provider, { value }, children);
 };
 
 export const useDateOfBirthCheck = (): DateOfBirthCheckResult => {
