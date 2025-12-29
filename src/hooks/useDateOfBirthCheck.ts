@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, createContext, useContext, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -9,7 +9,9 @@ interface DateOfBirthCheckResult {
   setDateOfBirthOptimistic: (dob: string) => void;
 }
 
-export const useDateOfBirthCheck = (): DateOfBirthCheckResult => {
+const DateOfBirthContext = createContext<DateOfBirthCheckResult | null>(null);
+
+export const DateOfBirthProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [hasDateOfBirth, setHasDateOfBirth] = useState<boolean | null>(null);
@@ -61,5 +63,17 @@ export const useDateOfBirthCheck = (): DateOfBirthCheckResult => {
     checkDateOfBirth();
   }, [user?.id]);
 
-  return { isLoading, hasDateOfBirth, dateOfBirth, setDateOfBirthOptimistic };
+  return (
+    <DateOfBirthContext.Provider value={{ isLoading, hasDateOfBirth, dateOfBirth, setDateOfBirthOptimistic }}>
+      {children}
+    </DateOfBirthContext.Provider>
+  );
+};
+
+export const useDateOfBirthCheck = (): DateOfBirthCheckResult => {
+  const context = useContext(DateOfBirthContext);
+  if (!context) {
+    throw new Error('useDateOfBirthCheck must be used within a DateOfBirthProvider');
+  }
+  return context;
 };
