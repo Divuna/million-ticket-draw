@@ -52,5 +52,5 @@ export const useUnreadMessagesCount = () => {
     };
   }, []);
 
-  return { unreadCount, refetchUnreadCount: fetchCount };
+  return { unreadCount };
 };

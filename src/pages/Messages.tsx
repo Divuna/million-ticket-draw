@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
-import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,7 +16,6 @@ interface Message {
 export default function MessagesPage() {
   const { user } = useAuth();
   const { sendMessageToAdmin, refetch } = useMessages();
-  const { refetchUnreadCount } = useUnreadMessagesCount();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -63,8 +61,6 @@ export default function MessagesPage() {
 
       // Mark admin messages as read after loading
       await markAdminMessagesAsRead();
-      // Immediately refresh the unread count badge
-      refetchUnreadCount();
     };
 
     loadMessages();
