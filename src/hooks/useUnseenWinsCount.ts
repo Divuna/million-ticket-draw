@@ -16,8 +16,8 @@ const getNotificationSound = () => {
 const playNotificationSound = () => {
   try {
     const stored = localStorage.getItem("notification_settings");
-    const settings = stored ? JSON.parse(stored) : { soundEnabled: true };
-    if (!settings.soundEnabled) return;
+    const settings = stored ? JSON.parse(stored) : { winSoundEnabled: true };
+    if (!settings.winSoundEnabled) return;
 
     const audio = getNotificationSound();
     if (audio) {

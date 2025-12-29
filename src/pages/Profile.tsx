@@ -64,7 +64,7 @@ const COIN_PACKAGES: CoinPackage[] = [
 const Profile: React.FC = () => {
   const { user, session } = useAuth();
   const { isAdmin } = useUserRole();
-  const { soundEnabled, toggleSound } = useNotificationSettings();
+  const { soundEnabled, messageSoundEnabled, winSoundEnabled, toggleSound, toggleMessageSound, toggleWinSound } = useNotificationSettings();
   const navigate = useNavigate();
   const [wallet, setWallet] = useState<UserWallet | null>(null);
   const [profile, setProfile] = useState<UserProfile>({
@@ -892,24 +892,45 @@ const Profile: React.FC = () => {
           <div className="rounded-2xl bg-black/40 border border-border/50 p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4">Notifikace</h2>
             
-            {/* Sound notification toggle */}
-            <div className="flex items-center justify-between mb-4 p-3 rounded-lg bg-muted/20 border border-border/30">
+            {/* Message sound toggle */}
+            <div className="flex items-center justify-between mb-3 p-3 rounded-lg bg-muted/20 border border-border/30">
               <div className="flex items-center gap-3">
-                {soundEnabled ? (
+                {messageSoundEnabled ? (
                   <Volume2 className="h-5 w-5 text-primary" />
                 ) : (
                   <VolumeX className="h-5 w-5 text-muted-foreground" />
                 )}
                 <div>
-                  <p className="font-medium text-foreground">Zvukové notifikace</p>
+                  <p className="font-medium text-foreground">Zvuk pro zprávy</p>
                   <p className="text-sm text-muted-foreground">
-                    Přehrávat zvuk při nových zprávách a výhrách
+                    Přehrávat zvuk při nových zprávách
                   </p>
                 </div>
               </div>
               <Switch
-                checked={soundEnabled}
-                onCheckedChange={toggleSound}
+                checked={messageSoundEnabled}
+                onCheckedChange={toggleMessageSound}
+              />
+            </div>
+
+            {/* Win sound toggle */}
+            <div className="flex items-center justify-between mb-4 p-3 rounded-lg bg-muted/20 border border-border/30">
+              <div className="flex items-center gap-3">
+                {winSoundEnabled ? (
+                  <Volume2 className="h-5 w-5 text-yellow-500" />
+                ) : (
+                  <VolumeX className="h-5 w-5 text-muted-foreground" />
+                )}
+                <div>
+                  <p className="font-medium text-foreground">Zvuk pro výhry</p>
+                  <p className="text-sm text-muted-foreground">
+                    Přehrávat zvuk při nových výhrách
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={winSoundEnabled}
+                onCheckedChange={toggleWinSound}
               />
             </div>
 
