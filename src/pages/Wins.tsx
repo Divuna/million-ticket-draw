@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -105,9 +105,6 @@ const Wins: React.FC = () => {
     bonus: wins.filter(w => w.type === 'bonus').length,
   }), [wins]);
 
-  // Ref to ensure mark-as-seen runs only once on page entry
-  const hasMarkedSeenRef = useRef(false);
-
   // Play notification sound
   const playNotificationSound = useCallback(() => {
     try {
@@ -132,35 +129,32 @@ const Wins: React.FC = () => {
     }
   }, []);
 
-  // Mark wins as seen on initial page load only
+  // Mark wins as seen and fetch data on page load (non-admin users only)
   useEffect(() => {
-    if (!user || hasMarkedSeenRef.current) return;
-    
-    const markWinsAsSeen = async () => {
-      hasMarkedSeenRef.current = true;
-      
-      const { error } = await supabase
-        .from('winners')
-        .update({ user_seen: true })
-        .eq('user_id', user.id)
-        .eq('user_seen', false);
-      
-      if (!error) {
-        // Refresh the badge count immediately after successful update
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const initPage = async () => {
+      // Mark wins as seen via SQL function (only for non-admin users)
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (userData?.role !== 'admin' && userData?.role !== 'superadmin') {
+        await supabase.rpc('mark_wins_as_seen');
         refreshUnseenWins();
       }
-    };
-    
-    markWinsAsSeen();
-  }, [user, refreshUnseenWins]);
 
-  useEffect(() => {
-    if (user) {
+      // Fetch wins and user age
       fetchWins();
       fetchUserAge();
-    } else {
-      setLoading(false);
-    }
+    };
+
+    initPage();
   }, [user]);
 
   const fetchUserAge = async () => {

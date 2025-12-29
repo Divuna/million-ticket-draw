@@ -1627,6 +1627,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      mark_wins_as_seen: { Args: never; Returns: undefined }
       notify_sofinity_event: {
         Args: {
           p_contest_id?: string
