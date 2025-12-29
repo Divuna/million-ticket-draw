@@ -11,7 +11,7 @@ import logo from '@/assets/logo-onemil.png';
 
 const OnboardingDateOfBirth: React.FC = () => {
   const { user } = useAuth();
-  const { isLoading: checkLoading, hasDateOfBirth } = useDateOfBirthCheck();
+  const { isLoading: checkLoading, hasDateOfBirth, setDateOfBirthOptimistic } = useDateOfBirthCheck();
   const navigate = useNavigate();
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [error, setError] = useState('');
@@ -60,6 +60,9 @@ const OnboardingDateOfBirth: React.FC = () => {
     }
 
     setLoading(true);
+
+    // Optimistic update - immediately update local state
+    setDateOfBirthOptimistic(dateOfBirth);
 
     try {
       const { error: updateError } = await supabase

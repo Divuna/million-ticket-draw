@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -6,6 +6,7 @@ interface DateOfBirthCheckResult {
   isLoading: boolean;
   hasDateOfBirth: boolean | null;
   dateOfBirth: string | null;
+  setDateOfBirthOptimistic: (dob: string) => void;
 }
 
 export const useDateOfBirthCheck = (): DateOfBirthCheckResult => {
@@ -13,12 +14,24 @@ export const useDateOfBirthCheck = (): DateOfBirthCheckResult => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasDateOfBirth, setHasDateOfBirth] = useState<boolean | null>(null);
   const [dateOfBirth, setDateOfBirth] = useState<string | null>(null);
+  const skipFetchRef = useRef(false);
+
+  const setDateOfBirthOptimistic = useCallback((dob: string) => {
+    skipFetchRef.current = true;
+    setDateOfBirth(dob);
+    setHasDateOfBirth(true);
+    setIsLoading(false);
+  }, []);
 
   useEffect(() => {
     const checkDateOfBirth = async () => {
       if (!user?.id) {
         setIsLoading(false);
         setHasDateOfBirth(null);
+        return;
+      }
+
+      if (skipFetchRef.current) {
         return;
       }
 
@@ -48,5 +61,5 @@ export const useDateOfBirthCheck = (): DateOfBirthCheckResult => {
     checkDateOfBirth();
   }, [user?.id]);
 
-  return { isLoading, hasDateOfBirth, dateOfBirth };
+  return { isLoading, hasDateOfBirth, dateOfBirth, setDateOfBirthOptimistic };
 };
