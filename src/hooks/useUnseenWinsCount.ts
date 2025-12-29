@@ -203,9 +203,12 @@ const setupRealtimeSubscription = async () => {
         table: "winners",
         filter: `user_id=eq.${user.id}`,
       },
-      () => {
-        // New win added - play sound and refetch count
-        playCelebrationSound();
+      (payload) => {
+        // New win added - play celebration sound and refetch count
+        // Verify this is truly for the current user (defense in depth)
+        if (payload.new && (payload.new as { user_id?: string }).user_id === user.id) {
+          playCelebrationSound();
+        }
         fetchCount();
       }
     )
@@ -218,7 +221,7 @@ const setupRealtimeSubscription = async () => {
         filter: `user_id=eq.${user.id}`,
       },
       () => {
-        // Win updated (user_seen changed) - refetch count
+        // Win updated (user_seen changed) - refetch count only, no sound
         fetchCount();
       }
     )
