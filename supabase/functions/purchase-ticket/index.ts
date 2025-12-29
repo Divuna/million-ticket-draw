@@ -132,6 +132,19 @@ serve(async (req) => {
           console.error('Error creating guardian notification:', guardianError)
           // Don't fail the ticket purchase if notification fails
         }
+
+        // Send system message to user about guardian requirement
+        try {
+          await supabaseClient.rpc('create_guardian_message_for_user', {
+            p_user_id: user.id,
+            p_contest_id: contest_id,
+            p_prize_title: bonusPrize.title || bonusPrize.description
+          })
+          console.log(`Guardian message sent to user ${user.id} for prize ${bonusPrize.id}`)
+        } catch (messageError) {
+          console.error('Error creating guardian message for user:', messageError)
+          // Don't fail the ticket purchase if message fails
+        }
       }
     }
 
