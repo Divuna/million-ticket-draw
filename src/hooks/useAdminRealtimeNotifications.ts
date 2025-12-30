@@ -75,13 +75,22 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
     });
   }, []);
 
-  // Realtime subscriptions
+  // Realtime subscriptions - configured to receive events from all users/devices
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAdmin) {
+      console.log('[Admin Realtime] Not admin, skipping subscriptions');
+      return;
+    }
+
+    console.log('[Admin Realtime] Setting up realtime subscriptions for admin notifications...');
 
     // New user registration - listen to profiles INSERT
     const profilesChannel = supabase
-      .channel('admin-new-users')
+      .channel('admin-new-users', {
+        config: {
+          broadcast: { self: true },
+        },
+      })
       .on(
         'postgres_changes',
         {
@@ -90,15 +99,24 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
           table: 'profiles',
         },
         (payload) => {
-          console.log('New user registered:', payload);
+          console.log('[Admin Realtime] 🆕 New user registered:', {
+            timestamp: new Date().toISOString(),
+            payload,
+          });
           playSound('newUser');
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[Admin Realtime] profiles channel status:', status);
+      });
 
     // MioCoin top-up - listen to payments INSERT
     const paymentsChannel = supabase
-      .channel('admin-payments')
+      .channel('admin-payments', {
+        config: {
+          broadcast: { self: true },
+        },
+      })
       .on(
         'postgres_changes',
         {
@@ -107,18 +125,28 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
           table: 'payments',
         },
         (payload) => {
-          console.log('New payment:', payload);
+          console.log('[Admin Realtime] 💰 New payment received:', {
+            timestamp: new Date().toISOString(),
+            status: (payload.new as any)?.status,
+            payload,
+          });
           // Only play for completed payments (top-ups)
           if (payload.new && (payload.new as any).status === 'completed') {
             playSound('topup');
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[Admin Realtime] payments channel status:', status);
+      });
 
     // Game played / MioCoin spent - listen to tickets INSERT
     const ticketsChannel = supabase
-      .channel('admin-game-played')
+      .channel('admin-game-played', {
+        config: {
+          broadcast: { self: true },
+        },
+      })
       .on(
         'postgres_changes',
         {
@@ -127,13 +155,22 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
           table: 'tickets',
         },
         (payload) => {
-          console.log('Ticket purchased (game played):', payload);
+          console.log('[Admin Realtime] 🎮 Ticket purchased (game played):', {
+            timestamp: new Date().toISOString(),
+            ticketNumber: (payload.new as any)?.number,
+            contestId: (payload.new as any)?.contest_id,
+            userId: (payload.new as any)?.user_id,
+            payload,
+          });
           playSound('gamePlay');
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[Admin Realtime] tickets channel status:', status);
+      });
 
     return () => {
+      console.log('[Admin Realtime] Cleaning up realtime subscriptions...');
       supabase.removeChannel(profilesChannel);
       supabase.removeChannel(paymentsChannel);
       supabase.removeChannel(ticketsChannel);
