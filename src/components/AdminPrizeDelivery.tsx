@@ -116,6 +116,7 @@ export const AdminPrizeDelivery: React.FC = () => {
     setLoading(true);
     try {
       // First get bonus prizes
+      // Only fetch actual wins (won or delivered status), not pending bonus positions
       const { data: prizesData, error: prizesError } = await supabase
         .from('bonus_prizes')
         .select(`
@@ -123,6 +124,7 @@ export const AdminPrizeDelivery: React.FC = () => {
           contest:contests(title)
         `)
         .eq('contest_id', contestId)
+        .in('status', ['won', 'delivered'])
         .order('ticket_position', { ascending: true });
 
       if (prizesError) throw prizesError;
@@ -480,7 +482,7 @@ export const AdminPrizeDelivery: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {deliverySummary.reduce((sum, item) => sum + item.pending_count + item.won_count, 0)}
+              {deliverySummary.reduce((sum, item) => sum + item.won_count, 0)}
             </div>
           </CardContent>
         </Card>
