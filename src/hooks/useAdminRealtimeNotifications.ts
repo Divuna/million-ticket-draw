@@ -56,19 +56,9 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
     soundEnabledRef.current = soundEnabled;
   }, [soundEnabled]);
 
-  // Track channel statuses for accurate connection badge
-  type ChannelStatus = 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR' | 'PENDING';
-  const channelStatusRef = useRef<{ profiles: ChannelStatus; payments: ChannelStatus; tickets: ChannelStatus }>({
-    profiles: 'PENDING',
-    payments: 'PENDING',
-    tickets: 'PENDING',
-  });
-
-  const updateConnectionStatus = useCallback(() => {
-    const { profiles, payments, tickets } = channelStatusRef.current;
-    const allConnected = profiles === 'SUBSCRIBED' && payments === 'SUBSCRIBED' && tickets === 'SUBSCRIBED';
-    setRealtimeConnected(allConnected);
-  }, []);
+  // STEP 2: Simplified connection indicator
+  // Set to true once subscriptions are created, do not track runtime status changes
+  // This isolates sound issues from connection detection complexity
 
   // Initialize audio elements
   useEffect(() => {
@@ -202,8 +192,9 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
       )
       .subscribe((status) => {
         console.log('[Admin Realtime] profiles channel:', status);
-        channelStatusRef.current.profiles = status as ChannelStatus;
-        updateConnectionStatus();
+        if (status === 'SUBSCRIBED') {
+          setRealtimeConnected(true);
+        }
       });
 
     const paymentsChannel = supabase
@@ -227,8 +218,6 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
       )
       .subscribe((status) => {
         console.log('[Admin Realtime] payments channel:', status);
-        channelStatusRef.current.payments = status as ChannelStatus;
-        updateConnectionStatus();
       });
 
     const ticketsChannel = supabase
@@ -250,8 +239,6 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
       )
       .subscribe((status) => {
         console.log('[Admin Realtime] tickets channel:', status);
-        channelStatusRef.current.tickets = status as ChannelStatus;
-        updateConnectionStatus();
       });
 
     return () => {
@@ -259,10 +246,9 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
       supabase.removeChannel(profilesChannel);
       supabase.removeChannel(paymentsChannel);
       supabase.removeChannel(ticketsChannel);
-      channelStatusRef.current = { profiles: 'PENDING', payments: 'PENDING', tickets: 'PENDING' };
       setRealtimeConnected(false);
     };
-  }, [isAdmin, playSound, updateConnectionStatus]);
+  }, [isAdmin, playSound]);
 
   // Polling fallback - checks every 4 seconds
   useEffect(() => {
