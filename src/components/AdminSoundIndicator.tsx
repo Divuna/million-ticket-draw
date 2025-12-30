@@ -3,6 +3,7 @@ import { Volume2, VolumeX, Wifi, WifiOff, Users, Gamepad2, CreditCard, Banknote 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminPresenceCount } from '@/hooks/useAdminPresenceCount';
 
 interface AdminSoundIndicatorProps {
   soundEnabled: boolean;
@@ -12,7 +13,6 @@ interface AdminSoundIndicatorProps {
 }
 
 interface AdminStats {
-  onlineNow: number;
   gamesToday: number;
   paymentsToday: number;
   revenueToday: number;
@@ -25,7 +25,8 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
   onToggleSound,
 }) => {
   const [isPulsing, setIsPulsing] = useState(false);
-  const [stats, setStats] = useState<AdminStats>({ onlineNow: 0, gamesToday: 0, paymentsToday: 0, revenueToday: 0 });
+  const [stats, setStats] = useState<AdminStats>({ gamesToday: 0, paymentsToday: 0, revenueToday: 0 });
+  const onlineCount = useAdminPresenceCount();
 
   // Pulse animation when new event occurs
   useEffect(() => {
@@ -37,31 +38,13 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
     return () => clearTimeout(timeout);
   }, [lastRealtimeEvent]);
 
-  // Fetch admin stats
+  // Fetch admin stats (excluding online count which is now live via Presence)
   useEffect(() => {
     const fetchStats = async () => {
       const now = new Date();
-      const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000).toISOString();
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
 
       try {
-        // Online now: unique users with recent activity (tickets or payments in last 10 min)
-        const [ticketsRecent, paymentsRecent] = await Promise.all([
-          supabase
-            .from('tickets')
-            .select('user_id')
-            .gte('created_at', tenMinutesAgo),
-          supabase
-            .from('payments')
-            .select('user_id')
-            .gte('created_at', tenMinutesAgo)
-            .eq('status', 'completed')
-        ]);
-
-        const recentUserIds = new Set<string>();
-        ticketsRecent.data?.forEach(t => recentUserIds.add(t.user_id));
-        paymentsRecent.data?.forEach(p => recentUserIds.add(p.user_id));
-
         // Games today: count of tickets created today
         const { count: gamesToday } = await supabase
           .from('tickets')
@@ -79,7 +62,6 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
         const revenueToday = paymentsData?.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
 
         setStats({
-          onlineNow: recentUserIds.size,
           gamesToday: gamesToday || 0,
           paymentsToday,
           revenueToday,
@@ -146,14 +128,14 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
 
       {/* Admin stats indicators */}
       <div className="hidden md:flex items-center gap-2">
-        {/* Online teď */}
+        {/* Online teď - LIVE via Supabase Presence */}
         <div 
           className="flex items-center gap-1.5 px-2 py-1 bg-background/50 rounded-md border border-border/50 text-xs"
-          title="Aktivní uživatelé za posledních 10 minut"
+          title="Online uživatelé (živě)"
         >
           <Users className="h-3 w-3 text-blue-400" />
           <span className="text-muted-foreground">Online teď:</span>
-          <span className="font-medium text-foreground">{stats.onlineNow}</span>
+          <span className="font-medium text-foreground">{onlineCount}</span>
         </div>
 
         {/* Hry dnes */}
