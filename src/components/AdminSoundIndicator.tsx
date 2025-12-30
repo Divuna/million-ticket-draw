@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Volume2, VolumeX, Wifi, WifiOff, Users, Gamepad2, CreditCard, Banknote } from 'lucide-react';
+import { Volume2, VolumeX, Wifi, WifiOff, Users, Gamepad2, CreditCard, Banknote, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminPresenceCount } from '@/hooks/useAdminPresenceCount';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { formatDistanceToNow } from 'date-fns';
+import { cs } from 'date-fns/locale';
 
 interface AdminSoundIndicatorProps {
   soundEnabled: boolean;
@@ -18,6 +25,13 @@ interface AdminStats {
   revenueToday: number;
 }
 
+interface OnlineUserInfo {
+  userId: string;
+  email: string;
+  name: string | null;
+  onlineAt: string;
+}
+
 export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
   soundEnabled,
   realtimeConnected,
@@ -26,7 +40,9 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
 }) => {
   const [isPulsing, setIsPulsing] = useState(false);
   const [stats, setStats] = useState<AdminStats>({ gamesToday: 0, paymentsToday: 0, revenueToday: 0 });
-  const onlineCount = useAdminPresenceCount();
+  const { onlineCount, onlineUsers } = useAdminPresenceCount();
+  const [onlineUserDetails, setOnlineUserDetails] = useState<OnlineUserInfo[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   // Pulse animation when new event occurs
   useEffect(() => {
@@ -37,6 +53,52 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
     
     return () => clearTimeout(timeout);
   }, [lastRealtimeEvent]);
+
+  // Fetch user details when online users change
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      if (onlineUsers.length === 0) {
+        setOnlineUserDetails([]);
+        return;
+      }
+
+      setIsLoadingUsers(true);
+      try {
+        const userIds = onlineUsers.map(u => u.userId);
+        const { data: users, error } = await supabase
+          .from('users')
+          .select('id, email, name, first_name, last_name, nickname')
+          .in('id', userIds);
+
+        if (error) {
+          console.error('[AdminPresence] Error fetching user details:', error);
+          return;
+        }
+
+        const details: OnlineUserInfo[] = onlineUsers.map(ou => {
+          const user = users?.find(u => u.id === ou.userId);
+          const displayName = user?.nickname || user?.name || 
+            (user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : null) ||
+            user?.first_name || null;
+          
+          return {
+            userId: ou.userId,
+            email: user?.email || 'Neznámý',
+            name: displayName,
+            onlineAt: ou.onlineAt,
+          };
+        });
+
+        setOnlineUserDetails(details);
+      } catch (error) {
+        console.error('[AdminPresence] Error:', error);
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    };
+
+    fetchUserDetails();
+  }, [onlineUsers]);
 
   // Fetch admin stats (excluding online count which is now live via Presence)
   useEffect(() => {
@@ -128,15 +190,63 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
 
       {/* Admin stats indicators */}
       <div className="hidden md:flex items-center gap-2">
-        {/* Online teď - LIVE via Supabase Presence */}
-        <div 
-          className="flex items-center gap-1.5 px-2 py-1 bg-background/50 rounded-md border border-border/50 text-xs"
-          title="Online uživatelé (živě)"
-        >
-          <Users className="h-3 w-3 text-blue-400" />
-          <span className="text-muted-foreground">Online teď:</span>
-          <span className="font-medium text-foreground">{onlineCount}</span>
-        </div>
+        {/* Online teď - LIVE via Supabase Presence with dropdown */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              className="flex items-center gap-1.5 px-2 py-1 bg-background/50 rounded-md border border-border/50 text-xs hover:bg-background/80 transition-colors cursor-pointer"
+              title="Online uživatelé (živě) - klikni pro detaily"
+            >
+              <Users className="h-3 w-3 text-blue-400" />
+              <span className="text-muted-foreground">Online teď:</span>
+              <span className="font-medium text-foreground">{onlineCount}</span>
+              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent 
+            className="w-80 p-0 bg-background border border-border shadow-lg z-50" 
+            align="start"
+          >
+            <div className="p-3 border-b border-border">
+              <h4 className="font-medium text-sm">Online uživatelé ({onlineCount})</h4>
+              <p className="text-xs text-muted-foreground">Aktuálně připojení hráči</p>
+            </div>
+            <div className="max-h-64 overflow-y-auto">
+              {isLoadingUsers ? (
+                <div className="p-4 text-center text-muted-foreground text-sm">
+                  Načítám...
+                </div>
+              ) : onlineUserDetails.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground text-sm">
+                  Žádní online uživatelé
+                </div>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {onlineUserDetails.map((user) => (
+                    <li key={user.userId} className="p-3 hover:bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {user.name || user.email}
+                          </p>
+                          {user.name && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {user.email}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Online {formatDistanceToNow(new Date(user.onlineAt), { addSuffix: true, locale: cs })}
+                          </p>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
 
         {/* Hry dnes */}
         <div 
