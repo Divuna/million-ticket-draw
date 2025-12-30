@@ -83,8 +83,16 @@ export const useAdminPresenceCount = (): AdminPresenceResult => {
           console.log('[AdminPresence] User left:', key, leftPresences);
         }
       })
-      .subscribe((status) => {
+      .subscribe(async (status) => {
         console.log('[AdminPresence] Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          // Admin must also track to participate in presence channel
+          const trackResult = await channel.track({
+            is_admin: true,
+            online_at: new Date().toISOString(),
+          });
+          console.log('[AdminPresence] Admin tracked:', trackResult);
+        }
       });
 
     return () => {
