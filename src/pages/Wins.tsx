@@ -432,13 +432,18 @@ const Wins: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredWins.map((win) => (
-              <WinCard
+            {filteredWins.map((win, index) => (
+              <div
                 key={win.id}
-                win={win}
-                onClick={() => setSelectedWin(win)}
-                isHighlighted={highlightedWins.has(win.id)}
-              />
+                className="animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}
+              >
+                <WinCard
+                  win={win}
+                  onClick={() => setSelectedWin(win)}
+                  isHighlighted={highlightedWins.has(win.id)}
+                />
+              </div>
             ))}
           </div>
         )}
