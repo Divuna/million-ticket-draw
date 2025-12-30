@@ -849,12 +849,12 @@ const AdminWinners: React.FC = () => {
                                 MioCoin
                               </Badge>
                             ) : winner.type === 'main' ? (
-                              <Badge variant="default" className="gap-1.5">
+                              <Badge variant="secondary" className="gap-1.5 bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
                                 <Trophy className="h-3 w-3" />
                                 Hlavní cena
                               </Badge>
                             ) : (
-                              <Badge variant="secondary" className="gap-1.5">
+                              <Badge variant="secondary" className="gap-1.5 bg-purple-500/20 text-purple-400 border-purple-500/30">
                                 <Gift className="h-3 w-3" />
                                 Bonusová cena
                               </Badge>
