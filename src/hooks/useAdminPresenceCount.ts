@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface OnlineUser {
@@ -9,6 +9,7 @@ interface OnlineUser {
 interface AdminPresenceResult {
   onlineCount: number;
   onlineUsers: OnlineUser[];
+  onUserJoin: (callback: (userId: string) => void) => void;
 }
 
 /**
@@ -19,6 +20,12 @@ export const useAdminPresenceCount = (): AdminPresenceResult => {
   const [onlineCount, setOnlineCount] = useState(0);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const joinCallbackRef = useRef<((userId: string) => void) | null>(null);
+  const initialSyncDoneRef = useRef(false);
+
+  const onUserJoin = useCallback((callback: (userId: string) => void) => {
+    joinCallbackRef.current = callback;
+  }, []);
 
   useEffect(() => {
     const channel = supabase.channel('online_users', {
@@ -52,10 +59,23 @@ export const useAdminPresenceCount = (): AdminPresenceResult => {
     };
 
     channel
-      .on('presence', { event: 'sync' }, updatePresenceState)
+      .on('presence', { event: 'sync' }, () => {
+        updatePresenceState();
+        // Mark initial sync as done after first sync
+        if (!initialSyncDoneRef.current) {
+          initialSyncDoneRef.current = true;
+        }
+      })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
         if (key !== 'admin_listener') {
           console.log('[AdminPresence] User joined:', key, newPresences);
+          // Only trigger callback after initial sync (to avoid sounds on page load)
+          if (initialSyncDoneRef.current && joinCallbackRef.current) {
+            const presence = newPresences[0] as { user_id?: string };
+            if (presence?.user_id) {
+              joinCallbackRef.current(presence.user_id);
+            }
+          }
         }
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
@@ -74,5 +94,5 @@ export const useAdminPresenceCount = (): AdminPresenceResult => {
     };
   }, []);
 
-  return { onlineCount, onlineUsers };
+  return { onlineCount, onlineUsers, onUserJoin };
 };
