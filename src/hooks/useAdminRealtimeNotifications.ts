@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 const ADMIN_SOUND_STORAGE_KEY = 'admin_sound_notifications_enabled';
+const GAME_PLAY_COOLDOWN_MS = 2500; // 2.5 second cooldown for game played sounds
 
 // Sound URLs
 const SOUNDS = {
@@ -35,6 +36,9 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
 
   // Track last known counts for polling fallback
   const lastCountsRef = useRef<{ tickets: number; payments: number; profiles: number } | null>(null);
+  
+  // Track last game play sound time for deduplication
+  const lastGamePlaySoundRef = useRef<number>(0);
 
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({
     newUser: null,
@@ -87,6 +91,20 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
 
   const playSound = useCallback((type: 'newUser' | 'topup' | 'gamePlay', source: 'realtime' | 'polling', details?: string) => {
     const eventType = type === 'newUser' ? 'profile' : type === 'topup' ? 'payment' : 'ticket';
+    
+    // Deduplication for gamePlay sounds - check cooldown
+    if (type === 'gamePlay') {
+      const now = Date.now();
+      const timeSinceLastSound = now - lastGamePlaySoundRef.current;
+      if (timeSinceLastSound < GAME_PLAY_COOLDOWN_MS) {
+        console.log(`[Admin Realtime] Skipping gamePlay sound (cooldown: ${timeSinceLastSound}ms < ${GAME_PLAY_COOLDOWN_MS}ms)`);
+        // Still add event to log, but mark as deduplicated
+        addEvent({ type: eventType, timestamp: new Date(), source, details: `${details} (deduplicated)` });
+        return;
+      }
+      lastGamePlaySoundRef.current = now;
+    }
+    
     addEvent({ type: eventType, timestamp: new Date(), source, details });
 
     if (!soundEnabled) return;
