@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminPresenceCount } from '@/hooks/useAdminPresenceCount';
+import { useNavigate } from 'react-router-dom';
 import {
   Popover,
   PopoverContent,
@@ -38,12 +39,19 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
   lastRealtimeEvent,
   onToggleSound,
 }) => {
+  const navigate = useNavigate();
   const [isPulsing, setIsPulsing] = useState(false);
   const [stats, setStats] = useState<AdminStats>({ gamesToday: 0, paymentsToday: 0, revenueToday: 0 });
   const { onlineCount, onlineUsers, onUserJoin } = useAdminPresenceCount();
   const [onlineUserDetails, setOnlineUserDetails] = useState<OnlineUserInfo[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const userJoinAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  const handleUserClick = (userId: string) => {
+    setPopoverOpen(false);
+    navigate(`/admin/users?highlight=${userId}`);
+  };
 
   // Initialize user join sound
   useEffect(() => {
@@ -211,7 +219,7 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
       {/* Admin stats indicators */}
       <div className="hidden md:flex items-center gap-2">
         {/* Online teď - LIVE via Supabase Presence with dropdown */}
-        <Popover>
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
           <PopoverTrigger asChild>
             <button
               className="flex items-center gap-1.5 px-2 py-1 bg-background/50 rounded-md border border-border/50 text-xs hover:bg-background/80 transition-colors cursor-pointer"
@@ -229,7 +237,7 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
           >
             <div className="p-3 border-b border-border">
               <h4 className="font-medium text-sm">Online uživatelé ({onlineCount})</h4>
-              <p className="text-xs text-muted-foreground">Aktuálně připojení hráči</p>
+              <p className="text-xs text-muted-foreground">Klikni pro zobrazení detailu</p>
             </div>
             <div className="max-h-64 overflow-y-auto">
               {isLoadingUsers ? (
@@ -243,7 +251,11 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
               ) : (
                 <ul className="divide-y divide-border">
                   {onlineUserDetails.map((user) => (
-                    <li key={user.userId} className="p-3 hover:bg-muted/50">
+                    <li 
+                      key={user.userId} 
+                      className="p-3 hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => handleUserClick(user.userId)}
+                    >
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                         <div className="flex-1 min-w-0">
