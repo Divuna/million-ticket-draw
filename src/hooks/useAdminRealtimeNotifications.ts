@@ -2,7 +2,6 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 const ADMIN_SOUND_STORAGE_KEY = 'admin_sound_notifications_enabled';
-const GAME_PLAY_COOLDOWN_MS = 2500; // 2.5 second cooldown for game played sounds
 
 // Sound URLs
 const SOUNDS = {
@@ -38,11 +37,12 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
   // Track last known counts for polling fallback
   const lastCountsRef = useRef<{ tickets: number; payments: number; profiles: number } | null>(null);
   
-  // Track last game play sound time for deduplication
-  const lastGamePlaySoundRef = useRef<number>(0);
-  
-  // Track last known payment count when topup sound was played (for deduplication)
-  const lastTopupSoundPaymentCountRef = useRef<number>(-1);
+  // Count-based deduplication: track last known count when sound was played by realtime
+  const lastSoundCountsRef = useRef<{ tickets: number; payments: number; profiles: number }>({
+    tickets: -1,
+    payments: -1,
+    profiles: -1,
+  });
 
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({
     newUser: null,
@@ -102,19 +102,6 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
   const playSound = useCallback((type: 'newUser' | 'topup' | 'gamePlay', source: 'realtime' | 'polling', details?: string) => {
     const eventType = type === 'newUser' ? 'profile' : type === 'topup' ? 'payment' : 'ticket';
     
-    // Deduplication for gamePlay sounds - check cooldown
-    if (type === 'gamePlay') {
-      const now = Date.now();
-      const timeSinceLastSound = now - lastGamePlaySoundRef.current;
-      if (timeSinceLastSound < GAME_PLAY_COOLDOWN_MS) {
-        console.log(`[Admin Realtime] Skipping gamePlay sound (cooldown: ${timeSinceLastSound}ms < ${GAME_PLAY_COOLDOWN_MS}ms)`);
-        addEvent({ type: eventType, timestamp: new Date(), source, details: `${details} (deduplicated)` });
-        return;
-      }
-      lastGamePlaySoundRef.current = now;
-    }
-    
-    
     addEvent({ type: eventType, timestamp: new Date(), source, details });
 
     if (!soundEnabled) return;
@@ -158,6 +145,11 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
         { event: 'INSERT', schema: 'public', table: 'profiles' },
         (payload) => {
           console.log('[Admin Realtime] 🆕 Profile INSERT:', payload);
+          // Update count-based deduplication to prevent polling replay
+          if (lastCountsRef.current) {
+            lastCountsRef.current.profiles += 1;
+            lastSoundCountsRef.current.profiles = lastCountsRef.current.profiles;
+          }
           playSound('newUser', 'realtime', `user_id: ${(payload.new as any)?.id}`);
         }
       )
@@ -176,10 +168,10 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
         (payload) => {
           console.log('[Admin Realtime] 💰 Payment INSERT:', payload);
           if (payload.new && (payload.new as any).status === 'completed') {
-            // Update lastCountsRef to prevent polling from replaying this event
+            // Update count-based deduplication to prevent polling replay
             if (lastCountsRef.current) {
               lastCountsRef.current.payments += 1;
-              lastTopupSoundPaymentCountRef.current = lastCountsRef.current.payments;
+              lastSoundCountsRef.current.payments = lastCountsRef.current.payments;
             }
             playSound('topup', 'realtime', `amount: ${(payload.new as any)?.amount}`);
           }
@@ -198,6 +190,11 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
         { event: 'INSERT', schema: 'public', table: 'tickets' },
         (payload) => {
           console.log('[Admin Realtime] 🎮 Ticket INSERT:', payload);
+          // Update count-based deduplication to prevent polling replay
+          if (lastCountsRef.current) {
+            lastCountsRef.current.tickets += 1;
+            lastSoundCountsRef.current.tickets = lastCountsRef.current.tickets;
+          }
           playSound('gamePlay', 'realtime', `ticket #${(payload.new as any)?.number}`);
         }
       )
@@ -236,27 +233,39 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
           const prev = lastCountsRef.current;
           
           if (currentCounts.tickets > prev.tickets) {
-            const diff = currentCounts.tickets - prev.tickets;
-            console.log(`[Admin Polling] 🎮 ${diff} new ticket(s) detected`);
-            playSound('gamePlay', 'polling', `+${diff} tiketů`);
+            // Skip if realtime already played this sound
+            if (lastSoundCountsRef.current.tickets >= currentCounts.tickets) {
+              console.log(`[Admin Polling] 🎮 Skipping gamePlay sound (already played by realtime)`);
+            } else {
+              const diff = currentCounts.tickets - prev.tickets;
+              console.log(`[Admin Polling] 🎮 ${diff} new ticket(s) detected`);
+              lastSoundCountsRef.current.tickets = currentCounts.tickets;
+              playSound('gamePlay', 'polling', `+${diff} tiketů`);
+            }
           }
           
           if (currentCounts.payments > prev.payments) {
             // Skip if realtime already played this sound
-            if (lastTopupSoundPaymentCountRef.current >= currentCounts.payments) {
+            if (lastSoundCountsRef.current.payments >= currentCounts.payments) {
               console.log(`[Admin Polling] 💰 Skipping topup sound (already played by realtime)`);
             } else {
               const diff = currentCounts.payments - prev.payments;
               console.log(`[Admin Polling] 💰 ${diff} new payment(s) detected`);
-              lastTopupSoundPaymentCountRef.current = currentCounts.payments;
+              lastSoundCountsRef.current.payments = currentCounts.payments;
               playSound('topup', 'polling', `+${diff} plateb`);
             }
           }
           
           if (currentCounts.profiles > prev.profiles) {
-            const diff = currentCounts.profiles - prev.profiles;
-            console.log(`[Admin Polling] 🆕 ${diff} new profile(s) detected`);
-            playSound('newUser', 'polling', `+${diff} uživatelů`);
+            // Skip if realtime already played this sound
+            if (lastSoundCountsRef.current.profiles >= currentCounts.profiles) {
+              console.log(`[Admin Polling] 🆕 Skipping newUser sound (already played by realtime)`);
+            } else {
+              const diff = currentCounts.profiles - prev.profiles;
+              console.log(`[Admin Polling] 🆕 ${diff} new profile(s) detected`);
+              lastSoundCountsRef.current.profiles = currentCounts.profiles;
+              playSound('newUser', 'polling', `+${diff} uživatelů`);
+            }
           }
         }
 
