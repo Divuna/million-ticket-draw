@@ -79,6 +79,7 @@ export const AdminPrizeDelivery: React.FC = () => {
   const [bulkStatus, setBulkStatus] = useState<string>('');
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pendingPrizeClick, setPendingPrizeClick] = useState<{ contestTitle: string; ticketPosition: number } | null>(null);
 
   // Fetch contests on component mount
   useEffect(() => {
@@ -92,6 +93,25 @@ export const AdminPrizeDelivery: React.FC = () => {
       fetchBonusPrizes(selectedContestId);
     }
   }, [selectedContestId]);
+
+  // Handle pending prize click after prizes are loaded
+  useEffect(() => {
+    if (pendingPrizeClick && bonusPrizes.length > 0 && !loading) {
+      const matchingPrize = bonusPrizes.find(
+        p => p.ticket_position === pendingPrizeClick.ticketPosition
+      );
+      if (matchingPrize) {
+        handleEditPrize(matchingPrize);
+      } else {
+        toast({
+          title: "Výhra nenalezena",
+          description: `Výhra na pozici ${pendingPrizeClick.ticketPosition} nebyla nalezena.`,
+          variant: "destructive"
+        });
+      }
+      setPendingPrizeClick(null);
+    }
+  }, [bonusPrizes, pendingPrizeClick, loading]);
 
   const fetchContests = async () => {
     try {
@@ -445,6 +465,88 @@ export const AdminPrizeDelivery: React.FC = () => {
       default:
         return <AlertCircle className="w-4 h-4 text-red-500" />;
     }
+  };
+
+  // Handle click on prize position badge from summary table
+  const handlePrizePositionClick = (contestTitle: string, ticketPosition: number, status: string) => {
+    // Find the contest by title
+    const contest = contests.find(c => c.title === contestTitle);
+    if (!contest) {
+      toast({
+        title: "Soutěž nenalezena",
+        description: `Soutěž "${contestTitle}" nebyla nalezena.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // If same contest is already selected, just find and open the prize
+    if (selectedContestId === contest.id) {
+      const matchingPrize = bonusPrizes.find(p => p.ticket_position === ticketPosition);
+      if (matchingPrize) {
+        handleEditPrize(matchingPrize);
+      } else {
+        toast({
+          title: "Výhra nenalezena",
+          description: `Výhra na pozici ${ticketPosition} nebyla nalezena.`,
+          variant: "destructive"
+        });
+      }
+    } else {
+      // Set pending click and switch contest (this will trigger prize fetch)
+      setPendingPrizeClick({ contestTitle, ticketPosition });
+      setSelectedContestId(contest.id);
+    }
+  };
+
+  // Parse prize_positions string into clickable badges
+  const renderPrizePositionBadges = (summary: DeliverySummary) => {
+    if (!summary.prize_positions) {
+      return <span className="text-muted-foreground">Žádné výhry</span>;
+    }
+
+    // Parse format: "5:won, 1:delivered(note), 10:won"
+    const positions = summary.prize_positions.split(', ').filter(Boolean);
+    
+    return (
+      <div className="flex flex-wrap gap-1">
+        {positions.map((pos, idx) => {
+          // Parse "5:won" or "5:delivered(note)"
+          const match = pos.match(/^(\d+):(\w+)/);
+          if (!match) return null;
+          
+          const ticketPosition = parseInt(match[1], 10);
+          const status = match[2];
+          
+          const getBadgeVariant = (s: string) => {
+            switch (s) {
+              case 'delivered': return 'default';
+              case 'won': return 'outline';
+              default: return 'secondary';
+            }
+          };
+          
+          const getBadgeClass = (s: string) => {
+            switch (s) {
+              case 'delivered': return 'bg-green-500 hover:bg-green-600 cursor-pointer';
+              case 'won': return 'hover:bg-muted cursor-pointer';
+              default: return 'cursor-pointer';
+            }
+          };
+
+          return (
+            <Badge
+              key={idx}
+              variant={getBadgeVariant(status)}
+              className={getBadgeClass(status)}
+              onClick={() => handlePrizePositionClick(summary.contest_title, ticketPosition, status)}
+            >
+              #{ticketPosition}:{status === 'delivered' ? 'předáno' : status === 'won' ? 'vyhráno' : status}
+            </Badge>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -916,8 +1018,8 @@ export const AdminPrizeDelivery: React.FC = () => {
                     <TableCell className="text-center">
                       <span className="text-blue-600 font-medium">{summary.won_count}</span>
                     </TableCell>
-                    <TableCell className="max-w-md truncate text-sm text-muted-foreground">
-                      {summary.prize_positions || 'Žádné výhry'}
+                    <TableCell className="max-w-md text-sm">
+                      {renderPrizePositionBadges(summary)}
                     </TableCell>
                   </TableRow>
                 ))}
