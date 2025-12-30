@@ -588,6 +588,120 @@ const AdminWinners: React.FC = () => {
     }
   };
 
+  // Bulk status update for selected physical rewards
+  const updateBulkWinnerStatus = async (newStatus: string) => {
+    // Get selected physical winners only (exclude auto-credited MioCoin)
+    const selectedPhysicalWinners = winners.filter(
+      w => selectedWinners.has(w.id) && !isAutoCreditBonus(w)
+    );
+
+    if (selectedPhysicalWinners.length === 0) {
+      toast({
+        title: "Žádné fyzické výhry",
+        description: "Vyberte alespoň jednu fyzickou výhru pro hromadnou změnu.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const winner of selectedPhysicalWinners) {
+        const oldStatus = winner.status || 'čeká na potvrzení';
+
+        // Update status in database
+        const { error: updateError } = await supabase
+          .from('winners')
+          .update({ status: newStatus })
+          .eq('id', winner.id);
+
+        if (updateError) {
+          console.error('Error updating winner:', winner.id, updateError);
+          errorCount++;
+          continue;
+        }
+
+        // Log status change to history
+        await supabase
+          .from('winner_status_history')
+          .insert({
+            winner_id: winner.id,
+            old_status: oldStatus,
+            new_status: newStatus,
+            changed_by: user?.id || null
+          });
+
+        // Send message to user
+        const messageContent = getStatusMessage(newStatus, winner.prize_description);
+        await supabase
+          .from('messages')
+          .insert({
+            user_id: winner.user_id,
+            sender: 'admin',
+            content: messageContent,
+            read: false,
+            topic: 'prize_status',
+            event: 'prize_status_change',
+            payload: {
+              winner_id: winner.id,
+              prize_description: winner.prize_description,
+              new_status: newStatus,
+              contest_title: winner.contest_title
+            }
+          });
+
+        successCount++;
+      }
+
+      // Update local state for all successful updates
+      setWinners(prev => prev.map(w => 
+        selectedWinners.has(w.id) && !isAutoCreditBonus(w)
+          ? { ...w, status: newStatus, updated_at: new Date().toISOString() }
+          : w
+      ));
+
+      // Clear history cache for updated winners
+      setHistoryData(prev => {
+        const newData = { ...prev };
+        selectedPhysicalWinners.forEach(w => delete newData[w.id]);
+        return newData;
+      });
+
+      // Clear selection
+      setSelectedWinners(new Set());
+
+      if (errorCount > 0) {
+        toast({
+          title: "Částečně dokončeno",
+          description: `Aktualizováno ${successCount} výher, ${errorCount} selhalo.`,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Hromadná aktualizace dokončena",
+          description: `Stav ${successCount} výher byl úspěšně změněn.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error in bulk update:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se provést hromadnou aktualizaci.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Get count of selected physical rewards (not auto-credited)
+  const selectedPhysicalCount = [...selectedWinners].filter(
+    id => {
+      const w = winners.find(win => win.id === id);
+      return w && !isAutoCreditBonus(w);
+    }
+  ).length;
+
   if (!session) {
     return <Navigate to="/login" replace />;
   }
@@ -703,6 +817,74 @@ const AdminWinners: React.FC = () => {
                   Export výher (CSV)
                 </Button>
               </div>
+
+              {/* Bulk action bar - shown when items are selected */}
+              {selectedWinners.size > 0 && (
+                <div className="mt-4 p-3 bg-primary/10 border border-primary/30 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Badge variant="secondary" className="bg-primary/20 text-primary">
+                      {selectedWinners.size} vybráno
+                    </Badge>
+                    {selectedPhysicalCount < selectedWinners.size && (
+                      <span className="text-xs text-muted-foreground">
+                        ({selectedPhysicalCount} fyzických výher)
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground mr-2">Hromadná změna stavu:</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateBulkWinnerStatus('čeká na potvrzení')}
+                      disabled={selectedPhysicalCount === 0}
+                      className="gap-1 border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                      Čeká
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateBulkWinnerStatus('připraveno k odeslání')}
+                      disabled={selectedPhysicalCount === 0}
+                      className="gap-1 border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                      Připraveno
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateBulkWinnerStatus('odesláno')}
+                      disabled={selectedPhysicalCount === 0}
+                      className="gap-1 border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+                      Odesláno
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateBulkWinnerStatus('vyplaceno')}
+                      disabled={selectedPhysicalCount === 0}
+                      className="gap-1 border-green-500/50 text-green-400 hover:bg-green-500/10"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                      Vyplaceno
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedWinners(new Set())}
+                      className="ml-2"
+                    >
+                      <X className="h-4 w-4" />
+                      Zrušit výběr
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardHeader>
             
             <CardContent>
