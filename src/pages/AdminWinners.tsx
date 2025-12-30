@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
 import { AdminMenu } from '@/components/AdminMenu';
-import { ImageOff, X, ChevronDown, ChevronUp, MapPin, History, Download, Check, Coins } from 'lucide-react';
+import { ImageOff, X, ChevronDown, ChevronUp, MapPin, History, Download, Check, Coins, Trophy, Gift } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -848,9 +848,15 @@ const AdminWinners: React.FC = () => {
                                 <Coins className="h-3 w-3" />
                                 MioCoin
                               </Badge>
+                            ) : winner.type === 'main' ? (
+                              <Badge variant="default" className="gap-1.5">
+                                <Trophy className="h-3 w-3" />
+                                Hlavní cena
+                              </Badge>
                             ) : (
-                              <Badge variant={winner.type === 'main' ? 'default' : 'secondary'}>
-                                {winner.type === 'main' ? 'Hlavní cena' : 'Bonusová cena'}
+                              <Badge variant="secondary" className="gap-1.5">
+                                <Gift className="h-3 w-3" />
+                                Bonusová cena
                               </Badge>
                             )}
                           </TableCell>
