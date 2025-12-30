@@ -25,7 +25,7 @@ import { AdminNotifications } from '@/components/AdminNotifications';
 import { OneSignalDebug } from '@/components/OneSignalDebug';
 import { AdminTestSuite } from '@/tests/AdminTestSuite';
 import { AdminValidationWorkflows } from '@/tests/AdminValidationWorkflows';
-import { useAdminRealtimeNotifications } from '@/hooks/useAdminRealtimeNotifications';
+import { useAdminRealtimeContext } from '@/components/AdminRealtimeProvider';
 import { TestTube, AlertTriangle, Gift, Volume2, VolumeX, Bug, Wifi, WifiOff } from 'lucide-react';
 
 interface Contest {
@@ -90,8 +90,8 @@ const AdminDashboard: React.FC = () => {
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Admin realtime sound notifications
-  const { soundEnabled, toggleSound, lastEvents, realtimeConnected, lastRealtimeEvent } = useAdminRealtimeNotifications(isAdmin);
+  // Admin realtime sound notifications (from global provider)
+  const { soundEnabled, toggleSound, lastEvents, realtimeConnected, lastRealtimeEvent } = useAdminRealtimeContext();
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   
   // Log analyzer states
