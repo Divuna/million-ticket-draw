@@ -87,7 +87,9 @@ function AppContent() {
         <Route path="/messages" element={<Messages />} />
         <Route path="/messages/:id" element={<MessageDetail />} />
         <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />
+        <Route path="/payment-cancel" element={<PaymentCancel />} />
         <Route path="/winners" element={<Winners />} />
         <Route path="/wins" element={<Wins />} />
         <Route path="/share/ticket/:ticketId" element={<ShareTicket />} />
