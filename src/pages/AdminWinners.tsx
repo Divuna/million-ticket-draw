@@ -1062,27 +1062,13 @@ const AdminWinners: React.FC = () => {
                                 <span className="text-sm">{winner.prize_description || '—'}</span>
                               )}
                               {/* Contextual win identifier line */}
-                              <div className="text-xs text-muted-foreground">
-                                {winner.ticket_number ? (
-                                  <span className="text-orange-400/80">
-                                    Ticket #{winner.ticket_number} · Vyhráno: {new Date(winner.created_at).toLocaleString('cs-CZ', { 
-                                      day: '2-digit', 
-                                      month: '2-digit', 
-                                      year: 'numeric', 
-                                      hour: '2-digit', 
-                                      minute: '2-digit' 
-                                    }).replace(',', '')}
-                                  </span>
+                              <div className="text-xs text-orange-400/80">
+                                {winner.type === 'main' ? (
+                                  <span>Hlavní výhra · Ticket {winner.ticket_number ? `#${winner.ticket_number}` : '—'}</span>
+                                ) : isAutoCreditBonus(winner) ? (
+                                  <span>Ticket {winner.ticket_number ? `#${winner.ticket_number}` : '—'}</span>
                                 ) : (
-                                  <span className="text-orange-400/80">
-                                    Hlavní výhra – losování · Vyhráno: {new Date(winner.created_at).toLocaleString('cs-CZ', { 
-                                      day: '2-digit', 
-                                      month: '2-digit', 
-                                      year: 'numeric', 
-                                      hour: '2-digit', 
-                                      minute: '2-digit' 
-                                    }).replace(',', '')}
-                                  </span>
+                                  <span>Bonusová cena · Ticket {winner.ticket_number ? `#${winner.ticket_number}` : '—'}</span>
                                 )}
                               </div>
                             </div>
