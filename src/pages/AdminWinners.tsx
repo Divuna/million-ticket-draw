@@ -1029,37 +1029,63 @@ const AdminWinners: React.FC = () => {
                           </TableCell>
                           <TableCell>{winner.contest_title}</TableCell>
                           <TableCell>
-                            {winner.prize_description && winner.prize_description.length > 20 ? (
-                              <div className="relative">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-auto py-1 px-2 gap-1 text-xs max-w-[180px]"
-                                  onClick={() => setExpandedPrizeDescription(
-                                    expandedPrizeDescription === winner.id ? null : winner.id
+                            <div className="space-y-1">
+                              {winner.prize_description && winner.prize_description.length > 20 ? (
+                                <div className="relative">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-auto py-1 px-2 gap-1 text-xs max-w-[180px]"
+                                    onClick={() => setExpandedPrizeDescription(
+                                      expandedPrizeDescription === winner.id ? null : winner.id
+                                    )}
+                                  >
+                                    <span className="truncate text-left">
+                                      {winner.prize_description.substring(0, 20)}…
+                                    </span>
+                                    {expandedPrizeDescription === winner.id ? (
+                                      <ChevronUp className="h-3 w-3 flex-shrink-0" />
+                                    ) : (
+                                      <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                                    )}
+                                  </Button>
+                                  {expandedPrizeDescription === winner.id && (
+                                    <div className="absolute z-10 top-full left-0 mt-1 w-64 bg-popover border rounded-md shadow-lg p-3 text-xs">
+                                      <div className="font-medium mb-1 text-foreground">Popis ceny</div>
+                                      <p className="text-muted-foreground whitespace-pre-wrap">
+                                        {winner.prize_description}
+                                      </p>
+                                    </div>
                                   )}
-                                >
-                                  <span className="truncate text-left">
-                                    {winner.prize_description.substring(0, 20)}…
+                                </div>
+                              ) : (
+                                <span className="text-sm">{winner.prize_description || '—'}</span>
+                              )}
+                              {/* Contextual win identifier line */}
+                              <div className="text-xs text-muted-foreground">
+                                {winner.ticket_number ? (
+                                  <span className="text-orange-400/80">
+                                    Ticket #{winner.ticket_number} · Vyhráno: {new Date(winner.created_at).toLocaleString('cs-CZ', { 
+                                      day: '2-digit', 
+                                      month: '2-digit', 
+                                      year: 'numeric', 
+                                      hour: '2-digit', 
+                                      minute: '2-digit' 
+                                    }).replace(',', '')}
                                   </span>
-                                  {expandedPrizeDescription === winner.id ? (
-                                    <ChevronUp className="h-3 w-3 flex-shrink-0" />
-                                  ) : (
-                                    <ChevronDown className="h-3 w-3 flex-shrink-0" />
-                                  )}
-                                </Button>
-                                {expandedPrizeDescription === winner.id && (
-                                  <div className="absolute z-10 top-full left-0 mt-1 w-64 bg-popover border rounded-md shadow-lg p-3 text-xs">
-                                    <div className="font-medium mb-1 text-foreground">Popis ceny</div>
-                                    <p className="text-muted-foreground whitespace-pre-wrap">
-                                      {winner.prize_description}
-                                    </p>
-                                  </div>
+                                ) : (
+                                  <span className="text-orange-400/80">
+                                    Hlavní výhra – losování · Vyhráno: {new Date(winner.created_at).toLocaleString('cs-CZ', { 
+                                      day: '2-digit', 
+                                      month: '2-digit', 
+                                      year: 'numeric', 
+                                      hour: '2-digit', 
+                                      minute: '2-digit' 
+                                    }).replace(',', '')}
+                                  </span>
                                 )}
                               </div>
-                            ) : (
-                              <span className="text-sm">{winner.prize_description || '—'}</span>
-                            )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             {isAutoCreditBonus(winner) ? (
