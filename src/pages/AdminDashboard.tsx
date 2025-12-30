@@ -25,7 +25,8 @@ import { AdminNotifications } from '@/components/AdminNotifications';
 import { OneSignalDebug } from '@/components/OneSignalDebug';
 import { AdminTestSuite } from '@/tests/AdminTestSuite';
 import { AdminValidationWorkflows } from '@/tests/AdminValidationWorkflows';
-import { TestTube, AlertTriangle, Gift } from 'lucide-react';
+import { useAdminRealtimeNotifications } from '@/hooks/useAdminRealtimeNotifications';
+import { TestTube, AlertTriangle, Gift, Volume2, VolumeX } from 'lucide-react';
 
 interface Contest {
   id: string;
@@ -88,6 +89,9 @@ const AdminDashboard: React.FC = () => {
   const [selectedContest, setSelectedContest] = useState<string>('');
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Admin realtime sound notifications
+  const { soundEnabled, toggleSound } = useAdminRealtimeNotifications(isAdmin);
   
   // Log analyzer states
   const [edgeFunctionLogs, setEdgeFunctionLogs] = useState<EdgeFunctionLog[]>([]);
@@ -659,9 +663,24 @@ const AdminDashboard: React.FC = () => {
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold">Administrátorský panel</h1>
-            <Button asChild variant="outline">
-              <Link to="/admin/winners">Správa výher</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSound}
+                title={soundEnabled ? 'Ztlumit zvuková upozornění' : 'Zapnout zvuková upozornění'}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                {soundEnabled ? (
+                  <Volume2 className="h-5 w-5" />
+                ) : (
+                  <VolumeX className="h-5 w-5" />
+                )}
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/admin/winners">Správa výher</Link>
+              </Button>
+            </div>
           </div>
           
           <Tabs defaultValue="management" className="space-y-6">
