@@ -50,6 +50,12 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
     gamePlay: null,
   });
 
+  // Stable ref for soundEnabled - prevents re-subscribe on toggle
+  const soundEnabledRef = useRef(soundEnabled);
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
+
   // Initialize audio elements
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -99,12 +105,17 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
     }
   }, []);
 
+  // playSound is now stable - uses ref instead of state dependency
   const playSound = useCallback((type: 'newUser' | 'topup' | 'gamePlay', source: 'realtime' | 'polling', details?: string) => {
     const eventType = type === 'newUser' ? 'profile' : type === 'topup' ? 'payment' : 'ticket';
     
     addEvent({ type: eventType, timestamp: new Date(), source, details });
 
-    if (!soundEnabled) return;
+    // Check ref for current mute state - no dependency on soundEnabled state
+    if (!soundEnabledRef.current) {
+      console.log(`[Admin Sound] Muted - skipping ${type} sound`);
+      return;
+    }
     
     const audio = audioRefs.current[type];
     if (audio) {
@@ -113,7 +124,7 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
         console.warn('[Admin Realtime] Sound play failed:', err);
       });
     }
-  }, [soundEnabled, addEvent]);
+  }, [addEvent]);
 
   const toggleSound = useCallback(() => {
     setSoundEnabled(prev => {
