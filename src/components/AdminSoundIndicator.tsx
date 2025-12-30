@@ -42,7 +42,7 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
   const navigate = useNavigate();
   const [isPulsing, setIsPulsing] = useState(false);
   const [stats, setStats] = useState<AdminStats>({ gamesToday: 0, paymentsToday: 0, revenueToday: 0 });
-  const { onlineCount, onlineUsers, onUserJoin } = useAdminPresenceCount();
+  const { onlineCount, onlineUsers, onUserJoin, presenceStatus, lastSyncAt } = useAdminPresenceCount();
   const [onlineUserDetails, setOnlineUserDetails] = useState<OnlineUserInfo[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const userJoinAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -238,6 +238,10 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
             <div className="p-3 border-b border-border">
               <h4 className="font-medium text-sm">Online uživatelé ({onlineCount})</h4>
               <p className="text-xs text-muted-foreground">Klikni pro zobrazení detailu</p>
+              {/* Debug info */}
+              <div className="mt-1 text-[10px] text-muted-foreground/60 font-mono">
+                Status: {presenceStatus} | Sync: {lastSyncAt ? lastSyncAt.toLocaleTimeString('cs-CZ') : '-'}
+              </div>
             </div>
             <div className="max-h-64 overflow-y-auto">
               {isLoadingUsers ? (
