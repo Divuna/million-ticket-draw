@@ -11,6 +11,7 @@ import { DateOfBirthGuard } from "@/components/DateOfBirthGuard";
 import { DateOfBirthProvider } from "@/hooks/useDateOfBirthCheck";
 import { useOneSignal } from "@/hooks/useOneSignal";
 import { useAuth } from "@/hooks/useAuth";
+import { AdminRealtimeProvider } from "@/components/AdminRealtimeProvider";
 import ContestDetailAdmin from "@/components/ContestDetailAdmin";
 
 import Homepage from "@/pages/Homepage";
@@ -129,13 +130,15 @@ function App() {
           <AuthProvider>
             <DateOfBirthProvider>
               <TestAuthProvider>
-                <TooltipProvider>
-                  <BrowserRouter>
-                    <AppContent />
-                    <Toaster />
-                    <Sonner />
-                  </BrowserRouter>
-                </TooltipProvider>
+                <AdminRealtimeProvider>
+                  <TooltipProvider>
+                    <BrowserRouter>
+                      <AppContent />
+                      <Toaster />
+                      <Sonner />
+                    </BrowserRouter>
+                  </TooltipProvider>
+                </AdminRealtimeProvider>
               </TestAuthProvider>
             </DateOfBirthProvider>
           </AuthProvider>
