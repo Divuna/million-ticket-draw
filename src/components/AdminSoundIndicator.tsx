@@ -42,10 +42,9 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
   const navigate = useNavigate();
   const [isPulsing, setIsPulsing] = useState(false);
   const [stats, setStats] = useState<AdminStats>({ gamesToday: 0, paymentsToday: 0, revenueToday: 0 });
-  const { onlineCount, onlineUsers, onUserJoin, presenceStatus, lastSyncAt } = useAdminPresenceCount();
+  const { onlineCount, onlineUsers, presenceStatus, lastSyncAt } = useAdminPresenceCount();
   const [onlineUserDetails, setOnlineUserDetails] = useState<OnlineUserInfo[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-  const userJoinAudioRef = useRef<HTMLAudioElement | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   const handleUserClick = (userId: string) => {
@@ -53,24 +52,6 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
     navigate(`/admin/users?highlight=${userId}`);
   };
 
-  // Initialize user join sound
-  useEffect(() => {
-    userJoinAudioRef.current = new Audio('/sounds/notification.mp3');
-    userJoinAudioRef.current.volume = 0.5;
-  }, []);
-
-  // Register callback for user join - play sound
-  useEffect(() => {
-    onUserJoin((userId) => {
-      if (soundEnabled && userJoinAudioRef.current) {
-        console.log('[AdminSound] User joined, playing notification:', userId);
-        userJoinAudioRef.current.currentTime = 0;
-        userJoinAudioRef.current.play().catch(err => {
-          console.warn('[AdminSound] Could not play user join sound:', err);
-        });
-      }
-    });
-  }, [onUserJoin, soundEnabled]);
 
   // Pulse animation when new event occurs
   useEffect(() => {
