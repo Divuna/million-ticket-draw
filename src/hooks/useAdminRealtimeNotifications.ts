@@ -5,7 +5,8 @@ const ADMIN_SOUND_STORAGE_KEY = 'admin_sound_notifications_enabled';
 
 // Sound URLs
 const SOUNDS = {
-  newUser: '/sounds/notification.mp3',
+  newUser: '/sounds/admin-new-user.mp3',
+  newUserFallback: '/sounds/notification.mp3',
   topup: '/sounds/win-celebration.mp3',
   gamePlay: '/sounds/notification.mp3',
 };
@@ -44,8 +45,14 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    audioRefs.current.newUser = new Audio(SOUNDS.newUser);
-    audioRefs.current.newUser.volume = 0.6;
+    // New user sound with fallback
+    const newUserAudio = new Audio(SOUNDS.newUser);
+    newUserAudio.volume = 0.6;
+    newUserAudio.onerror = () => {
+      console.warn('[Admin Realtime] Custom new user sound not found, using fallback');
+      newUserAudio.src = SOUNDS.newUserFallback;
+    };
+    audioRefs.current.newUser = newUserAudio;
     
     audioRefs.current.topup = new Audio(SOUNDS.topup);
     audioRefs.current.topup.volume = 0.5;
