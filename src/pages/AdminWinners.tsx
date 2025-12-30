@@ -729,10 +729,12 @@ const AdminWinners: React.FC = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredWinners.map((winner) => (
+                      {filteredWinners.map((winner) => {
+                        const isAutoCredit = isAutoCreditBonus(winner);
+                        return (
                         <TableRow 
                           key={winner.id}
-                          className={selectedWinners.has(winner.id) ? 'bg-primary/10 ring-1 ring-primary/30' : ''}
+                          className={`${selectedWinners.has(winner.id) ? 'bg-primary/10 ring-1 ring-primary/30' : ''} ${isAutoCredit ? 'bg-amber-500/5' : ''}`}
                         >
                           <TableCell>
                             <Checkbox
@@ -999,7 +1001,8 @@ const AdminWinners: React.FC = () => {
                             )}
                           </TableCell>
                         </TableRow>
-                      ))}
+                        );
+                      })}
                     </TableBody>
                     </Table>
                   </div>
