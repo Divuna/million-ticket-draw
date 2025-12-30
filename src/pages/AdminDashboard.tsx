@@ -26,7 +26,7 @@ import { OneSignalDebug } from '@/components/OneSignalDebug';
 import { AdminTestSuite } from '@/tests/AdminTestSuite';
 import { AdminValidationWorkflows } from '@/tests/AdminValidationWorkflows';
 import { useAdminRealtimeContext } from '@/components/AdminRealtimeProvider';
-import { TestTube, AlertTriangle, Gift, Volume2, VolumeX, Bug, Wifi, WifiOff } from 'lucide-react';
+import { TestTube, AlertTriangle, Gift, Bug, Wifi, WifiOff } from 'lucide-react';
 
 interface Contest {
   id: string;
@@ -90,8 +90,8 @@ const AdminDashboard: React.FC = () => {
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Admin realtime sound notifications (from global provider)
-  const { soundEnabled, toggleSound, lastEvents, realtimeConnected, lastRealtimeEvent } = useAdminRealtimeContext();
+  // Admin realtime sound notifications (from global provider) - toggle is in Header
+  const { lastEvents, realtimeConnected, lastRealtimeEvent } = useAdminRealtimeContext();
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   
   // Log analyzer states
@@ -676,25 +676,7 @@ const AdminDashboard: React.FC = () => {
                 <Bug className="h-5 w-5" />
               </Button>
               
-              {/* Sound toggle with connection indicator */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleSound}
-                title={soundEnabled ? 'Ztlumit zvuková upozornění' : 'Zapnout zvuková upozornění'}
-                className="text-muted-foreground hover:text-foreground relative"
-              >
-                {soundEnabled ? (
-                  <Volume2 className="h-5 w-5" />
-                ) : (
-                  <VolumeX className="h-5 w-5" />
-                )}
-                {realtimeConnected ? (
-                  <Wifi className="h-3 w-3 absolute -top-1 -right-1 text-green-500" />
-                ) : (
-                  <WifiOff className="h-3 w-3 absolute -top-1 -right-1 text-destructive" />
-                )}
-              </Button>
+              {/* Sound toggle moved to Header - single source of truth */}
               <Button asChild variant="outline">
                 <Link to="/admin/winners">Správa výher</Link>
               </Button>

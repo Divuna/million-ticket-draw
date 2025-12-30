@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useAdminRealtimeNotifications } from '@/hooks/useAdminRealtimeNotifications';
+import { useAdminRealtimeContext } from '@/components/AdminRealtimeProvider';
 import { AdminSoundIndicator } from '@/components/AdminSoundIndicator';
 import { Home } from 'lucide-react';
 import logo from '@/assets/logo-onemil.png';
@@ -11,7 +11,7 @@ import logo from '@/assets/logo-onemil.png';
 export const Header: React.FC = () => {
   const { user, signOut } = useAuth();
   const { isAdmin } = useUserRole();
-  const { soundEnabled, toggleSound, realtimeConnected, lastRealtimeEvent } = useAdminRealtimeNotifications(isAdmin);
+  const { soundEnabled, toggleSound, realtimeConnected, lastRealtimeEvent } = useAdminRealtimeContext();
 
   return (
     <header className="sticky top-0 z-50 h-16 md:h-20 bg-background/70 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4">
