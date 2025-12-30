@@ -62,11 +62,18 @@ export const useAdminPresenceCount = (): AdminPresenceResult => {
       const state = channel.presenceState();
       console.log('[AdminPresence] Raw presence state:', state);
       
-      // Get all user keys (excluding admin_listener)
+      // Get all user keys (excluding admin_listener and admin users)
       const users: OnlineUser[] = [];
       Object.entries(state).forEach(([key, presences]) => {
         if (key !== 'admin_listener' && presences && presences.length > 0) {
-          const presence = presences[0] as { user_id?: string; online_at?: string };
+          const presence = presences[0] as { user_id?: string; online_at?: string; is_admin?: boolean };
+          
+          // Skip admin users - only show customers
+          if (presence.is_admin) {
+            console.log('[AdminPresence] Skipping admin user:', key);
+            return;
+          }
+          
           // Fallback: use key as userId if user_id not present
           const userId = presence.user_id || key;
           users.push({
@@ -75,7 +82,7 @@ export const useAdminPresenceCount = (): AdminPresenceResult => {
           });
         }
       });
-      console.log('[AdminPresence] Sync - online users:', users.length, users);
+      console.log('[AdminPresence] Sync - online customers:', users.length, users);
       setOnlineCount(users.length);
       setOnlineUsers(users);
       setLastSyncAt(new Date());
@@ -92,10 +99,17 @@ export const useAdminPresenceCount = (): AdminPresenceResult => {
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
         if (key !== 'admin_listener') {
-          console.log('[AdminPresence] User joined:', key, newPresences);
+          const presence = newPresences[0] as { user_id?: string; is_admin?: boolean };
+          
+          // Skip admin users - don't notify for admin joins
+          if (presence?.is_admin) {
+            console.log('[AdminPresence] Skipping admin join:', key);
+            return;
+          }
+          
+          console.log('[AdminPresence] Customer joined:', key, newPresences);
           // Only trigger callback after initial sync (to avoid sounds on page load)
           if (initialSyncDoneRef.current && joinCallbackRef.current) {
-            const presence = newPresences[0] as { user_id?: string };
             const userId = presence?.user_id || key;
             joinCallbackRef.current(userId);
           }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 
 const HEARTBEAT_INTERVAL_MS = 30000; // 30 seconds
 
@@ -11,9 +12,16 @@ const HEARTBEAT_INTERVAL_MS = 30000; // 30 seconds
  */
 export const useOnlinePresence = () => {
   const { user } = useAuth();
+  const { isAdmin } = useUserRole();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const heartbeatIntervalRef = useRef<number | null>(null);
   const isSubscribedRef = useRef(false);
+  const isAdminRef = useRef(isAdmin);
+
+  // Keep isAdminRef in sync
+  useEffect(() => {
+    isAdminRef.current = isAdmin;
+  }, [isAdmin]);
 
   const trackPresence = useCallback(async () => {
     if (!channelRef.current || !user?.id || !isSubscribedRef.current) {
@@ -23,9 +31,10 @@ export const useOnlinePresence = () => {
     try {
       const trackResult = await channelRef.current.track({
         user_id: user.id,
+        is_admin: isAdminRef.current,
         online_at: new Date().toISOString(),
       });
-      console.log('[Presence] User tracked:', user.id, trackResult);
+      console.log('[Presence] User tracked:', user.id, 'isAdmin:', isAdminRef.current, trackResult);
     } catch (error) {
       console.error('[Presence] Track error:', error);
     }
