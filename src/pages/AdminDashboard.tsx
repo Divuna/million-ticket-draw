@@ -26,7 +26,7 @@ import { OneSignalDebug } from '@/components/OneSignalDebug';
 import { AdminTestSuite } from '@/tests/AdminTestSuite';
 import { AdminValidationWorkflows } from '@/tests/AdminValidationWorkflows';
 import { useAdminRealtimeNotifications } from '@/hooks/useAdminRealtimeNotifications';
-import { TestTube, AlertTriangle, Gift, Volume2, VolumeX } from 'lucide-react';
+import { TestTube, AlertTriangle, Gift, Volume2, VolumeX, Bug, Wifi, WifiOff } from 'lucide-react';
 
 interface Contest {
   id: string;
@@ -91,7 +91,8 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   
   // Admin realtime sound notifications
-  const { soundEnabled, toggleSound } = useAdminRealtimeNotifications(isAdmin);
+  const { soundEnabled, toggleSound, lastEvents, realtimeConnected, lastRealtimeEvent } = useAdminRealtimeNotifications(isAdmin);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
   
   // Log analyzer states
   const [edgeFunctionLogs, setEdgeFunctionLogs] = useState<EdgeFunctionLog[]>([]);
@@ -664,17 +665,34 @@ const AdminDashboard: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold">Administrátorský panel</h1>
             <div className="flex items-center gap-2">
+              {/* Debug panel toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowDebugPanel(!showDebugPanel)}
+                title="Zobrazit/skrýt debug panel"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Bug className="h-5 w-5" />
+              </Button>
+              
+              {/* Sound toggle with connection indicator */}
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={toggleSound}
                 title={soundEnabled ? 'Ztlumit zvuková upozornění' : 'Zapnout zvuková upozornění'}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground relative"
               >
                 {soundEnabled ? (
                   <Volume2 className="h-5 w-5" />
                 ) : (
                   <VolumeX className="h-5 w-5" />
+                )}
+                {realtimeConnected ? (
+                  <Wifi className="h-3 w-3 absolute -top-1 -right-1 text-green-500" />
+                ) : (
+                  <WifiOff className="h-3 w-3 absolute -top-1 -right-1 text-destructive" />
                 )}
               </Button>
               <Button asChild variant="outline">
@@ -682,6 +700,69 @@ const AdminDashboard: React.FC = () => {
               </Button>
             </div>
           </div>
+
+          {/* Realtime Debug Panel */}
+          {showDebugPanel && (
+            <Card className="mb-6 border-dashed border-2 border-muted">
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Bug className="h-4 w-4" />
+                  Debug: Realtime notifikace
+                  <Badge variant={realtimeConnected ? "default" : "destructive"} className="ml-auto">
+                    {realtimeConnected ? (
+                      <><Wifi className="h-3 w-3 mr-1" /> Připojeno</>
+                    ) : (
+                      <><WifiOff className="h-3 w-3 mr-1" /> Odpojeno (polling aktivní)</>
+                    )}
+                  </Badge>
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Poslední realtime událost: {lastRealtimeEvent ? lastRealtimeEvent.toLocaleString('cs-CZ') : 'žádná'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="py-2">
+                <div className="text-xs text-muted-foreground mb-2">
+                  Posledních 10 událostí (realtime + polling fallback):
+                </div>
+                {lastEvents.length === 0 ? (
+                  <div className="text-xs text-muted-foreground italic">
+                    Zatím žádné události. Čekám na registraci, hru nebo top-up...
+                  </div>
+                ) : (
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {lastEvents.map((event, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-xs py-1 px-2 rounded bg-muted/50">
+                        <Badge 
+                          variant="outline" 
+                          className={
+                            event.type === 'profile' ? 'border-blue-500 text-blue-500' :
+                            event.type === 'payment' ? 'border-green-500 text-green-500' :
+                            'border-yellow-500 text-yellow-500'
+                          }
+                        >
+                          {event.type === 'profile' && '🆕 Registrace'}
+                          {event.type === 'payment' && '💰 Top-up'}
+                          {event.type === 'ticket' && '🎮 Hra'}
+                        </Badge>
+                        <Badge variant={event.source === 'realtime' ? 'default' : 'secondary'}>
+                          {event.source === 'realtime' ? 'realtime' : 'polling'}
+                        </Badge>
+                        <span className="text-muted-foreground">
+                          {event.timestamp.toLocaleTimeString('cs-CZ')}
+                        </span>
+                        {event.details && (
+                          <span className="text-muted-foreground truncate max-w-32">
+                            {event.details}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          
           
           <Tabs defaultValue="management" className="space-y-6">
             <TabsList>

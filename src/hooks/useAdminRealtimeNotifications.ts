@@ -3,13 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 
 const ADMIN_SOUND_STORAGE_KEY = 'admin_sound_notifications_enabled';
 
-// Sound URLs - using existing notification.mp3 with different playback approaches
-// For distinct sounds, add more files to public/sounds/ and update these paths
+// Sound URLs
 const SOUNDS = {
   newUser: '/sounds/notification.mp3',
   topup: '/sounds/win-celebration.mp3',
   gamePlay: '/sounds/notification.mp3',
 };
+
+export interface RealtimeEvent {
+  type: 'ticket' | 'payment' | 'profile';
+  timestamp: Date;
+  source: 'realtime' | 'polling';
+  details?: string;
+}
 
 export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
   const [soundEnabled, setSoundEnabled] = useState(() => {
@@ -20,6 +26,13 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
       return true;
     }
   });
+
+  const [lastEvents, setLastEvents] = useState<RealtimeEvent[]>([]);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+  const [lastRealtimeEvent, setLastRealtimeEvent] = useState<Date | null>(null);
+
+  // Track last known counts for polling fallback
+  const lastCountsRef = useRef<{ tickets: number; payments: number; profiles: number } | null>(null);
 
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({
     newUser: null,
@@ -39,7 +52,7 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
     
     audioRefs.current.gamePlay = new Audio(SOUNDS.gamePlay);
     audioRefs.current.gamePlay.volume = 0.4;
-    audioRefs.current.gamePlay.playbackRate = 1.3; // Slightly faster for game events
+    audioRefs.current.gamePlay.playbackRate = 1.3;
 
     return () => {
       Object.values(audioRefs.current).forEach(audio => {
@@ -51,17 +64,27 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
     };
   }, []);
 
-  const playSound = useCallback((type: 'newUser' | 'topup' | 'gamePlay') => {
+  const addEvent = useCallback((event: RealtimeEvent) => {
+    setLastEvents(prev => [event, ...prev].slice(0, 10));
+    if (event.source === 'realtime') {
+      setLastRealtimeEvent(new Date());
+    }
+  }, []);
+
+  const playSound = useCallback((type: 'newUser' | 'topup' | 'gamePlay', source: 'realtime' | 'polling', details?: string) => {
+    const eventType = type === 'newUser' ? 'profile' : type === 'topup' ? 'payment' : 'ticket';
+    addEvent({ type: eventType, timestamp: new Date(), source, details });
+
     if (!soundEnabled) return;
     
     const audio = audioRefs.current[type];
     if (audio) {
       audio.currentTime = 0;
       audio.play().catch(err => {
-        console.warn('Admin notification sound failed:', err);
+        console.warn('[Admin Realtime] Sound play failed:', err);
       });
     }
-  }, [soundEnabled]);
+  }, [soundEnabled, addEvent]);
 
   const toggleSound = useCallback(() => {
     setSoundEnabled(prev => {
@@ -75,110 +98,134 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
     });
   }, []);
 
-  // Realtime subscriptions - configured to receive events from all users/devices
+  // Realtime subscriptions
   useEffect(() => {
     if (!isAdmin) {
       console.log('[Admin Realtime] Not admin, skipping subscriptions');
       return;
     }
 
-    console.log('[Admin Realtime] Setting up realtime subscriptions for admin notifications...');
+    console.log('[Admin Realtime] Setting up realtime subscriptions...');
 
-    // New user registration - listen to profiles INSERT
     const profilesChannel = supabase
       .channel('admin-new-users', {
-        config: {
-          broadcast: { self: true },
-        },
+        config: { broadcast: { self: true } },
       })
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'profiles',
-        },
+        { event: 'INSERT', schema: 'public', table: 'profiles' },
         (payload) => {
-          console.log('[Admin Realtime] 🆕 New user registered:', {
-            timestamp: new Date().toISOString(),
-            payload,
-          });
-          playSound('newUser');
+          console.log('[Admin Realtime] 🆕 Profile INSERT:', payload);
+          playSound('newUser', 'realtime', `user_id: ${(payload.new as any)?.id}`);
         }
       )
       .subscribe((status) => {
-        console.log('[Admin Realtime] profiles channel status:', status);
+        console.log('[Admin Realtime] profiles channel:', status);
+        if (status === 'SUBSCRIBED') setRealtimeConnected(true);
       });
 
-    // MioCoin top-up - listen to payments INSERT
     const paymentsChannel = supabase
       .channel('admin-payments', {
-        config: {
-          broadcast: { self: true },
-        },
+        config: { broadcast: { self: true } },
       })
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'payments',
-        },
+        { event: 'INSERT', schema: 'public', table: 'payments' },
         (payload) => {
-          console.log('[Admin Realtime] 💰 New payment received:', {
-            timestamp: new Date().toISOString(),
-            status: (payload.new as any)?.status,
-            payload,
-          });
-          // Only play for completed payments (top-ups)
+          console.log('[Admin Realtime] 💰 Payment INSERT:', payload);
           if (payload.new && (payload.new as any).status === 'completed') {
-            playSound('topup');
+            playSound('topup', 'realtime', `amount: ${(payload.new as any)?.amount}`);
           }
         }
       )
       .subscribe((status) => {
-        console.log('[Admin Realtime] payments channel status:', status);
+        console.log('[Admin Realtime] payments channel:', status);
       });
 
-    // Game played / MioCoin spent - listen to tickets INSERT
     const ticketsChannel = supabase
       .channel('admin-game-played', {
-        config: {
-          broadcast: { self: true },
-        },
+        config: { broadcast: { self: true } },
       })
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'tickets',
-        },
+        { event: 'INSERT', schema: 'public', table: 'tickets' },
         (payload) => {
-          console.log('[Admin Realtime] 🎮 Ticket purchased (game played):', {
-            timestamp: new Date().toISOString(),
-            ticketNumber: (payload.new as any)?.number,
-            contestId: (payload.new as any)?.contest_id,
-            userId: (payload.new as any)?.user_id,
-            payload,
-          });
-          playSound('gamePlay');
+          console.log('[Admin Realtime] 🎮 Ticket INSERT:', payload);
+          playSound('gamePlay', 'realtime', `ticket #${(payload.new as any)?.number}`);
         }
       )
       .subscribe((status) => {
-        console.log('[Admin Realtime] tickets channel status:', status);
+        console.log('[Admin Realtime] tickets channel:', status);
       });
 
     return () => {
-      console.log('[Admin Realtime] Cleaning up realtime subscriptions...');
+      console.log('[Admin Realtime] Cleaning up subscriptions...');
       supabase.removeChannel(profilesChannel);
       supabase.removeChannel(paymentsChannel);
       supabase.removeChannel(ticketsChannel);
+      setRealtimeConnected(false);
     };
+  }, [isAdmin, playSound]);
+
+  // Polling fallback - checks every 4 seconds
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const pollForChanges = async () => {
+      try {
+        const [ticketsRes, paymentsRes, profilesRes] = await Promise.all([
+          supabase.from('tickets').select('id', { count: 'exact', head: true }),
+          supabase.from('payments').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
+          supabase.from('profiles').select('id', { count: 'exact', head: true }),
+        ]);
+
+        const currentCounts = {
+          tickets: ticketsRes.count || 0,
+          payments: paymentsRes.count || 0,
+          profiles: profilesRes.count || 0,
+        };
+
+        if (lastCountsRef.current) {
+          const prev = lastCountsRef.current;
+          
+          if (currentCounts.tickets > prev.tickets) {
+            const diff = currentCounts.tickets - prev.tickets;
+            console.log(`[Admin Polling] 🎮 ${diff} new ticket(s) detected`);
+            playSound('gamePlay', 'polling', `+${diff} tiketů`);
+          }
+          
+          if (currentCounts.payments > prev.payments) {
+            const diff = currentCounts.payments - prev.payments;
+            console.log(`[Admin Polling] 💰 ${diff} new payment(s) detected`);
+            playSound('topup', 'polling', `+${diff} plateb`);
+          }
+          
+          if (currentCounts.profiles > prev.profiles) {
+            const diff = currentCounts.profiles - prev.profiles;
+            console.log(`[Admin Polling] 🆕 ${diff} new profile(s) detected`);
+            playSound('newUser', 'polling', `+${diff} uživatelů`);
+          }
+        }
+
+        lastCountsRef.current = currentCounts;
+      } catch (err) {
+        console.error('[Admin Polling] Error:', err);
+      }
+    };
+
+    // Initial count fetch
+    pollForChanges();
+
+    const interval = setInterval(pollForChanges, 4000);
+
+    return () => clearInterval(interval);
   }, [isAdmin, playSound]);
 
   return {
     soundEnabled,
     toggleSound,
+    lastEvents,
+    realtimeConnected,
+    lastRealtimeEvent,
   };
 };
