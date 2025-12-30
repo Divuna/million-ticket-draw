@@ -1061,15 +1061,9 @@ const AdminWinners: React.FC = () => {
                               ) : (
                                 <span className="text-sm">{winner.prize_description || '—'}</span>
                               )}
-                              {/* Contextual win identifier line */}
+                              {/* Ticket number line */}
                               <div className="text-xs text-orange-400/80">
-                                {winner.type === 'main' ? (
-                                  <span>Hlavní výhra · Ticket {winner.ticket_number ? `#${winner.ticket_number}` : '—'}</span>
-                                ) : isAutoCreditBonus(winner) ? (
-                                  <span>Ticket {winner.ticket_number ? `#${winner.ticket_number}` : '—'}</span>
-                                ) : (
-                                  <span>Bonusová cena · Ticket {winner.ticket_number ? `#${winner.ticket_number}` : '—'}</span>
-                                )}
+                                Ticket {winner.ticket_number ? `#${winner.ticket_number}` : '—'}
                               </div>
                             </div>
                           </TableCell>
