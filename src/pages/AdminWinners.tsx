@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
@@ -73,6 +73,23 @@ const AdminWinners: React.FC = () => {
   const [exportDateFrom, setExportDateFrom] = useState<string>('');
   const [exportDateTo, setExportDateTo] = useState<string>('');
   const [exportPreviewCount, setExportPreviewCount] = useState<number | null>(null);
+  const historyPopupRef = useRef<HTMLDivElement>(null);
+
+  // Close history popup when clicking outside
+  useEffect(() => {
+    if (!expandedHistory) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (historyPopupRef.current && !historyPopupRef.current.contains(event.target as Node)) {
+        setExpandedHistory(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [expandedHistory]);
 
   const statusOptions = [
     { value: 'all', label: 'Všechny stavy' },
@@ -1111,7 +1128,12 @@ const AdminWinners: React.FC = () => {
                                     )}
                                   </Button>
                                   {expandedHistory === winner.id && historyData[winner.id] && (
-                                    <div className="absolute z-10 top-full left-0 mt-1 w-72 bg-popover border rounded-md shadow-lg p-2 text-xs">
+                                    <div 
+                                      ref={historyPopupRef}
+                                      className="absolute z-10 top-full left-0 mt-1 w-72 bg-popover border rounded-md shadow-lg p-2 text-xs"
+                                      onClick={(e) => e.stopPropagation()}
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                    >
                                       <div className="font-medium mb-2 text-foreground">Historie změn stavu</div>
                                       {historyData[winner.id].length === 0 ? (
                                         <p className="text-muted-foreground">Žádné změny</p>
