@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Volume2, VolumeX, Wifi, WifiOff, Users, Gamepad2, CreditCard } from 'lucide-react';
+import { Volume2, VolumeX, Wifi, WifiOff, Users, Gamepad2, CreditCard, Banknote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +15,7 @@ interface AdminStats {
   onlineNow: number;
   gamesToday: number;
   paymentsToday: number;
+  revenueToday: number;
 }
 
 export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
@@ -24,7 +25,7 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
   onToggleSound,
 }) => {
   const [isPulsing, setIsPulsing] = useState(false);
-  const [stats, setStats] = useState<AdminStats>({ onlineNow: 0, gamesToday: 0, paymentsToday: 0 });
+  const [stats, setStats] = useState<AdminStats>({ onlineNow: 0, gamesToday: 0, paymentsToday: 0, revenueToday: 0 });
 
   // Pulse animation when new event occurs
   useEffect(() => {
@@ -67,17 +68,21 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
           .select('*', { count: 'exact', head: true })
           .gte('created_at', todayStart);
 
-        // Payments today: count of completed payments today
-        const { count: paymentsToday } = await supabase
+        // Payments today: count and sum of completed payments today
+        const { data: paymentsData } = await supabase
           .from('payments')
-          .select('*', { count: 'exact', head: true })
+          .select('amount')
           .gte('created_at', todayStart)
           .eq('status', 'completed');
+
+        const paymentsToday = paymentsData?.length || 0;
+        const revenueToday = paymentsData?.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
 
         setStats({
           onlineNow: recentUserIds.size,
           gamesToday: gamesToday || 0,
-          paymentsToday: paymentsToday || 0,
+          paymentsToday,
+          revenueToday,
         });
       } catch (error) {
         console.error('[AdminStats] Error fetching stats:', error);
@@ -169,6 +174,16 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
           <CreditCard className="h-3 w-3 text-green-400" />
           <span className="text-muted-foreground">Dobito dnes:</span>
           <span className="font-medium text-foreground">{stats.paymentsToday}</span>
+        </div>
+
+        {/* Tržba dnes */}
+        <div 
+          className="flex items-center gap-1.5 px-2 py-1 bg-background/50 rounded-md border border-border/50 text-xs"
+          title="Celková tržba z dobití dnes"
+        >
+          <Banknote className="h-3 w-3 text-yellow-400" />
+          <span className="text-muted-foreground">Tržba dnes:</span>
+          <span className="font-medium text-foreground">{stats.revenueToday.toLocaleString('cs-CZ')} Kč</span>
         </div>
       </div>
     </div>
