@@ -455,7 +455,7 @@ const AdminWinners: React.FC = () => {
       winner.user_address.phone || '',
       winner.user_address.address || '',
       winner.contest_title,
-      winner.type === 'main' ? 'Main' : 'Bonus',
+      winner.type === 'main' ? 'Hlavní výhra' : 'Bonus',
       winner.prize_description,
       deriveUiStatusForExport(winner),
       new Date(winner.created_at).toLocaleString('cs-CZ')
