@@ -8,7 +8,8 @@ const SOUNDS = {
   newUser: '/sounds/admin-new-user.mp3',
   newUserFallback: '/sounds/notification.mp3',
   topup: '/sounds/win-celebration.mp3',
-  gamePlay: '/sounds/notification.mp3',
+  gamePlay: '/sounds/admin-game-played.mp3',
+  gamePlayFallback: '/sounds/notification.mp3',
 };
 
 export interface RealtimeEvent {
@@ -57,9 +58,15 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
     audioRefs.current.topup = new Audio(SOUNDS.topup);
     audioRefs.current.topup.volume = 0.5;
     
-    audioRefs.current.gamePlay = new Audio(SOUNDS.gamePlay);
-    audioRefs.current.gamePlay.volume = 0.4;
-    audioRefs.current.gamePlay.playbackRate = 1.3;
+    // Game play sound with fallback
+    const gamePlayAudio = new Audio(SOUNDS.gamePlay);
+    gamePlayAudio.volume = 0.4;
+    gamePlayAudio.playbackRate = 1.3;
+    gamePlayAudio.onerror = () => {
+      console.warn('[Admin Realtime] Custom game play sound not found, using fallback');
+      gamePlayAudio.src = SOUNDS.gamePlayFallback;
+    };
+    audioRefs.current.gamePlay = gamePlayAudio;
 
     return () => {
       Object.values(audioRefs.current).forEach(audio => {
