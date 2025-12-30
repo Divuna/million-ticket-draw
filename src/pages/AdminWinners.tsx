@@ -47,6 +47,7 @@ interface WinnerData {
   prize_description: string;
   prize_image: string | null;
   user_address: UserAddress;
+  ticket_number: number | null;
 }
 
 interface StatusHistoryEntry {
@@ -280,19 +281,23 @@ const AdminWinners: React.FC = () => {
       for (const winner of data || []) {
         let prizeDescription = '';
         let prizeImage: string | null = null;
+        let ticketNumber: number | null = null;
         
         if (winner.type === 'main') {
           prizeDescription = (winner.contests as any)?.main_prize || 'Hlavní cena';
           prizeImage = (winner.contests as any)?.main_prize_secondary_image || (winner.contests as any)?.main_image || null;
+          // For main prizes, no specific ticket number is stored
+          ticketNumber = null;
         } else if (winner.type === 'bonus' && winner.prize_id) {
           const { data: bonusData } = await supabase
             .from('bonus_prizes')
-            .select('description, image_url')
+            .select('description, image_url, ticket_position')
             .eq('id', winner.prize_id)
             .single();
           
           prizeDescription = bonusData?.description || 'Bonusová cena';
           prizeImage = getStorageUrl(bonusData?.image_url);
+          ticketNumber = bonusData?.ticket_position || null;
         }
 
         const userData = winner.users as any;
@@ -316,7 +321,8 @@ const AdminWinners: React.FC = () => {
             last_name: userData?.last_name || null,
             address: userData?.address || null,
             phone: userData?.phone || null
-          }
+          },
+          ticket_number: ticketNumber
         });
       }
 
@@ -430,20 +436,22 @@ const AdminWinners: React.FC = () => {
         adminEmails = (admins || []).reduce((acc, a) => { acc[a.id] = a.email; return acc; }, {} as Record<string, string>);
       }
 
-      const winnerInfo: Record<string, { user_email: string; contest_title: string; prize_description: string }> = {};
+      const winnerInfo: Record<string, { user_email: string; contest_title: string; contest_id: string; ticket_number: number | null; type: string; prize_description: string }> = {};
       for (const winnerId of [...new Set(historyEntries.map(h => h.winner_id))]) {
         const winner = winners.find(w => w.id === winnerId);
         if (winner) {
-          winnerInfo[winnerId] = { user_email: winner.user_email, contest_title: winner.contest_title, prize_description: winner.prize_description };
+          winnerInfo[winnerId] = { user_email: winner.user_email, contest_title: winner.contest_title, contest_id: winner.contest_id, ticket_number: winner.ticket_number, type: winner.type, prize_description: winner.prize_description };
         }
       }
 
-      const headers = ['Datum', 'Uživatel', 'Soutěž', 'Cena', 'Starý stav', 'Nový stav', 'Změnil admin'];
+      const headers = ['Datum', 'Uživatel', 'Soutěž', 'ID soutěže', 'Ticket #', 'Cena', 'Starý stav', 'Nový stav', 'Změnil admin'];
       const rows = historyEntries.map(entry => {
-        const info = winnerInfo[entry.winner_id] || { user_email: 'Neznámý', contest_title: 'Neznámá', prize_description: 'Neznámá' };
+        const info = winnerInfo[entry.winner_id] || { user_email: 'Neznámý', contest_title: 'Neznámá', contest_id: '', ticket_number: null, type: '', prize_description: 'Neznámá' };
         return [
           new Date(entry.created_at).toLocaleString('cs-CZ'),
-          info.user_email, info.contest_title, info.prize_description,
+          info.user_email, info.contest_title, info.contest_id,
+          info.ticket_number ? `#${info.ticket_number}` : (info.type === 'main' ? 'Hlavní' : ''),
+          info.prize_description,
           entry.old_status || '(nový)', entry.new_status,
           entry.changed_by ? (adminEmails[entry.changed_by] || entry.changed_by) : ''
         ];
@@ -483,8 +491,8 @@ const AdminWinners: React.FC = () => {
       return;
     }
 
-    // Reordered columns: Email, First name, Last name, Phone, Address, Contest name, Prize type, Prize description, Status, Win date
-    const headers = ['Email', 'Jméno', 'Příjmení', 'Telefon', 'Adresa', 'Soutěž', 'Typ výhry', 'Popis ceny', 'Stav', 'Datum výhry'];
+    // Columns: Email, First name, Last name, Phone, Address, Contest name, Contest ID, Ticket #, Prize type, Prize description, Status, Win date
+    const headers = ['Email', 'Jméno', 'Příjmení', 'Telefon', 'Adresa', 'Soutěž', 'ID soutěže', 'Ticket #', 'Typ výhry', 'Popis ceny', 'Stav', 'Datum výhry'];
     const rows = filteredWinners.map(winner => [
       winner.user_email,
       winner.user_address.first_name || '',
@@ -492,6 +500,8 @@ const AdminWinners: React.FC = () => {
       winner.user_address.phone || '',
       winner.user_address.address || '',
       winner.contest_title,
+      winner.contest_id,
+      winner.ticket_number ? `#${winner.ticket_number}` : (winner.type === 'main' ? 'Hlavní' : ''),
       winner.type === 'main' ? 'Hlavní výhra' : 'Bonus',
       winner.prize_description,
       deriveUiStatusForExport(winner),
@@ -1130,11 +1140,14 @@ const AdminWinners: React.FC = () => {
                                   {expandedHistory === winner.id && historyData[winner.id] && (
                                     <div 
                                       ref={historyPopupRef}
-                                      className="absolute z-10 top-full left-0 mt-1 w-72 bg-popover border rounded-md shadow-lg p-2 text-xs"
+                                      className="absolute z-10 top-full left-0 mt-1 w-80 bg-popover border rounded-md shadow-lg p-2 text-xs"
                                       onClick={(e) => e.stopPropagation()}
                                       onMouseDown={(e) => e.stopPropagation()}
                                     >
-                                      <div className="font-medium mb-2 text-foreground">Historie změn stavu</div>
+                                      <div className="font-medium mb-1 text-foreground">Historie změn stavu</div>
+                                      <div className="text-muted-foreground mb-2 text-[10px] border-b border-border/30 pb-2">
+                                        {winner.ticket_number ? `Ticket #${winner.ticket_number}` : (winner.type === 'main' ? 'Hlavní výhra' : 'Bonus')} · {winner.contest_title} <span className="opacity-60">({winner.contest_id.slice(0, 8)})</span>
+                                      </div>
                                       {historyData[winner.id].length === 0 ? (
                                         <p className="text-muted-foreground">Žádné změny</p>
                                       ) : (
