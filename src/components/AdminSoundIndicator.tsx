@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, VolumeX, Wifi, WifiOff, Users, Gamepad2, CreditCard, Banknote, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -40,9 +40,29 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
 }) => {
   const [isPulsing, setIsPulsing] = useState(false);
   const [stats, setStats] = useState<AdminStats>({ gamesToday: 0, paymentsToday: 0, revenueToday: 0 });
-  const { onlineCount, onlineUsers } = useAdminPresenceCount();
+  const { onlineCount, onlineUsers, onUserJoin } = useAdminPresenceCount();
   const [onlineUserDetails, setOnlineUserDetails] = useState<OnlineUserInfo[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const userJoinAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize user join sound
+  useEffect(() => {
+    userJoinAudioRef.current = new Audio('/sounds/notification.mp3');
+    userJoinAudioRef.current.volume = 0.5;
+  }, []);
+
+  // Register callback for user join - play sound
+  useEffect(() => {
+    onUserJoin((userId) => {
+      if (soundEnabled && userJoinAudioRef.current) {
+        console.log('[AdminSound] User joined, playing notification:', userId);
+        userJoinAudioRef.current.currentTime = 0;
+        userJoinAudioRef.current.play().catch(err => {
+          console.warn('[AdminSound] Could not play user join sound:', err);
+        });
+      }
+    });
+  }, [onUserJoin, soundEnabled]);
 
   // Pulse animation when new event occurs
   useEffect(() => {
