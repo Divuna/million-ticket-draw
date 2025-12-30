@@ -97,6 +97,18 @@ const AdminWinners: React.FC = () => {
     }
   };
 
+  // Helper to determine if a winner is an auto-credited MioCoin bonus (no admin actions needed)
+  const isAutoCreditBonus = (winner: WinnerData): boolean => {
+    if (winner.type !== 'bonus') return false;
+    const desc = (winner.prize_description || '').toLowerCase();
+    // Check for MioCoin/credit indicators in prize description
+    return desc.includes('miocoin') || 
+           desc.includes('mio coin') || 
+           desc.includes('kredit') ||
+           desc.includes('credit') ||
+           /^\d+\s*(mio|mc|coin)/i.test(desc);
+  };
+
   // Check admin access
   const isAdmin = user?.email === 'divispavel2@gmail.com';
 
@@ -893,40 +905,46 @@ const AdminWinners: React.FC = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Select
-                              value={winner.status || 'čeká na potvrzení'}
-                              onValueChange={(value) => updateWinnerStatus(winner.id, value)}
-                            >
-                              <SelectTrigger className={`w-48 ${getStatusColor(winner.status).trigger}`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="čeká na potvrzení">
-                                  <span className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
-                                    Čeká na potvrzení
-                                  </span>
-                                </SelectItem>
-                                <SelectItem value="připraveno k odeslání">
-                                  <span className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-                                    Připraveno k odeslání
-                                  </span>
-                                </SelectItem>
-                                <SelectItem value="odesláno">
-                                  <span className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-purple-400"></span>
-                                    Odesláno
-                                  </span>
-                                </SelectItem>
-                                <SelectItem value="vyplaceno">
-                                  <span className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-green-400"></span>
-                                    Vyplaceno
-                                  </span>
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
+                            {isAutoCreditBonus(winner) ? (
+                              <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30">
+                                Automaticky připsáno
+                              </Badge>
+                            ) : (
+                              <Select
+                                value={winner.status || 'čeká na potvrzení'}
+                                onValueChange={(value) => updateWinnerStatus(winner.id, value)}
+                              >
+                                <SelectTrigger className={`w-48 ${getStatusColor(winner.status).trigger}`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="čeká na potvrzení">
+                                    <span className="flex items-center gap-2">
+                                      <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                                      Čeká na potvrzení
+                                    </span>
+                                  </SelectItem>
+                                  <SelectItem value="připraveno k odeslání">
+                                    <span className="flex items-center gap-2">
+                                      <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                                      Připraveno k odeslání
+                                    </span>
+                                  </SelectItem>
+                                  <SelectItem value="odesláno">
+                                    <span className="flex items-center gap-2">
+                                      <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+                                      Odesláno
+                                    </span>
+                                  </SelectItem>
+                                  <SelectItem value="vyplaceno">
+                                    <span className="flex items-center gap-2">
+                                      <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                                      Vyplaceno
+                                    </span>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
