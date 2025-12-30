@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 
 const ADMIN_SOUND_STORAGE_KEY = 'admin_sound_notifications_enabled';
 const GAME_PLAY_COOLDOWN_MS = 2500; // 2.5 second cooldown for game played sounds
-const TOPUP_COOLDOWN_MS = 2500; // 2.5 second cooldown for topup sounds
 
 // Sound URLs
 const SOUNDS = {
@@ -42,8 +41,8 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
   // Track last game play sound time for deduplication
   const lastGamePlaySoundRef = useRef<number>(0);
   
-  // Track last topup sound time for deduplication
-  const lastTopupSoundRef = useRef<number>(0);
+  // Track last known payment count when topup sound was played (for deduplication)
+  const lastTopupSoundPaymentCountRef = useRef<number>(-1);
 
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({
     newUser: null,
@@ -115,17 +114,6 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
       lastGamePlaySoundRef.current = now;
     }
     
-    // Deduplication for topup sounds - check cooldown
-    if (type === 'topup') {
-      const now = Date.now();
-      const timeSinceLastSound = now - lastTopupSoundRef.current;
-      if (timeSinceLastSound < TOPUP_COOLDOWN_MS) {
-        console.log(`[Admin Realtime] Skipping topup sound (cooldown: ${timeSinceLastSound}ms < ${TOPUP_COOLDOWN_MS}ms)`);
-        addEvent({ type: eventType, timestamp: new Date(), source, details: `${details} (deduplicated)` });
-        return;
-      }
-      lastTopupSoundRef.current = now;
-    }
     
     addEvent({ type: eventType, timestamp: new Date(), source, details });
 
@@ -188,6 +176,11 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
         (payload) => {
           console.log('[Admin Realtime] 💰 Payment INSERT:', payload);
           if (payload.new && (payload.new as any).status === 'completed') {
+            // Update lastCountsRef to prevent polling from replaying this event
+            if (lastCountsRef.current) {
+              lastCountsRef.current.payments += 1;
+              lastTopupSoundPaymentCountRef.current = lastCountsRef.current.payments;
+            }
             playSound('topup', 'realtime', `amount: ${(payload.new as any)?.amount}`);
           }
         }
@@ -249,9 +242,15 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
           }
           
           if (currentCounts.payments > prev.payments) {
-            const diff = currentCounts.payments - prev.payments;
-            console.log(`[Admin Polling] 💰 ${diff} new payment(s) detected`);
-            playSound('topup', 'polling', `+${diff} plateb`);
+            // Skip if realtime already played this sound
+            if (lastTopupSoundPaymentCountRef.current >= currentCounts.payments) {
+              console.log(`[Admin Polling] 💰 Skipping topup sound (already played by realtime)`);
+            } else {
+              const diff = currentCounts.payments - prev.payments;
+              console.log(`[Admin Polling] 💰 ${diff} new payment(s) detected`);
+              lastTopupSoundPaymentCountRef.current = currentCounts.payments;
+              playSound('topup', 'polling', `+${diff} plateb`);
+            }
           }
           
           if (currentCounts.profiles > prev.profiles) {
