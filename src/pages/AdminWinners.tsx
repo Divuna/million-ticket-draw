@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
 import { AdminMenu } from '@/components/AdminMenu';
-import { ImageOff, X, ChevronDown, ChevronUp, MapPin, History, Download, Check } from 'lucide-react';
+import { ImageOff, X, ChevronDown, ChevronUp, MapPin, History, Download, Check, Coins } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -843,9 +843,16 @@ const AdminWinners: React.FC = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={winner.type === 'main' ? 'default' : 'secondary'}>
-                              {winner.type === 'main' ? 'Hlavní cena' : 'Bonusová cena'}
-                            </Badge>
+                            {isAutoCreditBonus(winner) ? (
+                              <Badge variant="secondary" className="gap-1.5 bg-amber-500/20 text-amber-400 border-amber-500/30">
+                                <Coins className="h-3 w-3" />
+                                MioCoin
+                              </Badge>
+                            ) : (
+                              <Badge variant={winner.type === 'main' ? 'default' : 'secondary'}>
+                                {winner.type === 'main' ? 'Hlavní cena' : 'Bonusová cena'}
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge className={`${getStatusColor(winner.status).badge} border`}>
