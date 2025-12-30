@@ -3,12 +3,14 @@ import { supabase } from '@/integrations/supabase/client';
 
 const ADMIN_SOUND_STORAGE_KEY = 'admin_sound_notifications_enabled';
 const GAME_PLAY_COOLDOWN_MS = 2500; // 2.5 second cooldown for game played sounds
+const TOPUP_COOLDOWN_MS = 2500; // 2.5 second cooldown for topup sounds
 
 // Sound URLs
 const SOUNDS = {
   newUser: '/sounds/admin-new-user.mp3',
   newUserFallback: '/sounds/notification.mp3',
-  topup: '/sounds/win-celebration.mp3',
+  topup: '/sounds/admin-topup.mp3',
+  topupFallback: '/sounds/notification.mp3',
   gamePlay: '/sounds/admin-game-played.mp3',
   gamePlayFallback: '/sounds/notification.mp3',
 };
@@ -39,6 +41,9 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
   
   // Track last game play sound time for deduplication
   const lastGamePlaySoundRef = useRef<number>(0);
+  
+  // Track last topup sound time for deduplication
+  const lastTopupSoundRef = useRef<number>(0);
 
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({
     newUser: null,
@@ -59,8 +64,14 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
     };
     audioRefs.current.newUser = newUserAudio;
     
-    audioRefs.current.topup = new Audio(SOUNDS.topup);
-    audioRefs.current.topup.volume = 0.5;
+    // Topup sound with fallback
+    const topupAudio = new Audio(SOUNDS.topup);
+    topupAudio.volume = 0.5;
+    topupAudio.onerror = () => {
+      console.warn('[Admin Realtime] Custom topup sound not found, using fallback');
+      topupAudio.src = SOUNDS.topupFallback;
+    };
+    audioRefs.current.topup = topupAudio;
     
     // Game play sound with fallback
     const gamePlayAudio = new Audio(SOUNDS.gamePlay);
@@ -98,11 +109,22 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
       const timeSinceLastSound = now - lastGamePlaySoundRef.current;
       if (timeSinceLastSound < GAME_PLAY_COOLDOWN_MS) {
         console.log(`[Admin Realtime] Skipping gamePlay sound (cooldown: ${timeSinceLastSound}ms < ${GAME_PLAY_COOLDOWN_MS}ms)`);
-        // Still add event to log, but mark as deduplicated
         addEvent({ type: eventType, timestamp: new Date(), source, details: `${details} (deduplicated)` });
         return;
       }
       lastGamePlaySoundRef.current = now;
+    }
+    
+    // Deduplication for topup sounds - check cooldown
+    if (type === 'topup') {
+      const now = Date.now();
+      const timeSinceLastSound = now - lastTopupSoundRef.current;
+      if (timeSinceLastSound < TOPUP_COOLDOWN_MS) {
+        console.log(`[Admin Realtime] Skipping topup sound (cooldown: ${timeSinceLastSound}ms < ${TOPUP_COOLDOWN_MS}ms)`);
+        addEvent({ type: eventType, timestamp: new Date(), source, details: `${details} (deduplicated)` });
+        return;
+      }
+      lastTopupSoundRef.current = now;
     }
     
     addEvent({ type: eventType, timestamp: new Date(), source, details });
