@@ -14,6 +14,8 @@ import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { Badge } from '@/components/ui/badge';
 import { useUnseenWinsCount } from '@/hooks/useUnseenWinsCount';
 
+type UiStatus = 'čeká' | 'odesláno' | 'doručeno';
+
 interface Win {
   id: string;
   type: string;
@@ -36,7 +38,15 @@ interface Win {
     image_url: string | null;
     guardian_required: boolean | null;
   } | null;
+  ui_status: UiStatus;
 }
+
+// Helper to derive ui_status from win data
+const deriveUiStatus = (delivered: boolean, notes: string | null): UiStatus => {
+  if (delivered) return 'doručeno';
+  if (notes && notes.toLowerCase().includes('odesláno')) return 'odesláno';
+  return 'čeká';
+};
 
 type FilterStatus = 'all' | 'pending' | 'shipped' | 'delivered';
 type FilterType = 'all' | 'main' | 'bonus';
@@ -66,18 +76,12 @@ const Wins: React.FC = () => {
       result = result.filter(win => win.type === typeFilter);
     }
     
-    // Apply status filter
+    // Apply status filter based on ui_status
     if (filter !== 'all') {
       result = result.filter(win => {
-        if (filter === 'delivered') {
-          return win.delivered || win.status === 'vyplaceno';
-        }
-        if (filter === 'shipped') {
-          return win.status === 'odesláno' || win.status === 'připraveno k odeslání';
-        }
-        if (filter === 'pending') {
-          return !win.delivered && win.status !== 'vyplaceno' && win.status !== 'odesláno' && win.status !== 'připraveno k odeslání';
-        }
+        if (filter === 'delivered') return win.ui_status === 'doručeno';
+        if (filter === 'shipped') return win.ui_status === 'odesláno';
+        if (filter === 'pending') return win.ui_status === 'čeká';
         return true;
       });
     }
@@ -90,12 +94,12 @@ const Wins: React.FC = () => {
     });
   }, [wins, filter, typeFilter, sortOrder]);
 
-  // Count wins by status for badges
+  // Count wins by ui_status for badges
   const statusCounts = useMemo(() => ({
     all: wins.length,
-    pending: wins.filter(w => !w.delivered && w.status !== 'vyplaceno' && w.status !== 'odesláno' && w.status !== 'připraveno k odeslání').length,
-    shipped: wins.filter(w => w.status === 'odesláno' || w.status === 'připraveno k odeslání').length,
-    delivered: wins.filter(w => w.delivered || w.status === 'vyplaceno').length,
+    pending: wins.filter(w => w.ui_status === 'čeká').length,
+    shipped: wins.filter(w => w.ui_status === 'odesláno').length,
+    delivered: wins.filter(w => w.ui_status === 'doručeno').length,
   }), [wins]);
 
   // Count wins by type for badges
@@ -206,9 +210,11 @@ const Wins: React.FC = () => {
           const newStatus = payload.new.status as string;
           
           // Update the specific win in state
+          const newDelivered = payload.new.delivered as boolean;
+          const newNotes = payload.new.notes as string | null;
           setWins(prev => prev.map(win => 
             win.id === winId 
-              ? { ...win, status: newStatus, delivered: payload.new.delivered }
+              ? { ...win, status: newStatus, delivered: newDelivered, notes: newNotes, ui_status: deriveUiStatus(newDelivered, newNotes) }
               : win
           ));
           
@@ -289,7 +295,8 @@ const Wins: React.FC = () => {
       const transformedWins: Win[] = winsData.map(win => ({
         ...win,
         contest: contestsMap.get(win.contest_id) || null,
-        bonus_prize: win.prize_id ? prizesMap.get(win.prize_id) || null : null
+        bonus_prize: win.prize_id ? prizesMap.get(win.prize_id) || null : null,
+        ui_status: deriveUiStatus(win.delivered, win.notes)
       }));
 
       setWins(transformedWins);
