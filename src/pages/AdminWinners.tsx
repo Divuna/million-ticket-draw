@@ -76,6 +76,7 @@ const AdminWinners: React.FC = () => {
 
   const statusOptions = [
     { value: 'all', label: 'Všechny stavy' },
+    { value: 'auto_credited', label: 'Automaticky připsáno' },
     { value: 'čeká na potvrzení', label: 'Čeká na potvrzení' },
     { value: 'připraveno k odeslání', label: 'Připraveno k odeslání' },
     { value: 'odesláno', label: 'Odesláno' },
@@ -178,10 +179,17 @@ const AdminWinners: React.FC = () => {
   useEffect(() => {
     if (statusFilter === 'all') {
       setFilteredWinners(winners);
+    } else if (statusFilter === 'auto_credited') {
+      // Show only MioCoin auto-credited rewards
+      const filtered = winners.filter(winner => isAutoCreditBonus(winner));
+      setFilteredWinners(filtered);
     } else {
-      const filtered = winners.filter(winner => 
-        (winner.status || 'čeká na potvrzení') === statusFilter
-      );
+      // Physical status filters - exclude MioCoin auto-credited rewards
+      const filtered = winners.filter(winner => {
+        // Skip auto-credited MioCoin bonuses from physical status filters
+        if (isAutoCreditBonus(winner)) return false;
+        return (winner.status || 'čeká na potvrzení') === statusFilter;
+      });
       setFilteredWinners(filtered);
     }
   }, [winners, statusFilter]);
