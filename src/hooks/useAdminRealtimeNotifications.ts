@@ -56,6 +56,20 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
     soundEnabledRef.current = soundEnabled;
   }, [soundEnabled]);
 
+  // Track channel statuses for accurate connection badge
+  type ChannelStatus = 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR' | 'PENDING';
+  const channelStatusRef = useRef<{ profiles: ChannelStatus; payments: ChannelStatus; tickets: ChannelStatus }>({
+    profiles: 'PENDING',
+    payments: 'PENDING',
+    tickets: 'PENDING',
+  });
+
+  const updateConnectionStatus = useCallback(() => {
+    const { profiles, payments, tickets } = channelStatusRef.current;
+    const allConnected = profiles === 'SUBSCRIBED' && payments === 'SUBSCRIBED' && tickets === 'SUBSCRIBED';
+    setRealtimeConnected(allConnected);
+  }, []);
+
   // Initialize audio elements
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -119,6 +133,7 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
     
     const audio = audioRefs.current[type];
     if (audio) {
+      console.log(`[Admin Sound] Playing ${type} (${source})`);
       audio.currentTime = 0;
       audio.play().catch(err => {
         console.warn('[Admin Realtime] Sound play failed:', err);
@@ -134,9 +149,30 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
       } catch (e) {
         console.error('Error saving admin sound setting:', e);
       }
+      
+      // When turning OFF: immediately stop all playing audio
+      if (!newValue) {
+        Object.values(audioRefs.current).forEach(audio => {
+          if (audio) {
+            audio.pause();
+            audio.currentTime = 0;
+          }
+        });
+        console.log('[Admin Sound] All sounds stopped (muted)');
+      }
+      
       return newValue;
     });
   }, []);
+
+  // Sync audio.muted with soundEnabled as additional safeguard
+  useEffect(() => {
+    Object.values(audioRefs.current).forEach(audio => {
+      if (audio) {
+        audio.muted = !soundEnabled;
+      }
+    });
+  }, [soundEnabled]);
 
   // Realtime subscriptions
   useEffect(() => {
@@ -166,7 +202,8 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
       )
       .subscribe((status) => {
         console.log('[Admin Realtime] profiles channel:', status);
-        if (status === 'SUBSCRIBED') setRealtimeConnected(true);
+        channelStatusRef.current.profiles = status as ChannelStatus;
+        updateConnectionStatus();
       });
 
     const paymentsChannel = supabase
@@ -190,6 +227,8 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
       )
       .subscribe((status) => {
         console.log('[Admin Realtime] payments channel:', status);
+        channelStatusRef.current.payments = status as ChannelStatus;
+        updateConnectionStatus();
       });
 
     const ticketsChannel = supabase
@@ -211,6 +250,8 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
       )
       .subscribe((status) => {
         console.log('[Admin Realtime] tickets channel:', status);
+        channelStatusRef.current.tickets = status as ChannelStatus;
+        updateConnectionStatus();
       });
 
     return () => {
@@ -218,9 +259,10 @@ export const useAdminRealtimeNotifications = (isAdmin: boolean) => {
       supabase.removeChannel(profilesChannel);
       supabase.removeChannel(paymentsChannel);
       supabase.removeChannel(ticketsChannel);
+      channelStatusRef.current = { profiles: 'PENDING', payments: 'PENDING', tickets: 'PENDING' };
       setRealtimeConnected(false);
     };
-  }, [isAdmin, playSound]);
+  }, [isAdmin, playSound, updateConnectionStatus]);
 
   // Polling fallback - checks every 4 seconds
   useEffect(() => {
