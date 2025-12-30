@@ -3,23 +3,38 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useAdminRealtimeNotifications } from '@/hooks/useAdminRealtimeNotifications';
+import { AdminSoundIndicator } from '@/components/AdminSoundIndicator';
 import { Home } from 'lucide-react';
 import logo from '@/assets/logo-onemil.png';
 
 export const Header: React.FC = () => {
   const { user, signOut } = useAuth();
   const { isAdmin } = useUserRole();
+  const { soundEnabled, toggleSound, realtimeConnected, lastRealtimeEvent } = useAdminRealtimeNotifications(isAdmin);
 
   return (
     <header className="sticky top-0 z-50 h-16 md:h-20 bg-background/70 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4">
       <div className="container mx-auto flex items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-3">
-          <img
-            src={logo}
-            alt="OneMil logo"
-            className="h-12 md:h-20 w-auto object-contain"
-          />
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link to="/" className="flex items-center gap-3">
+            <img
+              src={logo}
+              alt="OneMil logo"
+              className="h-12 md:h-20 w-auto object-contain"
+            />
+          </Link>
+          
+          {/* Admin sound indicator next to logo */}
+          {isAdmin && (
+            <AdminSoundIndicator
+              soundEnabled={soundEnabled}
+              realtimeConnected={realtimeConnected}
+              lastRealtimeEvent={lastRealtimeEvent}
+              onToggleSound={toggleSound}
+            />
+          )}
+        </div>
         
         <nav className="flex items-center space-x-4">
           {user ? (
