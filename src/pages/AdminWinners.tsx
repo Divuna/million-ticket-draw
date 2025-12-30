@@ -872,9 +872,10 @@ const AdminWinners: React.FC = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            {isAutoCreditBonus(winner) ? (
-                              <span className="text-xs text-green-400">
-                                Připsáno: {new Date(winner.created_at).toLocaleString('cs-CZ', { 
+                            <div className="space-y-1">
+                              {/* Win date for all rewards */}
+                              <span className="text-xs text-orange-400 block">
+                                Vyhráno: {new Date(winner.created_at).toLocaleString('cs-CZ', { 
                                   day: '2-digit', 
                                   month: '2-digit', 
                                   year: 'numeric', 
@@ -882,58 +883,70 @@ const AdminWinners: React.FC = () => {
                                   minute: '2-digit' 
                                 })}
                               </span>
-                            ) : (
-                              <div className="relative">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-auto py-1 px-2 gap-1 text-xs max-w-[180px]"
-                                  onClick={() => fetchHistory(winner.id)}
-                                >
-                                  {historyData[winner.id] && historyData[winner.id].length > 0 ? (
-                                    <span className="truncate text-left">
-                                      {historyData[winner.id][0].new_status} · {new Date(historyData[winner.id][0].created_at).toLocaleString('cs-CZ')}
-                                    </span>
-                                  ) : (
-                                    <>
-                                      <History className="h-3 w-3 flex-shrink-0" />
-                                      <span>Žádná historie</span>
-                                    </>
-                                  )}
-                                  {expandedHistory === winner.id ? (
-                                    <ChevronUp className="h-3 w-3 flex-shrink-0" />
-                                  ) : (
-                                    <ChevronDown className="h-3 w-3 flex-shrink-0" />
-                                  )}
-                                </Button>
-                                {expandedHistory === winner.id && historyData[winner.id] && (
-                                  <div className="absolute z-10 top-full left-0 mt-1 w-72 bg-popover border rounded-md shadow-lg p-2 text-xs">
-                                    <div className="font-medium mb-2 text-foreground">Historie změn stavu</div>
-                                    {historyData[winner.id].length === 0 ? (
-                                      <p className="text-muted-foreground">Žádné změny</p>
+                              
+                              {isAutoCreditBonus(winner) ? (
+                                <span className="text-xs text-green-400 block">
+                                  Připsáno: {new Date(winner.created_at).toLocaleString('cs-CZ', { 
+                                    day: '2-digit', 
+                                    month: '2-digit', 
+                                    year: 'numeric', 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                  })}
+                                </span>
+                              ) : (
+                                <div className="relative">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-auto py-1 px-2 gap-1 text-xs max-w-[180px]"
+                                    onClick={() => fetchHistory(winner.id)}
+                                  >
+                                    {historyData[winner.id] && historyData[winner.id].length > 0 ? (
+                                      <span className="truncate text-left">
+                                        {historyData[winner.id][0].new_status} · {new Date(historyData[winner.id][0].created_at).toLocaleString('cs-CZ')}
+                                      </span>
                                     ) : (
-                                      <div className="max-h-48 overflow-y-auto space-y-2">
-                                        {historyData[winner.id].map((entry) => (
-                                          <div key={entry.id} className="border-b border-border/50 pb-2 last:border-0">
-                                            <div className="flex justify-between items-center">
-                                              <span className="text-muted-foreground">{entry.old_status || '(nový)'}</span>
-                                              <span className="mx-1">→</span>
-                                              <span className="font-medium text-foreground">{entry.new_status}</span>
-                                            </div>
-                                            <div className="text-muted-foreground mt-1">
-                                              {new Date(entry.created_at).toLocaleString('cs-CZ')}
-                                              {entry.admin_email && (
-                                                <span className="ml-1">({entry.admin_email})</span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
+                                      <>
+                                        <History className="h-3 w-3 flex-shrink-0" />
+                                        <span>Žádná historie</span>
+                                      </>
                                     )}
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                                    {expandedHistory === winner.id ? (
+                                      <ChevronUp className="h-3 w-3 flex-shrink-0" />
+                                    ) : (
+                                      <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                                    )}
+                                  </Button>
+                                  {expandedHistory === winner.id && historyData[winner.id] && (
+                                    <div className="absolute z-10 top-full left-0 mt-1 w-72 bg-popover border rounded-md shadow-lg p-2 text-xs">
+                                      <div className="font-medium mb-2 text-foreground">Historie změn stavu</div>
+                                      {historyData[winner.id].length === 0 ? (
+                                        <p className="text-muted-foreground">Žádné změny</p>
+                                      ) : (
+                                        <div className="max-h-48 overflow-y-auto space-y-2">
+                                          {historyData[winner.id].map((entry) => (
+                                            <div key={entry.id} className="border-b border-border/50 pb-2 last:border-0">
+                                              <div className="flex justify-between items-center">
+                                                <span className="text-muted-foreground">{entry.old_status || '(nový)'}</span>
+                                                <span className="mx-1">→</span>
+                                                <span className="font-medium text-foreground">{entry.new_status}</span>
+                                              </div>
+                                              <div className="text-muted-foreground mt-1">
+                                                {new Date(entry.created_at).toLocaleString('cs-CZ')}
+                                                {entry.admin_email && (
+                                                  <span className="ml-1">({entry.admin_email})</span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             {isAutoCreditBonus(winner) ? (
