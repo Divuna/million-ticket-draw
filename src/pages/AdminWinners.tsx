@@ -430,23 +430,34 @@ const AdminWinners: React.FC = () => {
     }
   };
 
+  // Helper to derive ui_status for CSV export
+  const deriveUiStatusForExport = (winner: WinnerData): string => {
+    // Check if delivered (status vyplaceno means delivered)
+    if (winner.status === 'vyplaceno') return 'doručeno';
+    // Check if notes contain 'odesláno' or status is 'odesláno'
+    if (winner.status === 'odesláno' || winner.status === 'připraveno k odeslání') return 'odesláno';
+    // Default
+    return 'čeká';
+  };
+
   const exportWinnersToCsv = () => {
     if (filteredWinners.length === 0) {
       toast({ title: "Info", description: "Žádné výhry k exportu." });
       return;
     }
 
-    const headers = ['Email', 'Jméno', 'Příjmení', 'Adresa', 'Telefon', 'Soutěž', 'Cena', 'Typ', 'Stav', 'Datum výhry'];
+    // Reordered columns: Email, First name, Last name, Phone, Address, Contest name, Prize type, Prize description, Status, Win date
+    const headers = ['Email', 'Jméno', 'Příjmení', 'Telefon', 'Adresa', 'Soutěž', 'Typ výhry', 'Popis ceny', 'Stav', 'Datum výhry'];
     const rows = filteredWinners.map(winner => [
       winner.user_email,
       winner.user_address.first_name || '',
       winner.user_address.last_name || '',
-      winner.user_address.address || '',
       winner.user_address.phone || '',
+      winner.user_address.address || '',
       winner.contest_title,
+      winner.type === 'main' ? 'Main' : 'Bonus',
       winner.prize_description,
-      winner.type === 'main' ? 'Hlavní výhra' : 'Bonus',
-      winner.status || 'čeká na potvrzení',
+      deriveUiStatusForExport(winner),
       new Date(winner.created_at).toLocaleString('cs-CZ')
     ]);
 
@@ -455,8 +466,7 @@ const AdminWinners: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const statusLabel = statusFilter === 'all' ? 'vsechny' : statusFilter.replace(/\s+/g, '-');
-    link.download = `vyhry-${statusLabel}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `onemil-admin-vyhry-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
 
