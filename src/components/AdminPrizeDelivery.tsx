@@ -8,9 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Truck, Package, Clock, CheckCircle, AlertCircle, UserCheck, Users, Download, AlertTriangle } from 'lucide-react';
+import { Truck, Package, Clock, CheckCircle, AlertCircle, UserCheck, Users, Download, AlertTriangle, Mail, MapPin, Calendar, User, X } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Contest {
@@ -31,6 +33,7 @@ interface BonusPrize {
   guardian_required?: boolean;
   winner_email?: string;
   winner_age?: number | null; // null = unknown, number = computed age
+  winner_address?: string;
   contest?: {
     title: string;
   }[] | { title: string };
@@ -68,12 +71,14 @@ export const AdminPrizeDelivery: React.FC = () => {
   const [deliverySummary, setDeliverySummary] = useState<DeliverySummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingPrize, setEditingPrize] = useState<BonusPrize | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [newStatus, setNewStatus] = useState<string>('');
   const [newNotes, setNewNotes] = useState<string>('');
   const [guardianFilter, setGuardianFilter] = useState<GuardianFilter>('all');
   const [selectedPrizeIds, setSelectedPrizeIds] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<string>('');
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Fetch contests on component mount
   useEffect(() => {
@@ -122,21 +127,26 @@ export const AdminPrizeDelivery: React.FC = () => {
 
       if (prizesError) throw prizesError;
 
-      // Get tickets with user emails and user_id for won prizes
+      // Get tickets with user emails, user_id and address for won prizes
       const { data: ticketsData, error: ticketsError } = await supabase
         .from('tickets')
-        .select('number, user_id, user:users(email)')
+        .select('number, user_id, user:users(email, address)')
         .eq('contest_id', contestId);
 
       if (ticketsError) throw ticketsError;
 
-      // Map ticket positions to user emails and user_ids
+      // Map ticket positions to user emails, user_ids and addresses
       const ticketEmailMap = new Map<number, string>();
       const ticketUserIdMap = new Map<number, string>();
+      const ticketAddressMap = new Map<number, string>();
       ticketsData?.forEach((ticket: any) => {
         const email = Array.isArray(ticket.user) ? ticket.user[0]?.email : ticket.user?.email;
+        const address = Array.isArray(ticket.user) ? ticket.user[0]?.address : ticket.user?.address;
         if (email) {
           ticketEmailMap.set(ticket.number, email);
+        }
+        if (address) {
+          ticketAddressMap.set(ticket.number, address);
         }
         if (ticket.user_id) {
           ticketUserIdMap.set(ticket.number, ticket.user_id);
@@ -165,13 +175,14 @@ export const AdminPrizeDelivery: React.FC = () => {
         }
       }
 
-      // Enrich prizes with winner emails and ages
+      // Enrich prizes with winner emails, ages and addresses
       const enrichedPrizes = (prizesData || []).map(prize => {
         const userId = ticketUserIdMap.get(prize.ticket_position);
         return {
           ...prize,
           winner_email: ticketEmailMap.get(prize.ticket_position) || '',
-          winner_age: userId && prize.guardian_required ? (userAgeMap.get(userId) ?? null) : null
+          winner_age: userId && prize.guardian_required ? (userAgeMap.get(userId) ?? null) : null,
+          winner_address: ticketAddressMap.get(prize.ticket_position) || ''
         };
       });
 
@@ -344,11 +355,20 @@ export const AdminPrizeDelivery: React.FC = () => {
     setEditingPrize(prize);
     setNewStatus(prize.status);
     setNewNotes(prize.admin_notes || '');
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingPrize(null);
+    setNewStatus('');
+    setNewNotes('');
   };
 
   const handleSavePrizeUpdate = async () => {
     if (!editingPrize) return;
 
+    setSaving(true);
     try {
       const { data, error } = await supabase
         .rpc('update_bonus_prize_delivery_status', {
@@ -370,10 +390,8 @@ export const AdminPrizeDelivery: React.FC = () => {
       }
       fetchDeliverySummary();
       
-      // Reset form
-      setEditingPrize(null);
-      setNewStatus('');
-      setNewNotes('');
+      // Close modal
+      handleCloseModal();
 
     } catch (error) {
       console.error('Error updating prize delivery status:', error);
@@ -382,7 +400,23 @@ export const AdminPrizeDelivery: React.FC = () => {
         description: "Nepodařilo se aktualizovat stav předání výhry.",
         variant: "destructive"
       });
+    } finally {
+      setSaving(false);
     }
+  };
+
+  // Get contest title helper
+  const getContestTitle = (prize: BonusPrize): string => {
+    if (!prize.contest) return 'Neznámá soutěž';
+    if (Array.isArray(prize.contest)) {
+      return prize.contest[0]?.title || 'Neznámá soutěž';
+    }
+    return prize.contest.title || 'Neznámá soutěž';
+  };
+
+  // Check if prize is physical
+  const isPrizePhysical = (prize: BonusPrize): boolean => {
+    return !prize.amount || prize.amount === 0;
   };
 
   const getStatusBadge = (status: string) => {
@@ -668,60 +702,178 @@ export const AdminPrizeDelivery: React.FC = () => {
         </Card>
       )}
 
-      {/* Edit Prize Modal/Form */}
-      {editingPrize && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Upravit stav předání výhry</CardTitle>
-            <CardDescription>
-              Výhra #{editingPrize.ticket_position}: {editingPrize.description}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="status-select">Stav</Label>
-              <Select value={newStatus} onValueChange={setNewStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Čeká na předání</SelectItem>
-                  <SelectItem value="won">Vyhráno</SelectItem>
-                  <SelectItem value="delivered">Předáno</SelectItem>
-                </SelectContent>
-              </Select>
+      {/* Edit Prize Modal */}
+      <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleCloseModal()}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Detail výhry #{editingPrize?.ticket_position}
+            </DialogTitle>
+            <DialogDescription>
+              Zobrazení a úprava detailů předání výhry
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingPrize && (
+            <div className="space-y-6">
+              {/* Prize Information Section */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Informace o výhře
+                </h4>
+                <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-muted/30 border">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Soutěž</Label>
+                    <p className="text-sm font-medium">{getContestTitle(editingPrize)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Pozice tiketu</Label>
+                    <p className="text-sm font-medium">#{editingPrize.ticket_position}</p>
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <Label className="text-xs text-muted-foreground">Popis výhry</Label>
+                    <p className="text-sm font-medium">{editingPrize.description}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Typ výhry</Label>
+                    <p className="text-sm font-medium">
+                      {isPrizePhysical(editingPrize) ? 'Fyzická výhra' : `${editingPrize.amount} MioCoins`}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Vytvořeno</Label>
+                    <p className="text-sm font-medium flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(editingPrize.created_at).toLocaleDateString('cs-CZ')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Winner Information Section */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Informace o výherci
+                </h4>
+                <div className="p-4 rounded-lg bg-muted/30 border space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      {editingPrize.winner_email || <span className="text-muted-foreground italic">Zatím nepřiřazeno</span>}
+                    </span>
+                  </div>
+                  
+                  {editingPrize.winner_age !== null && (
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">Věk: {editingPrize.winner_age} let</span>
+                    </div>
+                  )}
+
+                  {/* Guardian Required Indicator */}
+                  {isPrizePhysical(editingPrize) && (
+                    <div className="pt-2">
+                      {editingPrize.guardian_required ? (
+                        <Badge variant="outline" className="bg-yellow-500/15 text-yellow-400 border-yellow-500/40">
+                          <Users className="w-3 h-3 mr-1" />
+                          ⚠️ Vyžaduje zákonného zástupce
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-green-500/15 text-green-400 border-green-500/40">
+                          <UserCheck className="w-3 h-3 mr-1" />
+                          ✓ Převzetí možné od 15+ bez doprovodu
+                        </Badge>
+                      )}
+                      
+                      {editingPrize.guardian_required && editingPrize.winner_age !== null && editingPrize.winner_age < 18 && (
+                        <div className="mt-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/30">
+                          <div className="flex items-center gap-2 text-yellow-400 text-sm">
+                            <AlertTriangle className="w-4 h-4" />
+                            <span>Uživatel mladší 18 let – nutný kontakt zákonného zástupce</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Delivery Address - Only for Physical Prizes */}
+              {isPrizePhysical(editingPrize) && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                      Doručovací adresa
+                    </h4>
+                    <div className="p-4 rounded-lg bg-muted/30 border">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                        <span className="text-sm">
+                          {editingPrize.winner_address || <span className="text-muted-foreground italic">Adresa není vyplněna</span>}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <Separator />
+
+              {/* Editable Fields Section */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Stav předání
+                </h4>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="status-select">Stav</Label>
+                  <Select value={newStatus} onValueChange={setNewStatus}>
+                    <SelectTrigger id="status-select">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Čeká na předání</SelectItem>
+                      <SelectItem value="won">Vyhráno</SelectItem>
+                      <SelectItem value="delivered">Předáno</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="notes-input">Poznámky admina</Label>
+                  <Textarea
+                    id="notes-input"
+                    value={newNotes}
+                    onChange={(e) => setNewNotes(e.target.value)}
+                    placeholder="Volitelné poznámky k předání výhry..."
+                    className="min-h-[100px]"
+                  />
+                </div>
+              </div>
             </div>
-            
-            <div>
-              <Label htmlFor="notes-input">Poznámky admina</Label>
-              <Textarea
-                id="notes-input"
-                value={newNotes}
-                onChange={(e) => setNewNotes(e.target.value)}
-                placeholder="Volitelné poznámky k předání výhry..."
-                className="min-h-[80px]"
-              />
-            </div>
-            
-            <div className="flex gap-2">
-              <Button onClick={handleSavePrizeUpdate}>
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Uložit
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setEditingPrize(null);
-                  setNewStatus('');
-                  setNewNotes('');
-                }}
-              >
-                Zrušit
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleCloseModal} disabled={saving}>
+              Zrušit
+            </Button>
+            <Button onClick={handleSavePrizeUpdate} disabled={saving}>
+              {saving ? (
+                <>Ukládám...</>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Uložit změny
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delivery Summary */}
       <Card>
