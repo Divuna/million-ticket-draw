@@ -57,6 +57,7 @@ import OnboardingDateOfBirth from "@/pages/OnboardingDateOfBirth";
 import DeleteAccount from "@/pages/DeleteAccount";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsConditions from "@/pages/TermsConditions";
+import Kontakt from "@/pages/Kontakt";
 import NotFound from "@/pages/NotFound";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -120,6 +121,7 @@ function AppContent() {
         <Route path="/delete-account" element={<DeleteAccount />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsConditions />} />
+        <Route path="/kontakt" element={<Kontakt />} />
         <Route path="/test-login" element={<TestLogin />} />
         <Route path="/:section/:slug" element={<ContentPage />} />
         <Route path="*" element={<NotFound />} />

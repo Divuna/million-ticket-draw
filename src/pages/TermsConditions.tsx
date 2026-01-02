@@ -31,10 +31,19 @@ const TermsConditions = () => {
 
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">1. Úvodní ustanovení</h2>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4">
               Tyto obchodní podmínky (dále jen „Podmínky") upravují práva a povinnosti uživatelů 
-              mobilní a webové aplikace OneMil (dále jen „Aplikace") provozované společností 
-              OneMil (dále jen „Provozovatel"). Používáním Aplikace vyjadřujete souhlas s těmito Podmínkami.
+              mobilní a webové aplikace OneMil (dále jen „Aplikace") provozované společností:
+            </p>
+            <div className="bg-muted/50 rounded-lg p-4 text-muted-foreground space-y-1 mb-4">
+              <p className="font-medium text-foreground">iCONIC POINT s.r.o.</p>
+              <p>IČO: 177 95 851</p>
+              <p>Sídlo: Na Folimance 2155/15, Vinohrady, 120 00 Praha 2</p>
+              <p>Zapsáno v obchodním rejstříku vedeném Městským soudem v Praze, oddíl C, vložka 376856</p>
+              <p>Jednatel: Pavel Diviš</p>
+            </div>
+            <p className="text-muted-foreground">
+              (dále jen „Provozovatel"). Používáním Aplikace vyjadřujete souhlas s těmito Podmínkami.
             </p>
           </section>
 
@@ -189,10 +198,15 @@ const TermsConditions = () => {
 
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">14. Kontakt</h2>
-            <p className="text-muted-foreground">
-              V případě dotazů nás kontaktujte na e-mailu: {' '}
-              <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a>
+            <p className="text-muted-foreground mb-4">
+              V případě dotazů nás kontaktujte:
             </p>
+            <div className="bg-muted/50 rounded-lg p-4 text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground">iCONIC POINT s.r.o.</p>
+              <p>E-mail: <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a></p>
+              <p>Telefon: <a href="tel:+420776532562" className="text-primary hover:underline">+420 776 532 562</a></p>
+              <p>Adresa: Na Folimance 2155/15, Vinohrady, 120 00 Praha 2</p>
+            </div>
           </section>
         </div>
       </div>

@@ -112,9 +112,16 @@ const DeleteAccount: React.FC = () => {
               <p>
                 Vaše právo na smazání osobních údajů je zaručeno v souladu s nařízením GDPR. 
                 Pro více informací o zpracování osobních údajů navštivte naši stránku{' '}
-                <a href="/legal/ochrana-osobnich-udaju" className="text-primary hover:underline">
-                  Ochrana osobních údajů
+                <a href="/privacy" className="text-primary hover:underline">
+                  Zásady ochrany osobních údajů
                 </a>.
+              </p>
+            </div>
+
+            {/* Provozovatel */}
+            <div className="border-t border-border pt-6">
+              <p className="text-sm text-muted-foreground text-center">
+                <span className="font-medium text-foreground">Provozovatel:</span> iCONIC POINT s.r.o., IČO: 177 95 851
               </p>
             </div>
           </CardContent>
