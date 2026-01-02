@@ -1113,6 +1113,11 @@ const Homepage = () => {
                     Autorská práva
                   </Link>
                 </li>
+                <li>
+                  <Link to="/delete-account" className="hover:text-primary transition-colors duration-200 story-link">
+                    Smazání účtu
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
