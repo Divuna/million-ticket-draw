@@ -1089,13 +1089,13 @@ const Homepage = () => {
               <h4 className="font-semibold text-lg text-primary mb-6">Právní podmínky</h4>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li>
-                  <Link to="/legal/obchodni-podminky" className="hover:text-primary transition-colors duration-200 story-link">
-                    Všeobecné obchodní podmínky
+                  <Link to="/terms" className="hover:text-primary transition-colors duration-200 story-link">
+                    Obchodní podmínky
                   </Link>
                 </li>
                 <li>
-                  <Link to="/legal/ochrana-osobnich-udaju" className="hover:text-primary transition-colors duration-200 story-link">
-                    Ochrana osobních údajů
+                  <Link to="/privacy" className="hover:text-primary transition-colors duration-200 story-link">
+                    Zásady ochrany osobních údajů
                   </Link>
                 </li>
                 <li>

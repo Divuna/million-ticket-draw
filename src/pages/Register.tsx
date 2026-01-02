@@ -211,12 +211,13 @@ const Register: React.FC = () => {
               <label htmlFor="terms" className="text-sm leading-tight cursor-pointer">
                 Souhlasím s{' '}
                 <Link 
-                  to="/legal/obchodni-podminky" 
+                  to="/terms" 
                   className="text-primary hover:underline"
                   target="_blank"
                 >
-                  Všeobecnými obchodními podmínkami
+                  Obchodními podmínkami
                 </Link>
+                {' '}*
               </label>
             </div>
             
@@ -227,14 +228,15 @@ const Register: React.FC = () => {
                 onCheckedChange={(checked) => setGdprAccepted(checked === true)}
               />
               <label htmlFor="gdpr" className="text-sm leading-tight cursor-pointer">
-                Beru na vědomí{' '}
+                Souhlasím se{' '}
                 <Link 
-                  to="/legal/ochrana-osobnich-udaju" 
+                  to="/privacy" 
                   className="text-primary hover:underline"
                   target="_blank"
                 >
-                  Zásady ochrany osobních údajů
+                  Zásadami ochrany osobních údajů
                 </Link>
+                {' '}*
               </label>
             </div>
             
