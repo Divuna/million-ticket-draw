@@ -31,10 +31,18 @@ const PrivacyPolicy = () => {
 
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">1. Správce osobních údajů</h2>
-            <p className="text-muted-foreground">
-              Správcem vašich osobních údajů je společnost provozující aplikaci OneMil (dále jen „Správce"). 
-              V případě dotazů ohledně zpracování osobních údajů nás kontaktujte na e-mailu: <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a>
+            <p className="text-muted-foreground mb-4">
+              Správcem vašich osobních údajů je:
             </p>
+            <div className="bg-muted/50 rounded-lg p-4 text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground">iCONIC POINT s.r.o.</p>
+              <p>IČO: 177 95 851</p>
+              <p>Sídlo: Na Folimance 2155/15, Vinohrady, 120 00 Praha 2</p>
+              <p>Zapsáno v obchodním rejstříku vedeném Městským soudem v Praze, oddíl C, vložka 376856</p>
+              <p>Jednatel: Pavel Diviš</p>
+              <p className="pt-2">E-mail: <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a></p>
+              <p>Telefon: <a href="tel:+420776532562" className="text-primary hover:underline">+420 776 532 562</a></p>
+            </div>
           </section>
 
           <section>
@@ -140,10 +148,15 @@ const PrivacyPolicy = () => {
 
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">11. Kontakt</h2>
-            <p className="text-muted-foreground">
-              V případě dotazů ohledně ochrany osobních údajů nás kontaktujte na e-mailu: {' '}
-              <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a>
+            <p className="text-muted-foreground mb-4">
+              V případě dotazů ohledně ochrany osobních údajů nás kontaktujte:
             </p>
+            <div className="bg-muted/50 rounded-lg p-4 text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground">iCONIC POINT s.r.o.</p>
+              <p>E-mail: <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a></p>
+              <p>Telefon: <a href="tel:+420776532562" className="text-primary hover:underline">+420 776 532 562</a></p>
+              <p>Adresa: Na Folimance 2155/15, Vinohrady, 120 00 Praha 2</p>
+            </div>
           </section>
         </div>
       </div>

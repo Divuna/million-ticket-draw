@@ -1122,12 +1122,22 @@ const Homepage = () => {
             </div>
           </div>
 
+          {/* Company Info */}
+          <div className="border-t border-border pt-8 pb-4">
+            <div className="text-center space-y-2 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">Provozovatel: iCONIC POINT s.r.o.</p>
+              <p>IČO: 177 95 851 | Sídlo: Na Folimance 2155/15, Vinohrady, 120 00 Praha 2</p>
+              <p>Zapsáno v obchodním rejstříku vedeném Městským soudem v Praze, oddíl C, vložka 376856</p>
+              <p>Jednatel: Pavel Diviš | E-mail: <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a> | Tel: <a href="tel:+420776532562" className="text-primary hover:underline">+420 776 532 562</a></p>
+            </div>
+          </div>
+
           {/* Bottom Bar */}
-          <div className="border-t border-border pt-8 pb-8">
+          <div className="border-t border-border pt-4 pb-8">
             <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-              <div className="text-sm text-muted-foreground">© 2024 OneMil s.r.o. Všechna práva vyhrazena.</div>
+              <div className="text-sm text-muted-foreground">© 2024 iCONIC POINT s.r.o. Všechna práva vyhrazena.</div>
               <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-                <span>Verze 1.0.0</span>
+                <Link to="/kontakt" className="hover:text-primary transition-colors">Kontakt</Link>
                 <span>•</span>
                 <span>Česká republika</span>
                 <span>•</span>
