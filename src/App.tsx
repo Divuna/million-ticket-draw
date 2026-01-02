@@ -55,6 +55,8 @@ import ShareTicket from "@/pages/ShareTicket";
 import UnsubscribeMarketing from "@/pages/UnsubscribeMarketing";
 import OnboardingDateOfBirth from "@/pages/OnboardingDateOfBirth";
 import DeleteAccount from "@/pages/DeleteAccount";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsConditions from "@/pages/TermsConditions";
 import NotFound from "@/pages/NotFound";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -116,6 +118,8 @@ function AppContent() {
         <Route path="/admin/onboarding-incomplete" element={<AdminOnboardingIncomplete />} />
         <Route path="/unsubscribe/marketing" element={<UnsubscribeMarketing />} />
         <Route path="/delete-account" element={<DeleteAccount />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsConditions />} />
         <Route path="/test-login" element={<TestLogin />} />
         <Route path="/:section/:slug" element={<ContentPage />} />
         <Route path="*" element={<NotFound />} />
