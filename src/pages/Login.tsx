@@ -46,7 +46,7 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleOAuthSignIn = async (provider: "google" | "apple") => {
+  const handleOAuthSignIn = async (provider: "google" | "apple" | "facebook") => {
     try {
       await signInWithOAuth(provider);
     } catch (error) {
@@ -115,6 +115,10 @@ const Login: React.FC = () => {
 
               <Button type="button" variant="outline" className="w-full" onClick={() => handleOAuthSignIn("apple")}>
                 Přihlásit se přes Apple
+              </Button>
+
+              <Button type="button" variant="outline" className="w-full" onClick={() => handleOAuthSignIn("facebook")}>
+                Přihlásit se přes Facebook
               </Button>
             </div>
 

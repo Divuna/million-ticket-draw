@@ -9,7 +9,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, marketingConsent?: boolean) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
-  signInWithOAuth: (provider: 'google' | 'apple') => Promise<void>;
+  signInWithOAuth: (provider: 'google' | 'apple' | 'facebook') => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -114,7 +114,7 @@ export const useAuthState = () => {
     });
   };
 
-  const signInWithOAuth = async (provider: 'google' | 'apple') => {
+  const signInWithOAuth = async (provider: 'google' | 'apple' | 'facebook') => {
     // OAuth will redirect to origin, then we handle admin check in auth state change
     const redirectUrl = `${window.location.origin}/`;
     
