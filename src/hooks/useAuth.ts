@@ -121,7 +121,8 @@ export const useAuthState = () => {
     await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: redirectUrl
+        redirectTo: redirectUrl,
+        queryParams: provider === 'google' ? { prompt: 'select_account' } : undefined
       }
     });
   };
