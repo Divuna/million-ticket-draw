@@ -2,11 +2,14 @@ import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { WinnerCard } from '@/components/WinnerCard';
 import { useLatestWinners } from '@/hooks/useLatestWinners';
+import { usePlacementBanners } from '@/hooks/usePlacementBanners';
 import { Trophy } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const Winners = () => {
   const { data: winners, isLoading } = useLatestWinners(50);
+  const { banners } = usePlacementBanners(['posledni_vyherci']);
+  const winnersBanner = banners['posledni_vyherci'];
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -14,6 +17,17 @@ const Winners = () => {
       
       <div className="container mx-auto px-4 py-8">
         <div className="space-y-6">
+          {/* Optional Banner Slot */}
+          {winnersBanner && (
+            <div className="w-full rounded-xl overflow-hidden">
+              <img 
+                src={winnersBanner.image_url} 
+                alt={winnersBanner.title} 
+                className="w-full h-auto object-cover"
+              />
+            </div>
+          )}
+
           {/* Header */}
           <div className="space-y-2">
             <h1 className="text-3xl md:text-4xl font-bold text-heading-gold flex items-center gap-3">

@@ -19,6 +19,7 @@ export const PLACEMENT_OPTIONS = {
   'miocoin_1280': 'MioCoin balíček – 1280',
   'probihajici_souteze': 'Probíhající soutěže',
   'koupit_voucher': 'Koupit voucher se slevou',
+  'posledni_vyherci': 'Poslední výherci',
 } as const;
 
 export type PlacementKey = keyof typeof PLACEMENT_OPTIONS;
