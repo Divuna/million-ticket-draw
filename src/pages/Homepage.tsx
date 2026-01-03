@@ -452,11 +452,11 @@ const Homepage = () => {
             <CardContent className="p-5 h-full flex flex-col">
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
-                  <h2 className="text-xl md:text-2xl font-bold text-primary flex items-center gap-2">
+                  <h2 className="text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
                     <Gift className="w-6 h-6 md:w-7 md:h-7" />
                     Dobijte si MioCoiny
                   </h2>
-                  <p className="text-sm text-muted-foreground">Dobíjejte si MioCoiny pro otevření voucherů nebo účasti ve hře.</p>
+                  <p className="text-sm text-text-silver">Dobíjejte si MioCoiny pro otevření voucherů nebo účasti ve hře.</p>
                 </div>
 
                 {/* Coin Packages Grid */}
@@ -562,11 +562,11 @@ const Homepage = () => {
             <CardContent className="p-5 h-full flex flex-col">
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
-                  <h2 className="text-xl md:text-2xl font-bold text-primary flex items-center gap-2">
+                  <h2 className="text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
                     <Trophy className="w-6 h-6 md:w-7 md:h-7" />
                     Poslední výherci
                   </h2>
-                  <p className="text-sm text-muted-foreground">Nejnovější výhry z našich soutěží</p>
+                  <p className="text-sm text-text-silver">Nejnovější výhry z našich soutěží</p>
                 </div>
 
                 <div className="space-y-3 flex-1 overflow-y-auto">
@@ -678,7 +678,7 @@ const Homepage = () => {
         {/* Ongoing Contests Carousel */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-primary flex items-center gap-2">
+            <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
               <Ticket className="w-6 h-6" />
               Probíhající Soutěže
             </h3>
@@ -786,7 +786,7 @@ const Homepage = () => {
         {/* Available Vouchers Section - Visible to everyone */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-primary flex items-center gap-2">
+            <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
               <Gift className="w-6 h-6" />
               Dostupné vouchery
             </h3>
@@ -925,7 +925,7 @@ const Homepage = () => {
         {/* Partners Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-primary flex items-center gap-2">
+            <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
               <Handshake className="w-6 h-6" />
               Naši partneři, kde můžete získat MioCoiny za nákup
             </h3>
@@ -986,7 +986,7 @@ const Homepage = () => {
         {/* Coming Soon Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-primary flex items-center gap-2">
+            <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
               Připravujeme
             </h3>
           </div>

@@ -16,11 +16,11 @@ const Winners = () => {
         <div className="space-y-6">
           {/* Header */}
           <div className="space-y-2">
-            <h1 className="text-3xl md:text-4xl font-bold text-primary flex items-center gap-3">
+            <h1 className="text-3xl md:text-4xl font-bold text-heading-gold flex items-center gap-3">
               <Trophy className="w-8 h-8" />
               Poslední výherci
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-text-silver">
               Přehled posledních 50 výherců ze všech soutěží
             </p>
           </div>
