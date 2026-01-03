@@ -376,7 +376,7 @@ const Homepage = () => {
                 <div 
                   className="absolute inset-0 pointer-events-none"
                   style={{
-                    background: 'linear-gradient(to bottom, transparent 0%, transparent 35%, hsla(45, 60%, 55%, 0.12) 45%, hsla(45, 60%, 55%, 0.18) 50%, hsla(45, 60%, 55%, 0.12) 55%, transparent 65%, transparent 100%)'
+                    background: 'linear-gradient(to bottom, transparent 0%, transparent 30%, hsla(45, 65%, 60%, 0.25) 42%, hsla(45, 70%, 65%, 0.4) 50%, hsla(45, 65%, 60%, 0.25) 58%, transparent 70%, transparent 100%)'
                   }}
                 />
 
