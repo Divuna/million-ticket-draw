@@ -63,6 +63,11 @@
     --neon-cyan: 220 80% 55%;
     --neon-green: 140 50% 50%;
     --neon-pink: 330 60% 60%;
+    
+    /* Premium Typography Colors */
+    --heading-gold: 40 65% 55%;
+    --text-silver: 220 10% 75%;
+    --text-muted-gray: 220 8% 50%;
 
     /* Luxury Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--neon-blue)), hsl(var(--neon-gold)));
@@ -138,24 +143,36 @@
 
   h1 {
     font-size: 2.5rem;
+    color: hsl(var(--heading-gold));
   }
 
   h2 {
     font-size: 1.875rem;
+    color: hsl(var(--heading-gold));
   }
 
   h3 {
     font-size: 1.5rem;
     font-weight: 600;
+    color: hsl(var(--text-silver));
   }
 
   h4 {
     font-size: 1.25rem;
     font-weight: 600;
+    color: hsl(var(--text-silver));
   }
 
   p {
     line-height: 1.6;
+    color: hsl(var(--text-silver));
+  }
+  
+  /* Helper/muted text */
+  .text-muted-foreground,
+  small,
+  .text-sm {
+    color: hsl(var(--text-muted-gray));
   }
 
   /* Premium Subtle Background Gradient */
@@ -219,6 +236,19 @@
 
   .mystery-glow {
     box-shadow: var(--mystery-shadow);
+  }
+
+  /* Premium Typography Classes */
+  .text-heading-gold {
+    color: hsl(var(--heading-gold));
+  }
+
+  .text-content-silver {
+    color: hsl(var(--text-silver));
+  }
+
+  .text-helper-gray {
+    color: hsl(var(--text-muted-gray));
   }
 
   /* Luxury Text Effects */
