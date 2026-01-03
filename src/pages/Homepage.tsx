@@ -481,7 +481,7 @@ const Homepage = () => {
                 {/* Coin Packages Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
                   {/* Package 50 Kč → 50 MC */}
-                  <div className="rounded-xl py-2 px-3 bg-[hsl(220_45%_6%)] border-2 border-blue-400/30 flex flex-col items-center justify-between shadow-[inset_0_1px_12px_hsl(210_80%_50%/0.08)]">
+                  <div className="rounded-xl py-3 px-3 w-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-blue-400/30 flex flex-col items-center justify-between shadow-[inset_0_1px_12px_hsl(210_80%_50%/0.08)]">
                     <div className="text-center">
                       <div className="text-3xl font-bold text-blue-300">50</div>
                       <div className="text-sm text-muted-foreground">MioCoinů</div>
@@ -498,7 +498,7 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 300 Kč → 310 MC (+10 Bonus) */}
-                  <div className="rounded-xl py-2 px-3 bg-[hsl(220_45%_6%)] border-2 border-amber-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(40_80%_50%/0.08)]">
+                  <div className="rounded-xl py-3 px-3 w-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-amber-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(40_80%_50%/0.08)]">
                     <Badge className="absolute -top-2 -right-2 bg-amber-500/90 text-black text-xs font-medium">+10 Bonus</Badge>
                     <div className="text-center">
                       <div className="text-3xl font-bold text-amber-300">310</div>
@@ -516,7 +516,7 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 500 Kč → 525 MC (+25 Bonus) */}
-                  <div className="rounded-xl py-2 px-3 bg-[hsl(220_45%_6%)] border-2 border-violet-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(270_60%_50%/0.08)]">
+                  <div className="rounded-xl py-3 px-3 w-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-violet-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(270_60%_50%/0.08)]">
                     <Badge className="absolute -top-2 -right-2 bg-violet-500/90 text-white text-xs font-medium">+25 Bonus</Badge>
                     <div className="text-center">
                       <div className="text-3xl font-bold text-violet-300">525</div>
@@ -534,7 +534,7 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 1200 Kč → 1280 MC (+80 Bonus) */}
-                  <div className="rounded-xl py-2 px-3 bg-[hsl(220_45%_6%)] border-2 border-emerald-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(160_60%_40%/0.08)]">
+                  <div className="rounded-xl py-3 px-3 w-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-emerald-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(160_60%_40%/0.08)]">
                     <Badge className="absolute -top-2 -right-2 bg-emerald-500/90 text-white text-xs font-medium">+80 Bonus</Badge>
                     <div className="text-center">
                       <div className="text-3xl font-bold text-emerald-300">1280</div>
