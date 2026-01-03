@@ -375,12 +375,12 @@ const Homepage = () => {
               </div>
               
               <div className="relative">
-                <div className="h-48 md:h-56 relative overflow-hidden rounded-lg">
+                <div className="h-48 md:h-56 relative overflow-hidden rounded-lg bg-[hsl(220_30%_6%)]">
                   {/* Banner image */}
                   <img
                     src={megajackpotBanners[currentBannerIndex]?.image_url}
                     alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                   
                   {/* Horizontal golden light gradient - centered, fading up and down */}
