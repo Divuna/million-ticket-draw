@@ -444,7 +444,7 @@ const Homepage = () => {
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-blue-500 hover:bg-blue-400 text-white font-bold shadow-[0_0_12px_hsl(210_90%_55%/0.5)] hover:shadow-[0_0_18px_hsl(210_90%_60%/0.6)] transition-all"
+                      className="w-full mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[0_0_10px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_14px_hsl(var(--primary)/0.5)] transition-all"
                       onClick={() => handleCoinPurchase(50, 50)}
                       disabled={topUpLoading}
                     >
@@ -462,7 +462,7 @@ const Homepage = () => {
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-amber-500 hover:bg-amber-400 text-black font-bold shadow-[0_0_12px_hsl(40_90%_50%/0.5)] hover:shadow-[0_0_18px_hsl(40_90%_55%/0.6)] transition-all"
+                      className="w-full mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[0_0_10px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_14px_hsl(var(--primary)/0.5)] transition-all"
                       onClick={() => handleCoinPurchase(300, 310)}
                       disabled={topUpLoading}
                     >
@@ -480,7 +480,7 @@ const Homepage = () => {
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-violet-500 hover:bg-violet-400 text-white font-bold shadow-[0_0_12px_hsl(270_70%_55%/0.5)] hover:shadow-[0_0_18px_hsl(270_70%_60%/0.6)] transition-all"
+                      className="w-full mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[0_0_10px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_14px_hsl(var(--primary)/0.5)] transition-all"
                       onClick={() => handleCoinPurchase(500, 525)}
                       disabled={topUpLoading}
                     >
@@ -498,7 +498,7 @@ const Homepage = () => {
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-emerald-500 hover:bg-emerald-400 text-white font-bold shadow-[0_0_12px_hsl(160_70%_45%/0.5)] hover:shadow-[0_0_18px_hsl(160_70%_50%/0.6)] transition-all"
+                      className="w-full mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[0_0_10px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_14px_hsl(var(--primary)/0.5)] transition-all"
                       onClick={() => handleCoinPurchase(1200, 1280)}
                       disabled={topUpLoading}
                     >
@@ -811,7 +811,7 @@ const Homepage = () => {
                         {/* Button */}
                         <div className="space-y-2">
                           <Button
-                            className="w-full"
+                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[0_0_10px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_14px_hsl(var(--primary)/0.5)] transition-all"
                             disabled={isAdmin}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -822,7 +822,7 @@ const Homepage = () => {
                               }
                             }}
                           >
-                            {!user ? "PŘIHLÁSIT SE PRO NÁKUP" : "KOUPIT ZA 1 MioCoin"}
+                            {!user ? "PŘIHLÁSIT SE" : "KOUPIT ZA 1 MC"}
                           </Button>
 
                           {/* Status indicator */}
