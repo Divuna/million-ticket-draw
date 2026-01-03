@@ -436,15 +436,15 @@ const Homepage = () => {
                 {/* Coin Packages Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 flex-1">
                   {/* Package 50 Kč → 50 MC */}
-                  <div className="rounded-xl py-1.5 px-2 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 flex flex-col items-center justify-between">
+                  <div className="rounded-xl py-2 px-3 bg-[hsl(220_45%_6%)] border-2 border-blue-400/30 flex flex-col items-center justify-between shadow-[inset_0_1px_12px_hsl(210_80%_50%/0.08)]">
                     <div className="text-center">
-                      <div className="text-4xl font-bold text-blue-500">50</div>
+                      <div className="text-3xl font-bold text-blue-300">50</div>
                       <div className="text-sm text-muted-foreground">MioCoinů</div>
-                      <div className="text-xs text-muted-foreground">50 Kč</div>
+                      <div className="text-xs text-muted-foreground/70">50 Kč</div>
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-blue-600 hover:bg-blue-700"
+                      className="w-full mt-2 bg-blue-500 hover:bg-blue-400 text-white font-semibold shadow-md"
                       onClick={() => handleCoinPurchase(50, 50)}
                       disabled={topUpLoading}
                     >
@@ -453,16 +453,16 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 300 Kč → 310 MC (+10 Bonus) */}
-                  <div className="rounded-xl py-1.5 px-2 bg-gradient-to-br from-yellow-500/10 to-cyan-500/10 border border-yellow-500/20 flex flex-col items-center justify-between relative">
-                    <Badge className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs">+10 Bonus</Badge>
+                  <div className="rounded-xl py-2 px-3 bg-[hsl(220_45%_6%)] border-2 border-amber-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(40_80%_50%/0.08)]">
+                    <Badge className="absolute -top-2 -right-2 bg-amber-500/90 text-black text-xs font-medium">+10 Bonus</Badge>
                     <div className="text-center">
-                      <div className="text-4xl font-bold text-yellow-500">310</div>
+                      <div className="text-3xl font-bold text-amber-300">310</div>
                       <div className="text-sm text-muted-foreground">MioCoinů</div>
-                      <div className="text-xs text-muted-foreground">300 Kč</div>
+                      <div className="text-xs text-muted-foreground/70">300 Kč</div>
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-yellow-600 hover:bg-yellow-700"
+                      className="w-full mt-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold shadow-md"
                       onClick={() => handleCoinPurchase(300, 310)}
                       disabled={topUpLoading}
                     >
@@ -471,16 +471,16 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 500 Kč → 525 MC (+25 Bonus) */}
-                  <div className="rounded-xl py-1.5 px-2 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex flex-col items-center justify-between relative">
-                    <Badge className="absolute -top-2 -right-2 bg-purple-500 text-white text-xs">+25 Bonus</Badge>
+                  <div className="rounded-xl py-2 px-3 bg-[hsl(220_45%_6%)] border-2 border-violet-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(270_60%_50%/0.08)]">
+                    <Badge className="absolute -top-2 -right-2 bg-violet-500/90 text-white text-xs font-medium">+25 Bonus</Badge>
                     <div className="text-center">
-                      <div className="text-4xl font-bold text-purple-500">525</div>
+                      <div className="text-3xl font-bold text-violet-300">525</div>
                       <div className="text-sm text-muted-foreground">MioCoinů</div>
-                      <div className="text-xs text-muted-foreground">500 Kč</div>
+                      <div className="text-xs text-muted-foreground/70">500 Kč</div>
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-purple-600 hover:bg-purple-700"
+                      className="w-full mt-2 bg-violet-500 hover:bg-violet-400 text-white font-semibold shadow-md"
                       onClick={() => handleCoinPurchase(500, 525)}
                       disabled={topUpLoading}
                     >
@@ -489,16 +489,16 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 1200 Kč → 1280 MC (+80 Bonus) */}
-                  <div className="rounded-xl py-1.5 px-2 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 flex flex-col items-center justify-between relative">
-                    <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-xs">+80 Bonus</Badge>
+                  <div className="rounded-xl py-2 px-3 bg-[hsl(220_45%_6%)] border-2 border-emerald-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(160_60%_40%/0.08)]">
+                    <Badge className="absolute -top-2 -right-2 bg-emerald-500/90 text-white text-xs font-medium">+80 Bonus</Badge>
                     <div className="text-center">
-                      <div className="text-4xl font-bold text-green-500">1280</div>
+                      <div className="text-3xl font-bold text-emerald-300">1280</div>
                       <div className="text-sm text-muted-foreground">MioCoinů</div>
-                      <div className="text-xs text-muted-foreground">1200 Kč</div>
+                      <div className="text-xs text-muted-foreground/70">1200 Kč</div>
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-green-600 hover:bg-green-700"
+                      className="w-full mt-2 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold shadow-md"
                       onClick={() => handleCoinPurchase(1200, 1280)}
                       disabled={topUpLoading}
                     >
