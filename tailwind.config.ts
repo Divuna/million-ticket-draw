@@ -84,6 +84,10 @@ export default {
         "neon-cyan": "hsl(var(--neon-cyan))",
         "neon-green": "hsl(var(--neon-green))",
         "neon-pink": "hsl(var(--neon-pink))",
+        // Premium Typography Colors
+        "heading-gold": "hsl(var(--heading-gold))",
+        "text-silver": "hsl(var(--text-silver))",
+        "text-gray": "hsl(var(--text-muted-gray))",
       },
       borderRadius: {
         lg: "var(--radius)",
