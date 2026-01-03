@@ -436,23 +436,32 @@ const Homepage = () => {
                 )}
               </div>
               
-              {/* Bottom golden line separator - premium, wide */}
+              {/* Bottom golden line separator - premium, animated */}
               <div className="relative w-full overflow-hidden py-3 mt-2">
-                {/* Outer glow */}
+                {/* Animated outer glow */}
                 <div 
-                  className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0"
+                  className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
                   style={{
                     background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
                     filter: 'blur(8px)'
                   }}
                 />
-                {/* Sharp line layer */}
+                {/* Sharp line layer with shimmer */}
                 <div 
-                  className="relative h-[5px] max-w-[1300px] mx-auto"
+                  className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
                   style={{
                     background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
                   }}
-                />
+                >
+                  {/* Shimmer overlay */}
+                  <div 
+                    className="absolute inset-0 animate-golden-shimmer"
+                    style={{
+                      background: 'linear-gradient(90deg, transparent 0%, transparent 40%, hsla(50, 100%, 90%, 0.4) 50%, transparent 60%, transparent 100%)',
+                      backgroundSize: '200% 100%'
+                    }}
+                  />
+                </div>
               </div>
             </>
           ) : null}
@@ -629,23 +638,32 @@ const Homepage = () => {
           </Card>
         </section>
         
-        {/* Golden separator line - premium, wide linear */}
+        {/* Golden separator line - premium, animated */}
         <div className="relative w-full overflow-hidden py-3">
-          {/* Outer glow */}
+          {/* Animated outer glow */}
           <div 
-            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0"
+            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
               background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
-          {/* Sharp line layer */}
+          {/* Sharp line layer with shimmer */}
           <div 
-            className="relative h-[5px] max-w-[1300px] mx-auto"
+            className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
               background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
             }}
-          />
+          >
+            {/* Shimmer overlay */}
+            <div 
+              className="absolute inset-0 animate-golden-shimmer"
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, hsla(50, 100%, 90%, 0.4) 50%, transparent 60%, transparent 100%)',
+                backgroundSize: '200% 100%'
+              }}
+            />
+          </div>
         </div>
 
         {/* Dynamic Banners */}
@@ -691,23 +709,32 @@ const Homepage = () => {
           </section>
         )}
         
-        {/* Golden separator line - premium, wide linear */}
+        {/* Golden separator line - premium, animated */}
         <div className="relative w-full overflow-hidden py-3">
-          {/* Outer glow */}
+          {/* Animated outer glow */}
           <div 
-            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0"
+            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
               background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
-          {/* Sharp line layer */}
+          {/* Sharp line layer with shimmer */}
           <div 
-            className="relative h-[5px] max-w-[1300px] mx-auto"
+            className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
               background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
             }}
-          />
+          >
+            {/* Shimmer overlay */}
+            <div 
+              className="absolute inset-0 animate-golden-shimmer"
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, hsla(50, 100%, 90%, 0.4) 50%, transparent 60%, transparent 100%)',
+                backgroundSize: '200% 100%'
+              }}
+            />
+          </div>
         </div>
 
         {/* Ongoing Contests Carousel */}
@@ -810,23 +837,32 @@ const Homepage = () => {
           </div>
         </section>
         
-        {/* Golden separator line - premium, wide linear */}
+        {/* Golden separator line - premium, animated */}
         <div className="relative w-full overflow-hidden py-3">
-          {/* Outer glow */}
+          {/* Animated outer glow */}
           <div 
-            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0"
+            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
               background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
-          {/* Sharp line layer */}
+          {/* Sharp line layer with shimmer */}
           <div 
-            className="relative h-[5px] max-w-[1300px] mx-auto"
+            className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
               background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
             }}
-          />
+          >
+            {/* Shimmer overlay */}
+            <div 
+              className="absolute inset-0 animate-golden-shimmer"
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, hsla(50, 100%, 90%, 0.4) 50%, transparent 60%, transparent 100%)',
+                backgroundSize: '200% 100%'
+              }}
+            />
+          </div>
         </div>
 
         {/* Available Vouchers Section - Visible to everyone */}
@@ -960,23 +996,32 @@ const Homepage = () => {
           </div>
         </section>
 
-        {/* Golden separator line - premium, wide linear */}
+        {/* Golden separator line - premium, animated */}
         <div className="relative w-full overflow-hidden py-3">
-          {/* Outer glow */}
+          {/* Animated outer glow */}
           <div 
-            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0"
+            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
               background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
-          {/* Sharp line layer */}
+          {/* Sharp line layer with shimmer */}
           <div 
-            className="relative h-[5px] max-w-[1300px] mx-auto"
+            className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
               background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
             }}
-          />
+          >
+            {/* Shimmer overlay */}
+            <div 
+              className="absolute inset-0 animate-golden-shimmer"
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, hsla(50, 100%, 90%, 0.4) 50%, transparent 60%, transparent 100%)',
+                backgroundSize: '200% 100%'
+              }}
+            />
+          </div>
         </div>
 
         {/* Partners Section */}
@@ -1032,23 +1077,32 @@ const Homepage = () => {
           </div>
         </section>
         
-        {/* Golden separator line - premium, wide linear */}
+        {/* Golden separator line - premium, animated */}
         <div className="relative w-full overflow-hidden py-3">
-          {/* Outer glow */}
+          {/* Animated outer glow */}
           <div 
-            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0"
+            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
               background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
-          {/* Sharp line layer */}
+          {/* Sharp line layer with shimmer */}
           <div 
-            className="relative h-[5px] max-w-[1300px] mx-auto"
+            className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
               background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
             }}
-          />
+          >
+            {/* Shimmer overlay */}
+            <div 
+              className="absolute inset-0 animate-golden-shimmer"
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, hsla(50, 100%, 90%, 0.4) 50%, transparent 60%, transparent 100%)',
+                backgroundSize: '200% 100%'
+              }}
+            />
+          </div>
         </div>
 
         {/* Coming Soon Section */}

@@ -111,10 +111,30 @@ export default {
             height: "0",
           },
         },
+        "golden-shimmer": {
+          "0%": {
+            backgroundPosition: "-200% center",
+          },
+          "100%": {
+            backgroundPosition: "200% center",
+          },
+        },
+        "golden-pulse": {
+          "0%, 100%": {
+            opacity: "0.6",
+            filter: "blur(8px)",
+          },
+          "50%": {
+            opacity: "1",
+            filter: "blur(12px)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "golden-shimmer": "golden-shimmer 4s ease-in-out infinite",
+        "golden-pulse": "golden-pulse 3s ease-in-out infinite",
       },
     },
   },
