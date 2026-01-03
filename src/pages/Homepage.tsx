@@ -520,9 +520,9 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 300 Kč → 310 MC (+10 Bonus) */}
-                  <div className="relative z-20 overflow-visible">
+                  <div className="relative z-20 overflow-visible h-full">
                     <Badge className="absolute -top-2 -right-2 bg-amber-500/90 text-black text-xs font-medium z-50 pointer-events-none">+10 Bonus</Badge>
-                    <div className="rounded-xl py-3 px-3 w-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-amber-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(40_80%_50%/0.08)] overflow-hidden">
+                    <div className="rounded-xl py-3 px-3 w-full h-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-amber-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(40_80%_50%/0.08)] overflow-hidden">
                       {/* BannerLayer */}
                       <div className="absolute inset-0 z-0 pointer-events-none">
                         {placementBanners.miocoin_310?.image_url && (
@@ -554,9 +554,9 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 500 Kč → 525 MC (+25 Bonus) */}
-                  <div className="relative z-20 overflow-visible">
+                  <div className="relative z-20 overflow-visible h-full">
                     <Badge className="absolute -top-2 -right-2 bg-violet-500/90 text-white text-xs font-medium z-50 pointer-events-none">+25 Bonus</Badge>
-                    <div className="rounded-xl py-3 px-3 w-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-violet-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(270_60%_50%/0.08)] overflow-hidden">
+                    <div className="rounded-xl py-3 px-3 w-full h-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-violet-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(270_60%_50%/0.08)] overflow-hidden">
                       {/* BannerLayer */}
                       <div className="absolute inset-0 z-0 pointer-events-none">
                         {placementBanners.miocoin_525?.image_url && (
@@ -588,9 +588,9 @@ const Homepage = () => {
                   </div>
 
                   {/* Package 1200 Kč → 1280 MC (+80 Bonus) */}
-                  <div className="relative z-20 overflow-visible">
+                  <div className="relative z-20 overflow-visible h-full">
                     <Badge className="absolute -top-2 -right-2 bg-emerald-500/90 text-white text-xs font-medium z-50 pointer-events-none">+80 Bonus</Badge>
-                    <div className="rounded-xl py-3 px-3 w-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-emerald-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(160_60%_40%/0.08)] overflow-hidden">
+                    <div className="rounded-xl py-3 px-3 w-full h-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-emerald-400/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(160_60%_40%/0.08)] overflow-hidden">
                       {/* BannerLayer */}
                       <div className="absolute inset-0 z-0 pointer-events-none">
                         {placementBanners.miocoin_1280?.image_url && (
