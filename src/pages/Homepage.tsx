@@ -363,38 +363,31 @@ const Homepage = () => {
             <div className="h-48 md:h-56 bg-muted/30 animate-pulse rounded-lg" />
           ) : megajackpotBanners.length > 0 ? (
             // Banner display with carousel for multiple banners
-            <div className="relative">
-              {/* Top golden gradient separator - subtle */}
+            <>
+              {/* Top golden line separator - thin, uniform */}
               <div 
-                className="absolute top-0 left-0 right-0 h-8 z-10 pointer-events-none"
+                className="h-[2px] w-full"
                 style={{
-                  background: 'linear-gradient(to bottom, hsla(45, 60%, 55%, 0.15) 0%, hsla(45, 60%, 55%, 0.08) 40%, transparent 100%)'
+                  background: 'linear-gradient(90deg, transparent 0%, hsla(45, 70%, 50%, 0.6) 15%, hsla(45, 70%, 50%, 0.8) 50%, hsla(45, 70%, 50%, 0.6) 85%, transparent 100%)'
                 }}
               />
               
-              <div className="h-48 md:h-56 relative overflow-hidden rounded-lg">
-                {/* Banner image */}
-                <img
-                  src={megajackpotBanners[currentBannerIndex]?.image_url}
-                  alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
-                  className="w-full h-full object-cover"
-                />
-                
-                {/* Horizontal golden light gradient - centered, fading up and down */}
-                <div 
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(to bottom, transparent 0%, transparent 30%, hsla(45, 65%, 60%, 0.25) 42%, hsla(45, 70%, 65%, 0.4) 50%, hsla(45, 65%, 60%, 0.25) 58%, transparent 70%, transparent 100%)'
-                  }}
-                />
-              
-              {/* Bottom golden gradient separator - more visible */}
-              <div 
-                className="absolute bottom-0 left-0 right-0 h-12 z-10 pointer-events-none"
-                style={{
-                  background: 'linear-gradient(to top, hsla(45, 65%, 55%, 0.3) 0%, hsla(45, 60%, 55%, 0.15) 50%, transparent 100%)'
-                }}
-              />
+              <div className="relative">
+                <div className="h-48 md:h-56 relative overflow-hidden rounded-lg">
+                  {/* Banner image */}
+                  <img
+                    src={megajackpotBanners[currentBannerIndex]?.image_url}
+                    alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
+                    className="w-full h-full object-cover"
+                  />
+                  
+                  {/* Horizontal golden light gradient - centered, fading up and down */}
+                  <div 
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(to bottom, transparent 0%, transparent 30%, hsla(45, 65%, 60%, 0.25) 42%, hsla(45, 70%, 65%, 0.4) 50%, hsla(45, 65%, 60%, 0.25) 58%, transparent 70%, transparent 100%)'
+                    }}
+                  />
 
                 {/* Navigation arrows for multiple banners */}
                 {megajackpotBanners.length > 1 && (
@@ -421,25 +414,34 @@ const Homepage = () => {
                     </Button>
                   </>
                 )}
-              </div>
-
-              {/* Dot indicators for multiple banners */}
-              {megajackpotBanners.length > 1 && (
-                <div className="flex justify-center gap-2 mt-4">
-                  {megajackpotBanners.map((_, index) => (
-                    <button
-                      key={index}
-                      className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                        index === currentBannerIndex
-                          ? "bg-primary shadow-lg"
-                          : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                      }`}
-                      onClick={() => setCurrentBannerIndex(index)}
-                    />
-                  ))}
                 </div>
-              )}
-            </div>
+
+                {/* Dot indicators for multiple banners */}
+                {megajackpotBanners.length > 1 && (
+                  <div className="flex justify-center gap-2 mt-4">
+                    {megajackpotBanners.map((_, index) => (
+                      <button
+                        key={index}
+                        className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                          index === currentBannerIndex
+                            ? "bg-primary shadow-lg"
+                            : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                        }`}
+                        onClick={() => setCurrentBannerIndex(index)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Bottom golden line separator - stronger in center, fading to edges */}
+              <div 
+                className="h-[4px] w-full mt-2"
+                style={{
+                  background: 'radial-gradient(ellipse at center, hsla(45, 70%, 55%, 0.9) 0%, hsla(45, 70%, 50%, 0.5) 40%, transparent 70%)'
+                }}
+              />
+            </>
           ) : null}
         </section>
 
