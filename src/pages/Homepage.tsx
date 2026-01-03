@@ -581,7 +581,7 @@ const Homepage = () => {
                   )}
                 </div>
 
-                <Button variant="outline" size="lg" className="w-full gap-2 mt-2" onClick={() => navigate("/winners")}>
+                <Button variant="ghost" size="lg" className="w-full gap-2 mt-2 text-muted-foreground hover:text-foreground hover:bg-muted/30" onClick={() => navigate("/winners")}>
                   Zobrazit všechny
                   <ChevronRight className="w-4 h-4" />
                 </Button>

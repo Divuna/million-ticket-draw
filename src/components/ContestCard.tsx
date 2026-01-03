@@ -179,7 +179,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
               {getPlayButtonText()}
             </button>
             <button
-              className="py-2 px-4 bg-muted/30 backdrop-blur-sm text-muted-foreground font-medium rounded-lg border border-border/30 hover:bg-muted/50 transition-colors"
+              className="py-2 px-4 bg-background/20 text-foreground/60 font-medium rounded-lg hover:bg-background/30 hover:text-foreground/80 transition-colors"
               onClick={handleDetailClick}
             >
               Detail
@@ -190,10 +190,10 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         {/* Show login prompt for non-logged-in users */}
         {!user && (
           <button
-            className="w-full py-2 px-4 mt-2 bg-muted/30 backdrop-blur-sm text-muted-foreground font-medium rounded-lg border border-border/30 hover:bg-muted/50 transition-colors"
+            className="w-full py-2 px-4 mt-2 bg-background/20 text-foreground/60 font-medium rounded-lg hover:bg-background/30 hover:text-foreground/80 transition-colors"
             onClick={handleLoginClick}
           >
-            {fromPage === 'homepage' ? 'Přihlaste se pro hraní' : 'Přihlásit se'}
+            Přihlásit se
           </button>
         )}
         
