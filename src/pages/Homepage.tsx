@@ -423,18 +423,18 @@ const Homepage = () => {
         <section className="w-full overflow-x-hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Left Column - Dobijte si MioCoiny */}
           <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border-2 border-border/40 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
-            <CardContent className="p-3 sm:p-3 md:p-4 h-full flex flex-col">
-              <div className="space-y-2 flex-1 flex flex-col">
+            <CardContent className="p-5 h-full flex flex-col">
+              <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
                   <h2 className="text-xl md:text-2xl font-bold text-primary flex items-center gap-2">
                     <Gift className="w-6 h-6 md:w-7 md:h-7" />
                     Dobijte si MioCoiny
                   </h2>
-                  <p className="text-base text-muted-foreground">Dobíjejte si MioCoiny pro otevření voucherů nebo účasti ve hře.</p>
+                  <p className="text-sm text-muted-foreground">Dobíjejte si MioCoiny pro otevření voucherů nebo účasti ve hře.</p>
                 </div>
 
                 {/* Coin Packages Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 flex-1">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
                   {/* Package 50 Kč → 50 MC */}
                   <div className="rounded-xl py-2 px-3 bg-[hsl(220_45%_6%)] border-2 border-blue-400/30 flex flex-col items-center justify-between shadow-[inset_0_1px_12px_hsl(210_80%_50%/0.08)]">
                     <div className="text-center">
@@ -508,10 +508,10 @@ const Homepage = () => {
                 </div>
 
                 {/* Two Boxes Below */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   {/* Box 1: Probíhající soutěže */}
                   <div 
-                    className="rounded-xl p-3 bg-[hsl(220_45%_6%)] border-2 border-amber-400/30 cursor-pointer hover:border-amber-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(40_60%_50%/0.06)]"
+                    className="rounded-xl p-4 bg-[hsl(220_45%_6%)] border-2 border-amber-400/30 cursor-pointer hover:border-amber-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(40_60%_50%/0.06)]"
                     onClick={() => navigate("/games")}
                   >
                     <Trophy className="w-8 h-8 text-amber-400 mb-2" />
@@ -520,7 +520,7 @@ const Homepage = () => {
 
                   {/* Box 2: Koupit voucher se slevou */}
                   <div 
-                    className="rounded-xl p-3 bg-[hsl(220_45%_6%)] border-2 border-rose-400/30 cursor-pointer hover:border-rose-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(350_60%_50%/0.06)]"
+                    className="rounded-xl p-4 bg-[hsl(220_45%_6%)] border-2 border-rose-400/30 cursor-pointer hover:border-rose-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(350_60%_50%/0.06)]"
                     onClick={() => navigate("/vouchers")}
                   >
                     <Gift className="w-8 h-8 text-rose-400 mb-2" />
@@ -533,17 +533,17 @@ const Homepage = () => {
 
           {/* Right Column - Poslední výherci */}
           <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border-2 border-border/40 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
-            <CardContent className="p-3 sm:p-3 md:p-4 h-full flex flex-col">
-              <div className="space-y-2 flex-1 flex flex-col">
+            <CardContent className="p-5 h-full flex flex-col">
+              <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
                   <h2 className="text-xl md:text-2xl font-bold text-primary flex items-center gap-2">
                     <Trophy className="w-6 h-6 md:w-7 md:h-7" />
                     Poslední výherci
                   </h2>
-                  <p className="text-base text-muted-foreground">Nejnovější výhry z našich soutěží</p>
+                  <p className="text-sm text-muted-foreground">Nejnovější výhry z našich soutěží</p>
                 </div>
 
-                <div className="space-y-2 flex-1 overflow-y-auto">
+                <div className="space-y-3 flex-1 overflow-y-auto">
                   {winnersLoading ? (
                     // Loading placeholders
                     Array.from({ length: 3 }).map((_, index) => (
@@ -581,7 +581,7 @@ const Homepage = () => {
                   )}
                 </div>
 
-                <Button variant="outline" size="lg" className="w-full gap-2" onClick={() => navigate("/winners")}>
+                <Button variant="outline" size="lg" className="w-full gap-2 mt-2" onClick={() => navigate("/winners")}>
                   Zobrazit všechny
                   <ChevronRight className="w-4 h-4" />
                 </Button>
@@ -791,11 +791,11 @@ const Homepage = () => {
               </div>
             ) : (
               homepageVouchers.map((voucher) => (
-                <div key={voucher.id} className="flex-none w-80">
+                  <div key={voucher.id} className="flex-none w-80">
                   <Card className="relative overflow-hidden rounded-xl bg-[hsl(220_45%_6%)] border-2 border-border/40 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-200 hover:border-border/60">
                     <div className="flex h-48 relative">
                       {/* Left side - Content */}
-                      <div className="flex-1 p-6 flex flex-col justify-between">
+                      <div className="flex-1 p-5 flex flex-col justify-between">
                         {/* Header */}
                         <div>
                           <h2 className="text-foreground font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
@@ -892,7 +892,7 @@ const Homepage = () => {
                   className="aspect-square bg-[hsl(220_45%_6%)] border-2 border-border/40 rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:border-primary/50 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] group"
                   onClick={() => window.open(partner.website_url, "_blank")}
                 >
-                  <div className="w-full h-full p-4 flex items-center justify-center relative">
+                  <div className="w-full h-full p-5 flex items-center justify-center relative">
                     <img
                       src={partner.logo_url}
                       alt={partner.name}
@@ -926,7 +926,7 @@ const Homepage = () => {
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {comingSoonLoading ? (
               // Loading placeholder
               Array.from({ length: 3 }).map((_, index) => (
@@ -961,7 +961,7 @@ const Homepage = () => {
                       />
                     </div>
                     {banner.title && (
-                      <div className="p-4">
+                      <div className="p-5">
                         <h4 className="font-bold text-lg text-foreground text-center">{banner.title}</h4>
                       </div>
                     )}
