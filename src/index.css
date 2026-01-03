@@ -22,9 +22,9 @@
     /* Premium Dark Navy/Graphite Theme */
     --background: 222 47% 5%;
     --foreground: 210 20% 98%;
-    --card: 222 40% 9%;
+    --card: 222 40% 10% / 0.85;
     --card-foreground: 210 20% 98%;
-    --popover: 220 40% 12%;
+    --popover: 222 40% 10% / 0.92;
     --popover-foreground: 210 20% 98%;
     --primary: 220 80% 45%;
     --primary-foreground: 210 20% 98%;
@@ -36,10 +36,14 @@
     --accent-foreground: 220 45% 8%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 20% 98%;
-    --border: 220 25% 22%;
-    --input: 220 30% 16%;
+    --border: 215 20% 28%;
+    --input: 220 30% 14%;
     --ring: 220 80% 45%;
-    --radius: 0.75rem;
+    --radius: 0.625rem;
+    
+    /* Unified box styles */
+    --card-shadow: 0 4px 16px hsl(222 50% 3% / 0.5), 0 1px 3px hsl(222 50% 3% / 0.3);
+    --card-border: 1px solid hsl(215 20% 35% / 0.4);
 
     /* Sidebar */
     --sidebar-background: 220 40% 10%;
@@ -77,9 +81,9 @@
     /* Premium Dark Navy/Graphite Theme */
     --background: 225 50% 4%;
     --foreground: 210 20% 98%;
-    --card: 225 42% 8%;
+    --card: 225 42% 9% / 0.85;
     --card-foreground: 210 20% 98%;
-    --popover: 220 45% 10%;
+    --popover: 225 42% 10% / 0.92;
     --popover-foreground: 210 20% 98%;
     --primary: 220 85% 50%;
     --primary-foreground: 210 20% 98%;
@@ -91,9 +95,13 @@
     --accent-foreground: 220 50% 6%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 20% 98%;
-    --border: 220 30% 20%;
-    --input: 220 35% 14%;
+    --border: 215 20% 30%;
+    --input: 220 35% 12%;
     --ring: 220 85% 50%;
+    
+    /* Unified box styles */
+    --card-shadow: 0 4px 20px hsl(225 50% 2% / 0.6), 0 1px 4px hsl(225 50% 2% / 0.4);
+    --card-border: 1px solid hsl(215 20% 38% / 0.35);
 
     /* Enhanced Luxury Glow Effects */
     --glow-blue: 0 0 20px hsl(var(--neon-blue) / 0.5), 0 0 40px hsl(var(--neon-blue) / 0.25);
@@ -215,70 +223,48 @@
     text-shadow: 0 0 8px hsl(var(--neon-green) / 0.4);
   }
 
-  /* Luxury Admin Components */
+  /* Unified Box Styles */
   .luxury-card {
-    background: linear-gradient(135deg, 
-      hsl(var(--card)) 0%, 
-      hsl(220 42% 11%) 50%,
-      hsl(var(--card)) 100%
-    );
-    border: 1px solid hsl(var(--neon-blue) / 0.3);
-    box-shadow: 
-      0 4px 12px hsl(220 45% 8% / 0.5),
-      0 0 20px hsl(var(--neon-blue) / 0.1),
-      inset 0 1px 0 hsl(var(--neon-gold) / 0.1);
-    transition: all 0.3s ease;
-  }
-
-  .luxury-card:hover {
-    border-color: hsl(var(--neon-blue) / 0.5);
-    box-shadow: 
-      0 8px 24px hsl(220 45% 8% / 0.6),
-      0 0 32px hsl(var(--neon-blue) / 0.2),
-      inset 0 1px 0 hsl(var(--neon-gold) / 0.15);
-    transform: translateY(-2px);
-  }
-
-  .luxury-gradient-bg {
-    background: linear-gradient(135deg, 
-      hsl(var(--neon-blue) / 0.12) 0%, 
-      hsl(220 40% 12%) 40%,
-      hsl(var(--neon-gold) / 0.08) 100%
-    );
-  }
-
-  .admin-card-hover {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .admin-card-hover:hover {
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 
-      0 12px 32px hsl(var(--neon-blue) / 0.25),
-      0 0 40px hsl(var(--neon-gold) / 0.15);
-  }
-
-  .luxury-table-row {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border) / 0.4);
+    border-radius: 0.625rem;
+    box-shadow: var(--card-shadow);
+    backdrop-blur: 8px;
     transition: all 0.2s ease;
   }
 
+  .luxury-card:hover {
+    border-color: hsl(var(--border) / 0.6);
+    box-shadow: 0 6px 20px hsl(222 50% 3% / 0.6), 0 2px 6px hsl(222 50% 3% / 0.4);
+  }
+
+  .luxury-gradient-bg {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border) / 0.35);
+    border-radius: 0.625rem;
+  }
+
+  .admin-card-hover {
+    transition: all 0.2s ease;
+  }
+
+  .admin-card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px hsl(222 50% 3% / 0.5);
+  }
+
+  .luxury-table-row {
+    transition: all 0.15s ease;
+  }
+
   .luxury-table-row:hover {
-    background: linear-gradient(90deg,
-      hsl(var(--neon-blue) / 0.05) 0%,
-      hsl(var(--neon-gold) / 0.03) 100%
-    );
-    box-shadow: inset 0 0 0 1px hsl(var(--neon-blue) / 0.2);
+    background: hsl(var(--muted) / 0.3);
   }
 
   .luxury-stat-icon {
-    background: linear-gradient(135deg,
-      hsl(var(--neon-blue) / 0.2) 0%,
-      hsl(var(--neon-gold) / 0.1) 100%
-    );
-    border: 1px solid hsl(var(--neon-blue) / 0.3);
-    box-shadow: 
-      0 0 16px hsl(var(--neon-blue) / 0.3),
-      inset 0 1px 0 hsl(var(--neon-gold) / 0.2);
+    background: hsl(var(--muted) / 0.5);
+    border: 1px solid hsl(var(--border) / 0.4);
+    border-radius: 0.5rem;
   }
 
   /* Luxury Border Effects */
