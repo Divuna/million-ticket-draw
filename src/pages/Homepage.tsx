@@ -364,6 +364,14 @@ const Homepage = () => {
           ) : megajackpotBanners.length > 0 ? (
             // Banner display with carousel for multiple banners
             <div className="relative">
+              {/* Top golden gradient separator - subtle */}
+              <div 
+                className="absolute top-0 left-0 right-0 h-8 z-10 pointer-events-none"
+                style={{
+                  background: 'linear-gradient(to bottom, hsla(45, 60%, 55%, 0.15) 0%, hsla(45, 60%, 55%, 0.08) 40%, transparent 100%)'
+                }}
+              />
+              
               <div className="h-48 md:h-56 relative overflow-hidden rounded-lg">
                 {/* Banner image */}
                 <img
@@ -379,6 +387,14 @@ const Homepage = () => {
                     background: 'linear-gradient(to bottom, transparent 0%, transparent 30%, hsla(45, 65%, 60%, 0.25) 42%, hsla(45, 70%, 65%, 0.4) 50%, hsla(45, 65%, 60%, 0.25) 58%, transparent 70%, transparent 100%)'
                   }}
                 />
+              
+              {/* Bottom golden gradient separator - more visible */}
+              <div 
+                className="absolute bottom-0 left-0 right-0 h-12 z-10 pointer-events-none"
+                style={{
+                  background: 'linear-gradient(to top, hsla(45, 65%, 55%, 0.3) 0%, hsla(45, 60%, 55%, 0.15) 50%, transparent 100%)'
+                }}
+              />
 
                 {/* Navigation arrows for multiple banners */}
                 {megajackpotBanners.length > 1 && (
