@@ -444,7 +444,7 @@ const Homepage = () => {
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-blue-600/70 text-white font-bold shadow-[0_0_10px_hsl(210_70%_50%/0.25)] hover:brightness-110 transition-all duration-200"
+                      className="w-full mt-2 bg-blue-400 text-black font-bold shadow-[0_0_10px_hsl(210_80%_60%/0.3)] hover:brightness-110 transition-all duration-200"
                       onClick={() => handleCoinPurchase(50, 50)}
                       disabled={topUpLoading}
                     >
@@ -462,7 +462,7 @@ const Homepage = () => {
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-amber-600/70 text-white font-bold shadow-[0_0_10px_hsl(40_70%_50%/0.25)] hover:brightness-110 transition-all duration-200"
+                      className="w-full mt-2 bg-amber-500 text-black font-bold shadow-[0_0_10px_hsl(40_80%_50%/0.3)] hover:brightness-110 transition-all duration-200"
                       onClick={() => handleCoinPurchase(300, 310)}
                       disabled={topUpLoading}
                     >
@@ -480,7 +480,7 @@ const Homepage = () => {
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-violet-600/70 text-white font-bold shadow-[0_0_10px_hsl(270_60%_50%/0.25)] hover:brightness-110 transition-all duration-200"
+                      className="w-full mt-2 bg-violet-500 text-white font-bold shadow-[0_0_10px_hsl(270_60%_50%/0.3)] hover:brightness-110 transition-all duration-200"
                       onClick={() => handleCoinPurchase(500, 525)}
                       disabled={topUpLoading}
                     >
@@ -498,7 +498,7 @@ const Homepage = () => {
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-emerald-600/70 text-white font-bold shadow-[0_0_10px_hsl(160_60%_45%/0.25)] hover:brightness-110 transition-all duration-200"
+                      className="w-full mt-2 bg-emerald-500 text-white font-bold shadow-[0_0_10px_hsl(160_60%_45%/0.3)] hover:brightness-110 transition-all duration-200"
                       onClick={() => handleCoinPurchase(1200, 1280)}
                       disabled={topUpLoading}
                     >
