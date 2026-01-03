@@ -434,8 +434,8 @@ const Homepage = () => {
                 )}
               </div>
               
-              {/* Bottom golden line separator with wow halo - full width */}
-              <div className="relative w-[100vw] left-1/2 -translate-x-1/2 py-4 mt-2">
+              {/* Bottom golden line separator with wow halo - contained */}
+              <div className="relative w-full overflow-hidden py-4 mt-2">
                 {/* Outer halo - wide ambient glow */}
                 <div 
                   className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
@@ -635,8 +635,8 @@ const Homepage = () => {
           </Card>
         </section>
         
-        {/* Golden separator line with wow halo - full width */}
-        <div className="relative w-[100vw] left-1/2 -translate-x-1/2 py-4">
+        {/* Golden separator line with wow halo - contained */}
+        <div className="relative w-full overflow-hidden py-4">
           {/* Outer halo - wide ambient glow */}
           <div 
             className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
@@ -705,8 +705,8 @@ const Homepage = () => {
           </section>
         )}
         
-        {/* Golden separator line with wow halo - full width */}
-        <div className="relative w-[100vw] left-1/2 -translate-x-1/2 py-4">
+        {/* Golden separator line with wow halo - contained */}
+        <div className="relative w-full overflow-hidden py-4">
           {/* Outer halo - wide ambient glow */}
           <div 
             className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
@@ -832,8 +832,8 @@ const Homepage = () => {
           </div>
         </section>
         
-        {/* Golden separator line with wow halo - full width */}
-        <div className="relative w-[100vw] left-1/2 -translate-x-1/2 py-4">
+        {/* Golden separator line with wow halo - contained */}
+        <div className="relative w-full overflow-hidden py-4">
           {/* Outer halo - wide ambient glow */}
           <div 
             className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
@@ -990,8 +990,8 @@ const Homepage = () => {
           </div>
         </section>
 
-        {/* Golden separator line with wow halo - full width */}
-        <div className="relative w-[100vw] left-1/2 -translate-x-1/2 py-4">
+        {/* Golden separator line with wow halo - contained */}
+        <div className="relative w-full overflow-hidden py-4">
           {/* Outer halo - wide ambient glow */}
           <div 
             className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
@@ -1070,8 +1070,8 @@ const Homepage = () => {
           </div>
         </section>
         
-        {/* Golden separator line with wow halo - full width */}
-        <div className="relative w-[100vw] left-1/2 -translate-x-1/2 py-4">
+        {/* Golden separator line with wow halo - contained */}
+        <div className="relative w-full overflow-hidden py-4">
           {/* Outer halo - wide ambient glow */}
           <div 
             className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
