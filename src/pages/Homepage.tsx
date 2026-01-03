@@ -615,6 +615,14 @@ const Homepage = () => {
             </CardContent>
           </Card>
         </section>
+        
+        {/* Golden separator line */}
+        <div 
+          className="h-[3px] w-full"
+          style={{
+            background: 'radial-gradient(ellipse at center, hsla(45, 70%, 55%, 0.7) 0%, hsla(45, 70%, 50%, 0.4) 40%, transparent 70%)'
+          }}
+        />
 
         {/* Dynamic Banners */}
         {(voucherBanner || gamesBanner) && (
@@ -658,6 +666,14 @@ const Homepage = () => {
             )}
           </section>
         )}
+        
+        {/* Golden separator line */}
+        <div 
+          className="h-[3px] w-full"
+          style={{
+            background: 'radial-gradient(ellipse at center, hsla(45, 70%, 55%, 0.7) 0%, hsla(45, 70%, 50%, 0.4) 40%, transparent 70%)'
+          }}
+        />
 
         {/* Ongoing Contests Carousel */}
         <section className="space-y-6">
@@ -758,6 +774,14 @@ const Homepage = () => {
             )}
           </div>
         </section>
+        
+        {/* Golden separator line */}
+        <div 
+          className="h-[3px] w-full"
+          style={{
+            background: 'radial-gradient(ellipse at center, hsla(45, 70%, 55%, 0.7) 0%, hsla(45, 70%, 50%, 0.4) 40%, transparent 70%)'
+          }}
+        />
 
         {/* Available Vouchers Section - Visible to everyone */}
         <section className="space-y-6">
@@ -890,6 +914,13 @@ const Homepage = () => {
           </div>
         </section>
 
+        {/* Golden separator line */}
+        <div 
+          className="h-[3px] w-full"
+          style={{
+            background: 'radial-gradient(ellipse at center, hsla(45, 70%, 55%, 0.7) 0%, hsla(45, 70%, 50%, 0.4) 40%, transparent 70%)'
+          }}
+        />
 
         {/* Partners Section */}
         <section className="space-y-6">
@@ -943,6 +974,14 @@ const Homepage = () => {
             )}
           </div>
         </section>
+        
+        {/* Golden separator line */}
+        <div 
+          className="h-[3px] w-full"
+          style={{
+            background: 'radial-gradient(ellipse at center, hsla(45, 70%, 55%, 0.7) 0%, hsla(45, 70%, 50%, 0.4) 40%, transparent 70%)'
+          }}
+        />
 
         {/* Coming Soon Section */}
         <section className="space-y-6">
