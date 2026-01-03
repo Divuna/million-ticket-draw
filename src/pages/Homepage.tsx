@@ -532,8 +532,8 @@ const Homepage = () => {
                       )}
                     </div>
 
-                    {/* Bonus Badge - positioned relative to card */}
-                    <Badge className="absolute top-1 right-1 bg-amber-500/90 text-black text-xs font-medium z-20">+10 Bonus</Badge>
+                    {/* Bonus Badge - positioned relative to card, half over edge */}
+                    <Badge className="absolute -top-2 -right-2 bg-amber-500/90 text-black text-xs font-medium z-20">+10 Bonus</Badge>
 
                     {/* ContentLayer */}
                     <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
@@ -566,8 +566,8 @@ const Homepage = () => {
                       )}
                     </div>
 
-                    {/* Bonus Badge - positioned relative to card */}
-                    <Badge className="absolute top-1 right-1 bg-violet-500/90 text-white text-xs font-medium z-20">+25 Bonus</Badge>
+                    {/* Bonus Badge - positioned relative to card, half over edge */}
+                    <Badge className="absolute -top-2 -right-2 bg-violet-500/90 text-white text-xs font-medium z-20">+25 Bonus</Badge>
 
                     {/* ContentLayer */}
                     <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
@@ -600,8 +600,8 @@ const Homepage = () => {
                       )}
                     </div>
 
-                    {/* Bonus Badge - positioned relative to card */}
-                    <Badge className="absolute top-1 right-1 bg-emerald-500/90 text-white text-xs font-medium z-20">+80 Bonus</Badge>
+                    {/* Bonus Badge - positioned relative to card, half over edge */}
+                    <Badge className="absolute -top-2 -right-2 bg-emerald-500/90 text-white text-xs font-medium z-20">+80 Bonus</Badge>
 
                     {/* ContentLayer */}
                     <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
