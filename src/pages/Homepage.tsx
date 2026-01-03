@@ -494,13 +494,13 @@ const Homepage = () => {
                       <img 
                         src={placementBanners.miocoin_50.image_url} 
                         alt="MioCoin 50" 
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-contain"
                       />
                     )}
                     <div className="text-center relative z-10">
-                      <div className="text-3xl font-bold text-blue-300">50</div>
-                      <div className="text-sm text-muted-foreground">MioCoinů</div>
-                      <div className="text-xs text-muted-foreground/70">50 Kč</div>
+                      <div className="text-3xl font-bold text-blue-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">50</div>
+                      <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
+                      <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">50 Kč</div>
                     </div>
                     <Button 
                       size="sm" 
@@ -518,14 +518,14 @@ const Homepage = () => {
                       <img 
                         src={placementBanners.miocoin_310.image_url} 
                         alt="MioCoin 310" 
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-contain"
                       />
                     )}
                     <Badge className="absolute -top-2 -right-2 bg-amber-500/90 text-black text-xs font-medium z-20">+10 Bonus</Badge>
                     <div className="text-center relative z-10">
-                      <div className="text-3xl font-bold text-amber-300">310</div>
-                      <div className="text-sm text-muted-foreground">MioCoinů</div>
-                      <div className="text-xs text-muted-foreground/70">300 Kč</div>
+                      <div className="text-3xl font-bold text-amber-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">310</div>
+                      <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
+                      <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">300 Kč</div>
                     </div>
                     <Button 
                       size="sm" 
@@ -543,14 +543,14 @@ const Homepage = () => {
                       <img 
                         src={placementBanners.miocoin_525.image_url} 
                         alt="MioCoin 525" 
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-contain"
                       />
                     )}
                     <Badge className="absolute -top-2 -right-2 bg-violet-500/90 text-white text-xs font-medium z-20">+25 Bonus</Badge>
                     <div className="text-center relative z-10">
-                      <div className="text-3xl font-bold text-violet-300">525</div>
-                      <div className="text-sm text-muted-foreground">MioCoinů</div>
-                      <div className="text-xs text-muted-foreground/70">500 Kč</div>
+                      <div className="text-3xl font-bold text-violet-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">525</div>
+                      <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
+                      <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">500 Kč</div>
                     </div>
                     <Button 
                       size="sm" 
@@ -568,14 +568,14 @@ const Homepage = () => {
                       <img 
                         src={placementBanners.miocoin_1280.image_url} 
                         alt="MioCoin 1280" 
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-contain"
                       />
                     )}
                     <Badge className="absolute -top-2 -right-2 bg-emerald-500/90 text-white text-xs font-medium z-20">+80 Bonus</Badge>
                     <div className="text-center relative z-10">
-                      <div className="text-3xl font-bold text-emerald-300">1280</div>
-                      <div className="text-sm text-muted-foreground">MioCoinů</div>
-                      <div className="text-xs text-muted-foreground/70">1200 Kč</div>
+                      <div className="text-3xl font-bold text-emerald-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">1280</div>
+                      <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
+                      <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">1200 Kč</div>
                     </div>
                     <Button 
                       size="sm" 
