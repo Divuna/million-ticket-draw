@@ -66,8 +66,8 @@
     
     /* Premium Typography Colors - matched to OneMil logo */
     --heading-gold: 43 78% 54%;
-    --text-silver: 38 15% 72%;
-    --text-muted-gray: 35 8% 50%;
+    --text-silver: 210 18% 88%;
+    --text-muted-gray: 215 10% 55%;
 
     /* Luxury Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--neon-blue)), hsl(var(--neon-gold)));
