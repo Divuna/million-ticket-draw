@@ -438,7 +438,7 @@ const Homepage = () => {
               <div 
                 className="h-[4px] w-full mt-2"
                 style={{
-                  background: 'radial-gradient(ellipse at center, hsla(45, 70%, 55%, 0.9) 0%, hsla(45, 70%, 50%, 0.5) 40%, transparent 70%)'
+                  background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.85) 15%, hsla(43, 75%, 50%, 0.5) 40%, transparent 70%)'
                 }}
               />
             </>
@@ -620,7 +620,7 @@ const Homepage = () => {
         <div 
           className="h-[3px] w-full"
           style={{
-            background: 'radial-gradient(ellipse at center, hsla(45, 70%, 55%, 0.7) 0%, hsla(45, 70%, 50%, 0.4) 40%, transparent 70%)'
+            background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
           }}
         />
 
@@ -671,7 +671,7 @@ const Homepage = () => {
         <div 
           className="h-[3px] w-full"
           style={{
-            background: 'radial-gradient(ellipse at center, hsla(45, 70%, 55%, 0.7) 0%, hsla(45, 70%, 50%, 0.4) 40%, transparent 70%)'
+            background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
           }}
         />
 
@@ -779,7 +779,7 @@ const Homepage = () => {
         <div 
           className="h-[3px] w-full"
           style={{
-            background: 'radial-gradient(ellipse at center, hsla(45, 70%, 55%, 0.7) 0%, hsla(45, 70%, 50%, 0.4) 40%, transparent 70%)'
+            background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
           }}
         />
 
@@ -918,7 +918,7 @@ const Homepage = () => {
         <div 
           className="h-[3px] w-full"
           style={{
-            background: 'radial-gradient(ellipse at center, hsla(45, 70%, 55%, 0.7) 0%, hsla(45, 70%, 50%, 0.4) 40%, transparent 70%)'
+            background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
           }}
         />
 
@@ -979,7 +979,7 @@ const Homepage = () => {
         <div 
           className="h-[3px] w-full"
           style={{
-            background: 'radial-gradient(ellipse at center, hsla(45, 70%, 55%, 0.7) 0%, hsla(45, 70%, 50%, 0.4) 40%, transparent 70%)'
+            background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
           }}
         />
 
