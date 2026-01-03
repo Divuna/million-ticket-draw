@@ -422,7 +422,7 @@ const Homepage = () => {
         {/* Coin Top-up Section */}
         <section className="w-full overflow-x-hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Left Column - Dobijte si MioCoiny */}
-          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border-2 border-border/40 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
+          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-amber-300/20 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
             <CardContent className="p-5 h-full flex flex-col">
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
@@ -532,7 +532,7 @@ const Homepage = () => {
           </Card>
 
           {/* Right Column - Poslední výherci */}
-          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border-2 border-border/40 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
+          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-amber-300/20 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
             <CardContent className="p-5 h-full flex flex-col">
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
