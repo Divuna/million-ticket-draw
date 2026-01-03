@@ -38,23 +38,23 @@ export const WinnerCard = ({
 
   return (
     <Card className="rounded-xl overflow-hidden bg-card/60 border border-border/50 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all duration-300">
-      <CardContent className="p-4">
-        <div className="flex gap-4">
-          {/* Prize Image Slot - Left Side */}
-          <div className="w-28 h-24 flex-shrink-0 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden">
-            {prizeImageUrl ? (
-              <img 
-                src={prizeImageUrl} 
-                alt={prizeName} 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <Trophy className="w-10 h-10 text-muted-foreground/50" />
-            )}
-          </div>
+      <div className="flex">
+        {/* Prize Image Slot - Left Side (30-35% width, full height) */}
+        <div className="w-[35%] flex-shrink-0 bg-muted/50 flex items-center justify-center overflow-hidden">
+          {prizeImageUrl ? (
+            <img 
+              src={prizeImageUrl} 
+              alt={prizeName} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <Trophy className="w-12 h-12 text-muted-foreground/50" />
+          )}
+        </div>
 
-          {/* Right Side - Avatar and Info */}
-          <div className="flex-1 min-w-0 flex gap-3 items-center">
+        {/* Right Side - Avatar and Info */}
+        <CardContent className="flex-1 p-4">
+          <div className="flex gap-3 items-center h-full">
             {/* Avatar */}
             <Avatar className="w-12 h-12 border-2 border-primary/20 flex-shrink-0">
               <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold text-sm">
@@ -88,8 +88,8 @@ export const WinnerCard = ({
               </div>
             </div>
           </div>
-        </div>
-      </CardContent>
+        </CardContent>
+      </div>
     </Card>
   );
 };
