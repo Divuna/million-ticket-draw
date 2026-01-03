@@ -172,14 +172,14 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         {user && !isAdmin && (
           <div className="flex gap-2 mt-2">
             <button
-              className="flex-1 py-2 px-4 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-2 px-4 bg-primary text-primary-foreground font-bold rounded-lg shadow-[0_0_10px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_14px_hsl(var(--primary)/0.5)] hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
               onClick={handlePlayClick}
               disabled={contest.status !== 'active' || isProcessing}
             >
               {getPlayButtonText()}
             </button>
             <button
-              className="py-2 px-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-colors"
+              className="py-2 px-4 bg-muted/30 backdrop-blur-sm text-muted-foreground font-medium rounded-lg border border-border/30 hover:bg-muted/50 transition-colors"
               onClick={handleDetailClick}
             >
               Detail
@@ -190,10 +190,10 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         {/* Show login prompt for non-logged-in users */}
         {!user && (
           <button
-            className="w-full py-2 px-4 mt-2 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/30 hover:bg-white/30 transition-colors"
+            className="w-full py-2 px-4 mt-2 bg-muted/30 backdrop-blur-sm text-muted-foreground font-medium rounded-lg border border-border/30 hover:bg-muted/50 transition-colors"
             onClick={handleLoginClick}
           >
-            {fromPage === 'homepage' ? 'Přihlaste se pro hraní' : 'Přihlásit se pro koupi tiketu'}
+            {fromPage === 'homepage' ? 'Přihlaste se pro hraní' : 'Přihlásit se'}
           </button>
         )}
         
