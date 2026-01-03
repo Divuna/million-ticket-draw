@@ -364,13 +364,15 @@ const Homepage = () => {
           ) : megajackpotBanners.length > 0 ? (
             // Banner display with carousel for multiple banners
             <>
-              {/* Top golden line separator - thin, uniform */}
-              <div 
-                className="h-[2px] w-full"
-                style={{
-                  background: 'linear-gradient(90deg, transparent 0%, hsla(45, 70%, 50%, 0.6) 15%, hsla(45, 70%, 50%, 0.8) 50%, hsla(45, 70%, 50%, 0.6) 85%, transparent 100%)'
-                }}
-              />
+              {/* Top golden line separator - thin, premium */}
+              <div className="relative w-full overflow-hidden">
+                <div 
+                  className="h-[2px] max-w-[1300px] mx-auto"
+                  style={{
+                    background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 55%, 0.7) 5%, hsla(48, 85%, 60%, 0.9) 20%, hsla(50, 90%, 65%, 1) 50%, hsla(48, 85%, 60%, 0.9) 80%, hsla(45, 80%, 55%, 0.7) 95%, transparent 100%)'
+                  }}
+                />
+              </div>
               
               <div className="relative">
                 <div className="h-48 md:h-56 relative overflow-hidden rounded-lg">
@@ -434,29 +436,21 @@ const Homepage = () => {
                 )}
               </div>
               
-              {/* Bottom golden line separator with wow halo - contained */}
-              <div className="relative w-full overflow-hidden py-4 mt-2">
-                {/* Outer halo - wide ambient glow */}
+              {/* Bottom golden line separator - premium, wide */}
+              <div className="relative w-full overflow-hidden py-3 mt-2">
+                {/* Outer glow */}
                 <div 
-                  className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
+                  className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0"
                   style={{
-                    background: 'radial-gradient(ellipse 60% 100% at center, hsla(45, 85%, 55%, 0.25) 0%, hsla(45, 80%, 50%, 0.1) 40%, transparent 70%)',
-                    filter: 'blur(12px)'
-                  }}
-                />
-                {/* Middle halo - concentrated glow */}
-                <div 
-                  className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[16px] w-full"
-                  style={{
-                    background: 'radial-gradient(ellipse 50% 100% at center, hsla(48, 90%, 70%, 0.6) 0%, hsla(45, 85%, 60%, 0.3) 30%, transparent 60%)',
-                    filter: 'blur(6px)'
+                    background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
+                    filter: 'blur(8px)'
                   }}
                 />
                 {/* Sharp line layer */}
                 <div 
-                  className="relative h-[4px] w-full"
+                  className="relative h-[5px] max-w-[1300px] mx-auto"
                   style={{
-                    background: 'radial-gradient(ellipse 40% 100% at center, hsla(50, 100%, 85%, 1) 0%, hsla(48, 95%, 70%, 0.95) 10%, hsla(45, 85%, 55%, 0.7) 30%, hsla(43, 75%, 50%, 0.3) 50%, transparent 70%)'
+                    background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
                   }}
                 />
               </div>
@@ -635,29 +629,21 @@ const Homepage = () => {
           </Card>
         </section>
         
-        {/* Golden separator line with wow halo - contained */}
-        <div className="relative w-full overflow-hidden py-4">
-          {/* Outer halo - wide ambient glow */}
+        {/* Golden separator line - premium, wide linear */}
+        <div className="relative w-full overflow-hidden py-3">
+          {/* Outer glow */}
           <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
+            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0"
             style={{
-              background: 'radial-gradient(ellipse 60% 100% at center, hsla(45, 85%, 55%, 0.25) 0%, hsla(45, 80%, 50%, 0.1) 40%, transparent 70%)',
-              filter: 'blur(12px)'
-            }}
-          />
-          {/* Middle halo - concentrated glow */}
-          <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[16px] w-full"
-            style={{
-              background: 'radial-gradient(ellipse 50% 100% at center, hsla(48, 90%, 70%, 0.6) 0%, hsla(45, 85%, 60%, 0.3) 30%, transparent 60%)',
-              filter: 'blur(6px)'
+              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
+              filter: 'blur(8px)'
             }}
           />
           {/* Sharp line layer */}
           <div 
-            className="relative h-[3px] w-full"
+            className="relative h-[5px] max-w-[1300px] mx-auto"
             style={{
-              background: 'radial-gradient(ellipse 40% 100% at center, hsla(50, 100%, 85%, 1) 0%, hsla(48, 95%, 70%, 0.95) 10%, hsla(45, 85%, 55%, 0.7) 30%, hsla(43, 75%, 50%, 0.3) 50%, transparent 70%)'
+              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
             }}
           />
         </div>
@@ -705,29 +691,21 @@ const Homepage = () => {
           </section>
         )}
         
-        {/* Golden separator line with wow halo - contained */}
-        <div className="relative w-full overflow-hidden py-4">
-          {/* Outer halo - wide ambient glow */}
+        {/* Golden separator line - premium, wide linear */}
+        <div className="relative w-full overflow-hidden py-3">
+          {/* Outer glow */}
           <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
+            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0"
             style={{
-              background: 'radial-gradient(ellipse 60% 100% at center, hsla(45, 85%, 55%, 0.25) 0%, hsla(45, 80%, 50%, 0.1) 40%, transparent 70%)',
-              filter: 'blur(12px)'
-            }}
-          />
-          {/* Middle halo - concentrated glow */}
-          <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[16px] w-full"
-            style={{
-              background: 'radial-gradient(ellipse 50% 100% at center, hsla(48, 90%, 70%, 0.6) 0%, hsla(45, 85%, 60%, 0.3) 30%, transparent 60%)',
-              filter: 'blur(6px)'
+              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
+              filter: 'blur(8px)'
             }}
           />
           {/* Sharp line layer */}
           <div 
-            className="relative h-[3px] w-full"
+            className="relative h-[5px] max-w-[1300px] mx-auto"
             style={{
-              background: 'radial-gradient(ellipse 40% 100% at center, hsla(50, 100%, 85%, 1) 0%, hsla(48, 95%, 70%, 0.95) 10%, hsla(45, 85%, 55%, 0.7) 30%, hsla(43, 75%, 50%, 0.3) 50%, transparent 70%)'
+              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
             }}
           />
         </div>
@@ -832,29 +810,21 @@ const Homepage = () => {
           </div>
         </section>
         
-        {/* Golden separator line with wow halo - contained */}
-        <div className="relative w-full overflow-hidden py-4">
-          {/* Outer halo - wide ambient glow */}
+        {/* Golden separator line - premium, wide linear */}
+        <div className="relative w-full overflow-hidden py-3">
+          {/* Outer glow */}
           <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
+            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0"
             style={{
-              background: 'radial-gradient(ellipse 60% 100% at center, hsla(45, 85%, 55%, 0.25) 0%, hsla(45, 80%, 50%, 0.1) 40%, transparent 70%)',
-              filter: 'blur(12px)'
-            }}
-          />
-          {/* Middle halo - concentrated glow */}
-          <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[16px] w-full"
-            style={{
-              background: 'radial-gradient(ellipse 50% 100% at center, hsla(48, 90%, 70%, 0.6) 0%, hsla(45, 85%, 60%, 0.3) 30%, transparent 60%)',
-              filter: 'blur(6px)'
+              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
+              filter: 'blur(8px)'
             }}
           />
           {/* Sharp line layer */}
           <div 
-            className="relative h-[3px] w-full"
+            className="relative h-[5px] max-w-[1300px] mx-auto"
             style={{
-              background: 'radial-gradient(ellipse 40% 100% at center, hsla(50, 100%, 85%, 1) 0%, hsla(48, 95%, 70%, 0.95) 10%, hsla(45, 85%, 55%, 0.7) 30%, hsla(43, 75%, 50%, 0.3) 50%, transparent 70%)'
+              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
             }}
           />
         </div>
@@ -990,29 +960,21 @@ const Homepage = () => {
           </div>
         </section>
 
-        {/* Golden separator line with wow halo - contained */}
-        <div className="relative w-full overflow-hidden py-4">
-          {/* Outer halo - wide ambient glow */}
+        {/* Golden separator line - premium, wide linear */}
+        <div className="relative w-full overflow-hidden py-3">
+          {/* Outer glow */}
           <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
+            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0"
             style={{
-              background: 'radial-gradient(ellipse 60% 100% at center, hsla(45, 85%, 55%, 0.25) 0%, hsla(45, 80%, 50%, 0.1) 40%, transparent 70%)',
-              filter: 'blur(12px)'
-            }}
-          />
-          {/* Middle halo - concentrated glow */}
-          <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[16px] w-full"
-            style={{
-              background: 'radial-gradient(ellipse 50% 100% at center, hsla(48, 90%, 70%, 0.6) 0%, hsla(45, 85%, 60%, 0.3) 30%, transparent 60%)',
-              filter: 'blur(6px)'
+              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
+              filter: 'blur(8px)'
             }}
           />
           {/* Sharp line layer */}
           <div 
-            className="relative h-[3px] w-full"
+            className="relative h-[5px] max-w-[1300px] mx-auto"
             style={{
-              background: 'radial-gradient(ellipse 40% 100% at center, hsla(50, 100%, 85%, 1) 0%, hsla(48, 95%, 70%, 0.95) 10%, hsla(45, 85%, 55%, 0.7) 30%, hsla(43, 75%, 50%, 0.3) 50%, transparent 70%)'
+              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
             }}
           />
         </div>
@@ -1070,29 +1032,21 @@ const Homepage = () => {
           </div>
         </section>
         
-        {/* Golden separator line with wow halo - contained */}
-        <div className="relative w-full overflow-hidden py-4">
-          {/* Outer halo - wide ambient glow */}
+        {/* Golden separator line - premium, wide linear */}
+        <div className="relative w-full overflow-hidden py-3">
+          {/* Outer glow */}
           <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
+            className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0"
             style={{
-              background: 'radial-gradient(ellipse 60% 100% at center, hsla(45, 85%, 55%, 0.25) 0%, hsla(45, 80%, 50%, 0.1) 40%, transparent 70%)',
-              filter: 'blur(12px)'
-            }}
-          />
-          {/* Middle halo - concentrated glow */}
-          <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[16px] w-full"
-            style={{
-              background: 'radial-gradient(ellipse 50% 100% at center, hsla(48, 90%, 70%, 0.6) 0%, hsla(45, 85%, 60%, 0.3) 30%, transparent 60%)',
-              filter: 'blur(6px)'
+              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
+              filter: 'blur(8px)'
             }}
           />
           {/* Sharp line layer */}
           <div 
-            className="relative h-[3px] w-full"
+            className="relative h-[5px] max-w-[1300px] mx-auto"
             style={{
-              background: 'radial-gradient(ellipse 40% 100% at center, hsla(50, 100%, 85%, 1) 0%, hsla(48, 95%, 70%, 0.95) 10%, hsla(45, 85%, 55%, 0.7) 30%, hsla(43, 75%, 50%, 0.3) 50%, transparent 70%)'
+              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
             }}
           />
         </div>
