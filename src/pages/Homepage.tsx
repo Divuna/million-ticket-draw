@@ -434,13 +434,24 @@ const Homepage = () => {
                 )}
               </div>
               
-              {/* Bottom golden line separator - stronger in center, fading to edges */}
-              <div 
-                className="h-[4px] w-full mt-2"
-                style={{
-                  background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.85) 15%, hsla(43, 75%, 50%, 0.5) 40%, transparent 70%)'
-                }}
-              />
+              {/* Bottom golden line separator with halo */}
+              <div className="relative w-full mt-2">
+                {/* Halo layer - blurred glow */}
+                <div 
+                  className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[10px] w-full"
+                  style={{
+                    background: 'radial-gradient(ellipse at center, hsla(45, 80%, 65%, 0.5) 0%, hsla(45, 75%, 55%, 0.25) 30%, transparent 60%)',
+                    filter: 'blur(6px)'
+                  }}
+                />
+                {/* Sharp line layer */}
+                <div 
+                  className="relative h-[4px] w-full"
+                  style={{
+                    background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.85) 15%, hsla(43, 75%, 50%, 0.5) 40%, transparent 70%)'
+                  }}
+                />
+              </div>
             </>
           ) : null}
         </section>
@@ -616,13 +627,24 @@ const Homepage = () => {
           </Card>
         </section>
         
-        {/* Golden separator line */}
-        <div 
-          className="h-[3px] w-full"
-          style={{
-            background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
-          }}
-        />
+        {/* Golden separator line with halo */}
+        <div className="relative w-full">
+          {/* Halo layer - blurred glow */}
+          <div 
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[10px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse at center, hsla(45, 80%, 65%, 0.5) 0%, hsla(45, 75%, 55%, 0.25) 30%, transparent 60%)',
+              filter: 'blur(6px)'
+            }}
+          />
+          {/* Sharp line layer */}
+          <div 
+            className="relative h-[3px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
+            }}
+          />
+        </div>
 
         {/* Dynamic Banners */}
         {(voucherBanner || gamesBanner) && (
@@ -667,13 +689,24 @@ const Homepage = () => {
           </section>
         )}
         
-        {/* Golden separator line */}
-        <div 
-          className="h-[3px] w-full"
-          style={{
-            background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
-          }}
-        />
+        {/* Golden separator line with halo */}
+        <div className="relative w-full">
+          {/* Halo layer - blurred glow */}
+          <div 
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[10px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse at center, hsla(45, 80%, 65%, 0.5) 0%, hsla(45, 75%, 55%, 0.25) 30%, transparent 60%)',
+              filter: 'blur(6px)'
+            }}
+          />
+          {/* Sharp line layer */}
+          <div 
+            className="relative h-[3px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
+            }}
+          />
+        </div>
 
         {/* Ongoing Contests Carousel */}
         <section className="space-y-6">
@@ -775,13 +808,24 @@ const Homepage = () => {
           </div>
         </section>
         
-        {/* Golden separator line */}
-        <div 
-          className="h-[3px] w-full"
-          style={{
-            background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
-          }}
-        />
+        {/* Golden separator line with halo */}
+        <div className="relative w-full">
+          {/* Halo layer - blurred glow */}
+          <div 
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[10px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse at center, hsla(45, 80%, 65%, 0.5) 0%, hsla(45, 75%, 55%, 0.25) 30%, transparent 60%)',
+              filter: 'blur(6px)'
+            }}
+          />
+          {/* Sharp line layer */}
+          <div 
+            className="relative h-[3px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
+            }}
+          />
+        </div>
 
         {/* Available Vouchers Section - Visible to everyone */}
         <section className="space-y-6">
@@ -914,13 +958,24 @@ const Homepage = () => {
           </div>
         </section>
 
-        {/* Golden separator line */}
-        <div 
-          className="h-[3px] w-full"
-          style={{
-            background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
-          }}
-        />
+        {/* Golden separator line with halo */}
+        <div className="relative w-full">
+          {/* Halo layer - blurred glow */}
+          <div 
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[10px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse at center, hsla(45, 80%, 65%, 0.5) 0%, hsla(45, 75%, 55%, 0.25) 30%, transparent 60%)',
+              filter: 'blur(6px)'
+            }}
+          />
+          {/* Sharp line layer */}
+          <div 
+            className="relative h-[3px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
+            }}
+          />
+        </div>
 
         {/* Partners Section */}
         <section className="space-y-6">
@@ -975,13 +1030,24 @@ const Homepage = () => {
           </div>
         </section>
         
-        {/* Golden separator line */}
-        <div 
-          className="h-[3px] w-full"
-          style={{
-            background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
-          }}
-        />
+        {/* Golden separator line with halo */}
+        <div className="relative w-full">
+          {/* Halo layer - blurred glow */}
+          <div 
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[10px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse at center, hsla(45, 80%, 65%, 0.5) 0%, hsla(45, 75%, 55%, 0.25) 30%, transparent 60%)',
+              filter: 'blur(6px)'
+            }}
+          />
+          {/* Sharp line layer */}
+          <div 
+            className="relative h-[3px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
+            }}
+          />
+        </div>
 
         {/* Coming Soon Section */}
         <section className="space-y-6">
