@@ -375,12 +375,12 @@ const Homepage = () => {
               </div>
               
               <div className="relative">
-                <div className="h-48 md:h-56 relative overflow-hidden rounded-lg bg-[hsl(220_30%_6%)]">
-                  {/* Banner image */}
+                <div className="w-full max-w-[1920px] mx-auto h-[240px] md:h-[360px] lg:h-[480px] relative overflow-hidden rounded-lg bg-[hsl(220_30%_6%)]">
+                  {/* Banner image - designed for 1920x480px (4:1 ratio) */}
                   <img
                     src={megajackpotBanners[currentBannerIndex]?.image_url}
                     alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-cover"
                   />
                   
                   {/* Horizontal golden light gradient - centered, fading up and down */}
