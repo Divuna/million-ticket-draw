@@ -19,10 +19,10 @@
 
 @layer base {
   :root {
-    /* Luxury Modern Theme Colors */
-    --background: 220 45% 8%;
+    /* Premium Dark Navy/Graphite Theme */
+    --background: 222 47% 5%;
     --foreground: 210 20% 98%;
-    --card: 220 40% 12%;
+    --card: 222 40% 9%;
     --card-foreground: 210 20% 98%;
     --popover: 220 40% 12%;
     --popover-foreground: 210 20% 98%;
@@ -63,7 +63,7 @@
     /* Luxury Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--neon-blue)), hsl(var(--neon-gold)));
     --gradient-hero: linear-gradient(135deg, hsl(var(--neon-gold)), hsl(var(--neon-blue)));
-    --gradient-urban: linear-gradient(180deg, hsl(220 45% 8%), hsl(220 40% 12%));
+    --gradient-urban: linear-gradient(180deg, hsl(222 47% 4%), hsl(222 40% 8%));
     --gradient-mystery: linear-gradient(45deg, hsl(var(--neon-blue) / 0.1), hsl(var(--neon-gold) / 0.1));
 
     /* Luxury Shadows */
@@ -74,10 +74,10 @@
   }
 
   .dark {
-    /* Enhanced Luxury Dark Theme */
-    --background: 220 50% 6%;
+    /* Premium Dark Navy/Graphite Theme */
+    --background: 225 50% 4%;
     --foreground: 210 20% 98%;
-    --card: 220 45% 10%;
+    --card: 225 42% 8%;
     --card-foreground: 210 20% 98%;
     --popover: 220 45% 10%;
     --popover-foreground: 210 20% 98%;
@@ -116,7 +116,7 @@
     position: relative;
   }
 
-  /* Luxury Background Effects */
+  /* Premium Subtle Background Gradient */
   body::before {
     content: '';
     position: fixed;
@@ -124,15 +124,17 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: 
-      radial-gradient(circle at 20% 20%, hsl(var(--neon-blue) / 0.05) 0%, transparent 60%),
-      radial-gradient(circle at 80% 80%, hsl(var(--neon-gold) / 0.04) 0%, transparent 60%),
-      radial-gradient(circle at 50% 50%, hsl(220 40% 15% / 0.5) 0%, transparent 80%);
+    background: linear-gradient(
+      180deg,
+      hsl(225 50% 3%) 0%,
+      hsl(222 45% 6%) 50%,
+      hsl(220 40% 8%) 100%
+    );
     pointer-events: none;
     z-index: -1;
   }
 
-  /* Elegant texture overlay */
+  /* Subtle vignette for depth */
   body::after {
     content: '';
     position: fixed;
@@ -140,12 +142,11 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 1px,
-      hsl(var(--border) / 0.03) 1px,
-      hsl(var(--border) / 0.03) 2px
+    background: radial-gradient(
+      ellipse at 50% 0%,
+      transparent 0%,
+      transparent 60%,
+      hsl(225 50% 2% / 0.4) 100%
     );
     pointer-events: none;
     z-index: -1;
