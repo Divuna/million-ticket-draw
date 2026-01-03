@@ -532,9 +532,11 @@ const Homepage = () => {
                       )}
                     </div>
 
+                    {/* Bonus Badge - positioned relative to card */}
+                    <Badge className="absolute top-1 right-1 bg-amber-500/90 text-black text-xs font-medium z-20">+10 Bonus</Badge>
+
                     {/* ContentLayer */}
                     <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
-                      <Badge className="absolute -top-2 -right-2 bg-amber-500/90 text-black text-xs font-medium z-20">+10 Bonus</Badge>
                       <div className="text-center">
                         <div className="text-3xl font-bold text-amber-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">310</div>
                         <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
@@ -564,9 +566,11 @@ const Homepage = () => {
                       )}
                     </div>
 
+                    {/* Bonus Badge - positioned relative to card */}
+                    <Badge className="absolute top-1 right-1 bg-violet-500/90 text-white text-xs font-medium z-20">+25 Bonus</Badge>
+
                     {/* ContentLayer */}
                     <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
-                      <Badge className="absolute -top-2 -right-2 bg-violet-500/90 text-white text-xs font-medium z-20">+25 Bonus</Badge>
                       <div className="text-center">
                         <div className="text-3xl font-bold text-violet-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">525</div>
                         <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
@@ -596,9 +600,11 @@ const Homepage = () => {
                       )}
                     </div>
 
+                    {/* Bonus Badge - positioned relative to card */}
+                    <Badge className="absolute top-1 right-1 bg-emerald-500/90 text-white text-xs font-medium z-20">+80 Bonus</Badge>
+
                     {/* ContentLayer */}
                     <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
-                      <Badge className="absolute -top-2 -right-2 bg-emerald-500/90 text-white text-xs font-medium z-20">+80 Bonus</Badge>
                       <div className="text-center">
                         <div className="text-3xl font-bold text-emerald-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">1280</div>
                         <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
