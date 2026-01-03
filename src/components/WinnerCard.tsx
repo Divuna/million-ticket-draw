@@ -12,6 +12,7 @@ interface WinnerCardProps {
   contestTitle: string;
   createdAt: string;
   type: string;
+  prizeImageUrl?: string | null;
 }
 
 export const WinnerCard = ({ 
@@ -20,7 +21,8 @@ export const WinnerCard = ({
   prizeName, 
   contestTitle, 
   createdAt,
-  type 
+  type,
+  prizeImageUrl
 }: WinnerCardProps) => {
   const initials = (userNickname || userName)
     .split(' ')
@@ -37,37 +39,53 @@ export const WinnerCard = ({
   return (
     <Card className="rounded-xl overflow-hidden bg-card/60 border border-border/50 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all duration-300">
       <CardContent className="p-4">
-        <div className="flex gap-4 items-center">
-          {/* Avatar */}
-          <Avatar className="w-16 h-16 border-2 border-primary/20">
-            <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+        <div className="flex gap-4">
+          {/* Prize Image Slot - Left Side */}
+          <div className="w-20 h-20 flex-shrink-0 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden">
+            {prizeImageUrl ? (
+              <img 
+                src={prizeImageUrl} 
+                alt={prizeName} 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Trophy className="w-8 h-8 text-muted-foreground/50" />
+            )}
+          </div>
 
-          {/* Winner Info */}
-          <div className="flex-1 min-w-0 space-y-2">
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="font-bold text-foreground text-sm line-clamp-1">
-                {userNickname || userName}
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-primary flex-shrink-0" />
-              <span className="text-xs font-semibold text-primary line-clamp-1">
-                {prizeName}
-              </span>
-            </div>
+          {/* Right Side - Avatar and Info */}
+          <div className="flex-1 min-w-0 flex gap-3 items-center">
+            {/* Avatar */}
+            <Avatar className="w-12 h-12 border-2 border-primary/20 flex-shrink-0">
+              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold text-sm">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
 
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground line-clamp-1">
-                {contestTitle}
-              </span>
-              <Badge variant="secondary" className="text-xs whitespace-nowrap">
-                {timeAgo}
-              </Badge>
+            {/* Winner Info */}
+            <div className="flex-1 min-w-0 space-y-1">
+              <div className="flex items-center gap-2">
+                <User className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                <span className="font-bold text-foreground text-sm line-clamp-1">
+                  {userNickname || userName}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Trophy className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                <span className="text-xs font-semibold text-primary line-clamp-1">
+                  {prizeName}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground line-clamp-1">
+                  {contestTitle}
+                </span>
+                <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                  {timeAgo}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
