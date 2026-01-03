@@ -444,7 +444,7 @@ const Homepage = () => {
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[0_0_10px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_14px_hsl(var(--primary)/0.5)] transition-all"
+                      className="w-full mt-2 bg-primary text-primary-foreground font-bold shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
                       onClick={() => handleCoinPurchase(50, 50)}
                       disabled={topUpLoading}
                     >
@@ -462,7 +462,7 @@ const Homepage = () => {
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[0_0_10px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_14px_hsl(var(--primary)/0.5)] transition-all"
+                      className="w-full mt-2 bg-primary text-primary-foreground font-bold shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
                       onClick={() => handleCoinPurchase(300, 310)}
                       disabled={topUpLoading}
                     >
@@ -480,7 +480,7 @@ const Homepage = () => {
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[0_0_10px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_14px_hsl(var(--primary)/0.5)] transition-all"
+                      className="w-full mt-2 bg-primary text-primary-foreground font-bold shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
                       onClick={() => handleCoinPurchase(500, 525)}
                       disabled={topUpLoading}
                     >
@@ -498,7 +498,7 @@ const Homepage = () => {
                     </div>
                     <Button 
                       size="sm" 
-                      className="w-full mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[0_0_10px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_14px_hsl(var(--primary)/0.5)] transition-all"
+                      className="w-full mt-2 bg-primary text-primary-foreground font-bold shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
                       onClick={() => handleCoinPurchase(1200, 1280)}
                       disabled={topUpLoading}
                     >
@@ -811,7 +811,7 @@ const Homepage = () => {
                         {/* Button */}
                         <div className="space-y-2">
                           <Button
-                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[0_0_10px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_14px_hsl(var(--primary)/0.5)] transition-all"
+                            className="w-full bg-primary text-primary-foreground font-bold shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
                             disabled={isAdmin}
                             onClick={(e) => {
                               e.stopPropagation();
