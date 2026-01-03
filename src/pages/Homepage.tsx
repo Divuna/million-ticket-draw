@@ -434,13 +434,21 @@ const Homepage = () => {
                 )}
               </div>
               
-              {/* Bottom golden line separator with halo */}
-              <div className="relative w-full mt-2">
-                {/* Halo layer - blurred glow */}
+              {/* Bottom golden line separator with wow halo - full width */}
+              <div className="relative w-[100vw] left-1/2 -translate-x-1/2 py-4 mt-2">
+                {/* Outer halo - wide ambient glow */}
                 <div 
-                  className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[10px] w-full"
+                  className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
                   style={{
-                    background: 'radial-gradient(ellipse at center, hsla(45, 80%, 65%, 0.5) 0%, hsla(45, 75%, 55%, 0.25) 30%, transparent 60%)',
+                    background: 'radial-gradient(ellipse 60% 100% at center, hsla(45, 85%, 55%, 0.25) 0%, hsla(45, 80%, 50%, 0.1) 40%, transparent 70%)',
+                    filter: 'blur(12px)'
+                  }}
+                />
+                {/* Middle halo - concentrated glow */}
+                <div 
+                  className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[16px] w-full"
+                  style={{
+                    background: 'radial-gradient(ellipse 50% 100% at center, hsla(48, 90%, 70%, 0.6) 0%, hsla(45, 85%, 60%, 0.3) 30%, transparent 60%)',
                     filter: 'blur(6px)'
                   }}
                 />
@@ -448,7 +456,7 @@ const Homepage = () => {
                 <div 
                   className="relative h-[4px] w-full"
                   style={{
-                    background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.85) 15%, hsla(43, 75%, 50%, 0.5) 40%, transparent 70%)'
+                    background: 'radial-gradient(ellipse 40% 100% at center, hsla(50, 100%, 85%, 1) 0%, hsla(48, 95%, 70%, 0.95) 10%, hsla(45, 85%, 55%, 0.7) 30%, hsla(43, 75%, 50%, 0.3) 50%, transparent 70%)'
                   }}
                 />
               </div>
@@ -627,13 +635,21 @@ const Homepage = () => {
           </Card>
         </section>
         
-        {/* Golden separator line with halo */}
-        <div className="relative w-full">
-          {/* Halo layer - blurred glow */}
+        {/* Golden separator line with wow halo - full width */}
+        <div className="relative w-[100vw] left-1/2 -translate-x-1/2 py-4">
+          {/* Outer halo - wide ambient glow */}
           <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[10px] w-full"
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
             style={{
-              background: 'radial-gradient(ellipse at center, hsla(45, 80%, 65%, 0.5) 0%, hsla(45, 75%, 55%, 0.25) 30%, transparent 60%)',
+              background: 'radial-gradient(ellipse 60% 100% at center, hsla(45, 85%, 55%, 0.25) 0%, hsla(45, 80%, 50%, 0.1) 40%, transparent 70%)',
+              filter: 'blur(12px)'
+            }}
+          />
+          {/* Middle halo - concentrated glow */}
+          <div 
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[16px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse 50% 100% at center, hsla(48, 90%, 70%, 0.6) 0%, hsla(45, 85%, 60%, 0.3) 30%, transparent 60%)',
               filter: 'blur(6px)'
             }}
           />
@@ -641,7 +657,7 @@ const Homepage = () => {
           <div 
             className="relative h-[3px] w-full"
             style={{
-              background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
+              background: 'radial-gradient(ellipse 40% 100% at center, hsla(50, 100%, 85%, 1) 0%, hsla(48, 95%, 70%, 0.95) 10%, hsla(45, 85%, 55%, 0.7) 30%, hsla(43, 75%, 50%, 0.3) 50%, transparent 70%)'
             }}
           />
         </div>
@@ -689,13 +705,21 @@ const Homepage = () => {
           </section>
         )}
         
-        {/* Golden separator line with halo */}
-        <div className="relative w-full">
-          {/* Halo layer - blurred glow */}
+        {/* Golden separator line with wow halo - full width */}
+        <div className="relative w-[100vw] left-1/2 -translate-x-1/2 py-4">
+          {/* Outer halo - wide ambient glow */}
           <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[10px] w-full"
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
             style={{
-              background: 'radial-gradient(ellipse at center, hsla(45, 80%, 65%, 0.5) 0%, hsla(45, 75%, 55%, 0.25) 30%, transparent 60%)',
+              background: 'radial-gradient(ellipse 60% 100% at center, hsla(45, 85%, 55%, 0.25) 0%, hsla(45, 80%, 50%, 0.1) 40%, transparent 70%)',
+              filter: 'blur(12px)'
+            }}
+          />
+          {/* Middle halo - concentrated glow */}
+          <div 
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[16px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse 50% 100% at center, hsla(48, 90%, 70%, 0.6) 0%, hsla(45, 85%, 60%, 0.3) 30%, transparent 60%)',
               filter: 'blur(6px)'
             }}
           />
@@ -703,7 +727,7 @@ const Homepage = () => {
           <div 
             className="relative h-[3px] w-full"
             style={{
-              background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
+              background: 'radial-gradient(ellipse 40% 100% at center, hsla(50, 100%, 85%, 1) 0%, hsla(48, 95%, 70%, 0.95) 10%, hsla(45, 85%, 55%, 0.7) 30%, hsla(43, 75%, 50%, 0.3) 50%, transparent 70%)'
             }}
           />
         </div>
@@ -808,13 +832,21 @@ const Homepage = () => {
           </div>
         </section>
         
-        {/* Golden separator line with halo */}
-        <div className="relative w-full">
-          {/* Halo layer - blurred glow */}
+        {/* Golden separator line with wow halo - full width */}
+        <div className="relative w-[100vw] left-1/2 -translate-x-1/2 py-4">
+          {/* Outer halo - wide ambient glow */}
           <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[10px] w-full"
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
             style={{
-              background: 'radial-gradient(ellipse at center, hsla(45, 80%, 65%, 0.5) 0%, hsla(45, 75%, 55%, 0.25) 30%, transparent 60%)',
+              background: 'radial-gradient(ellipse 60% 100% at center, hsla(45, 85%, 55%, 0.25) 0%, hsla(45, 80%, 50%, 0.1) 40%, transparent 70%)',
+              filter: 'blur(12px)'
+            }}
+          />
+          {/* Middle halo - concentrated glow */}
+          <div 
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[16px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse 50% 100% at center, hsla(48, 90%, 70%, 0.6) 0%, hsla(45, 85%, 60%, 0.3) 30%, transparent 60%)',
               filter: 'blur(6px)'
             }}
           />
@@ -822,7 +854,7 @@ const Homepage = () => {
           <div 
             className="relative h-[3px] w-full"
             style={{
-              background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
+              background: 'radial-gradient(ellipse 40% 100% at center, hsla(50, 100%, 85%, 1) 0%, hsla(48, 95%, 70%, 0.95) 10%, hsla(45, 85%, 55%, 0.7) 30%, hsla(43, 75%, 50%, 0.3) 50%, transparent 70%)'
             }}
           />
         </div>
@@ -958,13 +990,21 @@ const Homepage = () => {
           </div>
         </section>
 
-        {/* Golden separator line with halo */}
-        <div className="relative w-full">
-          {/* Halo layer - blurred glow */}
+        {/* Golden separator line with wow halo - full width */}
+        <div className="relative w-[100vw] left-1/2 -translate-x-1/2 py-4">
+          {/* Outer halo - wide ambient glow */}
           <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[10px] w-full"
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
             style={{
-              background: 'radial-gradient(ellipse at center, hsla(45, 80%, 65%, 0.5) 0%, hsla(45, 75%, 55%, 0.25) 30%, transparent 60%)',
+              background: 'radial-gradient(ellipse 60% 100% at center, hsla(45, 85%, 55%, 0.25) 0%, hsla(45, 80%, 50%, 0.1) 40%, transparent 70%)',
+              filter: 'blur(12px)'
+            }}
+          />
+          {/* Middle halo - concentrated glow */}
+          <div 
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[16px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse 50% 100% at center, hsla(48, 90%, 70%, 0.6) 0%, hsla(45, 85%, 60%, 0.3) 30%, transparent 60%)',
               filter: 'blur(6px)'
             }}
           />
@@ -972,7 +1012,7 @@ const Homepage = () => {
           <div 
             className="relative h-[3px] w-full"
             style={{
-              background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
+              background: 'radial-gradient(ellipse 40% 100% at center, hsla(50, 100%, 85%, 1) 0%, hsla(48, 95%, 70%, 0.95) 10%, hsla(45, 85%, 55%, 0.7) 30%, hsla(43, 75%, 50%, 0.3) 50%, transparent 70%)'
             }}
           />
         </div>
@@ -1030,13 +1070,21 @@ const Homepage = () => {
           </div>
         </section>
         
-        {/* Golden separator line with halo */}
-        <div className="relative w-full">
-          {/* Halo layer - blurred glow */}
+        {/* Golden separator line with wow halo - full width */}
+        <div className="relative w-[100vw] left-1/2 -translate-x-1/2 py-4">
+          {/* Outer halo - wide ambient glow */}
           <div 
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[10px] w-full"
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[40px] w-full"
             style={{
-              background: 'radial-gradient(ellipse at center, hsla(45, 80%, 65%, 0.5) 0%, hsla(45, 75%, 55%, 0.25) 30%, transparent 60%)',
+              background: 'radial-gradient(ellipse 60% 100% at center, hsla(45, 85%, 55%, 0.25) 0%, hsla(45, 80%, 50%, 0.1) 40%, transparent 70%)',
+              filter: 'blur(12px)'
+            }}
+          />
+          {/* Middle halo - concentrated glow */}
+          <div 
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[16px] w-full"
+            style={{
+              background: 'radial-gradient(ellipse 50% 100% at center, hsla(48, 90%, 70%, 0.6) 0%, hsla(45, 85%, 60%, 0.3) 30%, transparent 60%)',
               filter: 'blur(6px)'
             }}
           />
@@ -1044,7 +1092,7 @@ const Homepage = () => {
           <div 
             className="relative h-[3px] w-full"
             style={{
-              background: 'radial-gradient(ellipse at center, hsla(48, 90%, 75%, 1) 0%, hsla(45, 85%, 60%, 0.8) 15%, hsla(43, 75%, 50%, 0.45) 40%, transparent 70%)'
+              background: 'radial-gradient(ellipse 40% 100% at center, hsla(50, 100%, 85%, 1) 0%, hsla(48, 95%, 70%, 0.95) 10%, hsla(45, 85%, 55%, 0.7) 30%, hsla(43, 75%, 50%, 0.3) 50%, transparent 70%)'
             }}
           />
         </div>
