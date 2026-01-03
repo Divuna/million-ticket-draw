@@ -371,6 +371,14 @@ const Homepage = () => {
                   alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
                   className="w-full h-full object-cover"
                 />
+                
+                {/* Horizontal golden light gradient - centered, fading up and down */}
+                <div 
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(to bottom, transparent 0%, transparent 35%, hsla(45, 60%, 55%, 0.12) 45%, hsla(45, 60%, 55%, 0.18) 50%, hsla(45, 60%, 55%, 0.12) 55%, transparent 65%, transparent 100%)'
+                  }}
+                />
 
                 {/* Navigation arrows for multiple banners */}
                 {megajackpotBanners.length > 1 && (
