@@ -41,7 +41,7 @@ export const WinnerCard = ({
       <CardContent className="p-4">
         <div className="flex gap-4">
           {/* Prize Image Slot - Left Side */}
-          <div className="w-20 h-20 flex-shrink-0 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden">
+          <div className="w-28 h-24 flex-shrink-0 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden">
             {prizeImageUrl ? (
               <img 
                 src={prizeImageUrl} 
@@ -49,7 +49,7 @@ export const WinnerCard = ({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <Trophy className="w-8 h-8 text-muted-foreground/50" />
+              <Trophy className="w-10 h-10 text-muted-foreground/50" />
             )}
           </div>
 
