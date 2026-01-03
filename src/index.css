@@ -240,7 +240,15 @@
 
   /* Premium Typography Classes */
   .text-heading-gold {
-    color: hsl(var(--heading-gold));
+    background: linear-gradient(
+      180deg,
+      hsl(45 85% 72%) 0%,
+      hsl(43 80% 58%) 50%,
+      hsl(40 75% 48%) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   .text-content-silver {
