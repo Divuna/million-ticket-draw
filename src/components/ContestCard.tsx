@@ -76,7 +76,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
   };
 
   return (
-    <div className={`contest-card rounded-2xl overflow-hidden relative ${className}`}>
+    <div className={`contest-card rounded-2xl overflow-hidden relative border border-amber-300/20 ${className}`}>
       {/* Full-width banner image - Priority: banner_image > main_prize_secondary_image > main_image */}
       {(() => {
         // Determine the best image source with priority
