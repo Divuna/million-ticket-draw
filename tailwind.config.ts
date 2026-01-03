@@ -14,9 +14,23 @@ export default {
     },
     extend: {
       fontFamily: {
-        'orbitron': ['Orbitron', 'monospace'],
-        'rajdhani': ['Rajdhani', 'sans-serif'],
-        'sans': ['Rajdhani', 'system-ui', 'sans-serif'],
+        'heading': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        'body': ['Inter', 'system-ui', 'sans-serif'],
+        'sans': ['Inter', 'system-ui', 'sans-serif'],
+      },
+      fontSize: {
+        'display': ['3.5rem', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'h1': ['2.5rem', { lineHeight: '1.15', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'h2': ['1.875rem', { lineHeight: '1.2', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'h3': ['1.5rem', { lineHeight: '1.3', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'h4': ['1.25rem', { lineHeight: '1.4', fontWeight: '600' }],
+        'body-lg': ['1.125rem', { lineHeight: '1.6' }],
+        'body': ['1rem', { lineHeight: '1.6' }],
+        'body-sm': ['0.875rem', { lineHeight: '1.5' }],
+      },
+      spacing: {
+        'section': '4rem',
+        'section-lg': '6rem',
       },
       colors: {
         border: "hsl(var(--border))",
