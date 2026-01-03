@@ -516,8 +516,19 @@ const AdminBanners: React.FC = () => {
                       <SelectItem value="vouchers">Kupte Voucher</SelectItem>
                       <SelectItem value="games">Hraj o luxusní ceny</SelectItem>
                       <SelectItem value="homepage_video">Jak to funguje (Video)</SelectItem>
+                      <SelectItem value="MioCoin balíček – 50">MioCoin balíček – 50</SelectItem>
+                      <SelectItem value="MioCoin balíček – 310">MioCoin balíček – 310</SelectItem>
+                      <SelectItem value="MioCoin balíček – 525">MioCoin balíček – 525</SelectItem>
+                      <SelectItem value="MioCoin balíček – 1280">MioCoin balíček – 1280</SelectItem>
+                      <SelectItem value="Probíhající soutěže">Probíhající soutěže</SelectItem>
+                      <SelectItem value="Koupit voucher se slevou">Koupit voucher se slevou</SelectItem>
                     </SelectContent>
                   </Select>
+                  {(bannerForm.targetPage.startsWith('MioCoin') || bannerForm.targetPage === 'Probíhající soutěže' || bannerForm.targetPage === 'Koupit voucher se slevou') && (
+                    <p className="text-xs text-muted-foreground">
+                      Doporučené rozměry pro kartičkové bannery: 200 × 140 px
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -969,8 +980,19 @@ const AdminBanners: React.FC = () => {
                   <SelectItem value="vouchers">Kupte Voucher</SelectItem>
                   <SelectItem value="games">Hraj o luxusní ceny</SelectItem>
                   <SelectItem value="homepage_video">Jak to funguje (Video)</SelectItem>
+                  <SelectItem value="MioCoin balíček – 50">MioCoin balíček – 50</SelectItem>
+                  <SelectItem value="MioCoin balíček – 310">MioCoin balíček – 310</SelectItem>
+                  <SelectItem value="MioCoin balíček – 525">MioCoin balíček – 525</SelectItem>
+                  <SelectItem value="MioCoin balíček – 1280">MioCoin balíček – 1280</SelectItem>
+                  <SelectItem value="Probíhající soutěže">Probíhající soutěže</SelectItem>
+                  <SelectItem value="Koupit voucher se slevou">Koupit voucher se slevou</SelectItem>
                 </SelectContent>
               </Select>
+              {(bannerForm.targetPage.startsWith('MioCoin') || bannerForm.targetPage === 'Probíhající soutěže' || bannerForm.targetPage === 'Koupit voucher se slevou') && (
+                <p className="text-xs text-muted-foreground">
+                  Doporučené rozměry pro kartičkové bannery: 200 × 140 px
+                </p>
+              )}
             </div>
 
             <div className="flex items-center space-x-2">
