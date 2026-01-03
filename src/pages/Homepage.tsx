@@ -494,7 +494,7 @@ const Homepage = () => {
                       <img 
                         src={placementBanners.miocoin_50.image_url} 
                         alt="MioCoin 50" 
-                        className="absolute inset-0 w-full h-full object-cover opacity-30"
+                        className="absolute inset-0 w-full h-full object-cover"
                       />
                     )}
                     <div className="text-center relative z-10">
@@ -518,7 +518,7 @@ const Homepage = () => {
                       <img 
                         src={placementBanners.miocoin_310.image_url} 
                         alt="MioCoin 310" 
-                        className="absolute inset-0 w-full h-full object-cover opacity-30"
+                        className="absolute inset-0 w-full h-full object-cover"
                       />
                     )}
                     <Badge className="absolute -top-2 -right-2 bg-amber-500/90 text-black text-xs font-medium z-20">+10 Bonus</Badge>
@@ -543,7 +543,7 @@ const Homepage = () => {
                       <img 
                         src={placementBanners.miocoin_525.image_url} 
                         alt="MioCoin 525" 
-                        className="absolute inset-0 w-full h-full object-cover opacity-30"
+                        className="absolute inset-0 w-full h-full object-cover"
                       />
                     )}
                     <Badge className="absolute -top-2 -right-2 bg-violet-500/90 text-white text-xs font-medium z-20">+25 Bonus</Badge>
@@ -568,7 +568,7 @@ const Homepage = () => {
                       <img 
                         src={placementBanners.miocoin_1280.image_url} 
                         alt="MioCoin 1280" 
-                        className="absolute inset-0 w-full h-full object-cover opacity-30"
+                        className="absolute inset-0 w-full h-full object-cover"
                       />
                     )}
                     <Badge className="absolute -top-2 -right-2 bg-emerald-500/90 text-white text-xs font-medium z-20">+80 Bonus</Badge>
@@ -599,7 +599,7 @@ const Homepage = () => {
                       <img 
                         src={placementBanners.probihajici_souteze.image_url} 
                         alt="Probíhající soutěže" 
-                        className="absolute inset-0 w-full h-full object-cover opacity-30"
+                        className="absolute inset-0 w-full h-full object-cover"
                       />
                     )}
                     <Trophy className="w-8 h-8 text-amber-400 mb-2 relative z-10" />
@@ -615,7 +615,7 @@ const Homepage = () => {
                       <img 
                         src={placementBanners.koupit_voucher.image_url} 
                         alt="Koupit voucher se slevou" 
-                        className="absolute inset-0 w-full h-full object-cover opacity-30"
+                        className="absolute inset-0 w-full h-full object-cover"
                       />
                     )}
                     <Gift className="w-8 h-8 text-rose-400 mb-2 relative z-10" />
