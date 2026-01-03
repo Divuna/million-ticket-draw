@@ -422,7 +422,7 @@ const Homepage = () => {
         {/* Coin Top-up Section */}
         <section className="w-full overflow-x-hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Left Column - Dobijte si MioCoiny */}
-          <Card className="rounded-2xl overflow-hidden bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-primary/10 transition-all duration-300 h-full">
+          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border-2 border-border/40 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
             <CardContent className="p-3 sm:p-3 md:p-4 h-full flex flex-col">
               <div className="space-y-2 flex-1 flex flex-col">
                 <div className="space-y-2">
@@ -511,19 +511,19 @@ const Homepage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                   {/* Box 1: Probíhající soutěže */}
                   <div 
-                    className="rounded-xl p-2 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 cursor-pointer hover:scale-105 transition-transform duration-200 flex flex-col items-center justify-center text-center"
+                    className="rounded-xl p-3 bg-[hsl(220_45%_6%)] border-2 border-amber-400/30 cursor-pointer hover:border-amber-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(40_60%_50%/0.06)]"
                     onClick={() => navigate("/games")}
                   >
-                    <Trophy className="w-8 h-8 text-amber-500 mb-2" />
+                    <Trophy className="w-8 h-8 text-amber-400 mb-2" />
                     <div className="text-sm font-semibold text-foreground">Probíhající soutěže</div>
                   </div>
 
                   {/* Box 2: Koupit voucher se slevou */}
                   <div 
-                    className="rounded-xl p-2 bg-gradient-to-br from-pink-500/10 to-rose-500/10 border border-pink-500/20 cursor-pointer hover:scale-105 transition-transform duration-200 flex flex-col items-center justify-center text-center"
+                    className="rounded-xl p-3 bg-[hsl(220_45%_6%)] border-2 border-rose-400/30 cursor-pointer hover:border-rose-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(350_60%_50%/0.06)]"
                     onClick={() => navigate("/vouchers")}
                   >
-                    <Gift className="w-8 h-8 text-pink-500 mb-2" />
+                    <Gift className="w-8 h-8 text-rose-400 mb-2" />
                     <div className="text-sm font-semibold text-foreground">Koupit voucher se slevou</div>
                   </div>
                 </div>
@@ -532,7 +532,7 @@ const Homepage = () => {
           </Card>
 
           {/* Right Column - Poslední výherci */}
-          <Card className="rounded-2xl overflow-hidden bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-primary/10 transition-all duration-300 h-full">
+          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border-2 border-border/40 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
             <CardContent className="p-3 sm:p-3 md:p-4 h-full flex flex-col">
               <div className="space-y-2 flex-1 flex flex-col">
                 <div className="space-y-2">
@@ -792,7 +792,7 @@ const Homepage = () => {
             ) : (
               homepageVouchers.map((voucher) => (
                 <div key={voucher.id} className="flex-none w-80">
-                  <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30 transition-all duration-300 hover:opacity-90 hover:scale-[1.01]">
+                  <Card className="relative overflow-hidden rounded-xl bg-[hsl(220_45%_6%)] border-2 border-border/40 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-200 hover:border-border/60">
                     <div className="flex h-48 relative">
                       {/* Left side - Content */}
                       <div className="flex-1 p-6 flex flex-col justify-between">
@@ -889,7 +889,7 @@ const Homepage = () => {
               partners.map((partner) => (
                 <div
                   key={partner.id}
-                  className="aspect-square bg-card border border-border rounded-lg overflow-hidden cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary group"
+                  className="aspect-square bg-[hsl(220_45%_6%)] border-2 border-border/40 rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:border-primary/50 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] group"
                   onClick={() => window.open(partner.website_url, "_blank")}
                 >
                   <div className="w-full h-full p-4 flex items-center justify-center relative">
@@ -930,18 +930,18 @@ const Homepage = () => {
             {comingSoonLoading ? (
               // Loading placeholder
               Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30">
+                <Card key={index} className="relative overflow-hidden rounded-xl bg-[hsl(220_45%_6%)] border-2 border-border/40 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)]">
                   <CardContent className="p-0">
-                    <div className="aspect-video rounded-lg overflow-hidden bg-muted/40 animate-pulse" />
+                    <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 animate-pulse" />
                   </CardContent>
                 </Card>
               ))
             ) : comingSoonBanners.length === 0 ? (
               // Placeholder cards when empty
               Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30">
+                <Card key={index} className="relative overflow-hidden rounded-xl bg-[hsl(220_45%_6%)] border-2 border-border/40 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)]">
                   <CardContent className="p-0">
-                    <div className="aspect-video rounded-lg overflow-hidden bg-muted/40 flex items-center justify-center">
+                    <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 flex items-center justify-center">
                       <div className="text-center text-muted-foreground">
                         <span className="text-sm">Připravujeme</span>
                       </div>
@@ -951,7 +951,7 @@ const Homepage = () => {
               ))
             ) : (
               comingSoonBanners.map((banner) => (
-                <Card key={banner.id} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30">
+                <Card key={banner.id} className="relative overflow-hidden rounded-xl bg-[hsl(220_45%_6%)] border-2 border-border/40 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)]">
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/40">
                       <img
