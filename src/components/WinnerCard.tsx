@@ -13,6 +13,7 @@ interface WinnerCardProps {
   createdAt: string;
   type: string;
   prizeImageUrl?: string | null;
+  cardStyleImageUrl?: string | null;
 }
 
 export const WinnerCard = ({ 
@@ -22,7 +23,8 @@ export const WinnerCard = ({
   contestTitle, 
   createdAt,
   type,
-  prizeImageUrl
+  prizeImageUrl,
+  cardStyleImageUrl
 }: WinnerCardProps) => {
   const initials = (userNickname || userName)
     .split(' ')
@@ -37,8 +39,21 @@ export const WinnerCard = ({
   });
 
   return (
-    <Card className="rounded-xl overflow-hidden bg-card/60 border border-border/50 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all duration-300">
-      <div className="flex">
+    <Card className="rounded-xl overflow-hidden bg-card/60 border border-border/50 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all duration-300 relative">
+      {/* Decorative background layer from placement banner */}
+      {cardStyleImageUrl && (
+        <div 
+          className="absolute inset-0 pointer-events-none z-0"
+          style={{
+            backgroundImage: `url(${cardStyleImageUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: 0.15
+          }}
+        />
+      )}
+      
+      <div className="flex relative z-10">
         {/* Prize Image Slot - Left Side (30-35% width, full height) */}
         <div className="w-[35%] flex-shrink-0 bg-muted/50 flex items-center justify-center overflow-hidden">
           {prizeImageUrl ? (
