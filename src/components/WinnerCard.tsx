@@ -40,20 +40,19 @@ export const WinnerCard = ({
   });
 
   return (
-    <Card className="rounded-xl overflow-hidden bg-transparent border-0 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 cursor-pointer relative w-full">
-      {/* Base layer - card PNG renders 1:1 with intrinsic aspect ratio */}
+    <Card className="rounded-xl overflow-hidden bg-transparent border-0 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 cursor-pointer relative">
+      {/* Base layer - card PNG renders 1:1 */}
       {cardStyleImageUrl && (
         <img 
           src={cardStyleImageUrl}
           alt=""
-          className="w-full h-auto block"
+          className="absolute inset-0 w-full h-full object-cover z-0"
         />
       )}
       
-      {/* Content overlay - absolutely positioned above PNG */}
-      <div className="absolute inset-0 flex z-10">
-        {/* Prize Image Slot - Left Side (35% width) */}
-        <div className="w-[35%] flex-shrink-0 flex items-center justify-center overflow-hidden">
+      <div className="flex relative z-10">
+        {/* Prize Image Slot - Left Side (30-35% width, full height) */}
+        <div className="w-[35%] flex-shrink-0 bg-muted/50 flex items-center justify-center overflow-hidden">
           {prizeImageUrl ? (
             <img 
               src={prizeImageUrl} 
@@ -70,8 +69,8 @@ export const WinnerCard = ({
         </div>
 
         {/* Right Side - Avatar and Info */}
-        <CardContent className="flex-1 p-4 flex items-center">
-          <div className="flex gap-3 items-center w-full">
+        <CardContent className="flex-1 p-4">
+          <div className="flex gap-3 items-center h-full">
             {/* Avatar */}
             <Avatar className="w-12 h-12 border-2 border-primary/20 flex-shrink-0">
               <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold text-sm">
