@@ -41,16 +41,17 @@ export const WinnerCard = ({
 
   return (
     <Card className="rounded-xl overflow-hidden bg-transparent border-0 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 cursor-pointer relative">
-      {/* Base layer - card PNG renders 1:1 */}
+      {/* Base layer - card PNG renders 1:1 at intrinsic size */}
       {cardStyleImageUrl && (
         <img 
           src={cardStyleImageUrl}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover z-0"
+          className="w-full h-auto block z-0"
         />
       )}
       
-      <div className="flex relative z-10">
+      {/* Content layer - absolutely positioned above PNG */}
+      <div className="absolute inset-0 z-10 flex">
         {/* Prize Image Slot - Left Side (30-35% width, full height) */}
         <div className="w-[35%] flex-shrink-0 bg-muted/50 flex items-center justify-center overflow-hidden">
           {prizeImageUrl ? (
