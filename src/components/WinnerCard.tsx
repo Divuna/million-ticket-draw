@@ -67,7 +67,7 @@ export const WinnerCard = ({
             <img 
               src={miocoinImage} 
               alt="MioCoin" 
-              className="w-16 h-16 object-contain opacity-80"
+              className="w-16 h-16 object-contain animate-coin-pulse"
             />
           )}
         </div>
