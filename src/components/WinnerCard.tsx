@@ -48,8 +48,7 @@ export const WinnerCard = ({
           style={{
             backgroundImage: `url(${cardStyleImageUrl})`,
             backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: 0.15
+            backgroundPosition: 'center'
           }}
         />
       )}
