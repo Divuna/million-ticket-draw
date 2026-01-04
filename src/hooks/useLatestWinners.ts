@@ -25,90 +25,42 @@ export const useLatestWinners = (limit: number = 50) => {
   return useQuery({
     queryKey: ["latest-winners", limit],
     queryFn: async () => {
-      // 1) Fetch winners only (NO JOINS → no RLS problems)
-      const { data: winnersData, error } = await supabase
-        .from("winners")
-        .select("id, user_id, contest_id, prize_id, type, created_at")
-        .order("created_at", { ascending: false })
-        .limit(limit);
+      // Use SECURITY DEFINER function that bypasses RLS
+      // Returns consistent data for all users (logged in, logged out, admin)
+      const { data, error } = await supabase.rpc("get_latest_winners", {
+        winners_limit: limit,
+      });
 
       if (error) throw error;
 
-      if (!winnersData || winnersData.length === 0) {
+      if (!data || data.length === 0) {
         return [];
       }
 
-      // Extract user_ids and contest_ids
-      const userIds = [...new Set(winnersData.map((w) => w.user_id))];
-
-      const contestIds = [...new Set(winnersData.map((w) => w.contest_id))];
-
-      const bonusPrizeIds = winnersData.filter((w) => w.type === "bonus" && w.prize_id).map((w) => w.prize_id);
-
-      // 2) Fetch users separately
-      const { data: users } = await supabase
-        .from("users")
-        .select("id, name, nickname, first_name, last_name, email")
-        .in("id", userIds);
-
-      const usersMap = new Map(users?.map((u) => [u.id, u]) || []);
-
-      // 3) Fetch contests separately (include main_image for prize display)
-      const { data: contests } = await supabase.from("contests").select("id, title, main_prize, main_image").in("id", contestIds);
-
-      const contestsMap = new Map(contests?.map((c) => [c.id, c]) || []);
-
-      // 4) Fetch bonus prizes
-      let bonusPrizesMap = new Map();
-      if (bonusPrizeIds.length > 0) {
-        const { data: bonusPrizes } = await supabase
-          .from("bonus_prizes")
-          .select("id, description, amount, image_url")
-          .in("id", bonusPrizeIds);
-
-        bonusPrizesMap = new Map(bonusPrizes?.map((bp) => [bp.id, bp]) || []);
-      }
-
-      // 5) Final result mapping
-      const result: Winner[] = winnersData.map((winner) => {
-        const user = usersMap.get(winner.user_id);
-        const contest = contestsMap.get(winner.contest_id);
-
-        let prizeName = "";
-        let prizeImageUrl: string | null = null;
-
-        if (winner.type === "main") {
-          prizeName = contest?.main_prize || "Hlavní výhra";
-          prizeImageUrl = getStorageUrl(contest?.main_image);
-        } else if (winner.type === "bonus") {
-          const bonus = bonusPrizesMap.get(winner.prize_id);
-          if (bonus) {
-            prizeName = bonus.amount ? `${bonus.amount} MioCoins` : bonus.description || "Bonus";
-            prizeImageUrl = getStorageUrl(bonus.image_url);
-          } else {
-            prizeName = "Bonus";
-          }
-        } else {
-          prizeName = "Výhra";
-        }
-
-        const userName =
-          user?.nickname ||
-          user?.name ||
-          (user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : user?.email || "Uživatel");
-
-        return {
-          id: winner.id,
-          user_id: winner.user_id,
-          user_name: userName,
-          user_nickname: user?.nickname || null,
-          prize_name: prizeName,
-          prize_image_url: prizeImageUrl,
-          contest_title: contest?.title || "Soutěž",
-          created_at: winner.created_at,
-          type: winner.type,
-        };
-      });
+      // Map the result to the Winner interface with proper image URLs
+      const result: Winner[] = data.map((winner: {
+        id: string;
+        user_id: string;
+        contest_id: string;
+        prize_id: string | null;
+        type: string;
+        created_at: string;
+        user_name: string;
+        user_nickname: string | null;
+        prize_name: string;
+        prize_image_url: string | null;
+        contest_title: string;
+      }) => ({
+        id: winner.id,
+        user_id: winner.user_id,
+        user_name: winner.user_name,
+        user_nickname: winner.user_nickname,
+        prize_name: winner.prize_name,
+        prize_image_url: getStorageUrl(winner.prize_image_url),
+        contest_title: winner.contest_title,
+        created_at: winner.created_at,
+        type: winner.type,
+      }));
 
       return result;
     },
