@@ -55,18 +55,18 @@ export const WinnerCard = ({
       
       <div className="flex relative z-10 h-full">
         {/* Prize Image Slot - Left Side (fixed width, full height) */}
-        <div className="w-[100px] flex-shrink-0 bg-muted/50 flex items-center justify-center overflow-hidden group/image">
+        <div className="w-[100px] flex-shrink-0 bg-muted/50 flex items-center justify-center overflow-hidden">
           {prizeImageUrl ? (
             <img 
               src={prizeImageUrl} 
               alt={prizeName} 
-              className="w-full h-full object-contain p-1 transition-transform duration-300 group-hover/image:scale-110"
+              className="w-full h-full object-contain p-1"
             />
           ) : (
             <img 
               src={miocoinImage} 
               alt="MioCoin" 
-              className="w-14 h-14 object-contain animate-coin-pulse transition-transform duration-300 group-hover/image:scale-125"
+              className="w-14 h-14 object-contain animate-coin-pulse"
             />
           )}
         </div>
