@@ -82,29 +82,29 @@ export const WinnerCard = ({
             </Avatar>
 
             {/* Winner Info */}
-            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-              {/* Primary: Winner name */}
-              <div className="flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-foreground/70 flex-shrink-0" />
-                <span className="font-semibold text-foreground text-sm leading-tight truncate">
+            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+              {/* Primary: Winner name - bold, bright, prominent */}
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-foreground/80 flex-shrink-0" />
+                <span className="font-bold text-foreground text-base tracking-tight leading-none truncate">
                   {userNickname || userName}
                 </span>
               </div>
               
-              {/* Secondary: Prize name */}
-              <div className="flex items-center gap-1.5">
-                <Trophy className="w-3 h-3 text-primary/80 flex-shrink-0" />
-                <span className="text-xs font-medium text-primary/90 leading-tight truncate">
+              {/* Secondary: Prize name - gold accent, strong visibility */}
+              <div className="flex items-center gap-2">
+                <Trophy className="w-3.5 h-3.5 text-secondary flex-shrink-0" />
+                <span className="text-sm font-semibold text-secondary tracking-wide leading-none truncate">
                   {prizeName}
                 </span>
               </div>
 
-              {/* Tertiary: Contest + time */}
+              {/* Tertiary: Contest + time - clearly muted */}
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] text-muted-foreground/70 leading-tight truncate flex-1">
+                <span className="text-[11px] font-normal text-muted-foreground/60 tracking-normal leading-none truncate flex-1">
                   {contestTitle}
                 </span>
-                <Badge variant="secondary" className="text-[10px] font-normal px-1.5 py-0 opacity-70 whitespace-nowrap flex-shrink-0">
+                <Badge variant="outline" className="text-[10px] font-normal px-1.5 py-0 text-muted-foreground/50 border-muted-foreground/20 whitespace-nowrap flex-shrink-0">
                   {timeAgo}
                 </Badge>
               </div>
