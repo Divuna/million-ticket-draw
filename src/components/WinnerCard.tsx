@@ -40,13 +40,17 @@ export const WinnerCard = ({
   });
 
   return (
-    <Card className="rounded-xl overflow-hidden bg-transparent border-0 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 cursor-pointer relative">
-      {/* Base layer - card PNG renders 1:1 */}
+    <Card className="rounded-xl overflow-hidden bg-card/60 border border-border/50 hover:bg-card hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 cursor-pointer relative">
+      {/* Decorative background layer from placement banner */}
       {cardStyleImageUrl && (
-        <img 
-          src={cardStyleImageUrl}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover z-0"
+        <div 
+          className="absolute inset-0 pointer-events-none z-0"
+          style={{
+            backgroundImage: `url(${cardStyleImageUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: 0.15
+          }}
         />
       )}
       
