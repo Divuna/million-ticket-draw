@@ -783,10 +783,10 @@ const Profile: React.FC = () => {
             </div>
             
             {/* Balance Display */}
-            <div className="flex items-center justify-center gap-6 mb-6 py-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-4 md:gap-6 mb-6 py-4">
               <div className="flex items-center gap-3">
-                <Coins className="h-8 w-8 text-yellow-500" />
-                <div className="text-center">
+                <Coins className="h-8 w-8 text-yellow-500 flex-shrink-0" />
+                <div>
                   <p className="text-sm text-muted-foreground">MioCoiny</p>
                   <p className="text-4xl font-bold text-yellow-500">
                     {wallet?.balance_coins?.toLocaleString('cs-CZ') || '0'}
@@ -794,20 +794,22 @@ const Profile: React.FC = () => {
                 </div>
               </div>
               {(wallet?.bonus_balance_coins ?? 0) > 0 && (
-                <div className="flex items-center gap-3 pl-6 border-l border-border/50">
-                  <Coins className="h-6 w-6 text-green-500" />
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Bonusové</p>
-                    <p className="text-2xl font-bold text-green-500">
-                      {wallet?.bonus_balance_coins?.toLocaleString('cs-CZ') || '0'}
-                    </p>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:pl-6 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-border/50">
+                  <div className="flex items-center gap-3">
+                    <Coins className="h-6 w-6 text-green-500 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Bonusové</p>
+                      <p className="text-2xl font-bold text-green-500">
+                        {wallet?.bonus_balance_coins?.toLocaleString('cs-CZ') || '0'}
+                      </p>
+                    </div>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleTransferBonus}
                     disabled={transferring || (wallet?.bonus_balance_coins ?? 0) === 0}
-                    className="ml-2"
+                    className="w-full sm:w-auto sm:ml-2"
                   >
                     {transferring ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-1" />
@@ -862,14 +864,14 @@ const Profile: React.FC = () => {
                   {(historyExpanded ? bonusTransfers : bonusTransfers.slice(0, 3)).map((transfer, index) => (
                     <div 
                       key={transfer.id} 
-                      className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/20 border border-border/30 animate-fade-in"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 px-3 rounded-lg bg-muted/20 border border-border/30 animate-fade-in"
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
                       <div className="flex items-center gap-2">
-                        <Coins className="h-4 w-4 text-green-500" />
+                        <Coins className="h-4 w-4 text-green-500 flex-shrink-0" />
                         <span className="text-sm text-foreground">Převod bonusových MioCoinů</span>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 pl-6 sm:pl-0">
                         <span className="text-sm font-medium text-green-500">+{transfer.amount} MioCoinů</span>
                         <span className="text-xs text-muted-foreground">
                           {new Date(transfer.created_at).toLocaleString('cs-CZ', {
