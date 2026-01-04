@@ -661,7 +661,7 @@ const Homepage = () => {
           </Card>
 
           {/* Right Column - Poslední výherci */}
-          <Card className="rounded-xl overflow-hidden bg-transparent border-0 shadow-none h-full">
+          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-amber-300/20 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
             <CardContent className="p-5 h-full flex flex-col">
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
@@ -676,7 +676,7 @@ const Homepage = () => {
                   {winnersLoading ? (
                     // Loading placeholders
                     Array.from({ length: 3 }).map((_, index) => (
-                      <div key={index} className="rounded-xl overflow-hidden bg-transparent border-0 p-4">
+                      <div key={index} className="rounded-xl overflow-hidden bg-card/60 border border-border/50 p-4">
                         <div className="flex gap-4">
                           <div className="w-16 h-16 bg-muted/40 animate-pulse rounded-full flex-shrink-0" />
                           <div className="flex-1 space-y-2">
