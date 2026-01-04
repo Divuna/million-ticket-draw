@@ -40,7 +40,7 @@ export const WinnerCard = ({
   });
 
   return (
-    <Card className="rounded-xl overflow-hidden bg-card/60 border border-border/50 hover:bg-card hover:border-primary/40 hover:shadow-md transition-all duration-300 relative">
+    <Card className="rounded-xl overflow-hidden bg-card/60 border border-border/50 hover:bg-card hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 cursor-pointer relative">
       {/* Decorative background layer from placement banner */}
       {cardStyleImageUrl && (
         <div 
