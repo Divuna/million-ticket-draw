@@ -1,4 +1,4 @@
-import { Trophy, User, Gamepad2 } from 'lucide-react';
+import { Trophy, User, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -102,7 +102,7 @@ export const WinnerCard = ({
               {/* Tertiary: Contest + time */}
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                  <Gamepad2 className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
+                  <Sparkles className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
                   <span className="text-sm font-medium text-muted-foreground/80 leading-tight truncate">
                     {contestTitle}
                   </span>
