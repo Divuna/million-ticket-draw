@@ -672,7 +672,7 @@ const Homepage = () => {
                   <p className="text-sm text-text-silver">Nejnovější výhry z našich soutěží</p>
                 </div>
 
-                <div className="space-y-3 flex-1 overflow-y-auto">
+                <div className="space-y-4 flex-1 overflow-y-auto">
                   {winnersLoading ? (
                     // Loading placeholders
                     Array.from({ length: 3 }).map((_, index) => (

@@ -72,39 +72,39 @@ export const WinnerCard = ({
         </div>
 
         {/* Right Side - Avatar and Info */}
-        <CardContent className="flex-1 p-3 overflow-hidden">
-          <div className="flex gap-2 items-center h-full">
+        <CardContent className="flex-1 p-4 overflow-hidden">
+          <div className="flex gap-3 items-center h-full">
             {/* Avatar */}
-            <Avatar className="w-10 h-10 border-2 border-primary/20 flex-shrink-0">
-              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold text-xs">
+            <Avatar className="w-11 h-11 border-2 border-primary/20 flex-shrink-0">
+              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold text-sm">
                 {initials}
               </AvatarFallback>
             </Avatar>
 
             {/* Winner Info */}
-            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+            <div className="flex-1 min-w-0 flex flex-col justify-center gap-2">
               {/* Primary: Winner name - bold, bright, prominent */}
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-foreground/80 flex-shrink-0" />
-                <span className="font-bold text-foreground text-base tracking-tight leading-none truncate">
+                <span className="font-bold text-foreground text-lg tracking-tight leading-tight truncate">
                   {userNickname || userName}
                 </span>
               </div>
               
               {/* Secondary: Prize name - gold accent, strong visibility */}
               <div className="flex items-center gap-2">
-                <Trophy className="w-3.5 h-3.5 text-secondary flex-shrink-0" />
-                <span className="text-sm font-semibold text-secondary tracking-wide leading-none truncate">
+                <Trophy className="w-4 h-4 text-secondary flex-shrink-0" />
+                <span className="text-base font-semibold text-secondary tracking-wide leading-tight truncate">
                   {prizeName}
                 </span>
               </div>
 
-              {/* Tertiary: Contest + time - clearly muted */}
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-normal text-muted-foreground/60 tracking-normal leading-none truncate flex-1">
+              {/* Tertiary: Contest + time */}
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-muted-foreground/80 leading-tight truncate flex-1">
                   {contestTitle}
                 </span>
-                <Badge variant="outline" className="text-[10px] font-normal px-1.5 py-0 text-muted-foreground/50 border-muted-foreground/20 whitespace-nowrap flex-shrink-0">
+                <Badge variant="outline" className="text-xs font-medium px-2 py-0.5 text-muted-foreground/70 border-muted-foreground/30 whitespace-nowrap flex-shrink-0">
                   {timeAgo}
                 </Badge>
               </div>
