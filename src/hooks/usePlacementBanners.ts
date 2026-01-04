@@ -20,6 +20,7 @@ export const PLACEMENT_OPTIONS = {
   'probihajici_souteze': 'Probíhající soutěže',
   'koupit_voucher': 'Koupit voucher se slevou',
   'posledni_vyherci': 'Poslední výherci',
+  'homepage_posledni_vyherci': 'Úvodní stránka – Poslední výherci',
 } as const;
 
 export type PlacementKey = keyof typeof PLACEMENT_OPTIONS;
