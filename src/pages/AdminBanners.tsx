@@ -522,6 +522,7 @@ const AdminBanners: React.FC = () => {
                       <SelectItem value="MioCoin balíček – 1280">MioCoin balíček – 1280</SelectItem>
                       <SelectItem value="Probíhající soutěže">Probíhající soutěže</SelectItem>
                       <SelectItem value="Koupit voucher se slevou">Koupit voucher se slevou</SelectItem>
+                      <SelectItem value="Vzhled – karta výher">Vzhled – karta výher</SelectItem>
                     </SelectContent>
                   </Select>
                   {(bannerForm.targetPage.startsWith('MioCoin') || bannerForm.targetPage === 'Probíhající soutěže' || bannerForm.targetPage === 'Koupit voucher se slevou') && (
@@ -986,6 +987,7 @@ const AdminBanners: React.FC = () => {
                   <SelectItem value="MioCoin balíček – 1280">MioCoin balíček – 1280</SelectItem>
                   <SelectItem value="Probíhající soutěže">Probíhající soutěže</SelectItem>
                   <SelectItem value="Koupit voucher se slevou">Koupit voucher se slevou</SelectItem>
+                  <SelectItem value="Vzhled – karta výher">Vzhled – karta výher</SelectItem>
                 </SelectContent>
               </Select>
               {(bannerForm.targetPage.startsWith('MioCoin') || bannerForm.targetPage === 'Probíhající soutěže' || bannerForm.targetPage === 'Koupit voucher se slevou') && (
