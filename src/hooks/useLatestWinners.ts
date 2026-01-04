@@ -1,6 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
+
+const getStorageUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${SUPABASE_URL}/storage/v1/object/public/contest-images/${path}`;
+};
+
 export interface Winner {
   id: string;
   user_id: string;
@@ -71,12 +79,12 @@ export const useLatestWinners = (limit: number = 50) => {
 
         if (winner.type === "main") {
           prizeName = contest?.main_prize || "Hlavní výhra";
-          prizeImageUrl = contest?.main_image || null;
+          prizeImageUrl = getStorageUrl(contest?.main_image);
         } else if (winner.type === "bonus") {
           const bonus = bonusPrizesMap.get(winner.prize_id);
           if (bonus) {
             prizeName = bonus.amount ? `${bonus.amount} MioCoins` : bonus.description || "Bonus";
-            prizeImageUrl = bonus.image_url || null;
+            prizeImageUrl = getStorageUrl(bonus.image_url);
           } else {
             prizeName = "Bonus";
           }
