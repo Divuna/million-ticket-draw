@@ -51,9 +51,8 @@ const Homepage = () => {
   const { banners: comingSoonBanners, loading: comingSoonLoading } = useComingSoonBanners();
   
   // Placement banners for MioCoin packages and action boxes
-  const placementKeys: PlacementKey[] = ['miocoin_50', 'miocoin_310', 'miocoin_525', 'miocoin_1280', 'probihajici_souteze', 'koupit_voucher', 'homepage_posledni_vyherci'];
+  const placementKeys: PlacementKey[] = ['miocoin_50', 'miocoin_310', 'miocoin_525', 'miocoin_1280', 'probihajici_souteze', 'koupit_voucher'];
   const { banners: placementBanners } = usePlacementBanners(placementKeys);
-  const homepageWinnersBanner = placementBanners['homepage_posledni_vyherci'];
   const contestsCarouselRef = useRef<HTMLDivElement>(null);
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
   const megajackpotCarouselRef = useRef<HTMLDivElement>(null);
@@ -665,16 +664,6 @@ const Homepage = () => {
           <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-amber-300/20 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
             <CardContent className="p-5 h-full flex flex-col">
               <div className="space-y-4 flex-1 flex flex-col">
-                {/* Optional Banner Slot */}
-                {homepageWinnersBanner && (
-                  <div className="w-full rounded-xl overflow-hidden -mt-1">
-                    <img 
-                      src={homepageWinnersBanner.image_url} 
-                      alt={homepageWinnersBanner.title} 
-                      className="w-full h-auto object-cover"
-                    />
-                  </div>
-                )}
                 <div className="space-y-2">
                   <h2 className="text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
                     <Trophy className="w-6 h-6 md:w-7 md:h-7" />
