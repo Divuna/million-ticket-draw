@@ -40,23 +40,19 @@ export const WinnerCard = ({
   });
 
   return (
-    <Card className="rounded-xl overflow-hidden bg-card/60 border border-border/50 hover:bg-card hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 cursor-pointer relative">
-      {/* Decorative background layer from placement banner */}
+    <Card className="rounded-xl overflow-hidden bg-transparent border-0 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 cursor-pointer relative">
+      {/* Card background image - displayed as-is */}
       {cardStyleImageUrl && (
-        <div 
-          className="absolute inset-0 pointer-events-none z-0"
-          style={{
-            backgroundImage: `url(${cardStyleImageUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: 0.15
-          }}
+        <img 
+          src={cardStyleImageUrl}
+          alt=""
+          className="absolute inset-0 w-full h-full object-contain pointer-events-none z-0"
         />
       )}
       
       <div className="flex relative z-10">
         {/* Prize Image Slot - Left Side (30-35% width, full height) */}
-        <div className="w-[35%] flex-shrink-0 bg-muted/50 flex items-center justify-center overflow-hidden">
+        <div className="w-[35%] flex-shrink-0 flex items-center justify-center overflow-hidden">
           {prizeImageUrl ? (
             <img 
               src={prizeImageUrl} 
