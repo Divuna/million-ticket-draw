@@ -2,11 +2,14 @@ import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { WinnerCard } from '@/components/WinnerCard';
 import { useLatestWinners } from '@/hooks/useLatestWinners';
+import { usePlacementBanners } from '@/hooks/usePlacementBanners';
 import { Trophy } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const Winners = () => {
   const { data: winners, isLoading } = useLatestWinners(50);
+  const { banners } = usePlacementBanners(['vzhled_karta_vyher']);
+  const cardStyleImageUrl = banners.vzhled_karta_vyher?.image_url || null;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -51,6 +54,7 @@ const Winners = () => {
                   contestTitle={winner.contest_title}
                   createdAt={winner.created_at}
                   type={winner.type}
+                  cardStyleImageUrl={cardStyleImageUrl}
                 />
               ))
             ) : (
