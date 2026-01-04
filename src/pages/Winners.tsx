@@ -54,6 +54,7 @@ const Winners = () => {
                   contestTitle={winner.contest_title}
                   createdAt={winner.created_at}
                   type={winner.type}
+                  prizeImageUrl={winner.prize_image_url}
                   cardStyleImageUrl={cardStyleImageUrl}
                 />
               ))

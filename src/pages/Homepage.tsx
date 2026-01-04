@@ -705,6 +705,7 @@ const Homepage = () => {
                           contestTitle={winner.contest_title}
                           createdAt={winner.created_at}
                           type={winner.type}
+                          prizeImageUrl={winner.prize_image_url}
                           cardStyleImageUrl={placementBanners.vzhled_karta_vyher?.image_url || null}
                         />
                       ))
