@@ -132,11 +132,13 @@ export default {
         "coin-pulse": {
           "0%, 100%": {
             transform: "scale(1)",
-            opacity: "0.7",
+            opacity: "0.8",
+            filter: "drop-shadow(0 0 8px hsl(45, 80%, 50%))",
           },
           "50%": {
-            transform: "scale(1.05)",
+            transform: "scale(1.08)",
             opacity: "1",
+            filter: "drop-shadow(0 0 16px hsl(45, 90%, 55%))",
           },
         },
       },
