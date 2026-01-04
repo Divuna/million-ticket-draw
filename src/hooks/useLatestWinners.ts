@@ -7,6 +7,7 @@ export interface Winner {
   user_name: string;
   user_nickname: string | null;
   prize_name: string;
+  prize_image_url: string | null;
   contest_title: string;
   created_at: string;
   type: string;
@@ -44,8 +45,8 @@ export const useLatestWinners = (limit: number = 50) => {
 
       const usersMap = new Map(users?.map((u) => [u.id, u]) || []);
 
-      // 3) Fetch contests separately
-      const { data: contests } = await supabase.from("contests").select("id, title, main_prize").in("id", contestIds);
+      // 3) Fetch contests separately (include main_image for prize display)
+      const { data: contests } = await supabase.from("contests").select("id, title, main_prize, main_image").in("id", contestIds);
 
       const contestsMap = new Map(contests?.map((c) => [c.id, c]) || []);
 
@@ -54,7 +55,7 @@ export const useLatestWinners = (limit: number = 50) => {
       if (bonusPrizeIds.length > 0) {
         const { data: bonusPrizes } = await supabase
           .from("bonus_prizes")
-          .select("id, description, amount")
+          .select("id, description, amount, image_url")
           .in("id", bonusPrizeIds);
 
         bonusPrizesMap = new Map(bonusPrizes?.map((bp) => [bp.id, bp]) || []);
@@ -66,12 +67,16 @@ export const useLatestWinners = (limit: number = 50) => {
         const contest = contestsMap.get(winner.contest_id);
 
         let prizeName = "";
+        let prizeImageUrl: string | null = null;
+
         if (winner.type === "main") {
           prizeName = contest?.main_prize || "Hlavní výhra";
+          prizeImageUrl = contest?.main_image || null;
         } else if (winner.type === "bonus") {
           const bonus = bonusPrizesMap.get(winner.prize_id);
           if (bonus) {
             prizeName = bonus.amount ? `${bonus.amount} MioCoins` : bonus.description || "Bonus";
+            prizeImageUrl = bonus.image_url || null;
           } else {
             prizeName = "Bonus";
           }
@@ -90,6 +95,7 @@ export const useLatestWinners = (limit: number = 50) => {
           user_name: userName,
           user_nickname: user?.nickname || null,
           prize_name: prizeName,
+          prize_image_url: prizeImageUrl,
           contest_title: contest?.title || "Soutěž",
           created_at: winner.created_at,
           type: winner.type,
