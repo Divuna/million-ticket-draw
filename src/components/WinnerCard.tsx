@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import logoOnemil from '@/assets/logo-onemil.png';
 
 interface WinnerCardProps {
   userName: string;
@@ -63,7 +64,11 @@ export const WinnerCard = ({
               className="w-full h-full object-cover"
             />
           ) : (
-            <Trophy className="w-12 h-12 text-muted-foreground/50" />
+            <img 
+              src={logoOnemil} 
+              alt="OneMil" 
+              className="w-16 h-16 object-contain opacity-60"
+            />
           )}
         </div>
 
