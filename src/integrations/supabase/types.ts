@@ -1582,6 +1582,22 @@ export type Database = {
       }
       get_contests_json: { Args: never; Returns: Json }
       get_current_user_role: { Args: never; Returns: string }
+      get_latest_winners: {
+        Args: { winners_limit?: number }
+        Returns: {
+          contest_id: string
+          contest_title: string
+          created_at: string
+          id: string
+          prize_id: string
+          prize_image_url: string
+          prize_name: string
+          type: string
+          user_id: string
+          user_name: string
+          user_nickname: string
+        }[]
+      }
       get_pending_event_forward_log: {
         Args: { _limit: number }
         Returns: {
