@@ -102,7 +102,7 @@ export const WinnerCard = ({
               {/* Tertiary: Contest + time */}
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                  <Target className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
+                  <Target className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0 animate-pulse" />
                   <span className="text-sm font-medium text-muted-foreground/80 leading-tight truncate">
                     {contestTitle}
                   </span>
