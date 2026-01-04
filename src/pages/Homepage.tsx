@@ -51,7 +51,7 @@ const Homepage = () => {
   const { banners: comingSoonBanners, loading: comingSoonLoading } = useComingSoonBanners();
   
   // Placement banners for MioCoin packages and action boxes
-  const placementKeys: PlacementKey[] = ['miocoin_50', 'miocoin_310', 'miocoin_525', 'miocoin_1280', 'probihajici_souteze', 'koupit_voucher'];
+  const placementKeys: PlacementKey[] = ['miocoin_50', 'miocoin_310', 'miocoin_525', 'miocoin_1280', 'probihajici_souteze', 'koupit_voucher', 'vzhled_karta_vyher'];
   const { banners: placementBanners } = usePlacementBanners(placementKeys);
   const contestsCarouselRef = useRef<HTMLDivElement>(null);
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
@@ -705,6 +705,7 @@ const Homepage = () => {
                           contestTitle={winner.contest_title}
                           createdAt={winner.created_at}
                           type={winner.type}
+                          cardStyleImageUrl={placementBanners.vzhled_karta_vyher?.image_url || null}
                         />
                       ))
                   )}
