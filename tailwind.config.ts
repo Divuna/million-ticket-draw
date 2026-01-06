@@ -84,6 +84,11 @@ export default {
         "neon-cyan": "hsl(var(--neon-cyan))",
         "neon-green": "hsl(var(--neon-green))",
         "neon-pink": "hsl(var(--neon-pink))",
+        // Package Colors - MioCoin tiers
+        "package-blue": "hsl(var(--package-blue))",
+        "package-gold": "hsl(var(--package-gold))",
+        "package-purple": "hsl(var(--package-purple))",
+        "package-green": "hsl(var(--package-green))",
         // Premium Typography Colors
         "heading-gold": "hsl(var(--heading-gold))",
         "text-silver": "hsl(var(--text-silver))",
