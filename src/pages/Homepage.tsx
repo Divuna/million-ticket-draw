@@ -21,6 +21,7 @@ import { usePlacementBanners, PlacementKey } from "@/hooks/usePlacementBanners";
 import { WinnerCard } from "@/components/WinnerCard";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { ContestCard } from "@/components/ContestCard";
+import { ScrollSection } from "@/components/ScrollSection";
 import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { toast } from "sonner";
@@ -474,6 +475,7 @@ const Homepage = () => {
         </section>
 
         {/* Coin Top-up Section */}
+        <ScrollSection animation="fade-up">
         <section className="w-full overflow-x-hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Left Column - Dobijte si MioCoiny */}
           <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-amber-300/20 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
@@ -721,6 +723,7 @@ const Homepage = () => {
             </CardContent>
           </Card>
         </section>
+        </ScrollSection>
         
         {/* Golden separator line - premium, animated */}
         <div className="relative w-full overflow-hidden py-3">
@@ -752,6 +755,7 @@ const Homepage = () => {
 
         {/* Dynamic Banners */}
         {(voucherBanner || gamesBanner) && (
+          <ScrollSection animation="fade-up" delay={100}>
           <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Voucher Banner */}
             {voucherBanner && (
@@ -791,6 +795,7 @@ const Homepage = () => {
               </div>
             )}
           </section>
+          </ScrollSection>
         )}
         
         {/* Golden separator line - premium, animated */}
@@ -822,6 +827,7 @@ const Homepage = () => {
         </div>
 
         {/* Ongoing Contests Carousel */}
+        <ScrollSection animation="fade-up" delay={150}>
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
@@ -920,6 +926,7 @@ const Homepage = () => {
             )}
           </div>
         </section>
+        </ScrollSection>
         
         {/* Golden separator line - premium, animated */}
         <div className="relative w-full overflow-hidden py-3">
@@ -950,6 +957,7 @@ const Homepage = () => {
         </div>
 
         {/* Available Vouchers Section - Visible to everyone */}
+        <ScrollSection animation="fade-up" delay={200}>
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
@@ -1079,6 +1087,7 @@ const Homepage = () => {
             )}
           </div>
         </section>
+        </ScrollSection>
 
         {/* Golden separator line - premium, animated */}
         <div className="relative w-full overflow-hidden py-3">
@@ -1109,6 +1118,7 @@ const Homepage = () => {
         </div>
 
         {/* Partners Section */}
+        <ScrollSection animation="fade-up" delay={250}>
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
@@ -1160,6 +1170,7 @@ const Homepage = () => {
             )}
           </div>
         </section>
+        </ScrollSection>
         
         {/* Golden separator line - premium, animated */}
         <div className="relative w-full overflow-hidden py-3">
@@ -1190,6 +1201,7 @@ const Homepage = () => {
         </div>
 
         {/* Coming Soon Section */}
+        <ScrollSection animation="fade-up" delay={300}>
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
@@ -1242,9 +1254,11 @@ const Homepage = () => {
             )}
           </div>
         </section>
+        </ScrollSection>
 
         {/* Instructional Video Section */}
         {!videoLoading && videoUrl && isVideoActive && (
+          <ScrollSection animation="scale" delay={350}>
           <section className="space-y-6 mt-16">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
@@ -1276,6 +1290,7 @@ const Homepage = () => {
               </div>
             </div>
           </section>
+          </ScrollSection>
         )}
 
         {/* Footer */}
