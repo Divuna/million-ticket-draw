@@ -126,3 +126,59 @@
     background-position: -100% 0;
   }
 }
+
+/* Coming Soon card glow - same as contests but 30% thinner border */
+.coming-soon-card-glow {
+  position: relative;
+}
+
+/* Animated light sweep on border - thinner version */
+.coming-soon-card-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 23px;
+  padding: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 20%,
+    hsl(45, 100%, 65%) 35%,
+    hsl(50, 100%, 80%) 50%,
+    hsl(45, 100%, 65%) 65%,
+    transparent 80%,
+    transparent 100%
+  );
+  background-size: 250% 100%;
+  animation: borderSweep 2.5s linear infinite;
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Inner gold glow layer - slightly reduced */
+.coming-soon-card-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  box-shadow: 
+    inset 0 0 15px 0 hsla(40, 80%, 50%, 0.12),
+    inset 0 1px 0 0 hsla(40, 80%, 70%, 0.15);
+  pointer-events: none;
+  z-index: 15;
+}
+
+/* Subtle hover enhancement */
+.coming-soon-card-glow:hover::after {
+  box-shadow: 
+    inset 0 0 25px 0 hsla(40, 80%, 50%, 0.18),
+    inset 0 1px 0 0 hsla(40, 80%, 70%, 0.25);
+}
