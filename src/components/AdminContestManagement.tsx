@@ -74,6 +74,7 @@ interface PhysicalPrize {
   id?: string;
   ticket_position: number;
   description: string;
+  detailed_description?: string;
   image_url?: string | null;
   image_file?: File | null;
   ai_image_url?: string | null;
@@ -143,6 +144,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   const [newPhysicalPrize, setNewPhysicalPrize] = useState<PhysicalPrize>({
     ticket_position: 1,
     description: "",
+    detailed_description: "",
     image_file: null,
     guardian_required: undefined,
   });
@@ -747,7 +749,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     
     // Add prize directly without AI processing
     setPhysicalPrizes((prev) => [...prev, prizeToAdd]);
-    setNewPhysicalPrize({ ticket_position: 1, description: "", image_file: null, guardian_required: undefined });
+    setNewPhysicalPrize({ ticket_position: 1, description: "", detailed_description: "", image_file: null, guardian_required: undefined });
     toast({ title: "Výhra přidána", description: "Věcná výhra byla přidána." });
   };
 
@@ -1167,6 +1169,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                     value={newPhysicalPrize.description}
                     onChange={(e) => setNewPhysicalPrize((prev) => ({ ...prev, description: e.target.value }))}
                     placeholder="Např. iPhone 15 Pro"
+                  />
+                </div>
+
+                <div>
+                  <Label>Detailní popis bonusové výhry</Label>
+                  <Textarea
+                    value={newPhysicalPrize.detailed_description || ""}
+                    onChange={(e) => setNewPhysicalPrize((prev) => ({ ...prev, detailed_description: e.target.value }))}
+                    placeholder="Kompletní popis produktu, který se zobrazí v modalu po kliknutí na výhru..."
+                    className="min-h-[100px]"
                   />
                 </div>
 
