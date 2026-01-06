@@ -68,6 +68,37 @@
   position: relative;
 }
 
+/* Animated light sweep on border - slower and more subtle */
+.voucher-card-glow::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 23px;
+  padding: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 25%,
+    hsla(40, 30%, 50%, 0.4) 40%,
+    hsla(40, 35%, 60%, 0.5) 50%,
+    hsla(40, 30%, 50%, 0.4) 60%,
+    transparent 75%,
+    transparent 100%
+  );
+  background-size: 250% 100%;
+  animation: voucherBorderSweep 4s linear infinite;
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 20;
+}
+
 .voucher-card-glow::after {
   content: '';
   position: absolute;
@@ -85,4 +116,13 @@
   box-shadow: 
     inset 0 0 20px 0 hsla(40, 40%, 45%, 0.12),
     inset 0 1px 0 0 hsla(40, 40%, 55%, 0.15);
+}
+
+@keyframes voucherBorderSweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
 }
