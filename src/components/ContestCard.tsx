@@ -162,18 +162,20 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             <div />
           )}
           
-          {/* Status badge - simple dark pill */}
-          <Badge 
-            className={`
-              px-4 py-1.5 rounded-full text-sm font-medium
-              ${contest.status === 'closed' 
-                ? 'bg-[rgba(60,60,60,0.85)] text-white/90' 
-                : 'bg-[rgba(40,45,55,0.9)] text-white'
-              }
-            `}
-          >
-            {contest.status === 'closed' ? 'Hra ukončena' : contest.status === 'active' ? 'Aktivní' : 'Připravuje se'}
-          </Badge>
+          {/* Status badge - only show for non-active states */}
+          {contest.status !== 'active' && (
+            <Badge 
+              className={`
+                px-4 py-1.5 rounded-full text-sm font-medium
+                ${contest.status === 'closed' 
+                  ? 'bg-[rgba(60,60,60,0.85)] text-white/90' 
+                  : 'bg-[rgba(40,45,55,0.9)] text-white'
+                }
+              `}
+            >
+              {contest.status === 'closed' ? 'Hra ukončena' : 'Připravuje se'}
+            </Badge>
+          )}
         </div>
         
         {/* Bottom content - text directly on gradient */}
