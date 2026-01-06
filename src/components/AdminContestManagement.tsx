@@ -211,6 +211,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           id: bonus.id,
           ticket_position: bonus.ticket_position,
           description: bonus.description || "",
+          detailed_description: bonus.detailed_description || "",
           image_url: bonus.image_url,
           guardian_required: bonus.guardian_required ?? false,
         });
@@ -906,6 +907,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             contest_id: contestId,
             ticket_position: prize.ticket_position,
             description: prize.description,
+            detailed_description: prize.detailed_description || null,
             image_url: imageUrl,
             status: "pending",
             guardian_required: prize.guardian_required ?? false,
