@@ -97,11 +97,11 @@ export const ContestCard: React.FC<ContestCardProps> = ({
     <div 
       className={`
         relative overflow-hidden
-        rounded-[20px]
-        border-2 border-[hsl(40_75%_50%)]
-        shadow-[0_0_40px_8px_hsl(40_80%_45%/0.35),0_0_80px_16px_hsl(40_80%_45%/0.15)]
+        rounded-[24px]
+        border border-[hsl(40_70%_50%/0.25)]
+        shadow-[0_0_30px_4px_hsl(40_75%_50%/0.12),0_12px_40px_-8px_rgba(0,0,0,0.5),0_4px_16px_-2px_rgba(0,0,0,0.3)]
         transition-all duration-300 ease-out
-        hover:shadow-[0_0_50px_12px_hsl(40_80%_50%/0.45),0_0_100px_20px_hsl(40_80%_45%/0.2)]
+        hover:shadow-[0_0_40px_6px_hsl(40_75%_50%/0.18),0_16px_48px_-8px_rgba(0,0,0,0.55),0_6px_20px_-2px_rgba(0,0,0,0.35)]
         ${className}
       `}
     >
@@ -124,16 +124,16 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         )}
       </div>
       
-      {/* Layer 2: Subtle bottom gradient for text readability */}
+      {/* Layer 2: Soft bottom gradient (30-35%) for text readability */}
       <div 
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.25) 65%, rgba(0,0,0,0.65) 100%)'
+          background: 'linear-gradient(to bottom, transparent 65%, rgba(0,0,0,0.35) 85%, rgba(0,0,0,0.7) 100%)'
         }}
       />
       
       {/* Content container */}
-      <div className="relative z-10 flex flex-col h-full min-h-[280px] p-4">
+      <div className="relative z-10 flex flex-col h-full min-h-[280px] p-5">
         {/* Top row: Favorite + Status */}
         <div className="flex items-start justify-between mb-auto">
           {/* Favorite button - simple outline style */}
@@ -141,11 +141,12 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             <button
               onClick={handleFavoriteClick}
               className="
-                p-2 rounded-full 
-                bg-[rgba(0,0,0,0.25)]
-                backdrop-blur-sm
+                p-2.5 rounded-full 
+                bg-[rgba(0,0,0,0.3)]
+                backdrop-blur-md
+                shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]
                 transition-all duration-200
-                hover:bg-[rgba(0,0,0,0.4)]
+                hover:bg-[rgba(0,0,0,0.45)]
               "
               aria-label={fromPage === 'favorites' ? 'Remove from favorites' : 'Toggle favorite'}
             >
@@ -165,9 +166,11 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           <Badge 
             className={`
               px-4 py-1.5 rounded-full text-sm font-medium
+              backdrop-blur-md
+              shadow-[inset_0_1px_2px_rgba(0,0,0,0.15)]
               ${contest.status === 'closed' 
-                ? 'bg-[rgba(60,60,60,0.85)] text-white/90' 
-                : 'bg-[rgba(40,45,55,0.9)] text-white'
+                ? 'bg-[rgba(50,50,55,0.75)] text-white/85' 
+                : 'bg-[rgba(35,40,50,0.8)] text-white/95'
               }
             `}
           >
@@ -194,14 +197,16 @@ export const ContestCard: React.FC<ContestCardProps> = ({
               <button
                 className="
                   flex-1 flex items-center justify-center gap-2
-                  py-3 px-5
-                  bg-[rgba(0,0,0,0.4)]
-                  backdrop-blur-sm
-                  text-[hsl(45_85%_55%)] font-semibold text-sm
+                  py-3.5 px-5
+                  bg-[rgba(0,0,0,0.35)]
+                  backdrop-blur-md
+                  text-[hsl(45_80%_58%)] font-semibold text-sm
                   rounded-full
-                  border-2 border-[hsl(40_75%_50%)]
-                  hover:bg-[rgba(0,0,0,0.5)]
-                  hover:text-[hsl(45_90%_60%)]
+                  border border-[hsl(40_70%_50%/0.5)]
+                  shadow-[inset_0_1px_3px_rgba(0,0,0,0.25),0_0_12px_hsl(40_70%_50%/0.08)]
+                  hover:bg-[rgba(0,0,0,0.45)]
+                  hover:shadow-[inset_0_1px_3px_rgba(0,0,0,0.25),0_0_16px_hsl(40_70%_50%/0.15)]
+                  hover:text-[hsl(45_85%_62%)]
                   active:scale-[0.98]
                   transition-all duration-200
                   disabled:opacity-40 disabled:cursor-not-allowed
@@ -214,13 +219,14 @@ export const ContestCard: React.FC<ContestCardProps> = ({
               {/* Detail button */}
               <button
                 className="
-                  py-3 px-5
-                  bg-[rgba(0,0,0,0.4)]
-                  backdrop-blur-sm
-                  text-white/80 font-medium text-sm
+                  py-3.5 px-5
+                  bg-[rgba(0,0,0,0.35)]
+                  backdrop-blur-md
+                  text-white/85 font-medium text-sm
                   rounded-full
-                  border border-white/20
-                  hover:bg-[rgba(0,0,0,0.5)]
+                  border border-white/15
+                  shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]
+                  hover:bg-[rgba(0,0,0,0.45)]
                   hover:text-white
                   active:scale-[0.98]
                   transition-all duration-200
@@ -236,13 +242,14 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           {!user && (
             <button
               className="
-                w-full py-3 px-5
-                bg-[rgba(0,0,0,0.4)]
-                backdrop-blur-sm
-                text-white/80 font-medium text-sm
+                w-full py-3.5 px-5
+                bg-[rgba(0,0,0,0.35)]
+                backdrop-blur-md
+                text-white/85 font-medium text-sm
                 rounded-full
-                border border-white/20
-                hover:bg-[rgba(0,0,0,0.5)]
+                border border-white/15
+                shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]
+                hover:bg-[rgba(0,0,0,0.45)]
                 hover:text-white
                 active:scale-[0.98]
                 transition-all duration-200
@@ -255,7 +262,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           
           {/* Read-only message for admin users */}
           {user && isAdmin && (
-            <div className="text-xs text-white/60 text-center py-2.5 bg-[rgba(0,0,0,0.35)] rounded-full">
+            <div className="text-xs text-white/60 text-center py-3 bg-[rgba(0,0,0,0.35)] backdrop-blur-md rounded-full shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
               Admin zobrazení - pouze pro čtení
             </div>
           )}
