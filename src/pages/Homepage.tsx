@@ -21,7 +21,7 @@ import { usePlacementBanners, PlacementKey } from "@/hooks/usePlacementBanners";
 import { WinnerCard } from "@/components/WinnerCard";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { ContestCard } from "@/components/ContestCard";
-import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink } from "lucide-react";
+import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, Facebook, Twitter, Instagram } from "lucide-react";
 import { toast } from "sonner";
 
 interface Contest {
@@ -1288,15 +1288,15 @@ const Homepage = () => {
                   Vaše platforma pro soutěže a výhry. Získejte šanci vyhrát luxusní ceny a vouchery.
                 </p>
                 <div className="flex space-x-3 pt-2">
-                  <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center border border-primary/30">
-                    <span className="text-xs text-primary font-medium">FB</span>
-                  </div>
-                  <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center border border-primary/30">
-                    <span className="text-xs text-primary font-medium">TW</span>
-                  </div>
-                  <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center border border-primary/30">
-                    <span className="text-xs text-primary font-medium">IG</span>
-                  </div>
+                  <a href="#" className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center border border-primary/30 hover:bg-primary/30 transition-colors">
+                    <Facebook className="w-4 h-4 text-primary" />
+                  </a>
+                  <a href="#" className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center border border-primary/30 hover:bg-primary/30 transition-colors">
+                    <Twitter className="w-4 h-4 text-primary" />
+                  </a>
+                  <a href="#" className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center border border-primary/30 hover:bg-primary/30 transition-colors">
+                    <Instagram className="w-4 h-4 text-primary" />
+                  </a>
                 </div>
               </div>
 
