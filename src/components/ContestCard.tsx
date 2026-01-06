@@ -98,14 +98,13 @@ export const ContestCard: React.FC<ContestCardProps> = ({
       className={`
         relative overflow-hidden
         rounded-[28px]
-        bg-[hsl(220_30%_8%/0.6)]
+        bg-[hsl(220_30%_6%/0.75)]
         backdrop-blur-xl
-        border border-[hsl(45_80%_55%/0.2)]
-        shadow-[0_8px_32px_hsl(220_50%_3%/0.4),0_0_0_1px_hsl(45_80%_55%/0.08),inset_0_1px_0_hsl(0_0%_100%/0.05)]
+        border border-[hsl(45_80%_55%/0.15)]
+        shadow-[0_0_20px_hsl(45_80%_55%/0.06)]
         transition-all duration-300 ease-out
-        hover:border-[hsl(45_80%_55%/0.35)]
-        hover:shadow-[0_12px_40px_hsl(220_50%_3%/0.5),0_0_24px_hsl(45_80%_55%/0.12),inset_0_1px_0_hsl(0_0%_100%/0.08)]
-        hover:scale-[1.02]
+        hover:border-[hsl(45_80%_55%/0.25)]
+        hover:shadow-[0_0_28px_hsl(45_80%_55%/0.1)]
         ${className}
       `}
     >
@@ -122,17 +121,14 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             }}
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-[hsl(220_30%_12%)] to-[hsl(220_30%_6%)] flex items-center justify-center">
-            <Trophy className="w-16 h-16 text-[hsl(45_80%_55%/0.3)]" />
+          <div className="w-full h-full bg-[hsl(220_30%_8%)] flex items-center justify-center">
+            <Trophy className="w-16 h-16 text-[hsl(45_80%_55%/0.2)]" />
           </div>
         )}
       </div>
       
-      {/* Dark gradient overlay for text readability */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[hsl(220_30%_4%)] via-[hsl(220_30%_6%/0.7)] to-[hsl(220_30%_8%/0.3)]" />
-      
-      {/* Subtle inner glow at top */}
-      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[hsl(0_0%_100%/0.03)] to-transparent pointer-events-none" />
+      {/* Subtle dark gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[hsl(220_30%_4%/0.95)] via-[hsl(220_30%_6%/0.6)] to-transparent" />
       
       {/* Content container */}
       <div className="relative z-10 flex flex-col h-full min-h-[280px] p-5">
@@ -142,14 +138,14 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           {user && !isAdmin && (onToggleFavorite || onRemoveFavorite) ? (
             <button
               onClick={handleFavoriteClick}
-              className="p-2.5 rounded-full bg-[hsl(220_30%_10%/0.7)] backdrop-blur-md border border-[hsl(0_0%_100%/0.1)] hover:bg-[hsl(220_30%_15%/0.8)] hover:border-[hsl(0_0%_100%/0.2)] transition-all duration-200 shadow-[0_4px_12px_hsl(220_50%_3%/0.3)]"
+              className="p-2 rounded-full bg-[hsl(220_30%_8%/0.6)] backdrop-blur-md border border-[hsl(0_0%_100%/0.08)] hover:border-[hsl(0_0%_100%/0.15)] transition-all duration-200"
               aria-label={fromPage === 'favorites' ? 'Remove from favorites' : 'Toggle favorite'}
             >
               <Heart
-                className={`w-5 h-5 transition-colors ${
+                className={`w-4 h-4 transition-colors ${
                   fromPage === 'favorites' || isFavorite
                     ? 'fill-[hsl(0_85%_60%)] text-[hsl(0_85%_60%)]'
-                    : 'text-[hsl(0_0%_100%/0.6)]'
+                    : 'text-[hsl(0_0%_100%/0.5)]'
                 }`}
               />
             </button>
@@ -160,10 +156,10 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           {/* Status badge */}
           <Badge 
             className={`
-              px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md border shadow-[0_4px_12px_hsl(220_50%_3%/0.3)]
+              px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md border
               ${contest.status === 'closed' 
-                ? 'bg-[hsl(0_60%_50%/0.8)] text-white border-[hsl(0_60%_50%/0.3)]' 
-                : 'bg-[hsl(45_80%_55%/0.15)] text-[hsl(45_90%_65%)] border-[hsl(45_80%_55%/0.3)]'
+                ? 'bg-[hsl(0_40%_40%/0.6)] text-[hsl(0_0%_100%/0.9)] border-[hsl(0_40%_50%/0.2)]' 
+                : 'bg-[hsl(45_60%_50%/0.12)] text-[hsl(45_80%_70%)] border-[hsl(45_80%_55%/0.2)]'
               }
             `}
           >
@@ -174,50 +170,51 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         {/* Bottom content */}
         <div className="mt-auto space-y-4">
           {/* Title and prize */}
-          <div className="space-y-1.5">
-            <h3 className="font-bold text-xl text-white line-clamp-2 drop-shadow-[0_2px_4px_hsl(220_50%_3%/0.5)]">
+          <div className="space-y-1">
+            <h3 className="font-semibold text-lg text-white line-clamp-2">
               {contest.title}
             </h3>
-            <p className="text-sm text-[hsl(45_40%_75%)] line-clamp-1 drop-shadow-[0_1px_2px_hsl(220_50%_3%/0.5)]">
+            <p className="text-sm text-[hsl(45_30%_70%)] line-clamp-1">
               {contest.main_prize}
             </p>
           </div>
           
-          {/* CTA buttons for logged-in non-admin users */}
+          {/* CTA for logged-in non-admin users */}
           {user && !isAdmin && (
-            <div className="flex gap-3">
+            <div className="flex gap-2.5">
+              {/* Gold outlined glass CTA */}
               <button
                 className="
                   flex-1 flex items-center justify-center gap-2
-                  py-3 px-5
-                  bg-gradient-to-r from-[hsl(45_80%_45%)] to-[hsl(40_85%_50%)]
-                  text-[hsl(220_30%_8%)] font-bold text-sm
+                  py-2.5 px-4
+                  bg-[hsl(220_30%_8%/0.5)]
+                  backdrop-blur-md
+                  text-[hsl(45_80%_65%)] font-medium text-sm
                   rounded-full
-                  shadow-[0_4px_16px_hsl(45_80%_50%/0.35),0_0_0_1px_hsl(45_80%_55%/0.2)]
-                  hover:shadow-[0_6px_24px_hsl(45_80%_50%/0.5),0_0_0_1px_hsl(45_80%_55%/0.4)]
-                  hover:brightness-110
+                  border border-[hsl(45_80%_55%/0.35)]
+                  shadow-[0_0_12px_hsl(45_80%_55%/0.08)]
+                  hover:border-[hsl(45_80%_55%/0.5)]
+                  hover:shadow-[0_0_18px_hsl(45_80%_55%/0.15)]
+                  hover:text-[hsl(45_80%_75%)]
                   active:scale-[0.98]
                   transition-all duration-200
-                  disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:brightness-100
+                  disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-[hsl(45_80%_55%/0.35)] disabled:hover:shadow-[0_0_12px_hsl(45_80%_55%/0.08)]
                 "
                 onClick={handlePlayClick}
                 disabled={contest.status !== 'active' || isProcessing}
               >
-                <Trophy className="w-4 h-4" />
-                {getPlayButtonText()}
+                🏆 {getPlayButtonText()}
               </button>
               <button
                 className="
-                  py-3 px-5
-                  bg-[hsl(220_30%_12%/0.8)]
+                  py-2.5 px-4
+                  bg-[hsl(220_30%_8%/0.5)]
                   backdrop-blur-md
-                  text-[hsl(0_0%_100%/0.8)] font-medium text-sm
+                  text-[hsl(0_0%_100%/0.7)] font-medium text-sm
                   rounded-full
-                  border border-[hsl(0_0%_100%/0.12)]
-                  shadow-[0_4px_12px_hsl(220_50%_3%/0.3)]
-                  hover:bg-[hsl(220_30%_18%/0.9)]
-                  hover:text-white
+                  border border-[hsl(0_0%_100%/0.1)]
                   hover:border-[hsl(0_0%_100%/0.2)]
+                  hover:text-[hsl(0_0%_100%/0.9)]
                   active:scale-[0.98]
                   transition-all duration-200
                 "
@@ -232,16 +229,14 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           {!user && (
             <button
               className="
-                w-full py-3 px-5
-                bg-[hsl(220_30%_12%/0.8)]
+                w-full py-2.5 px-4
+                bg-[hsl(220_30%_8%/0.5)]
                 backdrop-blur-md
-                text-[hsl(0_0%_100%/0.8)] font-medium text-sm
+                text-[hsl(0_0%_100%/0.7)] font-medium text-sm
                 rounded-full
-                border border-[hsl(0_0%_100%/0.12)]
-                shadow-[0_4px_12px_hsl(220_50%_3%/0.3)]
-                hover:bg-[hsl(220_30%_18%/0.9)]
-                hover:text-white
+                border border-[hsl(0_0%_100%/0.1)]
                 hover:border-[hsl(0_0%_100%/0.2)]
+                hover:text-[hsl(0_0%_100%/0.9)]
                 active:scale-[0.98]
                 transition-all duration-200
               "
@@ -253,7 +248,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           
           {/* Read-only message for admin users */}
           {user && isAdmin && (
-            <div className="text-xs text-[hsl(0_0%_100%/0.5)] text-center py-2 backdrop-blur-md bg-[hsl(220_30%_10%/0.5)] rounded-full border border-[hsl(0_0%_100%/0.08)]">
+            <div className="text-xs text-[hsl(0_0%_100%/0.4)] text-center py-2 backdrop-blur-md bg-[hsl(220_30%_8%/0.4)] rounded-full border border-[hsl(0_0%_100%/0.06)]">
               Admin zobrazení - pouze pro čtení
             </div>
           )}
