@@ -1288,14 +1288,14 @@ const Homepage = () => {
                   Vaše platforma pro soutěže a výhry. Získejte šanci vyhrát luxusní ceny a vouchery.
                 </p>
                 <div className="flex space-x-3 pt-2">
-                  <a href="#" className="w-8 h-8 bg-[hsl(45_80%_50%/0.15)] rounded-full flex items-center justify-center border border-[hsl(45_80%_50%/0.4)] hover:bg-[hsl(45_80%_50%/0.25)] transition-colors">
-                    <Facebook className="w-4 h-4 text-[hsl(45_80%_55%)]" />
+                  <a href="#" className="w-8 h-8 bg-neon-gold/15 rounded-full flex items-center justify-center border border-neon-gold/40 hover:bg-neon-gold/25 transition-colors">
+                    <Facebook className="w-4 h-4 text-neon-gold" />
                   </a>
-                  <a href="#" className="w-8 h-8 bg-[hsl(45_80%_50%/0.15)] rounded-full flex items-center justify-center border border-[hsl(45_80%_50%/0.4)] hover:bg-[hsl(45_80%_50%/0.25)] transition-colors">
-                    <Twitter className="w-4 h-4 text-[hsl(45_80%_55%)]" />
+                  <a href="#" className="w-8 h-8 bg-neon-gold/15 rounded-full flex items-center justify-center border border-neon-gold/40 hover:bg-neon-gold/25 transition-colors">
+                    <Twitter className="w-4 h-4 text-neon-gold" />
                   </a>
-                  <a href="#" className="w-8 h-8 bg-[hsl(45_80%_50%/0.15)] rounded-full flex items-center justify-center border border-[hsl(45_80%_50%/0.4)] hover:bg-[hsl(45_80%_50%/0.25)] transition-colors">
-                    <Instagram className="w-4 h-4 text-[hsl(45_80%_55%)]" />
+                  <a href="#" className="w-8 h-8 bg-neon-gold/15 rounded-full flex items-center justify-center border border-neon-gold/40 hover:bg-neon-gold/25 transition-colors">
+                    <Instagram className="w-4 h-4 text-neon-gold" />
                   </a>
                 </div>
               </div>
