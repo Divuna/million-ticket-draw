@@ -1201,7 +1201,7 @@ const Homepage = () => {
             {comingSoonLoading ? (
               // Loading placeholder
               Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-[hsl(220_45%_6%)] border-[2px] border-[hsl(45_80%_45%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)]">
+                <Card key={index} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[2px] border-[hsl(45_80%_45%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)]">
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 animate-pulse" />
                   </CardContent>
@@ -1210,7 +1210,7 @@ const Homepage = () => {
             ) : comingSoonBanners.length === 0 ? (
               // Placeholder cards when empty
               Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-[hsl(220_45%_6%)] border-[2px] border-[hsl(45_80%_45%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)]">
+                <Card key={index} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[2px] border-[hsl(45_80%_45%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)]">
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 flex items-center justify-center">
                       <div className="text-center text-muted-foreground">
@@ -1222,7 +1222,7 @@ const Homepage = () => {
               ))
             ) : (
               comingSoonBanners.map((banner) => (
-                <Card key={banner.id} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-[hsl(220_45%_6%)] border-[2px] border-[hsl(45_80%_45%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)]">
+                <Card key={banner.id} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[2px] border-[hsl(45_80%_45%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)]">
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/40">
                       <img
