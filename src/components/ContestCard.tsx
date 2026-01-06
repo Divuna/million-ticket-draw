@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Heart, Trophy } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
+import './ContestCard.css';
 
 interface Contest {
   id: string;
@@ -96,12 +97,11 @@ export const ContestCard: React.FC<ContestCardProps> = ({
   return (
     <div 
       className={`
+        contest-card-glow
         relative overflow-hidden
         rounded-[20px]
-        border-2 border-[hsl(40_75%_50%)]
-        shadow-[0_0_40px_8px_hsl(40_80%_45%/0.35),0_0_80px_16px_hsl(40_80%_45%/0.15)]
+        border-2 border-[hsl(40_75%_55%)]
         transition-all duration-300 ease-out
-        hover:shadow-[0_0_50px_12px_hsl(40_80%_50%/0.45),0_0_100px_20px_hsl(40_80%_45%/0.2)]
         ${className}
       `}
     >
