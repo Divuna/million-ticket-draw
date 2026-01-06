@@ -278,19 +278,19 @@ export default function ContestDetail() {
               <p className="text-xl font-bold text-white">{balance.toLocaleString("cs-CZ")}</p>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3 mt-auto">
+          <div className="flex flex-col sm:flex-row items-stretch gap-3 mt-auto">
             <Button
               onClick={handleUseMiocoins}
               disabled={isProcessing}
               variant="premium"
-              className="flex-1 font-semibold px-4 py-2.5 rounded-xl"
+              className="flex-1 h-11 font-semibold px-5 rounded-full whitespace-nowrap"
             >
               {isProcessing ? "Zpracovávám..." : `Uplatnit ${contest.ticket_price} MioCoin`}
             </Button>
             <Button
               onClick={() => navigate("/profile")}
               variant="outline"
-              className="flex-1 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-semibold px-4 py-2.5 rounded-xl transition-colors"
+              className="flex-1 h-11 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-semibold px-5 rounded-full transition-colors"
             >
               Dobít MioCoiny
             </Button>
