@@ -101,9 +101,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         relative overflow-hidden
         rounded-[20px]
         border-[3px] border-[hsl(40_75%_55%)]
-        shadow-[0_4px_30px_-4px_hsl(40_80%_50%/0.35),0_8px_50px_-8px_hsl(40_75%_45%/0.2)]
         transition-all duration-300 ease-out
-        hover:shadow-[0_6px_40px_-4px_hsl(40_85%_55%/0.45),0_12px_60px_-8px_hsl(40_80%_50%/0.25)]
         ${className}
       `}
     >
