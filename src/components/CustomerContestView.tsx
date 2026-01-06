@@ -189,7 +189,8 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
               <div className="flex flex-col gap-2 w-full sm:w-auto max-w-xs sm:max-w-none sm:items-end">
                 <Button
                   size="lg"
-                  className="w-full sm:w-auto min-w-[200px] text-base font-semibold shadow-[0_0_30px_rgba(59,130,246,0.55)]"
+                  variant="premium"
+                  className="w-full sm:w-auto min-w-[200px] text-base font-semibold"
                   onClick={handleBuyTicket}
                   disabled={purchasing || contest.status !== "active"}
                 >
@@ -297,6 +298,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
             <Button
               className="w-full"
               size="lg"
+              variant="premium"
               onClick={handleBuyTicket}
               disabled={purchasing || contest.status !== "active"}
             >

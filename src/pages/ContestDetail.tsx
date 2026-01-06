@@ -282,7 +282,8 @@ export default function ContestDetail() {
             <Button
               onClick={handleUseMiocoins}
               disabled={isProcessing}
-              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 transition-colors"
+              variant="premium"
+              className="flex-1 font-semibold px-4 py-2.5 rounded-xl"
             >
               {isProcessing ? "Zpracovávám..." : `Uplatnit ${contest.ticket_price} MioCoin`}
             </Button>

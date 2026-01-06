@@ -191,6 +191,7 @@ export const AdminContestView: React.FC<AdminContestViewProps> = ({
                 onClick={handleBuyClick}
                 disabled={purchasing || userWallet.balance_coins < 1}
                 size="lg"
+                variant="premium"
               >
                 {purchasing ? 'Uplatňuji...' : `Uplatnit ${userWallet.balance_coins >= 1 ? '1' : '0'} miocoinů`}
               </Button>
