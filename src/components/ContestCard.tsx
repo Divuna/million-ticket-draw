@@ -178,15 +178,10 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         
         {/* Bottom content - text directly on gradient */}
         <div className="mt-auto space-y-3">
-          {/* Title and prize */}
-          <div className="space-y-0.5">
-            <h3 className="font-bold text-xl text-white drop-shadow-md line-clamp-2">
-              {contest.title}
-            </h3>
-            <p className="text-sm text-white/80 drop-shadow-sm line-clamp-1">
-              {contest.main_prize}
-            </p>
-          </div>
+          {/* Title */}
+          <h3 className="font-bold text-xl text-white drop-shadow-md line-clamp-2">
+            {contest.title}
+          </h3>
           
           {/* CTA for logged-in non-admin users */}
           {user && !isAdmin && (
