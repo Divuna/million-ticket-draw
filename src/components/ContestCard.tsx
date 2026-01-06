@@ -190,12 +190,13 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           
           {/* CTA for logged-in non-admin users */}
           {user && !isAdmin && (
-            <div className="flex gap-2">
+            <div className="flex items-stretch gap-2">
               {/* Gold outlined pill CTA */}
               <button
                 className="
                   flex-1 flex items-center justify-center gap-2
-                  py-3 px-5
+                  h-11 px-5
+                  whitespace-nowrap
                   bg-[rgba(0,0,0,0.4)]
                   backdrop-blur-sm
                   text-[hsl(45_85%_55%)] font-semibold text-sm
@@ -215,7 +216,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
               {/* Detail button */}
               <button
                 className="
-                  py-3 px-5
+                  h-11 px-4
                   bg-[rgba(0,0,0,0.4)]
                   backdrop-blur-sm
                   text-white/80 font-medium text-sm
