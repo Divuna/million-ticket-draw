@@ -1132,7 +1132,7 @@ const Homepage = () => {
               partners.map((partner) => (
                 <div
                   key={partner.id}
-                  className="aspect-square bg-[hsl(220_45%_6%)] border-2 border-border/40 rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:border-primary/50 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] group"
+                  className="voucher-card-glow aspect-square bg-[hsl(220_45%_6%)] border-[3px] border-[hsl(40_30%_35%)] rounded-[20px] overflow-hidden cursor-pointer transition-all duration-300 hover:border-[hsl(40_40%_45%)] hover:shadow-[0_0_12px_hsl(40_30%_40%/0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] group"
                   onClick={() => window.open(partner.website_url, "_blank")}
                 >
                   <div className="w-full h-full p-5 flex items-center justify-center relative">
