@@ -1,0 +1,64 @@
+/* Animated border glow effect for Contest Card */
+.contest-card-glow {
+  position: relative;
+}
+
+/* Animated light sweep on border */
+.contest-card-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 22px;
+  padding: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 30%,
+    hsl(40, 85%, 60%) 45%,
+    hsl(45, 90%, 70%) 50%,
+    hsl(40, 85%, 60%) 55%,
+    transparent 70%,
+    transparent 100%
+  );
+  background-size: 300% 100%;
+  animation: borderSweep 3s linear infinite;
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Inner gold glow layer */
+.contest-card-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  box-shadow: 
+    inset 0 0 20px 0 hsla(40, 80%, 50%, 0.15),
+    inset 0 1px 0 0 hsla(40, 80%, 70%, 0.2);
+  pointer-events: none;
+  z-index: 15;
+}
+
+@keyframes borderSweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+/* Subtle hover enhancement */
+.contest-card-glow:hover::after {
+  box-shadow: 
+    inset 0 0 30px 0 hsla(40, 80%, 50%, 0.2),
+    inset 0 1px 0 0 hsla(40, 80%, 70%, 0.3);
+}
