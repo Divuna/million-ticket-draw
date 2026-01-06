@@ -1288,14 +1288,14 @@ const Homepage = () => {
                   Vaše platforma pro soutěže a výhry. Získejte šanci vyhrát luxusní ceny a vouchery.
                 </p>
                 <div className="flex space-x-3 pt-2">
-                  <a href="#" className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center border border-primary/30 hover:bg-primary/30 transition-colors">
-                    <Facebook className="w-4 h-4 text-primary" />
+                  <a href="#" className="w-8 h-8 bg-[hsl(45_80%_50%/0.15)] rounded-full flex items-center justify-center border border-[hsl(45_80%_50%/0.4)] hover:bg-[hsl(45_80%_50%/0.25)] transition-colors">
+                    <Facebook className="w-4 h-4 text-[hsl(45_80%_55%)]" />
                   </a>
-                  <a href="#" className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center border border-primary/30 hover:bg-primary/30 transition-colors">
-                    <Twitter className="w-4 h-4 text-primary" />
+                  <a href="#" className="w-8 h-8 bg-[hsl(45_80%_50%/0.15)] rounded-full flex items-center justify-center border border-[hsl(45_80%_50%/0.4)] hover:bg-[hsl(45_80%_50%/0.25)] transition-colors">
+                    <Twitter className="w-4 h-4 text-[hsl(45_80%_55%)]" />
                   </a>
-                  <a href="#" className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center border border-primary/30 hover:bg-primary/30 transition-colors">
-                    <Instagram className="w-4 h-4 text-primary" />
+                  <a href="#" className="w-8 h-8 bg-[hsl(45_80%_50%/0.15)] rounded-full flex items-center justify-center border border-[hsl(45_80%_50%/0.4)] hover:bg-[hsl(45_80%_50%/0.25)] transition-colors">
+                    <Instagram className="w-4 h-4 text-[hsl(45_80%_55%)]" />
                   </a>
                 </div>
               </div>
