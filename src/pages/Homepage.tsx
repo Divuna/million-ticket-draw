@@ -857,7 +857,7 @@ const Homepage = () => {
             {loading ? (
               // Skeleton placeholders matching ContestCard design
               Array(3).fill(0).map((_, index) => (
-                <div key={`skeleton-${index}`} className="flex-shrink-0 w-[280px] md:w-[320px]">
+                <div key={`skeleton-${index}`} className="flex-shrink-0 w-[320px] md:w-[360px] lg:w-[400px]">
                   <div className="contest-card rounded-2xl overflow-hidden relative">
                     {/* Skeleton image area - matches h-64 from ContestCard */}
                     <div className="w-full h-64 bg-muted/40 animate-pulse" />
@@ -914,7 +914,7 @@ const Homepage = () => {
                   onToggleFavorite={toggleFavorite}
                   onPlay={handleContestClick}
                   fromPage="homepage"
-                  className="flex-shrink-0 w-[280px] md:w-[320px]"
+                  className="flex-shrink-0 w-[320px] md:w-[360px] lg:w-[400px]"
                 />
               ))
             )}
