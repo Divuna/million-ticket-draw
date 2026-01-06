@@ -133,7 +133,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
       />
       
       {/* Content container */}
-      <div className="relative z-10 flex flex-col h-full min-h-[280px] p-4">
+      <div className="relative z-10 flex flex-col h-48 p-4">
         {/* Top row: Favorite + Status */}
         <div className="flex items-start justify-between mb-auto">
           {/* Favorite button - simple outline style */}
