@@ -1244,43 +1244,47 @@ const Homepage = () => {
 
         {/* Instructional Video Section */}
         {!videoLoading && videoUrl && isVideoActive && (
-          <section className="space-y-6 mt-16">
-            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-bold text-primary flex items-center gap-2">
-                <span className="w-6 h-6 text-primary">🎬</span>
-                Jak to funguje
-              </h3>
-            </div>
-
-            <div className="max-w-4xl mx-auto space-y-6">
-              <YouTubeEmbed url={videoUrl} className="rounded-lg shadow-lg" />
-
-              <div className="text-center space-y-4 px-4">
-                <h4 className="text-xl font-semibold text-foreground">
-                  Jak hra funguje, co se vyhrává a jak probíhá nákup voucherů
-                </h4>
-                <div className="text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-                  <p className="mb-3">
-                    🎯 <strong>Kupte tikety</strong> do soutěží o luxusní ceny za pouhý 1 MioCoin
-                  </p>
-                  <p className="mb-3">
-                    🏆 <strong>Vyhrajte hlavní ceny</strong> jako jsou auta, dovolené nebo elektronika
-                  </p>
-                  <p className="mb-3">
-                    🎁 <strong>Získejte bonusové výhry</strong> na každé 100. pozici tiketu
-                  </p>
-                  <p>
-                    💳 <strong>Nakupte vouchery</strong> u našich partnerů a získejte MioCoiny za každý nákup
-                  </p>
+          <section className="mt-20">
+            <Card className="overflow-hidden bg-[hsl(220_45%_6%)] border border-border/40 rounded-2xl shadow-[0_8px_32px_hsl(222_50%_3%/0.6)]">
+              <CardContent className="p-6 sm:p-8 lg:p-10 space-y-8">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🎬</span>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-primary">
+                    Jak to funguje
+                  </h3>
                 </div>
-              </div>
-            </div>
+
+                <div className="max-w-4xl mx-auto space-y-8">
+                  <YouTubeEmbed url={videoUrl} className="rounded-xl shadow-[0_4px_24px_hsl(222_50%_3%/0.5)]" />
+
+                  <div className="text-center space-y-6 px-2 sm:px-6">
+                    <h4 className="text-xl sm:text-2xl font-semibold text-foreground leading-snug">
+                      Jak hra funguje, co se vyhrává a jak probíhá nákup voucherů
+                    </h4>
+                    <div className="space-y-4 max-w-2xl mx-auto">
+                      <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
+                        🎯 <strong className="text-foreground">Kupte tikety</strong> do soutěží o luxusní ceny za pouhý 1 MioCoin
+                      </p>
+                      <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
+                        🏆 <strong className="text-foreground">Vyhrajte hlavní ceny</strong> jako jsou auta, dovolené nebo elektronika
+                      </p>
+                      <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
+                        🎁 <strong className="text-foreground">Získejte bonusové výhry</strong> na každé 100. pozici tiketu
+                      </p>
+                      <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
+                        💳 <strong className="text-foreground">Nakupte vouchery</strong> u našich partnerů a získejte MioCoiny za každý nákup
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </section>
         )}
 
         {/* Enhanced Footer */}
-        <footer className="border-t border-border pt-12 mt-20 bg-gradient-to-br from-background to-muted/20">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+        <footer className="mt-24 pt-12 pb-4 rounded-t-3xl bg-[hsl(220_50%_4%)] border-t border-border/30 px-4 sm:px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-12 mb-12">
             {/* Company Info */}
             <div className="space-y-4">
               <h4 className="font-bold text-xl text-primary mb-6">OneMil</h4>
