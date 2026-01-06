@@ -8,6 +8,7 @@ import { MIOCOIN_IMAGE_URL } from "@/components/MioCoin";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { TicketResultModal } from "@/components/TicketResultModal";
+import { BonusPrizeDetailModal } from "@/components/BonusPrizeDetailModal";
 
 type Contest = {
   id: string;
@@ -24,6 +25,7 @@ type BonusPrize = {
   id: string;
   contest_id: string;
   description: string | null;
+  detailed_description?: string | null;
   amount: number | null;
   image?: string | null;
   image_url?: string | null;
@@ -62,6 +64,7 @@ export default function ContestDetail() {
   const [processingContestId, setProcessingContestId] = useState<string | null>(null);
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
   const [modalContestId, setModalContestId] = useState<string | null>(null);
+  const [selectedBonusPrize, setSelectedBonusPrize] = useState<BonusPrize | null>(null);
 
   async function loadUserBalance(userId: string) {
     const { data: wallet } = await supabase.from("wallets").select("balance_coins").eq("user_id", userId).maybeSingle();
@@ -369,9 +372,11 @@ export default function ContestDetail() {
               }
               
               return (
-                <div 
-                  key={b.id} 
-                  className="p-3 rounded-xl bg-black/30 border border-white/5 hover:border-white/10 transition-colors"
+                <button 
+                  key={b.id}
+                  type="button"
+                  onClick={() => setSelectedBonusPrize({ ...b, image_url: bonusImageUrl })}
+                  className="p-3 rounded-xl bg-black/30 border border-white/5 hover:border-yellow-500/30 hover:bg-black/40 transition-colors text-left cursor-pointer"
                 >
                   {bonusImageUrl && (
                     <div className="aspect-[4/3] mb-2 rounded-lg overflow-hidden bg-black/20">
@@ -389,12 +394,19 @@ export default function ContestDetail() {
                       Moje výhra
                     </span>
                   )}
-                </div>
+                </button>
               );
             })}
           </div>
         )}
       </section>
+
+      {/* BONUS PRIZE DETAIL MODAL */}
+      <BonusPrizeDetailModal
+        isOpen={selectedBonusPrize !== null}
+        onClose={() => setSelectedBonusPrize(null)}
+        prize={selectedBonusPrize}
+      />
       {/* TICKET RESULT MODAL */}
       <TicketResultModal
         isOpen={modalResult !== null}
