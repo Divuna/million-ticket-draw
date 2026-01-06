@@ -62,3 +62,27 @@
     inset 0 0 30px 0 hsla(40, 80%, 50%, 0.2),
     inset 0 1px 0 0 hsla(40, 80%, 70%, 0.3);
 }
+
+/* Voucher card subtle inner glow - muted champagne version */
+.voucher-card-glow {
+  position: relative;
+}
+
+.voucher-card-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 17px;
+  box-shadow: 
+    inset 0 0 15px 0 hsla(40, 30%, 40%, 0.08),
+    inset 0 1px 0 0 hsla(40, 30%, 50%, 0.1);
+  pointer-events: none;
+  z-index: 15;
+  transition: box-shadow 0.3s ease-out;
+}
+
+.voucher-card-glow:hover::after {
+  box-shadow: 
+    inset 0 0 20px 0 hsla(40, 40%, 45%, 0.12),
+    inset 0 1px 0 0 hsla(40, 40%, 55%, 0.15);
+}
