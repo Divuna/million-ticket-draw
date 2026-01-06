@@ -1283,7 +1283,7 @@ const Homepage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-10">
               {/* Company Info */}
               <div className="space-y-4">
-                <h4 className="font-bold text-lg text-foreground">OneMil</h4>
+                <h4 className="font-semibold text-base text-foreground">OneMil</h4>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   Vaše platforma pro soutěže a výhry. Získejte šanci vyhrát luxusní ceny a vouchery.
                 </p>
