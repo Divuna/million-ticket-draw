@@ -241,7 +241,7 @@ const MyContestDetail: React.FC = () => {
           {/* Back Button */}
           <button
             onClick={() => navigate('/my-contests')}
-            className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
+            className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full bg-[rgba(0,0,0,0.4)] backdrop-blur-sm text-white/80 font-medium text-sm border border-white/20 hover:bg-[rgba(0,0,0,0.5)] hover:text-white active:scale-[0.98] transition-all duration-200"
           >
             <ArrowLeft className="h-4 w-4" />
             Zpět na Moje hry
