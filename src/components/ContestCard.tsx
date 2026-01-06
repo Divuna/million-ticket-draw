@@ -97,14 +97,11 @@ export const ContestCard: React.FC<ContestCardProps> = ({
     <div 
       className={`
         relative overflow-hidden
-        rounded-[28px]
-        bg-[rgba(12,15,22,0.45)]
-        backdrop-blur-[14px]
-        border border-[hsl(45_80%_55%/0.4)]
-        shadow-[inset_0_0.5px_0_0_rgba(255,255,255,0.06),0_8px_24px_-4px_rgba(0,0,0,0.4),0_0_0_0.5px_rgba(0,0,0,0.3)]
+        rounded-[20px]
+        border-2 border-[hsl(40_75%_50%)]
+        shadow-[0_0_40px_8px_hsl(40_80%_45%/0.35),0_0_80px_16px_hsl(40_80%_45%/0.15)]
         transition-all duration-300 ease-out
-        hover:border-[hsl(45_80%_55%/0.55)]
-        hover:shadow-[inset_0_0.5px_0_0_rgba(255,255,255,0.08),0_12px_32px_-4px_rgba(0,0,0,0.5),0_0_16px_hsl(45_80%_55%/0.08)]
+        hover:shadow-[0_0_50px_12px_hsl(40_80%_50%/0.45),0_0_100px_20px_hsl(40_80%_45%/0.2)]
         ${className}
       `}
     >
@@ -121,44 +118,42 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             }}
           />
         ) : (
-          <div className="w-full h-full bg-[hsl(220_30%_8%)] flex items-center justify-center">
-            <Trophy className="w-16 h-16 text-[hsl(45_80%_55%/0.15)]" />
+          <div className="w-full h-full bg-[hsl(220_25%_10%)] flex items-center justify-center">
+            <Trophy className="w-16 h-16 text-[hsl(45_80%_55%/0.2)]" />
           </div>
         )}
       </div>
       
-      {/* Layer 2: Cinematic gradient mask (separate overlay) */}
+      {/* Layer 2: Subtle bottom gradient for text readability */}
       <div 
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.30) 50%, rgba(0,0,0,0.70) 100%)'
+          background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.25) 65%, rgba(0,0,0,0.65) 100%)'
         }}
       />
       
       {/* Content container */}
-      <div className="relative z-10 flex flex-col h-full min-h-[280px] p-5">
+      <div className="relative z-10 flex flex-col h-full min-h-[280px] p-4">
         {/* Top row: Favorite + Status */}
         <div className="flex items-start justify-between mb-auto">
-          {/* Favorite button - glass pill style */}
+          {/* Favorite button - simple outline style */}
           {user && !isAdmin && (onToggleFavorite || onRemoveFavorite) ? (
             <button
               onClick={handleFavoriteClick}
               className="
-                p-2.5 rounded-full 
-                bg-[rgba(0,0,0,0.35)] 
-                backdrop-blur-[10px] 
-                border border-[hsl(0_0%_100%/0.12)]
-                shadow-[inset_0_0.5px_0_0_rgba(255,255,255,0.05)]
-                hover:border-[hsl(0_0%_100%/0.2)] 
+                p-2 rounded-full 
+                bg-[rgba(0,0,0,0.25)]
+                backdrop-blur-sm
                 transition-all duration-200
+                hover:bg-[rgba(0,0,0,0.4)]
               "
               aria-label={fromPage === 'favorites' ? 'Remove from favorites' : 'Toggle favorite'}
             >
               <Heart
-                className={`w-4 h-4 transition-colors ${
+                className={`w-5 h-5 transition-colors ${
                   fromPage === 'favorites' || isFavorite
                     ? 'fill-[hsl(0_85%_60%)] text-[hsl(0_85%_60%)]'
-                    : 'text-[hsl(0_0%_100%/0.6)]'
+                    : 'text-white/70'
                 }`}
               />
             </button>
@@ -166,15 +161,13 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             <div />
           )}
           
-          {/* Status badge - glass pill style */}
+          {/* Status badge - simple dark pill */}
           <Badge 
             className={`
-              px-3.5 py-1.5 rounded-full text-xs font-medium 
-              backdrop-blur-[10px] 
-              shadow-[inset_0_0.5px_0_0_rgba(255,255,255,0.05)]
+              px-4 py-1.5 rounded-full text-sm font-medium
               ${contest.status === 'closed' 
-                ? 'bg-[rgba(0,0,0,0.35)] text-[hsl(0_0%_100%/0.8)] border border-[hsl(0_50%_50%/0.3)]' 
-                : 'bg-[rgba(0,0,0,0.35)] text-[hsl(45_80%_70%)] border border-[hsl(45_80%_55%/0.35)]'
+                ? 'bg-[rgba(60,60,60,0.85)] text-white/90' 
+                : 'bg-[rgba(40,45,55,0.9)] text-white'
               }
             `}
           >
@@ -182,107 +175,90 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           </Badge>
         </div>
         
-        {/* Bottom content with frosted glass panel */}
-        <div className="mt-auto">
-          {/* Frosted glass content strip */}
-          <div className="
-            relative rounded-2xl p-4 -mx-1
-            bg-[rgba(12,15,22,0.35)]
-            backdrop-blur-[10px]
-            border border-[hsl(0_0%_100%/0.06)]
-            shadow-[inset_0_0.5px_0_0_rgba(255,255,255,0.04)]
-          ">
-            {/* Title and prize */}
-            <div className="space-y-1 mb-4">
-              <h3 className="font-semibold text-lg text-white/95 line-clamp-2 drop-shadow-sm">
-                {contest.title}
-              </h3>
-              <p className="text-sm text-[hsl(45_40%_75%)] line-clamp-1">
-                {contest.main_prize}
-              </p>
-            </div>
-            
-            {/* CTA for logged-in non-admin users */}
-            {user && !isAdmin && (
-              <div className="flex gap-2.5">
-                {/* Gold outlined glass pill CTA */}
-                <button
-                  className="
-                    flex-1 flex items-center justify-center gap-2
-                    py-3 px-5
-                    bg-[rgba(0,0,0,0.35)]
-                    backdrop-blur-[10px]
-                    text-[hsl(45_80%_65%)] font-medium text-sm
-                    rounded-full
-                    border border-[hsl(45_80%_55%/0.6)]
-                    shadow-[inset_0_0.5px_0_0_rgba(255,255,255,0.05)]
-                    hover:border-[hsl(45_80%_55%/0.75)]
-                    hover:shadow-[inset_0_0.5px_0_0_rgba(255,255,255,0.05),0_0_12px_hsl(45_80%_55%/0.12)]
-                    hover:text-[hsl(45_80%_75%)]
-                    active:scale-[0.98]
-                    transition-all duration-200
-                    disabled:opacity-40 disabled:cursor-not-allowed
-                  "
-                  onClick={handlePlayClick}
-                  disabled={contest.status !== 'active' || isProcessing}
-                >
-                  🏆 {getPlayButtonText()}
-                </button>
-                {/* Detail button - glass pill */}
-                <button
-                  className="
-                    py-3 px-5
-                    bg-[rgba(0,0,0,0.35)]
-                    backdrop-blur-[10px]
-                    text-[hsl(0_0%_100%/0.7)] font-medium text-sm
-                    rounded-full
-                    border border-[hsl(0_0%_100%/0.12)]
-                    shadow-[inset_0_0.5px_0_0_rgba(255,255,255,0.05)]
-                    hover:border-[hsl(0_0%_100%/0.22)]
-                    hover:text-[hsl(0_0%_100%/0.9)]
-                    active:scale-[0.98]
-                    transition-all duration-200
-                  "
-                  onClick={handleDetailClick}
-                >
-                  Detail
-                </button>
-              </div>
-            )}
-            
-            {/* Login prompt for non-logged-in users */}
-            {!user && (
+        {/* Bottom content - text directly on gradient */}
+        <div className="mt-auto space-y-3">
+          {/* Title and prize */}
+          <div className="space-y-0.5">
+            <h3 className="font-bold text-xl text-white drop-shadow-md line-clamp-2">
+              {contest.title}
+            </h3>
+            <p className="text-sm text-white/80 drop-shadow-sm line-clamp-1">
+              {contest.main_prize}
+            </p>
+          </div>
+          
+          {/* CTA for logged-in non-admin users */}
+          {user && !isAdmin && (
+            <div className="flex gap-2">
+              {/* Gold outlined pill CTA */}
               <button
                 className="
-                  w-full py-3 px-5
-                  bg-[rgba(0,0,0,0.35)]
-                  backdrop-blur-[10px]
-                  text-[hsl(0_0%_100%/0.7)] font-medium text-sm
+                  flex-1 flex items-center justify-center gap-2
+                  py-3 px-5
+                  bg-[rgba(0,0,0,0.4)]
+                  backdrop-blur-sm
+                  text-[hsl(45_85%_55%)] font-semibold text-sm
                   rounded-full
-                  border border-[hsl(0_0%_100%/0.12)]
-                  shadow-[inset_0_0.5px_0_0_rgba(255,255,255,0.05)]
-                  hover:border-[hsl(0_0%_100%/0.22)]
-                  hover:text-[hsl(0_0%_100%/0.9)]
+                  border-2 border-[hsl(40_75%_50%)]
+                  hover:bg-[rgba(0,0,0,0.5)]
+                  hover:text-[hsl(45_90%_60%)]
+                  active:scale-[0.98]
+                  transition-all duration-200
+                  disabled:opacity-40 disabled:cursor-not-allowed
+                "
+                onClick={handlePlayClick}
+                disabled={contest.status !== 'active' || isProcessing}
+              >
+                🏆 {getPlayButtonText()}
+              </button>
+              {/* Detail button */}
+              <button
+                className="
+                  py-3 px-5
+                  bg-[rgba(0,0,0,0.4)]
+                  backdrop-blur-sm
+                  text-white/80 font-medium text-sm
+                  rounded-full
+                  border border-white/20
+                  hover:bg-[rgba(0,0,0,0.5)]
+                  hover:text-white
                   active:scale-[0.98]
                   transition-all duration-200
                 "
-                onClick={handleLoginClick}
+                onClick={handleDetailClick}
               >
-                Přihlásit se
+                Detail
               </button>
-            )}
-            
-            {/* Read-only message for admin users */}
-            {user && isAdmin && (
-              <div className="
-                text-xs text-[hsl(0_0%_100%/0.5)] text-center py-2.5 
-                bg-[rgba(0,0,0,0.25)] backdrop-blur-[8px] 
-                rounded-full border border-[hsl(0_0%_100%/0.08)]
-              ">
-                Admin zobrazení - pouze pro čtení
-              </div>
-            )}
-          </div>
+            </div>
+          )}
+          
+          {/* Login prompt for non-logged-in users */}
+          {!user && (
+            <button
+              className="
+                w-full py-3 px-5
+                bg-[rgba(0,0,0,0.4)]
+                backdrop-blur-sm
+                text-white/80 font-medium text-sm
+                rounded-full
+                border border-white/20
+                hover:bg-[rgba(0,0,0,0.5)]
+                hover:text-white
+                active:scale-[0.98]
+                transition-all duration-200
+              "
+              onClick={handleLoginClick}
+            >
+              Přihlásit se
+            </button>
+          )}
+          
+          {/* Read-only message for admin users */}
+          {user && isAdmin && (
+            <div className="text-xs text-white/60 text-center py-2.5 bg-[rgba(0,0,0,0.35)] rounded-full">
+              Admin zobrazení - pouze pro čtení
+            </div>
+          )}
         </div>
       </div>
     </div>
