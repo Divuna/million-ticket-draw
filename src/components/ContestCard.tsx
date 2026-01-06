@@ -102,6 +102,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         rounded-[20px]
         border-[3px] border-[hsl(40_75%_55%)]
         transition-all duration-300 ease-out
+        hover:scale-[1.02]
         ${className}
       `}
     >
