@@ -1244,41 +1244,36 @@ const Homepage = () => {
 
         {/* Instructional Video Section */}
         {!videoLoading && videoUrl && isVideoActive && (
-          <section className="mt-20">
-            <Card className="overflow-hidden bg-[hsl(220_45%_6%)] border border-border/40 rounded-2xl shadow-[0_8px_32px_hsl(222_50%_3%/0.6)]">
-              <CardContent className="p-6 sm:p-8 lg:p-10 space-y-8">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">🎬</span>
-                  <h3 className="text-2xl sm:text-3xl font-bold text-primary">
-                    Jak to funguje
-                  </h3>
-                </div>
+          <section className="space-y-6 mt-16">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
+                🎬 Jak to funguje
+              </h3>
+            </div>
 
-                <div className="max-w-4xl mx-auto space-y-8">
-                  <YouTubeEmbed url={videoUrl} className="rounded-xl shadow-[0_4px_24px_hsl(222_50%_3%/0.5)]" />
+            <div className="max-w-4xl mx-auto space-y-8">
+              <YouTubeEmbed url={videoUrl} className="rounded-xl" />
 
-                  <div className="text-center space-y-6 px-2 sm:px-6">
-                    <h4 className="text-xl sm:text-2xl font-semibold text-foreground leading-snug">
-                      Jak hra funguje, co se vyhrává a jak probíhá nákup voucherů
-                    </h4>
-                    <div className="space-y-4 max-w-2xl mx-auto">
-                      <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-                        🎯 <strong className="text-foreground">Kupte tikety</strong> do soutěží o luxusní ceny za pouhý 1 MioCoin
-                      </p>
-                      <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-                        🏆 <strong className="text-foreground">Vyhrajte hlavní ceny</strong> jako jsou auta, dovolené nebo elektronika
-                      </p>
-                      <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-                        🎁 <strong className="text-foreground">Získejte bonusové výhry</strong> na každé 100. pozici tiketu
-                      </p>
-                      <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-                        💳 <strong className="text-foreground">Nakupte vouchery</strong> u našich partnerů a získejte MioCoiny za každý nákup
-                      </p>
-                    </div>
-                  </div>
+              <div className="text-center space-y-6">
+                <h4 className="text-xl sm:text-2xl font-semibold text-foreground leading-snug">
+                  Jak hra funguje, co se vyhrává a jak probíhá nákup voucherů
+                </h4>
+                <div className="space-y-3 max-w-2xl mx-auto text-left">
+                  <p className="text-base text-muted-foreground leading-relaxed">
+                    🎯 <strong className="text-foreground">Kupte tikety</strong> do soutěží o luxusní ceny za pouhý 1 MioCoin
+                  </p>
+                  <p className="text-base text-muted-foreground leading-relaxed">
+                    🏆 <strong className="text-foreground">Vyhrajte hlavní ceny</strong> jako jsou auta, dovolené nebo elektronika
+                  </p>
+                  <p className="text-base text-muted-foreground leading-relaxed">
+                    🎁 <strong className="text-foreground">Získejte bonusové výhry</strong> na každé 100. pozici tiketu
+                  </p>
+                  <p className="text-base text-muted-foreground leading-relaxed">
+                    💳 <strong className="text-foreground">Nakupte vouchery</strong> u našich partnerů a získejte MioCoiny za každý nákup
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </section>
         )}
 
