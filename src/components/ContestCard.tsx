@@ -100,7 +100,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         contest-card-glow
         relative overflow-hidden
         rounded-[20px]
-        border-2 border-[hsl(40_75%_55%)]
+        border-[3px] border-[hsl(40_75%_55%)]
         transition-all duration-300 ease-out
         ${className}
       `}
