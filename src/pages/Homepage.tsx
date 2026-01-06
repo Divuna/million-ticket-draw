@@ -1008,7 +1008,7 @@ const Homepage = () => {
             ) : (
               homepageVouchers.map((voucher) => (
                   <div key={voucher.id} className="flex-none w-80">
-                  <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-[hsl(220_45%_6%)] border-[3px] border-[hsl(40_30%_35%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[hsl(40_40%_45%)] hover:shadow-[0_0_12px_hsl(40_30%_40%/0.2)] hover:scale-[1.02]">
+                  <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[hsl(40_40%_45%)] hover:shadow-[0_0_12px_hsl(40_30%_40%/0.2)] hover:scale-[1.02]">
                     <div className="flex h-48 relative">
                       {/* Left side - Content */}
                       <div className="flex-1 p-5 flex flex-col justify-between">
