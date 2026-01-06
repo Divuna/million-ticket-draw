@@ -9,6 +9,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { Heart, Trophy } from 'lucide-react';
 
 interface Contest {
   id: string;
@@ -248,12 +249,12 @@ const Index = () => {
     }
   };
 
-  if (loading) {
+if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background dark">
         <Header />
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center">Načítání soutěží...</div>
+          <div className="text-center text-muted-foreground">Načítání soutěží...</div>
         </div>
       </div>
     );
@@ -262,21 +263,27 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background dark pb-20">
       <Header />
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div className="text-center flex-1">
-            <h1 className="mb-4 text-4xl font-bold text-neon-green">OneMil</h1>
-            <p className="text-xl text-muted-foreground">Vyberte si soutěž a zkuste štěstí!</p>
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Page Header - matching homepage typography */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="text-center md:text-left flex-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-heading-gold flex items-center gap-3 justify-center md:justify-start">
+              <Trophy className="w-7 h-7 md:w-8 md:h-8" />
+              Soutěže
+            </h1>
+            <p className="text-sm text-text-silver mt-2">Vyberte si soutěž a zkuste štěstí!</p>
           </div>
           
           <Button 
-            className="bg-[#FF4D4D] hover:bg-[#FF3333] text-white font-bold px-8 py-6 rounded-full text-lg"
+            className="bg-primary hover:brightness-110 text-primary-foreground font-bold px-6 py-3 rounded-xl shadow-[0_0_12px_hsl(var(--primary)/0.35)] transition-all duration-200"
             onClick={() => navigate('/favorite-games')}
           >
-            OBLÍBENÉ
+            <Heart className="w-5 h-5 mr-2" />
+            Oblíbené
           </Button>
         </div>
         
+        {/* Contests Grid - matching homepage card styling */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {contests.map((contest) => (
             <ContestCard
@@ -294,10 +301,10 @@ const Index = () => {
         </div>
 
         {contests.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-4">🎯</div>
-            <h3 className="text-xl font-semibold mb-2">Žádné soutěže</h3>
-            <p className="text-muted-foreground">Momentálně nejsou dostupné žádné soutěže.</p>
+          <div className="text-center py-16 space-y-4">
+            <Trophy className="w-16 h-16 mx-auto text-muted-foreground/50" />
+            <h3 className="text-xl font-bold text-foreground">Žádné soutěže</h3>
+            <p className="text-sm text-muted-foreground">Momentálně nejsou dostupné žádné soutěže.</p>
           </div>
         )}
       </div>

@@ -76,7 +76,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
   };
 
   return (
-    <div className={`contest-card rounded-2xl overflow-hidden relative border border-amber-300/20 ${className}`}>
+    <div className={`rounded-xl overflow-hidden relative bg-[hsl(220_45%_6%)] border border-amber-300/20 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-200 hover:border-amber-300/40 hover:shadow-[0_8px_24px_hsl(222_50%_3%/0.6)] ${className}`}>
       {/* Full-width banner image - Priority: banner_image > main_prize_secondary_image > main_image */}
       {(() => {
         // Determine the best image source with priority
@@ -104,39 +104,33 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           <img
             src={imageUrl}
             alt={contest.title}
-            className="w-full h-64 object-cover"
+            className="w-full h-56 object-cover"
             loading="lazy"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = 'none';
             }}
           />
         ) : (
-          <div className="w-full h-64 bg-muted/40 flex items-center justify-center">
+          <div className="w-full h-56 bg-muted/20 flex items-center justify-center">
             <div className="text-center text-muted-foreground">
-              {fromPage === 'homepage' ? (
-                <>
-                  <Trophy className="w-12 h-12 mx-auto mb-2" />
-                  <span className="text-sm">Bez obrázku</span>
-                </>
-              ) : (
-                <span className="text-6xl">🎯</span>
-              )}
+              <Trophy className="w-12 h-12 mx-auto mb-2 text-muted-foreground/50" />
+              <span className="text-sm">Bez obrázku</span>
             </div>
           </div>
         );
       })()}
       
       {/* Bottom dark gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[hsl(220_45%_6%)]/95 via-[hsl(220_45%_6%)]/60 to-transparent pointer-events-none" />
       
       {/* Status badge */}
       <div className="absolute top-3 right-3">
         {contest.status === 'closed' ? (
-          <Badge className="bg-destructive text-destructive-foreground">
+          <Badge className="bg-destructive/90 text-destructive-foreground border-0 shadow-md">
             Hra ukončena
           </Badge>
         ) : (
-          <Badge variant="secondary" className="bg-primary/90 text-primary-foreground border-0">
+          <Badge variant="secondary" className="bg-primary/90 text-primary-foreground border-0 shadow-md">
             {contest.status === 'active' ? 'Aktivní' : 'Připravuje se'}
           </Badge>
         )}
@@ -146,13 +140,13 @@ export const ContestCard: React.FC<ContestCardProps> = ({
       {user && !isAdmin && (onToggleFavorite || onRemoveFavorite) && (
         <button
           onClick={handleFavoriteClick}
-          className="absolute top-3 left-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors"
+          className="absolute top-3 left-3 z-10 p-2 rounded-full bg-[hsl(220_45%_6%)]/80 hover:bg-[hsl(220_45%_6%)] border border-border/30 transition-all duration-200"
           aria-label={fromPage === 'favorites' ? 'Remove from favorites' : 'Toggle favorite'}
         >
           <Heart
             className={`w-5 h-5 ${
               fromPage === 'favorites' || isFavorite
-                ? 'fill-red-500 text-red-500'
+                ? 'fill-destructive text-destructive'
                 : 'text-muted-foreground'
             }`}
           />
@@ -160,11 +154,11 @@ export const ContestCard: React.FC<ContestCardProps> = ({
       )}
       
       {/* Overlay content */}
-      <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-2">
-        <h3 className="font-bold text-lg text-white line-clamp-2 mb-1">
+      <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col gap-2">
+        <h3 className="font-bold text-lg text-foreground line-clamp-2">
           {contest.title}
         </h3>
-        <p className="text-sm text-white/80 line-clamp-1">
+        <p className="text-sm text-text-silver line-clamp-1">
           {contest.main_prize}
         </p>
         
@@ -172,14 +166,14 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         {user && !isAdmin && (
           <div className="flex gap-2 mt-2">
             <button
-              className="flex-1 py-2 px-4 bg-primary text-primary-foreground font-bold rounded-lg shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+              className="flex-1 py-2.5 px-4 bg-primary text-primary-foreground font-bold rounded-lg shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none text-sm"
               onClick={handlePlayClick}
               disabled={contest.status !== 'active' || isProcessing}
             >
               {getPlayButtonText()}
             </button>
             <button
-              className="py-2 px-4 bg-background/20 text-foreground/60 font-medium rounded-lg hover:bg-background/30 hover:text-foreground/80 transition-colors"
+              className="py-2.5 px-4 bg-muted/30 text-muted-foreground font-medium rounded-lg hover:bg-muted/50 hover:text-foreground border border-border/30 transition-all duration-200 text-sm"
               onClick={handleDetailClick}
             >
               Detail
@@ -190,7 +184,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         {/* Show login prompt for non-logged-in users */}
         {!user && (
           <button
-            className="w-full py-2 px-4 mt-2 bg-background/20 text-foreground/60 font-medium rounded-lg hover:bg-background/30 hover:text-foreground/80 transition-colors"
+            className="w-full py-2.5 px-4 mt-2 bg-muted/30 text-muted-foreground font-medium rounded-lg hover:bg-muted/50 hover:text-foreground border border-border/30 transition-all duration-200 text-sm"
             onClick={handleLoginClick}
           >
             Přihlásit se
@@ -199,7 +193,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         
         {/* Show read-only message for admin users */}
         {user && isAdmin && (
-          <div className="text-xs text-white/70 text-center mt-2">
+          <div className="text-xs text-muted-foreground text-center mt-2 py-2">
             Admin zobrazení - pouze pro čtení
           </div>
         )}
