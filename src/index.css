@@ -60,9 +60,15 @@
     --neon-gold: 43 90% 55%;
     --neon-red: 0 72% 51%;
     --neon-purple: 270 50% 60%;
-    --neon-cyan: 220 80% 55%;
-    --neon-green: 140 50% 50%;
+    --neon-cyan: 210 80% 65%;
+    --neon-green: 160 55% 45%;
     --neon-pink: 330 60% 60%;
+    
+    /* Package Colors - for MioCoin tiers */
+    --package-blue: 210 80% 65%;
+    --package-gold: 43 90% 55%;
+    --package-purple: 270 60% 60%;
+    --package-green: 160 55% 50%;
     
     /* Premium Typography Colors - matched to OneMil logo */
     --heading-gold: 43 78% 54%;
