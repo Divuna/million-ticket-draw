@@ -248,7 +248,7 @@ export default function ContestDetail() {
   const isProcessing = processingContestId === contest.id;
 
   return (
-    <div className="p-4 md:p-6 w-full max-w-5xl mx-auto space-y-6 pb-24">
+    <div className="p-4 md:p-6 w-full max-w-5xl mx-auto space-y-6 pb-[calc(6rem+env(safe-area-inset-bottom))]">
       {/* 1. HERO SECTION */}
       <section className="contest-card-glow w-full rounded-[20px] relative overflow-hidden bg-gradient-to-br from-[hsl(220_25%_8%)] to-[hsl(220_20%_12%)] border-[3px] border-[hsl(40_75%_55%)]">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-6 md:p-8">
