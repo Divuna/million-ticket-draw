@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { TicketResultModal } from "@/components/TicketResultModal";
 import { BonusPrizeDetailModal } from "@/components/BonusPrizeDetailModal";
 import { usePlacementBanners } from "@/hooks/usePlacementBanners";
+import "@/components/ContestCard.css";
 
 type Contest = {
   id: string;
@@ -249,7 +250,7 @@ export default function ContestDetail() {
   return (
     <div className="p-4 md:p-6 w-full max-w-5xl mx-auto space-y-6">
       {/* 1. HERO SECTION */}
-      <section className="w-full rounded-2xl relative overflow-hidden bg-gradient-to-br from-[#0b0e12] to-[#151a20] border border-yellow-500/30 shadow-[0_0_40px_rgba(250,204,21,0.15)]">
+      <section className="contest-card-glow w-full rounded-[20px] relative overflow-hidden bg-gradient-to-br from-[hsl(220_25%_8%)] to-[hsl(220_20%_12%)] border-[3px] border-[hsl(40_75%_55%)]">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-6 md:p-8">
           {/* Text content */}
           <div className="flex-1 space-y-4 z-10">
@@ -278,7 +279,7 @@ export default function ContestDetail() {
       {/* 2. INFO BOXES - Side by side on desktop, stacked on mobile */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Box 1: Stav MioCoinů + akce */}
-        <section className="bg-[#111418]/80 backdrop-blur rounded-2xl p-5 border border-white/10 flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+        <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/80 backdrop-blur rounded-[20px] p-5 border-[2px] border-[hsl(40_50%_45%/0.5)] flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <div className="flex items-center gap-3">
             <img src={MIOCOIN_IMAGE_URL} className="w-7 h-7" alt="MioCoin" />
             <div>
@@ -306,7 +307,7 @@ export default function ContestDetail() {
         </section>
 
         {/* Box 2: Bonusové MioCoiny v soutěži */}
-        <section className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 rounded-2xl p-5 border border-yellow-500/20 flex items-start gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        <section className="voucher-card-glow bg-gradient-to-br from-[hsl(45_60%_50%/0.1)] to-[hsl(45_60%_40%/0.05)] rounded-[20px] p-5 border-[2px] border-[hsl(40_60%_50%/0.3)] flex items-start gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
           <div className="flex-shrink-0">
             <TooltipProvider>
               <Tooltip>
@@ -332,7 +333,7 @@ export default function ContestDetail() {
       </div>
 
       {/* 4. CESTA K HLAVNÍ VÝHŘE */}
-      <section className="bg-[#111418]/60 rounded-2xl p-4 md:p-5 border border-yellow-500/15">
+      <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[hsl(40_60%_50%/0.2)]">
         <h2 className="text-white font-semibold text-sm md:text-base mb-4">Cesta k hlavní výhře</h2>
         
         {/* Milestone labels */}
@@ -356,7 +357,7 @@ export default function ContestDetail() {
       </section>
 
       {/* 5. BONUSOVÉ VĚCNÉ VÝHRY */}
-      <section className="bg-[#111418]/60 rounded-2xl p-4 md:p-5 border border-white/10">
+      <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[hsl(40_50%_45%/0.3)]">
         <h2 className="text-white font-semibold text-sm md:text-base mb-4">Bonusové věcné výhry</h2>
 
         {bonusPrizes.length === 0 ? (
