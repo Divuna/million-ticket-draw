@@ -25,10 +25,8 @@ export const BonusPrizeDetailModal: React.FC<BonusPrizeDetailModalProps> = ({
   prize,
   backgroundImageUrl,
 }) => {
-  if (!prize) return null;
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent 
         className="sm:max-w-lg max-h-[85vh] overflow-y-auto relative"
         style={{
@@ -43,13 +41,13 @@ export const BonusPrizeDetailModal: React.FC<BonusPrizeDetailModalProps> = ({
         )}
         <DialogHeader className="relative z-10">
           <DialogTitle className="text-xl font-bold text-yellow-400">
-            {prize.description || 'Bonusová výhra'}
+            {prize?.description || 'Bonusová výhra'}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2 relative z-10">
           {/* Prize image */}
-          {prize.image_url && (
+          {prize?.image_url && (
             <div className="w-full rounded-xl overflow-hidden bg-black/20">
               <img
                 src={prize.image_url}
@@ -61,7 +59,7 @@ export const BonusPrizeDetailModal: React.FC<BonusPrizeDetailModalProps> = ({
           )}
 
           {/* Detailed description */}
-          {prize.detailed_description ? (
+          {prize?.detailed_description ? (
             <div className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
               {prize.detailed_description}
             </div>
