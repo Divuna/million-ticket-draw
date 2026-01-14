@@ -7,15 +7,17 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
+interface BonusPrize {
+  id: string;
+  description: string | null;
+  detailed_description?: string | null;
+  image_url?: string | null;
+}
+
 interface BonusPrizeDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  prize: {
-    id: string;
-    description: string | null;
-    detailed_description?: string | null;
-    image_url?: string | null;
-  } | null;
+  prize: BonusPrize | null;
   backgroundImageUrl?: string | null;
 }
 
@@ -28,7 +30,7 @@ export const BonusPrizeDetailModal: React.FC<BonusPrizeDetailModalProps> = ({
   if (!prize) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent 
         className="sm:max-w-lg max-h-[85vh] overflow-y-auto relative"
         style={{
