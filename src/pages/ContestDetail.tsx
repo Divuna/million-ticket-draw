@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { TicketResultModal } from "@/components/TicketResultModal";
 import { BonusPrizeDetailModal } from "@/components/BonusPrizeDetailModal";
+import { usePlacementBanners } from "@/hooks/usePlacementBanners";
 
 type Contest = {
   id: string;
@@ -65,6 +66,10 @@ export default function ContestDetail() {
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
   const [modalContestId, setModalContestId] = useState<string | null>(null);
   const [selectedBonusPrize, setSelectedBonusPrize] = useState<BonusPrize | null>(null);
+  
+  // Fetch the starry background banner used in "Poslední výherci"
+  const { banners: placementBanners } = usePlacementBanners(['vzhled_karta_vyher']);
+  const starryBackgroundUrl = placementBanners.vzhled_karta_vyher?.image_url || null;
 
   async function loadUserBalance(userId: string) {
     const { data: wallet } = await supabase.from("wallets").select("balance_coins").eq("user_id", userId).maybeSingle();
@@ -376,7 +381,13 @@ export default function ContestDetail() {
                   key={b.id}
                   type="button"
                   onClick={() => setSelectedBonusPrize({ ...b, image_url: bonusImageUrl })}
-                  className="p-3 rounded-xl bg-black/30 border border-white/5 hover:border-yellow-500/30 hover:bg-black/40 transition-colors text-left cursor-pointer"
+                  className="p-3 rounded-xl border border-white/5 hover:border-yellow-500/30 transition-colors text-left cursor-pointer relative overflow-hidden"
+                  style={{
+                    backgroundImage: starryBackgroundUrl ? `url(${starryBackgroundUrl})` : undefined,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundColor: starryBackgroundUrl ? undefined : 'rgba(0,0,0,0.3)'
+                  }}
                 >
                   {bonusImageUrl && (
                     <div className="aspect-[4/3] mb-2 rounded-lg overflow-hidden bg-black/20">
@@ -406,6 +417,7 @@ export default function ContestDetail() {
         isOpen={selectedBonusPrize !== null}
         onClose={() => setSelectedBonusPrize(null)}
         prize={selectedBonusPrize}
+        backgroundImageUrl={starryBackgroundUrl}
       />
       {/* TICKET RESULT MODAL */}
       <TicketResultModal
