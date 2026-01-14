@@ -13,7 +13,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2, ChevronDown, Mail, CheckCircle, XCircle } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2, ChevronDown, Mail, CheckCircle, XCircle, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { AdminMenu } from '@/components/AdminMenu';
@@ -797,7 +798,19 @@ const Profile: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <Coins className="h-6 w-6 text-green-500 flex-shrink-0" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Bonusové</p>
+                    <div className="flex items-center gap-1">
+                      <p className="text-sm text-muted-foreground">Bonusové</p>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="text-sm">Bonusové MioCoiny získáváte jako odměnu při hraní soutěží. Můžete je převést do hlavní peněženky a použít na nákup losů.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <p className="text-2xl font-bold text-green-500">
                       {wallet?.bonus_balance_coins?.toLocaleString('cs-CZ') || '0'}
                     </p>
