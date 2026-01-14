@@ -793,31 +793,29 @@ const Profile: React.FC = () => {
                   </p>
                 </div>
               </div>
-              {(wallet?.bonus_balance_coins ?? 0) > 0 && (
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:pl-6 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-border/50">
-                  <div className="flex items-center gap-3">
-                    <Coins className="h-6 w-6 text-green-500 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Bonusové</p>
-                      <p className="text-2xl font-bold text-green-500">
-                        {wallet?.bonus_balance_coins?.toLocaleString('cs-CZ') || '0'}
-                      </p>
-                    </div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:pl-6 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-border/50">
+                <div className="flex items-center gap-3">
+                  <Coins className="h-6 w-6 text-green-500 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Bonusové</p>
+                    <p className="text-2xl font-bold text-green-500">
+                      {wallet?.bonus_balance_coins?.toLocaleString('cs-CZ') || '0'}
+                    </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleTransferBonus}
-                    disabled={transferring || (wallet?.bonus_balance_coins ?? 0) === 0}
-                    className="w-full sm:w-auto sm:ml-2"
-                  >
-                    {transferring ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                    ) : null}
-                    Převést bonusové MioCoiny
-                  </Button>
                 </div>
-              )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTransferBonus}
+                  disabled={transferring || (wallet?.bonus_balance_coins ?? 0) === 0}
+                  className="w-full sm:w-auto sm:ml-2"
+                >
+                  {transferring ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : null}
+                  Převést bonusové MioCoiny
+                </Button>
+              </div>
             </div>
             
             {/* Action Buttons */}
