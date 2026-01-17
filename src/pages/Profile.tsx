@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2, ChevronDown, Mail, CheckCircle, XCircle, Info } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2, ChevronDown, Mail, CheckCircle, XCircle, Info, Crown, Sparkles, Wallet, Shield } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
@@ -62,8 +62,8 @@ const COIN_PACKAGES: CoinPackage[] = [
   { id: 'pack_1200', coins: 1200, bonus: 80, price: 1200 },
 ];
 
-// Animated count-up hook
-const useCountUp = (target: number, duration: number = 800) => {
+// Animated count-up hook with smoother easing
+const useCountUp = (target: number, duration: number = 1200) => {
   const [count, setCount] = useState(0);
   const prevTarget = useRef(target);
 
@@ -81,8 +81,8 @@ const useCountUp = (target: number, duration: number = 800) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
-      // Ease-out cubic
-      const easeOut = 1 - Math.pow(1 - progress, 3);
+      // Elastic ease-out for more dramatic effect
+      const easeOut = 1 - Math.pow(1 - progress, 4);
       const currentValue = startValue + (target - startValue) * easeOut;
       
       setCount(Math.round(currentValue * 10) / 10);
@@ -99,6 +99,72 @@ const useCountUp = (target: number, duration: number = 800) => {
 
   return count;
 };
+
+// Premium VIP Card Component
+const VIPCard: React.FC<{
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+  variant?: 'default' | 'gold' | 'accent';
+  glowIntensity?: 'low' | 'medium' | 'high';
+  isLoaded?: boolean;
+}> = ({ children, className = '', delay = 0, variant = 'default', glowIntensity = 'low', isLoaded = true }) => {
+  const glowStyles = {
+    low: 'shadow-[0_0_30px_-8px_hsl(var(--border)/0.3)]',
+    medium: 'shadow-[0_0_40px_-8px_hsl(43_90%_55%/0.15)]',
+    high: 'shadow-[0_0_60px_-12px_hsl(43_90%_55%/0.25),0_0_100px_-20px_hsl(43_90%_55%/0.15)]'
+  };
+
+  const variantStyles = {
+    default: 'border-border/30 bg-gradient-to-br from-card/95 via-card/90 to-card/80',
+    gold: 'border-yellow-500/25 bg-gradient-to-br from-yellow-500/5 via-card/95 to-yellow-600/5',
+    accent: 'border-primary/25 bg-gradient-to-br from-primary/5 via-card/95 to-primary/3'
+  };
+
+  return (
+    <div
+      className={`
+        relative overflow-hidden rounded-2xl border backdrop-blur-xl
+        transition-all duration-700 ease-out
+        hover:border-opacity-60 hover:shadow-xl
+        ${variantStyles[variant]}
+        ${glowStyles[glowIntensity]}
+        ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}
+        ${className}
+      `}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {/* Shimmer effect overlay */}
+      <div 
+        className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+        style={{
+          background: 'linear-gradient(105deg, transparent 40%, hsl(43 90% 55% / 0.03) 45%, hsl(43 90% 55% / 0.05) 50%, hsl(43 90% 55% / 0.03) 55%, transparent 60%)',
+          backgroundSize: '200% 100%',
+          animation: 'shimmer 3s ease-in-out infinite'
+        }}
+      />
+      {children}
+    </div>
+  );
+};
+
+// Floating particles background
+const FloatingParticles: React.FC = () => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    {[...Array(6)].map((_, i) => (
+      <div
+        key={i}
+        className="absolute w-1 h-1 rounded-full bg-yellow-500/20"
+        style={{
+          left: `${15 + i * 15}%`,
+          top: `${20 + (i % 3) * 25}%`,
+          animation: `float ${4 + i * 0.5}s ease-in-out infinite`,
+          animationDelay: `${i * 0.3}s`
+        }}
+      />
+    ))}
+  </div>
+);
 
 const Profile: React.FC = () => {
   const { user, session } = useAuth();
@@ -151,8 +217,7 @@ const Profile: React.FC = () => {
 
   useEffect(() => {
     if (!loading) {
-      // Trigger entrance animations after content loads
-      const timer = setTimeout(() => setPageLoaded(true), 50);
+      const timer = setTimeout(() => setPageLoaded(true), 100);
       return () => clearTimeout(timer);
     }
   }, [loading]);
@@ -225,7 +290,6 @@ const Profile: React.FC = () => {
         description: "Byli jste přihlášeni k odběru marketingových sdělení."
       });
 
-      // Send notification (non-blocking)
       supabase.functions.invoke('send-marketing-consent-notification', {
         body: { action: 'subscribe' }
       }).catch(err => console.error('Notification error:', err));
@@ -298,7 +362,6 @@ const Profile: React.FC = () => {
         return;
       }
       
-      // Also fetch avatar and date_of_birth from profiles table
       const profileResult = await supabase.from('profiles').select('avatar_url, date_of_birth').eq('id', user?.id ?? '').maybeSingle();
       const avatarUrl = profileResult.data?.avatar_url || null;
       const dateOfBirth = (profileResult.data as any)?.date_of_birth || null;
@@ -323,7 +386,6 @@ const Profile: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file || !user?.id) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Chyba",
@@ -333,7 +395,6 @@ const Profile: React.FC = () => {
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "Chyba",
@@ -348,21 +409,18 @@ const Profile: React.FC = () => {
       const fileExt = file.name.split('.').pop();
       const filePath = `${user.id}/avatar.${fileExt}`;
 
-      // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: urlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
       const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
-      // Update profiles table
       const { error: updateError } = await supabase
         .from('profiles')
         .upsert({ id: user.id, avatar_url: avatarUrl, updated_at: new Date().toISOString() });
@@ -383,7 +441,6 @@ const Profile: React.FC = () => {
       });
     } finally {
       setAvatarUploading(false);
-      // Reset input
       if (avatarInputRef.current) {
         avatarInputRef.current.value = '';
       }
@@ -514,7 +571,7 @@ const Profile: React.FC = () => {
         return;
       }
       priceInCzk = amount;
-      totalCoins = amount; // No bonus for custom amount
+      totalCoins = amount;
     } else {
       toast({
         title: "Chyba",
@@ -591,7 +648,10 @@ const Profile: React.FC = () => {
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
-            <div className="animate-pulse text-muted-foreground">Načítám profil...</div>
+            <div className="relative">
+              <div className="w-12 h-12 rounded-full border-2 border-yellow-500/30 border-t-yellow-500 animate-spin" />
+              <Sparkles className="absolute inset-0 m-auto w-5 h-5 text-yellow-500 animate-pulse" />
+            </div>
           </div>
         </div>
         {isAdmin ? <AdminMenu /> : <BottomNavigation />}
@@ -601,153 +661,291 @@ const Profile: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background dark pb-20">
+      {/* Custom CSS for animations */}
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.4; }
+          50% { transform: translateY(-20px) rotate(180deg); opacity: 0.8; }
+        }
+        @keyframes pulse-ring {
+          0% { transform: scale(0.95); opacity: 0.5; }
+          50% { transform: scale(1.05); opacity: 0.8; }
+          100% { transform: scale(0.95); opacity: 0.5; }
+        }
+        @keyframes rotate-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes glow-pulse {
+          0%, 100% { opacity: 0.4; filter: blur(20px); }
+          50% { opacity: 0.7; filter: blur(25px); }
+        }
+        @keyframes coin-shine {
+          0% { background-position: -100% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .vip-button {
+          position: relative;
+          overflow: hidden;
+        }
+        .vip-button::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+          transition: left 0.5s ease;
+        }
+        .vip-button:hover::before {
+          left: 100%;
+        }
+        .premium-input:focus {
+          box-shadow: 0 0 0 2px hsl(43 90% 55% / 0.2), 0 0 20px -5px hsl(43 90% 55% / 0.3);
+        }
+      `}</style>
+
       <Header />
       
-      <div className="container mx-auto px-4 py-8">
-        {/* Page Header with Avatar - Premium VIP Style */}
+      <div className="container mx-auto px-4 py-8 relative">
+        {/* Background ambient glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-yellow-500/5 rounded-full blur-[100px] pointer-events-none" />
+        
+        {/* VIP Header Section */}
         <div 
-          className={`flex items-center gap-5 mb-10 transition-all duration-700 ease-out ${
-            pageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          className={`relative mb-12 transition-all duration-1000 ease-out ${
+            pageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
-          {/* Avatar with Animated Ring */}
-          <div className="relative group">
-            {/* Outer glow ring */}
-            <div className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-yellow-500/40 via-yellow-400/20 to-yellow-500/40 blur-sm animate-pulse" />
-            {/* Animated ring */}
+          {/* Premium background card for header */}
+          <div className="relative rounded-3xl overflow-hidden">
+            {/* Animated gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 via-transparent to-primary/5" />
             <div 
-              className="absolute -inset-1 rounded-full"
+              className="absolute inset-0 opacity-30"
               style={{
-                background: 'conic-gradient(from 0deg, hsl(43 90% 55% / 0.6), hsl(220 80% 45% / 0.3), hsl(43 90% 55% / 0.6))',
-                animation: 'spin 4s linear infinite'
+                background: 'radial-gradient(ellipse at 30% 50%, hsl(43 90% 55% / 0.1) 0%, transparent 50%)'
               }}
             />
-            <Avatar className="relative h-24 w-24 border-2 border-yellow-500/30 ring-2 ring-background">
-              <AvatarImage src={profile.avatar_url || undefined} alt="Avatar" />
-              <AvatarFallback className="bg-gradient-to-br from-muted to-muted/50 text-foreground text-2xl font-semibold">
-                {getInitials()}
-              </AvatarFallback>
-            </Avatar>
-            <button
-              onClick={() => avatarInputRef.current?.click()}
-              disabled={avatarUploading}
-              className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer backdrop-blur-sm"
-            >
-              {avatarUploading ? (
-                <Loader2 className="h-7 w-7 text-white animate-spin" />
-              ) : (
-                <Camera className="h-7 w-7 text-white" />
-              )}
-            </button>
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarUpload}
-              className="hidden"
-            />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-heading-gold mb-1">Můj profil</h1>
-            <p className="text-sm text-muted-foreground">Kliknutím na avatar změníte obrázek</p>
+            
+            <div className="relative p-8 flex flex-col md:flex-row items-center gap-8">
+              {/* Premium Avatar Container */}
+              <div className="relative group">
+                {/* Outer animated glow ring */}
+                <div 
+                  className="absolute -inset-4 rounded-full opacity-60"
+                  style={{
+                    background: 'conic-gradient(from 0deg, hsl(43 90% 55% / 0.4), hsl(220 80% 45% / 0.2), hsl(43 90% 55% / 0.4), hsl(220 80% 45% / 0.2), hsl(43 90% 55% / 0.4))',
+                    animation: 'rotate-slow 8s linear infinite'
+                  }}
+                />
+                {/* Glow backdrop */}
+                <div 
+                  className="absolute -inset-3 rounded-full bg-yellow-500/30 blur-xl"
+                  style={{ animation: 'glow-pulse 3s ease-in-out infinite' }}
+                />
+                {/* Inner ring */}
+                <div 
+                  className="absolute -inset-1 rounded-full"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(43 90% 65%), hsl(43 80% 45%), hsl(43 90% 55%))',
+                    padding: '2px'
+                  }}
+                >
+                  <div className="w-full h-full rounded-full bg-background" />
+                </div>
+                
+                <Avatar className="relative h-28 w-28 border-2 border-yellow-500/50 shadow-2xl">
+                  <AvatarImage src={profile.avatar_url || undefined} alt="Avatar" className="object-cover" />
+                  <AvatarFallback className="bg-gradient-to-br from-yellow-500/20 via-card to-primary/20 text-3xl font-bold text-yellow-500">
+                    {getInitials()}
+                  </AvatarFallback>
+                </Avatar>
+                
+                {/* VIP Crown Badge */}
+                <div className="absolute -top-2 -right-2 p-2 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-lg shadow-yellow-500/30">
+                  <Crown className="w-4 h-4 text-black" />
+                </div>
+                
+                {/* Upload overlay */}
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarUploading}
+                  className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer backdrop-blur-sm"
+                >
+                  {avatarUploading ? (
+                    <Loader2 className="h-8 w-8 text-yellow-500 animate-spin" />
+                  ) : (
+                    <Camera className="h-8 w-8 text-yellow-500" />
+                  )}
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+              </div>
+              
+              {/* VIP Info */}
+              <div className="text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                  <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
+                    Můj profil
+                  </h1>
+                  <div className="hidden md:flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 border border-yellow-500/30">
+                    <Sparkles className="w-4 h-4 text-yellow-500" />
+                    <span className="text-sm font-semibold text-yellow-500">VIP</span>
+                  </div>
+                </div>
+                <p className="text-muted-foreground text-lg">Kliknutím na avatar změníte obrázek</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-2xl mx-auto space-y-6 relative">
           
-          {/* Wallet Section - Premium VIP Card with Gold Glow */}
-          <div 
-            className={`relative overflow-hidden rounded-2xl transition-all duration-700 ease-out delay-100 ${
-              pageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* WALLET SECTION - The Crown Jewel */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          <VIPCard 
+            delay={150} 
+            variant="gold" 
+            glowIntensity="high" 
+            isLoaded={pageLoaded}
+            className="relative"
           >
-            {/* Background glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 via-transparent to-yellow-600/5" />
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-yellow-500/10 rounded-full blur-3xl" />
-            <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-yellow-600/8 rounded-full blur-2xl" />
+            {/* Floating particles */}
+            <FloatingParticles />
             
-            {/* Card content */}
-            <div className="relative rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-card/95 via-card/90 to-card/95 backdrop-blur-xl p-6 shadow-[0_0_40px_-12px_hsl(43_90%_55%/0.3)]">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 border border-yellow-500/20">
-                    <Coins className="h-5 w-5 text-yellow-500" />
+            {/* Premium corner accents */}
+            <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-yellow-500/20 to-transparent rounded-br-full" />
+            <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-yellow-500/10 to-transparent rounded-tl-full" />
+            
+            {/* Background glow orbs */}
+            <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl" />
+            <div className="absolute top-1/4 right-1/4 w-24 h-24 bg-yellow-600/8 rounded-full blur-2xl" />
+            
+            <div className="relative p-8">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-yellow-500/40 rounded-2xl blur-lg" />
+                    <div className="relative p-3.5 rounded-2xl bg-gradient-to-br from-yellow-500/30 via-yellow-500/20 to-yellow-600/30 border border-yellow-500/40 shadow-inner">
+                      <Wallet className="h-6 w-6 text-yellow-500" />
+                    </div>
                   </div>
-                  <h2 className="text-xl font-bold text-foreground">Peněženka</h2>
+                  <div>
+                    <h2 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
+                      Peněženka
+                    </h2>
+                    <p className="text-sm text-muted-foreground">Váš MioCoin účet</p>
+                  </div>
                 </div>
                 <Button 
                   variant="ghost" 
                   size="sm" 
                   onClick={handleRefreshBalance} 
                   disabled={refreshing}
-                  className="text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all duration-200 hover:scale-105"
+                  className="text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10 transition-all duration-300 hover:scale-105"
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                   {refreshing ? 'Aktualizuji...' : 'Aktualizovat'}
                 </Button>
               </div>
               
-              {/* Balance Display - Premium Style with Animated Count */}
-              <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-6 mb-8 py-6 px-4 rounded-xl bg-gradient-to-r from-yellow-500/5 via-transparent to-yellow-500/5 border border-yellow-500/10">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-yellow-500/30 rounded-full blur-lg animate-pulse" />
-                    <div className="relative p-3 rounded-full bg-gradient-to-br from-yellow-500/30 to-yellow-600/20 border border-yellow-500/30">
-                      <Coins className="h-8 w-8 text-yellow-500" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground font-medium">MioCoiny</p>
-                    <p className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent tabular-nums">
-                      {animatedBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 md:pl-6 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-border/30">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-green-500/20 border border-green-500/30">
-                      <Coins className="h-5 w-5 text-green-500" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-sm text-muted-foreground font-medium">Bonusové</p>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-xs">
-                              <p className="text-sm">Bonusové MioCoiny získáváte jako odměnu při hraní soutěží. Můžete je převést do hlavní peněženky a použít na nákup losů.</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+              {/* Main Balance Display - Premium Design */}
+              <div className="relative mb-8">
+                <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 via-yellow-400/5 to-yellow-500/10 rounded-2xl blur-sm" />
+                <div className="relative rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-yellow-500/5 via-transparent to-yellow-600/5 p-8 overflow-hidden">
+                  {/* Animated shine effect */}
+                  <div 
+                    className="absolute inset-0 opacity-50"
+                    style={{
+                      background: 'linear-gradient(105deg, transparent 40%, hsl(43 90% 55% / 0.08) 45%, hsl(43 90% 55% / 0.12) 50%, hsl(43 90% 55% / 0.08) 55%, transparent 60%)',
+                      backgroundSize: '200% 100%',
+                      animation: 'coin-shine 4s ease-in-out infinite'
+                    }}
+                  />
+                  
+                  <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+                    {/* Main Balance */}
+                    <div className="flex items-center gap-5">
+                      <div className="relative">
+                        {/* Coin glow */}
+                        <div className="absolute inset-0 bg-yellow-500/50 rounded-full blur-xl scale-150" style={{ animation: 'glow-pulse 2s ease-in-out infinite' }} />
+                        <div className="relative p-4 rounded-full bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 shadow-xl shadow-yellow-500/30">
+                          <Coins className="h-10 w-10 text-black" />
+                        </div>
                       </div>
-                      <p className="text-2xl font-bold text-green-500 tabular-nums">
-                        {animatedBonusBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
-                      </p>
+                      <div>
+                        <p className="text-sm font-medium text-yellow-500/80 uppercase tracking-wider mb-1">MioCoiny</p>
+                        <p className="text-5xl lg:text-6xl font-black bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 bg-clip-text text-transparent tabular-nums tracking-tight">
+                          {animatedBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Bonus Balance */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 lg:border-l lg:border-yellow-500/20 lg:pl-8">
+                      <div className="flex items-center gap-4">
+                        <div className="relative">
+                          <div className="absolute inset-0 bg-green-500/30 rounded-full blur-lg" />
+                          <div className="relative p-3 rounded-full bg-gradient-to-br from-green-500/30 to-green-600/20 border border-green-500/40">
+                            <Coins className="h-6 w-6 text-green-500" />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <p className="text-sm font-medium text-green-500/80 uppercase tracking-wider">Bonusové</p>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-green-500 cursor-help transition-colors" />
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50">
+                                  <p className="text-sm">Bonusové MioCoiny získáváte jako odměnu při hraní soutěží. Můžete je převést do hlavní peněženky a použít na nákup losů.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <p className="text-3xl font-bold text-green-500 tabular-nums">
+                            {animatedBonusBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleTransferBonus}
+                        disabled={transferring || (wallet?.bonus_balance_coins ?? 0) === 0}
+                        className="border-green-500/30 text-green-500 hover:border-green-500/50 hover:bg-green-500/10 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-green-500/10"
+                      >
+                        {transferring ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Sparkles className="h-4 w-4 mr-2" />
+                        )}
+                        Převést bonusové MioCoiny
+                      </Button>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleTransferBonus}
-                    disabled={transferring || (wallet?.bonus_balance_coins ?? 0) === 0}
-                    className="w-full sm:w-auto sm:ml-2 border-green-500/30 hover:border-green-500/50 hover:bg-green-500/10 transition-all duration-200 hover:scale-[1.02]"
-                  >
-                    {transferring ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                    ) : null}
-                    Převést bonusové MioCoiny
-                  </Button>
                 </div>
               </div>
               
-              {/* Action Buttons with Premium Hover Effects */}
-              <div className="flex flex-col sm:flex-row gap-3">
+              {/* Action Buttons - Premium Style */}
+              <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
                   onClick={() => setShowTopUpModal(true)} 
-                  className="flex-1 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-semibold shadow-lg shadow-yellow-500/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-yellow-500/30" 
+                  className="vip-button flex-1 bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-500 hover:from-yellow-400 hover:via-yellow-500 hover:to-yellow-400 text-black font-bold text-lg shadow-xl shadow-yellow-500/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-yellow-500/40 border-0" 
                   size="lg"
                 >
                   <Coins className="h-5 w-5 mr-2" />
@@ -757,7 +955,7 @@ const Profile: React.FC = () => {
                 <Button 
                   onClick={() => navigate('/my-contests')} 
                   variant="outline" 
-                  className="flex-1 border-primary/30 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 hover:scale-[1.02]" 
+                  className="vip-button flex-1 border-primary/40 hover:border-primary/60 hover:bg-primary/10 text-lg font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/10" 
                   size="lg"
                 >
                   <GamepadIcon className="h-5 w-5 mr-2" />
@@ -766,15 +964,15 @@ const Profile: React.FC = () => {
               </div>
 
               {/* Bonus Transfer History */}
-              <div className="mt-6 pt-6 border-t border-border/20">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-muted-foreground">Historie převodů bonusových MioCoinů</h3>
+              <div className="mt-8 pt-6 border-t border-yellow-500/10">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Historie převodů</h3>
                   {bonusTransfers.length > 3 && (
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setHistoryExpanded(!historyExpanded)}
-                      className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-all duration-200"
+                      className="text-xs text-muted-foreground hover:text-yellow-500 flex items-center gap-1 transition-all duration-300"
                     >
                       {historyExpanded ? 'Skrýt historii' : 'Zobrazit celou historii'}
                       <ChevronDown 
@@ -784,27 +982,32 @@ const Profile: React.FC = () => {
                   )}
                 </div>
                 {bonusTransfersLoading ? (
-                  <div className="text-sm text-muted-foreground">Načítám...</div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Načítám...
+                  </div>
                 ) : bonusTransfers.length === 0 ? (
                   <p className="text-sm text-muted-foreground italic">Zatím žádné převody bonusových MioCoinů</p>
                 ) : (
                   <div 
-                    className={`space-y-2 transition-all duration-300 ease-out ${
+                    className={`space-y-2 transition-all duration-500 ease-out ${
                       historyExpanded ? 'max-h-64 overflow-y-auto' : 'max-h-none overflow-hidden'
                     }`}
                   >
                     {(historyExpanded ? bonusTransfers : bonusTransfers.slice(0, 3)).map((transfer, index) => (
                       <div 
                         key={transfer.id} 
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2.5 px-3 rounded-lg bg-muted/20 border border-border/20 hover:bg-muted/30 transition-colors"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-green-500/5 via-transparent to-green-500/5 border border-green-500/10 hover:border-green-500/20 transition-all duration-300"
                         style={{ animationDelay: `${index * 50}ms` }}
                       >
-                        <div className="flex items-center gap-2">
-                          <Coins className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        <div className="flex items-center gap-3">
+                          <div className="p-1.5 rounded-lg bg-green-500/15">
+                            <Coins className="h-4 w-4 text-green-500" />
+                          </div>
                           <span className="text-sm text-foreground">Převod bonusových MioCoinů</span>
                         </div>
-                        <div className="flex items-center gap-3 pl-6 sm:pl-0">
-                          <span className="text-sm font-medium text-green-500">+{transfer.amount} MioCoinů</span>
+                        <div className="flex items-center gap-4 pl-8 sm:pl-0">
+                          <span className="text-sm font-bold text-green-500">+{transfer.amount} MioCoinů</span>
                           <span className="text-xs text-muted-foreground">
                             {new Date(transfer.created_at).toLocaleString('cs-CZ', {
                               day: '2-digit',
@@ -821,428 +1024,433 @@ const Profile: React.FC = () => {
                 )}
               </div>
             </div>
-          </div>
+          </VIPCard>
 
-          {/* Account Info Section */}
-          <div 
-            className={`rounded-2xl border border-border/30 bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-sm p-6 shadow-lg transition-all duration-700 ease-out delay-200 ${
-              pageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
-          >
-            <div className="flex items-center gap-3 mb-5">
-              <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-                <User className="h-4 w-4 text-primary" />
-              </div>
-              <h2 className="text-lg font-semibold text-foreground">Účet</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1 p-3 rounded-lg bg-muted/10 border border-border/20">
-                <label className="text-sm text-muted-foreground font-medium">E-mail</label>
-                <p className="text-foreground">{wallet?.email || user?.email}</p>
-              </div>
-              {wallet?.name && (
-                <div className="space-y-1 p-3 rounded-lg bg-muted/10 border border-border/20">
-                  <label className="text-sm text-muted-foreground font-medium">Jméno</label>
-                  <p className="text-foreground">{wallet.name}</p>
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* ACCOUNT SECTION */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          <VIPCard delay={250} isLoaded={pageLoaded}>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
+                  <Shield className="h-5 w-5 text-primary" />
                 </div>
-              )}
+                <div>
+                  <h2 className="text-xl font-bold text-foreground">Účet</h2>
+                  <p className="text-sm text-muted-foreground">Přihlašovací údaje</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="group p-4 rounded-xl bg-gradient-to-br from-muted/20 to-transparent border border-border/30 hover:border-primary/30 transition-all duration-300">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">E-mail</label>
+                  <p className="text-foreground mt-1 font-medium">{wallet?.email || user?.email}</p>
+                </div>
+                {wallet?.name && (
+                  <div className="group p-4 rounded-xl bg-gradient-to-br from-muted/20 to-transparent border border-border/30 hover:border-primary/30 transition-all duration-300">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Jméno</label>
+                    <p className="text-foreground mt-1 font-medium">{wallet.name}</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </VIPCard>
 
-          {/* Personal Details Section */}
-          <div 
-            className={`rounded-2xl border border-border/30 bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-sm p-6 shadow-lg transition-all duration-700 ease-out delay-300 ${
-              pageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-                  <User className="h-4 w-4 text-primary" />
-                </div>
-                <h2 className="text-lg font-semibold text-foreground">Osobní údaje</h2>
-              </div>
-              {!editMode && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setEditMode(true)}
-                  className="border-primary/30 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 hover:scale-[1.02]"
-                >
-                  Upravit profil
-                </Button>
-              )}
-            </div>
-            
-            {editMode ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-                  <div className="space-y-2">
-                    <Label htmlFor="nickname">Přezdívka</Label>
-                    <Input 
-                      id="nickname" 
-                      type="text" 
-                      value={profile.nickname} 
-                      onChange={e => setProfile(prev => ({
-                        ...prev,
-                        nickname: e.target.value
-                      }))} 
-                      placeholder="Zadejte přezdívku"
-                      className="bg-muted/20 border-border/40 focus:border-primary/50 transition-colors"
-                    />
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* PERSONAL DETAILS SECTION */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          <VIPCard delay={350} isLoaded={pageLoaded}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
+                    <User className="h-5 w-5 text-primary" />
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Telefon</Label>
-                    <Input 
-                      id="phone" 
-                      type="text" 
-                      value={profile.phone} 
-                      onChange={e => setProfile(prev => ({
-                        ...prev,
-                        phone: e.target.value
-                      }))} 
-                      placeholder="Zadejte telefon"
-                      className="bg-muted/20 border-border/40 focus:border-primary/50 transition-colors"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="first_name">Křestní jméno</Label>
-                    <Input 
-                      id="first_name" 
-                      type="text" 
-                      value={profile.first_name} 
-                      onChange={e => setProfile(prev => ({
-                        ...prev,
-                        first_name: e.target.value
-                      }))} 
-                      placeholder="Zadejte křestní jméno"
-                      className="bg-muted/20 border-border/40 focus:border-primary/50 transition-colors"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="last_name">Příjmení</Label>
-                    <Input 
-                      id="last_name" 
-                      type="text" 
-                      value={profile.last_name} 
-                      onChange={e => setProfile(prev => ({
-                        ...prev,
-                        last_name: e.target.value
-                      }))} 
-                      placeholder="Zadejte příjmení"
-                      className="bg-muted/20 border-border/40 focus:border-primary/50 transition-colors"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="address">Doručovací adresa výhry</Label>
-                    <Textarea 
-                      id="address" 
-                      value={profile.address} 
-                      onChange={e => setProfile(prev => ({
-                        ...prev,
-                        address: e.target.value
-                      }))} 
-                      placeholder="Zadejte doručovací adresu pro výhry" 
-                      rows={3}
-                      className="bg-muted/20 border-border/40 focus:border-primary/50 transition-colors"
-                    />
+                  <div>
+                    <h2 className="text-xl font-bold text-foreground">Osobní údaje</h2>
+                    <p className="text-sm text-muted-foreground">Profil a kontakt</p>
                   </div>
                 </div>
-                
-                <div className="flex gap-3">
-                  <Button 
-                    onClick={handleProfileSave} 
-                    disabled={profileSaving}
-                    className="transition-all duration-200 hover:scale-[1.02]"
-                  >
-                    {profileSaving ? 'Ukládám...' : 'Uložit profil'}
-                  </Button>
+                {!editMode && (
                   <Button 
                     variant="outline" 
-                    onClick={() => setEditMode(false)}
-                    disabled={profileSaving}
-                    className="transition-all duration-200 hover:scale-[1.02]"
+                    size="sm" 
+                    onClick={() => setEditMode(true)}
+                    className="border-primary/30 hover:border-primary/50 hover:bg-primary/10 transition-all duration-300 hover:scale-[1.02]"
                   >
-                    Zrušit
+                    Upravit profil
                   </Button>
-                </div>
-              </>
-            ) : (
-              <div className="space-y-4">
-                {(profile.nickname || profile.phone || profile.first_name || profile.last_name || profile.address) ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {profile.nickname && (
-                      <div className="space-y-1 p-3 rounded-lg bg-muted/10 border border-border/20">
-                        <label className="text-sm text-muted-foreground font-medium">Přezdívka</label>
-                        <p className="text-foreground">{profile.nickname}</p>
-                      </div>
-                    )}
+                )}
+              </div>
+              
+              {editMode ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="nickname" className="text-xs font-semibold uppercase tracking-wider">Přezdívka</Label>
+                      <Input 
+                        id="nickname" 
+                        type="text" 
+                        value={profile.nickname} 
+                        onChange={e => setProfile(prev => ({
+                          ...prev,
+                          nickname: e.target.value
+                        }))} 
+                        placeholder="Zadejte přezdívku"
+                        className="premium-input bg-muted/20 border-border/40 focus:border-yellow-500/50 transition-all duration-300"
+                      />
+                    </div>
                     
-                    {profile.phone && (
-                      <div className="space-y-1 p-3 rounded-lg bg-muted/10 border border-border/20">
-                        <label className="text-sm text-muted-foreground font-medium">Telefon</label>
-                        <p className="text-foreground">{profile.phone}</p>
-                      </div>
-                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-xs font-semibold uppercase tracking-wider">Telefon</Label>
+                      <Input 
+                        id="phone" 
+                        type="text" 
+                        value={profile.phone} 
+                        onChange={e => setProfile(prev => ({
+                          ...prev,
+                          phone: e.target.value
+                        }))} 
+                        placeholder="Zadejte telefon"
+                        className="premium-input bg-muted/20 border-border/40 focus:border-yellow-500/50 transition-all duration-300"
+                      />
+                    </div>
                     
-                    {(profile.first_name || profile.last_name) && (
-                      <div className="space-y-1 p-3 rounded-lg bg-muted/10 border border-border/20">
-                        <label className="text-sm text-muted-foreground font-medium">Jméno</label>
-                        <p className="text-foreground">
-                          {[profile.first_name, profile.last_name].filter(Boolean).join(' ')}
+                    <div className="space-y-2">
+                      <Label htmlFor="first_name" className="text-xs font-semibold uppercase tracking-wider">Křestní jméno</Label>
+                      <Input 
+                        id="first_name" 
+                        type="text" 
+                        value={profile.first_name} 
+                        onChange={e => setProfile(prev => ({
+                          ...prev,
+                          first_name: e.target.value
+                        }))} 
+                        placeholder="Zadejte křestní jméno"
+                        className="premium-input bg-muted/20 border-border/40 focus:border-yellow-500/50 transition-all duration-300"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="last_name" className="text-xs font-semibold uppercase tracking-wider">Příjmení</Label>
+                      <Input 
+                        id="last_name" 
+                        type="text" 
+                        value={profile.last_name} 
+                        onChange={e => setProfile(prev => ({
+                          ...prev,
+                          last_name: e.target.value
+                        }))} 
+                        placeholder="Zadejte příjmení"
+                        className="premium-input bg-muted/20 border-border/40 focus:border-yellow-500/50 transition-all duration-300"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="address" className="text-xs font-semibold uppercase tracking-wider">Doručovací adresa výhry</Label>
+                      <Textarea 
+                        id="address" 
+                        value={profile.address} 
+                        onChange={e => setProfile(prev => ({
+                          ...prev,
+                          address: e.target.value
+                        }))} 
+                        placeholder="Zadejte doručovací adresu pro výhry" 
+                        rows={3}
+                        className="premium-input bg-muted/20 border-border/40 focus:border-yellow-500/50 transition-all duration-300"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={handleProfileSave} 
+                      disabled={profileSaving}
+                      className="vip-button bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-semibold transition-all duration-300 hover:scale-[1.02]"
+                    >
+                      {profileSaving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Ukládám...
+                        </>
+                      ) : 'Uložit profil'}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setEditMode(false)}
+                      disabled={profileSaving}
+                      className="transition-all duration-300 hover:scale-[1.02]"
+                    >
+                      Zrušit
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-4">
+                  {(profile.nickname || profile.phone || profile.first_name || profile.last_name || profile.address) ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {profile.nickname && (
+                        <div className="group p-4 rounded-xl bg-gradient-to-br from-muted/20 to-transparent border border-border/30 hover:border-primary/30 transition-all duration-300">
+                          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Přezdívka</label>
+                          <p className="text-foreground mt-1 font-medium">{profile.nickname}</p>
+                        </div>
+                      )}
+                      
+                      {profile.phone && (
+                        <div className="group p-4 rounded-xl bg-gradient-to-br from-muted/20 to-transparent border border-border/30 hover:border-primary/30 transition-all duration-300">
+                          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Telefon</label>
+                          <p className="text-foreground mt-1 font-medium">{profile.phone}</p>
+                        </div>
+                      )}
+                      
+                      {(profile.first_name || profile.last_name) && (
+                        <div className="group p-4 rounded-xl bg-gradient-to-br from-muted/20 to-transparent border border-border/30 hover:border-primary/30 transition-all duration-300">
+                          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Jméno</label>
+                          <p className="text-foreground mt-1 font-medium">
+                            {[profile.first_name, profile.last_name].filter(Boolean).join(' ')}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {profile.address && (
+                        <div className="group p-4 rounded-xl bg-gradient-to-br from-muted/20 to-transparent border border-border/30 hover:border-primary/30 transition-all duration-300 md:col-span-2">
+                          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Doručovací adresa</label>
+                          <p className="text-foreground mt-1 font-medium whitespace-pre-wrap">{profile.address}</p>
+                        </div>
+                      )}
+                      
+                      <div className="group p-4 rounded-xl bg-gradient-to-br from-muted/20 to-transparent border border-border/30 hover:border-primary/30 transition-all duration-300">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Datum narození</label>
+                        <p className="text-foreground mt-1 font-medium">
+                          {profile.date_of_birth 
+                            ? format(new Date(profile.date_of_birth), 'dd.MM.yyyy', { locale: cs })
+                            : 'Neuvedeno'}
                         </p>
                       </div>
-                    )}
-                    
-                    {profile.address && (
-                      <div className="space-y-1 md:col-span-2 p-3 rounded-lg bg-muted/10 border border-border/20">
-                        <label className="text-sm text-muted-foreground font-medium">Doručovací adresa</label>
-                        <p className="text-foreground whitespace-pre-wrap">{profile.address}</p>
-                      </div>
-                    )}
-                    
-                    <div className="space-y-1 p-3 rounded-lg bg-muted/10 border border-border/20">
-                      <label className="text-sm text-muted-foreground font-medium">Datum narození</label>
-                      <p className="text-foreground">
-                        {profile.date_of_birth 
-                          ? format(new Date(profile.date_of_birth), 'dd.MM.yyyy', { locale: cs })
-                          : 'Neuvedeno'}
-                      </p>
                     </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 px-4 rounded-xl bg-muted/10 border border-dashed border-border/30">
-                    <p className="text-muted-foreground">Zatím nemáte vyplněny osobní údaje.</p>
-                    <p className="text-sm mt-1 text-muted-foreground/70">Klikněte na "Upravit profil" pro jejich zadání.</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Notifications Section */}
-          <div 
-            className={`rounded-2xl border border-border/30 bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-sm p-6 shadow-lg transition-all duration-700 ease-out delay-[400ms] ${
-              pageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
-          >
-            <div className="flex items-center gap-3 mb-5">
-              <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-                <Bell className="h-4 w-4 text-primary" />
-              </div>
-              <h2 className="text-lg font-semibold text-foreground">Notifikace</h2>
+                  ) : (
+                    <div className="text-center py-10 px-4 rounded-2xl bg-gradient-to-br from-muted/10 to-transparent border border-dashed border-border/40">
+                      <User className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                      <p className="text-muted-foreground font-medium">Zatím nemáte vyplněny osobní údaje.</p>
+                      <p className="text-sm mt-1 text-muted-foreground/70">Klikněte na "Upravit profil" pro jejich zadání.</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            
-            {/* Message sound toggle */}
-            <div className="flex items-center justify-between mb-3 p-4 rounded-xl bg-muted/10 border border-border/20 hover:bg-muted/15 transition-colors">
-              <div className="flex items-center gap-3">
-                {messageSoundEnabled ? (
-                  <div className="p-2 rounded-lg bg-primary/15 border border-primary/25">
-                    <Volume2 className="h-5 w-5 text-primary" />
-                  </div>
-                ) : (
-                  <div className="p-2 rounded-lg bg-muted/30 border border-border/30">
-                    <VolumeX className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                )}
+          </VIPCard>
+
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* NOTIFICATIONS SECTION */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          <VIPCard delay={450} isLoaded={pageLoaded}>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
+                  <Bell className="h-5 w-5 text-primary" />
+                </div>
                 <div>
-                  <p className="font-medium text-foreground">Zvuk pro zprávy</p>
-                  <p className="text-sm text-muted-foreground">
-                    Přehrávat zvuk při nových zprávách
-                  </p>
+                  <h2 className="text-xl font-bold text-foreground">Notifikace</h2>
+                  <p className="text-sm text-muted-foreground">Zvuky a upozornění</p>
                 </div>
               </div>
-              <Switch
-                checked={messageSoundEnabled}
-                onCheckedChange={toggleMessageSound}
-              />
-            </div>
-
-            {/* Win sound toggle */}
-            <div className="flex items-center justify-between mb-5 p-4 rounded-xl bg-muted/10 border border-border/20 hover:bg-muted/15 transition-colors">
-              <div className="flex items-center gap-3">
-                {winSoundEnabled ? (
-                  <div className="p-2 rounded-lg bg-yellow-500/15 border border-yellow-500/25">
-                    <Volume2 className="h-5 w-5 text-yellow-500" />
-                  </div>
-                ) : (
-                  <div className="p-2 rounded-lg bg-muted/30 border border-border/30">
-                    <VolumeX className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                )}
-                <div>
-                  <p className="font-medium text-foreground">Zvuk pro výhry</p>
-                  <p className="text-sm text-muted-foreground">
-                    Přehrávat zvuk při nových výhrách
-                  </p>
-                </div>
-              </div>
-              <Switch
-                checked={winSoundEnabled}
-                onCheckedChange={toggleWinSound}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Otestujte si funkčnost push notifikací na vašem zařízení.
-              </p>
-              <Button 
-                onClick={handleTestNotification} 
-                variant="outline" 
-                disabled={testingNotification}
-                className="w-full sm:w-auto border-primary/30 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 hover:scale-[1.02]"
-              >
-                <Bell className={`h-4 w-4 mr-2 ${testingNotification ? 'animate-pulse' : ''}`} />
-                {testingNotification ? 'Odesílám...' : 'Otestovat notifikaci'}
-              </Button>
-            </div>
-          </div>
-
-          {/* Marketing Section */}
-          <div 
-            className={`rounded-2xl border border-border/30 bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-sm p-6 shadow-lg transition-all duration-700 ease-out delay-500 ${
-              pageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
-          >
-            <div className="flex items-center gap-3 mb-5">
-              <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-                <Mail className="h-4 w-4 text-primary" />
-              </div>
-              <h2 className="text-lg font-semibold text-foreground">Marketingová sdělení</h2>
-            </div>
-            <div className="space-y-4">
-              {/* Status Display */}
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/10 border border-border/20">
-                {marketingStatus === 'active' ? (
-                  <>
-                    <div className="p-2 rounded-lg bg-green-500/15 border border-green-500/25">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                    </div>
-                    <span className="font-medium text-foreground">Marketing: Aktivní</span>
-                  </>
-                ) : marketingStatus === 'revoked' ? (
-                  <>
-                    <div className="p-2 rounded-lg bg-destructive/15 border border-destructive/25">
-                      <XCircle className="h-5 w-5 text-destructive" />
-                    </div>
-                    <span className="font-medium text-foreground">Marketing: Odhlášeno</span>
-                  </>
-                ) : marketingStatus === 'none' ? (
-                  <>
-                    <div className="p-2 rounded-lg bg-muted/30 border border-border/30">
-                      <XCircle className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <span className="font-medium text-muted-foreground">Marketing: Nepřihlášeno</span>
-                  </>
-                ) : (
-                  <span className="text-muted-foreground">Načítám...</span>
-                )}
-              </div>
-
-              <p className="text-sm text-muted-foreground">
-                V rámci vašeho účtu můžete dostávat informace o nových soutěžích, 
-                speciálních akcích a dalších novinkách prostřednictvím e-mailu.
-              </p>
               
-              {marketingStatus === 'active' && (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    Pokud si již nepřejete dostávat marketingová sdělení, můžete se odhlásit.
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    className="w-full sm:w-auto border-destructive/30 hover:border-destructive/50 hover:bg-destructive/5 transition-all duration-200 hover:scale-[1.02]"
-                    onClick={() => {
-                      setPendingMarketingAction('unsubscribe');
-                      setMarketingDialogOpen(true);
-                    }}
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    Odhlásit marketing
-                  </Button>
-                </>
-              )}
+              {/* Message sound toggle */}
+              <div className="flex items-center justify-between mb-4 p-4 rounded-xl bg-gradient-to-r from-muted/20 via-transparent to-muted/10 border border-border/30 hover:border-primary/30 transition-all duration-300">
+                <div className="flex items-center gap-4">
+                  <div className={`p-2.5 rounded-xl transition-all duration-300 ${messageSoundEnabled ? 'bg-primary/20 border border-primary/30' : 'bg-muted/30 border border-border/30'}`}>
+                    {messageSoundEnabled ? (
+                      <Volume2 className="h-5 w-5 text-primary" />
+                    ) : (
+                      <VolumeX className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">Zvuk pro zprávy</p>
+                    <p className="text-sm text-muted-foreground">Přehrávat zvuk při nových zprávách</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={messageSoundEnabled}
+                  onCheckedChange={toggleMessageSound}
+                />
+              </div>
 
-              {(marketingStatus === 'revoked' || marketingStatus === 'none') && (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    Chcete-li dostávat marketingová sdělení, můžete se přihlásit.
-                  </p>
-                  <Button 
-                    variant="default" 
-                    className="w-full sm:w-auto transition-all duration-200 hover:scale-[1.02]"
-                    onClick={() => {
-                      setPendingMarketingAction('subscribe');
-                      setMarketingDialogOpen(true);
-                    }}
-                    disabled={marketingSubscribing}
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    {marketingSubscribing ? 'Přihlašuji...' : 'Přihlásit marketing'}
-                  </Button>
-                </>
-              )}
+              {/* Win sound toggle */}
+              <div className="flex items-center justify-between mb-6 p-4 rounded-xl bg-gradient-to-r from-yellow-500/5 via-transparent to-yellow-500/5 border border-yellow-500/20 hover:border-yellow-500/40 transition-all duration-300">
+                <div className="flex items-center gap-4">
+                  <div className={`p-2.5 rounded-xl transition-all duration-300 ${winSoundEnabled ? 'bg-yellow-500/20 border border-yellow-500/30' : 'bg-muted/30 border border-border/30'}`}>
+                    {winSoundEnabled ? (
+                      <Volume2 className="h-5 w-5 text-yellow-500" />
+                    ) : (
+                      <VolumeX className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">Zvuk pro výhry</p>
+                    <p className="text-sm text-muted-foreground">Přehrávat zvuk při nových výhrách</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={winSoundEnabled}
+                  onCheckedChange={toggleWinSound}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">Otestujte si funkčnost push notifikací na vašem zařízení.</p>
+                <Button 
+                  onClick={handleTestNotification} 
+                  variant="outline" 
+                  disabled={testingNotification}
+                  className="w-full sm:w-auto border-primary/30 hover:border-primary/50 hover:bg-primary/10 transition-all duration-300 hover:scale-[1.02]"
+                >
+                  <Bell className={`h-4 w-4 mr-2 ${testingNotification ? 'animate-pulse' : ''}`} />
+                  {testingNotification ? 'Odesílám...' : 'Otestovat notifikaci'}
+                </Button>
+              </div>
             </div>
-          </div>
+          </VIPCard>
+
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* MARKETING SECTION */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          <VIPCard delay={550} isLoaded={pageLoaded}>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
+                  <Mail className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-foreground">Marketingová sdělení</h2>
+                  <p className="text-sm text-muted-foreground">E-mailové novinky</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {/* Status Display */}
+                <div className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-300 ${
+                  marketingStatus === 'active' 
+                    ? 'bg-gradient-to-r from-green-500/10 via-transparent to-green-500/5 border border-green-500/25' 
+                    : 'bg-gradient-to-r from-muted/20 via-transparent to-muted/10 border border-border/30'
+                }`}>
+                  {marketingStatus === 'active' ? (
+                    <>
+                      <div className="p-2.5 rounded-xl bg-green-500/20 border border-green-500/30">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                      </div>
+                      <span className="font-semibold text-foreground">Marketing: Aktivní</span>
+                    </>
+                  ) : marketingStatus === 'revoked' ? (
+                    <>
+                      <div className="p-2.5 rounded-xl bg-destructive/20 border border-destructive/30">
+                        <XCircle className="h-5 w-5 text-destructive" />
+                      </div>
+                      <span className="font-semibold text-foreground">Marketing: Odhlášeno</span>
+                    </>
+                  ) : marketingStatus === 'none' ? (
+                    <>
+                      <div className="p-2.5 rounded-xl bg-muted/30 border border-border/30">
+                        <XCircle className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <span className="font-semibold text-muted-foreground">Marketing: Nepřihlášeno</span>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">Načítám...</span>
+                  )}
+                </div>
+
+                <p className="text-sm text-muted-foreground">
+                  V rámci vašeho účtu můžete dostávat informace o nových soutěžích, speciálních akcích a dalších novinkách prostřednictvím e-mailu.
+                </p>
+                
+                {marketingStatus === 'active' && (
+                  <>
+                    <p className="text-sm text-muted-foreground">Pokud si již nepřejete dostávat marketingová sdělení, můžete se odhlásit.</p>
+                    <Button 
+                      variant="outline" 
+                      className="w-full sm:w-auto border-destructive/30 hover:border-destructive/50 hover:bg-destructive/10 transition-all duration-300 hover:scale-[1.02]"
+                      onClick={() => {
+                        setPendingMarketingAction('unsubscribe');
+                        setMarketingDialogOpen(true);
+                      }}
+                    >
+                      <Mail className="h-4 w-4 mr-2" />
+                      Odhlásit marketing
+                    </Button>
+                  </>
+                )}
+
+                {(marketingStatus === 'revoked' || marketingStatus === 'none') && (
+                  <>
+                    <p className="text-sm text-muted-foreground">Chcete-li dostávat marketingová sdělení, můžete se přihlásit.</p>
+                    <Button 
+                      className="vip-button w-full sm:w-auto bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary transition-all duration-300 hover:scale-[1.02]"
+                      onClick={() => {
+                        setPendingMarketingAction('subscribe');
+                        setMarketingDialogOpen(true);
+                      }}
+                      disabled={marketingSubscribing}
+                    >
+                      <Mail className="h-4 w-4 mr-2" />
+                      {marketingSubscribing ? 'Přihlašuji...' : 'Přihlásit marketing'}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </VIPCard>
         </div>
       </div>
 
-      {/* MioCoin Top-up Modal */}
+      {/* Premium Top-up Modal */}
       <Dialog open={showTopUpModal} onOpenChange={setShowTopUpModal}>
-        <DialogContent className="max-w-md border-border/40 bg-card/95 backdrop-blur-xl">
+        <DialogContent className="max-w-md border-yellow-500/20 bg-gradient-to-br from-card via-card to-yellow-500/5 backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Dobít MioCoiny</DialogTitle>
-            <DialogDescription>
-              Vyberte balíček nebo zadejte vlastní částku.
-            </DialogDescription>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-yellow-500/20">
+                <Coins className="h-5 w-5 text-yellow-500" />
+              </div>
+              Dobít MioCoiny
+            </DialogTitle>
+            <DialogDescription>Vyberte balíček nebo zadejte vlastní částku.</DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
-            {/* Package Selection */}
             <div className="grid grid-cols-1 gap-3">
               {COIN_PACKAGES.map((pkg) => (
                 <button
                   key={pkg.id}
                   onClick={() => handlePackageSelect(pkg)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:scale-[1.01] ${
+                  className={`p-5 rounded-xl border-2 text-left transition-all duration-300 hover:scale-[1.01] ${
                     selectedPackage?.id === pkg.id
-                      ? 'border-yellow-500/60 bg-yellow-500/10 shadow-lg shadow-yellow-500/10'
+                      ? 'border-yellow-500/60 bg-gradient-to-r from-yellow-500/15 via-yellow-500/10 to-yellow-500/5 shadow-lg shadow-yellow-500/10'
                       : 'border-border/40 hover:border-yellow-500/30 bg-muted/10'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${selectedPackage?.id === pkg.id ? 'bg-yellow-500/20' : 'bg-muted/30'}`}>
-                        <Coins className={`h-5 w-5 ${selectedPackage?.id === pkg.id ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                    <div className="flex items-center gap-4">
+                      <div className={`p-2.5 rounded-xl transition-all duration-300 ${selectedPackage?.id === pkg.id ? 'bg-yellow-500/25' : 'bg-muted/30'}`}>
+                        <Coins className={`h-5 w-5 transition-colors ${selectedPackage?.id === pkg.id ? 'text-yellow-500' : 'text-muted-foreground'}`} />
                       </div>
                       <div>
-                        <p className="font-semibold">
+                        <p className="font-bold text-lg">
                           {pkg.coins.toLocaleString('cs-CZ')} MioCoinů
                           {pkg.bonus > 0 && (
-                            <span className="text-green-500 ml-1">+{pkg.bonus} Bonus</span>
+                            <span className="text-green-500 ml-2 font-semibold">+{pkg.bonus} Bonus</span>
                           )}
                         </p>
                         <p className="text-sm text-muted-foreground">{pkg.price} Kč</p>
                       </div>
                     </div>
                     {selectedPackage?.id === pkg.id && (
-                      <Check className="h-5 w-5 text-yellow-500" />
+                      <Check className="h-6 w-6 text-yellow-500" />
                     )}
                   </div>
                 </button>
               ))}
             </div>
 
-            {/* Custom Amount */}
             <div className="border-t border-border/30 pt-4">
-              <Label htmlFor="customAmount" className="text-sm font-medium">
-                Vlastní částka (Kč)
-              </Label>
+              <Label htmlFor="customAmount" className="text-xs font-semibold uppercase tracking-wider">Vlastní částka (Kč)</Label>
               <Input
                 id="customAmount"
                 type="number"
@@ -1250,17 +1458,17 @@ const Profile: React.FC = () => {
                 min="1"
                 value={customAmount}
                 onChange={(e) => handleCustomAmountChange(e.target.value)}
-                className="mt-2 bg-muted/20 border-border/40"
+                className="mt-2 premium-input bg-muted/20 border-border/40 focus:border-yellow-500/50"
               />
               {customAmount && parseInt(customAmount) > 0 && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Obdržíte {parseInt(customAmount).toLocaleString('cs-CZ')} MioCoinů (bez bonusu)
+                <p className="text-sm text-muted-foreground mt-2">
+                  Obdržíte <span className="text-yellow-500 font-semibold">{parseInt(customAmount).toLocaleString('cs-CZ')} MioCoinů</span> (bez bonusu)
                 </p>
               )}
             </div>
           </div>
 
-          <DialogFooter className="mt-4">
+          <DialogFooter className="mt-6 gap-3">
             <Button 
               variant="outline" 
               onClick={() => {
@@ -1269,32 +1477,37 @@ const Profile: React.FC = () => {
                 setCustomAmount('');
               }} 
               disabled={purchaseLoading}
-              className="transition-all duration-200 hover:scale-[1.02]"
+              className="transition-all duration-300 hover:scale-[1.02]"
             >
               Zrušit
             </Button>
             <Button 
               onClick={handleTopUpPurchase} 
               disabled={purchaseLoading || (!selectedPackage && !customAmount)}
-              className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-semibold transition-all duration-200 hover:scale-[1.02]"
+              className="vip-button bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-bold transition-all duration-300 hover:scale-[1.02]"
             >
-              {purchaseLoading ? 'Zpracovávám...' : 'Pokračovat k platbě'}
+              {purchaseLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Zpracovávám...
+                </>
+              ) : 'Pokračovat k platbě'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Marketing Consent Confirmation Dialog */}
+      {/* Marketing Dialog */}
       <AlertDialog open={marketingDialogOpen} onOpenChange={setMarketingDialogOpen}>
-        <AlertDialogContent className="border-border/40 bg-card/95 backdrop-blur-xl">
+        <AlertDialogContent className="border-border/40 bg-gradient-to-br from-card to-card/95 backdrop-blur-xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Potvrzení změny</AlertDialogTitle>
+            <AlertDialogTitle className="text-xl font-bold">Potvrzení změny</AlertDialogTitle>
             <AlertDialogDescription>
               Opravdu chcete změnit nastavení marketingových sdělení? Tuto volbu můžete kdykoliv změnit.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingMarketingAction(null)}>
+            <AlertDialogCancel onClick={() => setPendingMarketingAction(null)} className="transition-all duration-300 hover:scale-[1.02]">
               Zrušit
             </AlertDialogCancel>
             <AlertDialogAction
@@ -1307,6 +1520,7 @@ const Profile: React.FC = () => {
                 setPendingMarketingAction(null);
                 setMarketingDialogOpen(false);
               }}
+              className="vip-button bg-gradient-to-r from-primary to-primary/80 transition-all duration-300 hover:scale-[1.02]"
             >
               Potvrdit
             </AlertDialogAction>
