@@ -1127,100 +1127,158 @@ const Profile: React.FC = () => {
           </VIPCard>
 
           {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* ACCOUNT SECTION - Apple ID / Revolut Style */}
+          {/* ACCOUNT SECTION - Premium Wallet Style */}
           {/* ═══════════════════════════════════════════════════════════════ */}
-          <div 
-            className={`relative rounded-3xl border border-border/15 bg-gradient-to-b from-[hsl(var(--card))]/80 to-[hsl(var(--card))]/40 backdrop-blur-xl overflow-hidden transition-all duration-700 ease-out ${
-              pageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-            }`}
-            style={{ transitionDelay: '250ms' }}
+          <VIPCard 
+            delay={250} 
+            variant="accent" 
+            glowIntensity="medium" 
+            isLoaded={pageLoaded}
+            className="relative"
           >
-            {/* Top edge highlight */}
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--foreground))]/8 to-transparent" />
+            {/* Subtle floating particles */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {[...Array(4)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-1 h-1 rounded-full bg-primary/20"
+                  style={{
+                    left: `${20 + i * 20}%`,
+                    top: `${25 + (i % 2) * 50}%`,
+                    animation: `float ${5 + i * 0.5}s ease-in-out infinite`,
+                    animationDelay: `${i * 0.4}s`
+                  }}
+                />
+              ))}
+            </div>
             
-            {/* Inner glow */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--foreground))]/[0.02] via-transparent to-transparent pointer-events-none" />
+            {/* Premium corner accents */}
+            <div className="absolute top-0 left-0 w-16 h-16 bg-gradient-to-br from-primary/15 to-transparent rounded-br-full" />
+            <div className="absolute bottom-0 right-0 w-16 h-16 bg-gradient-to-tl from-primary/10 to-transparent rounded-tl-full" />
             
-            <div className="relative p-8 md:p-10">
-              {/* Section Header - Minimal */}
-              <div className="flex items-center gap-5 mb-10">
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-[hsl(var(--muted))]/40 to-[hsl(var(--muted))]/20 border border-[hsl(var(--border))]/10 shadow-inner">
-                  <Shield className="h-6 w-6 text-[hsl(var(--foreground))]/60" />
+            {/* Background glow orbs */}
+            <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-primary/8 rounded-full blur-2xl" />
+            <div className="absolute top-1/4 right-1/4 w-20 h-20 bg-primary/5 rounded-full blur-xl" />
+            
+            <div className="relative p-8">
+              {/* Section Header */}
+              <div className="flex items-center gap-5 mb-8">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-primary/20 rounded-xl blur-lg" />
+                  <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-primary/25 to-primary/10 border border-primary/30 shadow-lg shadow-primary/10">
+                    <Shield className="h-6 w-6 text-primary" />
+                  </div>
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-[hsl(var(--foreground))] tracking-tight">Účet</h2>
-                  <p className="text-sm text-[hsl(var(--muted-foreground))]/70 mt-0.5">Přihlašovací údaje</p>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">Účet</h2>
+                  <p className="text-sm text-muted-foreground/70 mt-0.5">Přihlašovací údaje</p>
                 </div>
               </div>
               
               {/* Premium Info Blocks */}
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Email Block */}
-                <div className="group relative">
-                  <div className="p-6 rounded-2xl bg-gradient-to-br from-[hsl(var(--muted))]/20 to-[hsl(var(--muted))]/5 border border-[hsl(var(--border))]/10 hover:border-[hsl(var(--border))]/20 transition-all duration-500">
-                    <div className="flex items-start justify-between gap-4">
+                <div className="group relative p-5 rounded-2xl bg-gradient-to-br from-primary/8 via-transparent to-primary/5 border border-primary/15 hover:border-primary/30 transition-all duration-500 hover:shadow-lg hover:shadow-primary/5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="p-2.5 rounded-xl bg-primary/15 border border-primary/20">
+                        <Mail className="h-5 w-5 text-primary" />
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-semibold text-[hsl(var(--muted-foreground))]/60 uppercase tracking-[0.1em] mb-3">
+                        <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">
                           E-mailová adresa
                         </p>
-                        <p className="text-lg font-medium text-[hsl(var(--foreground))] truncate">
+                        <p className="text-lg font-semibold text-foreground truncate">
                           {wallet?.email || user?.email}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
-                        <CheckCircle className="h-3.5 w-3.5 text-green-500/80" />
-                        <span className="text-xs font-medium text-green-500/80">Ověřeno</span>
-                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/15 border border-green-500/25 shadow-sm shadow-green-500/10">
+                      <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                      <span className="text-xs font-semibold text-green-500">Ověřeno</span>
                     </div>
                   </div>
                 </div>
                 
                 {/* Name Block */}
                 {wallet?.name && (
-                  <div className="group relative">
-                    <div className="p-6 rounded-2xl bg-gradient-to-br from-[hsl(var(--muted))]/20 to-[hsl(var(--muted))]/5 border border-[hsl(var(--border))]/10 hover:border-[hsl(var(--border))]/20 transition-all duration-500">
-                      <div className="flex items-start gap-4">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-semibold text-[hsl(var(--muted-foreground))]/60 uppercase tracking-[0.1em] mb-3">
-                            Jméno účtu
-                          </p>
-                          <p className="text-lg font-medium text-[hsl(var(--foreground))] truncate">
-                            {wallet.name}
-                          </p>
-                        </div>
+                  <div className="group relative p-5 rounded-2xl bg-gradient-to-br from-primary/8 via-transparent to-primary/5 border border-primary/15 hover:border-primary/30 transition-all duration-500 hover:shadow-lg hover:shadow-primary/5">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2.5 rounded-xl bg-primary/15 border border-primary/20">
+                        <User className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">
+                          Jméno účtu
+                        </p>
+                        <p className="text-lg font-semibold text-foreground truncate">
+                          {wallet.name}
+                        </p>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
             </div>
-            
-            {/* Bottom edge */}
-            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--border))]/10 to-transparent" />
-          </div>
+          </VIPCard>
 
           {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* PERSONAL DETAILS SECTION - Premium Apple ID Style */}
+          {/* PERSONAL DETAILS SECTION - Premium Wallet Style */}
           {/* ═══════════════════════════════════════════════════════════════ */}
-          <div 
-            className={`relative rounded-3xl border border-border/15 bg-gradient-to-b from-[hsl(220_20%_10%)] via-[hsl(220_18%_8%)] to-[hsl(220_20%_6%)] overflow-hidden transition-all duration-700 ease-out ${
-              pageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-            }`}
-            style={{ transitionDelay: '350ms' }}
+          <VIPCard 
+            delay={350} 
+            variant="gold" 
+            glowIntensity="medium" 
+            isLoaded={pageLoaded}
+            className="relative"
           >
-            {/* Subtle top highlight line */}
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+            {/* Floating particles */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-1 h-1 rounded-full bg-yellow-500/15"
+                  style={{
+                    left: `${10 + i * 18}%`,
+                    top: `${15 + (i % 3) * 30}%`,
+                    animation: `float ${4.5 + i * 0.4}s ease-in-out infinite`,
+                    animationDelay: `${i * 0.25}s`
+                  }}
+                />
+              ))}
+            </div>
             
-            <div className="p-8 md:p-10">
+            {/* Premium corner accents */}
+            <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-yellow-500/15 to-transparent rounded-br-full" />
+            <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-yellow-500/10 to-transparent rounded-tl-full" />
+            
+            {/* Background glow orbs */}
+            <div className="absolute top-1/3 left-1/3 w-28 h-28 bg-yellow-500/8 rounded-full blur-2xl" />
+            <div className="absolute bottom-1/4 right-1/4 w-24 h-24 bg-yellow-600/5 rounded-full blur-xl" />
+            
+            <div className="relative p-8">
               {/* Section Header */}
-              <div className="flex items-center justify-between mb-10">
+              <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-5">
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-muted/25 to-muted/10 border border-border/15 shadow-lg shadow-black/20">
-                    <User className="h-6 w-6 text-muted-foreground/80" />
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-yellow-500/25 rounded-xl blur-lg" />
+                    <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-yellow-500/25 to-yellow-600/15 border border-yellow-500/35 shadow-lg shadow-yellow-500/10">
+                      <User className="h-6 w-6 text-yellow-500" />
+                    </div>
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-foreground tracking-tight">Osobní údaje</h2>
-                    <p className="text-sm text-muted-foreground/60 mt-1">Profil a kontaktní informace</p>
+                    <h2 
+                      className="text-2xl font-bold"
+                      style={{
+                        background: 'linear-gradient(135deg, hsl(50 95% 70%) 0%, hsl(45 90% 60%) 50%, hsl(43 85% 55%) 100%)',
+                        WebkitBackgroundClip: 'text',
+                        backgroundClip: 'text',
+                        color: 'transparent'
+                      }}
+                    >
+                      Osobní údaje
+                    </h2>
+                    <p className="text-sm text-muted-foreground/70 mt-0.5">Profil a kontaktní informace</p>
                   </div>
                 </div>
                 {!editMode && (
@@ -1228,8 +1286,9 @@ const Profile: React.FC = () => {
                     variant="outline" 
                     size="default" 
                     onClick={() => setEditMode(true)}
-                    className="border-border/25 bg-white/[0.03] hover:bg-white/[0.06] hover:border-border/40 text-foreground/90 hover:text-foreground transition-all duration-300 font-medium px-6 rounded-xl"
+                    className="vip-button border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 hover:border-yellow-500/50 text-yellow-500 hover:text-yellow-400 transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-yellow-500/10 hover:scale-[1.02]"
                   >
+                    <Sparkles className="h-4 w-4 mr-2" />
                     Upravit
                   </Button>
                 )}
@@ -1238,9 +1297,12 @@ const Profile: React.FC = () => {
               {editMode ? (
                 <>
                   {/* Edit Mode - Premium Input Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                    <div className="space-y-3">
-                      <Label htmlFor="nickname" className="text-xs font-medium text-muted-foreground/60 uppercase tracking-widest">Přezdívka</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+                    <div className="space-y-2.5">
+                      <Label htmlFor="nickname" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
+                        <Sparkles className="h-3 w-3" />
+                        Přezdívka
+                      </Label>
                       <Input 
                         id="nickname" 
                         type="text" 
@@ -1250,12 +1312,15 @@ const Profile: React.FC = () => {
                           nickname: e.target.value
                         }))} 
                         placeholder="Zadejte přezdívku"
-                        className="h-14 px-5 rounded-xl bg-white/[0.03] border-border/20 focus:border-white/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-white/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
-                    <div className="space-y-3">
-                      <Label htmlFor="phone" className="text-xs font-medium text-muted-foreground/60 uppercase tracking-widest">Telefon</Label>
+                    <div className="space-y-2.5">
+                      <Label htmlFor="phone" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
+                        <Sparkles className="h-3 w-3" />
+                        Telefon
+                      </Label>
                       <Input 
                         id="phone" 
                         type="text" 
@@ -1265,12 +1330,15 @@ const Profile: React.FC = () => {
                           phone: e.target.value
                         }))} 
                         placeholder="Zadejte telefon"
-                        className="h-14 px-5 rounded-xl bg-white/[0.03] border-border/20 focus:border-white/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-white/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
-                    <div className="space-y-3">
-                      <Label htmlFor="first_name" className="text-xs font-medium text-muted-foreground/60 uppercase tracking-widest">Křestní jméno</Label>
+                    <div className="space-y-2.5">
+                      <Label htmlFor="first_name" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
+                        <Sparkles className="h-3 w-3" />
+                        Křestní jméno
+                      </Label>
                       <Input 
                         id="first_name" 
                         type="text" 
@@ -1280,12 +1348,15 @@ const Profile: React.FC = () => {
                           first_name: e.target.value
                         }))} 
                         placeholder="Zadejte křestní jméno"
-                        className="h-14 px-5 rounded-xl bg-white/[0.03] border-border/20 focus:border-white/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-white/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
-                    <div className="space-y-3">
-                      <Label htmlFor="last_name" className="text-xs font-medium text-muted-foreground/60 uppercase tracking-widest">Příjmení</Label>
+                    <div className="space-y-2.5">
+                      <Label htmlFor="last_name" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
+                        <Sparkles className="h-3 w-3" />
+                        Příjmení
+                      </Label>
                       <Input 
                         id="last_name" 
                         type="text" 
@@ -1295,12 +1366,15 @@ const Profile: React.FC = () => {
                           last_name: e.target.value
                         }))} 
                         placeholder="Zadejte příjmení"
-                        className="h-14 px-5 rounded-xl bg-white/[0.03] border-border/20 focus:border-white/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-white/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
-                    <div className="space-y-3 md:col-span-2">
-                      <Label htmlFor="address" className="text-xs font-medium text-muted-foreground/60 uppercase tracking-widest">Doručovací adresa výhry</Label>
+                    <div className="space-y-2.5 md:col-span-2">
+                      <Label htmlFor="address" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
+                        <Sparkles className="h-3 w-3" />
+                        Doručovací adresa výhry
+                      </Label>
                       <Textarea 
                         id="address" 
                         value={profile.address} 
@@ -1310,7 +1384,7 @@ const Profile: React.FC = () => {
                         }))} 
                         placeholder="Zadejte doručovací adresu pro výhry" 
                         rows={3}
-                        className="px-5 py-4 rounded-xl bg-white/[0.03] border-border/20 focus:border-white/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-white/10 transition-all duration-300 placeholder:text-muted-foreground/30 resize-none text-lg"
+                        className="premium-input px-5 py-4 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 resize-none text-lg"
                       />
                     </div>
                   </div>
@@ -1320,20 +1394,25 @@ const Profile: React.FC = () => {
                     <Button 
                       onClick={handleProfileSave} 
                       disabled={profileSaving}
-                      className="bg-white/10 hover:bg-white/15 text-foreground font-medium px-8 h-12 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-black/20 border border-white/10"
+                      className="vip-button bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-500 hover:from-yellow-400 hover:via-yellow-500 hover:to-yellow-400 text-black font-bold px-8 h-12 rounded-xl transition-all duration-300 shadow-lg shadow-yellow-500/25 hover:shadow-yellow-500/40 hover:scale-[1.02]"
                     >
                       {profileSaving ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           Ukládám...
                         </>
-                      ) : 'Uložit změny'}
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4 mr-2" />
+                          Uložit změny
+                        </>
+                      )}
                     </Button>
                     <Button 
                       variant="ghost" 
                       onClick={() => setEditMode(false)}
                       disabled={profileSaving}
-                      className="text-muted-foreground hover:text-foreground hover:bg-white/[0.03] transition-all duration-300 h-12 px-6 rounded-xl"
+                      className="text-muted-foreground hover:text-foreground hover:bg-yellow-500/10 transition-all duration-300 h-12 px-6 rounded-xl border border-transparent hover:border-yellow-500/20"
                     >
                       Zrušit
                     </Button>
@@ -1343,87 +1422,126 @@ const Profile: React.FC = () => {
                 /* View Mode - Premium Read-Only Profile Summary */
                 <div className="space-y-1">
                   {(profile.nickname || profile.phone || profile.first_name || profile.last_name || profile.address || profile.date_of_birth) ? (
-                    <div className="divide-y divide-border/10">
+                    <div className="space-y-4">
                       {/* Nickname Row */}
-                      <div className="py-6 first:pt-0 group">
-                        <p className="text-[11px] font-medium text-muted-foreground/50 uppercase tracking-[0.15em] mb-2">Přezdívka</p>
-                        <p className="text-xl text-foreground font-medium tracking-tight">
-                          {profile.nickname || <span className="text-muted-foreground/30 font-normal">Nenastaveno</span>}
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
+                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2 flex items-center gap-2">
+                          <Sparkles className="h-3 w-3" />
+                          Přezdívka
+                        </p>
+                        <p className="text-xl text-foreground font-semibold tracking-tight">
+                          {profile.nickname || <span className="text-muted-foreground/40 font-normal italic">Nenastaveno</span>}
                         </p>
                       </div>
                       
                       {/* Full Name Row */}
-                      <div className="py-6 group">
-                        <p className="text-[11px] font-medium text-muted-foreground/50 uppercase tracking-[0.15em] mb-2">Celé jméno</p>
-                        <p className="text-xl text-foreground font-medium tracking-tight">
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
+                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2 flex items-center gap-2">
+                          <User className="h-3 w-3" />
+                          Celé jméno
+                        </p>
+                        <p className="text-xl text-foreground font-semibold tracking-tight">
                           {(profile.first_name || profile.last_name) 
                             ? [profile.first_name, profile.last_name].filter(Boolean).join(' ')
-                            : <span className="text-muted-foreground/30 font-normal">Nenastaveno</span>}
+                            : <span className="text-muted-foreground/40 font-normal italic">Nenastaveno</span>}
                         </p>
                       </div>
                       
                       {/* Phone Row */}
-                      <div className="py-6 group">
-                        <p className="text-[11px] font-medium text-muted-foreground/50 uppercase tracking-[0.15em] mb-2">Telefon</p>
-                        <p className="text-xl text-foreground font-medium tracking-tight">
-                          {profile.phone || <span className="text-muted-foreground/30 font-normal">Nenastaveno</span>}
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
+                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2">Telefon</p>
+                        <p className="text-xl text-foreground font-semibold tracking-tight">
+                          {profile.phone || <span className="text-muted-foreground/40 font-normal italic">Nenastaveno</span>}
                         </p>
                       </div>
                       
                       {/* Date of Birth Row */}
-                      <div className="py-6 group">
-                        <p className="text-[11px] font-medium text-muted-foreground/50 uppercase tracking-[0.15em] mb-2">Datum narození</p>
-                        <p className="text-xl text-foreground font-medium tracking-tight">
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
+                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2">Datum narození</p>
+                        <p className="text-xl text-foreground font-semibold tracking-tight">
                           {profile.date_of_birth 
                             ? format(new Date(profile.date_of_birth), 'dd. MMMM yyyy', { locale: cs })
-                            : <span className="text-muted-foreground/30 font-normal">Nenastaveno</span>}
+                            : <span className="text-muted-foreground/40 font-normal italic">Nenastaveno</span>}
                         </p>
                       </div>
                       
                       {/* Address Row */}
-                      <div className="py-6 last:pb-0 group">
-                        <p className="text-[11px] font-medium text-muted-foreground/50 uppercase tracking-[0.15em] mb-2">Doručovací adresa</p>
-                        <p className="text-xl text-foreground font-medium tracking-tight whitespace-pre-wrap leading-relaxed">
-                          {profile.address || <span className="text-muted-foreground/30 font-normal">Nenastaveno</span>}
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
+                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2">Doručovací adresa</p>
+                        <p className="text-xl text-foreground font-semibold tracking-tight whitespace-pre-wrap leading-relaxed">
+                          {profile.address || <span className="text-muted-foreground/40 font-normal italic">Nenastaveno</span>}
                         </p>
                       </div>
                     </div>
                   ) : (
                     <div className="text-center py-16 px-8">
-                      <div className="p-5 rounded-3xl bg-gradient-to-br from-muted/20 to-muted/5 w-fit mx-auto mb-6 border border-border/10">
-                        <User className="w-10 h-10 text-muted-foreground/30" />
+                      <div className="relative w-fit mx-auto mb-6">
+                        <div className="absolute inset-0 bg-yellow-500/20 rounded-3xl blur-xl" />
+                        <div className="relative p-6 rounded-3xl bg-gradient-to-br from-yellow-500/15 to-yellow-600/5 border border-yellow-500/20">
+                          <User className="w-12 h-12 text-yellow-500/50" />
+                        </div>
                       </div>
-                      <p className="text-lg text-foreground/80 font-medium mb-2">Zatím nemáte vyplněny osobní údaje</p>
-                      <p className="text-sm text-muted-foreground/50">Klikněte na „Upravit" pro jejich zadání</p>
+                      <p className="text-xl text-foreground font-semibold mb-2">Zatím nemáte vyplněny osobní údaje</p>
+                      <p className="text-sm text-muted-foreground/60">Klikněte na „Upravit" pro jejich zadání</p>
                     </div>
                   )}
                 </div>
               )}
             </div>
-            
-            {/* Bottom subtle gradient line */}
-            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-          </div>
+          </VIPCard>
 
           {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* NOTIFICATIONS SECTION */}
+          {/* NOTIFICATIONS SECTION - Premium Wallet Style */}
           {/* ═══════════════════════════════════════════════════════════════ */}
-          <VIPCard delay={450} isLoaded={pageLoaded}>
-            <div className="p-6">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
-                  <Bell className="h-5 w-5 text-primary" />
+          <VIPCard 
+            delay={450} 
+            variant="accent" 
+            glowIntensity="medium" 
+            isLoaded={pageLoaded}
+            className="relative"
+          >
+            {/* Subtle floating particles */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-1 h-1 rounded-full bg-primary/20"
+                  style={{
+                    left: `${25 + i * 25}%`,
+                    top: `${30 + (i % 2) * 40}%`,
+                    animation: `float ${5.5 + i * 0.5}s ease-in-out infinite`,
+                    animationDelay: `${i * 0.3}s`
+                  }}
+                />
+              ))}
+            </div>
+            
+            {/* Premium corner accents */}
+            <div className="absolute top-0 left-0 w-16 h-16 bg-gradient-to-br from-primary/15 to-transparent rounded-br-full" />
+            <div className="absolute bottom-0 right-0 w-16 h-16 bg-gradient-to-tl from-primary/10 to-transparent rounded-tl-full" />
+            
+            {/* Background glow */}
+            <div className="absolute top-1/2 right-1/4 w-24 h-24 bg-primary/8 rounded-full blur-2xl" />
+            
+            <div className="relative p-8">
+              {/* Section Header */}
+              <div className="flex items-center gap-5 mb-8">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-primary/20 rounded-xl blur-lg" />
+                  <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-primary/25 to-primary/10 border border-primary/30 shadow-lg shadow-primary/10">
+                    <Bell className="h-6 w-6 text-primary" />
+                  </div>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-foreground">Notifikace</h2>
-                  <p className="text-sm text-muted-foreground">Zvuky a upozornění</p>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">Notifikace</h2>
+                  <p className="text-sm text-muted-foreground/70 mt-0.5">Zvuky a upozornění</p>
                 </div>
               </div>
               
               {/* Message sound toggle */}
-              <div className="flex items-center justify-between mb-4 p-4 rounded-xl bg-gradient-to-r from-muted/20 via-transparent to-muted/10 border border-border/30 hover:border-primary/30 transition-all duration-300">
+              <div className="flex items-center justify-between mb-4 p-5 rounded-xl bg-gradient-to-r from-primary/10 via-transparent to-primary/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
                 <div className="flex items-center gap-4">
-                  <div className={`p-2.5 rounded-xl transition-all duration-300 ${messageSoundEnabled ? 'bg-primary/20 border border-primary/30' : 'bg-muted/30 border border-border/30'}`}>
+                  <div className={`p-3 rounded-xl transition-all duration-300 ${messageSoundEnabled ? 'bg-primary/25 border border-primary/40 shadow-lg shadow-primary/15' : 'bg-muted/30 border border-border/30'}`}>
                     {messageSoundEnabled ? (
                       <Volume2 className="h-5 w-5 text-primary" />
                     ) : (
@@ -1431,20 +1549,21 @@ const Profile: React.FC = () => {
                     )}
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground">Zvuk pro zprávy</p>
-                    <p className="text-sm text-muted-foreground">Přehrávat zvuk při nových zprávách</p>
+                    <p className="font-semibold text-foreground text-lg">Zvuk pro zprávy</p>
+                    <p className="text-sm text-muted-foreground/70">Přehrávat zvuk při nových zprávách</p>
                   </div>
                 </div>
                 <Switch
                   checked={messageSoundEnabled}
                   onCheckedChange={toggleMessageSound}
+                  className="data-[state=checked]:bg-primary"
                 />
               </div>
 
               {/* Win sound toggle */}
-              <div className="flex items-center justify-between mb-6 p-4 rounded-xl bg-gradient-to-r from-yellow-500/5 via-transparent to-yellow-500/5 border border-yellow-500/20 hover:border-yellow-500/40 transition-all duration-300">
+              <div className="flex items-center justify-between mb-6 p-5 rounded-xl bg-gradient-to-r from-yellow-500/10 via-transparent to-yellow-500/5 border border-yellow-500/25 hover:border-yellow-500/45 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/10">
                 <div className="flex items-center gap-4">
-                  <div className={`p-2.5 rounded-xl transition-all duration-300 ${winSoundEnabled ? 'bg-yellow-500/20 border border-yellow-500/30' : 'bg-muted/30 border border-border/30'}`}>
+                  <div className={`p-3 rounded-xl transition-all duration-300 ${winSoundEnabled ? 'bg-yellow-500/25 border border-yellow-500/40 shadow-lg shadow-yellow-500/15' : 'bg-muted/30 border border-border/30'}`}>
                     {winSoundEnabled ? (
                       <Volume2 className="h-5 w-5 text-yellow-500" />
                     ) : (
@@ -1452,23 +1571,25 @@ const Profile: React.FC = () => {
                     )}
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground">Zvuk pro výhry</p>
-                    <p className="text-sm text-muted-foreground">Přehrávat zvuk při nových výhrách</p>
+                    <p className="font-semibold text-foreground text-lg">Zvuk pro výhry</p>
+                    <p className="text-sm text-muted-foreground/70">Přehrávat zvuk při nových výhrách</p>
                   </div>
                 </div>
                 <Switch
                   checked={winSoundEnabled}
                   onCheckedChange={toggleWinSound}
+                  className="data-[state=checked]:bg-yellow-500"
                 />
               </div>
 
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">Otestujte si funkčnost push notifikací na vašem zařízení.</p>
+              {/* Test notification section */}
+              <div className="mt-8 pt-6 border-t border-primary/10">
+                <p className="text-sm text-muted-foreground/70 mb-4">Otestujte si funkčnost push notifikací na vašem zařízení.</p>
                 <Button 
                   onClick={handleTestNotification} 
                   variant="outline" 
                   disabled={testingNotification}
-                  className="w-full sm:w-auto border-primary/30 hover:border-primary/50 hover:bg-primary/10 transition-all duration-300 hover:scale-[1.02]"
+                  className="vip-button w-full sm:w-auto border-primary/35 bg-primary/5 hover:border-primary/55 hover:bg-primary/15 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/10 font-semibold"
                 >
                   <Bell className={`h-4 w-4 mr-2 ${testingNotification ? 'animate-pulse' : ''}`} />
                   {testingNotification ? 'Odesílám...' : 'Otestovat notifikaci'}
@@ -1478,62 +1599,118 @@ const Profile: React.FC = () => {
           </VIPCard>
 
           {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* MARKETING SECTION */}
+          {/* MARKETING SECTION - Premium Wallet Style */}
           {/* ═══════════════════════════════════════════════════════════════ */}
-          <VIPCard delay={550} isLoaded={pageLoaded}>
-            <div className="p-6">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
-                  <Mail className="h-5 w-5 text-primary" />
+          <VIPCard 
+            delay={550} 
+            variant="gold" 
+            glowIntensity="low" 
+            isLoaded={pageLoaded}
+            className="relative"
+          >
+            {/* Subtle floating particles */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-1 h-1 rounded-full bg-yellow-500/15"
+                  style={{
+                    left: `${15 + i * 30}%`,
+                    top: `${20 + (i % 2) * 55}%`,
+                    animation: `float ${6 + i * 0.4}s ease-in-out infinite`,
+                    animationDelay: `${i * 0.35}s`
+                  }}
+                />
+              ))}
+            </div>
+            
+            {/* Premium corner accents */}
+            <div className="absolute top-0 left-0 w-14 h-14 bg-gradient-to-br from-yellow-500/12 to-transparent rounded-br-full" />
+            <div className="absolute bottom-0 right-0 w-14 h-14 bg-gradient-to-tl from-yellow-500/8 to-transparent rounded-tl-full" />
+            
+            {/* Background glow */}
+            <div className="absolute top-1/3 left-1/3 w-20 h-20 bg-yellow-500/6 rounded-full blur-xl" />
+            
+            <div className="relative p-8">
+              {/* Section Header */}
+              <div className="flex items-center gap-5 mb-8">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-yellow-500/20 rounded-xl blur-lg" />
+                  <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 border border-yellow-500/30 shadow-lg shadow-yellow-500/10">
+                    <Mail className="h-6 w-6 text-yellow-500" />
+                  </div>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-foreground">Marketingová sdělení</h2>
-                  <p className="text-sm text-muted-foreground">E-mailové novinky</p>
+                  <h2 
+                    className="text-2xl font-bold"
+                    style={{
+                      background: 'linear-gradient(135deg, hsl(50 95% 70%) 0%, hsl(45 90% 60%) 50%, hsl(43 85% 55%) 100%)',
+                      WebkitBackgroundClip: 'text',
+                      backgroundClip: 'text',
+                      color: 'transparent'
+                    }}
+                  >
+                    Marketingová sdělení
+                  </h2>
+                  <p className="text-sm text-muted-foreground/70 mt-0.5">E-mailové novinky</p>
                 </div>
               </div>
-              <div className="space-y-4">
+              
+              <div className="space-y-5">
                 {/* Status Display */}
-                <div className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-300 ${
+                <div className={`flex items-center gap-4 p-5 rounded-xl transition-all duration-500 hover:shadow-lg ${
                   marketingStatus === 'active' 
-                    ? 'bg-gradient-to-r from-green-500/10 via-transparent to-green-500/5 border border-green-500/25' 
-                    : 'bg-gradient-to-r from-muted/20 via-transparent to-muted/10 border border-border/30'
+                    ? 'bg-gradient-to-r from-green-500/15 via-green-500/5 to-transparent border border-green-500/30 hover:border-green-500/50 hover:shadow-green-500/10' 
+                    : 'bg-gradient-to-r from-yellow-500/10 via-transparent to-yellow-500/5 border border-yellow-500/20 hover:border-yellow-500/35 hover:shadow-yellow-500/5'
                 }`}>
                   {marketingStatus === 'active' ? (
                     <>
-                      <div className="p-2.5 rounded-xl bg-green-500/20 border border-green-500/30">
+                      <div className="p-3 rounded-xl bg-green-500/25 border border-green-500/35 shadow-lg shadow-green-500/15">
                         <CheckCircle className="h-5 w-5 text-green-500" />
                       </div>
-                      <span className="font-semibold text-foreground">Marketing: Aktivní</span>
+                      <div>
+                        <span className="font-bold text-foreground text-lg block">Marketing: Aktivní</span>
+                        <span className="text-sm text-green-500/70">Dostáváte novinky e-mailem</span>
+                      </div>
                     </>
                   ) : marketingStatus === 'revoked' ? (
                     <>
-                      <div className="p-2.5 rounded-xl bg-destructive/20 border border-destructive/30">
+                      <div className="p-3 rounded-xl bg-destructive/25 border border-destructive/35 shadow-lg shadow-destructive/15">
                         <XCircle className="h-5 w-5 text-destructive" />
                       </div>
-                      <span className="font-semibold text-foreground">Marketing: Odhlášeno</span>
+                      <div>
+                        <span className="font-bold text-foreground text-lg block">Marketing: Odhlášeno</span>
+                        <span className="text-sm text-muted-foreground/60">Nepřijímáte marketingové e-maily</span>
+                      </div>
                     </>
                   ) : marketingStatus === 'none' ? (
                     <>
-                      <div className="p-2.5 rounded-xl bg-muted/30 border border-border/30">
+                      <div className="p-3 rounded-xl bg-muted/35 border border-border/35">
                         <XCircle className="h-5 w-5 text-muted-foreground" />
                       </div>
-                      <span className="font-semibold text-muted-foreground">Marketing: Nepřihlášeno</span>
+                      <div>
+                        <span className="font-bold text-foreground text-lg block">Marketing: Nepřihlášeno</span>
+                        <span className="text-sm text-muted-foreground/60">Nejste přihlášeni k odběru</span>
+                      </div>
                     </>
                   ) : (
-                    <span className="text-muted-foreground">Načítám...</span>
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
+                      <span className="text-muted-foreground">Načítám...</span>
+                    </div>
                   )}
                 </div>
 
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground/70 leading-relaxed">
                   V rámci vašeho účtu můžete dostávat informace o nových soutěžích, speciálních akcích a dalších novinkách prostřednictvím e-mailu.
                 </p>
                 
                 {marketingStatus === 'active' && (
-                  <>
-                    <p className="text-sm text-muted-foreground">Pokud si již nepřejete dostávat marketingová sdělení, můžete se odhlásit.</p>
+                  <div className="pt-4 border-t border-yellow-500/10">
+                    <p className="text-sm text-muted-foreground/60 mb-4">Pokud si již nepřejete dostávat marketingová sdělení, můžete se odhlásit.</p>
                     <Button 
                       variant="outline" 
-                      className="w-full sm:w-auto border-destructive/30 hover:border-destructive/50 hover:bg-destructive/10 transition-all duration-300 hover:scale-[1.02]"
+                      className="vip-button w-full sm:w-auto border-destructive/35 bg-destructive/5 hover:border-destructive/55 hover:bg-destructive/15 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-destructive/10 font-semibold"
                       onClick={() => {
                         setPendingMarketingAction('unsubscribe');
                         setMarketingDialogOpen(true);
@@ -1542,24 +1719,33 @@ const Profile: React.FC = () => {
                       <Mail className="h-4 w-4 mr-2" />
                       Odhlásit marketing
                     </Button>
-                  </>
+                  </div>
                 )}
 
                 {(marketingStatus === 'revoked' || marketingStatus === 'none') && (
-                  <>
-                    <p className="text-sm text-muted-foreground">Chcete-li dostávat marketingová sdělení, můžete se přihlásit.</p>
+                  <div className="pt-4 border-t border-yellow-500/10">
+                    <p className="text-sm text-muted-foreground/60 mb-4">Chcete-li dostávat marketingová sdělení, můžete se přihlásit.</p>
                     <Button 
-                      className="vip-button w-full sm:w-auto bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary transition-all duration-300 hover:scale-[1.02]"
+                      className="vip-button w-full sm:w-auto bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-500 hover:from-yellow-400 hover:via-yellow-500 hover:to-yellow-400 text-black font-bold transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-yellow-500/25 hover:shadow-yellow-500/40"
                       onClick={() => {
                         setPendingMarketingAction('subscribe');
                         setMarketingDialogOpen(true);
                       }}
                       disabled={marketingSubscribing}
                     >
-                      <Mail className="h-4 w-4 mr-2" />
-                      {marketingSubscribing ? 'Přihlašuji...' : 'Přihlásit marketing'}
+                      {marketingSubscribing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Přihlašuji...
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="h-4 w-4 mr-2" />
+                          Přihlásit marketing
+                        </>
+                      )}
                     </Button>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
