@@ -138,7 +138,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         {/* Top row: Favorite + Status */}
         <div className="flex items-start justify-between mb-auto">
           {/* Favorite button - simple outline style */}
-          {user && !isAdmin && (onToggleFavorite || onRemoveFavorite) ? (
+          {user && (onToggleFavorite || onRemoveFavorite) ? (
             <button
               onClick={handleFavoriteClick}
               className="
@@ -185,8 +185,8 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             {contest.title}
           </h3>
           
-          {/* CTA for logged-in non-admin users */}
-          {user && !isAdmin && (
+          {/* CTA for logged-in users (including admins) */}
+          {user && (
             <div className="flex items-stretch gap-2">
               {/* Gold outlined pill CTA */}
               <button
@@ -228,34 +228,6 @@ export const ContestCard: React.FC<ContestCardProps> = ({
               >
                 Detail
               </button>
-            </div>
-          )}
-          
-          {/* Login prompt for non-logged-in users */}
-          {!user && (
-            <button
-              className="
-                w-full py-3 px-5
-                bg-[rgba(0,0,0,0.4)]
-                backdrop-blur-sm
-                text-white/80 font-medium text-sm
-                rounded-full
-                border border-white/20
-                hover:bg-[rgba(0,0,0,0.5)]
-                hover:text-white
-                active:scale-[0.98]
-                transition-all duration-200
-              "
-              onClick={handleLoginClick}
-            >
-              Přihlásit se
-            </button>
-          )}
-          
-          {/* Read-only message for admin users */}
-          {user && isAdmin && (
-            <div className="text-xs text-white/60 text-center py-2.5 bg-[rgba(0,0,0,0.35)] rounded-full">
-              Admin zobrazení - pouze pro čtení
             </div>
           )}
         </div>
