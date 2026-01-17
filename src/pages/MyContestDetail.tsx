@@ -316,7 +316,7 @@ const MyContestDetail: React.FC = () => {
         </div>
       </div>
 
-      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
+      <BottomNavigation />
     </div>
   );
 };

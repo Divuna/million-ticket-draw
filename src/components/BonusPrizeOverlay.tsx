@@ -69,11 +69,6 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
       return;
     }
 
-    // Admin users see read-only view
-    if (isAdmin) {
-      toast.info('Admin zobrazení - pouze pro čtení');
-      return;
-    }
 
     setClaimingBonus(bonusId);
 
@@ -151,12 +146,6 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
             Bonusové ceny - {contestTitle}
           </DialogTitle>
           
-          {/* Role-based notices */}
-          {user && isAdmin && (
-            <Badge variant="secondary" className="w-fit">
-              Admin zobrazení - pouze pro čtení
-            </Badge>
-          )}
           
           {!user && (
             <Badge variant="outline" className="w-fit">
@@ -254,9 +243,8 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
                         </Button>
                       )}
 
-                      {(bonus.status !== 'pending' || (user && isAdmin)) && (
+                      {bonus.status !== 'pending' && (
                         <div className="text-center text-xs text-muted-foreground py-2">
-                          {bonus.status === 'pending' && isAdmin && 'Admin zobrazení'}
                           {bonus.status === 'claimed' && 'Bonus již byl uplatněn'}
                           {bonus.status === 'won' && 'Bonus byl vyhrán'}
                         </div>

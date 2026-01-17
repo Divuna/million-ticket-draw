@@ -251,13 +251,6 @@ export const ContestCard: React.FC<ContestCardProps> = ({
               Přihlásit se
             </button>
           )}
-          
-          {/* Read-only message for admin users */}
-          {user && isAdmin && (
-            <div className="text-xs text-white/60 text-center py-2.5 bg-[rgba(0,0,0,0.35)] rounded-full">
-              Admin zobrazení - pouze pro čtení
-            </div>
-          )}
         </div>
       </div>
     </div>
