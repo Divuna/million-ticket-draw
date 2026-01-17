@@ -5,7 +5,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAdminRealtimeContext } from '@/components/AdminRealtimeProvider';
 import { AdminSoundIndicator } from '@/components/AdminSoundIndicator';
-import { Home } from 'lucide-react';
 import logo from '@/assets/logo-onemil.png';
 
 export const Header: React.FC = () => {
@@ -39,22 +38,13 @@ export const Header: React.FC = () => {
         <nav className="flex items-center space-x-4">
           {user ? (
             <>
-              {/* Show different navigation for admin vs regular users */}
-              {isAdmin ? (
-                <>
-                  <Link to="/">
-                    <Button variant="ghost">
-                      <Home className="mr-2 h-4 w-4" />
-                      ÚVODNÍ STRÁNKA
-                    </Button>
-                  </Link>
-                  <Link to="/admin">
-                    <Button variant="ghost">Admin</Button>
-                  </Link>
-                </>
-              ) : (
-                <Link to="/profile">
-                  <Button variant="ghost">Profil</Button>
+              {/* All users see profile link, admins also see admin dashboard link */}
+              <Link to="/profile">
+                <Button variant="ghost">Profil</Button>
+              </Link>
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button variant="ghost">Admin</Button>
                 </Link>
               )}
               <Button variant="outline" onClick={signOut}>
