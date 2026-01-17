@@ -688,6 +688,25 @@ const Profile: React.FC = () => {
           0% { background-position: -100% 0; }
           100% { background-position: 200% 0; }
         }
+        @keyframes ambient-drift {
+          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+          25% { transform: translate(10px, -5px) scale(1.02); opacity: 0.4; }
+          50% { transform: translate(-5px, 5px) scale(0.98); opacity: 0.35; }
+          75% { transform: translate(-10px, -3px) scale(1.01); opacity: 0.38; }
+        }
+        @keyframes avatar-ring-glow {
+          0%, 100% { 
+            box-shadow: 0 0 30px hsl(43 90% 55% / 0.3), 0 0 60px hsl(43 90% 55% / 0.15), inset 0 0 20px hsl(43 90% 55% / 0.1);
+          }
+          50% { 
+            box-shadow: 0 0 40px hsl(43 90% 55% / 0.45), 0 0 80px hsl(43 90% 55% / 0.2), inset 0 0 25px hsl(43 90% 55% / 0.15);
+          }
+        }
+        @keyframes hover-shimmer {
+          0% { left: -100%; opacity: 0; }
+          50% { opacity: 0.6; }
+          100% { left: 100%; opacity: 0; }
+        }
         .vip-button {
           position: relative;
           overflow: hidden;
@@ -708,6 +727,32 @@ const Profile: React.FC = () => {
         .premium-input:focus {
           box-shadow: 0 0 0 2px hsl(43 90% 55% / 0.2), 0 0 20px -5px hsl(43 90% 55% / 0.3);
         }
+        .vip-header-container {
+          position: relative;
+        }
+        .vip-header-container::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, hsl(43 90% 55% / 0.03) 0%, transparent 40%, hsl(220 80% 45% / 0.03) 100%);
+          pointer-events: none;
+        }
+        .avatar-hover-shimmer::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 50%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, hsl(43 90% 75% / 0.4), transparent);
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+        .avatar-hover-shimmer:hover::before {
+          animation: hover-shimmer 0.8s ease-out forwards;
+          opacity: 1;
+        }
       `}</style>
 
       <Header />
@@ -716,72 +761,104 @@ const Profile: React.FC = () => {
         {/* Background ambient glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-yellow-500/5 rounded-full blur-[100px] pointer-events-none" />
         
-        {/* VIP Header Section */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* VIP HEADER SECTION - Premium Luxury Design */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
         <div 
           className={`relative mb-12 transition-all duration-1000 ease-out ${
             pageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
-          {/* Premium background card for header */}
-          <div className="relative rounded-3xl overflow-hidden">
-            {/* Animated gradient background */}
-            <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 via-transparent to-primary/5" />
+          {/* Full-width premium header container */}
+          <div className="vip-header-container relative rounded-3xl overflow-hidden border border-yellow-500/10">
+            {/* Multi-layer gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-background via-card/95 to-background" />
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/[0.03] via-transparent to-primary/[0.03]" />
+            
+            {/* Animated ambient light orbs - very subtle */}
             <div 
-              className="absolute inset-0 opacity-30"
+              className="absolute top-0 left-1/4 w-64 h-64 rounded-full pointer-events-none"
               style={{
-                background: 'radial-gradient(ellipse at 30% 50%, hsl(43 90% 55% / 0.1) 0%, transparent 50%)'
+                background: 'radial-gradient(circle, hsl(43 90% 55% / 0.08) 0%, transparent 70%)',
+                animation: 'ambient-drift 12s ease-in-out infinite'
+              }}
+            />
+            <div 
+              className="absolute bottom-0 right-1/4 w-48 h-48 rounded-full pointer-events-none"
+              style={{
+                background: 'radial-gradient(circle, hsl(220 80% 55% / 0.06) 0%, transparent 70%)',
+                animation: 'ambient-drift 15s ease-in-out infinite reverse'
               }}
             />
             
-            <div className="relative p-8 flex flex-col md:flex-row items-center gap-8">
-              {/* Premium Avatar Container */}
-              <div className="relative group">
-                {/* Outer animated glow ring */}
+            {/* Subtle noise texture overlay */}
+            <div 
+              className="absolute inset-0 opacity-[0.015] pointer-events-none"
+              style={{
+                backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")'
+              }}
+            />
+            
+            <div className="relative px-6 py-10 md:py-12 flex flex-col items-center">
+              {/* Premium Avatar Container - Centered & Larger */}
+              <div className="relative group mb-6">
+                {/* Outermost soft glow halo */}
                 <div 
-                  className="absolute -inset-4 rounded-full opacity-60"
+                  className="absolute -inset-8 rounded-full opacity-40 pointer-events-none"
                   style={{
-                    background: 'conic-gradient(from 0deg, hsl(43 90% 55% / 0.4), hsl(220 80% 45% / 0.2), hsl(43 90% 55% / 0.4), hsl(220 80% 45% / 0.2), hsl(43 90% 55% / 0.4))',
-                    animation: 'rotate-slow 8s linear infinite'
+                    background: 'radial-gradient(circle, hsl(43 90% 55% / 0.25) 0%, hsl(43 90% 55% / 0.1) 40%, transparent 70%)',
+                    animation: 'glow-pulse 4s ease-in-out infinite'
                   }}
                 />
-                {/* Glow backdrop */}
-                <div 
-                  className="absolute -inset-3 rounded-full bg-yellow-500/30 blur-xl"
-                  style={{ animation: 'glow-pulse 3s ease-in-out infinite' }}
-                />
-                {/* Inner ring */}
-                <div 
-                  className="absolute -inset-1 rounded-full"
-                  style={{
-                    background: 'linear-gradient(135deg, hsl(43 90% 65%), hsl(43 80% 45%), hsl(43 90% 55%))',
-                    padding: '2px'
-                  }}
-                >
-                  <div className="w-full h-full rounded-full bg-background" />
-                </div>
                 
-                <Avatar className="relative h-28 w-28 border-2 border-yellow-500/50 shadow-2xl">
+                {/* Animated rotating gold gradient ring */}
+                <div 
+                  className="absolute -inset-[6px] rounded-full"
+                  style={{
+                    background: 'conic-gradient(from 0deg, hsl(48 95% 65%), hsl(43 90% 55%), hsl(38 85% 48%), hsl(43 90% 55%), hsl(48 95% 65%))',
+                    animation: 'rotate-slow 12s linear infinite'
+                  }}
+                />
+                
+                {/* Inner dark ring to separate gradient from avatar */}
+                <div className="absolute -inset-[3px] rounded-full bg-background" />
+                
+                {/* Glowing ring effect */}
+                <div 
+                  className="absolute -inset-[3px] rounded-full pointer-events-none"
+                  style={{
+                    animation: 'avatar-ring-glow 3s ease-in-out infinite'
+                  }}
+                />
+                
+                {/* The Avatar itself */}
+                <Avatar className="avatar-hover-shimmer relative h-32 w-32 md:h-36 md:w-36 border-2 border-yellow-500/40 shadow-2xl overflow-hidden">
                   <AvatarImage src={profile.avatar_url || undefined} alt="Avatar" className="object-cover" />
-                  <AvatarFallback className="bg-gradient-to-br from-yellow-500/20 via-card to-primary/20 text-3xl font-bold text-yellow-500">
+                  <AvatarFallback className="bg-gradient-to-br from-yellow-500/20 via-card to-primary/20 text-4xl font-bold text-yellow-500">
                     {getInitials()}
                   </AvatarFallback>
                 </Avatar>
                 
-                {/* VIP Crown Badge */}
-                <div className="absolute -top-2 -right-2 p-2 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-lg shadow-yellow-500/30">
-                  <Crown className="w-4 h-4 text-black" />
+                {/* VIP Crown Badge - Larger & More Prominent */}
+                <div 
+                  className="absolute -top-1 -right-1 p-2.5 rounded-full bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 shadow-xl"
+                  style={{
+                    boxShadow: '0 4px 20px hsl(43 90% 55% / 0.5), 0 0 30px hsl(43 90% 55% / 0.3)'
+                  }}
+                >
+                  <Crown className="w-5 h-5 text-black" />
                 </div>
                 
-                {/* Upload overlay */}
+                {/* Upload overlay on hover */}
                 <button
                   onClick={() => avatarInputRef.current?.click()}
                   disabled={avatarUploading}
-                  className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer backdrop-blur-sm"
+                  className="absolute inset-0 flex items-center justify-center bg-black/75 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer backdrop-blur-sm border-2 border-yellow-500/50"
                 >
                   {avatarUploading ? (
-                    <Loader2 className="h-8 w-8 text-yellow-500 animate-spin" />
+                    <Loader2 className="h-10 w-10 text-yellow-500 animate-spin" />
                   ) : (
-                    <Camera className="h-8 w-8 text-yellow-500" />
+                    <Camera className="h-10 w-10 text-yellow-500" />
                   )}
                 </button>
                 <input
@@ -793,20 +870,43 @@ const Profile: React.FC = () => {
                 />
               </div>
               
-              {/* VIP Info */}
-              <div className="text-center md:text-left">
-                <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
-                  <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
-                    Můj profil
+              {/* VIP Title & Badge - Elegant Typography */}
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <h1 
+                    className="text-4xl md:text-5xl font-bold"
+                    style={{
+                      background: 'linear-gradient(135deg, hsl(50 95% 75%) 0%, hsl(45 90% 65%) 25%, hsl(43 85% 55%) 50%, hsl(40 80% 50%) 75%, hsl(38 75% 45%) 100%)',
+                      WebkitBackgroundClip: 'text',
+                      backgroundClip: 'text',
+                      color: 'transparent',
+                      textShadow: '0 2px 30px hsl(43 90% 55% / 0.3)'
+                    }}
+                  >
+                    {profile.nickname || profile.first_name || 'Můj profil'}
                   </h1>
-                  <div className="hidden md:flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 border border-yellow-500/30">
+                  
+                  {/* VIP Badge */}
+                  <div 
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-yellow-500/40"
+                    style={{
+                      background: 'linear-gradient(135deg, hsl(43 90% 55% / 0.15) 0%, hsl(43 85% 50% / 0.08) 100%)',
+                      boxShadow: '0 0 20px hsl(43 90% 55% / 0.15), inset 0 1px 0 hsl(43 90% 70% / 0.1)'
+                    }}
+                  >
                     <Sparkles className="w-4 h-4 text-yellow-500" />
-                    <span className="text-sm font-semibold text-yellow-500">VIP</span>
+                    <span className="text-sm font-bold tracking-wider text-yellow-500">VIP</span>
                   </div>
                 </div>
-                <p className="text-muted-foreground text-lg">Kliknutím na avatar změníte obrázek</p>
+                
+                <p className="text-muted-foreground text-base md:text-lg">
+                  Kliknutím na avatar změníte obrázek
+                </p>
               </div>
             </div>
+            
+            {/* Bottom gradient fade */}
+            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background/50 to-transparent pointer-events-none" />
           </div>
         </div>
 
