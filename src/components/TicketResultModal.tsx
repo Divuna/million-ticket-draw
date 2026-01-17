@@ -364,20 +364,18 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     }
   };
 
-  if (!result) return null;
-
-  // Detection logic
+  // Detection logic - use safe access since result can be null
   const isBonusWin = bonusPrize !== null;
-  const isMainPrize = result.won_type === 'main' || result.won_main === true;
+  const isMainPrize = result?.won_type === 'main' || result?.won_main === true;
   const isWinner = isBonusWin || isMainPrize;
   const isBonusClaimed = bonusPrize?.status === 'won';
 
   // Dynamic share text based on result
   const getShareText = () => {
     if (isWinner) {
-      return `Vyhrál jsem na OneMil 🎉🎟️ Ticket #${result.ticket_number.toLocaleString('cs-CZ')}. Zkus štěstí taky 👉 onemil.cz`;
+      return `Vyhrál jsem na OneMil 🎉🎟️ Ticket #${result?.ticket_number?.toLocaleString('cs-CZ') ?? ''}. Zkus štěstí taky 👉 onemil.cz`;
     }
-    return `Zahrál jsem si na OneMil 🎟️ Ticket #${result.ticket_number.toLocaleString('cs-CZ')}. Každý ticket tě blíží k výhře 👉 onemil.cz`;
+    return `Zahrál jsem si na OneMil 🎟️ Ticket #${result?.ticket_number?.toLocaleString('cs-CZ') ?? ''}. Každý ticket tě blíží k výhře 👉 onemil.cz`;
   };
 
   const handleShare = (platform: 'facebook' | 'instagram' | 'tiktok' | 'x') => {
@@ -439,7 +437,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `onemil-ticket-${result.ticket_number}.png`;
+    a.download = `onemil-ticket-${result?.ticket_number ?? 0}.png`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -467,8 +465,10 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     onClose();
   };
 
+  // Always render Dialog to prevent mount/unmount flicker in React StrictMode
+  // Control visibility via isOpen && result !== null
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen && result !== null} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         {isWinner && (
           <Confetti
@@ -501,14 +501,14 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                   </p>
                 )}
                 <p className="text-muted-foreground">
-                  Tiket #{result.ticket_number.toLocaleString('cs-CZ')}
+                  Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
                 </p>
-                {result.remaining_tickets !== undefined && (
+                {result?.remaining_tickets !== undefined && (
                   <p className="text-sm text-muted-foreground">
                     Zbývá tiketů: <span className="font-semibold">{result.remaining_tickets.toLocaleString('cs-CZ')}</span>
                   </p>
                 )}
-                {result.distance_to_next_bonus && result.distance_to_next_bonus > 0 && (
+                {result?.distance_to_next_bonus && result.distance_to_next_bonus > 0 && (
                   <p className="text-sm text-muted-foreground">
                     Do další bonusové výhry: <span className="font-semibold text-primary">{result.distance_to_next_bonus.toLocaleString('cs-CZ')} tiketů</span>
                   </p>
@@ -537,7 +537,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                   Gratulujeme, vyhrál jsi hlavní cenu!
                 </p>
                 <p className="text-muted-foreground">
-                  Tiket #{result.ticket_number.toLocaleString('cs-CZ')}
+                  Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
                 </p>
               </div>
             ) : null
@@ -554,14 +554,14 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               </p>
               <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Tvůj tiket: <span className="font-semibold">#{result.ticket_number.toLocaleString('cs-CZ')}</span>
+                  Tvůj tiket: <span className="font-semibold">#{result?.ticket_number?.toLocaleString('cs-CZ')}</span>
                 </p>
-                {result.distance_to_next_bonus && !isWinner && (
+                {result?.distance_to_next_bonus && !isWinner && (
                   <p className="text-sm text-muted-foreground">
                     Do bonusové výhry zbývá: <span className="font-semibold text-primary">{result.distance_to_next_bonus.toLocaleString('cs-CZ')} tiketů</span>
                   </p>
                 )}
-                {result.remaining_tickets !== undefined && (
+                {result?.remaining_tickets !== undefined && (
                   <p className="text-sm text-muted-foreground">
                     Zbývá tiketů: <span className="font-semibold">{result.remaining_tickets.toLocaleString('cs-CZ')}</span>
                   </p>
