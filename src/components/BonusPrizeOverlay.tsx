@@ -69,7 +69,11 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
       return;
     }
 
-    // Admins can now use all user features
+    // Admin users see read-only view
+    if (isAdmin) {
+      toast.info('Admin zobrazení - pouze pro čtení');
+      return;
+    }
 
     setClaimingBonus(bonusId);
 
@@ -148,6 +152,11 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
           </DialogTitle>
           
           {/* Role-based notices */}
+          {user && isAdmin && (
+            <Badge variant="secondary" className="w-fit">
+              Admin zobrazení - pouze pro čtení
+            </Badge>
+          )}
           
           {!user && (
             <Badge variant="outline" className="w-fit">
@@ -172,7 +181,7 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {bonusPrizes.map((bonus) => {
                 const IconComponent = getBonusIcon(bonus.description);
-                const isClaimable = bonus.status === 'pending' && user;
+                const isClaimable = bonus.status === 'pending' && user && !isAdmin;
                 
                 return (
                   <Card 
@@ -245,8 +254,9 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
                         </Button>
                       )}
 
-                      {bonus.status !== 'pending' && (
+                      {(bonus.status !== 'pending' || (user && isAdmin)) && (
                         <div className="text-center text-xs text-muted-foreground py-2">
+                          {bonus.status === 'pending' && isAdmin && 'Admin zobrazení'}
                           {bonus.status === 'claimed' && 'Bonus již byl uplatněn'}
                           {bonus.status === 'won' && 'Bonus byl vyhrán'}
                         </div>
@@ -259,7 +269,7 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
           )}
 
           {/* Instructions for non-admin users */}
-          {user && bonusPrizes.some(b => b.status === 'pending') && (
+          {user && !isAdmin && bonusPrizes.some(b => b.status === 'pending') && (
             <Card className="bg-muted/50">
               <CardContent className="pt-4">
                 <div className="text-sm text-muted-foreground text-center">

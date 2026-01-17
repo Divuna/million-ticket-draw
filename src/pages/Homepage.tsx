@@ -230,7 +230,9 @@ const Homepage = () => {
       return;
     }
 
-    // Admins can now use all user features
+    if (isAdmin) {
+      return; // Read-only for admin
+    }
 
     // Navigate to main games page
     navigate("/games");
@@ -243,7 +245,9 @@ const Homepage = () => {
       return;
     }
 
-    // Admins can now use all user features
+    if (isAdmin) {
+      return; // Read-only for admin
+    }
 
     try {
       // Check user's wallet balance
@@ -752,24 +756,38 @@ const Homepage = () => {
             {/* Voucher Banner */}
             {voucherBanner && (
               <div
-                className="relative rounded-lg overflow-hidden transition-all duration-200 cursor-pointer hover:scale-105"
-                onClick={() => navigate("/vouchers")}
+                className={`relative rounded-lg overflow-hidden transition-all duration-200 ${
+                  user && !isAdmin ? "cursor-pointer hover:scale-105" : ""
+                }`}
+                onClick={() => !isAdmin && navigate("/vouchers")}
               >
                 <img
                   src={voucherBanner.image_url}
                   alt={voucherBanner.title}
                   className="w-full h-64 md:h-80 object-cover"
                 />
+                {isAdmin && (
+                  <div className="absolute top-2 right-2 px-2 py-1 bg-amber-100/10 border border-amber-400/30 rounded text-xs text-amber-400">
+                    Pouze čtení
+                  </div>
+                )}
               </div>
             )}
 
             {/* Games Banner */}
             {gamesBanner && (
               <div
-                className="relative rounded-lg overflow-hidden transition-all duration-200 cursor-pointer hover:scale-105"
-                onClick={() => navigate("/games")}
+                className={`relative rounded-lg overflow-hidden transition-all duration-200 ${
+                  user && !isAdmin ? "cursor-pointer hover:scale-105" : ""
+                }`}
+                onClick={() => !isAdmin && navigate("/games")}
               >
                 <img src={gamesBanner.image_url} alt={gamesBanner.title} className="w-full h-64 md:h-80 object-cover" />
+                {isAdmin && (
+                  <div className="absolute top-2 right-2 px-2 py-1 bg-amber-100/10 border border-amber-400/30 rounded text-xs text-amber-400">
+                    Pouze čtení
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -812,6 +830,12 @@ const Homepage = () => {
             </h3>
             <div className="flex items-center gap-2">
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              {/* Role indicator */}
+              {isAdmin && (
+                <div className="px-2 py-1 bg-amber-100/10 border border-amber-400/30 rounded text-xs text-amber-400">
+                  Pouze čtení
+                </div>
+              )}
               {!user && (
                 <div className="px-2 py-1 bg-blue-100/10 border border-blue-400/30 rounded text-xs text-blue-400">
                   Přihlásit pro interakci
@@ -823,7 +847,7 @@ const Homepage = () => {
           <div
             ref={contestsCarouselRef}
             data-carousel-content
-            className="flex overflow-x-auto scroll-smooth gap-4 pb-4"
+            className={`flex overflow-x-auto scroll-smooth gap-4 pb-4 ${isAdmin ? "carousel-disabled" : ""}`}
             style={{
               scrollBehavior: "smooth",
               scrollSnapType: "none",
@@ -1004,11 +1028,12 @@ const Homepage = () => {
                         <div className="space-y-2">
                           <Button
                             className="w-full bg-primary text-primary-foreground font-bold shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
+                            disabled={isAdmin}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (!user) {
                                 navigate("/login");
-                              } else {
+                              } else if (!isAdmin) {
                                 handleVoucherPurchase(voucher.id);
                               }
                             }}
@@ -1018,9 +1043,11 @@ const Homepage = () => {
 
                           {/* Status indicator */}
                           <div className="text-xs text-muted-foreground">
-                            {user
+                            {user && !isAdmin
                               ? "Klikněte pro nákup"
-                              : "Přihlaste se pro nákup"}
+                              : !user
+                                ? "Přihlaste se pro nákup"
+                                : "Admin zobrazení - pouze pro čtení"}
                           </div>
                         </div>
                       </div>
