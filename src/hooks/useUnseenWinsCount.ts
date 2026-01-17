@@ -45,20 +45,7 @@ const fetchCount = async () => {
     return;
   }
 
-  // Check user role - admins don't see user badge
-  const { data: userData } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (userData?.role === "admin" || userData?.role === "superadmin") {
-    _unseenCount = 0;
-    notifyListeners();
-    return;
-  }
-
-  // Count unseen wins for current user
+  // Count unseen wins for current user (admins can also see their wins)
   const { count, error } = await supabase
     .from("winners")
     .select("*", { count: "exact", head: true })
@@ -98,15 +85,6 @@ const startUnseenWinsStore = () => {
 const setupRealtimeSubscription = async () => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-
-  // Check user role
-  const { data: userData } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (userData?.role === "admin" || userData?.role === "superadmin") return;
 
   if (_channel) {
     supabase.removeChannel(_channel);
