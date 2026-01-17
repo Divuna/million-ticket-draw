@@ -1200,35 +1200,35 @@ const Profile: React.FC = () => {
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* PERSONAL DETAILS SECTION - Premium Fintech Style */}
+          {/* PERSONAL DETAILS SECTION - Premium Apple ID Style */}
           {/* ═══════════════════════════════════════════════════════════════ */}
           <div 
-            className={`relative rounded-2xl border border-border/20 bg-gradient-to-br from-card/60 via-card/40 to-card/60 backdrop-blur-sm overflow-hidden transition-all duration-700 ease-out ${
+            className={`relative rounded-3xl border border-border/15 bg-gradient-to-b from-[hsl(220_20%_10%)] via-[hsl(220_18%_8%)] to-[hsl(220_20%_6%)] overflow-hidden transition-all duration-700 ease-out ${
               pageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
             }`}
             style={{ transitionDelay: '350ms' }}
           >
-            {/* Subtle top highlight */}
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+            {/* Subtle top highlight line */}
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
             
-            <div className="p-6 md:p-8">
-              {/* Section Header with Edit Button */}
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-2xl bg-muted/30 border border-border/20">
-                    <User className="h-5 w-5 text-muted-foreground" />
+            <div className="p-8 md:p-10">
+              {/* Section Header */}
+              <div className="flex items-center justify-between mb-10">
+                <div className="flex items-center gap-5">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-muted/25 to-muted/10 border border-border/15 shadow-lg shadow-black/20">
+                    <User className="h-6 w-6 text-muted-foreground/80" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-foreground tracking-tight">Osobní údaje</h2>
-                    <p className="text-sm text-muted-foreground/80">Profil a kontaktní informace</p>
+                    <h2 className="text-xl font-semibold text-foreground tracking-tight">Osobní údaje</h2>
+                    <p className="text-sm text-muted-foreground/60 mt-1">Profil a kontaktní informace</p>
                   </div>
                 </div>
                 {!editMode && (
                   <Button 
                     variant="outline" 
-                    size="sm" 
+                    size="default" 
                     onClick={() => setEditMode(true)}
-                    className="border-border/30 bg-transparent hover:bg-muted/20 hover:border-border/50 text-muted-foreground hover:text-foreground transition-all duration-300 text-sm font-medium"
+                    className="border-border/25 bg-white/[0.03] hover:bg-white/[0.06] hover:border-border/40 text-foreground/90 hover:text-foreground transition-all duration-300 font-medium px-6 rounded-xl"
                   >
                     Upravit
                   </Button>
@@ -1238,9 +1238,9 @@ const Profile: React.FC = () => {
               {editMode ? (
                 <>
                   {/* Edit Mode - Premium Input Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
-                    <div className="space-y-2.5">
-                      <Label htmlFor="nickname" className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wider">Přezdívka</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                    <div className="space-y-3">
+                      <Label htmlFor="nickname" className="text-xs font-medium text-muted-foreground/60 uppercase tracking-widest">Přezdívka</Label>
                       <Input 
                         id="nickname" 
                         type="text" 
@@ -1250,12 +1250,12 @@ const Profile: React.FC = () => {
                           nickname: e.target.value
                         }))} 
                         placeholder="Zadejte přezdívku"
-                        className="h-12 px-4 rounded-xl bg-muted/15 border-border/20 focus:border-primary/40 focus:bg-muted/25 focus:ring-1 focus:ring-primary/20 transition-all duration-300 placeholder:text-muted-foreground/40"
+                        className="h-14 px-5 rounded-xl bg-white/[0.03] border-border/20 focus:border-white/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-white/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
-                    <div className="space-y-2.5">
-                      <Label htmlFor="phone" className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wider">Telefon</Label>
+                    <div className="space-y-3">
+                      <Label htmlFor="phone" className="text-xs font-medium text-muted-foreground/60 uppercase tracking-widest">Telefon</Label>
                       <Input 
                         id="phone" 
                         type="text" 
@@ -1265,12 +1265,12 @@ const Profile: React.FC = () => {
                           phone: e.target.value
                         }))} 
                         placeholder="Zadejte telefon"
-                        className="h-12 px-4 rounded-xl bg-muted/15 border-border/20 focus:border-primary/40 focus:bg-muted/25 focus:ring-1 focus:ring-primary/20 transition-all duration-300 placeholder:text-muted-foreground/40"
+                        className="h-14 px-5 rounded-xl bg-white/[0.03] border-border/20 focus:border-white/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-white/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
-                    <div className="space-y-2.5">
-                      <Label htmlFor="first_name" className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wider">Křestní jméno</Label>
+                    <div className="space-y-3">
+                      <Label htmlFor="first_name" className="text-xs font-medium text-muted-foreground/60 uppercase tracking-widest">Křestní jméno</Label>
                       <Input 
                         id="first_name" 
                         type="text" 
@@ -1280,12 +1280,12 @@ const Profile: React.FC = () => {
                           first_name: e.target.value
                         }))} 
                         placeholder="Zadejte křestní jméno"
-                        className="h-12 px-4 rounded-xl bg-muted/15 border-border/20 focus:border-primary/40 focus:bg-muted/25 focus:ring-1 focus:ring-primary/20 transition-all duration-300 placeholder:text-muted-foreground/40"
+                        className="h-14 px-5 rounded-xl bg-white/[0.03] border-border/20 focus:border-white/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-white/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
-                    <div className="space-y-2.5">
-                      <Label htmlFor="last_name" className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wider">Příjmení</Label>
+                    <div className="space-y-3">
+                      <Label htmlFor="last_name" className="text-xs font-medium text-muted-foreground/60 uppercase tracking-widest">Příjmení</Label>
                       <Input 
                         id="last_name" 
                         type="text" 
@@ -1295,12 +1295,12 @@ const Profile: React.FC = () => {
                           last_name: e.target.value
                         }))} 
                         placeholder="Zadejte příjmení"
-                        className="h-12 px-4 rounded-xl bg-muted/15 border-border/20 focus:border-primary/40 focus:bg-muted/25 focus:ring-1 focus:ring-primary/20 transition-all duration-300 placeholder:text-muted-foreground/40"
+                        className="h-14 px-5 rounded-xl bg-white/[0.03] border-border/20 focus:border-white/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-white/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
-                    <div className="space-y-2.5 md:col-span-2">
-                      <Label htmlFor="address" className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wider">Doručovací adresa výhry</Label>
+                    <div className="space-y-3 md:col-span-2">
+                      <Label htmlFor="address" className="text-xs font-medium text-muted-foreground/60 uppercase tracking-widest">Doručovací adresa výhry</Label>
                       <Textarea 
                         id="address" 
                         value={profile.address} 
@@ -1310,17 +1310,17 @@ const Profile: React.FC = () => {
                         }))} 
                         placeholder="Zadejte doručovací adresu pro výhry" 
                         rows={3}
-                        className="px-4 py-3 rounded-xl bg-muted/15 border-border/20 focus:border-primary/40 focus:bg-muted/25 focus:ring-1 focus:ring-primary/20 transition-all duration-300 placeholder:text-muted-foreground/40 resize-none"
+                        className="px-5 py-4 rounded-xl bg-white/[0.03] border-border/20 focus:border-white/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-white/10 transition-all duration-300 placeholder:text-muted-foreground/30 resize-none text-lg"
                       />
                     </div>
                   </div>
                   
-                  {/* Action Buttons - Minimal */}
-                  <div className="flex gap-3 pt-2">
+                  {/* Action Buttons */}
+                  <div className="flex gap-4 pt-4">
                     <Button 
                       onClick={handleProfileSave} 
                       disabled={profileSaving}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-6 transition-all duration-300 hover:shadow-lg hover:shadow-primary/20"
+                      className="bg-white/10 hover:bg-white/15 text-foreground font-medium px-8 h-12 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-black/20 border border-white/10"
                     >
                       {profileSaving ? (
                         <>
@@ -1333,75 +1333,76 @@ const Profile: React.FC = () => {
                       variant="ghost" 
                       onClick={() => setEditMode(false)}
                       disabled={profileSaving}
-                      className="text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-all duration-300"
+                      className="text-muted-foreground hover:text-foreground hover:bg-white/[0.03] transition-all duration-300 h-12 px-6 rounded-xl"
                     >
                       Zrušit
                     </Button>
                   </div>
                 </>
               ) : (
-                /* View Mode - Profile Info Cards */
-                <div className="space-y-3">
-                  {(profile.nickname || profile.phone || profile.first_name || profile.last_name || profile.address) ? (
-                    <>
-                      {/* Two-column grid for smaller fields */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {profile.nickname && (
-                          <div className="group p-5 rounded-xl bg-muted/10 border border-border/15 hover:border-border/30 hover:bg-muted/15 transition-all duration-300">
-                            <p className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider mb-1.5">Přezdívka</p>
-                            <p className="text-foreground font-medium">{profile.nickname}</p>
-                          </div>
-                        )}
-                        
-                        {profile.phone && (
-                          <div className="group p-5 rounded-xl bg-muted/10 border border-border/15 hover:border-border/30 hover:bg-muted/15 transition-all duration-300">
-                            <p className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider mb-1.5">Telefon</p>
-                            <p className="text-foreground font-medium">{profile.phone}</p>
-                          </div>
-                        )}
-                        
-                        {(profile.first_name || profile.last_name) && (
-                          <div className="group p-5 rounded-xl bg-muted/10 border border-border/15 hover:border-border/30 hover:bg-muted/15 transition-all duration-300">
-                            <p className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider mb-1.5">Celé jméno</p>
-                            <p className="text-foreground font-medium">
-                              {[profile.first_name, profile.last_name].filter(Boolean).join(' ')}
-                            </p>
-                          </div>
-                        )}
-                        
-                        <div className="group p-5 rounded-xl bg-muted/10 border border-border/15 hover:border-border/30 hover:bg-muted/15 transition-all duration-300">
-                          <p className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider mb-1.5">Datum narození</p>
-                          <p className="text-foreground font-medium">
-                            {profile.date_of_birth 
-                              ? format(new Date(profile.date_of_birth), 'dd. MMMM yyyy', { locale: cs })
-                              : <span className="text-muted-foreground/50 italic">Neuvedeno</span>}
-                          </p>
-                        </div>
+                /* View Mode - Premium Read-Only Profile Summary */
+                <div className="space-y-1">
+                  {(profile.nickname || profile.phone || profile.first_name || profile.last_name || profile.address || profile.date_of_birth) ? (
+                    <div className="divide-y divide-border/10">
+                      {/* Nickname Row */}
+                      <div className="py-6 first:pt-0 group">
+                        <p className="text-[11px] font-medium text-muted-foreground/50 uppercase tracking-[0.15em] mb-2">Přezdívka</p>
+                        <p className="text-xl text-foreground font-medium tracking-tight">
+                          {profile.nickname || <span className="text-muted-foreground/30 font-normal">Nenastaveno</span>}
+                        </p>
                       </div>
                       
-                      {/* Full width for address */}
-                      {profile.address && (
-                        <div className="group p-5 rounded-xl bg-muted/10 border border-border/15 hover:border-border/30 hover:bg-muted/15 transition-all duration-300">
-                          <p className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider mb-1.5">Doručovací adresa</p>
-                          <p className="text-foreground font-medium whitespace-pre-wrap leading-relaxed">{profile.address}</p>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-center py-12 px-6 rounded-2xl bg-muted/5 border border-dashed border-border/20">
-                      <div className="p-4 rounded-2xl bg-muted/20 w-fit mx-auto mb-4">
-                        <User className="w-8 h-8 text-muted-foreground/40" />
+                      {/* Full Name Row */}
+                      <div className="py-6 group">
+                        <p className="text-[11px] font-medium text-muted-foreground/50 uppercase tracking-[0.15em] mb-2">Celé jméno</p>
+                        <p className="text-xl text-foreground font-medium tracking-tight">
+                          {(profile.first_name || profile.last_name) 
+                            ? [profile.first_name, profile.last_name].filter(Boolean).join(' ')
+                            : <span className="text-muted-foreground/30 font-normal">Nenastaveno</span>}
+                        </p>
                       </div>
-                      <p className="text-foreground/80 font-medium mb-1">Zatím nemáte vyplněny osobní údaje</p>
-                      <p className="text-sm text-muted-foreground/60">Klikněte na „Upravit" pro jejich zadání</p>
+                      
+                      {/* Phone Row */}
+                      <div className="py-6 group">
+                        <p className="text-[11px] font-medium text-muted-foreground/50 uppercase tracking-[0.15em] mb-2">Telefon</p>
+                        <p className="text-xl text-foreground font-medium tracking-tight">
+                          {profile.phone || <span className="text-muted-foreground/30 font-normal">Nenastaveno</span>}
+                        </p>
+                      </div>
+                      
+                      {/* Date of Birth Row */}
+                      <div className="py-6 group">
+                        <p className="text-[11px] font-medium text-muted-foreground/50 uppercase tracking-[0.15em] mb-2">Datum narození</p>
+                        <p className="text-xl text-foreground font-medium tracking-tight">
+                          {profile.date_of_birth 
+                            ? format(new Date(profile.date_of_birth), 'dd. MMMM yyyy', { locale: cs })
+                            : <span className="text-muted-foreground/30 font-normal">Nenastaveno</span>}
+                        </p>
+                      </div>
+                      
+                      {/* Address Row */}
+                      <div className="py-6 last:pb-0 group">
+                        <p className="text-[11px] font-medium text-muted-foreground/50 uppercase tracking-[0.15em] mb-2">Doručovací adresa</p>
+                        <p className="text-xl text-foreground font-medium tracking-tight whitespace-pre-wrap leading-relaxed">
+                          {profile.address || <span className="text-muted-foreground/30 font-normal">Nenastaveno</span>}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-16 px-8">
+                      <div className="p-5 rounded-3xl bg-gradient-to-br from-muted/20 to-muted/5 w-fit mx-auto mb-6 border border-border/10">
+                        <User className="w-10 h-10 text-muted-foreground/30" />
+                      </div>
+                      <p className="text-lg text-foreground/80 font-medium mb-2">Zatím nemáte vyplněny osobní údaje</p>
+                      <p className="text-sm text-muted-foreground/50">Klikněte na „Upravit" pro jejich zadání</p>
                     </div>
                   )}
                 </div>
               )}
             </div>
             
-            {/* Bottom subtle gradient */}
-            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/20 to-transparent" />
+            {/* Bottom subtle gradient line */}
+            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════ */}
