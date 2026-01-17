@@ -100,7 +100,7 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', 
 
   return (
     <div 
-      className={`contest-card rounded-2xl overflow-hidden relative cursor-pointer transition-all duration-300 ${isHighlighted ? 'ring-2 ring-primary/60 animate-pulse shadow-lg shadow-primary/20' : ''} ${className}`}
+      className={`rounded-[0.625rem] overflow-hidden relative cursor-pointer border border-border/40 bg-card shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] hover:border-border/60 hover:shadow-[0_6px_20px_hsl(222_50%_3%/0.6)] hover:-translate-y-0.5 transition-all duration-200 ${isHighlighted ? 'ring-2 ring-primary/60 animate-pulse shadow-lg shadow-primary/20' : ''} ${className}`}
       onClick={onClick}
     >
       {/* Full-width image matching ContestCard h-64 */}
