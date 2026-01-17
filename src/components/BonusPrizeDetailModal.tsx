@@ -32,7 +32,7 @@ export const BonusPrizeDetailModal: React.FC<BonusPrizeDetailModalProps> = ({
   return (
     <Dialog open={isOpen && prize !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent 
-        className="sm:max-w-lg max-h-[85vh] overflow-y-auto relative fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]"
+        className="sm:max-w-lg max-h-[85vh] overflow-y-auto relative"
         style={{
           backgroundImage: backgroundImageUrl ? `url(${backgroundImageUrl})` : undefined,
           backgroundSize: 'cover',
