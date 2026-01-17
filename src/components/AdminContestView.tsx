@@ -50,10 +50,10 @@ export const AdminContestView: React.FC<AdminContestViewProps> = ({
   const progressPercentage = (currentTickets / contest.ticket_count) * 100;
 
   const handleBuyClick = () => {
-    if (userWallet.balance_coins < 1) {
+    if (userWallet.balance_coins < contest.ticket_price) {
       toast({
         title: "Nedostatek mincí",
-        description: "Pro nákup tiketu potřebujete alespoň 1 minci.",
+        description: `Pro nákup tiketu potřebujete alespoň ${contest.ticket_price} MioCoinů.`,
         variant: "destructive"
       });
       return;
@@ -184,16 +184,16 @@ export const AdminContestView: React.FC<AdminContestViewProps> = ({
               <div>
                 <h3 className="text-lg font-semibold mb-1">Uplatnit miocoiny (Admin test)</h3>
                 <p className="text-muted-foreground">
-                  Cena: 1 miocoin | Váš zůstatek: {userWallet.balance_coins.toLocaleString('cs-CZ')} miocoinů
+                  Cena: {contest.ticket_price} MioCoinů | Váš zůstatek: {userWallet.balance_coins.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} MioCoinů
                 </p>
               </div>
               <Button 
                 onClick={handleBuyClick}
-                disabled={purchasing || userWallet.balance_coins < 1}
+                disabled={purchasing || userWallet.balance_coins < contest.ticket_price}
                 size="lg"
                 variant="premium"
               >
-                {purchasing ? 'Uplatňuji...' : `Uplatnit ${userWallet.balance_coins >= 1 ? '1' : '0'} miocoinů`}
+                {purchasing ? 'Uplatňuji...' : `Uplatnit ${contest.ticket_price} MioCoinů`}
               </Button>
             </div>
           </CardContent>
