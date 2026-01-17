@@ -230,9 +230,6 @@ const Homepage = () => {
       return;
     }
 
-    if (isAdmin) {
-      return; // Read-only for admin
-    }
 
     // Navigate to main games page
     navigate("/games");
@@ -245,9 +242,6 @@ const Homepage = () => {
       return;
     }
 
-    if (isAdmin) {
-      return; // Read-only for admin
-    }
 
     try {
       // Check user's wallet balance
@@ -756,38 +750,24 @@ const Homepage = () => {
             {/* Voucher Banner */}
             {voucherBanner && (
               <div
-                className={`relative rounded-lg overflow-hidden transition-all duration-200 ${
-                  user && !isAdmin ? "cursor-pointer hover:scale-105" : ""
-                }`}
-                onClick={() => !isAdmin && navigate("/vouchers")}
+                className="relative rounded-lg overflow-hidden transition-all duration-200 cursor-pointer hover:scale-105"
+                onClick={() => navigate("/vouchers")}
               >
                 <img
                   src={voucherBanner.image_url}
                   alt={voucherBanner.title}
                   className="w-full h-64 md:h-80 object-cover"
                 />
-                {isAdmin && (
-                  <div className="absolute top-2 right-2 px-2 py-1 bg-amber-100/10 border border-amber-400/30 rounded text-xs text-amber-400">
-                    Pouze čtení
-                  </div>
-                )}
               </div>
             )}
 
             {/* Games Banner */}
             {gamesBanner && (
               <div
-                className={`relative rounded-lg overflow-hidden transition-all duration-200 ${
-                  user && !isAdmin ? "cursor-pointer hover:scale-105" : ""
-                }`}
-                onClick={() => !isAdmin && navigate("/games")}
+                className="relative rounded-lg overflow-hidden transition-all duration-200 cursor-pointer hover:scale-105"
+                onClick={() => navigate("/games")}
               >
                 <img src={gamesBanner.image_url} alt={gamesBanner.title} className="w-full h-64 md:h-80 object-cover" />
-                {isAdmin && (
-                  <div className="absolute top-2 right-2 px-2 py-1 bg-amber-100/10 border border-amber-400/30 rounded text-xs text-amber-400">
-                    Pouze čtení
-                  </div>
-                )}
               </div>
             )}
           </section>
@@ -847,7 +827,7 @@ const Homepage = () => {
           <div
             ref={contestsCarouselRef}
             data-carousel-content
-            className={`flex overflow-x-auto scroll-smooth gap-4 pb-4 ${isAdmin ? "carousel-disabled" : ""}`}
+            className="flex overflow-x-auto scroll-smooth gap-4 pb-4"
             style={{
               scrollBehavior: "smooth",
               scrollSnapType: "none",
@@ -957,7 +937,7 @@ const Homepage = () => {
               Dostupné vouchery
             </h3>
             <div className="flex items-center gap-2">
-              {user && !isAdmin && (
+              {user && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -967,11 +947,6 @@ const Homepage = () => {
                   Moje vouchery
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
-              )}
-              {isAdmin && (
-                <div className="px-2 py-1 bg-amber-100/10 border border-amber-400/30 rounded text-xs text-amber-400">
-                  Pouze čtení
-                </div>
               )}
             </div>
           </div>

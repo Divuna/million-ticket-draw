@@ -138,7 +138,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         {/* Top row: Favorite + Status */}
         <div className="flex items-start justify-between mb-auto">
           {/* Favorite button - simple outline style */}
-          {user && !isAdmin && (onToggleFavorite || onRemoveFavorite) ? (
+          {user && (onToggleFavorite || onRemoveFavorite) ? (
             <button
               onClick={handleFavoriteClick}
               className="
@@ -185,8 +185,8 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             {contest.title}
           </h3>
           
-          {/* CTA for logged-in non-admin users */}
-          {user && !isAdmin && (
+          {/* CTA for logged-in users */}
+          {user && (
             <div className="flex items-stretch gap-2">
               {/* Gold outlined pill CTA */}
               <button
