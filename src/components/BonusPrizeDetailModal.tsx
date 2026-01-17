@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -30,7 +31,12 @@ export const BonusPrizeDetailModal: React.FC<BonusPrizeDetailModalProps> = ({
   // Always render Dialog to prevent mount/unmount flicker in React StrictMode
   // Control visibility via isOpen prop, render content only when prize exists
   return (
-    <Dialog open={isOpen && prize !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog 
+      open={isOpen && prize !== null} 
+      onOpenChange={(open) => { 
+        if (!open && prize !== null) onClose(); 
+      }}
+    >
       <DialogContent 
         className="sm:max-w-lg max-h-[85vh] overflow-y-auto relative fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]"
         style={{
@@ -47,6 +53,9 @@ export const BonusPrizeDetailModal: React.FC<BonusPrizeDetailModalProps> = ({
           <DialogTitle className="text-xl font-bold text-yellow-400">
             {prize?.description || 'Bonusová výhra'}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Detail bonusové věcné výhry
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2 relative z-10">
