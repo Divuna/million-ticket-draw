@@ -384,7 +384,9 @@ export default function ContestDetail() {
                 <button 
                   key={b.id}
                   type="button"
-                  onClick={() => setSelectedBonusPrize({ ...b, image_url: bonusImageUrl })}
+                  onClick={() => setSelectedBonusPrize((prev) => 
+                    prev?.id === b.id ? prev : { ...b, image_url: bonusImageUrl }
+                  )}
                   className="p-3 rounded-xl border border-white/5 hover:border-yellow-500/30 transition-colors text-left cursor-pointer relative overflow-hidden"
                   style={{
                     backgroundImage: starryBackgroundUrl ? `url(${starryBackgroundUrl})` : undefined,
