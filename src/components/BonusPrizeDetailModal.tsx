@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -28,14 +28,27 @@ export const BonusPrizeDetailModal: React.FC<BonusPrizeDetailModalProps> = ({
   prize,
   backgroundImageUrl,
 }) => {
+  // Track if modal was truly open to prevent premature close calls
+  const wasOpenRef = useRef(false);
+  
+  // Update ref when modal state changes
+  useEffect(() => {
+    wasOpenRef.current = isOpen && prize !== null;
+  }, [isOpen, prize]);
+
+  const handleOpenChange = (open: boolean) => {
+    // Only call onClose if modal was actually open and is now closing
+    if (!open && wasOpenRef.current) {
+      onClose();
+    }
+  };
+
   // Always render Dialog to prevent mount/unmount flicker in React StrictMode
   // Control visibility via isOpen prop, render content only when prize exists
   return (
     <Dialog 
       open={isOpen && prize !== null} 
-      onOpenChange={(open) => { 
-        if (!open && prize !== null) onClose(); 
-      }}
+      onOpenChange={handleOpenChange}
     >
       <DialogContent 
         className="sm:max-w-lg max-h-[85vh] overflow-y-auto relative fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]"
