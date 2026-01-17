@@ -116,13 +116,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "audit_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_user_wallets"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       banners: {
@@ -599,13 +592,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_user_wallets"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       partners: {
@@ -670,13 +656,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_user_wallets"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -794,13 +773,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "push_log_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_user_wallets"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       push_retry: {
@@ -903,13 +875,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tickets_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_user_wallets"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1164,13 +1129,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "vouchers_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_user_wallets"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       wallets: {
@@ -1205,13 +1163,6 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "wallets_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "v_user_wallets"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1309,13 +1260,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "winners_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "v_user_wallets"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
     }
@@ -1385,13 +1329,31 @@ export type Database = {
       v_user_wallets: {
         Row: {
           balance_coins: number | null
-          balance_vouchers: number | null
+          bonus_balance_coins: number | null
           created_at: string | null
-          email: string | null
-          name: string | null
           user_id: string | null
         }
-        Relationships: []
+        Insert: {
+          balance_coins?: number | null
+          bonus_balance_coins?: number | null
+          created_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          balance_coins?: number | null
+          bonus_balance_coins?: number | null
+          created_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

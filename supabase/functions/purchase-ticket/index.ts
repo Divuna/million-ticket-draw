@@ -42,6 +42,9 @@ serve(async (req) => {
       throw new Error('Contest not found or not active')
     }
 
+    // Get ticket price from contest (supports decimals like 0.1, 0.2, etc.)
+    const ticketPrice = Number(contest.ticket_price)
+    
     // 2. Check user wallet
     const { data: wallet, error: walletError } = await supabaseClient
       .from('wallets')
@@ -49,7 +52,7 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .single()
 
-    if (walletError || !wallet || wallet.balance_coins < 1) {
+    if (walletError || !wallet || Number(wallet.balance_coins) < ticketPrice) {
       throw new Error('Insufficient balance')
     }
 
@@ -68,15 +71,18 @@ serve(async (req) => {
       throw new Error('Contest is full')
     }
 
-    // 4. Deduct coin from wallet
+    // 4. Deduct ticket price from wallet (using decimal math)
+    const newBalance = Number(wallet.balance_coins) - ticketPrice
     const { error: walletUpdateError } = await supabaseClient
       .from('wallets')
-      .update({ balance_coins: wallet.balance_coins - 1 })
+      .update({ balance_coins: newBalance })
       .eq('user_id', user.id)
 
     if (walletUpdateError) {
       throw new Error('Failed to update wallet')
     }
+    
+    console.log(`Ticket purchased: user=${user.id}, contest=${contest_id}, ticket=#${nextTicketNumber}, price=${ticketPrice}, oldBalance=${wallet.balance_coins}, newBalance=${newBalance}`)
 
     // 5. Create ticket
     const { data: newTicket, error: ticketError } = await supabaseClient
@@ -90,10 +96,10 @@ serve(async (req) => {
       .single()
 
     if (ticketError) {
-      // Rollback wallet update
+      // Rollback wallet update - restore original balance
       await supabaseClient
         .from('wallets')
-        .update({ balance_coins: wallet.balance_coins })
+        .update({ balance_coins: Number(wallet.balance_coins) })
         .eq('user_id', user.id)
       
       throw new Error('Failed to create ticket')

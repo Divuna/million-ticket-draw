@@ -287,7 +287,7 @@ export default function ContestDetail() {
             <img src={MIOCOIN_IMAGE_URL} className="w-7 h-7" alt="MioCoin" />
             <div>
               <p className="text-xs text-gray-400">Tvůj stav MioCoinů</p>
-              <p className="text-xl font-bold text-white">{balance.toLocaleString("cs-CZ")}</p>
+              <p className="text-xl font-bold text-white">{balance.toLocaleString("cs-CZ", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}</p>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch gap-3 mt-auto">
