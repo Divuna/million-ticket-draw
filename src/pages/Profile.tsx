@@ -1127,55 +1127,67 @@ const Profile: React.FC = () => {
           </VIPCard>
 
           {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* ACCOUNT SECTION - Calm & Premium */}
+          {/* ACCOUNT SECTION - Apple ID / Revolut Style */}
           {/* ═══════════════════════════════════════════════════════════════ */}
           <div 
-            className={`relative rounded-2xl border border-border/20 bg-gradient-to-br from-card/60 via-card/40 to-card/60 backdrop-blur-sm overflow-hidden transition-all duration-700 ease-out ${
+            className={`relative rounded-3xl border border-border/15 bg-gradient-to-b from-[hsl(var(--card))]/80 to-[hsl(var(--card))]/40 backdrop-blur-xl overflow-hidden transition-all duration-700 ease-out ${
               pageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
             }`}
             style={{ transitionDelay: '250ms' }}
           >
-            {/* Subtle top highlight */}
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+            {/* Top edge highlight */}
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--foreground))]/8 to-transparent" />
             
-            <div className="p-6 md:p-8">
-              {/* Section Header */}
-              <div className="flex items-center gap-4 mb-8">
-                <div className="p-3 rounded-2xl bg-muted/30 border border-border/20">
-                  <Shield className="h-5 w-5 text-muted-foreground" />
+            {/* Inner glow */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--foreground))]/[0.02] via-transparent to-transparent pointer-events-none" />
+            
+            <div className="relative p-8 md:p-10">
+              {/* Section Header - Minimal */}
+              <div className="flex items-center gap-5 mb-10">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-[hsl(var(--muted))]/40 to-[hsl(var(--muted))]/20 border border-[hsl(var(--border))]/10 shadow-inner">
+                  <Shield className="h-6 w-6 text-[hsl(var(--foreground))]/60" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-foreground tracking-tight">Účet</h2>
-                  <p className="text-sm text-muted-foreground/80">Přihlašovací údaje</p>
+                  <h2 className="text-xl font-semibold text-[hsl(var(--foreground))] tracking-tight">Účet</h2>
+                  <p className="text-sm text-[hsl(var(--muted-foreground))]/70 mt-0.5">Přihlašovací údaje</p>
                 </div>
               </div>
               
-              {/* Info Cards - Apple-style */}
-              <div className="space-y-3">
-                <div className="group relative p-5 rounded-xl bg-muted/10 border border-border/15 hover:border-border/30 hover:bg-muted/15 transition-all duration-300">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2 rounded-lg bg-muted/40">
-                        <Mail className="h-4 w-4 text-muted-foreground/70" />
+              {/* Premium Info Blocks */}
+              <div className="space-y-6">
+                {/* Email Block */}
+                <div className="group relative">
+                  <div className="p-6 rounded-2xl bg-gradient-to-br from-[hsl(var(--muted))]/20 to-[hsl(var(--muted))]/5 border border-[hsl(var(--border))]/10 hover:border-[hsl(var(--border))]/20 transition-all duration-500">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-semibold text-[hsl(var(--muted-foreground))]/60 uppercase tracking-[0.1em] mb-3">
+                          E-mailová adresa
+                        </p>
+                        <p className="text-lg font-medium text-[hsl(var(--foreground))] truncate">
+                          {wallet?.email || user?.email}
+                        </p>
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider mb-1">E-mail</p>
-                        <p className="text-foreground font-medium">{wallet?.email || user?.email}</p>
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+                        <CheckCircle className="h-3.5 w-3.5 text-green-500/80" />
+                        <span className="text-xs font-medium text-green-500/80">Ověřeno</span>
                       </div>
                     </div>
-                    <CheckCircle className="h-4 w-4 text-green-500/60" />
                   </div>
                 </div>
                 
+                {/* Name Block */}
                 {wallet?.name && (
-                  <div className="group relative p-5 rounded-xl bg-muted/10 border border-border/15 hover:border-border/30 hover:bg-muted/15 transition-all duration-300">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2 rounded-lg bg-muted/40">
-                        <User className="h-4 w-4 text-muted-foreground/70" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider mb-1">Jméno účtu</p>
-                        <p className="text-foreground font-medium">{wallet.name}</p>
+                  <div className="group relative">
+                    <div className="p-6 rounded-2xl bg-gradient-to-br from-[hsl(var(--muted))]/20 to-[hsl(var(--muted))]/5 border border-[hsl(var(--border))]/10 hover:border-[hsl(var(--border))]/20 transition-all duration-500">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-semibold text-[hsl(var(--muted-foreground))]/60 uppercase tracking-[0.1em] mb-3">
+                            Jméno účtu
+                          </p>
+                          <p className="text-lg font-medium text-[hsl(var(--foreground))] truncate">
+                            {wallet.name}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1183,8 +1195,8 @@ const Profile: React.FC = () => {
               </div>
             </div>
             
-            {/* Bottom subtle gradient */}
-            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/20 to-transparent" />
+            {/* Bottom edge */}
+            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--border))]/10 to-transparent" />
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════ */}
