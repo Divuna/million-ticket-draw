@@ -1028,12 +1028,11 @@ const Homepage = () => {
                         <div className="space-y-2">
                           <Button
                             className="w-full bg-primary text-primary-foreground font-bold shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
-                            disabled={isAdmin}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (!user) {
                                 navigate("/login");
-                              } else if (!isAdmin) {
+                              } else {
                                 handleVoucherPurchase(voucher.id);
                               }
                             }}
@@ -1043,11 +1042,7 @@ const Homepage = () => {
 
                           {/* Status indicator */}
                           <div className="text-xs text-muted-foreground">
-                            {user && !isAdmin
-                              ? "Klikněte pro nákup"
-                              : !user
-                                ? "Přihlaste se pro nákup"
-                                : "Admin zobrazení - pouze pro čtení"}
+                            {user ? "Klikněte pro nákup" : "Přihlaste se pro nákup"}
                           </div>
                         </div>
                       </div>

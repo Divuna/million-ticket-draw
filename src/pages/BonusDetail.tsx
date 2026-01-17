@@ -224,7 +224,7 @@ const BonusDetail: React.FC = () => {
         </div>
       </div>
 
-      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
+      <BottomNavigation />
     </div>
   );
 };
