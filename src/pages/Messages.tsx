@@ -1,10 +1,23 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageCircle, Send, Sparkles } from "lucide-react";
+
+interface Sparkle {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  delay: number;
+}
+
+interface FlyingMessage {
+  id: number;
+  content: string;
+}
 
 interface Message {
   id: string;
@@ -23,8 +36,12 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
+  const [sparkles, setSparkles] = useState<Sparkle[]>([]);
+  const [flyingMessage, setFlyingMessage] = useState<FlyingMessage | null>(null);
+  const [isSending, setIsSending] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
@@ -87,15 +104,41 @@ export default function MessagesPage() {
     };
   }, [user]);
 
-  // SEND
+  // Create sparkle effect
+  const createSparkles = useCallback(() => {
+    const newSparkles: Sparkle[] = [];
+    for (let i = 0; i < 12; i++) {
+      newSparkles.push({
+        id: Date.now() + i,
+        x: Math.random() * 100 - 50,
+        y: Math.random() * 60 - 80,
+        size: 4 + Math.random() * 8,
+        delay: Math.random() * 0.3,
+      });
+    }
+    setSparkles(newSparkles);
+    setTimeout(() => setSparkles([]), 1000);
+  }, []);
+
+  // SEND with animation
   const handleSend = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || isSending) return;
+
+    const messageContent = newMessage.trim();
+    setIsSending(true);
+    
+    // Start flying animation
+    setFlyingMessage({ id: Date.now(), content: messageContent });
+    createSparkles();
+    setNewMessage("");
+
+    // Wait for animation
+    await new Promise(resolve => setTimeout(resolve, 600));
 
     setLoading(true);
-    const ok = await sendMessageToAdmin(newMessage);
+    const ok = await sendMessageToAdmin(messageContent);
 
     if (ok) {
-      setNewMessage("");
       await refetch();
       toast({ title: "Odesláno" });
     } else {
@@ -103,6 +146,8 @@ export default function MessagesPage() {
     }
 
     setLoading(false);
+    setFlyingMessage(null);
+    setIsSending(false);
   };
 
   // Handle Enter key
@@ -340,12 +385,55 @@ export default function MessagesPage() {
             />
 
             <div className="relative flex items-center gap-3">
+              {/* Flying message animation */}
+              {flyingMessage && (
+                <div 
+                  className="absolute right-16 bottom-full mb-2 z-50 pointer-events-none"
+                  style={{ animation: 'fly-up 0.6s ease-out forwards' }}
+                >
+                  <div 
+                    className="max-w-[200px] px-4 py-2 rounded-xl text-sm font-medium text-black truncate"
+                    style={{
+                      background: 'linear-gradient(135deg, hsl(45, 80%, 50%) 0%, hsl(35, 90%, 40%) 100%)',
+                      boxShadow: '0 4px 20px hsl(45, 80%, 40%, 0.5)',
+                    }}
+                  >
+                    {flyingMessage.content.length > 30 
+                      ? flyingMessage.content.substring(0, 30) + '...' 
+                      : flyingMessage.content}
+                  </div>
+                  
+                  {/* Sparkles around flying message */}
+                  {sparkles.map((sparkle) => (
+                    <div
+                      key={sparkle.id}
+                      className="absolute"
+                      style={{
+                        left: '50%',
+                        top: '50%',
+                        width: sparkle.size,
+                        height: sparkle.size,
+                        animation: `sparkle-burst 0.8s ease-out ${sparkle.delay}s forwards`,
+                        transform: `translate(${sparkle.x}px, ${sparkle.y}px)`,
+                      }}
+                    >
+                      <Sparkles 
+                        className="w-full h-full"
+                        style={{ color: 'hsl(45, 93%, 60%)' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <input
+                ref={inputRef}
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Napište zprávu..."
-                className="flex-1 bg-[hsl(220,25%,10%)] text-gray-100 p-4 rounded-xl border border-[hsl(220,20%,20%)] focus:border-[hsl(45,70%,50%)]/50 focus:ring-2 focus:ring-[hsl(45,70%,50%)]/20 transition-all duration-300 placeholder:text-gray-500 text-[15px]"
+                disabled={isSending}
+                className="flex-1 bg-[hsl(220,25%,10%)] text-gray-100 p-4 rounded-xl border border-[hsl(220,20%,20%)] focus:border-[hsl(45,70%,50%)]/50 focus:ring-2 focus:ring-[hsl(45,70%,50%)]/20 transition-all duration-300 placeholder:text-gray-500 text-[15px] disabled:opacity-50"
                 style={{
                   boxShadow: 'inset 0 2px 4px hsl(0, 0%, 0%, 0.2)',
                 }}
@@ -353,8 +441,8 @@ export default function MessagesPage() {
               
               <button
                 onClick={handleSend}
-                disabled={loading || !newMessage.trim()}
-                className="relative overflow-hidden p-4 rounded-xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+                disabled={loading || !newMessage.trim() || isSending}
+                className={`relative overflow-hidden p-4 rounded-xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105 active:scale-95 ${isSending ? 'animate-pulse' : ''}`}
                 style={{
                   background: newMessage.trim() 
                     ? 'linear-gradient(135deg, hsl(45, 80%, 45%) 0%, hsl(35, 90%, 35%) 100%)'
@@ -368,7 +456,7 @@ export default function MessagesPage() {
                 }}
               >
                 {/* Button shimmer */}
-                {newMessage.trim() && (
+                {newMessage.trim() && !isSending && (
                   <div 
                     className="absolute inset-0 opacity-30"
                     style={{
@@ -378,7 +466,7 @@ export default function MessagesPage() {
                     }}
                   />
                 )}
-                <Send className={`w-5 h-5 relative z-10 ${newMessage.trim() ? 'text-black' : 'text-gray-500'}`} />
+                <Send className={`w-5 h-5 relative z-10 transition-transform ${newMessage.trim() ? 'text-black' : 'text-gray-500'} ${isSending ? 'rotate-[-45deg] scale-110' : ''}`} />
               </button>
             </div>
           </div>
@@ -402,6 +490,36 @@ export default function MessagesPage() {
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fly-up {
+          0% { 
+            opacity: 1; 
+            transform: translateY(0) scale(1); 
+          }
+          50% { 
+            opacity: 1; 
+            transform: translateY(-40px) scale(1.05); 
+          }
+          100% { 
+            opacity: 0; 
+            transform: translateY(-100px) scale(0.8); 
+          }
+        }
+        
+        @keyframes sparkle-burst {
+          0% { 
+            opacity: 0; 
+            transform: translate(0, 0) scale(0) rotate(0deg); 
+          }
+          30% { 
+            opacity: 1; 
+            transform: translate(var(--tx, 0), var(--ty, 0)) scale(1.2) rotate(180deg); 
+          }
+          100% { 
+            opacity: 0; 
+            transform: translate(calc(var(--tx, 0) * 2), calc(var(--ty, 0) * 2)) scale(0) rotate(360deg); 
+          }
         }
       `}</style>
     </div>
