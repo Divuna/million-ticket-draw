@@ -5,7 +5,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { AdminMenu } from '@/components/AdminMenu';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Trophy, Filter, ArrowUp, ArrowDown, Gift } from 'lucide-react';
+import { Trophy, Filter, ArrowUp, ArrowDown, Gift, Sparkles, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { WinCard } from '@/components/WinCard';
 import { WinDetailModal } from '@/components/WinDetailModal';
@@ -112,7 +112,6 @@ const Wins: React.FC = () => {
   // Play notification sound
   const playNotificationSound = useCallback(() => {
     try {
-      // Create audio context for a simple notification tone
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
@@ -141,7 +140,6 @@ const Wins: React.FC = () => {
     }
 
     const initPage = async () => {
-      // Mark wins as seen via SQL function (only for non-admin users)
       const { data: userData } = await supabase
         .from('users')
         .select('role')
@@ -153,7 +151,6 @@ const Wins: React.FC = () => {
         refreshUnseenWins();
       }
 
-      // Fetch wins and user age
       fetchWins();
       fetchUserAge();
     };
@@ -209,7 +206,6 @@ const Wins: React.FC = () => {
           const winId = payload.new.id as string;
           const newStatus = payload.new.status as string;
           
-          // Update the specific win in state
           const newDelivered = payload.new.delivered as boolean;
           const newNotes = payload.new.notes as string | null;
           setWins(prev => prev.map(win => 
@@ -218,21 +214,17 @@ const Wins: React.FC = () => {
               : win
           ));
           
-          // Play notification sound (if enabled)
           if (soundEnabled) {
             playNotificationSound();
           }
           
-          // Show toast notification
           toast({
             title: "Stav výhry aktualizován",
             description: `Nový stav: ${newStatus || 'Čeká na potvrzení'}`,
           });
           
-          // Highlight the updated win
           setHighlightedWins(prev => new Set(prev).add(winId));
           
-          // Remove highlight after 2 seconds
           setTimeout(() => {
             setHighlightedWins(prev => {
               const next = new Set(prev);
@@ -309,10 +301,10 @@ const Wins: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-gradient-to-b from-[hsl(220,20%,4%)] via-[hsl(220,25%,6%)] to-[hsl(220,20%,4%)] pb-20">
         <Header />
         <main className="container mx-auto px-4 py-6">
-          <p className="text-muted-foreground text-center">Pro zobrazení výher se musíte přihlásit.</p>
+          <p className="text-gray-400 text-center">Pro zobrazení výher se musíte přihlásit.</p>
         </main>
         {isAdmin ? <AdminMenu /> : <BottomNavigation />}
       </div>
@@ -320,89 +312,197 @@ const Wins: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background dark pb-20">
+    <div className="min-h-screen bg-gradient-to-b from-[hsl(220,20%,4%)] via-[hsl(220,25%,6%)] to-[hsl(220,20%,4%)] relative overflow-hidden pb-20">
+      {/* Premium floating particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(25)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-1 h-1 rounded-full"
+            style={{
+              background: `radial-gradient(circle, hsl(45, 93%, ${50 + Math.random() * 20}%) 0%, transparent 70%)`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              opacity: 0.15 + Math.random() * 0.15,
+              animation: `float ${8 + Math.random() * 12}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 5}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Premium shimmer overlay */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-[0.02]"
+        style={{
+          background: 'linear-gradient(45deg, transparent 30%, hsl(45, 93%, 60%) 50%, transparent 70%)',
+          backgroundSize: '200% 200%',
+          animation: 'shimmer 8s ease-in-out infinite',
+        }}
+      />
+
       <Header />
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-3 mb-6">
-          <Trophy className="h-8 w-8 text-yellow-500" />
-          <h1 className="text-2xl font-bold text-foreground">Moje výhry</h1>
+      
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        {/* Premium Header Card */}
+        <div 
+          className="relative overflow-hidden rounded-2xl p-6 mb-8"
+          style={{
+            background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
+            border: '1px solid hsl(45, 70%, 40%, 0.2)',
+            boxShadow: '0 8px 32px hsl(0, 0%, 0%, 0.4), inset 0 1px 0 hsl(45, 70%, 50%, 0.1)',
+          }}
+        >
+          {/* Header shimmer */}
+          <div 
+            className="absolute inset-0 opacity-10"
+            style={{
+              background: 'linear-gradient(90deg, transparent 0%, hsl(45, 93%, 60%) 50%, transparent 100%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer 4s ease-in-out infinite',
+            }}
+          />
+          
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div 
+                className="w-16 h-16 rounded-xl flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(45, 80%, 45%) 0%, hsl(35, 90%, 35%) 100%)',
+                  boxShadow: '0 4px 20px hsl(45, 80%, 40%, 0.3)',
+                }}
+              >
+                <Trophy className="w-8 h-8 text-black" />
+              </div>
+              
+              <div>
+                <h1 
+                  className="text-3xl font-bold tracking-tight"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(45, 93%, 65%) 0%, hsl(35, 90%, 55%) 50%, hsl(45, 93%, 65%) 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  Moje výhry
+                </h1>
+                <p className="text-gray-400 mt-1">Přehled všech vašich výher</p>
+              </div>
+            </div>
+
+            {wins.length > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(45,80%,45%)]/10 border border-[hsl(45,70%,50%)]/20">
+                <Crown className="w-5 h-5 text-[hsl(45,80%,55%)]" />
+                <span className="text-lg font-bold text-[hsl(45,80%,60%)]">{wins.length}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Filter and Sort Controls */}
         {wins.length > 0 && (
-          <div className="space-y-4 mb-6">
+          <div 
+            className="relative overflow-hidden rounded-2xl p-5 mb-6 space-y-4"
+            style={{
+              background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 10%) 100%)',
+              border: '1px solid hsl(220, 20%, 18%)',
+              boxShadow: '0 4px 16px hsl(0, 0%, 0%, 0.3)',
+            }}
+          >
             {/* Type Filter */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted-foreground mr-1">Typ:</span>
-              <Badge
-                variant={typeFilter === 'all' ? 'default' : 'outline'}
-                className={`cursor-pointer transition-colors ${typeFilter === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm text-gray-400 font-medium">Typ:</span>
+              <button
                 onClick={() => setTypeFilter('all')}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                  typeFilter === 'all' 
+                    ? 'bg-gradient-to-r from-[hsl(45,80%,45%)] to-[hsl(35,90%,35%)] text-black shadow-[0_4px_16px_hsl(45,80%,40%,0.3)]' 
+                    : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[hsl(45,70%,50%)]/30'
+                }`}
               >
                 Všechny ({typeCounts.all})
-              </Badge>
-              <Badge
-                variant={typeFilter === 'main' ? 'default' : 'outline'}
-                className={`cursor-pointer transition-colors ${typeFilter === 'main' ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20'}`}
+              </button>
+              <button
                 onClick={() => setTypeFilter('main')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                  typeFilter === 'main' 
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black shadow-[0_4px_16px_rgba(245,158,11,0.3)]' 
+                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20'
+                }`}
               >
-                <Trophy className="w-3 h-3 mr-1" />
+                <Trophy className="w-4 h-4" />
                 Hlavní ({typeCounts.main})
-              </Badge>
-              <Badge
-                variant={typeFilter === 'bonus' ? 'default' : 'outline'}
-                className={`cursor-pointer transition-colors ${typeFilter === 'bonus' ? 'bg-purple-500 text-white border-purple-500' : 'bg-purple-500/10 text-purple-400 border-purple-500/30 hover:bg-purple-500/20'}`}
+              </button>
+              <button
                 onClick={() => setTypeFilter('bonus')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                  typeFilter === 'bonus' 
+                    ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-[0_4px_16px_rgba(168,85,247,0.3)]' 
+                    : 'bg-purple-500/10 text-purple-400 border border-purple-500/30 hover:bg-purple-500/20'
+                }`}
               >
-                <Gift className="w-3 h-3 mr-1" />
+                <Gift className="w-4 h-4" />
                 Bonus ({typeCounts.bonus})
-              </Badge>
+              </button>
             </div>
 
             {/* Status Filter and Sort */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2 border-t border-[hsl(220,20%,15%)]">
               {/* Status Filter Buttons */}
-              <div className="flex flex-wrap items-center gap-2">
-                <Filter className="w-4 h-4 text-muted-foreground" />
-                <Badge
-                  variant={filter === 'all' ? 'default' : 'outline'}
-                  className={`cursor-pointer transition-colors ${filter === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+              <div className="flex flex-wrap items-center gap-3">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <button
                   onClick={() => setFilter('all')}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                    filter === 'all' 
+                      ? 'bg-gradient-to-r from-[hsl(45,80%,45%)] to-[hsl(35,90%,35%)] text-black shadow-[0_4px_16px_hsl(45,80%,40%,0.3)]' 
+                      : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[hsl(45,70%,50%)]/30'
+                  }`}
                 >
                   Všechny ({statusCounts.all})
-                </Badge>
-                <Badge
-                  variant={filter === 'pending' ? 'default' : 'outline'}
-                  className={`cursor-pointer transition-colors ${filter === 'pending' ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20'}`}
+                </button>
+                <button
                   onClick={() => setFilter('pending')}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                    filter === 'pending' 
+                      ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-black shadow-[0_4px_16px_rgba(234,179,8,0.3)]' 
+                      : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/20'
+                  }`}
                 >
                   Čeká ({statusCounts.pending})
-                </Badge>
-                <Badge
-                  variant={filter === 'shipped' ? 'default' : 'outline'}
-                  className={`cursor-pointer transition-colors ${filter === 'shipped' ? 'bg-blue-500 text-white border-blue-500' : 'bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20'}`}
+                </button>
+                <button
                   onClick={() => setFilter('shipped')}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                    filter === 'shipped' 
+                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0_4px_16px_rgba(59,130,246,0.3)]' 
+                      : 'bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20'
+                  }`}
                 >
                   Odesláno ({statusCounts.shipped})
-                </Badge>
-                <Badge
-                  variant={filter === 'delivered' ? 'default' : 'outline'}
-                  className={`cursor-pointer transition-colors ${filter === 'delivered' ? 'bg-green-500 text-white border-green-500' : 'bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20'}`}
+                </button>
+                <button
                   onClick={() => setFilter('delivered')}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                    filter === 'delivered' 
+                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-[0_4px_16px_rgba(34,197,94,0.3)]' 
+                      : 'bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20'
+                  }`}
                 >
                   Doručeno ({statusCounts.delivered})
-                </Badge>
+                </button>
               </div>
 
               {/* Sort Toggle */}
               <button
                 onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 hover:bg-muted transition-colors text-sm text-muted-foreground hover:text-foreground"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[hsl(220,25%,12%)] border border-[hsl(220,20%,20%)] hover:border-[hsl(45,70%,50%)]/30 transition-all duration-300 text-sm text-gray-300 hover:text-white"
               >
                 {sortOrder === 'newest' ? (
-                  <ArrowDown className="w-4 h-4" />
+                  <ArrowDown className="w-4 h-4 text-[hsl(45,70%,50%)]" />
                 ) : (
-                  <ArrowUp className="w-4 h-4" />
+                  <ArrowUp className="w-4 h-4 text-[hsl(45,70%,50%)]" />
                 )}
                 {sortOrder === 'newest' ? 'Nejnovější' : 'Nejstarší'}
               </button>
@@ -413,30 +513,70 @@ const Wins: React.FC = () => {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-2xl overflow-hidden bg-muted/40 animate-pulse">
-                <div className="w-full h-64 bg-muted/60" />
+              <div 
+                key={i} 
+                className="rounded-2xl overflow-hidden animate-pulse"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(220, 25%, 10%) 0%, hsl(220, 30%, 14%) 100%)',
+                  border: '1px solid hsl(220, 20%, 18%)',
+                }}
+              >
+                <div className="w-full h-64 bg-[hsl(220,25%,15%)]" />
               </div>
             ))}
           </div>
         ) : wins.length === 0 ? (
-          <div className="text-center py-12">
-            <Trophy className="h-16 w-16 mx-auto mb-4 text-muted-foreground/30" />
-            <h3 className="text-xl font-semibold mb-2">Zatím nemáte žádné výhry</h3>
-            <p className="text-muted-foreground">Kupte si tikety v soutěžích a vyhrajte skvělé ceny!</p>
+          <div 
+            className="relative overflow-hidden rounded-2xl p-12 text-center"
+            style={{
+              background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
+              border: '1px solid hsl(45, 70%, 40%, 0.15)',
+              boxShadow: '0 8px 32px hsl(0, 0%, 0%, 0.3)',
+            }}
+          >
+            <div 
+              className="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center"
+              style={{
+                background: 'linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 16%) 100%)',
+                border: '1px solid hsl(45, 70%, 40%, 0.1)',
+              }}
+            >
+              <Trophy className="w-12 h-12 text-[hsl(45,70%,50%)]/30" />
+            </div>
+            <h3 
+              className="text-2xl font-bold mb-3"
+              style={{
+                background: 'linear-gradient(135deg, hsl(45, 93%, 65%) 0%, hsl(35, 90%, 55%) 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              Zatím nemáte žádné výhry
+            </h3>
+            <p className="text-gray-400 text-lg">Kupte si tikety v soutěžích a vyhrajte skvělé ceny!</p>
           </div>
         ) : filteredWins.length === 0 ? (
-          <div className="text-center py-12">
-            <Filter className="h-16 w-16 mx-auto mb-4 text-muted-foreground/30" />
-            <h3 className="text-xl font-semibold mb-2">Žádné výhry v této kategorii</h3>
-            <p className="text-muted-foreground">Zkuste jiný filtr pro zobrazení výher.</p>
+          <div 
+            className="relative overflow-hidden rounded-2xl p-12 text-center"
+            style={{
+              background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 100%)',
+              border: '1px solid hsl(220, 20%, 18%)',
+            }}
+          >
+            <Filter className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+            <h3 className="text-xl font-semibold text-gray-300 mb-2">Žádné výhry v této kategorii</h3>
+            <p className="text-gray-500">Zkuste jiný filtr pro zobrazení výher.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredWins.map((win, index) => (
               <div
                 key={win.id}
-                className="animate-fade-in"
-                style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}
+                className="transform transition-all duration-500 hover:scale-[1.02]"
+                style={{
+                  animation: `fade-in 0.5s ease-out ${index * 0.1}s both`,
+                }}
               >
                 <WinCard
                   win={win}
@@ -459,6 +599,26 @@ const Wins: React.FC = () => {
       </div>
 
       {isAdmin ? <AdminMenu /> : <BottomNavigation />}
+
+      {/* Global animations */}
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0) translateX(0); }
+          25% { transform: translateY(-20px) translateX(10px); }
+          50% { transform: translateY(-10px) translateX(-5px); }
+          75% { transform: translateY(-30px) translateX(15px); }
+        }
+        
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 };
