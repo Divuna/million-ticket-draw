@@ -594,29 +594,317 @@ export type Database = {
           },
         ]
       }
-      partners: {
+      partner_api_keys: {
         Row: {
           created_at: string
           id: string
-          logo_url: string
-          name: string
-          updated_at: string
-          website_url: string
+          key_hash: string
+          key_prefix: string
+          partner_id: string
+          revoked_at: string | null
         }
         Insert: {
           created_at?: string
           id?: string
-          logo_url: string
-          name: string
-          updated_at?: string
-          website_url: string
+          key_hash: string
+          key_prefix: string
+          partner_id: string
+          revoked_at?: string | null
         }
         Update: {
           created_at?: string
           id?: string
+          key_hash?: string
+          key_prefix?: string
+          partner_id?: string
+          revoked_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_api_keys_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_coin_activations: {
+        Row: {
+          activated_at: string
+          code: string
+          coins: number
+          created_at: string
+          external_order_id: string | null
+          id: string
+          partner_id: string
+          user_id: string
+        }
+        Insert: {
+          activated_at?: string
+          code: string
+          coins: number
+          created_at?: string
+          external_order_id?: string | null
+          id?: string
+          partner_id: string
+          user_id: string
+        }
+        Update: {
+          activated_at?: string
+          code?: string
+          coins?: number
+          created_at?: string
+          external_order_id?: string | null
+          id?: string
+          partner_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_coin_activations_code_fkey"
+            columns: ["code"]
+            isOneToOne: true
+            referencedRelation: "partner_reward_codes"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "partner_coin_activations_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_invoice_lines: {
+        Row: {
+          activated_at: string
+          activation_id: string
+          coins: number
+          external_order_id: string | null
+          id: number
+          invoice_id: string
+        }
+        Insert: {
+          activated_at: string
+          activation_id: string
+          coins: number
+          external_order_id?: string | null
+          id?: number
+          invoice_id: string
+        }
+        Update: {
+          activated_at?: string
+          activation_id?: string
+          coins?: number
+          external_order_id?: string | null
+          id?: number
+          invoice_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_invoice_lines_activation_id_fkey"
+            columns: ["activation_id"]
+            isOneToOne: false
+            referencedRelation: "partner_coin_activations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_invoices: {
+        Row: {
+          amount_ex_vat: number
+          amount_inc_vat: number
+          coins_activated: number
+          created_at: string
+          id: string
+          issued_at: string | null
+          paid_at: string | null
+          partner_id: string
+          period_end: string
+          period_start: string
+          status: Database["public"]["Enums"]["partner_invoice_status"]
+          vat_amount: number
+        }
+        Insert: {
+          amount_ex_vat?: number
+          amount_inc_vat?: number
+          coins_activated?: number
+          created_at?: string
+          id?: string
+          issued_at?: string | null
+          paid_at?: string | null
+          partner_id: string
+          period_end: string
+          period_start: string
+          status?: Database["public"]["Enums"]["partner_invoice_status"]
+          vat_amount?: number
+        }
+        Update: {
+          amount_ex_vat?: number
+          amount_inc_vat?: number
+          coins_activated?: number
+          created_at?: string
+          id?: string
+          issued_at?: string | null
+          paid_at?: string | null
+          partner_id?: string
+          period_end?: string
+          period_start?: string
+          status?: Database["public"]["Enums"]["partner_invoice_status"]
+          vat_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_invoices_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_reward_codes: {
+        Row: {
+          activated_at: string | null
+          activated_by_user_id: string | null
+          cancelled_at: string | null
+          code: string
+          coins: number
+          customer_email: string | null
+          expired_at: string | null
+          external_order_id: string | null
+          issued_at: string
+          issued_to_email: string | null
+          metadata: Json
+          partner_id: string
+          status: Database["public"]["Enums"]["partner_code_status"]
+        }
+        Insert: {
+          activated_at?: string | null
+          activated_by_user_id?: string | null
+          cancelled_at?: string | null
+          code: string
+          coins: number
+          customer_email?: string | null
+          expired_at?: string | null
+          external_order_id?: string | null
+          issued_at?: string
+          issued_to_email?: string | null
+          metadata?: Json
+          partner_id: string
+          status?: Database["public"]["Enums"]["partner_code_status"]
+        }
+        Update: {
+          activated_at?: string | null
+          activated_by_user_id?: string | null
+          cancelled_at?: string | null
+          code?: string
+          coins?: number
+          customer_email?: string | null
+          expired_at?: string | null
+          external_order_id?: string | null
+          issued_at?: string
+          issued_to_email?: string | null
+          metadata?: Json
+          partner_id?: string
+          status?: Database["public"]["Enums"]["partner_code_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_reward_codes_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partners: {
+        Row: {
+          approved_at: string | null
+          auth_user_id: string | null
+          billing_city: string | null
+          billing_country: string | null
+          billing_street: string | null
+          billing_zip: string | null
+          company_name: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          currency: string
+          dic: string | null
+          ico: string | null
+          id: string
+          logo_url: string
+          name: string
+          notes: string | null
+          price_per_coin: number
+          rejected_at: string | null
+          status: Database["public"]["Enums"]["partner_status"]
+          suspended_at: string | null
+          updated_at: string
+          vat_rate: number
+          website_url: string
+        }
+        Insert: {
+          approved_at?: string | null
+          auth_user_id?: string | null
+          billing_city?: string | null
+          billing_country?: string | null
+          billing_street?: string | null
+          billing_zip?: string | null
+          company_name?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          currency?: string
+          dic?: string | null
+          ico?: string | null
+          id?: string
+          logo_url: string
+          name: string
+          notes?: string | null
+          price_per_coin?: number
+          rejected_at?: string | null
+          status?: Database["public"]["Enums"]["partner_status"]
+          suspended_at?: string | null
+          updated_at?: string
+          vat_rate?: number
+          website_url: string
+        }
+        Update: {
+          approved_at?: string | null
+          auth_user_id?: string | null
+          billing_city?: string | null
+          billing_country?: string | null
+          billing_street?: string | null
+          billing_zip?: string | null
+          company_name?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          currency?: string
+          dic?: string | null
+          ico?: string | null
+          id?: string
           logo_url?: string
           name?: string
+          notes?: string | null
+          price_per_coin?: number
+          rejected_at?: string | null
+          status?: Database["public"]["Enums"]["partner_status"]
+          suspended_at?: string | null
           updated_at?: string
+          vat_rate?: number
           website_url?: string
         }
         Relationships: []
@@ -1358,6 +1646,7 @@ export type Database = {
     }
     Functions: {
       _invoke_forward_messages_to_sofinity: { Args: never; Returns: undefined }
+      activate_partner_reward_code: { Args: { p_code: string }; Returns: Json }
       admin_manage_bonus_prize: {
         Args: {
           p_amount?: number
@@ -1403,6 +1692,14 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_set_partner_status: {
+        Args: {
+          p_notes?: string
+          p_partner_id: string
+          p_status: Database["public"]["Enums"]["partner_status"]
+        }
+        Returns: undefined
+      }
       buy_ticket_atomic: {
         Args: { p_contest_id: string; p_user_id: string }
         Returns: Json
@@ -1433,6 +1730,10 @@ export type Database = {
         Args: { p_contest_id: string; p_prize_id: string; p_user_id: string }
         Returns: Json
       }
+      create_partner_api_key: {
+        Args: { p_partner_id: string }
+        Returns: string
+      }
       create_test_result: {
         Args: {
           p_details?: Json
@@ -1451,6 +1752,16 @@ export type Database = {
       generate_miocoin_bonus: {
         Args: { p_contest_id: string; p_count: number }
         Returns: undefined
+      }
+      generate_partner_reward_code: {
+        Args: {
+          p_coins: number
+          p_customer_email?: string
+          p_external_order_id?: string
+          p_metadata?: Json
+          p_partner_id: string
+        }
+        Returns: string
       }
       get_active_banners_summary: { Args: never; Returns: string }
       get_admin_actions_summary: {
@@ -1598,6 +1909,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: never; Returns: boolean }
       log_admin_action: {
         Args: {
           action_name: string
@@ -1647,6 +1959,7 @@ export type Database = {
         }[]
       }
       redeem_voucher: { Args: { p_voucher_id: string }; Returns: Json }
+      resolve_partner_by_api_key: { Args: { p_key: string }; Returns: string }
       run_complete_admin_test_suite: { Args: never; Returns: Json }
       run_deep_sofinity_test_suite: {
         Args: { p_performance_events?: number }
@@ -1726,6 +2039,9 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "superadmin" | "user"
+      partner_code_status: "issued" | "activated" | "cancelled" | "expired"
+      partner_invoice_status: "draft" | "issued" | "paid" | "void"
+      partner_status: "pending" | "approved" | "suspended" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1854,6 +2170,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "superadmin", "user"],
+      partner_code_status: ["issued", "activated", "cancelled", "expired"],
+      partner_invoice_status: ["draft", "issued", "paid", "void"],
+      partner_status: ["pending", "approved", "suspended", "rejected"],
     },
   },
 } as const
