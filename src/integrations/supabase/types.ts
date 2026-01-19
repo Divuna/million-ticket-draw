@@ -637,6 +637,7 @@ export type Database = {
           created_at: string
           external_order_id: string | null
           id: string
+          invoiced: boolean
           partner_id: string
           user_id: string
         }
@@ -647,6 +648,7 @@ export type Database = {
           created_at?: string
           external_order_id?: string | null
           id?: string
+          invoiced?: boolean
           partner_id: string
           user_id: string
         }
@@ -657,6 +659,7 @@ export type Database = {
           created_at?: string
           external_order_id?: string | null
           id?: string
+          invoiced?: boolean
           partner_id?: string
           user_id?: string
         }
@@ -722,45 +725,63 @@ export type Database = {
       partner_invoices: {
         Row: {
           amount_ex_vat: number
+          amount_gross: number | null
           amount_inc_vat: number
+          amount_net: number | null
           coins_activated: number
+          coins_total: number | null
           created_at: string
           id: string
           issued_at: string | null
           paid_at: string | null
           partner_id: string
           period_end: string
+          period_from: string | null
           period_start: string
+          period_to: string | null
           status: Database["public"]["Enums"]["partner_invoice_status"]
           vat_amount: number
+          vat_rate: number
         }
         Insert: {
           amount_ex_vat?: number
+          amount_gross?: number | null
           amount_inc_vat?: number
+          amount_net?: number | null
           coins_activated?: number
+          coins_total?: number | null
           created_at?: string
           id?: string
           issued_at?: string | null
           paid_at?: string | null
           partner_id: string
           period_end: string
+          period_from?: string | null
           period_start: string
+          period_to?: string | null
           status?: Database["public"]["Enums"]["partner_invoice_status"]
           vat_amount?: number
+          vat_rate?: number
         }
         Update: {
           amount_ex_vat?: number
+          amount_gross?: number | null
           amount_inc_vat?: number
+          amount_net?: number | null
           coins_activated?: number
+          coins_total?: number | null
           created_at?: string
           id?: string
           issued_at?: string | null
           paid_at?: string | null
           partner_id?: string
           period_end?: string
+          period_from?: string | null
           period_start?: string
+          period_to?: string | null
           status?: Database["public"]["Enums"]["partner_invoice_status"]
           vat_amount?: number
+          vat_rate?: number
         }
         Relationships: [
           {
