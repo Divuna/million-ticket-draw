@@ -59,3 +59,9 @@ verify_jwt = false
 
 [functions.check-guardian-notifications]
 verify_jwt = false
+
+[functions.get-pending-partner-registrations]
+verify_jwt = false
+
+[functions.approve-partner-registration]
+verify_jwt = false
