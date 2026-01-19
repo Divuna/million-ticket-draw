@@ -4,10 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, ExternalLink, Upload } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, Upload, CheckCircle, XCircle, Loader2, Clock, Building2, Globe, Phone, FileText } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
 
 interface Partner {
   id: string;
@@ -16,6 +20,17 @@ interface Partner {
   website_url: string;
   created_at: string;
   updated_at: string;
+}
+
+interface PendingRegistration {
+  id: string;
+  email: string;
+  company_name: string;
+  website_url: string;
+  contact_phone: string | null;
+  ico: string | null;
+  dic: string | null;
+  created_at: string;
 }
 
 const AdminPartners = () => {
@@ -31,8 +46,14 @@ const AdminPartners = () => {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  // Pending registrations state
+  const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(true);
+  const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
+
   useEffect(() => {
     fetchPartners();
+    loadPendingRegistrations();
   }, []);
 
   const fetchPartners = async () => {
@@ -49,6 +70,85 @@ const AdminPartners = () => {
       toast.error('Nepodařilo se načíst partnery');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPendingRegistrations = async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error('No session for pending registrations');
+        setPendingLoading(false);
+        return;
+      }
+
+      const response = await supabase.functions.invoke('get-pending-partner-registrations', {
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      const data = response.data as { success: boolean; registrations: PendingRegistration[] };
+      
+      if (data.success) {
+        setPendingRegistrations(data.registrations || []);
+      }
+    } catch (error) {
+      console.error('Error loading pending registrations:', error);
+    } finally {
+      setPendingLoading(false);
+    }
+  };
+
+  const handleApproveRegistration = async (registration: PendingRegistration, action: 'approve' | 'reject') => {
+    setApprovalLoading(registration.id);
+
+    // Optimistic update - remove from list
+    const previousRegistrations = [...pendingRegistrations];
+    setPendingRegistrations(pendingRegistrations.filter(r => r.id !== registration.id));
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error('Nejste přihlášen');
+      }
+
+      const response = await supabase.functions.invoke('approve-partner-registration', {
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
+        body: {
+          auth_user_id: registration.id,
+          action: action,
+        },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      const data = response.data as { success: boolean; message: string };
+
+      if (!data.success) {
+        throw new Error(data.message);
+      }
+
+      toast.success(action === 'approve' ? 'Partner byl schválen' : 'Registrace byla zamítnuta');
+      
+      // Reload partners list if approved
+      if (action === 'approve') {
+        fetchPartners();
+      }
+    } catch (error) {
+      console.error('Error approving registration:', error);
+      setPendingRegistrations(previousRegistrations);
+      toast.error('Nepodařilo se zpracovat registraci');
+    } finally {
+      setApprovalLoading(null);
     }
   };
 
@@ -295,79 +395,198 @@ const AdminPartners = () => {
           </Dialog>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {partners.map((partner) => (
-            <Card key={partner.id}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="truncate">{partner.name}</span>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => window.open(partner.website_url, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEdit(partner)}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDelete(partner.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                    <img
-                      src={partner.logo_url}
-                      alt={partner.name}
-                      className="max-w-full max-h-full object-contain"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        if (target.nextElementSibling) {
-                          (target.nextElementSibling as HTMLElement).style.display = 'flex';
-                        }
-                      }}
-                    />
-                    <div className="hidden flex-col items-center justify-center text-muted-foreground">
-                      <span className="text-sm">Chyba načítání loga</span>
-                    </div>
-                  </div>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p><strong>Web:</strong> {partner.website_url}</p>
-                    <p><strong>Vytvořeno:</strong> {new Date(partner.created_at).toLocaleDateString('cs-CZ')}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Tabs defaultValue="partners" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="pending" className="gap-2">
+              <Clock className="w-4 h-4" />
+              Čekající registrace
+              {pendingRegistrations.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {pendingRegistrations.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="partners" className="gap-2">
+              <Building2 className="w-4 h-4" />
+              Partneři
+            </TabsTrigger>
+          </TabsList>
 
-        {partners.length === 0 && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground text-center mb-4">
-                Zatím nejsou přidáni žádní partneři
-              </p>
-              <Button onClick={openDialog} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Přidat prvního partnera
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+          {/* Pending Registrations Tab */}
+          <TabsContent value="pending" className="mt-6">
+            {pendingLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : pendingRegistrations.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Clock className="w-12 h-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground text-center">
+                    Žádné čekající registrace
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {pendingRegistrations.map((registration) => (
+                  <Card key={registration.id} className="border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Building2 className="w-5 h-5 text-amber-600" />
+                        <span className="truncate">{registration.company_name}</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <span className="font-medium">E-mail:</span>
+                          <span className="truncate">{registration.email}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Globe className="w-4 h-4 flex-shrink-0" />
+                          <a 
+                            href={registration.website_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="truncate text-primary hover:underline"
+                          >
+                            {registration.website_url}
+                          </a>
+                        </div>
+                        {registration.contact_phone && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Phone className="w-4 h-4 flex-shrink-0" />
+                            <span>{registration.contact_phone}</span>
+                          </div>
+                        )}
+                        {(registration.ico || registration.dic) && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <FileText className="w-4 h-4 flex-shrink-0" />
+                            <span>
+                              {registration.ico && `IČO: ${registration.ico}`}
+                              {registration.ico && registration.dic && ' | '}
+                              {registration.dic && `DIČ: ${registration.dic}`}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Clock className="w-4 h-4 flex-shrink-0" />
+                          <span>
+                            {format(new Date(registration.created_at), 'dd.MM.yyyy HH:mm', { locale: cs })}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          size="sm"
+                          className="flex-1 gap-1"
+                          onClick={() => handleApproveRegistration(registration, 'approve')}
+                          disabled={approvalLoading === registration.id}
+                        >
+                          {approvalLoading === registration.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <CheckCircle className="w-4 h-4" />
+                          )}
+                          Schválit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 gap-1"
+                          onClick={() => handleApproveRegistration(registration, 'reject')}
+                          disabled={approvalLoading === registration.id}
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Zamítnout
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Partners Tab */}
+          <TabsContent value="partners" className="mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {partners.map((partner) => (
+                <Card key={partner.id}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span className="truncate">{partner.name}</span>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(partner.website_url, '_blank')}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(partner)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDelete(partner.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                        <img
+                          src={partner.logo_url}
+                          alt={partner.name}
+                          className="max-w-full max-h-full object-contain"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            if (target.nextElementSibling) {
+                              (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                            }
+                          }}
+                        />
+                        <div className="hidden flex-col items-center justify-center text-muted-foreground">
+                          <span className="text-sm">Chyba načítání loga</span>
+                        </div>
+                      </div>
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <p><strong>Web:</strong> {partner.website_url}</p>
+                        <p><strong>Vytvořeno:</strong> {new Date(partner.created_at).toLocaleDateString('cs-CZ')}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {partners.length === 0 && (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <p className="text-muted-foreground text-center mb-4">
+                    Zatím nejsou přidáni žádní partneři
+                  </p>
+                  <Button onClick={openDialog} className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Přidat prvního partnera
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
       <AdminMenu />
     </div>
