@@ -48,10 +48,20 @@ const PartnerRegister = () => {
     setLoading(true);
 
     try {
-      // Create auth user
+      // Create auth user only - partner record will be created by admin after approval
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          data: {
+            partner_registration: true,
+            company_name: formData.companyName,
+            website_url: formData.websiteUrl,
+            contact_phone: formData.contactPhone || null,
+            ico: formData.ico || null,
+            dic: formData.dic || null,
+          },
+        },
       });
 
       if (authError) throw authError;
@@ -60,25 +70,7 @@ const PartnerRegister = () => {
         throw new Error('Nepodařilo se vytvořit uživatele');
       }
 
-      // Create partner record with pending status
-      const { error: partnerError } = await supabase.from('partners').insert({
-        auth_user_id: authData.user.id,
-        name: formData.companyName,
-        company_name: formData.companyName,
-        website_url: formData.websiteUrl,
-        contact_email: formData.email,
-        contact_phone: formData.contactPhone || null,
-        ico: formData.ico || null,
-        dic: formData.dic || null,
-        logo_url: 'https://placehold.co/200x200/1a1a2e/gold?text=Logo',
-        status: 'pending',
-      });
-
-      if (partnerError) {
-        console.error('Partner creation error:', partnerError);
-        throw new Error('Nepodařilo se vytvořit partnerský účet');
-      }
-
+      // Registration successful - show success message
       setSubmitted(true);
       toast.success('Registrace odeslána ke schválení');
     } catch (error: any) {
@@ -101,8 +93,7 @@ const PartnerRegister = () => {
             </div>
             <CardTitle className="text-2xl font-bold">Registrace odeslána</CardTitle>
             <CardDescription className="text-base">
-              Vaše žádost o partnerství byla přijata a čeká na schválení. Jakmile bude váš účet
-              aktivován, obdržíte e-mail s dalšími instrukcemi.
+              Registrace odeslána. Partnerský účet bude aktivován po schválení administrátorem.
             </CardDescription>
           </CardHeader>
           <CardContent>
