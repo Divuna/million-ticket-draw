@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Building2, CheckCircle, XCircle, Eye, Coins, FileText, Calendar } from 'lucide-react';
+import { Loader2, Building2, CheckCircle, XCircle, Eye, Coins, FileText, Calendar, Key, Copy, Check } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { AdminMenu } from '@/components/AdminMenu';
@@ -35,6 +35,12 @@ interface PartnerDetail extends Partner {
     coins: number;
     activated_at: string;
     external_order_id: string | null;
+  }[];
+  apiKeys: {
+    id: string;
+    key_prefix: string;
+    created_at: string;
+    revoked_at: string | null;
   }[];
   invoiceSummary: {
     totalActivations: number;
@@ -65,6 +71,9 @@ const AdminPartnersPortal = () => {
   const [selectedPartner, setSelectedPartner] = useState<PartnerDetail | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const [newlyGeneratedKey, setNewlyGeneratedKey] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState(false);
 
   useEffect(() => {
     loadPartners();
@@ -112,42 +121,89 @@ const AdminPartnersPortal = () => {
   };
 
   const openPartnerDetail = async (partner: Partner) => {
+    setNewlyGeneratedKey(null);
+    setCopiedKey(false);
     try {
-      // Load activations
-      const { data: activations } = await supabase
-        .from('partner_coin_activations')
-        .select('code, coins, activated_at, external_order_id')
-        .eq('partner_id', partner.id)
-        .order('activated_at', { ascending: false })
-        .limit(50);
-
-      // Calculate invoice summary for current month
-      const monthStart = startOfMonth(new Date());
-      const monthEnd = endOfMonth(new Date());
-
-      const { data: monthActivations } = await supabase
-        .from('partner_coin_activations')
-        .select('coins')
-        .eq('partner_id', partner.id)
-        .gte('activated_at', monthStart.toISOString())
-        .lte('activated_at', monthEnd.toISOString());
+      // Load activations and API keys in parallel
+      const [activationsRes, apiKeysRes, monthActivationsRes] = await Promise.all([
+        supabase
+          .from('partner_coin_activations')
+          .select('code, coins, activated_at, external_order_id')
+          .eq('partner_id', partner.id)
+          .order('activated_at', { ascending: false })
+          .limit(50),
+        supabase
+          .from('partner_api_keys')
+          .select('id, key_prefix, created_at, revoked_at')
+          .eq('partner_id', partner.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('partner_coin_activations')
+          .select('coins')
+          .eq('partner_id', partner.id)
+          .gte('activated_at', startOfMonth(new Date()).toISOString())
+          .lte('activated_at', endOfMonth(new Date()).toISOString()),
+      ]);
 
       const invoiceSummary = {
-        totalActivations: monthActivations?.length || 0,
-        totalCoins: monthActivations?.reduce((sum, a) => sum + a.coins, 0) || 0,
-        periodStart: format(monthStart, 'dd.MM.yyyy', { locale: cs }),
-        periodEnd: format(monthEnd, 'dd.MM.yyyy', { locale: cs }),
+        totalActivations: monthActivationsRes.data?.length || 0,
+        totalCoins: monthActivationsRes.data?.reduce((sum, a) => sum + a.coins, 0) || 0,
+        periodStart: format(startOfMonth(new Date()), 'dd.MM.yyyy', { locale: cs }),
+        periodEnd: format(endOfMonth(new Date()), 'dd.MM.yyyy', { locale: cs }),
       };
 
       setSelectedPartner({
         ...partner,
-        activations: activations || [],
+        activations: activationsRes.data || [],
+        apiKeys: apiKeysRes.data || [],
         invoiceSummary,
       });
       setDetailOpen(true);
     } catch (error) {
       console.error('Error loading partner detail:', error);
       toast.error('Nepodařilo se načíst detail partnera');
+    }
+  };
+
+  const generateApiKey = async () => {
+    if (!selectedPartner) return;
+    
+    setGeneratingKey(true);
+    try {
+      const { data, error } = await supabase.rpc('create_partner_api_key', {
+        p_partner_id: selectedPartner.id,
+      });
+
+      if (error) throw error;
+      
+      setNewlyGeneratedKey(data as string);
+      toast.success('API klíč byl úspěšně vygenerován');
+      
+      // Reload API keys
+      const { data: apiKeysData } = await supabase
+        .from('partner_api_keys')
+        .select('id, key_prefix, created_at, revoked_at')
+        .eq('partner_id', selectedPartner.id)
+        .order('created_at', { ascending: false });
+      
+      setSelectedPartner({
+        ...selectedPartner,
+        apiKeys: apiKeysData || [],
+      });
+    } catch (error) {
+      console.error('Error generating API key:', error);
+      toast.error('Nepodařilo se vygenerovat API klíč');
+    } finally {
+      setGeneratingKey(false);
+    }
+  };
+
+  const copyGeneratedKey = () => {
+    if (newlyGeneratedKey) {
+      navigator.clipboard.writeText(newlyGeneratedKey);
+      setCopiedKey(true);
+      toast.success('API klíč zkopírován do schránky');
+      setTimeout(() => setCopiedKey(false), 2000);
     }
   };
 
@@ -351,7 +407,88 @@ const AdminPartnersPortal = () => {
                   </div>
                 </div>
 
-                {/* Invoice Summary */}
+                {/* API Keys Management */}
+                <Card className="border-border/50">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Key className="w-4 h-4" />
+                        API klíče
+                      </CardTitle>
+                      <Button
+                        size="sm"
+                        onClick={generateApiKey}
+                        disabled={generatingKey}
+                      >
+                        {generatingKey ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Key className="w-4 h-4 mr-2" />
+                        )}
+                        Vygenerovat API klíč
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {/* Newly generated key - show full key once */}
+                    {newlyGeneratedKey && (
+                      <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-green-600 mb-1">Nově vygenerovaný klíč</p>
+                            <code className="text-sm font-mono bg-background px-2 py-1 rounded break-all">
+                              {newlyGeneratedKey}
+                            </code>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={copyGeneratedKey}
+                          >
+                            {copiedKey ? (
+                              <Check className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          ⚠️ Tento klíč se zobrazí pouze jednou. Zkopírujte ho a uložte na bezpečné místo.
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Existing API keys */}
+                    {selectedPartner.apiKeys.length === 0 && !newlyGeneratedKey ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Partner zatím nemá žádné API klíče
+                      </p>
+                    ) : (
+                      selectedPartner.apiKeys.map((key) => (
+                        <div
+                          key={key.id}
+                          className={`flex items-center justify-between p-3 rounded-lg border ${
+                            key.revoked_at ? 'bg-muted/20 border-border/30 opacity-50' : 'bg-muted/30 border-border/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <code className="text-sm font-mono bg-background px-2 py-1 rounded">
+                              {key.key_prefix}••••••••••••••••
+                            </code>
+                            {key.revoked_at && (
+                              <Badge variant="destructive" className="text-xs">Zrušeno</Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(key.created_at), 'dd.MM.yyyy HH:mm', { locale: cs })}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </CardContent>
+                </Card>
+
+
                 <Card className="border-primary/30 bg-primary/5">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
