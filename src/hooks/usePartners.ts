@@ -8,8 +8,17 @@ interface Partner {
   website_url: string;
   created_at: string;
   updated_at: string;
+  status: string;
+  logo_status: string;
 }
 
+/**
+ * Hook for fetching partners that should be displayed publicly (e.g., homepage).
+ * Only returns partners with:
+ * - status = 'approved'
+ * - logo_status = 'approved'
+ * - logo_url IS NOT NULL
+ */
 export const usePartners = () => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +29,9 @@ export const usePartners = () => {
         const { data, error } = await supabase
           .from('partners')
           .select('*')
+          .eq('status', 'approved')
+          .eq('logo_status', 'approved')
+          .not('logo_url', 'is', null)
           .order('created_at', { ascending: false });
 
         if (error) throw error;

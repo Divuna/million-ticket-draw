@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Building2, Coins, Key, FileText, LogOut, Copy, Check, TrendingUp, Calendar } from 'lucide-react';
+import { Loader2, Building2, Coins, Key, FileText, LogOut, Copy, Check, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -17,6 +19,7 @@ interface Partner {
   logo_url: string;
   website_url: string;
   status: string;
+  logo_status: string;
 }
 
 interface ApiKey {
@@ -48,6 +51,8 @@ const PartnerDashboard = () => {
     totalActivatedCoins: 0,
   });
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
 
   useEffect(() => {
     loadPartnerData();
@@ -147,6 +152,79 @@ const PartnerDashboard = () => {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  const handleLogoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Povolené formáty: PNG, JPG, SVG');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Maximální velikost souboru je 5MB');
+        return;
+      }
+      setSelectedLogoFile(file);
+    }
+  };
+
+  const handleLogoUpload = async () => {
+    if (!selectedLogoFile || !partner) return;
+
+    setUploadingLogo(true);
+    try {
+      const fileExt = selectedLogoFile.name.split('.').pop();
+      const fileName = `${partner.id}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('partner-logos')
+        .upload(fileName, selectedLogoFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('partner-logos')
+        .getPublicUrl(fileName);
+
+      // Update partner with new logo and set logo_status to pending
+      const { error: updateError } = await supabase
+        .from('partners')
+        .update({ 
+          logo_url: urlData.publicUrl,
+          logo_status: 'pending'
+        })
+        .eq('id', partner.id);
+
+      if (updateError) throw updateError;
+
+      setPartner({
+        ...partner,
+        logo_url: urlData.publicUrl,
+        logo_status: 'pending'
+      });
+      setSelectedLogoFile(null);
+      toast.success('Logo nahráno a čeká na schválení');
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast.error('Nepodařilo se nahrát logo');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const getLogoStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20"><CheckCircle className="w-3 h-3 mr-1" />Schváleno</Badge>;
+      case 'pending':
+        return <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20"><Clock className="w-3 h-3 mr-1" />Čeká na schválení</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-500/20"><XCircle className="w-3 h-3 mr-1" />Zamítnuto</Badge>;
+      default:
+        return <Badge variant="outline"><Image className="w-3 h-3 mr-1" />Není nahráno</Badge>;
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -228,6 +306,102 @@ const PartnerDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Logo Management Section */}
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Image className="w-5 h-5" />
+              Logo partnera
+            </CardTitle>
+            <CardDescription>
+              Nahrajte logo pro zobrazení na webu. Logo musí být schváleno administrátorem.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start gap-6">
+              {/* Current logo preview */}
+              <div className="flex-shrink-0">
+                <div className="w-32 h-20 bg-muted rounded-lg flex items-center justify-center overflow-hidden border border-border">
+                  {partner.logo_url && partner.logo_status !== 'none' ? (
+                    <img
+                      src={partner.logo_url}
+                      alt={partner.name}
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  ) : (
+                    <Image className="w-8 h-8 text-muted-foreground/50" />
+                  )}
+                </div>
+              </div>
+              
+              {/* Status and upload */}
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  {getLogoStatusBadge(partner.logo_status)}
+                </div>
+                
+                {partner.logo_status === 'rejected' && (
+                  <p className="text-sm text-red-600">
+                    Vaše logo bylo zamítnuto. Nahrajte prosím nové logo.
+                  </p>
+                )}
+                
+                {partner.logo_status === 'pending' && (
+                  <p className="text-sm text-amber-600">
+                    Vaše logo čeká na schválení administrátorem.
+                  </p>
+                )}
+                
+                {partner.logo_status === 'approved' && (
+                  <p className="text-sm text-green-600">
+                    Vaše logo je schváleno a zobrazuje se na webu.
+                  </p>
+                )}
+                
+                <div className="space-y-2">
+                  <Label htmlFor="logo-upload" className="text-sm font-medium">
+                    {partner.logo_status === 'none' || partner.logo_status === 'rejected' 
+                      ? 'Nahrát logo' 
+                      : 'Nahrát nové logo'}
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="logo-upload"
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                      onChange={handleLogoFileSelect}
+                      className="max-w-xs"
+                    />
+                    {selectedLogoFile && (
+                      <Button 
+                        onClick={handleLogoUpload} 
+                        disabled={uploadingLogo}
+                        size="sm"
+                      >
+                        {uploadingLogo ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                        ) : (
+                          <Upload className="w-4 h-4 mr-1" />
+                        )}
+                        Nahrát
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    PNG, JPG, SVG (max 5MB). Doporučené rozměry: 320×180px (16:9)
+                  </p>
+                  {selectedLogoFile && (
+                    <p className="text-sm text-primary">
+                      Vybrán soubor: {selectedLogoFile.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* API Keys Section - Only visible for approved partners */}
         {partner.status === 'approved' ? (
