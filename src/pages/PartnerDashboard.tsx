@@ -229,56 +229,74 @@ const PartnerDashboard = () => {
           </Card>
         </div>
 
-        {/* API Keys Section */}
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5" />
-              API klíče
-            </CardTitle>
-            <CardDescription>Vaše API klíče pro integraci</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {apiKeys.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">Zatím nemáte žádné API klíče</p>
-            ) : (
-              <div className="space-y-3">
-                {apiKeys.map((key) => (
-                  <div
-                    key={key.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <code className="text-sm font-mono bg-background px-2 py-1 rounded">
-                        {key.key_prefix}••••••••
-                      </code>
-                      {key.revoked_at && (
-                        <Badge variant="destructive" className="text-xs">Zrušeno</Badge>
-                      )}
+        {/* API Keys Section - Only visible for approved partners */}
+        {partner.status === 'approved' ? (
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="w-5 h-5" />
+                API klíče
+              </CardTitle>
+              <CardDescription>Vaše API klíče pro integraci</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {apiKeys.length === 0 ? (
+                <div className="text-center py-6">
+                  <Key className="w-10 h-10 text-muted-foreground/50 mx-auto mb-2" />
+                  <p className="text-muted-foreground">Zatím nemáte žádné API klíče</p>
+                  <p className="text-xs text-muted-foreground mt-1">Kontaktujte administrátora pro vygenerování klíče</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {apiKeys.filter(k => !k.revoked_at).map((key) => (
+                    <div
+                      key={key.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <code className="text-sm font-mono bg-background px-2 py-1 rounded">
+                          {key.key_prefix}••••••••••••••••
+                        </code>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(key.created_at), 'dd.MM.yyyy', { locale: cs })}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyApiKey(key.key_prefix)}
+                        >
+                          {copiedKey === key.key_prefix ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(key.created_at), 'dd.MM.yyyy', { locale: cs })}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyApiKey(key.key_prefix)}
-                        disabled={!!key.revoked_at}
-                      >
-                        {copiedKey === key.key_prefix ? (
-                          <Check className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-border/50 opacity-60">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="w-5 h-5" />
+                API klíče
+              </CardTitle>
+              <CardDescription>Vaše API klíče pro integraci</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-6">
+                <Key className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-muted-foreground">API klíče budou dostupné po schválení účtu</p>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Weekly Reports */}
         <Card className="border-border/50">
