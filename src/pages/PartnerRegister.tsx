@@ -24,7 +24,10 @@ const PartnerRegister = () => {
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    // Trim whitespace for email field
+    const processedValue = name === 'email' ? value.trim() : value;
+    setFormData({ ...formData, [name]: processedValue });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,9 +51,12 @@ const PartnerRegister = () => {
     setLoading(true);
 
     try {
+      // Trim email before sending to Supabase
+      const trimmedEmail = formData.email.trim();
+      
       // Create auth user only - partner record will be created by admin after approval
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
+        email: trimmedEmail,
         password: formData.password,
         options: {
           data: {
