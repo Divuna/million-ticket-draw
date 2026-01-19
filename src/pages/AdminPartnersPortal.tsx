@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Building2, CheckCircle, XCircle, Eye, Coins, FileText, Calendar, Key, Copy, Check, Receipt, Send, Download } from 'lucide-react';
+import { Loader2, Building2, CheckCircle, XCircle, Eye, Coins, FileText, Calendar, Key, Copy, Check, Receipt, Send, Download, UserPlus, Clock } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { AdminMenu } from '@/components/AdminMenu';
@@ -73,6 +73,17 @@ interface InvoiceDetail extends Invoice {
   partner: Partner | null;
 }
 
+interface PendingRegistration {
+  id: string;
+  email: string;
+  company_name: string;
+  website_url: string;
+  contact_phone: string | null;
+  ico: string | null;
+  dic: string | null;
+  created_at: string;
+}
+
 const statusLabels: Record<PartnerStatus, string> = {
   pending: 'Čeká na schválení',
   approved: 'Schváleno',
@@ -120,9 +131,15 @@ const AdminPartnersPortal = () => {
   const [issueConfirmOpen, setIssueConfirmOpen] = useState(false);
   const [issuingInvoice, setIssuingInvoice] = useState(false);
 
+  // Pending registrations state
+  const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(true);
+  const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
+
   useEffect(() => {
     loadPartners();
     loadInvoices();
+    loadPendingRegistrations();
   }, []);
 
   const loadPartners = async () => {
@@ -171,6 +188,84 @@ const AdminPartnersPortal = () => {
       toast.error('Nepodařilo se načíst faktury');
     } finally {
       setInvoicesLoading(false);
+    }
+  };
+
+  const loadPendingRegistrations = async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error('No session for pending registrations');
+        return;
+      }
+
+      const response = await supabase.functions.invoke('get-pending-partner-registrations', {
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      const data = response.data as { success: boolean; registrations: PendingRegistration[] };
+      
+      if (data.success) {
+        setPendingRegistrations(data.registrations || []);
+      }
+    } catch (error) {
+      console.error('Error loading pending registrations:', error);
+    } finally {
+      setPendingLoading(false);
+    }
+  };
+
+  const handleApproveRegistration = async (registration: PendingRegistration, action: 'approve' | 'reject') => {
+    setApprovalLoading(registration.id);
+
+    // Optimistic update - remove from list
+    const previousRegistrations = [...pendingRegistrations];
+    setPendingRegistrations(pendingRegistrations.filter(r => r.id !== registration.id));
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error('Nejste přihlášen');
+      }
+
+      const response = await supabase.functions.invoke('approve-partner-registration', {
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
+        body: {
+          auth_user_id: registration.id,
+          action: action,
+        },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      const data = response.data as { success: boolean; message: string };
+
+      if (!data.success) {
+        throw new Error(data.message);
+      }
+
+      toast.success(action === 'approve' ? 'Partner byl schválen' : 'Registrace byla zamítnuta');
+      
+      // Reload partners list if approved
+      if (action === 'approve') {
+        loadPartners();
+      }
+    } catch (error) {
+      console.error('Error approving registration:', error);
+      setPendingRegistrations(previousRegistrations);
+      toast.error('Nepodařilo se zpracovat registraci');
+    } finally {
+      setApprovalLoading(null);
     }
   };
 
@@ -485,8 +580,9 @@ const AdminPartnersPortal = () => {
             <p className="text-muted-foreground mt-1">Schvalování partnerů a správa faktur</p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-sm">
-              {partners.filter(p => p.status === 'pending').length} čeká na schválení
+            <Badge variant="outline" className="text-sm flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {pendingRegistrations.length} čekajících registrací
             </Badge>
             <Badge variant="secondary" className="text-sm">
               {invoices.filter(i => i.status === 'draft').length} faktur k vydání
@@ -494,8 +590,12 @@ const AdminPartnersPortal = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="partners" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+        <Tabs defaultValue="pending" className="space-y-6">
+          <TabsList className="grid w-full max-w-lg grid-cols-3">
+            <TabsTrigger value="pending" className="flex items-center gap-2">
+              <UserPlus className="w-4 h-4" />
+              Čekající registrace
+            </TabsTrigger>
             <TabsTrigger value="partners" className="flex items-center gap-2">
               <Building2 className="w-4 h-4" />
               Partneři
@@ -505,6 +605,102 @@ const AdminPartnersPortal = () => {
               Faktury
             </TabsTrigger>
           </TabsList>
+
+          {/* Pending Registrations Tab */}
+          <TabsContent value="pending">
+            <Card className="border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-primary" />
+                  Čekající registrace
+                </CardTitle>
+                <CardDescription>Partnerské registrace čekající na schválení (z auth.users metadata)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pendingLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : pendingRegistrations.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <UserPlus className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                    <p>Žádné čekající registrace</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {pendingRegistrations.map((reg) => (
+                      <Card key={reg.id} className="border-border/50">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">{reg.company_name || 'Bez názvu'}</CardTitle>
+                          <CardDescription className="text-xs">{reg.email}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <div className="text-sm space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Web:</span>
+                              <a
+                                href={reg.website_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline truncate max-w-[150px]"
+                              >
+                                {reg.website_url}
+                              </a>
+                            </div>
+                            {reg.ico && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">IČO:</span>
+                                <span className="font-mono">{reg.ico}</span>
+                              </div>
+                            )}
+                            {reg.dic && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">DIČ:</span>
+                                <span className="font-mono">{reg.dic}</span>
+                              </div>
+                            )}
+                            {reg.contact_phone && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Telefon:</span>
+                                <span>{reg.contact_phone}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Registrace:</span>
+                              <span className="text-xs">{format(new Date(reg.created_at), 'dd.MM.yyyy HH:mm', { locale: cs })}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 pt-2">
+                            <Button
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => handleApproveRegistration(reg, 'approve')}
+                              disabled={approvalLoading === reg.id}
+                            >
+                              {approvalLoading === reg.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                              ) : (
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                              )}
+                              Schválit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleApproveRegistration(reg, 'reject')}
+                              disabled={approvalLoading === reg.id}
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Partners Tab */}
           <TabsContent value="partners">
