@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, ExternalLink, Upload, CheckCircle, XCircle, Loader2, Clock, Building2, Globe, Phone, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, Upload, CheckCircle, XCircle, Loader2, Clock, Building2, Globe, Phone, FileText, Image, Eye } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -20,6 +20,8 @@ interface Partner {
   website_url: string;
   created_at: string;
   updated_at: string;
+  status: string;
+  logo_status: string;
 }
 
 interface PendingRegistration {
@@ -259,6 +261,52 @@ const AdminPartners = () => {
     }
   };
 
+  const handleLogoApproval = async (partnerId: string, action: 'approve' | 'reject') => {
+    try {
+      const newStatus = action === 'approve' ? 'approved' : 'rejected';
+      const { error } = await supabase
+        .from('partners')
+        .update({ logo_status: newStatus })
+        .eq('id', partnerId);
+
+      if (error) throw error;
+      
+      toast.success(action === 'approve' ? 'Logo bylo schváleno' : 'Logo bylo zamítnuto');
+      fetchPartners();
+    } catch (error) {
+      console.error('Error updating logo status:', error);
+      toast.error('Nepodařilo se aktualizovat status loga');
+    }
+  };
+
+  const getLogoStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20"><CheckCircle className="w-3 h-3 mr-1" />Schváleno</Badge>;
+      case 'pending':
+        return <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20"><Clock className="w-3 h-3 mr-1" />Čeká</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-500/20"><XCircle className="w-3 h-3 mr-1" />Zamítnuto</Badge>;
+      default:
+        return <Badge variant="outline"><Image className="w-3 h-3 mr-1" />Není</Badge>;
+    }
+  };
+
+  const getPartnerStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Aktivní</Badge>;
+      case 'pending':
+        return <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">Čeká</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  // Partners with pending logos for review
+  const partnersWithPendingLogos = partners.filter(p => p.logo_status === 'pending');
+
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -396,13 +444,22 @@ const AdminPartners = () => {
         </div>
 
         <Tabs defaultValue="partners" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-xl grid-cols-3">
             <TabsTrigger value="pending" className="gap-2">
               <Clock className="w-4 h-4" />
               Čekající registrace
               {pendingRegistrations.length > 0 && (
                 <Badge variant="secondary" className="ml-1">
                   {pendingRegistrations.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="logos" className="gap-2">
+              <Image className="w-4 h-4" />
+              Schválení log
+              {partnersWithPendingLogos.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {partnersWithPendingLogos.length}
                 </Badge>
               )}
             </TabsTrigger>
@@ -510,6 +567,85 @@ const AdminPartners = () => {
             )}
           </TabsContent>
 
+          {/* Logo Approval Tab */}
+          <TabsContent value="logos" className="mt-6">
+            {partnersWithPendingLogos.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Image className="w-12 h-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground text-center">
+                    Žádná loga ke schválení
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {partnersWithPendingLogos.map((partner) => (
+                  <Card key={partner.id} className="border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Building2 className="w-5 h-5 text-amber-600" />
+                        <span className="truncate">{partner.name}</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Logo preview */}
+                      <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden border-2 border-border">
+                        {partner.logo_url ? (
+                          <img
+                            src={partner.logo_url}
+                            alt={partner.name}
+                            className="max-w-full max-h-full object-contain"
+                          />
+                        ) : (
+                          <Image className="w-12 h-12 text-muted-foreground/50" />
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Globe className="w-4 h-4 flex-shrink-0" />
+                          <a 
+                            href={partner.website_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="truncate text-primary hover:underline"
+                          >
+                            {partner.website_url}
+                          </a>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Status partnera:</span>
+                          {getPartnerStatusBadge(partner.status)}
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          size="sm"
+                          className="flex-1 gap-1"
+                          onClick={() => handleLogoApproval(partner.id, 'approve')}
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Schválit logo
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 gap-1"
+                          onClick={() => handleLogoApproval(partner.id, 'reject')}
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Zamítnout
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
           {/* Partners Tab */}
           <TabsContent value="partners" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -546,25 +682,60 @@ const AdminPartners = () => {
                   <CardContent>
                     <div className="space-y-4">
                       <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                        <img
-                          src={partner.logo_url}
-                          alt={partner.name}
-                          className="max-w-full max-h-full object-contain"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            if (target.nextElementSibling) {
-                              (target.nextElementSibling as HTMLElement).style.display = 'flex';
-                            }
-                          }}
-                        />
+                        {partner.logo_url ? (
+                          <img
+                            src={partner.logo_url}
+                            alt={partner.name}
+                            className="max-w-full max-h-full object-contain"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              if (target.nextElementSibling) {
+                                (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : (
+                          <Image className="w-8 h-8 text-muted-foreground/50" />
+                        )}
                         <div className="hidden flex-col items-center justify-center text-muted-foreground">
                           <span className="text-sm">Chyba načítání loga</span>
                         </div>
                       </div>
-                      <div className="text-sm text-muted-foreground space-y-1">
+                      <div className="text-sm text-muted-foreground space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span><strong>Status:</strong></span>
+                          {getPartnerStatusBadge(partner.status)}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span><strong>Logo:</strong></span>
+                          {getLogoStatusBadge(partner.logo_status)}
+                        </div>
                         <p><strong>Web:</strong> {partner.website_url}</p>
                         <p><strong>Vytvořeno:</strong> {new Date(partner.created_at).toLocaleDateString('cs-CZ')}</p>
+                        
+                        {/* Show approval action if logo pending */}
+                        {partner.logo_status === 'pending' && (
+                          <div className="flex gap-2 pt-2">
+                            <Button
+                              size="sm"
+                              className="flex-1 gap-1"
+                              onClick={() => handleLogoApproval(partner.id, 'approve')}
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              Schválit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 gap-1"
+                              onClick={() => handleLogoApproval(partner.id, 'reject')}
+                            >
+                              <XCircle className="w-4 h-4" />
+                              Zamítnout
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>

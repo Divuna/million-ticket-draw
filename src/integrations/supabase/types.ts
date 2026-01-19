@@ -865,6 +865,7 @@ export type Database = {
           dic: string | null
           ico: string | null
           id: string
+          logo_status: string
           logo_url: string
           name: string
           notes: string | null
@@ -891,6 +892,7 @@ export type Database = {
           dic?: string | null
           ico?: string | null
           id?: string
+          logo_status?: string
           logo_url: string
           name: string
           notes?: string | null
@@ -917,6 +919,7 @@ export type Database = {
           dic?: string | null
           ico?: string | null
           id?: string
+          logo_status?: string
           logo_url?: string
           name?: string
           notes?: string | null
