@@ -57,8 +57,11 @@ serve(async (req) => {
     const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
     
     if (listError) {
+      console.error('Error listing users:', listError)
       throw listError
     }
+
+    console.log(`Total auth users: ${authUsers.users.length}`)
 
     // Get all existing partner auth_user_ids
     const { data: existingPartners } = await supabaseAdmin
@@ -66,13 +69,14 @@ serve(async (req) => {
       .select('auth_user_id')
 
     const existingAuthUserIds = new Set((existingPartners || []).map(p => p.auth_user_id))
+    console.log(`Existing partners count: ${existingAuthUserIds.size}`)
 
     // Filter users with partner_registration metadata who don't have a partner record yet
-    const pendingRegistrations: PendingRegistration[] = authUsers.users
-      .filter(u => {
-        const metadata = u.user_metadata
-        return metadata?.partner_registration === true && !existingAuthUserIds.has(u.id)
-      })
+    const usersWithPartnerFlag = authUsers.users.filter(u => u.user_metadata?.partner_registration === true)
+    console.log(`Users with partner_registration=true: ${usersWithPartnerFlag.length}`)
+
+    const pendingRegistrations: PendingRegistration[] = usersWithPartnerFlag
+      .filter(u => !existingAuthUserIds.has(u.id))
       .map(u => ({
         id: u.id,
         email: u.email || '',
