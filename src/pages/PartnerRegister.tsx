@@ -64,21 +64,54 @@ const PartnerRegister = () => {
         },
       });
 
-      if (authError) throw authError;
-
-      if (!authData.user) {
-        throw new Error('Nepodařilo se vytvořit uživatele');
+      // Strict error check
+      if (authError) {
+        console.error('SignUp auth error:', authError);
+        // Map common errors to Czech messages
+        if (authError.message?.includes('rate limit')) {
+          throw new Error('Příliš mnoho pokusů. Zkuste to prosím později.');
+        }
+        if (authError.message?.includes('already registered') || authError.message?.includes('already exists')) {
+          throw new Error('Tento e-mail je již zaregistrován.');
+        }
+        throw new Error(authError.message || 'Nepodařilo se vytvořit účet.');
       }
+
+      // Check if user object exists
+      if (!authData?.user) {
+        console.error('SignUp returned no user object');
+        throw new Error('Nepodařilo se vytvořit uživatele.');
+      }
+
+      // CRITICAL: Check for fake success (user exists but no new identity created)
+      // Supabase returns user with empty identities[] if email already exists
+      if (!authData.user.identities || authData.user.identities.length === 0) {
+        console.error('SignUp returned user with no identities - email already exists');
+        throw new Error('Tento e-mail je již zaregistrován.');
+      }
+
+      // Verify metadata was saved
+      if (authData.user.user_metadata?.partner_registration !== true) {
+        console.warn('partner_registration metadata not set correctly:', authData.user.user_metadata);
+      }
+
+      console.log('Partner registration successful:', {
+        userId: authData.user.id,
+        email: authData.user.email,
+        hasPartnerFlag: authData.user.user_metadata?.partner_registration === true,
+      });
 
       // Registration successful - show success message
       setSubmitted(true);
       toast.success('Registrace odeslána ke schválení');
     } catch (error: any) {
       console.error('Registration error:', error);
-      toast.error(error.message || 'Nepodařilo se zaregistrovat');
-    } finally {
       setLoading(false);
+      toast.error(error.message || 'Nepodařilo se zaregistrovat');
+      return; // Don't set submitted, stay on form
     }
+
+    setLoading(false);
   };
 
   if (submitted) {
