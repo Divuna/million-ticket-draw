@@ -4,15 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Building2, CheckCircle, XCircle, Eye, Coins, FileText, Calendar, Key, Copy, Check } from 'lucide-react';
+import { Loader2, Building2, CheckCircle, XCircle, Eye, Coins, FileText, Calendar, Key, Copy, Check, Receipt, Send } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { AdminMenu } from '@/components/AdminMenu';
 
 type PartnerStatus = 'pending' | 'approved' | 'suspended' | 'rejected';
+type InvoiceStatus = 'draft' | 'issued' | 'paid' | 'void';
 
 interface Partner {
   id: string;
@@ -50,6 +52,26 @@ interface PartnerDetail extends Partner {
   };
 }
 
+interface Invoice {
+  id: string;
+  partner_id: string;
+  partner_name?: string;
+  period_start: string;
+  period_end: string;
+  coins_total: number | null;
+  amount_net: number | null;
+  vat_amount: number;
+  amount_gross: number | null;
+  status: InvoiceStatus;
+  created_at: string;
+  issued_at: string | null;
+}
+
+interface InvoiceDetail extends Invoice {
+  activationsSummary: string;
+  partner: Partner | null;
+}
+
 const statusLabels: Record<PartnerStatus, string> = {
   pending: 'Čeká na schválení',
   approved: 'Schváleno',
@@ -64,6 +86,20 @@ const statusColors: Record<PartnerStatus, 'default' | 'secondary' | 'destructive
   rejected: 'outline',
 };
 
+const invoiceStatusLabels: Record<InvoiceStatus, string> = {
+  draft: 'Koncept',
+  issued: 'Vydáno',
+  paid: 'Zaplaceno',
+  void: 'Stornováno',
+};
+
+const invoiceStatusColors: Record<InvoiceStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  draft: 'secondary',
+  issued: 'default',
+  paid: 'default',
+  void: 'destructive',
+};
+
 const AdminPartnersPortal = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -74,9 +110,18 @@ const AdminPartnersPortal = () => {
   const [generatingKey, setGeneratingKey] = useState(false);
   const [newlyGeneratedKey, setNewlyGeneratedKey] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState(false);
+  
+  // Invoice state
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(true);
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDetail | null>(null);
+  const [invoiceDetailOpen, setInvoiceDetailOpen] = useState(false);
+  const [issueConfirmOpen, setIssueConfirmOpen] = useState(false);
+  const [issuingInvoice, setIssuingInvoice] = useState(false);
 
   useEffect(() => {
     loadPartners();
+    loadInvoices();
   }, []);
 
   const loadPartners = async () => {
@@ -93,6 +138,38 @@ const AdminPartnersPortal = () => {
       toast.error('Nepodařilo se načíst partnery');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadInvoices = async () => {
+    try {
+      const { data: invoicesData, error: invoicesError } = await supabase
+        .from('partner_invoices')
+        .select('*')
+        .order('period_start', { ascending: false });
+
+      if (invoicesError) throw invoicesError;
+
+      // Get partner names for invoices
+      const partnerIds = [...new Set((invoicesData || []).map(i => i.partner_id))];
+      const { data: partnersData } = await supabase
+        .from('partners')
+        .select('id, name')
+        .in('id', partnerIds);
+
+      const partnerMap = new Map((partnersData || []).map(p => [p.id, p.name]));
+      
+      const invoicesWithNames = (invoicesData || []).map(inv => ({
+        ...inv,
+        partner_name: partnerMap.get(inv.partner_id) || 'Neznámý partner',
+      })) as Invoice[];
+
+      setInvoices(invoicesWithNames);
+    } catch (error) {
+      console.error('Error loading invoices:', error);
+      toast.error('Nepodařilo se načíst faktury');
+    } finally {
+      setInvoicesLoading(false);
     }
   };
 
@@ -207,6 +284,69 @@ const AdminPartnersPortal = () => {
     }
   };
 
+  const openInvoiceDetail = async (invoice: Invoice) => {
+    try {
+      // Load partner and activation lines
+      const [partnerRes, linesRes] = await Promise.all([
+        supabase.from('partners').select('*').eq('id', invoice.partner_id).single(),
+        supabase
+          .from('partner_invoice_lines')
+          .select('coins, activated_at, external_order_id')
+          .eq('invoice_id', invoice.id)
+          .order('activated_at', { ascending: false }),
+      ]);
+
+      // Build STRING_AGG-like summary
+      const activationsSummary = (linesRes.data || [])
+        .slice(0, 20)
+        .map(line => `${line.coins} MioCoins (${format(new Date(line.activated_at), 'dd.MM.', { locale: cs })})`)
+        .join(', ');
+
+      setSelectedInvoice({
+        ...invoice,
+        partner: partnerRes.data as Partner | null,
+        activationsSummary: activationsSummary || 'Žádné aktivace',
+      });
+      setInvoiceDetailOpen(true);
+    } catch (error) {
+      console.error('Error loading invoice detail:', error);
+      toast.error('Nepodařilo se načíst detail faktury');
+    }
+  };
+
+  const issueInvoice = async () => {
+    if (!selectedInvoice) return;
+
+    setIssuingInvoice(true);
+
+    // Optimistic update
+    const previousInvoices = [...invoices];
+    setInvoices(invoices.map(inv => 
+      inv.id === selectedInvoice.id 
+        ? { ...inv, status: 'issued' as InvoiceStatus, issued_at: new Date().toISOString() } 
+        : inv
+    ));
+    setSelectedInvoice({ ...selectedInvoice, status: 'issued', issued_at: new Date().toISOString() });
+
+    try {
+      const { error } = await supabase
+        .from('partner_invoices')
+        .update({ status: 'issued', issued_at: new Date().toISOString() })
+        .eq('id', selectedInvoice.id);
+
+      if (error) throw error;
+      toast.success('Faktura byla úspěšně vydána');
+      setIssueConfirmOpen(false);
+    } catch (error) {
+      console.error('Error issuing invoice:', error);
+      setInvoices(previousInvoices);
+      setSelectedInvoice({ ...selectedInvoice, status: 'draft', issued_at: null });
+      toast.error('Nepodařilo se vydat fakturu');
+    } finally {
+      setIssuingInvoice(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -222,136 +362,232 @@ const AdminPartnersPortal = () => {
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
               <Building2 className="w-6 h-6 text-primary" />
-              Správa partnerů
+              Správa partnerů a fakturace
             </h1>
-            <p className="text-muted-foreground mt-1">Schvalování a správa partnerských účtů</p>
+            <p className="text-muted-foreground mt-1">Schvalování partnerů a správa faktur</p>
           </div>
-          <Badge variant="outline" className="text-sm">
-            {partners.filter(p => p.status === 'pending').length} čeká na schválení
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-sm">
+              {partners.filter(p => p.status === 'pending').length} čeká na schválení
+            </Badge>
+            <Badge variant="secondary" className="text-sm">
+              {invoices.filter(i => i.status === 'draft').length} faktur k vydání
+            </Badge>
+          </div>
         </div>
 
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle>Seznam partnerů</CardTitle>
-            <CardDescription>Všechny registrované partnerské účty</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Partner</TableHead>
-                  <TableHead>Kontakt</TableHead>
-                  <TableHead>IČO</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Registrace</TableHead>
-                  <TableHead className="text-right">Akce</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {partners.map((partner) => (
-                  <TableRow key={partner.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={partner.logo_url}
-                          alt={partner.name}
-                          className="w-10 h-10 rounded-lg object-cover"
-                        />
-                        <div>
-                          <div className="font-medium">{partner.name}</div>
-                          <a
-                            href={partner.website_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-muted-foreground hover:text-primary"
-                          >
-                            {partner.website_url}
-                          </a>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">{partner.contact_email || '—'}</div>
-                      <div className="text-xs text-muted-foreground">{partner.contact_phone || ''}</div>
-                    </TableCell>
-                    <TableCell className="text-sm">{partner.ico || '—'}</TableCell>
-                    <TableCell>
-                      <Badge variant={statusColors[partner.status]}>
-                        {statusLabels[partner.status]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(partner.created_at), 'dd.MM.yyyy', { locale: cs })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openPartnerDetail(partner)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        {partner.status === 'pending' && (
-                          <>
+        <Tabs defaultValue="partners" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="partners" className="flex items-center gap-2">
+              <Building2 className="w-4 h-4" />
+              Partneři
+            </TabsTrigger>
+            <TabsTrigger value="invoices" className="flex items-center gap-2">
+              <Receipt className="w-4 h-4" />
+              Faktury
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Partners Tab */}
+          <TabsContent value="partners">
+            <Card className="border-border/50">
+              <CardHeader>
+                <CardTitle>Seznam partnerů</CardTitle>
+                <CardDescription>Všechny registrované partnerské účty</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Partner</TableHead>
+                      <TableHead>Kontakt</TableHead>
+                      <TableHead>IČO</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Registrace</TableHead>
+                      <TableHead className="text-right">Akce</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {partners.map((partner) => (
+                      <TableRow key={partner.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={partner.logo_url}
+                              alt={partner.name}
+                              className="w-10 h-10 rounded-lg object-cover"
+                            />
+                            <div>
+                              <div className="font-medium">{partner.name}</div>
+                              <a
+                                href={partner.website_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-muted-foreground hover:text-primary"
+                              >
+                                {partner.website_url}
+                              </a>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">{partner.contact_email || '—'}</div>
+                          <div className="text-xs text-muted-foreground">{partner.contact_phone || ''}</div>
+                        </TableCell>
+                        <TableCell className="text-sm">{partner.ico || '—'}</TableCell>
+                        <TableCell>
+                          <Badge variant={statusColors[partner.status]}>
+                            {statusLabels[partner.status]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {format(new Date(partner.created_at), 'dd.MM.yyyy', { locale: cs })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
                             <Button
-                              variant="default"
+                              variant="ghost"
                               size="sm"
-                              onClick={() => updatePartnerStatus(partner.id, 'approved')}
-                              disabled={actionLoading === partner.id}
+                              onClick={() => openPartnerDetail(partner)}
                             >
-                              {actionLoading === partner.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <CheckCircle className="w-4 h-4" />
-                              )}
+                              <Eye className="w-4 h-4" />
                             </Button>
+                            {partner.status === 'pending' && (
+                              <>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => updatePartnerStatus(partner.id, 'approved')}
+                                  disabled={actionLoading === partner.id}
+                                >
+                                  {actionLoading === partner.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="w-4 h-4" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => updatePartnerStatus(partner.id, 'rejected')}
+                                  disabled={actionLoading === partner.id}
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
+                            {partner.status === 'approved' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => updatePartnerStatus(partner.id, 'suspended')}
+                                disabled={actionLoading === partner.id}
+                              >
+                                Pozastavit
+                              </Button>
+                            )}
+                            {partner.status === 'suspended' && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => updatePartnerStatus(partner.id, 'approved')}
+                                disabled={actionLoading === partner.id}
+                              >
+                                Obnovit
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {partners.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          Zatím nejsou žádní partneři
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Invoices Tab */}
+          <TabsContent value="invoices">
+            <Card className="border-border/50">
+              <CardHeader>
+                <CardTitle>Seznam faktur</CardTitle>
+                <CardDescription>Přehled všech partnerských faktur</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {invoicesLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Období</TableHead>
+                        <TableHead>Partner</TableHead>
+                        <TableHead className="text-right">MioCoiny</TableHead>
+                        <TableHead className="text-right">Částka netto</TableHead>
+                        <TableHead className="text-right">DPH</TableHead>
+                        <TableHead className="text-right">Částka brutto</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Akce</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {invoices.map((invoice) => (
+                        <TableRow key={invoice.id}>
+                          <TableCell className="text-sm">
+                            {format(new Date(invoice.period_start), 'dd.MM.', { locale: cs })} – {format(new Date(invoice.period_end), 'dd.MM.yyyy', { locale: cs })}
+                          </TableCell>
+                          <TableCell className="font-medium">{invoice.partner_name}</TableCell>
+                          <TableCell className="text-right font-medium text-primary">
+                            {(invoice.coins_total || 0).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {(invoice.amount_net || 0).toLocaleString()} Kč
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {invoice.vat_amount.toLocaleString()} Kč
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {(invoice.amount_gross || 0).toLocaleString()} Kč
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={invoiceStatusColors[invoice.status]}>
+                              {invoiceStatusLabels[invoice.status]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
                             <Button
-                              variant="destructive"
+                              variant="ghost"
                               size="sm"
-                              onClick={() => updatePartnerStatus(partner.id, 'rejected')}
-                              disabled={actionLoading === partner.id}
+                              onClick={() => openInvoiceDetail(invoice)}
                             >
-                              <XCircle className="w-4 h-4" />
+                              <Eye className="w-4 h-4" />
                             </Button>
-                          </>
-                        )}
-                        {partner.status === 'approved' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updatePartnerStatus(partner.id, 'suspended')}
-                            disabled={actionLoading === partner.id}
-                          >
-                            Pozastavit
-                          </Button>
-                        )}
-                        {partner.status === 'suspended' && (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => updatePartnerStatus(partner.id, 'approved')}
-                            disabled={actionLoading === partner.id}
-                          >
-                            Obnovit
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {partners.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Zatím nejsou žádní partneři
-                    </TableCell>
-                  </TableRow>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {invoices.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                            Zatím nejsou žádné faktury
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
                 )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Partner Detail Dialog */}
@@ -560,6 +796,169 @@ const AdminPartnersPortal = () => {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Invoice Detail Dialog */}
+      <Dialog open={invoiceDetailOpen} onOpenChange={setInvoiceDetailOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          {selectedInvoice && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-3">
+                  <Receipt className="w-6 h-6 text-primary" />
+                  <div>
+                    <div>Faktura – {selectedInvoice.partner_name}</div>
+                    <Badge variant={invoiceStatusColors[selectedInvoice.status]} className="mt-1">
+                      {invoiceStatusLabels[selectedInvoice.status]}
+                    </Badge>
+                  </div>
+                </DialogTitle>
+                <DialogDescription>
+                  Období: {format(new Date(selectedInvoice.period_start), 'dd.MM.', { locale: cs })} – {format(new Date(selectedInvoice.period_end), 'dd.MM.yyyy', { locale: cs })}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6 mt-4">
+                {/* Partner Info */}
+                {selectedInvoice.partner && (
+                  <div className="grid grid-cols-2 gap-4 text-sm p-4 rounded-lg bg-muted/30 border border-border/50">
+                    <div>
+                      <span className="text-muted-foreground">Partner:</span>
+                      <span className="ml-2 font-medium">{selectedInvoice.partner.name}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">IČO:</span>
+                      <span className="ml-2 font-medium">{selectedInvoice.partner.ico || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">DIČ:</span>
+                      <span className="ml-2 font-medium">{selectedInvoice.partner.dic || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">E-mail:</span>
+                      <span className="ml-2 font-medium">{selectedInvoice.partner.contact_email || '—'}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Totals */}
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Coins className="w-4 h-4" />
+                      Souhrn fakturace
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                      <div>
+                        <div className="text-2xl font-bold text-primary">{(selectedInvoice.coins_total || 0).toLocaleString()}</div>
+                        <div className="text-xs text-muted-foreground">MioCoinů</div>
+                      </div>
+                      <div>
+                        <div className="text-xl font-semibold">{(selectedInvoice.amount_net || 0).toLocaleString()} Kč</div>
+                        <div className="text-xs text-muted-foreground">Částka netto</div>
+                      </div>
+                      <div>
+                        <div className="text-lg text-muted-foreground">{selectedInvoice.vat_amount.toLocaleString()} Kč</div>
+                        <div className="text-xs text-muted-foreground">DPH</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold">{(selectedInvoice.amount_gross || 0).toLocaleString()} Kč</div>
+                        <div className="text-xs text-muted-foreground">Celkem brutto</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Activations Summary */}
+                <div>
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Přehled aktivací
+                  </h4>
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {selectedInvoice.activationsSummary}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Issue Invoice Action */}
+                {selectedInvoice.status === 'draft' && (
+                  <div className="pt-4 border-t border-border/50">
+                    <Button
+                      onClick={() => setIssueConfirmOpen(true)}
+                      className="w-full"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Vydat fakturu
+                    </Button>
+                  </div>
+                )}
+
+                {selectedInvoice.issued_at && (
+                  <div className="text-sm text-muted-foreground text-center">
+                    Vydáno: {format(new Date(selectedInvoice.issued_at), 'dd.MM.yyyy HH:mm', { locale: cs })}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Issue Invoice Confirmation Dialog */}
+      <Dialog open={issueConfirmOpen} onOpenChange={setIssueConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5 text-primary" />
+              Potvrdit vydání faktury
+            </DialogTitle>
+            <DialogDescription>
+              Opravdu chcete vydat tuto fakturu? Status bude změněn z "Koncept" na "Vydáno".
+            </DialogDescription>
+          </DialogHeader>
+          {selectedInvoice && (
+            <div className="py-4">
+              <div className="p-4 rounded-lg bg-muted/30 border border-border/50 text-sm space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Partner:</span>
+                  <span className="font-medium">{selectedInvoice.partner_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">MioCoiny:</span>
+                  <span className="font-medium text-primary">{(selectedInvoice.coins_total || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Celkem:</span>
+                  <span className="font-bold">{(selectedInvoice.amount_gross || 0).toLocaleString()} Kč</span>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIssueConfirmOpen(false)}
+              disabled={issuingInvoice}
+            >
+              Zrušit
+            </Button>
+            <Button
+              onClick={issueInvoice}
+              disabled={issuingInvoice}
+            >
+              {issuingInvoice ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              Vydat fakturu
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
