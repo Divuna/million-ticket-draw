@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, ExternalLink, Upload, CheckCircle, XCircle, Loader2, Clock, Building2, Globe, Phone, FileText, Image, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, Upload, CheckCircle, XCircle, Loader2, Clock, Building2, Globe, Phone, FileText, Image } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -109,7 +109,6 @@ const AdminPartners = () => {
   const handleApproveRegistration = async (registration: PendingRegistration, action: 'approve' | 'reject') => {
     setApprovalLoading(registration.id);
 
-    // Optimistic update - remove from list
     const previousRegistrations = [...pendingRegistrations];
     setPendingRegistrations(pendingRegistrations.filter(r => r.id !== registration.id));
 
@@ -141,7 +140,6 @@ const AdminPartners = () => {
 
       toast.success(action === 'approve' ? 'Partner byl schválen' : 'Registrace byla zamítnuta');
       
-      // Reload partners list if approved
       if (action === 'approve') {
         fetchPartners();
       }
@@ -191,7 +189,6 @@ const AdminPartners = () => {
       setUploading(true);
       let logoUrl = formData.logo_url;
 
-      // Upload new logo if file is selected
       if (selectedFile) {
         logoUrl = await uploadLogo(selectedFile);
       }
@@ -303,21 +300,17 @@ const AdminPartners = () => {
     }
   };
 
-  // Partners with pending logos for review
   const partnersWithPendingLogos = partners.filter(p => p.logo_status === 'pending');
-
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
       const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
       if (!allowedTypes.includes(file.type)) {
         toast.error('Povolené formáty: PNG, JPG, SVG');
         return;
       }
       
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast.error('Maximální velikost souboru je 5MB');
         return;
@@ -589,7 +582,6 @@ const AdminPartners = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {/* Logo preview */}
                       <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden border-2 border-border">
                         {partner.logo_url ? (
                           <img
@@ -714,7 +706,6 @@ const AdminPartners = () => {
                         <p><strong>Web:</strong> {partner.website_url}</p>
                         <p><strong>Vytvořeno:</strong> {new Date(partner.created_at).toLocaleDateString('cs-CZ')}</p>
                         
-                        {/* Show approval action if logo pending */}
                         {partner.logo_status === 'pending' && (
                           <div className="flex gap-2 pt-2">
                             <Button
