@@ -8,10 +8,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Building2, CheckCircle, XCircle, Eye, Coins, FileText, Calendar, Key, Copy, Check, Receipt, Send } from 'lucide-react';
+import { Loader2, Building2, CheckCircle, XCircle, Eye, Coins, FileText, Calendar, Key, Copy, Check, Receipt, Send, Download } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { AdminMenu } from '@/components/AdminMenu';
+import { jsPDF } from 'jspdf';
 
 type PartnerStatus = 'pending' | 'approved' | 'suspended' | 'rejected';
 type InvoiceStatus = 'draft' | 'issued' | 'paid' | 'void';
@@ -344,6 +345,123 @@ const AdminPartnersPortal = () => {
       toast.error('Nepodařilo se vydat fakturu');
     } finally {
       setIssuingInvoice(false);
+    }
+  };
+
+  const downloadInvoicePdf = () => {
+    if (!selectedInvoice) return;
+
+    try {
+      const doc = new jsPDF();
+      const partner = selectedInvoice.partner;
+      
+      // Title
+      doc.setFontSize(20);
+      doc.text('FAKTURA', 105, 25, { align: 'center' });
+      
+      // Status badge
+      doc.setFontSize(12);
+      doc.text(`Status: ${invoiceStatusLabels[selectedInvoice.status]}`, 105, 35, { align: 'center' });
+      
+      // Period
+      const periodText = `Obdobi: ${format(new Date(selectedInvoice.period_start), 'dd.MM.yyyy', { locale: cs })} - ${format(new Date(selectedInvoice.period_end), 'dd.MM.yyyy', { locale: cs })}`;
+      doc.text(periodText, 105, 45, { align: 'center' });
+      
+      // Divider line
+      doc.setLineWidth(0.5);
+      doc.line(20, 55, 190, 55);
+      
+      // Partner details section
+      doc.setFontSize(14);
+      doc.text('Udaje partnera', 20, 70);
+      
+      doc.setFontSize(11);
+      let yPos = 80;
+      
+      if (partner) {
+        doc.text(`Nazev: ${partner.name}`, 20, yPos);
+        yPos += 8;
+        if (partner.company_name) {
+          doc.text(`Spolecnost: ${partner.company_name}`, 20, yPos);
+          yPos += 8;
+        }
+        if (partner.ico) {
+          doc.text(`ICO: ${partner.ico}`, 20, yPos);
+          yPos += 8;
+        }
+        if (partner.dic) {
+          doc.text(`DIC: ${partner.dic}`, 20, yPos);
+          yPos += 8;
+        }
+        if (partner.contact_email) {
+          doc.text(`E-mail: ${partner.contact_email}`, 20, yPos);
+          yPos += 8;
+        }
+      } else {
+        doc.text(`Partner: ${selectedInvoice.partner_name}`, 20, yPos);
+        yPos += 8;
+      }
+      
+      // Divider line
+      yPos += 5;
+      doc.line(20, yPos, 190, yPos);
+      yPos += 15;
+      
+      // Financial details section
+      doc.setFontSize(14);
+      doc.text('Financni prehled', 20, yPos);
+      yPos += 15;
+      
+      doc.setFontSize(11);
+      
+      // Create a simple table layout
+      const col1 = 30;
+      const col2 = 130;
+      
+      doc.text('MioCoiny celkem:', col1, yPos);
+      doc.text(`${(selectedInvoice.coins_total || 0).toLocaleString()}`, col2, yPos);
+      yPos += 10;
+      
+      doc.text('Castka netto:', col1, yPos);
+      doc.text(`${(selectedInvoice.amount_net || 0).toLocaleString()} Kc`, col2, yPos);
+      yPos += 10;
+      
+      doc.text('DPH:', col1, yPos);
+      doc.text(`${selectedInvoice.vat_amount.toLocaleString()} Kc`, col2, yPos);
+      yPos += 10;
+      
+      // Total with emphasis
+      doc.setLineWidth(0.3);
+      doc.line(col1 - 5, yPos - 3, col2 + 40, yPos - 3);
+      
+      doc.setFontSize(13);
+      doc.text('Celkem brutto:', col1, yPos + 5);
+      doc.text(`${(selectedInvoice.amount_gross || 0).toLocaleString()} Kc`, col2, yPos + 5);
+      yPos += 20;
+      
+      // Issued date if available
+      if (selectedInvoice.issued_at) {
+        doc.setFontSize(10);
+        doc.text(`Vydano: ${format(new Date(selectedInvoice.issued_at), 'dd.MM.yyyy HH:mm', { locale: cs })}`, 20, yPos);
+        yPos += 10;
+      }
+      
+      // Footer
+      doc.setFontSize(9);
+      doc.setTextColor(128);
+      doc.text('Vygenerovano z OneMil Partner Portal', 105, 280, { align: 'center' });
+      doc.text(`Datum generovani: ${format(new Date(), 'dd.MM.yyyy HH:mm', { locale: cs })}`, 105, 286, { align: 'center' });
+      
+      // Generate filename
+      const partnerSlug = (selectedInvoice.partner_name || 'partner').replace(/\s+/g, '-').toLowerCase();
+      const periodSlug = format(new Date(selectedInvoice.period_start), 'yyyy-MM');
+      const filename = `faktura-${partnerSlug}-${periodSlug}.pdf`;
+      
+      doc.save(filename);
+      toast.success('PDF bylo staženo');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Nepodařilo se vygenerovat PDF');
     }
   };
 
@@ -885,18 +1003,27 @@ const AdminPartnersPortal = () => {
                   </div>
                 </div>
 
-                {/* Issue Invoice Action */}
-                {selectedInvoice.status === 'draft' && (
-                  <div className="pt-4 border-t border-border/50">
+                {/* Actions */}
+                <div className="pt-4 border-t border-border/50 flex flex-col sm:flex-row gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={downloadInvoicePdf}
+                    className="flex-1"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Stáhnout PDF
+                  </Button>
+                  
+                  {selectedInvoice.status === 'draft' && (
                     <Button
                       onClick={() => setIssueConfirmOpen(true)}
-                      className="w-full"
+                      className="flex-1"
                     >
                       <Send className="w-4 h-4 mr-2" />
                       Vydat fakturu
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {selectedInvoice.issued_at && (
                   <div className="text-sm text-muted-foreground text-center">
