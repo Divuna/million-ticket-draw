@@ -24,10 +24,7 @@ const PartnerRegister = () => {
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    // Trim whitespace for email field
-    const processedValue = name === 'email' ? value.trim() : value;
-    setFormData({ ...formData, [name]: processedValue });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
