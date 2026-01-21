@@ -1777,6 +1777,15 @@ export type Database = {
         Args: { p_contest_id: string; p_count: number }
         Returns: undefined
       }
+      generate_partner_api_key: {
+        Args: { p_description?: string; p_partner_id: string }
+        Returns: {
+          api_key: string
+          created_at: string
+          key_id: string
+          key_prefix: string
+        }[]
+      }
       generate_partner_reward_code: {
         Args: {
           p_coins: number
@@ -2050,6 +2059,13 @@ export type Database = {
       validate_crud_test_data: {
         Args: { p_user_email?: string }
         Returns: Json
+      }
+      validate_partner_api_key: {
+        Args: { p_api_key: string }
+        Returns: {
+          key_id: string
+          partner_id: string
+        }[]
       }
       validate_sofinity_events: {
         Args: { p_hours_back?: number }
