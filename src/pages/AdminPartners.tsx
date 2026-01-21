@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../lib/supabase";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
 import { Loader2 } from "lucide-react";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useUserRole } from "../hooks/useUserRole";
 
 type Partner = {
   id: string;
@@ -37,6 +37,7 @@ const AdminPartners = () => {
   =========================== */
   const loadPartners = async () => {
     setLoading(true);
+
     const { data, error } = await supabase.from("partners").select("*").order("created_at", { ascending: false });
 
     if (error) {
@@ -45,6 +46,7 @@ const AdminPartners = () => {
     } else {
       setPartners(data || []);
     }
+
     setLoading(false);
   };
 
