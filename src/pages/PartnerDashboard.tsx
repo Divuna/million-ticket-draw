@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Building2, Coins, Key, FileText, LogOut, Copy, Check, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, Building2, Coins, Key, FileText, LogOut, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -50,7 +50,7 @@ const PartnerDashboard = () => {
     totalIssuedCoins: 0,
     totalActivatedCoins: 0,
   });
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
 
@@ -145,12 +145,6 @@ const PartnerDashboard = () => {
     navigate('/partner/login');
   };
 
-  const copyApiKey = (keyPrefix: string) => {
-    navigator.clipboard.writeText(`${keyPrefix}••••••••`);
-    setCopiedKey(keyPrefix);
-    toast.success('API klíč zkopírován');
-    setTimeout(() => setCopiedKey(null), 2000);
-  };
 
   const handleLogoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -403,74 +397,60 @@ const PartnerDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* API Keys Section - Only visible for approved partners */}
-        {partner.status === 'approved' ? (
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Key className="w-5 h-5" />
-                API klíče
-              </CardTitle>
-              <CardDescription>Vaše API klíče pro integraci</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {apiKeys.length === 0 ? (
-                <div className="text-center py-6">
-                  <Key className="w-10 h-10 text-muted-foreground/50 mx-auto mb-2" />
-                  <p className="text-muted-foreground">Zatím nemáte žádné API klíče</p>
-                  <p className="text-xs text-muted-foreground mt-1">Kontaktujte administrátora pro vygenerování klíče</p>
-                </div>
-              ) : (
+        {/* API Keys Section */}
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5" />
+              API klíče
+            </CardTitle>
+            <CardDescription>
+              Přehled vašich API klíčů pro integraci
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {partner.status !== 'approved' ? (
+              <div className="text-center py-6">
+                <Key className="w-10 h-10 text-muted-foreground/50 mx-auto mb-2" />
+                <p className="text-muted-foreground">API klíče jsou dostupné pouze pro schválené partnery</p>
+                <p className="text-xs text-muted-foreground mt-1">Váš účet čeká na schválení administrátorem</p>
+              </div>
+            ) : apiKeys.filter(k => !k.revoked_at).length === 0 ? (
+              <div className="text-center py-6">
+                <Key className="w-10 h-10 text-muted-foreground/50 mx-auto mb-2" />
+                <p className="text-muted-foreground">Zatím nemáte žádné API klíče</p>
+                <p className="text-xs text-muted-foreground mt-1">Pro vytvoření nebo rotaci API klíče kontaktujte administrátora.</p>
+              </div>
+            ) : (
+              <>
                 <div className="space-y-3">
                   {apiKeys.filter(k => !k.revoked_at).map((key) => (
                     <div
                       key={key.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50"
+                      className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-2"
                     >
                       <div className="flex items-center gap-3">
+                        <Key className="w-4 h-4 text-muted-foreground" />
                         <code className="text-sm font-mono bg-background px-2 py-1 rounded">
                           {key.key_prefix}••••••••••••••••
                         </code>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(key.created_at), 'dd.MM.yyyy', { locale: cs })}
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground pl-7">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          Vytvořeno: {format(new Date(key.created_at), 'dd.MM.yyyy HH:mm', { locale: cs })}
                         </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyApiKey(key.key_prefix)}
-                        >
-                          {copiedKey === key.key_prefix ? (
-                            <Check className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </Button>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-border/50 opacity-60">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Key className="w-5 h-5" />
-                API klíče
-              </CardTitle>
-              <CardDescription>Vaše API klíče pro integraci</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-6">
-                <Key className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-muted-foreground">API klíče budou dostupné po schválení účtu</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                <p className="text-sm text-muted-foreground italic">
+                  Pro vytvoření nebo rotaci API klíče kontaktujte administrátora.
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Weekly Reports */}
         <Card className="border-border/50">
