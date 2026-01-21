@@ -41,6 +41,7 @@ interface ApiKey {
   key_prefix: string;
   created_at: string;
   revoked_at: string | null;
+  last_used_at: string | null;
 }
 
 const AdminPartners = () => {
@@ -358,7 +359,7 @@ const AdminPartners = () => {
     try {
       const { data, error } = await supabase
         .from('partner_api_keys')
-        .select('*')
+        .select('id, key_prefix, created_at, revoked_at, last_used_at')
         .eq('partner_id', partnerId)
         .order('created_at', { ascending: false });
 
@@ -379,15 +380,17 @@ const AdminPartners = () => {
     setNewlyGeneratedKey(null);
     
     try {
-      const { data, error } = await supabase.rpc('create_partner_api_key', {
+      const { data, error } = await supabase.rpc('generate_partner_api_key', {
         p_partner_id: selectedPartner.id
       });
 
       if (error) throw error;
       
-      // The RPC returns the full API key
-      setNewlyGeneratedKey(data as string);
-      toast.success('API klíč byl úspěšně vygenerován');
+      // The RPC returns an array with api_key, created_at, key_id, key_prefix
+      if (data && data.length > 0) {
+        setNewlyGeneratedKey(data[0].api_key);
+        toast.success('API klíč byl úspěšně vygenerován');
+      }
       
       // Reload API keys list
       await loadPartnerApiKeys(selectedPartner.id);
