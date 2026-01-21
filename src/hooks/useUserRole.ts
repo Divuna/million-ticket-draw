@@ -2,9 +2,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export type UserRole = 'admin' | 'superadmin' | 'user';
+export type UserRole = 'admin' | 'superadmin' | 'user' | 'partner';
 
-export const useUserRole = (): { role: UserRole; isAdmin: boolean; isSuperAdmin: boolean; loading: boolean } => {
+export const useUserRole = (): { role: UserRole; isAdmin: boolean; isSuperAdmin: boolean; isPartner: boolean; loading: boolean } => {
   const { user } = useAuth();
   const [role, setRole] = useState<UserRole>('user');
   const [loading, setLoading] = useState(true);
@@ -46,6 +46,7 @@ export const useUserRole = (): { role: UserRole; isAdmin: boolean; isSuperAdmin:
 
   const isAdmin = role === 'admin' || role === 'superadmin';
   const isSuperAdmin = role === 'superadmin';
+  const isPartner = role === 'partner';
   
-  return { role, isAdmin, isSuperAdmin, loading };
+  return { role, isAdmin, isSuperAdmin, isPartner, loading };
 };
