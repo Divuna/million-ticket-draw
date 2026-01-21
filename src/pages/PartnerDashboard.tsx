@@ -353,50 +353,69 @@ const PartnerDashboard = () => {
             </div>
 
             {/* Jak začít Checklist */}
-            <div className="border-t border-border/50 pt-6">
-              <div className="flex items-center gap-2 mb-4">
-                <ListChecks className="w-5 h-5 text-primary" />
-                <h3 className="font-semibold text-foreground">Jak začít</h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-                  <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-sm font-medium flex items-center justify-center flex-shrink-0 mt-0.5">
-                    1
+            {(() => {
+              const step1Done = partner.status === 'approved';
+              const step2Done = !!(partner.logo_url && partner.logo_status !== 'none');
+              const step3Done = apiKeys.filter(k => !k.revoked_at).length > 0;
+              const step4Done = false; // Always pending (informational)
+              const completedCount = [step1Done, step2Done, step3Done].filter(Boolean).length;
+
+              return (
+                <div className="border-t border-border/50 pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <ListChecks className="w-5 h-5 text-primary" />
+                      <h3 className="font-semibold text-foreground">Jak začít</h3>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {completedCount}/3 dokončeno
+                    </Badge>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Počkejte na schválení účtu</p>
-                    <p className="text-xs text-muted-foreground">Administrátor zkontroluje vaši registraci</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Step 1 */}
+                    <div className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${step1Done ? 'bg-green-500/10 border border-green-500/20' : 'bg-muted/30'}`}>
+                      <div className={`w-6 h-6 rounded-full text-sm font-medium flex items-center justify-center flex-shrink-0 mt-0.5 ${step1Done ? 'bg-green-500 text-white' : 'bg-primary/20 text-primary'}`}>
+                        {step1Done ? <CheckCircle className="w-4 h-4" /> : '1'}
+                      </div>
+                      <div>
+                        <p className={`text-sm font-medium ${step1Done ? 'text-green-700 dark:text-green-400' : 'text-foreground'}`}>Počkejte na schválení účtu</p>
+                        <p className="text-xs text-muted-foreground">Administrátor zkontroluje vaši registraci</p>
+                      </div>
+                    </div>
+                    {/* Step 2 */}
+                    <div className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${step2Done ? 'bg-green-500/10 border border-green-500/20' : 'bg-muted/30'}`}>
+                      <div className={`w-6 h-6 rounded-full text-sm font-medium flex items-center justify-center flex-shrink-0 mt-0.5 ${step2Done ? 'bg-green-500 text-white' : 'bg-primary/20 text-primary'}`}>
+                        {step2Done ? <CheckCircle className="w-4 h-4" /> : '2'}
+                      </div>
+                      <div>
+                        <p className={`text-sm font-medium ${step2Done ? 'text-green-700 dark:text-green-400' : 'text-foreground'}`}>Nahrajte logo partnera</p>
+                        <p className="text-xs text-muted-foreground">Logo se zobrazí zákazníkům při aktivaci</p>
+                      </div>
+                    </div>
+                    {/* Step 3 */}
+                    <div className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${step3Done ? 'bg-green-500/10 border border-green-500/20' : 'bg-muted/30'}`}>
+                      <div className={`w-6 h-6 rounded-full text-sm font-medium flex items-center justify-center flex-shrink-0 mt-0.5 ${step3Done ? 'bg-green-500 text-white' : 'bg-primary/20 text-primary'}`}>
+                        {step3Done ? <CheckCircle className="w-4 h-4" /> : '3'}
+                      </div>
+                      <div>
+                        <p className={`text-sm font-medium ${step3Done ? 'text-green-700 dark:text-green-400' : 'text-foreground'}`}>Získejte API klíč</p>
+                        <p className="text-xs text-muted-foreground">Kontaktujte administrátora pro vygenerování</p>
+                      </div>
+                    </div>
+                    {/* Step 4 - Always pending */}
+                    <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                      <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-sm font-medium flex items-center justify-center flex-shrink-0 mt-0.5">
+                        4
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Integrujte do e-shopu</p>
+                        <p className="text-xs text-muted-foreground">Použijte API pro vydávání MioCoinů</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-                  <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-sm font-medium flex items-center justify-center flex-shrink-0 mt-0.5">
-                    2
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Nahrajte logo partnera</p>
-                    <p className="text-xs text-muted-foreground">Logo se zobrazí zákazníkům při aktivaci</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-                  <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-sm font-medium flex items-center justify-center flex-shrink-0 mt-0.5">
-                    3
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Získejte API klíč</p>
-                    <p className="text-xs text-muted-foreground">Kontaktujte administrátora pro vygenerování</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-                  <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-sm font-medium flex items-center justify-center flex-shrink-0 mt-0.5">
-                    4
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Integrujte do e-shopu</p>
-                    <p className="text-xs text-muted-foreground">Použijte API pro vydávání MioCoinů</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+              );
+            })()}
           </CardContent>
         </Card>
 
