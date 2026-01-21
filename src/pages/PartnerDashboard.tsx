@@ -27,6 +27,7 @@ interface ApiKey {
   key_prefix: string;
   created_at: string;
   revoked_at: string | null;
+  last_used_at: string | null;
 }
 
 interface WeeklyReport {
@@ -85,7 +86,7 @@ const PartnerDashboard = () => {
       // Load API keys
       const { data: keysData } = await supabase
         .from('partner_api_keys')
-        .select('*')
+        .select('id, key_prefix, created_at, revoked_at, last_used_at')
         .eq('partner_id', partnerData.id)
         .order('created_at', { ascending: false });
 
