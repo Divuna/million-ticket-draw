@@ -13,6 +13,7 @@ import { Plus, Edit, Trash2, ExternalLink, Upload, CheckCircle, XCircle, Loader2
 import { AdminMenu } from '@/components/AdminMenu';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface Partner {
   id: string;
@@ -45,6 +46,7 @@ interface ApiKey {
 }
 
 const AdminPartners = () => {
+  const { loading: roleLoading } = useUserRole();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -376,13 +378,28 @@ const AdminPartners = () => {
   const generateOrRotateApiKey = async () => {
     if (!selectedPartner) return;
     
+    // Ensure role/session is fully loaded before proceeding
+    if (roleLoading) {
+      toast.error('Čekejte prosím, načítání uživatele...');
+      return;
+    }
+    
     setGeneratingKey(true);
     setNewlyGeneratedKey(null);
     
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        throw new Error('Nejste přihlášen');
+      // Explicitly check session before calling Edge Function
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        toast.error('Chyba při ověření relace. Zkuste se znovu přihlásit.');
+        return;
+      }
+      
+      if (!sessionData?.session?.access_token) {
+        toast.error('Nejste přihlášen nebo vypršela relace. Přihlaste se znovu.');
+        return;
       }
 
       // Always use edge function for both generation and rotation
@@ -395,7 +412,11 @@ const AdminPartners = () => {
       });
 
       if (response.error) {
-        throw new Error(response.error.message || 'Nepodařilo se vygenerovat API klíč');
+        // Extract meaningful error message from Edge Function response
+        const errorMessage = response.error.message || 
+          (typeof response.error === 'object' ? JSON.stringify(response.error) : String(response.error));
+        console.error('Edge Function error:', response.error);
+        throw new Error(errorMessage || 'Nepodařilo se vygenerovat API klíč');
       }
 
       const result = response.data as { success: boolean; api_key?: string; error?: string };
@@ -430,7 +451,8 @@ const AdminPartners = () => {
     }
   };
 
-  if (loading) {
+  // Wait for both partner data AND user role/session to be loaded
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen bg-background pb-20">
         <div className="container mx-auto p-6">
