@@ -373,13 +373,28 @@ const AdminPartners = () => {
     }
   };
 
-  const generateApiKey = async () => {
+  const generateApiKey = async (isRotation: boolean = false) => {
     if (!selectedPartner) return;
     
     setGeneratingKey(true);
     setNewlyGeneratedKey(null);
     
     try {
+      // If rotating, first revoke all existing active keys
+      if (isRotation) {
+        const { error: revokeError } = await supabase
+          .from('partner_api_keys')
+          .update({ revoked_at: new Date().toISOString() })
+          .eq('partner_id', selectedPartner.id)
+          .is('revoked_at', null);
+
+        if (revokeError) {
+          console.error('Error revoking existing keys:', revokeError);
+          throw new Error('Nepodařilo se zneplatnit existující klíče');
+        }
+      }
+
+      // Generate new API key
       const { data, error } = await supabase.rpc('generate_partner_api_key', {
         p_partner_id: selectedPartner.id
       });
@@ -389,14 +404,17 @@ const AdminPartners = () => {
       // The RPC returns an array with api_key, created_at, key_id, key_prefix
       if (data && data.length > 0) {
         setNewlyGeneratedKey(data[0].api_key);
-        toast.success('API klíč byl úspěšně vygenerován');
+        toast.success(isRotation 
+          ? 'API klíč byl úspěšně rotován. Starý klíč je neplatný.' 
+          : 'API klíč byl úspěšně vygenerován'
+        );
       }
       
       // Reload API keys list
       await loadPartnerApiKeys(selectedPartner.id);
     } catch (error) {
       console.error('Error generating API key:', error);
-      toast.error('Nepodařilo se vygenerovat API klíč');
+      toast.error(error instanceof Error ? error.message : 'Nepodařilo se vygenerovat API klíč');
     } finally {
       setGeneratingKey(false);
     }
@@ -959,7 +977,10 @@ const AdminPartners = () => {
                     {/* Generate new key button */}
                     <div className="flex items-center justify-between">
                       <Button
-                        onClick={generateApiKey}
+                        onClick={() => {
+                          const hasActiveKeys = partnerApiKeys.filter(k => !k.revoked_at).length > 0;
+                          generateApiKey(hasActiveKeys);
+                        }}
                         disabled={generatingKey || selectedPartner.status !== 'approved'}
                         className="gap-2"
                       >
