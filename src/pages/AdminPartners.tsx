@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, ExternalLink, Upload, CheckCircle, XCircle, Loader2, Clock, Building2, Globe, Phone, FileText, Image } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, Upload, CheckCircle, XCircle, Loader2, Clock, Building2, Globe, Phone, FileText, Image, Key, Eye, Copy, Check, AlertTriangle, RefreshCw } from 'lucide-react';
 import { AdminMenu } from '@/components/AdminMenu';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -35,6 +36,13 @@ interface PendingRegistration {
   created_at: string;
 }
 
+interface ApiKey {
+  id: string;
+  key_prefix: string;
+  created_at: string;
+  revoked_at: string | null;
+}
+
 const AdminPartners = () => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +60,15 @@ const AdminPartners = () => {
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
   const [pendingLoading, setPendingLoading] = useState(true);
   const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
+
+  // Partner detail dialog state
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
+  const [partnerApiKeys, setPartnerApiKeys] = useState<ApiKey[]>([]);
+  const [apiKeysLoading, setApiKeysLoading] = useState(false);
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const [newlyGeneratedKey, setNewlyGeneratedKey] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState(false);
 
   useEffect(() => {
     fetchPartners();
@@ -325,6 +342,70 @@ const AdminPartners = () => {
     setFormData({ name: '', logo_url: '', website_url: '' });
     setSelectedFile(null);
     setDialogOpen(true);
+  };
+
+  // Partner detail and API key functions
+  const openPartnerDetail = async (partner: Partner) => {
+    setSelectedPartner(partner);
+    setDetailDialogOpen(true);
+    setNewlyGeneratedKey(null);
+    setCopiedKey(false);
+    await loadPartnerApiKeys(partner.id);
+  };
+
+  const loadPartnerApiKeys = async (partnerId: string) => {
+    setApiKeysLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('partner_api_keys')
+        .select('*')
+        .eq('partner_id', partnerId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPartnerApiKeys(data || []);
+    } catch (error) {
+      console.error('Error loading API keys:', error);
+      toast.error('Nepodařilo se načíst API klíče');
+    } finally {
+      setApiKeysLoading(false);
+    }
+  };
+
+  const generateApiKey = async () => {
+    if (!selectedPartner) return;
+    
+    setGeneratingKey(true);
+    setNewlyGeneratedKey(null);
+    
+    try {
+      const { data, error } = await supabase.rpc('create_partner_api_key', {
+        p_partner_id: selectedPartner.id
+      });
+
+      if (error) throw error;
+      
+      // The RPC returns the full API key
+      setNewlyGeneratedKey(data as string);
+      toast.success('API klíč byl úspěšně vygenerován');
+      
+      // Reload API keys list
+      await loadPartnerApiKeys(selectedPartner.id);
+    } catch (error) {
+      console.error('Error generating API key:', error);
+      toast.error('Nepodařilo se vygenerovat API klíč');
+    } finally {
+      setGeneratingKey(false);
+    }
+  };
+
+  const copyNewApiKey = () => {
+    if (newlyGeneratedKey) {
+      navigator.clipboard.writeText(newlyGeneratedKey);
+      setCopiedKey(true);
+      toast.success('API klíč byl zkopírován do schránky');
+      setTimeout(() => setCopiedKey(false), 3000);
+    }
   };
 
   if (loading) {
@@ -650,6 +731,14 @@ const AdminPartners = () => {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => openPartnerDetail(partner)}
+                          title="Zobrazit detail"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => window.open(partner.website_url, '_blank')}
                         >
                           <ExternalLink className="w-4 h-4" />
@@ -749,6 +838,188 @@ const AdminPartners = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Partner Detail Dialog */}
+        <Dialog open={detailDialogOpen} onOpenChange={(open) => {
+          setDetailDialogOpen(open);
+          if (!open) {
+            setNewlyGeneratedKey(null);
+            setCopiedKey(false);
+          }
+        }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Building2 className="w-5 h-5" />
+                Detail partnera: {selectedPartner?.name}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {selectedPartner && (
+              <div className="space-y-6">
+                {/* Partner Info */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Základní informace</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center gap-4">
+                      <div className="w-24 h-16 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                        {selectedPartner.logo_url ? (
+                          <img
+                            src={selectedPartner.logo_url}
+                            alt={selectedPartner.name}
+                            className="max-w-full max-h-full object-contain"
+                          />
+                        ) : (
+                          <Image className="w-6 h-6 text-muted-foreground/50" />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{selectedPartner.name}</span>
+                          {getPartnerStatusBadge(selectedPartner.status)}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Globe className="w-4 h-4" />
+                          <a 
+                            href={selectedPartner.website_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            {selectedPartner.website_url}
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Logo status:</span>
+                      {getLogoStatusBadge(selectedPartner.logo_status)}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Vytvořeno: {format(new Date(selectedPartner.created_at), 'dd.MM.yyyy HH:mm', { locale: cs })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* API Keys Section */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Key className="w-5 h-5" />
+                      API klíče partnera
+                    </CardTitle>
+                    <CardDescription>
+                      Spravujte API klíče pro tohoto partnera
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Newly generated key warning */}
+                    {newlyGeneratedKey && (
+                      <Alert className="border-amber-500/50 bg-amber-500/10">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        <AlertDescription className="space-y-3">
+                          <p className="font-medium text-amber-700">
+                            ⚠️ DŮLEŽITÉ: Tento API klíč se zobrazí pouze jednou!
+                          </p>
+                          <p className="text-sm text-amber-600">
+                            Zkopírujte si klíč nyní a bezpečně ho uložte. Po zavření tohoto dialogu už nebude možné klíč znovu zobrazit.
+                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <code className="flex-1 text-sm font-mono bg-background px-3 py-2 rounded border break-all">
+                              {newlyGeneratedKey}
+                            </code>
+                            <Button
+                              size="sm"
+                              variant={copiedKey ? "default" : "outline"}
+                              onClick={copyNewApiKey}
+                              className="flex-shrink-0"
+                            >
+                              {copiedKey ? (
+                                <>
+                                  <Check className="w-4 h-4 mr-1" />
+                                  Zkopírováno
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-4 h-4 mr-1" />
+                                  Kopírovat
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* Generate new key button */}
+                    <div className="flex items-center justify-between">
+                      <Button
+                        onClick={generateApiKey}
+                        disabled={generatingKey || selectedPartner.status !== 'approved'}
+                        className="gap-2"
+                      >
+                        {generatingKey ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4" />
+                        )}
+                        {partnerApiKeys.filter(k => !k.revoked_at).length > 0 
+                          ? 'Rotovat API klíč' 
+                          : 'Vygenerovat API klíč'}
+                      </Button>
+                      {selectedPartner.status !== 'approved' && (
+                        <span className="text-sm text-muted-foreground">
+                          Partner musí být schválen pro generování klíčů
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Existing keys list */}
+                    {apiKeysLoading ? (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : partnerApiKeys.length === 0 ? (
+                      <div className="text-center py-6 text-muted-foreground">
+                        <Key className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                        <p>Partner zatím nemá žádné API klíče</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">Existující klíče:</p>
+                        {partnerApiKeys.map((key) => (
+                          <div
+                            key={key.id}
+                            className={`flex items-center justify-between p-3 rounded-lg border ${
+                              key.revoked_at 
+                                ? 'bg-muted/30 border-border/50 opacity-60' 
+                                : 'bg-muted/50 border-border'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Key className="w-4 h-4 text-muted-foreground" />
+                              <code className="text-sm font-mono">
+                                {key.key_prefix}••••••••••••••••
+                              </code>
+                              {key.revoked_at && (
+                                <Badge variant="destructive" className="text-xs">Zneplatněn</Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {format(new Date(key.created_at), 'dd.MM.yyyy HH:mm', { locale: cs })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
       <AdminMenu />
     </div>
