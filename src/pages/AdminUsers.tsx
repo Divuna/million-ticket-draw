@@ -12,7 +12,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Header } from '@/components/Header';
 import { AdminMenu } from '@/components/AdminMenu';
-import { Search, Edit, Trash2, UserCheck, UserX } from 'lucide-react';
+import { Search, Edit, Trash2, UserCheck, UserX, AlertTriangle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface User {
   id: string;
@@ -23,6 +24,7 @@ interface User {
   first_name?: string;
   last_name?: string;
   phone?: string;
+  isPartnerAccount?: boolean;
 }
 
 const AdminUsers: React.FC = () => {
@@ -41,13 +43,30 @@ const AdminUsers: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch users
+      const { data: usersData, error: usersError } = await supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setUsers(data || []);
+      if (usersError) throw usersError;
+
+      // Fetch all partner auth_user_ids to detect partner accounts
+      const { data: partnersData } = await supabase
+        .from('partners')
+        .select('auth_user_id');
+
+      const partnerAuthIds = new Set(
+        (partnersData || []).map(p => p.auth_user_id).filter(Boolean)
+      );
+
+      // Mark users that are partner accounts
+      const usersWithPartnerFlag = (usersData || []).map(u => ({
+        ...u,
+        isPartnerAccount: partnerAuthIds.has(u.id)
+      }));
+
+      setUsers(usersWithPartnerFlag);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -61,6 +80,17 @@ const AdminUsers: React.FC = () => {
   };
 
   const updateUserRole = async (userId: string, newRole: string) => {
+    // Check if user is a partner account
+    const targetUser = users.find(u => u.id === userId);
+    if (targetUser?.isPartnerAccount) {
+      toast({
+        title: "Změna role zamítnuta",
+        description: "Tento uživatel je partnerský účet. Role partnerských účtů nelze měnit.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('users')
@@ -185,19 +215,35 @@ const AdminUsers: React.FC = () => {
                           {new Date(user.created_at).toLocaleDateString('cs-CZ')}
                         </TableCell>
                         <TableCell>
-                          <Select 
-                            value={user.role} 
-                            onValueChange={(newRole) => updateUserRole(user.id, newRole)}
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">Uživatel</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="superadmin">SuperAdmin</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          {user.isPartnerAccount ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-2 text-warning">
+                                  <AlertTriangle className="h-4 w-4" />
+                                  <Badge variant="outline" className="border-warning text-warning">
+                                    Partnerský účet
+                                  </Badge>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Role partnerských účtů nelze měnit</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Select 
+                              value={user.role} 
+                              onValueChange={(newRole) => updateUserRole(user.id, newRole)}
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="user">Uživatel</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="superadmin">SuperAdmin</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
