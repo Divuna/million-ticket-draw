@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink } from 'lucide-react';
+import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -226,9 +226,28 @@ const PartnerDashboard = () => {
     return null;
   }
 
+  // Derived states for blocking actions
+  const isAccountApproved = partner.status === 'approved';
+  const isLogoApproved = partner.logo_status === 'approved';
+  const hasActiveApiKeys = apiKeys.filter(k => !k.revoked_at).length > 0;
+
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Global Account Status Banner - shown when account is NOT approved */}
+        {!isAccountApproved && (
+          <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-amber-700 dark:text-amber-300">
+                Váš účet čeká na schválení administrátorem.
+              </p>
+              <p className="text-sm text-amber-600/80 dark:text-amber-400/80 mt-1">
+                Po schválení účtu budete moci plně využívat partnerský portál včetně API klíčů pro integraci MioCoinů.
+              </p>
+            </div>
+          </div>
+        )}
         {/* Welcome & Account Status Section */}
         <Card className="border-border/50 bg-gradient-to-br from-card to-muted/20">
           <CardHeader className="pb-4">
@@ -555,17 +574,29 @@ const PartnerDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {partner.status !== 'approved' ? (
-              <div className="text-center py-6">
-                <Key className="w-10 h-10 text-muted-foreground/50 mx-auto mb-2" />
-                <p className="text-muted-foreground">API klíče jsou dostupné pouze pro schválené partnery</p>
-                <p className="text-xs text-muted-foreground mt-1">Váš účet čeká na schválení administrátorem</p>
+            {!isAccountApproved ? (
+              <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">API klíče nejsou dostupné</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Váš účet čeká na schválení administrátorem. Po schválení budete moci využívat API klíče.
+                    </p>
+                  </div>
+                </div>
               </div>
-            ) : apiKeys.filter(k => !k.revoked_at).length === 0 ? (
-              <div className="text-center py-6">
-                <Key className="w-10 h-10 text-muted-foreground/50 mx-auto mb-2" />
-                <p className="text-muted-foreground">Zatím nemáte žádné API klíče</p>
-                <p className="text-xs text-muted-foreground mt-1">Pro vytvoření nebo rotaci API klíče kontaktujte administrátora.</p>
+            ) : !hasActiveApiKeys ? (
+              <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">API klíč zatím nebyl vygenerován administrátorem.</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Pro vygenerování API klíče kontaktujte administrátora na <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a>.
+                    </p>
+                  </div>
+                </div>
               </div>
             ) : (
               <>
