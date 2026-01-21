@@ -1,8 +1,9 @@
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/components/AuthProvider";
 import TestAuthProvider from "@/components/TestAuthProvider";
@@ -72,11 +73,27 @@ const queryClient = new QueryClient();
 
 function AppContent() {
   const { user } = useAuth();
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isPartner } = useUserRole();
   const location = useLocation();
+  const navigate = useNavigate();
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isPartnerRoute = location.pathname.startsWith('/partner');
 
   useOneSignal();
+
+  // Redirect partners away from user-only routes
+  React.useEffect(() => {
+    if (isPartner && user) {
+      const userOnlyRoutes = ['/', '/games', '/favorite-games', '/contest', '/my-contests', '/my-contest', '/vouchers', '/messages', '/wins', '/winners', '/profile'];
+      const isUserOnlyRoute = userOnlyRoutes.some(route => 
+        location.pathname === route || location.pathname.startsWith(route + '/')
+      );
+      
+      if (isUserOnlyRoute) {
+        navigate('/partner/dashboard', { replace: true });
+      }
+    }
+  }, [isPartner, user, location.pathname, navigate]);
 
   return (
     <DateOfBirthGuard>
@@ -135,7 +152,8 @@ function AppContent() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       
-      {isAdmin && isAdminRoute ? <AdminMenu /> : <BottomNavigation />}
+      {/* Hide navigation for partners, show AdminMenu for admins on admin routes, otherwise BottomNavigation */}
+      {!isPartner && (isAdmin && isAdminRoute ? <AdminMenu /> : <BottomNavigation />)}
     </DateOfBirthGuard>
   );
 }
