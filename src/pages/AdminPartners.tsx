@@ -373,7 +373,7 @@ const AdminPartners = () => {
     }
   };
 
-  const generateOrRotateApiKey = async (isRotation: boolean = false) => {
+  const generateOrRotateApiKey = async () => {
     if (!selectedPartner) return;
     
     setGeneratingKey(true);
@@ -385,40 +385,31 @@ const AdminPartners = () => {
         throw new Error('Nejste přihlášen');
       }
 
-      if (isRotation) {
-        // Use edge function for rotation (revokes old keys + generates new)
-        const response = await supabase.functions.invoke('rotate-partner-api-key', {
-          headers: {
-            Authorization: `Bearer ${sessionData.session.access_token}`,
-          },
-          body: { partner_id: selectedPartner.id },
-        });
+      // Always use edge function for both generation and rotation
+      // The edge function handles: revoking old keys (if any) + generating new key
+      const response = await supabase.functions.invoke('rotate-partner-api-key', {
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
+        body: { partner_id: selectedPartner.id },
+      });
 
-        if (response.error) {
-          throw new Error(response.error.message || 'Nepodařilo se rotovat API klíč');
-        }
-
-        const result = response.data as { success: boolean; api_key?: string; error?: string };
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Nepodařilo se rotovat API klíč');
-        }
-
-        setNewlyGeneratedKey(result.api_key || null);
-        toast.success('API klíč byl úspěšně rotován. Starý klíč je neplatný.');
-      } else {
-        // Use RPC for initial generation (no existing keys to revoke)
-        const { data, error } = await supabase.rpc('generate_partner_api_key', {
-          p_partner_id: selectedPartner.id
-        });
-
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          setNewlyGeneratedKey(data[0].api_key);
-          toast.success('API klíč byl úspěšně vygenerován');
-        }
+      if (response.error) {
+        throw new Error(response.error.message || 'Nepodařilo se vygenerovat API klíč');
       }
+
+      const result = response.data as { success: boolean; api_key?: string; error?: string };
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Nepodařilo se vygenerovat API klíč');
+      }
+
+      setNewlyGeneratedKey(result.api_key || null);
+      
+      const hasExistingActiveKeys = partnerApiKeys.some(k => !k.revoked_at);
+      toast.success(hasExistingActiveKeys 
+        ? 'API klíč byl úspěšně rotován. Starý klíč je neplatný.' 
+        : 'API klíč byl úspěšně vygenerován');
       
       // Reload API keys list
       await loadPartnerApiKeys(selectedPartner.id);
@@ -987,10 +978,7 @@ const AdminPartners = () => {
                     {/* Generate new key button */}
                     <div className="flex items-center justify-between">
                       <Button
-                        onClick={() => {
-                          const hasActiveKeys = partnerApiKeys.filter(k => !k.revoked_at).length > 0;
-                          generateOrRotateApiKey(hasActiveKeys);
-                        }}
+                        onClick={() => generateOrRotateApiKey()}
                         disabled={generatingKey || selectedPartner.status !== 'approved'}
                         className="gap-2"
                       >
