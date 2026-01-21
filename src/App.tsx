@@ -73,7 +73,7 @@ const queryClient = new QueryClient();
 
 function AppContent() {
   const { user } = useAuth();
-  const { isAdmin, isPartner } = useUserRole();
+  const { isAdmin, isPartnerAccount, loading: roleLoading } = useUserRole();
   const location = useLocation();
   const navigate = useNavigate();
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -81,19 +81,21 @@ function AppContent() {
 
   useOneSignal();
 
-  // Redirect partners away from user-only routes
+  // Redirect partner accounts away from customer routes
   React.useEffect(() => {
-    if (isPartner && user) {
-      const userOnlyRoutes = ['/', '/games', '/favorite-games', '/contest', '/my-contests', '/my-contest', '/vouchers', '/messages', '/wins', '/winners', '/profile'];
-      const isUserOnlyRoute = userOnlyRoutes.some(route => 
+    if (roleLoading) return; // Wait for role to be loaded
+    
+    if (isPartnerAccount && user) {
+      const customerRoutes = ['/', '/games', '/favorite-games', '/contest', '/my-contests', '/my-contest', '/vouchers', '/messages', '/wins', '/winners', '/profile', '/bonus', '/payment'];
+      const isCustomerRoute = customerRoutes.some(route => 
         location.pathname === route || location.pathname.startsWith(route + '/')
       );
       
-      if (isUserOnlyRoute) {
+      if (isCustomerRoute) {
         navigate('/partner/dashboard', { replace: true });
       }
     }
-  }, [isPartner, user, location.pathname, navigate]);
+  }, [isPartnerAccount, user, location.pathname, navigate, roleLoading]);
 
   return (
     <DateOfBirthGuard>
@@ -152,8 +154,8 @@ function AppContent() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       
-      {/* Hide navigation for partners, show AdminMenu for admins on admin routes, otherwise BottomNavigation */}
-      {!isPartner && (isAdmin && isAdminRoute ? <AdminMenu /> : <BottomNavigation />)}
+      {/* Hide navigation completely for partner accounts, show AdminMenu for admins on admin routes, otherwise BottomNavigation */}
+      {!isPartnerAccount && (isAdmin && isAdminRoute ? <AdminMenu /> : <BottomNavigation />)}
     </DateOfBirthGuard>
   );
 }
