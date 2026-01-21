@@ -90,26 +90,30 @@ function PartnerHeader({ partnerName, partnerLogoUrl, partnerStatus }: PartnerHe
     navigate('/partner/login');
   };
 
-  const getStatusBadge = () => {
+  const getStatusBadge = (isMobile: boolean = false) => {
+    const baseClasses = isMobile 
+      ? "text-[10px] px-1.5 py-0.5" 
+      : "text-xs";
+    
     switch (partnerStatus) {
       case 'approved':
         return (
-          <Badge className="text-xs bg-green-500/10 text-green-600 border-green-500/20 hidden sm:inline-flex">
-            <CheckCircle className="w-3 h-3 mr-1" />
+          <Badge className={`${baseClasses} bg-green-500/10 text-green-600 border-green-500/20`}>
+            <CheckCircle className={isMobile ? "w-2.5 h-2.5 mr-0.5" : "w-3 h-3 mr-1"} />
             Aktivní
           </Badge>
         );
       case 'pending':
         return (
-          <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20 hidden sm:inline-flex">
-            <Clock className="w-3 h-3 mr-1" />
-            Čeká na schválení
+          <Badge variant="secondary" className={`${baseClasses} bg-amber-500/10 text-amber-600 border-amber-500/20`}>
+            <Clock className={isMobile ? "w-2.5 h-2.5 mr-0.5" : "w-3 h-3 mr-1"} />
+            {isMobile ? "Čeká" : "Čeká na schválení"}
           </Badge>
         );
       case 'suspended':
         return (
-          <Badge variant="destructive" className="text-xs bg-red-500/10 text-red-600 border-red-500/20 hidden sm:inline-flex">
-            <XCircle className="w-3 h-3 mr-1" />
+          <Badge variant="destructive" className={`${baseClasses} bg-red-500/10 text-red-600 border-red-500/20`}>
+            <XCircle className={isMobile ? "w-2.5 h-2.5 mr-0.5" : "w-3 h-3 mr-1"} />
             Pozastaveno
           </Badge>
         );
@@ -140,16 +144,26 @@ function PartnerHeader({ partnerName, partnerLogoUrl, partnerStatus }: PartnerHe
                 <Building2 className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                {/* Desktop layout */}
+                <div className="hidden sm:flex items-center gap-2">
                   <span className="font-semibold text-foreground text-sm">
                     {partnerName || 'Partner'}
                   </span>
-                  <Badge variant="outline" className="text-xs hidden sm:inline-flex">
+                  <Badge variant="outline" className="text-xs">
                     Partnerský portál
                   </Badge>
-                  {getStatusBadge()}
+                  {getStatusBadge(false)}
                 </div>
-                <p className="text-xs text-muted-foreground sm:hidden">Partnerský portál</p>
+                {/* Mobile layout */}
+                <div className="sm:hidden">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-foreground text-sm">
+                      {partnerName || 'Partner'}
+                    </span>
+                    {getStatusBadge(true)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Partnerský portál</p>
+                </div>
               </div>
             </Link>
           </TooltipTrigger>
