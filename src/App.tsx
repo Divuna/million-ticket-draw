@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Building2, Key, LogOut } from "lucide-react";
+import { Building2, Key, LogOut, CheckCircle, Clock, XCircle } from "lucide-react";
 
 import Homepage from "@/pages/Homepage";
 import Login from "@/pages/Login";
@@ -78,15 +78,44 @@ import { useUserRole } from "@/hooks/useUserRole";
 interface PartnerHeaderProps {
   partnerName: string | null;
   partnerLogoUrl: string | null;
+  partnerStatus: string | null;
 }
 
-function PartnerHeader({ partnerName, partnerLogoUrl }: PartnerHeaderProps) {
+function PartnerHeader({ partnerName, partnerLogoUrl, partnerStatus }: PartnerHeaderProps) {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success('Odhlášeno');
     navigate('/partner/login');
+  };
+
+  const getStatusBadge = () => {
+    switch (partnerStatus) {
+      case 'approved':
+        return (
+          <Badge className="text-xs bg-green-500/10 text-green-600 border-green-500/20 hidden sm:inline-flex">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Aktivní
+          </Badge>
+        );
+      case 'pending':
+        return (
+          <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20 hidden sm:inline-flex">
+            <Clock className="w-3 h-3 mr-1" />
+            Čeká na schválení
+          </Badge>
+        );
+      case 'suspended':
+        return (
+          <Badge variant="destructive" className="text-xs bg-red-500/10 text-red-600 border-red-500/20 hidden sm:inline-flex">
+            <XCircle className="w-3 h-3 mr-1" />
+            Pozastaveno
+          </Badge>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -118,6 +147,7 @@ function PartnerHeader({ partnerName, partnerLogoUrl }: PartnerHeaderProps) {
                   <Badge variant="outline" className="text-xs hidden sm:inline-flex">
                     Partnerský portál
                   </Badge>
+                  {getStatusBadge()}
                 </div>
                 <p className="text-xs text-muted-foreground sm:hidden">Partnerský portál</p>
               </div>
@@ -151,28 +181,30 @@ function PartnerHeader({ partnerName, partnerLogoUrl }: PartnerHeaderProps) {
 interface PartnerHeaderData {
   name: string | null;
   logoUrl: string | null;
+  status: string | null;
 }
 
 function usePartnerData(userId: string | undefined): PartnerHeaderData {
-  const [data, setData] = useState<PartnerHeaderData>({ name: null, logoUrl: null });
+  const [data, setData] = useState<PartnerHeaderData>({ name: null, logoUrl: null, status: null });
 
   useEffect(() => {
     if (!userId) {
-      setData({ name: null, logoUrl: null });
+      setData({ name: null, logoUrl: null, status: null });
       return;
     }
 
     const fetchPartnerData = async () => {
       const { data: partnerData } = await supabase
         .from('partners')
-        .select('name, company_name, logo_url')
+        .select('name, company_name, logo_url, status')
         .eq('auth_user_id', userId)
         .single();
       
       if (partnerData) {
         setData({
           name: partnerData.company_name || partnerData.name,
-          logoUrl: partnerData.logo_url || null
+          logoUrl: partnerData.logo_url || null,
+          status: partnerData.status || null
         });
       }
     };
@@ -241,7 +273,7 @@ function AppContent() {
   // Render partner header for partner accounts on partner routes
   const renderPartnerHeader = () => {
     if (isPartnerAccount && isPartnerRoute && location.pathname !== '/partner/login' && location.pathname !== '/partner/register') {
-      return <PartnerHeader partnerName={partnerData.name} partnerLogoUrl={partnerData.logoUrl} />;
+      return <PartnerHeader partnerName={partnerData.name} partnerLogoUrl={partnerData.logoUrl} partnerStatus={partnerData.status} />;
     }
     return null;
   };
