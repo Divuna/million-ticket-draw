@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Building2, Coins, Key, FileText, LogOut, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, Building2, Coins, Key, FileText, LogOut, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -251,6 +251,155 @@ const PartnerDashboard = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Welcome & Account Status Section */}
+        <Card className="border-border/50 bg-gradient-to-br from-card to-muted/20">
+          <CardHeader className="pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Rocket className="w-5 h-5 text-primary" />
+                  Vítejte v partnerském portálu
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  {partner.company_name || partner.name}
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Status účtu:</span>
+                {partner.status === 'approved' ? (
+                  <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Aktivní
+                  </Badge>
+                ) : partner.status === 'pending' ? (
+                  <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+                    <Clock className="w-3 h-3 mr-1" />
+                    Čeká na schválení
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-500/20">
+                    <XCircle className="w-3 h-3 mr-1" />
+                    Pozastaveno
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Status Messages */}
+            {partner.status === 'pending' && (
+              <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  <Clock className="w-4 h-4 inline mr-2" />
+                  Váš účet čeká na schválení administrátorem. Po schválení budete moci generovat API klíče a začít integrovat MioCoiny.
+                </p>
+              </div>
+            )}
+            {partner.status === 'suspended' && (
+              <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+                <p className="text-sm text-red-700 dark:text-red-400">
+                  <XCircle className="w-4 h-4 inline mr-2" />
+                  Váš účet byl pozastaven. Pro více informací kontaktujte podporu.
+                </p>
+              </div>
+            )}
+
+            {/* Primary Actions */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <a href="#api-keys" className="block">
+                <div className="p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors cursor-pointer h-full">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <Key className="w-5 h-5 text-primary" />
+                    </div>
+                    <span className="font-medium text-foreground">API klíče</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Zobrazit a spravovat přístupové klíče
+                  </p>
+                </div>
+              </a>
+
+              <a href="https://docs.onemil.cz/partner-api" target="_blank" rel="noopener noreferrer" className="block">
+                <div className="p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors cursor-pointer h-full">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <BookOpen className="w-5 h-5 text-primary" />
+                    </div>
+                    <span className="font-medium text-foreground flex items-center gap-1">
+                      Dokumentace API
+                      <ExternalLink className="w-3 h-3" />
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Návody a reference pro integraci
+                  </p>
+                </div>
+              </a>
+
+              <a href="mailto:podpora@onemil.cz" className="block">
+                <div className="p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors cursor-pointer h-full">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <Mail className="w-5 h-5 text-primary" />
+                    </div>
+                    <span className="font-medium text-foreground">Kontaktovat podporu</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Potřebujete pomoc? Napište nám
+                  </p>
+                </div>
+              </a>
+            </div>
+
+            {/* Jak začít Checklist */}
+            <div className="border-t border-border/50 pt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <ListChecks className="w-5 h-5 text-primary" />
+                <h3 className="font-semibold text-foreground">Jak začít</h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-sm font-medium flex items-center justify-center flex-shrink-0 mt-0.5">
+                    1
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Počkejte na schválení účtu</p>
+                    <p className="text-xs text-muted-foreground">Administrátor zkontroluje vaši registraci</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-sm font-medium flex items-center justify-center flex-shrink-0 mt-0.5">
+                    2
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Nahrajte logo partnera</p>
+                    <p className="text-xs text-muted-foreground">Logo se zobrazí zákazníkům při aktivaci</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-sm font-medium flex items-center justify-center flex-shrink-0 mt-0.5">
+                    3
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Získejte API klíč</p>
+                    <p className="text-xs text-muted-foreground">Kontaktujte administrátora pro vygenerování</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-sm font-medium flex items-center justify-center flex-shrink-0 mt-0.5">
+                    4
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Integrujte do e-shopu</p>
+                    <p className="text-xs text-muted-foreground">Použijte API pro vydávání MioCoinů</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border-border/50">
@@ -398,7 +547,7 @@ const PartnerDashboard = () => {
         </Card>
 
         {/* API Keys Section */}
-        <Card className="border-border/50">
+        <Card id="api-keys" className="border-border/50 scroll-mt-24">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Key className="w-5 h-5" />
