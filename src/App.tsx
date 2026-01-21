@@ -77,9 +77,10 @@ import { useUserRole } from "@/hooks/useUserRole";
 // Partner Header Component (inline to avoid new files)
 interface PartnerHeaderProps {
   partnerName: string | null;
+  partnerLogoUrl: string | null;
 }
 
-function PartnerHeader({ partnerName }: PartnerHeaderProps) {
+function PartnerHeader({ partnerName, partnerLogoUrl }: PartnerHeaderProps) {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -92,7 +93,19 @@ function PartnerHeader({ partnerName }: PartnerHeaderProps) {
     <header className="border-b border-border/50 bg-card/50 backdrop-blur sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center">
+          {partnerLogoUrl ? (
+            <img 
+              src={partnerLogoUrl} 
+              alt={partnerName || 'Partner'} 
+              className="w-9 h-9 rounded-lg object-cover border border-border/50"
+              onError={(e) => {
+                // Fallback to icon if image fails to load
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+              }}
+            />
+          ) : null}
+          <div className={`w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center ${partnerLogoUrl ? 'hidden' : ''}`}>
             <Building2 className="w-5 h-5 text-primary" />
           </div>
           <div>
@@ -127,32 +140,40 @@ function PartnerHeader({ partnerName }: PartnerHeaderProps) {
   );
 }
 
-// Hook to get partner name for header
-function usePartnerName(userId: string | undefined) {
-  const [partnerName, setPartnerName] = useState<string | null>(null);
+// Hook to get partner data for header
+interface PartnerHeaderData {
+  name: string | null;
+  logoUrl: string | null;
+}
+
+function usePartnerData(userId: string | undefined): PartnerHeaderData {
+  const [data, setData] = useState<PartnerHeaderData>({ name: null, logoUrl: null });
 
   useEffect(() => {
     if (!userId) {
-      setPartnerName(null);
+      setData({ name: null, logoUrl: null });
       return;
     }
 
-    const fetchPartnerName = async () => {
-      const { data } = await supabase
+    const fetchPartnerData = async () => {
+      const { data: partnerData } = await supabase
         .from('partners')
-        .select('name, company_name')
+        .select('name, company_name, logo_url')
         .eq('auth_user_id', userId)
         .single();
       
-      if (data) {
-        setPartnerName(data.company_name || data.name);
+      if (partnerData) {
+        setData({
+          name: partnerData.company_name || partnerData.name,
+          logoUrl: partnerData.logo_url || null
+        });
       }
     };
 
-    fetchPartnerName();
+    fetchPartnerData();
   }, [userId]);
 
-  return partnerName;
+  return data;
 }
 
 const queryClient = new QueryClient();
@@ -178,8 +199,8 @@ function AppContent() {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isPartnerRoute = location.pathname.startsWith('/partner');
   
-  // Fetch partner name for header (only when partner account)
-  const partnerName = usePartnerName(isPartnerAccount ? user?.id : undefined);
+  // Fetch partner data for header (only when partner account)
+  const partnerData = usePartnerData(isPartnerAccount ? user?.id : undefined);
 
   useOneSignal();
 
@@ -213,7 +234,7 @@ function AppContent() {
   // Render partner header for partner accounts on partner routes
   const renderPartnerHeader = () => {
     if (isPartnerAccount && isPartnerRoute && location.pathname !== '/partner/login' && location.pathname !== '/partner/register') {
-      return <PartnerHeader partnerName={partnerName} />;
+      return <PartnerHeader partnerName={partnerData.name} partnerLogoUrl={partnerData.logoUrl} />;
     }
     return null;
   };
