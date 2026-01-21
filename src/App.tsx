@@ -61,9 +61,7 @@ import Kontakt from "@/pages/Kontakt";
 import PartnerLogin from "@/pages/PartnerLogin";
 import PartnerRegister from "@/pages/PartnerRegister";
 import PartnerDashboard from "@/pages/PartnerDashboard";
-import PartnerApiKeys from "@/pages/PartnerApiKeys";
 import AdminPartnersPortal from "@/pages/AdminPartnersPortal";
-import AdminPartnerApiKeys from "@/pages/AdminPartnerApiKeys";
 import NotFound from "@/pages/NotFound";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -124,11 +122,9 @@ function AppContent() {
         <Route path="/admin/legal-acceptances" element={<AdminLegalAcceptances />} />
         <Route path="/admin/onboarding-incomplete" element={<AdminOnboardingIncomplete />} />
         <Route path="/admin/partners-portal" element={<AdminPartnersPortal />} />
-        <Route path="/admin/partners/:id/api-keys" element={<AdminPartnerApiKeys />} />
         <Route path="/partner/login" element={<PartnerLogin />} />
         <Route path="/partner/register" element={<PartnerRegister />} />
         <Route path="/partner/dashboard" element={<PartnerDashboard />} />
-        <Route path="/partner/api-keys" element={<PartnerApiKeys />} />
         <Route path="/unsubscribe/marketing" element={<UnsubscribeMarketing />} />
         <Route path="/delete-account" element={<DeleteAccount />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
