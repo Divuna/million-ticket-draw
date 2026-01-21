@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Building2, Coins, Key, FileText, LogOut, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink } from 'lucide-react';
+import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -139,11 +139,6 @@ const PartnerDashboard = () => {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success('Odhlášeno');
-    navigate('/partner/login');
-  };
 
 
   const handleLogoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -233,23 +228,6 @@ const PartnerDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={partner.logo_url} alt={partner.name} className="w-10 h-10 rounded-lg object-cover" />
-            <div>
-              <h1 className="font-semibold text-foreground">{partner.name}</h1>
-              <p className="text-sm text-muted-foreground">Partnerský portál</p>
-            </div>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Odhlásit
-          </Button>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-8 space-y-8">
         {/* Welcome & Account Status Section */}
         <Card className="border-border/50 bg-gradient-to-br from-card to-muted/20">

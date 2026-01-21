@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate, Link } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/components/AuthProvider";
 import TestAuthProvider from "@/components/TestAuthProvider";
@@ -14,6 +14,11 @@ import { useOneSignal } from "@/hooks/useOneSignal";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminRealtimeProvider } from "@/components/AdminRealtimeProvider";
 import ContestDetailAdmin from "@/components/ContestDetailAdmin";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Building2, Key, LogOut } from "lucide-react";
 
 import Homepage from "@/pages/Homepage";
 import Login from "@/pages/Login";
@@ -69,6 +74,87 @@ import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminMenu } from "@/components/AdminMenu";
 import { useUserRole } from "@/hooks/useUserRole";
 
+// Partner Header Component (inline to avoid new files)
+interface PartnerHeaderProps {
+  partnerName: string | null;
+}
+
+function PartnerHeader({ partnerName }: PartnerHeaderProps) {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast.success('Odhlášeno');
+    navigate('/partner/login');
+  };
+
+  return (
+    <header className="border-b border-border/50 bg-card/50 backdrop-blur sticky top-0 z-50">
+      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center">
+            <Building2 className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-foreground text-sm">
+                {partnerName || 'Partner'}
+              </span>
+              <Badge variant="outline" className="text-xs hidden sm:inline-flex">
+                Partnerský portál
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground sm:hidden">Partnerský portál</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link to="/partner/dashboard#api-keys">
+            <Button variant="ghost" size="sm" className="hidden sm:flex">
+              <Key className="w-4 h-4 mr-2" />
+              API klíče
+            </Button>
+            <Button variant="ghost" size="icon" className="sm:hidden">
+              <Key className="w-4 h-4" />
+            </Button>
+          </Link>
+          <Button variant="outline" size="sm" onClick={handleLogout}>
+            <LogOut className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Odhlásit se</span>
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// Hook to get partner name for header
+function usePartnerName(userId: string | undefined) {
+  const [partnerName, setPartnerName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!userId) {
+      setPartnerName(null);
+      return;
+    }
+
+    const fetchPartnerName = async () => {
+      const { data } = await supabase
+        .from('partners')
+        .select('name, company_name')
+        .eq('auth_user_id', userId)
+        .single();
+      
+      if (data) {
+        setPartnerName(data.company_name || data.name);
+      }
+    };
+
+    fetchPartnerName();
+  }, [userId]);
+
+  return partnerName;
+}
+
 const queryClient = new QueryClient();
 
 // List of routes blocked for partner accounts
@@ -91,6 +177,9 @@ function AppContent() {
   const navigate = useNavigate();
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isPartnerRoute = location.pathname.startsWith('/partner');
+  
+  // Fetch partner name for header (only when partner account)
+  const partnerName = usePartnerName(isPartnerAccount ? user?.id : undefined);
 
   useOneSignal();
 
@@ -121,6 +210,14 @@ function AppContent() {
     );
   }
 
+  // Render partner header for partner accounts on partner routes
+  const renderPartnerHeader = () => {
+    if (isPartnerAccount && isPartnerRoute && location.pathname !== '/partner/login' && location.pathname !== '/partner/register') {
+      return <PartnerHeader partnerName={partnerName} />;
+    }
+    return null;
+  };
+
   // Layout wrapper based on account type
   const renderNavigation = () => {
     // Partners see no navigation - they're confined to partner portal
@@ -137,6 +234,9 @@ function AppContent() {
     <DateOfBirthGuard>
       {/* Main app layout wrapper - applies different UI based on accountType */}
       <div className={isPartnerAccount ? 'partner-layout' : 'customer-layout'}>
+        {/* Partner header - only visible for partner accounts on partner routes */}
+        {renderPartnerHeader()}
+        
         <Routes>
           <Route path="/" element={<Homepage />} />
           <Route path="/login" element={<Login />} />
