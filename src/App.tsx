@@ -84,6 +84,123 @@ function isCustomerBlockedRoute(pathname: string): boolean {
   );
 }
 
+// Partner Layout - clean, no customer widgets, no bottom nav
+function PartnerLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background">
+      {children}
+    </div>
+  );
+}
+
+// Customer Layout - includes bottom navigation and DateOfBirthGuard
+function CustomerLayout({ children, isAdmin, isAdminRoute }: { 
+  children: React.ReactNode; 
+  isAdmin: boolean; 
+  isAdminRoute: boolean;
+}) {
+  return (
+    <DateOfBirthGuard>
+      {children}
+      {isAdmin && isAdminRoute ? <AdminMenu /> : <BottomNavigation />}
+    </DateOfBirthGuard>
+  );
+}
+
+// Admin Layout - includes admin menu
+function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <DateOfBirthGuard>
+      {children}
+      <AdminMenu />
+    </DateOfBirthGuard>
+  );
+}
+
+// Shared routes accessible by all account types
+function SharedRoutes() {
+  return (
+    <>
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/partner/login" element={<PartnerLogin />} />
+      <Route path="/partner/register" element={<PartnerRegister />} />
+      <Route path="/unsubscribe/marketing" element={<UnsubscribeMarketing />} />
+      <Route path="/delete-account" element={<DeleteAccount />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<TermsConditions />} />
+      <Route path="/kontakt" element={<Kontakt />} />
+      <Route path="/test-login" element={<TestLogin />} />
+      <Route path="/:section/:slug" element={<ContentPage />} />
+      <Route path="*" element={<NotFound />} />
+    </>
+  );
+}
+
+// Partner-only routes
+function PartnerRoutes() {
+  return (
+    <>
+      <Route path="/partner/dashboard" element={<PartnerDashboard />} />
+    </>
+  );
+}
+
+// Customer-only routes
+function CustomerRoutes() {
+  return (
+    <>
+      <Route path="/" element={<Homepage />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/games" element={<Games />} />
+      <Route path="/favorite-games" element={<FavoriteGames />} />
+      <Route path="/contest/:id" element={<ContestDetail />} />
+      <Route path="/my-contests" element={<MyContests />} />
+      <Route path="/my-contest/:id" element={<MyContestDetail />} />
+      <Route path="/bonus/:id" element={<BonusDetail />} />
+      <Route path="/vouchers" element={<Vouchers />} />
+      <Route path="/messages" element={<Messages />} />
+      <Route path="/messages/:id" element={<MessageDetail />} />
+      <Route path="/payment/success" element={<PaymentSuccess />} />
+      <Route path="/payment-success" element={<PaymentSuccess />} />
+      <Route path="/payment/cancel" element={<PaymentCancel />} />
+      <Route path="/payment-cancel" element={<PaymentCancel />} />
+      <Route path="/winners" element={<Winners />} />
+      <Route path="/wins" element={<Wins />} />
+      <Route path="/share/ticket/:ticketId" element={<ShareTicket />} />
+      <Route path="/onboarding/date-of-birth" element={<OnboardingDateOfBirth />} />
+    </>
+  );
+}
+
+// Admin routes
+function AdminRoutes() {
+  return (
+    <>
+      <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/admin/users" element={<AdminUsers />} />
+      <Route path="/admin/banners" element={<AdminBanners />} />
+      <Route path="/admin/vouchers" element={<AdminVouchers />} />
+      <Route path="/admin/payments" element={<AdminPayments />} />
+      <Route path="/admin/statistics" element={<AdminStatistics />} />
+      <Route path="/admin/notifications" element={<AdminNotifications />} />
+      <Route path="/admin/winners" element={<AdminWinners />} />
+      <Route path="/admin/tests" element={<AdminTests />} />
+      <Route path="/admin/partners" element={<AdminPartners />} />
+      <Route path="/admin/messages" element={<AdminMessages />} />
+      <Route path="/admin/messages/:userId" element={<AdminMessageThread />} />
+      <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+      <Route path="/admin/audit-repair" element={<AdminAuditRepair />} />
+      <Route path="/admin/onemil-audit" element={<OneMilAudit />} />
+      <Route path="/admin/contest/:contestId" element={<ContestDetailAdmin />} />
+      <Route path="/admin/content" element={<AdminContentPages />} />
+      <Route path="/admin/legal-acceptances" element={<AdminLegalAcceptances />} />
+      <Route path="/admin/onboarding-incomplete" element={<AdminOnboardingIncomplete />} />
+      <Route path="/admin/partners-portal" element={<AdminPartnersPortal />} />
+    </>
+  );
+}
+
 function AppContent() {
   const { user } = useAuth();
   const { isAdmin, isPartnerAccount, loading: roleLoading } = useUserRole();
@@ -94,7 +211,7 @@ function AppContent() {
 
   useOneSignal();
 
-  // Hard-block: Redirect partner accounts away from customer routes (works on direct URL access)
+  // Hard-block: Redirect partner accounts away from customer routes
   React.useEffect(() => {
     if (roleLoading) return;
     
@@ -103,7 +220,7 @@ function AppContent() {
     }
   }, [isPartnerAccount, user, location.pathname, navigate, roleLoading]);
 
-  // Block rendering of customer routes while checking account type (prevents flash)
+  // Loading state while checking account type
   if (user && roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -112,7 +229,7 @@ function AppContent() {
     );
   }
 
-  // Hard-block: If partner tries to access customer route, show nothing (redirect in effect)
+  // Hard-block: Partner trying to access customer route - show loading while redirect happens
   if (isPartnerAccount && user && isCustomerBlockedRoute(location.pathname)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -121,66 +238,41 @@ function AppContent() {
     );
   }
 
+  // Partner account layout - completely separate from customer UI
+  if (isPartnerAccount && user) {
+    return (
+      <PartnerLayout>
+        <Routes>
+          <PartnerRoutes />
+          <SharedRoutes />
+        </Routes>
+      </PartnerLayout>
+    );
+  }
+
+  // Admin layout for admin routes
+  if (isAdmin && isAdminRoute) {
+    return (
+      <AdminLayout>
+        <Routes>
+          <AdminRoutes />
+          <CustomerRoutes />
+          <SharedRoutes />
+        </Routes>
+      </AdminLayout>
+    );
+  }
+
+  // Customer layout - default for non-partner, non-admin routes
   return (
-    <DateOfBirthGuard>
+    <CustomerLayout isAdmin={isAdmin} isAdminRoute={isAdminRoute}>
       <Routes>
-        <Route path="/" element={<Homepage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/games" element={<Games />} />
-        <Route path="/favorite-games" element={<FavoriteGames />} />
-        <Route path="/contest/:id" element={<ContestDetail />} />
-        <Route path="/my-contests" element={<MyContests />} />
-        <Route path="/my-contest/:id" element={<MyContestDetail />} />
-        <Route path="/bonus/:id" element={<BonusDetail />} />
-        <Route path="/vouchers" element={<Vouchers />} />
-        <Route path="/messages" element={<Messages />} />
-        <Route path="/messages/:id" element={<MessageDetail />} />
-        <Route path="/payment/success" element={<PaymentSuccess />} />
-        <Route path="/payment-success" element={<PaymentSuccess />} />
-        <Route path="/payment/cancel" element={<PaymentCancel />} />
-        <Route path="/payment-cancel" element={<PaymentCancel />} />
-        <Route path="/winners" element={<Winners />} />
-        <Route path="/wins" element={<Wins />} />
-        <Route path="/share/ticket/:ticketId" element={<ShareTicket />} />
-        <Route path="/onboarding/date-of-birth" element={<OnboardingDateOfBirth />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/admin/banners" element={<AdminBanners />} />
-        <Route path="/admin/vouchers" element={<AdminVouchers />} />
-        <Route path="/admin/payments" element={<AdminPayments />} />
-        <Route path="/admin/statistics" element={<AdminStatistics />} />
-        <Route path="/admin/notifications" element={<AdminNotifications />} />
-        <Route path="/admin/winners" element={<AdminWinners />} />
-        <Route path="/admin/tests" element={<AdminTests />} />
-        <Route path="/admin/partners" element={<AdminPartners />} />
-        <Route path="/admin/messages" element={<AdminMessages />} />
-        <Route path="/admin/messages/:userId" element={<AdminMessageThread />} />
-        <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
-        <Route path="/admin/audit-repair" element={<AdminAuditRepair />} />
-        <Route path="/admin/onemil-audit" element={<OneMilAudit />} />
-        <Route path="/admin/contest/:contestId" element={<ContestDetailAdmin />} />
-        <Route path="/admin/content" element={<AdminContentPages />} />
-        <Route path="/admin/legal-acceptances" element={<AdminLegalAcceptances />} />
-        <Route path="/admin/onboarding-incomplete" element={<AdminOnboardingIncomplete />} />
-        <Route path="/admin/partners-portal" element={<AdminPartnersPortal />} />
-        <Route path="/partner/login" element={<PartnerLogin />} />
-        <Route path="/partner/register" element={<PartnerRegister />} />
-        <Route path="/partner/dashboard" element={<PartnerDashboard />} />
-        <Route path="/unsubscribe/marketing" element={<UnsubscribeMarketing />} />
-        <Route path="/delete-account" element={<DeleteAccount />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-        <Route path="/terms" element={<TermsConditions />} />
-        <Route path="/kontakt" element={<Kontakt />} />
-        <Route path="/test-login" element={<TestLogin />} />
-        <Route path="/:section/:slug" element={<ContentPage />} />
-        <Route path="*" element={<NotFound />} />
+        <CustomerRoutes />
+        <AdminRoutes />
+        <PartnerRoutes />
+        <SharedRoutes />
       </Routes>
-      
-      {/* Hide navigation completely for partner accounts, show AdminMenu for admins on admin routes, otherwise BottomNavigation */}
-      {!isPartnerAccount && (isAdmin && isAdminRoute ? <AdminMenu /> : <BottomNavigation />)}
-    </DateOfBirthGuard>
+    </CustomerLayout>
   );
 }
 
