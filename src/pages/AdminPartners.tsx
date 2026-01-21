@@ -74,7 +74,6 @@ interface ApiKey {
   key_prefix: string;
   created_at: string;
   revoked_at: string | null;
-  last_used_at: string | null;
 }
 
 const statusLabels: Record<PartnerStatus, string> = {
@@ -374,7 +373,7 @@ const AdminPartners = () => {
     try {
       const { data, error } = await supabase
         .from("partner_api_keys")
-        .select("id, key_prefix, created_at, revoked_at, last_used_at")
+        .select("id, key_prefix, created_at, revoked_at")
         .eq("partner_id", partnerId)
         .order("created_at", { ascending: false });
 
@@ -1005,11 +1004,6 @@ const AdminPartners = () => {
                             <span className="text-xs text-muted-foreground block">
                               {format(new Date(key.created_at), "dd.MM.yyyy HH:mm", { locale: cs })}
                             </span>
-                            {key.last_used_at && (
-                              <span className="text-xs text-muted-foreground block">
-                                Použito: {format(new Date(key.last_used_at), "dd.MM.yyyy", { locale: cs })}
-                              </span>
-                            )}
                           </div>
                         </div>
                       ))
