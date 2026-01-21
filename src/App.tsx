@@ -71,6 +71,19 @@ import { useUserRole } from "@/hooks/useUserRole";
 
 const queryClient = new QueryClient();
 
+// List of routes blocked for partner accounts
+const CUSTOMER_BLOCKED_ROUTES = [
+  '/', '/games', '/favorite-games', '/contest', '/my-contests', '/my-contest', 
+  '/vouchers', '/messages', '/wins', '/winners', '/profile', '/bonus', 
+  '/payment', '/payment-success', '/payment-cancel', '/share/ticket'
+];
+
+function isCustomerBlockedRoute(pathname: string): boolean {
+  return CUSTOMER_BLOCKED_ROUTES.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  );
+}
+
 function AppContent() {
   const { user } = useAuth();
   const { isAdmin, isPartnerAccount, loading: roleLoading } = useUserRole();
@@ -81,21 +94,32 @@ function AppContent() {
 
   useOneSignal();
 
-  // Redirect partner accounts away from customer routes
+  // Hard-block: Redirect partner accounts away from customer routes (works on direct URL access)
   React.useEffect(() => {
-    if (roleLoading) return; // Wait for role to be loaded
+    if (roleLoading) return;
     
-    if (isPartnerAccount && user) {
-      const customerRoutes = ['/', '/games', '/favorite-games', '/contest', '/my-contests', '/my-contest', '/vouchers', '/messages', '/wins', '/winners', '/profile', '/bonus', '/payment'];
-      const isCustomerRoute = customerRoutes.some(route => 
-        location.pathname === route || location.pathname.startsWith(route + '/')
-      );
-      
-      if (isCustomerRoute) {
-        navigate('/partner/dashboard', { replace: true });
-      }
+    if (isPartnerAccount && user && isCustomerBlockedRoute(location.pathname)) {
+      navigate('/partner/dashboard', { replace: true });
     }
   }, [isPartnerAccount, user, location.pathname, navigate, roleLoading]);
+
+  // Block rendering of customer routes while checking account type (prevents flash)
+  if (user && roleLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Hard-block: If partner tries to access customer route, show nothing (redirect in effect)
+  if (isPartnerAccount && user && isCustomerBlockedRoute(location.pathname)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <DateOfBirthGuard>
