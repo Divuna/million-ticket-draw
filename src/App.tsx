@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Link } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
@@ -92,34 +92,41 @@ function PartnerHeader({ partnerName, partnerLogoUrl }: PartnerHeaderProps) {
   return (
     <header className="border-b border-border/50 bg-card/50 backdrop-blur sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/partner/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-          {partnerLogoUrl ? (
-            <img 
-              src={partnerLogoUrl} 
-              alt={partnerName || 'Partner'} 
-              className="w-9 h-9 rounded-lg object-cover border border-border/50"
-              onError={(e) => {
-                // Fallback to icon if image fails to load
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.nextElementSibling?.classList.remove('hidden');
-              }}
-            />
-          ) : null}
-          <div className={`w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center ${partnerLogoUrl ? 'hidden' : ''}`}>
-            <Building2 className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-foreground text-sm">
-                {partnerName || 'Partner'}
-              </span>
-              <Badge variant="outline" className="text-xs hidden sm:inline-flex">
-                Partnerský portál
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground sm:hidden">Partnerský portál</p>
-          </div>
-        </Link>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link to="/partner/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+              {partnerLogoUrl ? (
+                <img 
+                  src={partnerLogoUrl} 
+                  alt={partnerName || 'Partner'} 
+                  className="w-9 h-9 rounded-lg object-cover border border-border/50"
+                  onError={(e) => {
+                    // Fallback to icon if image fails to load
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+              ) : null}
+              <div className={`w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center ${partnerLogoUrl ? 'hidden' : ''}`}>
+                <Building2 className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground text-sm">
+                    {partnerName || 'Partner'}
+                  </span>
+                  <Badge variant="outline" className="text-xs hidden sm:inline-flex">
+                    Partnerský portál
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground sm:hidden">Partnerský portál</p>
+              </div>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Přejít na partnerský dashboard</p>
+          </TooltipContent>
+        </Tooltip>
         <div className="flex items-center gap-2">
           <Link to="/partner/dashboard#api-keys">
             <Button variant="ghost" size="sm" className="hidden sm:flex">
