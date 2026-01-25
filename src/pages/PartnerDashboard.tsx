@@ -53,6 +53,74 @@ const PartnerDashboard = () => {
   
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
+  const [activatingReward, setActivatingReward] = useState(false);
+
+  // Function to activate a partner reward code via RPC
+  const activatePartnerReward = async (rewardCode: string, apiKey: string): Promise<boolean> => {
+    if (!partner) {
+      toast.error('Partner nenalezen');
+      return false;
+    }
+
+    if (!rewardCode.trim()) {
+      toast.error('Kód odměny je povinný');
+      return false;
+    }
+
+    if (!apiKey.trim()) {
+      toast.error('API klíč je povinný');
+      return false;
+    }
+
+    setActivatingReward(true);
+
+    try {
+      const { data, error } = await supabase.rpc('activate_partner_reward_sql', {
+        p_api_key: apiKey,
+        p_partner_id: partner.id,
+        p_reward_code: rewardCode,
+      });
+
+      if (error) {
+        console.error('Chyba při aktivaci odměny:', error);
+        
+        // Handle specific error messages
+        if (error.message.includes('not found') || error.message.includes('nenalezen')) {
+          toast.error('Kód odměny nebyl nalezen');
+        } else if (error.message.includes('already activated') || error.message.includes('již aktivován')) {
+          toast.error('Tento kód byl již aktivován');
+        } else if (error.message.includes('expired') || error.message.includes('vypršel')) {
+          toast.error('Platnost kódu vypršela');
+        } else if (error.message.includes('invalid') || error.message.includes('neplatný')) {
+          toast.error('Neplatný API klíč nebo kód odměny');
+        } else {
+          toast.error(`Chyba při aktivaci: ${error.message}`);
+        }
+        return false;
+      }
+
+      // Check RPC response for success/error
+      const result = data as { success?: boolean; error?: string; message?: string } | null;
+      
+      if (result?.error) {
+        toast.error(result.error);
+        return false;
+      }
+
+      toast.success('Odměna byla úspěšně aktivována');
+      
+      // Reload data to reflect changes
+      await loadPartnerData();
+      
+      return true;
+    } catch (err) {
+      console.error('Neočekávaná chyba při aktivaci odměny:', err);
+      toast.error('Nastala neočekávaná chyba při aktivaci odměny');
+      return false;
+    } finally {
+      setActivatingReward(false);
+    }
+  };
 
   useEffect(() => {
     loadPartnerData();
