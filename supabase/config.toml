@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.partner-activate]
 verify_jwt = false
+
+[functions.admin-generate-partner-api-key]
+verify_jwt = false
