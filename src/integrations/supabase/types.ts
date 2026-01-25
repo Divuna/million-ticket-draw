@@ -594,6 +594,27 @@ export type Database = {
           },
         ]
       }
+      partner_api_key_usage: {
+        Row: {
+          id: string
+          key_id: string
+          partner_id: string
+          used_at: string
+        }
+        Insert: {
+          id?: string
+          key_id: string
+          partner_id: string
+          used_at?: string
+        }
+        Update: {
+          id?: string
+          key_id?: string
+          partner_id?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
       partner_api_keys: {
         Row: {
           created_at: string
@@ -1667,10 +1688,36 @@ export type Database = {
           },
         ]
       }
+      valid_partner_api_keys: {
+        Row: {
+          key_id: string | null
+          partner_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_api_keys_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       _invoke_forward_messages_to_sofinity: { Args: never; Returns: undefined }
-      activate_partner_reward_code: { Args: { p_code: string }; Returns: Json }
+      activate_partner_reward_code: {
+        Args: { p_reward_code: string }
+        Returns: undefined
+      }
+      activate_partner_reward_code_for_user: {
+        Args: { p_reward_code: string; p_user_id: string }
+        Returns: undefined
+      }
+      activate_partner_reward_sql: {
+        Args: { p_api_key: string; p_partner_id: string; p_reward_code: string }
+        Returns: Json
+      }
       admin_manage_bonus_prize: {
         Args: {
           p_amount?: number
@@ -1953,6 +2000,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      log_partner_api_key_usage: {
+        Args: { p_key_id: string; p_partner_id: string }
+        Returns: undefined
+      }
       mark_wins_as_seen: { Args: never; Returns: undefined }
       notify_sofinity_event: {
         Args: {
@@ -2074,6 +2125,13 @@ export type Database = {
           event_name: string
           latest_timestamp: string
           sample_metadata: Json
+        }[]
+      }
+      verify_partner_api_key: {
+        Args: { p_api_key: string }
+        Returns: {
+          key_id: string
+          partner_id: string
         }[]
       }
     }
