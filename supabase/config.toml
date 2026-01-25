@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.rotate-partner-api-key]
 verify_jwt = false
+
+[functions.partner-activate]
+verify_jwt = false
