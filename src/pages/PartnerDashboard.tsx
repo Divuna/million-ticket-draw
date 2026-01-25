@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface Partner {
   id: string;
@@ -41,6 +42,7 @@ interface WeeklyReport {
 
 const PartnerDashboard = () => {
   const navigate = useNavigate();
+  const { isAdmin } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [partner, setPartner] = useState<Partner | null>(null);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -714,15 +716,17 @@ const PartnerDashboard = () => {
                   <p className="text-sm text-muted-foreground italic flex-1">
                     Pro vytvoření nebo rotaci API klíče kontaktujte administrátora.
                   </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={openActivateModal}
-                    className="gap-2"
-                  >
-                    <Gift className="w-4 h-4" />
-                    Aktivovat odměnu
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={openActivateModal}
+                      className="gap-2"
+                    >
+                      <Gift className="w-4 h-4" />
+                      Aktivovat odměnu
+                    </Button>
+                  )}
                 </div>
               </>
             )}
@@ -774,65 +778,67 @@ const PartnerDashboard = () => {
         </Card>
       </main>
 
-      {/* Activate Reward Modal */}
-      <Dialog open={activateModalOpen} onOpenChange={setActivateModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Gift className="w-5 h-5" />
-              Aktivovat odměnu
-            </DialogTitle>
-            <DialogDescription>
-              Zadejte kód odměny a váš API klíč pro aktivaci.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="reward-code">Kód odměny</Label>
-              <Input
-                id="reward-code"
-                placeholder="např. ABC123XYZ"
-                value={rewardCodeInput}
-                onChange={(e) => setRewardCodeInput(e.target.value)}
-                disabled={activatingReward}
-              />
+      {/* Activate Reward Modal - Admin only */}
+      {isAdmin && (
+        <Dialog open={activateModalOpen} onOpenChange={setActivateModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Gift className="w-5 h-5" />
+                Aktivovat odměnu
+              </DialogTitle>
+              <DialogDescription>
+                Zadejte kód odměny a váš API klíč pro aktivaci.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="reward-code">Kód odměny</Label>
+                <Input
+                  id="reward-code"
+                  placeholder="např. ABC123XYZ"
+                  value={rewardCodeInput}
+                  onChange={(e) => setRewardCodeInput(e.target.value)}
+                  disabled={activatingReward}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="api-key">API klíč</Label>
+                <Input
+                  id="api-key"
+                  type="password"
+                  placeholder="Váš API klíč"
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  disabled={activatingReward}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="api-key">API klíč</Label>
-              <Input
-                id="api-key"
-                type="password"
-                placeholder="Váš API klíč"
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => setActivateModalOpen(false)}
                 disabled={activatingReward}
-              />
-            </div>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => setActivateModalOpen(false)}
-              disabled={activatingReward}
-            >
-              Zrušit
-            </Button>
-            <Button
-              onClick={handleActivateRewardSubmit}
-              disabled={activatingReward || !rewardCodeInput.trim() || !apiKeyInput.trim()}
-            >
-              {activatingReward ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Aktivuji...
-                </>
-              ) : (
-                'Aktivovat'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              >
+                Zrušit
+              </Button>
+              <Button
+                onClick={handleActivateRewardSubmit}
+                disabled={activatingReward || !rewardCodeInput.trim() || !apiKeyInput.trim()}
+              >
+                {activatingReward ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Aktivuji...
+                  </>
+                ) : (
+                  'Aktivovat'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
