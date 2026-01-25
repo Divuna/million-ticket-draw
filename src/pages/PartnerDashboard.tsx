@@ -6,9 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info } from 'lucide-react';
+import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -54,6 +55,26 @@ const PartnerDashboard = () => {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
   const [activatingReward, setActivatingReward] = useState(false);
+  
+  // Activate reward modal state
+  const [activateModalOpen, setActivateModalOpen] = useState(false);
+  const [rewardCodeInput, setRewardCodeInput] = useState('');
+  const [apiKeyInput, setApiKeyInput] = useState('');
+
+  const handleActivateRewardSubmit = async () => {
+    const success = await activatePartnerReward(rewardCodeInput, apiKeyInput);
+    if (success) {
+      setActivateModalOpen(false);
+      setRewardCodeInput('');
+      setApiKeyInput('');
+    }
+  };
+
+  const openActivateModal = () => {
+    setRewardCodeInput('');
+    setApiKeyInput('');
+    setActivateModalOpen(true);
+  };
 
   // Function to activate a partner reward code via RPC
   const activatePartnerReward = async (rewardCode: string, apiKey: string): Promise<boolean> => {
@@ -689,9 +710,20 @@ const PartnerDashboard = () => {
                     </div>
                   ))}
                 </div>
-                <p className="text-sm text-muted-foreground italic">
-                  Pro vytvoření nebo rotaci API klíče kontaktujte administrátora.
-                </p>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-2 border-t border-border/30">
+                  <p className="text-sm text-muted-foreground italic flex-1">
+                    Pro vytvoření nebo rotaci API klíče kontaktujte administrátora.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openActivateModal}
+                    className="gap-2"
+                  >
+                    <Gift className="w-4 h-4" />
+                    Aktivovat odměnu
+                  </Button>
+                </div>
               </>
             )}
           </CardContent>
@@ -741,6 +773,66 @@ const PartnerDashboard = () => {
           </CardContent>
         </Card>
       </main>
+
+      {/* Activate Reward Modal */}
+      <Dialog open={activateModalOpen} onOpenChange={setActivateModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="w-5 h-5" />
+              Aktivovat odměnu
+            </DialogTitle>
+            <DialogDescription>
+              Zadejte kód odměny a váš API klíč pro aktivaci.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reward-code">Kód odměny</Label>
+              <Input
+                id="reward-code"
+                placeholder="např. ABC123XYZ"
+                value={rewardCodeInput}
+                onChange={(e) => setRewardCodeInput(e.target.value)}
+                disabled={activatingReward}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="api-key">API klíč</Label>
+              <Input
+                id="api-key"
+                type="password"
+                placeholder="Váš API klíč"
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                disabled={activatingReward}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setActivateModalOpen(false)}
+              disabled={activatingReward}
+            >
+              Zrušit
+            </Button>
+            <Button
+              onClick={handleActivateRewardSubmit}
+              disabled={activatingReward || !rewardCodeInput.trim() || !apiKeyInput.trim()}
+            >
+              {activatingReward ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Aktivuji...
+                </>
+              ) : (
+                'Aktivovat'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
