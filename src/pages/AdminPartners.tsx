@@ -404,6 +404,7 @@ const AdminPartners = () => {
       const res = await supabase.functions.invoke("rotate-partner-api-key", {
         headers: {
           Authorization: `Bearer ${sessionData.session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
         },
         body: {
           partner_id: selectedPartner.id,
