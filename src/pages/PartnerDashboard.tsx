@@ -754,41 +754,47 @@ const PartnerDashboard = () => {
                   </div>
                 </div>
               </div>
-            ) : !hasActiveApiKeys ? (
-              <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
-                <div className="flex items-start gap-3">
-                  <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">API klíč zatím nebyl vygenerován administrátorem.</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Pro vygenerování API klíče kontaktujte administrátora na <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a>.
-                    </p>
-                  </div>
-                </div>
-              </div>
             ) : (
               <>
-                <div className="space-y-3">
-                  {apiKeys.filter(k => !k.revoked_at).map((key) => (
-                    <div
-                      key={key.id}
-                      className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-2"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Key className="w-4 h-4 text-muted-foreground" />
-                        <code className="text-sm font-mono bg-background px-2 py-1 rounded">
-                          {key.key_prefix}••••••••••••••••
-                        </code>
-                      </div>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground pl-7">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          Vytvořeno: {format(new Date(key.created_at), 'dd.MM.yyyy HH:mm', { locale: cs })}
-                        </span>
-                      </div>
+                {/* API key exists - show secure message */}
+                <div className="p-4 rounded-lg bg-green-500/5 border border-green-500/20">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">API klíč je aktivní, ale z bezpečnostních důvodů se nezobrazuje.</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Pro získání nového klíče použijte „Regenerovat API klíč".
+                      </p>
                     </div>
-                  ))}
+                  </div>
                 </div>
+
+                {/* Show key prefixes for reference */}
+                {hasActiveApiKeys && (
+                  <div className="space-y-3">
+                    {apiKeys.filter(k => !k.revoked_at).map((key) => (
+                      <div
+                        key={key.id}
+                        className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-2"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Key className="w-4 h-4 text-muted-foreground" />
+                          <code className="text-sm font-mono bg-background px-2 py-1 rounded">
+                            {key.key_prefix}••••••••••••••••
+                          </code>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground pl-7">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            Vytvořeno: {format(new Date(key.created_at), 'dd.MM.yyyy HH:mm', { locale: cs })}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Always show regenerate button */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-4 border-t border-border/30">
                   <Button
                     onClick={openRotatePasswordModal}
