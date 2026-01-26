@@ -308,20 +308,26 @@ const Vouchers: React.FC = () => {
     <div className="min-h-screen bg-background dark pb-20">
       <Header />
       
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-3 mb-6">
-          <Gift className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold text-primary">Vouchery</h1>
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Premium Header */}
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center justify-center gap-3">
+            <Gift className="w-8 h-8 text-secondary" />
+            <h1 className="text-3xl font-bold text-heading-gold">Vouchery</h1>
+          </div>
+          <p className="text-muted-foreground text-sm max-w-md mx-auto">
+            Sbírejte a uplatňujte exkluzivní vouchery
+          </p>
         </div>
 
         <Tabs defaultValue="available" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 max-w-lg">
-            <TabsTrigger value="available" className="flex items-center gap-1 text-xs sm:text-sm">
+          <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto bg-card/60 border border-border/40 backdrop-blur-sm rounded-xl p-1">
+            <TabsTrigger value="available" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <Ticket className="w-4 h-4" />
               <span className="hidden sm:inline">Dostupné</span>
               <span className="sm:hidden">Dost.</span>
             </TabsTrigger>
-            <TabsTrigger value="favorites" className="flex items-center gap-1 text-xs sm:text-sm">
+            <TabsTrigger value="favorites" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <Heart className="w-4 h-4" />
               <span className="hidden sm:inline">Oblíbené</span>
               <span className="sm:hidden">Obl.</span>
@@ -329,7 +335,7 @@ const Vouchers: React.FC = () => {
                 <Badge variant="secondary" className="ml-1 text-xs">{favoriteVouchers.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="purchased" className="flex items-center gap-1 text-xs sm:text-sm">
+            <TabsTrigger value="purchased" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <ShoppingCart className="w-4 h-4" />
               <span className="hidden sm:inline">Zakoupené</span>
               <span className="sm:hidden">Zak.</span>
@@ -340,32 +346,32 @@ const Vouchers: React.FC = () => {
           </TabsList>
 
           {/* Dostupné vouchery Tab */}
-          <TabsContent value="available" className="space-y-4">
+          <TabsContent value="available" className="space-y-6">
             {availableLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 3 }).map((_, index) => (
-                  <Card key={index} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40">
-                    <CardContent className="p-6 space-y-4">
-                      <div className="h-32 bg-muted rounded animate-pulse" />
-                      <div className="h-6 bg-muted rounded animate-pulse w-3/4" />
-                      <div className="h-4 bg-muted/70 rounded animate-pulse w-1/2" />
-                      <div className="h-10 bg-muted/80 rounded animate-pulse" />
+                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)]">
+                    <CardContent className="p-5 space-y-4">
+                      <div className="h-32 bg-muted/20 rounded-lg animate-pulse" />
+                      <div className="h-6 bg-muted/20 rounded animate-pulse w-3/4" />
+                      <div className="h-4 bg-muted/15 rounded animate-pulse w-1/2" />
+                      <div className="h-11 bg-muted/20 rounded-lg animate-pulse" />
                     </CardContent>
                   </Card>
                 ))}
               </div>
             ) : truelyAvailableVouchers.length === 0 ? (
-              <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40">
-                <CardContent className="p-8 space-y-2 text-center">
-                  <Gift className="w-12 h-12 mx-auto text-muted-foreground/50" />
-                  <h3 className="text-xl font-bold text-primary">Žádné dostupné vouchery</h3>
+              <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)]">
+                <CardContent className="p-8 space-y-3 text-center">
+                  <Gift className="w-12 h-12 mx-auto text-secondary/50" />
+                  <h3 className="text-xl font-bold text-heading-gold">Žádné dostupné vouchery</h3>
                   <p className="text-sm text-muted-foreground">
                     Momentálně nejsou k dispozici žádné nové vouchery.
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {truelyAvailableVouchers.map((voucher) => {
                   const remaining = getRemainingCount(voucher);
                   const isAvailable = isVoucherAvailable(voucher);
@@ -373,38 +379,41 @@ const Vouchers: React.FC = () => {
                   const isTogglingFavorite = togglingFavoriteId === voucher.id;
 
                   return (
-                    <Card key={voucher.id} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30 shadow-md hover:shadow-lg transition-all duration-300">
+                    <Card key={voucher.id} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[hsl(40_40%_45%)] hover:shadow-[0_0_12px_hsl(40_30%_40%/0.2)] hover:scale-[1.02]">
                       {/* Favorite heart button */}
                       <button
                         onClick={(e) => handleFavoriteClick(e, voucher.id)}
                         disabled={isTogglingFavorite}
-                        className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors disabled:opacity-50"
+                        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 hover:bg-background transition-all duration-200 disabled:opacity-50"
                         aria-label="Přidat do oblíbených"
                       >
                         {isTogglingFavorite ? (
-                          <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
+                          <Loader2 className="w-5 h-5 text-secondary animate-spin" />
                         ) : (
                           <Heart className="w-5 h-5 text-muted-foreground hover:text-red-500 transition-colors" />
                         )}
                       </button>
 
                       {voucher.banner_url && (
-                        <img
-                          src={voucher.banner_url}
-                          alt={`${voucher.name} banner`}
-                          className="w-full h-32 object-cover"
-                          loading="lazy"
-                        />
+                        <div className="relative h-36 overflow-hidden">
+                          <img
+                            src={voucher.banner_url}
+                            alt={`${voucher.name} banner`}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[hsl(40_15%_10%)] via-transparent to-transparent" />
+                        </div>
                       )}
                       
-                      <CardContent className="p-6 space-y-4">
+                      <CardContent className="p-5 space-y-4">
                         <div className="flex items-center gap-4">
                           {voucher.image_url && (
                             <div className="flex-shrink-0">
                               <img
                                 src={voucher.image_url}
                                 alt={voucher.name}
-                                className="w-14 h-14 object-cover rounded-lg border border-border"
+                                className="w-14 h-14 object-cover rounded-lg border-2 border-[hsl(40_30%_35%)] shadow-md"
                                 loading="lazy"
                               />
                             </div>
@@ -417,17 +426,17 @@ const Vouchers: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between py-2 px-3 bg-muted/30 rounded-lg">
+                        <div className="flex items-center justify-between py-2.5 px-4 bg-background/40 backdrop-blur-sm rounded-lg border border-border/30">
                           <span className="text-sm text-muted-foreground">Zbývá:</span>
-                          <span className="font-bold text-primary">{remaining}</span>
+                          <span className="font-bold text-secondary">{remaining}</span>
                         </div>
 
                         {/* Purchase button */}
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           <Button
                             onClick={() => handleVoucherPurchase(voucher.id)}
                             disabled={!isAvailable || isPurchasing || isAdmin}
-                            className="w-full h-11 text-base font-semibold"
+                            className="w-full h-11 text-base font-bold bg-primary shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
                           >
                             {isPurchasing ? "Kupuji..." : "Koupit za 5 MioCoinů"}
                           </Button>
@@ -444,42 +453,43 @@ const Vouchers: React.FC = () => {
           </TabsContent>
 
           {/* Oblíbené vouchery Tab */}
-          <TabsContent value="favorites" className="space-y-4">
+          <TabsContent value="favorites" className="space-y-6">
             {userVouchersLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 3 }).map((_, index) => (
-                  <Card key={index} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40">
-                    <CardContent className="p-6 space-y-4">
-                      <div className="h-6 bg-muted rounded animate-pulse mb-2" />
-                      <div className="h-4 bg-muted/70 rounded animate-pulse w-24" />
-                      <div className="h-10 bg-muted/80 rounded animate-pulse" />
+                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)]">
+                    <CardContent className="p-5 space-y-4">
+                      <div className="aspect-video bg-muted/20 rounded-lg animate-pulse" />
+                      <div className="h-6 bg-muted/20 rounded animate-pulse w-3/4" />
+                      <div className="h-4 bg-muted/15 rounded animate-pulse w-1/3" />
+                      <div className="h-11 bg-muted/20 rounded-lg animate-pulse" />
                     </CardContent>
                   </Card>
                 ))}
               </div>
             ) : favoriteVouchers.length === 0 ? (
-              <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40">
-                <CardContent className="p-8 space-y-2 text-center">
-                  <Heart className="w-12 h-12 mx-auto text-muted-foreground/50" />
-                  <h3 className="text-xl font-bold text-primary">Zatím nemáte žádné oblíbené vouchery</h3>
+              <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)]">
+                <CardContent className="p-8 space-y-3 text-center">
+                  <Heart className="w-12 h-12 mx-auto text-secondary/50" />
+                  <h3 className="text-xl font-bold text-heading-gold">Zatím nemáte žádné oblíbené vouchery</h3>
                   <p className="text-sm text-muted-foreground">
                     Kliknutím na srdíčko přidáte voucher do oblíbených
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {favoriteVouchers.map((userVoucher) => {
                   const isPurchasing = purchasingId === userVoucher.voucher_id;
                   const isTogglingFavorite = togglingFavoriteId === userVoucher.voucher_id;
 
                   return (
-                    <Card key={userVoucher.id} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30 shadow-md">
+                    <Card key={userVoucher.id} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[hsl(40_40%_45%)] hover:shadow-[0_0_12px_hsl(40_30%_40%/0.2)] hover:scale-[1.02]">
                       {/* Remove from favorites button */}
                       <button
                         onClick={(e) => handleFavoriteClick(e, userVoucher.voucher_id)}
                         disabled={isTogglingFavorite}
-                        className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 hover:bg-background transition-colors disabled:opacity-50"
+                        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 hover:bg-background transition-all duration-200 disabled:opacity-50"
                         aria-label="Odebrat z oblíbených"
                       >
                         {isTogglingFavorite ? (
@@ -489,9 +499,9 @@ const Vouchers: React.FC = () => {
                         )}
                       </button>
 
-                      <CardContent className="p-6 space-y-4">
+                      <CardContent className="p-5 space-y-4">
                         {/* Voucher image */}
-                        <div className="aspect-video rounded-lg overflow-hidden bg-muted/40">
+                        <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 border border-border/30">
                           {userVoucher.voucher?.image_url ? (
                             <img
                               src={userVoucher.voucher.image_url}
@@ -500,7 +510,7 @@ const Vouchers: React.FC = () => {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <Gift className="w-12 h-12 text-muted-foreground/50" />
+                              <Gift className="w-12 h-12 text-secondary/40" />
                             </div>
                           )}
                         </div>
@@ -514,11 +524,11 @@ const Vouchers: React.FC = () => {
                         </div>
 
                         {/* Purchase button */}
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           <Button
                             onClick={() => handleVoucherPurchase(userVoucher.voucher_id)}
                             disabled={isPurchasing || isAdmin}
-                            className="w-full h-11 text-base font-semibold"
+                            className="w-full h-11 text-base font-bold bg-primary shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
                           >
                             {isPurchasing ? "Kupuji..." : "Koupit za 5 MioCoinů"}
                           </Button>
@@ -535,40 +545,48 @@ const Vouchers: React.FC = () => {
           </TabsContent>
 
           {/* Zakoupené vouchery Tab */}
-          <TabsContent value="purchased" className="space-y-4">
+          <TabsContent value="purchased" className="space-y-6">
             {userVouchersLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 3 }).map((_, index) => (
-                  <Card key={index} className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40">
-                    <CardContent className="p-6 space-y-4">
-                      <div className="h-6 bg-muted rounded animate-pulse mb-2" />
-                      <div className="h-4 bg-muted/70 rounded animate-pulse w-24" />
-                      <div className="h-12 bg-muted rounded animate-pulse mb-4" />
-                      <div className="h-10 bg-muted/80 rounded animate-pulse" />
+                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)]">
+                    <CardContent className="p-5 space-y-4">
+                      <div className="aspect-video bg-muted/20 rounded-lg animate-pulse" />
+                      <div className="h-6 bg-muted/20 rounded animate-pulse w-3/4" />
+                      <div className="h-4 bg-muted/15 rounded animate-pulse w-1/3" />
+                      <div className="h-16 bg-muted/20 rounded-lg animate-pulse" />
+                      <div className="h-11 bg-muted/20 rounded-lg animate-pulse" />
                     </CardContent>
                   </Card>
                 ))}
               </div>
             ) : purchasedVouchers.length === 0 ? (
-              <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40">
-                <CardContent className="p-8 space-y-2 text-center">
-                  <ShoppingCart className="w-12 h-12 mx-auto text-muted-foreground/50" />
-                  <h3 className="text-xl font-bold text-primary">Zatím nemáte žádné zakoupené vouchery</h3>
+              <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)]">
+                <CardContent className="p-8 space-y-3 text-center">
+                  <ShoppingCart className="w-12 h-12 mx-auto text-secondary/50" />
+                  <h3 className="text-xl font-bold text-heading-gold">Zatím nemáte žádné zakoupené vouchery</h3>
                   <p className="text-sm text-muted-foreground">
                     Zakupte si voucher v sekci "Dostupné" nebo "Oblíbené"
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {purchasedVouchers.map((userVoucher) => {
                   const expiration = getExpirationInfo(userVoucher.created_at);
 
                   return (
-                    <Card key={userVoucher.id} className={`relative overflow-hidden rounded-2xl border shadow-md ${expiration.isExpired ? 'border-destructive/30 bg-destructive/5' : 'border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30'}`}>
-                      <CardContent className="p-6 space-y-4">
+                    <Card 
+                      key={userVoucher.id} 
+                      className={`voucher-card-glow relative overflow-hidden rounded-[20px] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:scale-[1.02] ${
+                        expiration.isExpired 
+                          ? 'bg-gradient-to-b from-[hsl(0_20%_12%)] via-[hsl(0_15%_10%)] to-[hsl(0_12%_7%)] border-[3px] border-destructive/40' 
+                          : 'bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)] hover:border-[hsl(40_40%_45%)] hover:shadow-[0_0_12px_hsl(40_30%_40%/0.2)]'
+                      }`}
+                    >
+                      <CardContent className="p-5 space-y-4">
                         {/* Voucher image */}
-                        <div className="aspect-video rounded-lg overflow-hidden bg-muted/40">
+                        <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 border border-border/30">
                           {userVoucher.voucher?.image_url ? (
                             <img
                               src={userVoucher.voucher.image_url}
@@ -577,20 +595,20 @@ const Vouchers: React.FC = () => {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <Gift className="w-12 h-12 text-muted-foreground/50" />
+                              <Gift className="w-12 h-12 text-secondary/40" />
                             </div>
                           )}
                         </div>
 
                         {/* Voucher info */}
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           <h4 className="font-bold text-lg text-foreground">{userVoucher.voucher?.name}</h4>
                           <div className="text-sm text-muted-foreground">
                             Zakoupeno: {new Date(userVoucher.created_at).toLocaleDateString('cs-CZ')}
                           </div>
                           
                           {/* Expiration countdown */}
-                          <div className={`flex items-center gap-2 text-sm ${expiration.isExpired ? 'text-destructive' : 'text-amber-500'}`}>
+                          <div className={`flex items-center gap-2 text-sm font-medium ${expiration.isExpired ? 'text-destructive' : 'text-secondary'}`}>
                             <Clock className="w-4 h-4" />
                             <span>
                               {expiration.isExpired ? 'Voucher vypršel' : `Platnost: ${expiration.text}`}
@@ -599,9 +617,9 @@ const Vouchers: React.FC = () => {
                           
                           {/* Voucher code */}
                           {!expiration.isExpired && (
-                            <div className="bg-background/80 rounded-lg p-3 space-y-2">
+                            <div className="bg-background/40 backdrop-blur-sm rounded-lg p-3 space-y-1 border border-border/30">
                               <div className="text-xs text-muted-foreground">Váš kód:</div>
-                              <div className="font-mono font-bold text-lg text-primary">{userVoucher.code}</div>
+                              <div className="font-mono font-bold text-lg text-secondary">{userVoucher.code}</div>
                             </div>
                           )}
                         </div>
@@ -610,7 +628,7 @@ const Vouchers: React.FC = () => {
                         {!expiration.isExpired && (
                           <Button
                             variant="outline"
-                            className="w-full"
+                            className="w-full h-11 border-[hsl(40_30%_35%)] hover:bg-secondary/10 hover:border-secondary/50 transition-all duration-200"
                             onClick={() => handleCopyVoucherCode(userVoucher.code)}
                           >
                             <Copy className="w-4 h-4 mr-2" />
@@ -619,7 +637,7 @@ const Vouchers: React.FC = () => {
                         )}
 
                         {expiration.isExpired && (
-                          <Badge variant="destructive" className="w-full justify-center py-2">
+                          <Badge variant="destructive" className="w-full justify-center py-2.5 text-sm">
                             Voucher vypršel
                           </Badge>
                         )}
