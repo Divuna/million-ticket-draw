@@ -617,6 +617,7 @@ export type Database = {
       }
       partner_api_keys: {
         Row: {
+          api_key_hash: string | null
           created_at: string
           id: string
           key_hash: string
@@ -625,6 +626,7 @@ export type Database = {
           revoked_at: string | null
         }
         Insert: {
+          api_key_hash?: string | null
           created_at?: string
           id?: string
           key_hash: string
@@ -633,6 +635,7 @@ export type Database = {
           revoked_at?: string | null
         }
         Update: {
+          api_key_hash?: string | null
           created_at?: string
           id?: string
           key_hash?: string
@@ -1776,6 +1779,10 @@ export type Database = {
         Returns: Json
       }
       check_guardian_notifications_batch: { Args: never; Returns: Json }
+      check_partner_api_rate_limit: {
+        Args: { p_limit: number; p_partner_id: string; p_window: unknown }
+        Returns: boolean
+      }
       claim_miocoin_bonus: {
         Args: { p_bonus_id: string; p_user_id: string }
         Returns: undefined
@@ -1825,7 +1832,7 @@ export type Database = {
         Returns: undefined
       }
       generate_partner_api_key: {
-        Args: { p_description?: string; p_partner_id: string }
+        Args: { p_partner_id: string }
         Returns: {
           api_key: string
           created_at: string
@@ -2000,10 +2007,20 @@ export type Database = {
         }
         Returns: undefined
       }
-      log_partner_api_key_usage: {
-        Args: { p_key_id: string; p_partner_id: string }
-        Returns: undefined
-      }
+      log_partner_api_key_usage:
+        | {
+            Args: {
+              p_endpoint: string
+              p_ip: unknown
+              p_partner_id: string
+              p_user_agent: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: { p_key_id: string; p_partner_id: string }
+            Returns: undefined
+          }
       mark_wins_as_seen: { Args: never; Returns: undefined }
       notify_sofinity_event: {
         Args: {
@@ -2044,6 +2061,13 @@ export type Database = {
       }
       redeem_voucher: { Args: { p_voucher_id: string }; Returns: Json }
       resolve_partner_by_api_key: { Args: { p_key: string }; Returns: string }
+      rotate_partner_api_key: {
+        Args: { p_partner_id: string }
+        Returns: {
+          api_key: string
+          key_prefix: string
+        }[]
+      }
       run_complete_admin_test_suite: { Args: never; Returns: Json }
       run_deep_sofinity_test_suite: {
         Args: { p_performance_events?: number }
@@ -2111,13 +2135,7 @@ export type Database = {
         Args: { p_user_email?: string }
         Returns: Json
       }
-      validate_partner_api_key: {
-        Args: { p_api_key: string }
-        Returns: {
-          key_id: string
-          partner_id: string
-        }[]
-      }
+      validate_partner_api_key: { Args: { p_api_key: string }; Returns: string }
       validate_sofinity_events: {
         Args: { p_hours_back?: number }
         Returns: {
