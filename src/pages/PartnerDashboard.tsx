@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift } from 'lucide-react';
+import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift, RefreshCw, Copy, Eye, EyeOff } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -63,6 +63,14 @@ const PartnerDashboard = () => {
   const [rewardCodeInput, setRewardCodeInput] = useState('');
   const [apiKeyInput, setApiKeyInput] = useState('');
 
+  // API Key rotation modal state
+  const [rotatePasswordModalOpen, setRotatePasswordModalOpen] = useState(false);
+  const [rotateSuccessModalOpen, setRotateSuccessModalOpen] = useState(false);
+  const [rotatePassword, setRotatePassword] = useState('');
+  const [rotatePasswordVisible, setRotatePasswordVisible] = useState(false);
+  const [newApiKey, setNewApiKey] = useState('');
+  const [rotatingKey, setRotatingKey] = useState(false);
+
   const handleActivateRewardSubmit = async () => {
     const success = await activatePartnerReward(rewardCodeInput, apiKeyInput);
     if (success) {
@@ -76,6 +84,75 @@ const PartnerDashboard = () => {
     setRewardCodeInput('');
     setApiKeyInput('');
     setActivateModalOpen(true);
+  };
+
+  // Function to handle API key rotation by partner
+  const handleRotateApiKey = async () => {
+    if (!rotatePassword.trim()) {
+      toast.error('Heslo je povinné');
+      return;
+    }
+
+    setRotatingKey(true);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+
+      if (!sessionData.session?.access_token) {
+        toast.error('Chybí platná session. Přihlaste se znovu.');
+        return;
+      }
+
+      const res = await supabase.functions.invoke("partner-rotate-api-key", {
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
+        body: {
+          password: rotatePassword,
+        },
+      });
+
+      if (res.error || !res.data?.success) {
+        const errorMsg = res.data?.error || res.error?.message || 'Nepodařilo se rotovat API klíč';
+        toast.error(errorMsg);
+        return;
+      }
+
+      // Success - show the new key
+      setNewApiKey(res.data.api_key);
+      setRotatePasswordModalOpen(false);
+      setRotatePassword('');
+      setRotatePasswordVisible(false);
+      setRotateSuccessModalOpen(true);
+
+      // Reload API keys list
+      await loadPartnerData();
+    } catch (err) {
+      console.error('Chyba při rotaci API klíče:', err);
+      toast.error('Nastala neočekávaná chyba');
+    } finally {
+      setRotatingKey(false);
+    }
+  };
+
+  const openRotatePasswordModal = () => {
+    setRotatePassword('');
+    setRotatePasswordVisible(false);
+    setRotatePasswordModalOpen(true);
+  };
+
+  const closeRotateSuccessModal = () => {
+    setNewApiKey(''); // Clear the key from memory
+    setRotateSuccessModalOpen(false);
+  };
+
+  const copyApiKeyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(newApiKey);
+      toast.success('API klíč byl zkopírován do schránky');
+    } catch {
+      toast.error('Nepodařilo se zkopírovat do schránky');
+    }
   };
 
   // Function to activate a partner reward code via RPC
@@ -712,10 +789,15 @@ const PartnerDashboard = () => {
                     </div>
                   ))}
                 </div>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-2 border-t border-border/30">
-                  <p className="text-sm text-muted-foreground italic flex-1">
-                    Pro vytvoření nebo rotaci API klíče kontaktujte administrátora.
-                  </p>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-4 border-t border-border/30">
+                  <Button
+                    onClick={openRotatePasswordModal}
+                    disabled={rotatingKey}
+                    className="gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Regenerovat API klíč
+                  </Button>
                   {isAdmin && (
                     <Button
                       variant="outline"
@@ -839,6 +921,113 @@ const PartnerDashboard = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Password Confirmation Modal for API Key Rotation */}
+      <Dialog open={rotatePasswordModalOpen} onOpenChange={setRotatePasswordModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5" />
+              Potvrzení rotace API klíče
+            </DialogTitle>
+            <DialogDescription>
+              Pro regenerování API klíče zadejte své heslo. Stávající klíč bude zneplatněn.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rotate-password">Heslo</Label>
+              <div className="relative">
+                <Input
+                  id="rotate-password"
+                  type={rotatePasswordVisible ? 'text' : 'password'}
+                  value={rotatePassword}
+                  onChange={(e) => setRotatePassword(e.target.value)}
+                  placeholder="Zadejte své heslo"
+                  className="pr-10"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && rotatePassword.trim()) {
+                      handleRotateApiKey();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setRotatePasswordVisible(!rotatePasswordVisible)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {rotatePasswordVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRotatePasswordModalOpen(false)}
+              disabled={rotatingKey}
+            >
+              Zrušit
+            </Button>
+            <Button
+              onClick={handleRotateApiKey}
+              disabled={rotatingKey || !rotatePassword.trim()}
+            >
+              {rotatingKey ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Regeneruji...
+                </>
+              ) : (
+                'Regenerovat'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Modal with New API Key */}
+      <Dialog open={rotateSuccessModalOpen} onOpenChange={(open) => !open && closeRotateSuccessModal()}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <CheckCircle className="w-5 h-5" />
+              API klíč byl úspěšně vygenerován
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-muted rounded-lg">
+              <Label className="text-xs text-muted-foreground mb-2 block">Váš nový API klíč</Label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-sm font-mono bg-background px-3 py-2 rounded border break-all">
+                  {newApiKey}
+                </code>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={copyApiKeyToClipboard}
+                  title="Kopírovat do schránky"
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <p className="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>
+                  <strong>Tento API klíč se zobrazí pouze jednou.</strong> Uložte si ho na bezpečné místo.
+                </span>
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={closeRotateSuccessModal}>
+              Rozumím, zavřít
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
