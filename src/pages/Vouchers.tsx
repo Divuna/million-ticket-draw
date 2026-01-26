@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useHomepageVouchers } from '@/hooks/useHomepageVouchers';
@@ -30,6 +31,8 @@ const VOUCHER_EXPIRATION_DAYS = 30;
 const Vouchers: React.FC = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get('tab') || 'available';
   const { vouchers: availableVouchers, loading: availableLoading, getRemainingCount, isVoucherAvailable, refetch: refetchAvailable } = useHomepageVouchers();
   const { vouchers: userVouchers, loading: userVouchersLoading, refetch: refetchUserVouchers, optimisticRemoveByVoucherId, optimisticAddFavorite } = useUserVouchers();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
@@ -320,7 +323,7 @@ const Vouchers: React.FC = () => {
           </p>
         </div>
 
-        <Tabs defaultValue="available" className="space-y-6">
+        <Tabs defaultValue={defaultTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto bg-card/60 border border-border/40 backdrop-blur-sm rounded-xl p-1">
             <TabsTrigger value="available" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <Ticket className="w-4 h-4" />
@@ -384,67 +387,74 @@ const Vouchers: React.FC = () => {
                       <button
                         onClick={(e) => handleFavoriteClick(e, voucher.id)}
                         disabled={isTogglingFavorite}
-                        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 hover:bg-background transition-all duration-200 disabled:opacity-50"
+                        className="absolute top-4 left-4 z-10 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 hover:bg-background transition-all duration-200 disabled:opacity-50"
                         aria-label="Přidat do oblíbených"
                       >
                         {isTogglingFavorite ? (
                           <Loader2 className="w-5 h-5 text-secondary animate-spin" />
                         ) : (
-                          <Heart className="w-5 h-5 text-muted-foreground hover:text-red-500 transition-colors" />
+                          <Heart className="w-5 h-5 text-muted-foreground hover:text-destructive transition-colors" />
                         )}
                       </button>
 
-                      {voucher.banner_url && (
-                        <div className="relative h-36 overflow-hidden">
-                          <img
-                            src={voucher.banner_url}
-                            alt={`${voucher.name} banner`}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-[hsl(40_15%_10%)] via-transparent to-transparent" />
-                        </div>
-                      )}
-                      
-                      <CardContent className="p-5 space-y-4">
-                        <div className="flex items-center gap-4">
-                          {voucher.image_url && (
-                            <div className="flex-shrink-0">
-                              <img
-                                src={voucher.image_url}
-                                alt={voucher.name}
-                                className="w-14 h-14 object-cover rounded-lg border-2 border-[hsl(40_30%_35%)] shadow-md"
-                                loading="lazy"
-                              />
-                            </div>
-                          )}
-                          <div className="flex-1">
-                            <h3 className="text-lg font-bold text-foreground">{voucher.name}</h3>
-                            {!isAvailable && (
-                              <Badge variant="destructive" className="mt-1">Nedostupný</Badge>
-                            )}
+                      <div className="flex h-48 relative">
+                        {/* Left side - Content */}
+                        <div className="flex-1 p-5 flex flex-col justify-between">
+                          {/* Header */}
+                          <div>
+                            <h2 className="text-foreground font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
+                            <p className="text-muted-foreground text-sm font-medium">HRAJ O CENY</p>
+                          </div>
+
+                          {/* Voucher name */}
+                          <div className="my-3">
+                            <h3 className="text-foreground font-bold text-lg mb-2">{voucher.name}</h3>
+                            <div className="text-primary font-bold text-2xl">5 MioCoinů</div>
+                          </div>
+
+                          {/* Button */}
+                          <div className="space-y-1">
+                            <Button
+                              onClick={() => handleVoucherPurchase(voucher.id)}
+                              disabled={!isAvailable || isPurchasing || isAdmin}
+                              className="w-full bg-primary text-primary-foreground font-bold shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
+                            >
+                              {isPurchasing ? "Kupuji..." : "KOUPIT ZA 5 MC"}
+                            </Button>
+                            <p className="text-xs text-center text-muted-foreground">
+                              50 % z částky jde na pomoc potřebným.
+                            </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between py-2.5 px-4 bg-background/40 backdrop-blur-sm rounded-lg border border-border/30">
-                          <span className="text-sm text-muted-foreground">Zbývá:</span>
-                          <span className="font-bold text-secondary">{remaining}</span>
+                        {/* Right side - Image */}
+                        <div className="w-32 relative border-l border-dashed border-border/50">
+                          {voucher.image_url ? (
+                            <img
+                              src={voucher.image_url}
+                              alt={voucher.name}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-muted/40 flex items-center justify-center">
+                              <span className="text-muted-foreground text-sm text-center px-2">VOUCHER</span>
+                            </div>
+                          )}
                         </div>
 
-                        {/* Purchase button */}
-                        <div className="space-y-2">
-                          <Button
-                            onClick={() => handleVoucherPurchase(voucher.id)}
-                            disabled={!isAvailable || isPurchasing || isAdmin}
-                            className="w-full h-11 text-base font-bold bg-primary shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
-                          >
-                            {isPurchasing ? "Kupuji..." : "Koupit za 5 MioCoinů"}
-                          </Button>
-                          <p className="text-xs text-center text-muted-foreground">
-                            50 % z částky jde na pomoc potřebným.
-                          </p>
+                        {/* Remaining count indicator */}
+                        <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded border border-border">
+                          Zbývá: {remaining}
                         </div>
-                      </CardContent>
+                        
+                        {/* Unavailable badge */}
+                        {!isAvailable && (
+                          <div className="absolute bottom-3 right-3">
+                            <Badge variant="destructive">Nedostupný</Badge>
+                          </div>
+                        )}
+                      </div>
                     </Card>
                   );
                 })}
@@ -489,54 +499,67 @@ const Vouchers: React.FC = () => {
                       <button
                         onClick={(e) => handleFavoriteClick(e, userVoucher.voucher_id)}
                         disabled={isTogglingFavorite}
-                        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 hover:bg-background transition-all duration-200 disabled:opacity-50"
+                        className="absolute top-4 left-4 z-10 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 hover:bg-background transition-all duration-200 disabled:opacity-50"
                         aria-label="Odebrat z oblíbených"
                       >
                         {isTogglingFavorite ? (
-                          <Loader2 className="w-5 h-5 text-red-500 animate-spin" />
+                          <Loader2 className="w-5 h-5 text-destructive animate-spin" />
                         ) : (
-                          <Heart className="w-5 h-5 fill-red-500 text-red-500 transition-colors" />
+                          <Heart className="w-5 h-5 fill-destructive text-destructive transition-colors" />
                         )}
                       </button>
 
-                      <CardContent className="p-5 space-y-4">
-                        {/* Voucher image */}
-                        <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 border border-border/30">
+                      <div className="flex h-48 relative">
+                        {/* Left side - Content */}
+                        <div className="flex-1 p-5 flex flex-col justify-between">
+                          {/* Header */}
+                          <div>
+                            <h2 className="text-foreground font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
+                            <p className="text-muted-foreground text-sm font-medium">HRAJ O CENY</p>
+                          </div>
+
+                          {/* Voucher name */}
+                          <div className="my-3">
+                            <h3 className="text-foreground font-bold text-lg mb-2">{userVoucher.voucher?.name}</h3>
+                            <div className="text-primary font-bold text-2xl">5 MioCoinů</div>
+                          </div>
+
+                          {/* Button */}
+                          <div className="space-y-1">
+                            <Button
+                              onClick={() => handleVoucherPurchase(userVoucher.voucher_id)}
+                              disabled={isPurchasing || isAdmin}
+                              className="w-full bg-primary text-primary-foreground font-bold shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
+                            >
+                              {isPurchasing ? "Kupuji..." : "KOUPIT ZA 5 MC"}
+                            </Button>
+                            <p className="text-xs text-center text-muted-foreground">
+                              50 % z částky jde na pomoc potřebným.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Right side - Image */}
+                        <div className="w-32 relative border-l border-dashed border-border/50">
                           {userVoucher.voucher?.image_url ? (
                             <img
                               src={userVoucher.voucher.image_url}
                               alt={userVoucher.voucher?.name}
                               className="w-full h-full object-cover"
+                              loading="lazy"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
+                            <div className="w-full h-full bg-muted/40 flex items-center justify-center">
                               <Gift className="w-12 h-12 text-secondary/40" />
                             </div>
                           )}
                         </div>
 
-                        {/* Voucher info */}
-                        <div className="space-y-2">
-                          <h4 className="font-bold text-lg text-foreground">{userVoucher.voucher?.name}</h4>
-                          <div className="text-sm text-muted-foreground">
-                            Přidáno: {new Date(userVoucher.created_at).toLocaleDateString('cs-CZ')}
-                          </div>
+                        {/* Added date indicator */}
+                        <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded border border-border">
+                          Přidáno: {new Date(userVoucher.created_at).toLocaleDateString('cs-CZ')}
                         </div>
-
-                        {/* Purchase button */}
-                        <div className="space-y-2">
-                          <Button
-                            onClick={() => handleVoucherPurchase(userVoucher.voucher_id)}
-                            disabled={isPurchasing || isAdmin}
-                            className="w-full h-11 text-base font-bold bg-primary shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
-                          >
-                            {isPurchasing ? "Kupuji..." : "Koupit za 5 MioCoinů"}
-                          </Button>
-                          <p className="text-xs text-center text-muted-foreground">
-                            50 % z částky jde na pomoc potřebným.
-                          </p>
-                        </div>
-                      </CardContent>
+                      </div>
                     </Card>
                   );
                 })}
@@ -584,64 +607,67 @@ const Vouchers: React.FC = () => {
                           : 'bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)] hover:border-[hsl(40_40%_45%)] hover:shadow-[0_0_12px_hsl(40_30%_40%/0.2)]'
                       }`}
                     >
-                      <CardContent className="p-5 space-y-4">
-                        {/* Voucher image */}
-                        <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 border border-border/30">
+                      <div className="flex h-48 relative">
+                        {/* Left side - Content */}
+                        <div className="flex-1 p-5 flex flex-col justify-between">
+                          {/* Header */}
+                          <div>
+                            <h2 className="text-foreground font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
+                            <p className="text-muted-foreground text-sm font-medium">ZAKOUPENO</p>
+                          </div>
+
+                          {/* Voucher name and code */}
+                          <div className="my-2">
+                            <h3 className="text-foreground font-bold text-lg mb-1">{userVoucher.voucher?.name}</h3>
+                            {!expiration.isExpired && (
+                              <div className="font-mono font-bold text-lg text-secondary">{userVoucher.code}</div>
+                            )}
+                          </div>
+
+                          {/* Expiration / Copy button */}
+                          <div className="space-y-1">
+                            {!expiration.isExpired ? (
+                              <Button
+                                variant="outline"
+                                className="w-full border-[hsl(40_30%_35%)] hover:bg-secondary/10 hover:border-secondary/50 transition-all duration-200"
+                                onClick={() => handleCopyVoucherCode(userVoucher.code)}
+                              >
+                                <Copy className="w-4 h-4 mr-2" />
+                                Zkopírovat kód
+                              </Button>
+                            ) : (
+                              <Badge variant="destructive" className="w-full justify-center py-2 text-sm">
+                                Voucher vypršel
+                              </Badge>
+                            )}
+                            <div className={`flex items-center justify-center gap-1 text-xs ${expiration.isExpired ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              <Clock className="w-3 h-3" />
+                              <span>{expiration.isExpired ? 'Vypršel' : `Platnost: ${expiration.text}`}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right side - Image */}
+                        <div className="w-32 relative border-l border-dashed border-border/50">
                           {userVoucher.voucher?.image_url ? (
                             <img
                               src={userVoucher.voucher.image_url}
                               alt={userVoucher.voucher?.name}
                               className={`w-full h-full object-cover ${expiration.isExpired ? 'opacity-50 grayscale' : ''}`}
+                              loading="lazy"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Gift className="w-12 h-12 text-secondary/40" />
+                            <div className="w-full h-full bg-muted/40 flex items-center justify-center">
+                              <Gift className={`w-12 h-12 ${expiration.isExpired ? 'text-muted-foreground/30' : 'text-secondary/40'}`} />
                             </div>
                           )}
                         </div>
 
-                        {/* Voucher info */}
-                        <div className="space-y-3">
-                          <h4 className="font-bold text-lg text-foreground">{userVoucher.voucher?.name}</h4>
-                          <div className="text-sm text-muted-foreground">
-                            Zakoupeno: {new Date(userVoucher.created_at).toLocaleDateString('cs-CZ')}
-                          </div>
-                          
-                          {/* Expiration countdown */}
-                          <div className={`flex items-center gap-2 text-sm font-medium ${expiration.isExpired ? 'text-destructive' : 'text-secondary'}`}>
-                            <Clock className="w-4 h-4" />
-                            <span>
-                              {expiration.isExpired ? 'Voucher vypršel' : `Platnost: ${expiration.text}`}
-                            </span>
-                          </div>
-                          
-                          {/* Voucher code */}
-                          {!expiration.isExpired && (
-                            <div className="bg-background/40 backdrop-blur-sm rounded-lg p-3 space-y-1 border border-border/30">
-                              <div className="text-xs text-muted-foreground">Váš kód:</div>
-                              <div className="font-mono font-bold text-lg text-secondary">{userVoucher.code}</div>
-                            </div>
-                          )}
+                        {/* Purchase date indicator */}
+                        <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded border border-border">
+                          {new Date(userVoucher.created_at).toLocaleDateString('cs-CZ')}
                         </div>
-
-                        {/* Copy button (only if not expired) */}
-                        {!expiration.isExpired && (
-                          <Button
-                            variant="outline"
-                            className="w-full h-11 border-[hsl(40_30%_35%)] hover:bg-secondary/10 hover:border-secondary/50 transition-all duration-200"
-                            onClick={() => handleCopyVoucherCode(userVoucher.code)}
-                          >
-                            <Copy className="w-4 h-4 mr-2" />
-                            Zkopírovat kód
-                          </Button>
-                        )}
-
-                        {expiration.isExpired && (
-                          <Badge variant="destructive" className="w-full justify-center py-2.5 text-sm">
-                            Voucher vypršel
-                          </Badge>
-                        )}
-                      </CardContent>
+                      </div>
                     </Card>
                   );
                 })}

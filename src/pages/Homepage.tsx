@@ -941,7 +941,7 @@ const Homepage = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate("/vouchers")}
+                  onClick={() => navigate("/vouchers?tab=available")}
                   className="text-xs"
                 >
                   Moje vouchery
