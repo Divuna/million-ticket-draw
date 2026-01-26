@@ -653,6 +653,27 @@ export type Database = {
           },
         ]
       }
+      partner_api_requests: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          partner_id: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          partner_id: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          partner_id?: string
+        }
+        Relationships: []
+      }
       partner_coin_activations: {
         Row: {
           activated_at: string
@@ -1662,6 +1683,24 @@ export type Database = {
           },
         ]
       }
+      partner_api_activity: {
+        Row: {
+          created_at: string | null
+          endpoint: string | null
+          partner_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          endpoint?: string | null
+          partner_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          endpoint?: string | null
+          partner_id?: string | null
+        }
+        Relationships: []
+      }
       v_user_wallets: {
         Row: {
           balance_coins: number | null
@@ -2021,6 +2060,10 @@ export type Database = {
             Args: { p_key_id: string; p_partner_id: string }
             Returns: undefined
           }
+      log_partner_api_request: {
+        Args: { p_endpoint: string; p_partner_id: string }
+        Returns: undefined
+      }
       mark_wins_as_seen: { Args: never; Returns: undefined }
       notify_sofinity_event: {
         Args: {
@@ -2030,6 +2073,29 @@ export type Database = {
           p_user_id?: string
         }
         Returns: string
+      }
+      partner_api_example_endpoint: {
+        Args: { p_api_key: string; p_payload: Json }
+        Returns: {
+          ok: boolean
+          partner_id: string
+        }[]
+      }
+      partner_api_guard: {
+        Args: {
+          p_api_key: string
+          p_endpoint: string
+          p_limit?: number
+          p_window?: unknown
+        }
+        Returns: string
+      }
+      partner_api_ping: {
+        Args: { p_api_key: string }
+        Returns: {
+          ok: boolean
+          partner_id: string
+        }[]
       }
       process_event_queue_miocoin: { Args: never; Returns: undefined }
       process_push_retries: { Args: never; Returns: undefined }
@@ -2109,6 +2175,13 @@ export type Database = {
       test_admin_security_rls: { Args: never; Returns: Json }
       test_audit_logging: { Args: never; Returns: Json }
       test_deep_data_integrity: { Args: never; Returns: Json }
+      test_partner_api_key: {
+        Args: { p_api_key: string }
+        Returns: {
+          partner_id: string
+          partner_name: string
+        }[]
+      }
       test_sofinity_edge_cases: { Args: never; Returns: Json }
       test_sofinity_integration: { Args: never; Returns: Json }
       test_sofinity_performance: {

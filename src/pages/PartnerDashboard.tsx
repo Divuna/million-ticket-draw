@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift, RefreshCw, Copy, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift, RefreshCw, Copy, Eye, EyeOff, Activity } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -40,6 +40,11 @@ interface WeeklyReport {
   activated_coins: number;
 }
 
+interface ApiActivity {
+  endpoint: string | null;
+  created_at: string | null;
+}
+
 const PartnerDashboard = () => {
   const navigate = useNavigate();
   const { isAdmin } = useUserRole();
@@ -47,6 +52,7 @@ const PartnerDashboard = () => {
   const [partner, setPartner] = useState<Partner | null>(null);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [weeklyReports, setWeeklyReports] = useState<WeeklyReport[]>([]);
+  const [apiActivity, setApiActivity] = useState<ApiActivity[]>([]);
   const [stats, setStats] = useState({
     totalIssued: 0,
     totalActivated: 0,
@@ -312,6 +318,16 @@ const PartnerDashboard = () => {
         }
         setWeeklyReports(reports);
       }
+
+      // Load API activity (read-only, last 50 entries)
+      const { data: activityData } = await supabase
+        .from('partner_api_activity')
+        .select('endpoint, created_at')
+        .eq('partner_id', partnerData.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      setApiActivity(activityData || []);
     } catch (error) {
       console.error('Error loading partner data:', error);
       toast.error('Nepodařilo se načíst data');
@@ -833,6 +849,52 @@ const PartnerDashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* API Activity Section */}
+        {isAccountApproved && (
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="w-5 h-5" />
+                API aktivita
+              </CardTitle>
+              <CardDescription>
+                Posledních 50 volání API (pouze pro čtení)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {apiActivity.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Endpoint</TableHead>
+                      <TableHead className="text-right">Datum a čas</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {apiActivity.map((activity, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-mono text-sm">
+                          {activity.endpoint || '—'}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {activity.created_at
+                            ? format(new Date(activity.created_at), 'dd.MM.yyyy HH:mm:ss', { locale: cs })
+                            : '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="p-8 text-center text-muted-foreground">
+                  <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>Zatím nemáte žádnou API aktivitu</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Weekly Reports */}
         <Card className="border-border/50">
