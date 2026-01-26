@@ -87,9 +87,22 @@ const PartnerDashboard = () => {
   };
 
   // Function to handle API key rotation by partner
+  // IMPORTANT: This function must ONLY be called after explicit user action (button click + password submit)
+  // It should NEVER be called automatically on mount, in useEffect, or during data loading
   const handleRotateApiKey = async () => {
+    // Guard: Only proceed if the password modal is actually open (explicit user action)
+    if (!rotatePasswordModalOpen) {
+      console.warn('[handleRotateApiKey] Called without password modal open - aborting');
+      return;
+    }
+
     if (!rotatePassword.trim()) {
       toast.error('Heslo je povinné');
+      return;
+    }
+
+    // Prevent double-submission
+    if (rotatingKey) {
       return;
     }
 
