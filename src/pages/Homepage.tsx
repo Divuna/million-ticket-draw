@@ -253,8 +253,8 @@ const Homepage = () => {
 
       if (walletError) throw walletError;
 
-      if (!walletData || walletData.balance_coins < 1) {
-        toast.error("Nemáte dostatek MioCoinů. Potřebujete alespoň 1 MioCoin.");
+      if (!walletData || walletData.balance_coins < 5) {
+        toast.error("Nemáte dostatek MioCoinů. Potřebujete alespoň 5 MioCoinů.");
         return;
       }
 
@@ -276,15 +276,15 @@ const Homepage = () => {
         throw purchaseError;
       }
 
-      // Deduct 1 MioCoin from wallet
+      // Deduct 5 MioCoins from wallet
       const { error: updateError } = await supabase
         .from('wallets')
-        .update({ balance_coins: walletData.balance_coins - 1 })
+        .update({ balance_coins: walletData.balance_coins - 5 })
         .eq('user_id', user.id);
 
       if (updateError) throw updateError;
 
-      toast.success("Voucher úspěšně zakoupen za 1 MioCoin!");
+      toast.success("Voucher úspěšně zakoupen za 5 MioCoinů!");
     } catch (error) {
       console.error("Error purchasing voucher:", error);
       toast.error("Nepodařilo se zakoupit voucher");
@@ -997,7 +997,7 @@ const Homepage = () => {
                         {/* Voucher name */}
                         <div className="my-3">
                           <h3 className="text-foreground font-bold text-lg mb-2">{voucher.name}</h3>
-                          <div className="text-primary font-bold text-2xl">1 MioCoin</div>
+                          <div className="text-primary font-bold text-2xl">5 MioCoinů</div>
                         </div>
 
                         {/* Button */}
@@ -1013,7 +1013,7 @@ const Homepage = () => {
                               }
                             }}
                           >
-                            {!user ? "PŘIHLÁSIT SE" : "KOUPIT ZA 1 MC"}
+                            {!user ? "PŘIHLÁSIT SE" : "KOUPIT ZA 5 MC"}
                           </Button>
 
                           {/* Status indicator */}
