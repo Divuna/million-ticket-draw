@@ -63,30 +63,39 @@
     inset 0 1px 0 0 hsla(40, 80%, 70%, 0.3);
 }
 
-/* Voucher card subtle inner glow - muted champagne version */
-.voucher-card-glow {
+/* Premium Voucher Card - Luxury Redesign */
+.voucher-card-premium {
   position: relative;
+  background: linear-gradient(
+    165deg,
+    hsl(35 30% 12%) 0%,
+    hsl(30 25% 8%) 40%,
+    hsl(25 20% 6%) 100%
+  );
+  border: 2px solid hsl(40 50% 40% / 0.5);
+  border-radius: 24px;
+  box-shadow: 
+    0 8px 32px hsl(0 0% 0% / 0.5),
+    0 2px 8px hsl(0 0% 0% / 0.3),
+    inset 0 1px 0 hsl(40 60% 60% / 0.15);
+  overflow: hidden;
 }
 
-/* Animated light sweep on border - slower and more subtle */
-.voucher-card-glow::before {
+/* Outer gold glow ring */
+.voucher-card-premium::before {
   content: '';
   position: absolute;
-  inset: -3px;
-  border-radius: 23px;
-  padding: 3px;
+  inset: -4px;
+  border-radius: 28px;
+  padding: 4px;
   background: linear-gradient(
-    90deg,
-    transparent 0%,
-    transparent 25%,
-    hsla(40, 30%, 50%, 0.4) 40%,
-    hsla(40, 35%, 60%, 0.5) 50%,
-    hsla(40, 30%, 50%, 0.4) 60%,
-    transparent 75%,
-    transparent 100%
+    135deg,
+    hsl(45 80% 55% / 0.6) 0%,
+    hsl(40 70% 45% / 0.3) 25%,
+    hsl(35 60% 35% / 0.15) 50%,
+    hsl(40 70% 45% / 0.3) 75%,
+    hsl(45 80% 55% / 0.6) 100%
   );
-  background-size: 250% 100%;
-  animation: voucherBorderSweep 4s linear infinite;
   -webkit-mask: 
     linear-gradient(#fff 0 0) content-box, 
     linear-gradient(#fff 0 0);
@@ -96,35 +105,166 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
-  z-index: 20;
+  z-index: 1;
 }
 
-.voucher-card-glow::after {
+/* Animated shimmer sweep */
+.voucher-card-premium::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: 17px;
-  box-shadow: 
-    inset 0 0 15px 0 hsla(40, 30%, 40%, 0.08),
-    inset 0 1px 0 0 hsla(40, 30%, 50%, 0.1);
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(45 80% 70% / 0.08) 50%,
+    transparent 100%
+  );
+  animation: voucherShimmer 4s ease-in-out infinite;
   pointer-events: none;
-  z-index: 15;
-  transition: box-shadow 0.3s ease-out;
+  z-index: 2;
 }
 
-.voucher-card-glow:hover::after {
+@keyframes voucherShimmer {
+  0%, 100% {
+    left: -100%;
+  }
+  50% {
+    left: 150%;
+  }
+}
+
+/* Hover state enhancement */
+.voucher-card-premium:hover {
+  border-color: hsl(40 60% 50% / 0.7);
   box-shadow: 
-    inset 0 0 20px 0 hsla(40, 40%, 45%, 0.12),
-    inset 0 1px 0 0 hsla(40, 40%, 55%, 0.15);
+    0 12px 48px hsl(0 0% 0% / 0.6),
+    0 4px 16px hsl(40 50% 40% / 0.2),
+    inset 0 1px 0 hsl(40 70% 65% / 0.2);
+  transform: translateY(-4px) scale(1.01);
 }
 
-@keyframes voucherBorderSweep {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -100% 0;
-  }
+/* Premium CTA Button */
+.voucher-cta-premium {
+  background: linear-gradient(
+    135deg,
+    hsl(45 85% 50%) 0%,
+    hsl(40 80% 45%) 50%,
+    hsl(35 75% 40%) 100%
+  );
+  color: hsl(30 30% 10%);
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 1rem 1.5rem;
+  border-radius: 14px;
+  border: none;
+  box-shadow: 
+    0 4px 16px hsl(40 70% 45% / 0.4),
+    inset 0 1px 0 hsl(50 90% 75% / 0.3),
+    inset 0 -1px 0 hsl(35 60% 30% / 0.3);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.voucher-cta-premium::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(50 100% 85% / 0.3) 50%,
+    transparent 100%
+  );
+  transition: left 0.5s ease;
+}
+
+.voucher-cta-premium:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 6px 24px hsl(40 70% 45% / 0.5),
+    inset 0 1px 0 hsl(50 90% 80% / 0.4),
+    inset 0 -1px 0 hsl(35 60% 30% / 0.4);
+}
+
+.voucher-cta-premium:hover::before {
+  left: 100%;
+}
+
+.voucher-cta-premium:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Price dominant styling */
+.voucher-price-hero {
+  font-size: 2.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  background: linear-gradient(
+    180deg,
+    hsl(50 95% 80%) 0%,
+    hsl(45 90% 65%) 40%,
+    hsl(40 85% 50%) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 2px 8px hsl(40 70% 50% / 0.3);
+}
+
+/* Separator line with gold gradient */
+.voucher-separator {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(40 50% 40% / 0.5) 20%,
+    hsl(45 60% 55% / 0.8) 50%,
+    hsl(40 50% 40% / 0.5) 80%,
+    transparent 100%
+  );
+  margin: 1rem 0;
+}
+
+/* Inner glow effect */
+.voucher-inner-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  box-shadow: 
+    inset 0 0 40px hsl(40 50% 40% / 0.1),
+    inset 0 0 80px hsl(40 50% 40% / 0.05);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Voucher expired state */
+.voucher-card-expired {
+  border-color: hsl(0 30% 30% / 0.5);
+  background: linear-gradient(
+    165deg,
+    hsl(0 15% 12%) 0%,
+    hsl(0 10% 8%) 40%,
+    hsl(0 8% 6%) 100%
+  );
+}
+
+.voucher-card-expired::before {
+  background: linear-gradient(
+    135deg,
+    hsl(0 40% 40% / 0.4) 0%,
+    hsl(0 30% 30% / 0.2) 50%,
+    hsl(0 40% 40% / 0.4) 100%
+  );
 }
 
 /* Coming Soon card glow - same as contests but 30% thinner border */
