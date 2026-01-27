@@ -1995,6 +1995,7 @@ export type Database = {
           prize_image_url: string
           prize_name: string
           type: string
+          user_avatar_url: string
           user_id: string
           user_name: string
           user_nickname: string

@@ -56,6 +56,7 @@ const Winners = () => {
                   type={winner.type}
                   prizeImageUrl={winner.prize_image_url}
                   cardStyleImageUrl={cardStyleImageUrl}
+                  userAvatarUrl={winner.user_avatar_url}
                 />
               ))
             ) : (
