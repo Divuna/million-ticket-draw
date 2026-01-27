@@ -983,38 +983,27 @@ const Homepage = () => {
               </div>
             ) : (
               homepageVouchers.map((voucher) => (
-                  <div key={voucher.id} className="flex-none w-80 cursor-pointer group" onClick={() => navigate("/vouchers?tab=available")}>
-                  <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-br from-[hsl(222_40%_12%)] via-[hsl(222_35%_9%)] to-[hsl(222_30%_6%)] border-2 border-[hsl(43_50%_40%/0.4)] shadow-[0_8px_32px_hsl(222_50%_3%/0.6),0_0_0_1px_hsl(43_50%_35%/0.1)_inset] transition-all duration-300 hover:border-[hsl(43_60%_50%/0.6)] hover:shadow-[0_12px_40px_hsl(222_50%_3%/0.7),0_0_24px_hsl(43_50%_50%/0.15)] hover:scale-[1.02]">
-                    {/* Premium gold accent line at top */}
-                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[hsl(43_80%_55%)] to-transparent opacity-60" />
-                    
-                    <div className="flex h-52 relative">
+                  <div key={voucher.id} className="flex-none w-80 cursor-pointer" onClick={() => navigate("/vouchers?tab=available")}>
+                  <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[hsl(40_40%_45%)] hover:shadow-[0_0_12px_hsl(40_30%_40%/0.2)] hover:scale-[1.02]">
+                    <div className="flex h-48 relative">
                       {/* Left side - Content */}
-                      <div className="flex-1 p-5 flex flex-col justify-between relative z-10">
-                        {/* Header with premium badge */}
+                      <div className="flex-1 p-5 flex flex-col justify-between">
+                        {/* Header */}
                         <div>
-                          <div className="inline-flex items-center gap-2 mb-2">
-                            <span className="text-[hsl(43_80%_60%)] text-xs font-bold tracking-[0.15em] uppercase">ONEMIL</span>
-                            <span className="w-1 h-1 rounded-full bg-[hsl(43_80%_55%)]" />
-                            <span className="text-muted-foreground text-xs font-medium tracking-wide">VOUCHER</span>
-                          </div>
-                          <p className="text-muted-foreground/80 text-xs font-medium tracking-wider">HRAJ O CENY</p>
+                          <h2 className="text-foreground font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
+                          <p className="text-muted-foreground text-sm font-medium">HRAJ O CENY</p>
                         </div>
 
-                        {/* Voucher name - dominant hierarchy */}
-                        <div className="my-2">
-                          <h3 className="text-foreground font-bold text-xl leading-tight mb-3 group-hover:text-[hsl(43_70%_75%)] transition-colors duration-300">{voucher.name}</h3>
-                          {/* Price - large and prominent */}
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-[hsl(43_85%_60%)] font-extrabold text-3xl tracking-tight drop-shadow-[0_0_8px_hsl(43_80%_50%/0.3)]">5</span>
-                            <span className="text-[hsl(43_70%_55%)] font-semibold text-lg">MioCoinů</span>
-                          </div>
+                        {/* Voucher name */}
+                        <div className="my-3">
+                          <h3 className="text-foreground font-bold text-lg mb-2">{voucher.name}</h3>
+                          <div className="text-primary font-bold text-2xl">5 MioCoinů</div>
                         </div>
 
-                        {/* Premium CTA Button */}
+                        {/* Button */}
                         <div className="space-y-2">
                           <Button
-                            className="w-full h-11 bg-gradient-to-r from-[hsl(43_80%_45%)] via-[hsl(45_85%_50%)] to-[hsl(43_80%_45%)] text-[hsl(222_40%_8%)] font-bold text-sm tracking-wide shadow-[0_4px_16px_hsl(43_80%_50%/0.35),0_0_0_1px_hsl(43_90%_60%/0.2)_inset] hover:shadow-[0_6px_24px_hsl(43_80%_50%/0.5),0_0_0_1px_hsl(43_90%_70%/0.3)_inset] hover:brightness-110 active:scale-[0.98] transition-all duration-200 rounded-lg"
+                            className="w-full bg-primary text-primary-foreground font-bold shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
                             onClick={(e) => {
                               e.stopPropagation();
                               if (!user) {
@@ -1027,39 +1016,32 @@ const Homepage = () => {
                             {!user ? "PŘIHLÁSIT SE" : "KOUPIT ZA 5 MC"}
                           </Button>
 
-                          {/* Subtle helper text */}
-                          <div className="text-[10px] text-muted-foreground/70 text-center tracking-wide">
+                          {/* Status indicator */}
+                          <div className="text-xs text-muted-foreground">
                             {user ? "Klikněte pro nákup" : "Přihlaste se pro nákup"}
                           </div>
                         </div>
                       </div>
 
-                      {/* Right side - Image with premium overlay */}
-                      <div className="w-36 relative">
-                        {/* Dashed separator with gold accent */}
-                        <div className="absolute left-0 top-4 bottom-4 w-px border-l border-dashed border-[hsl(43_50%_40%/0.3)]" />
-                        
+                      {/* Right side - Image */}
+                      <div className="w-32 relative border-l border-dashed border-border/50">
                         {voucher.image_url ? (
-                          <>
-                            <img
-                              src={voucher.image_url}
-                              alt={voucher.name}
-                              className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-300"
-                              loading="lazy"
-                            />
-                            {/* Subtle gradient overlay for depth */}
-                            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-[hsl(222_35%_8%/0.4)]" />
-                          </>
+                          <img
+                            src={voucher.image_url}
+                            alt={voucher.name}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
                         ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-muted/30 to-muted/10 flex items-center justify-center">
-                            <span className="text-muted-foreground/50 text-sm font-medium text-center px-2 tracking-wider">VOUCHER</span>
+                          <div className="w-full h-full bg-muted/40 flex items-center justify-center">
+                            <span className="text-muted-foreground text-sm text-center px-2">VOUCHER</span>
                           </div>
                         )}
+                      </div>
 
-                        {/* Remaining count badge - premium style */}
-                        <div className="absolute top-3 right-3 bg-[hsl(222_40%_8%/0.9)] backdrop-blur-md text-[hsl(43_70%_65%)] text-[10px] font-semibold px-2.5 py-1 rounded-full border border-[hsl(43_50%_40%/0.3)] shadow-lg">
-                          Zbývá: {getRemainingCount(voucher)}
-                        </div>
+                      {/* Remaining count indicator */}
+                      <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded border border-border">
+                        Zbývá: {getRemainingCount(voucher)}
                       </div>
                     </div>
                   </Card>
