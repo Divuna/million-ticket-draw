@@ -19,6 +19,7 @@ export interface Winner {
   contest_title: string;
   created_at: string;
   type: string;
+  user_avatar_url: string | null;
 }
 
 export const useLatestWinners = (limit: number = 50) => {
@@ -50,6 +51,7 @@ export const useLatestWinners = (limit: number = 50) => {
         prize_name: string;
         prize_image_url: string | null;
         contest_title: string;
+        user_avatar_url: string | null;
       }) => ({
         id: winner.id,
         user_id: winner.user_id,
@@ -60,6 +62,7 @@ export const useLatestWinners = (limit: number = 50) => {
         contest_title: winner.contest_title,
         created_at: winner.created_at,
         type: winner.type,
+        user_avatar_url: winner.user_avatar_url,
       }));
 
       return result;

@@ -1,6 +1,6 @@
 import { Trophy, User, Target } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -15,6 +15,7 @@ interface WinnerCardProps {
   type: string;
   prizeImageUrl?: string | null;
   cardStyleImageUrl?: string | null;
+  userAvatarUrl?: string | null;
 }
 
 export const WinnerCard = ({ 
@@ -25,7 +26,8 @@ export const WinnerCard = ({
   createdAt,
   type,
   prizeImageUrl,
-  cardStyleImageUrl
+  cardStyleImageUrl,
+  userAvatarUrl
 }: WinnerCardProps) => {
   const initials = (userNickname || userName)
     .split(' ')
@@ -76,6 +78,9 @@ export const WinnerCard = ({
           <div className="flex gap-3 items-center h-full">
             {/* Avatar */}
             <Avatar className="w-11 h-11 border-2 border-primary/20 flex-shrink-0">
+              {userAvatarUrl && (
+                <AvatarImage src={userAvatarUrl} alt={userNickname || userName} />
+              )}
               <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold text-sm">
                 {initials}
               </AvatarFallback>

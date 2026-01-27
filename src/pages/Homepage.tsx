@@ -702,6 +702,7 @@ const Homepage = () => {
                           type={winner.type}
                           prizeImageUrl={winner.prize_image_url}
                           cardStyleImageUrl={placementBanners.vzhled_karta_vyher?.image_url || null}
+                          userAvatarUrl={winner.user_avatar_url}
                         />
                       ))
                   )}
