@@ -17,38 +17,79 @@ interface ContentPageData {
 }
 
 /**
- * Transforms plain text content into structured HTML.
- * - Splits by empty lines into paragraphs
- * - Lines starting with "1.", "2.", "1.1", etc. become h3 headings
+ * Transforms plain text content into structured HTML for FAQ/legal documents.
+ * - Lines starting with "1.", "2.", "1.1", etc. become questions with gold-accented numbers
+ * - Text following until the next numbered line becomes the answer
+ * - Empty lines split content into paragraphs
  */
 const transformContentToHtml = (content: string): string => {
-  // If content already contains HTML tags, return as-is
-  if (/<[a-z][\s\S]*>/i.test(content)) {
+  // If content already contains significant HTML tags, return as-is
+  if (/<(div|section|article|h[1-6]|ul|ol|table)[^>]*>/i.test(content)) {
     return content;
   }
 
-  // Split content by double newlines (empty lines)
-  const blocks = content.split(/\n\s*\n/);
+  // Normalize line endings and split into lines
+  const lines = content.replace(/\r\n/g, '\n').split('\n');
   
-  return blocks
-    .map((block) => {
-      const trimmedBlock = block.trim();
-      if (!trimmedBlock) return '';
+  // Pattern for numbered questions: "1.", "2.", "1.1", "1.1.1", etc.
+  const numberedPattern = /^((\d+\.)+)\s+(.+)$/;
+  
+  const result: string[] = [];
+  let currentAnswer: string[] = [];
+  let inQuestion = false;
 
-      // Check if block starts with numbered pattern like "1.", "2.", "1.1", "1.1.1", etc.
-      const numberedHeadingPattern = /^(\d+\.)+\s+/;
-      
-      if (numberedHeadingPattern.test(trimmedBlock)) {
-        // It's a numbered section heading
-        return `<h3>${trimmedBlock}</h3>`;
+  const flushAnswer = () => {
+    if (currentAnswer.length > 0) {
+      const answerText = currentAnswer.join('\n').trim();
+      if (answerText) {
+        // Split answer by empty lines into paragraphs
+        const paragraphs = answerText.split(/\n\s*\n/);
+        paragraphs.forEach((para) => {
+          const trimmedPara = para.trim();
+          if (trimmedPara) {
+            // Replace single newlines with <br />
+            const formattedPara = trimmedPara.replace(/\n/g, '<br />');
+            result.push(`<p class="cms-answer">${formattedPara}</p>`);
+          }
+        });
       }
+      currentAnswer = [];
+    }
+  };
+
+  lines.forEach((line) => {
+    const trimmedLine = line.trim();
+    const match = trimmedLine.match(numberedPattern);
+
+    if (match) {
+      // Flush any pending answer content
+      flushAnswer();
       
-      // Regular paragraph - handle single newlines within the block
-      const formattedBlock = trimmedBlock.replace(/\n/g, '<br />');
-      return `<p>${formattedBlock}</p>`;
-    })
-    .filter(Boolean)
-    .join('\n');
+      // Extract number prefix and question text
+      const numberPrefix = match[1]; // e.g., "1." or "1.1."
+      const questionText = match[3]; // The actual question text
+      
+      // Create question heading with separated number
+      result.push(
+        `<h3 class="cms-question"><span class="cms-number">${numberPrefix}</span> ${questionText}</h3>`
+      );
+      inQuestion = true;
+    } else if (trimmedLine === '') {
+      // Empty line - add to current answer for paragraph separation
+      if (inQuestion) {
+        currentAnswer.push('');
+      }
+    } else {
+      // Regular text line - add to current answer
+      currentAnswer.push(trimmedLine);
+      inQuestion = true;
+    }
+  });
+
+  // Flush any remaining answer content
+  flushAnswer();
+
+  return result.join('\n');
 };
 
 const ContentPage: React.FC = () => {
@@ -149,13 +190,34 @@ const ContentPage: React.FC = () => {
                 className="
                   prose prose-lg dark:prose-invert max-w-none
                   
-                  /* Headings - Section titles */
+                  /* CMS Question styling - numbered headings with gold accent */
+                  [&_.cms-question]:font-heading [&_.cms-question]:font-semibold
+                  [&_.cms-question]:text-lg [&_.cms-question]:md:text-xl
+                  [&_.cms-question]:mt-10 [&_.cms-question]:mb-4
+                  [&_.cms-question]:text-foreground
+                  [&_.cms-question]:flex [&_.cms-question]:items-baseline [&_.cms-question]:gap-3
+                  [&_.cms-question]:pb-3 [&_.cms-question]:border-b [&_.cms-question]:border-border/20
+                  
+                  /* CMS Number prefix - gold accent */
+                  [&_.cms-number]:text-[hsl(var(--heading-gold))]
+                  [&_.cms-number]:font-bold
+                  [&_.cms-number]:text-lg [&_.cms-number]:md:text-xl
+                  [&_.cms-number]:min-w-[2.5rem]
+                  [&_.cms-number]:shrink-0
+                  
+                  /* CMS Answer styling */
+                  [&_.cms-answer]:text-muted-foreground
+                  [&_.cms-answer]:leading-[1.85]
+                  [&_.cms-answer]:mb-6
+                  [&_.cms-answer]:text-[15px] [&_.cms-answer]:md:text-base
+                  [&_.cms-answer]:pl-0 [&_.cms-answer]:md:pl-[2.75rem]
+                  
+                  /* Regular Headings - Section titles (for HTML content) */
                   prose-headings:font-heading prose-headings:font-semibold
                   prose-h2:text-xl prose-h2:md:text-2xl prose-h2:mt-12 prose-h2:mb-5 prose-h2:text-foreground 
                   prose-h2:border-b prose-h2:border-border/25 prose-h2:pb-4
                   prose-h2:bg-muted/20 prose-h2:-mx-4 prose-h2:px-4 prose-h2:pt-4 prose-h2:rounded-t-lg
                   prose-h3:text-lg prose-h3:md:text-xl prose-h3:mt-10 prose-h3:mb-4 prose-h3:text-foreground/90
-                  prose-h3:pl-4 prose-h3:border-l-2 prose-h3:border-primary/40
                   prose-h4:text-base prose-h4:md:text-lg prose-h4:mt-8 prose-h4:mb-3 prose-h4:text-foreground/85 prose-h4:font-medium
                   
                   /* Body text - Readable paragraphs */
