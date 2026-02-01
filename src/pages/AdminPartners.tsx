@@ -32,7 +32,10 @@ import {
   AlertTriangle,
   RefreshCw,
   UserPlus,
+  BookOpen,
+  Save,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { AdminMenu } from "@/components/AdminMenu";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
@@ -139,12 +142,57 @@ const AdminPartners = () => {
 
   const [logoApprovalLoading, setLogoApprovalLoading] = useState<string | null>(null);
 
+  // API Documentation state
+  const [apiDocumentation, setApiDocumentation] = useState("");
+  const [apiDocLoading, setApiDocLoading] = useState(true);
+  const [apiDocSaving, setApiDocSaving] = useState(false);
+
   /* ===================== INIT ===================== */
 
   useEffect(() => {
     fetchPartners();
     loadPendingRegistrations();
+    loadApiDocumentation();
   }, []);
+
+  /* ===================== API DOCUMENTATION ===================== */
+
+  const loadApiDocumentation = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("settings")
+        .select("value")
+        .eq("key", "partner_api_documentation")
+        .maybeSingle();
+
+      if (error) throw error;
+      setApiDocumentation(data?.value || "");
+    } catch (error) {
+      console.error("Error loading API documentation:", error);
+    } finally {
+      setApiDocLoading(false);
+    }
+  };
+
+  const saveApiDocumentation = async () => {
+    setApiDocSaving(true);
+    try {
+      const { error } = await supabase
+        .from("settings")
+        .upsert(
+          { key: "partner_api_documentation", value: apiDocumentation, updated_at: new Date().toISOString() },
+          { onConflict: "key" }
+        );
+
+      if (error) throw error;
+      toast.success("Dokumentace byla uložena");
+    } catch (error) {
+      console.error("Error saving API documentation:", error);
+      toast.error("Nepodařilo se uložit dokumentaci");
+    } finally {
+      setApiDocSaving(false);
+    }
+  };
 
   /* ===================== DATA ===================== */
 
@@ -484,7 +532,7 @@ const AdminPartners = () => {
         </div>
 
         <Tabs defaultValue="pending" className="space-y-6">
-          <TabsList className="grid w-full max-w-lg grid-cols-3">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4">
             <TabsTrigger value="pending" className="flex items-center gap-2">
               <UserPlus className="w-4 h-4" />
               Čekající registrace
@@ -496,6 +544,10 @@ const AdminPartners = () => {
             <TabsTrigger value="logos" className="flex items-center gap-2">
               <Image className="w-4 h-4" />
               Schválení log
+            </TabsTrigger>
+            <TabsTrigger value="api-docs" className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4" />
+              Dokumentace API
             </TabsTrigger>
           </TabsList>
 
@@ -758,6 +810,62 @@ const AdminPartners = () => {
                         </CardContent>
                       </Card>
                     ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* API Documentation Tab */}
+          <TabsContent value="api-docs">
+            <Card className="border-border/50">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <BookOpen className="w-5 h-5 text-primary" />
+                      Dokumentace API pro partnery
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      Upravte centrální dokumentaci API, která se zobrazuje všem partnerům
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    onClick={saveApiDocumentation} 
+                    disabled={apiDocSaving}
+                    className="gap-2"
+                  >
+                    {apiDocSaving ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    Uložit dokumentaci
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {apiDocLoading ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <Alert className="border-primary/20 bg-primary/5">
+                      <BookOpen className="w-4 h-4 text-primary" />
+                      <AlertDescription className="text-sm">
+                        Tato dokumentace se zobrazuje partnerům v jejich portálu. Podporuje formátování jako Markdown.
+                      </AlertDescription>
+                    </Alert>
+                    <Textarea
+                      value={apiDocumentation}
+                      onChange={(e) => setApiDocumentation(e.target.value)}
+                      placeholder="Napište dokumentaci API pro partnery...&#10;&#10;Příklad:&#10;# API Dokumentace&#10;&#10;## Autentizace&#10;Každý request musí obsahovat hlavičku `X-API-Key`.&#10;&#10;## Endpointy&#10;- POST /api/issue-code&#10;- GET /api/codes"
+                      className="min-h-[400px] font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Tip: Použijte Markdown formátování pro nadpisy (#), seznamy (-), kód (`), apod.
+                    </p>
                   </div>
                 )}
               </CardContent>
