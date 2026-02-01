@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,7 +17,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Pencil, FileText, Scale, HelpCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, FileText, Scale, HelpCircle } from 'lucide-react';
 
 interface ContentPage {
   id: string;
@@ -26,6 +27,7 @@ interface ContentPage {
   content: string;
   version: string | null;
   is_active: boolean;
+  order: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -49,6 +51,7 @@ const AdminContentPages: React.FC = () => {
     title: '',
     content: '',
     version: '',
+    order: 100,
     is_active: true,
   });
 
@@ -63,7 +66,8 @@ const AdminContentPages: React.FC = () => {
       const { data, error } = await supabase
         .from('content_pages')
         .select('*')
-        .order('section', { ascending: true })
+        .is('deleted_at', null)
+        .order('order', { ascending: true })
         .order('title', { ascending: true });
 
       if (error) throw error;
@@ -88,6 +92,7 @@ const AdminContentPages: React.FC = () => {
       title: '',
       content: '',
       version: '',
+      order: 100,
       is_active: true,
     });
     setDialogOpen(true);
@@ -101,6 +106,7 @@ const AdminContentPages: React.FC = () => {
       title: page.title,
       content: page.content,
       version: page.version || '',
+      order: page.order ?? 100,
       is_active: page.is_active ?? true,
     });
     setDialogOpen(true);
@@ -123,6 +129,7 @@ const AdminContentPages: React.FC = () => {
         title: formData.title.trim(),
         content: formData.content,
         version: formData.version.trim() || null,
+        order: formData.order,
         is_active: formData.is_active,
         updated_at: new Date().toISOString(),
       };
@@ -159,6 +166,31 @@ const AdminContentPages: React.FC = () => {
       toast({
         title: 'Chyba',
         description: error.message || 'Nepodařilo se uložit stránku.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDelete = async (page: ContentPage) => {
+    try {
+      const { error } = await supabase
+        .from('content_pages')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', page.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Úspěch',
+        description: 'Stránka byla úspěšně smazána.',
+      });
+
+      fetchContentPages();
+    } catch (error: any) {
+      console.error('Error deleting content page:', error);
+      toast({
+        title: 'Chyba',
+        description: error.message || 'Nepodařilo se smazat stránku.',
         variant: 'destructive',
       });
     }
@@ -253,7 +285,7 @@ const AdminContentPages: React.FC = () => {
                     className="font-mono text-sm"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="version">Verze</Label>
                     <Input
@@ -261,6 +293,16 @@ const AdminContentPages: React.FC = () => {
                       value={formData.version}
                       onChange={(e) => setFormData({ ...formData, version: e.target.value })}
                       placeholder="např. 1.0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="order">Pořadí</Label>
+                    <Input
+                      id="order"
+                      type="number"
+                      value={formData.order}
+                      onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 100 })}
+                      placeholder="100"
                     />
                   </div>
                   <div className="flex items-center space-x-2 pt-8">
@@ -272,7 +314,7 @@ const AdminContentPages: React.FC = () => {
                       }
                     />
                     <Label htmlFor="is_active" className="cursor-pointer">
-                      Aktivní (viditelná veřejně)
+                      Aktivní
                     </Label>
                   </div>
                 </div>
@@ -325,6 +367,7 @@ const AdminContentPages: React.FC = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-12">Pořadí</TableHead>
                           <TableHead>Název</TableHead>
                           <TableHead>Slug</TableHead>
                           <TableHead>Verze</TableHead>
@@ -335,6 +378,7 @@ const AdminContentPages: React.FC = () => {
                       <TableBody>
                         {getPagesBySection(s.value).map((page) => (
                           <TableRow key={page.id}>
+                            <TableCell className="text-muted-foreground">{page.order ?? 100}</TableCell>
                             <TableCell className="font-medium">{page.title}</TableCell>
                             <TableCell>
                               <code className="text-sm bg-muted px-2 py-1 rounded">
@@ -347,16 +391,42 @@ const AdminContentPages: React.FC = () => {
                                 {page.is_active ? 'Aktivní' : 'Neaktivní'}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right space-x-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleOpenEdit(page)}
-                                className="gap-2"
                               >
                                 <Pencil className="h-4 w-4" />
-                                Upravit
                               </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Smazat stránku?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Opravdu chcete smazat stránku "{page.title}"? Stránka bude skryta, ale lze ji obnovit v databázi.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDelete(page)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Smazat
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </TableCell>
                           </TableRow>
                         ))}

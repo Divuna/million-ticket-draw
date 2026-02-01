@@ -266,8 +266,10 @@ export type Database = {
         Row: {
           content: string
           created_at: string | null
+          deleted_at: string | null
           id: string
           is_active: boolean | null
+          order: number | null
           section: string
           slug: string
           title: string
@@ -277,8 +279,10 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
           is_active?: boolean | null
+          order?: number | null
           section: string
           slug: string
           title: string
@@ -288,8 +292,10 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
           is_active?: boolean | null
+          order?: number | null
           section?: string
           slug?: string
           title?: string
