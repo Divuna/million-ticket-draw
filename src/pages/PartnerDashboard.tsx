@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift, RefreshCw, Copy, Eye, EyeOff, Activity } from 'lucide-react';
@@ -76,6 +77,35 @@ const PartnerDashboard = () => {
   const [rotatePasswordVisible, setRotatePasswordVisible] = useState(false);
   const [newApiKey, setNewApiKey] = useState('');
   const [rotatingKey, setRotatingKey] = useState(false);
+
+  // API Documentation modal state
+  const [apiDocsModalOpen, setApiDocsModalOpen] = useState(false);
+  const [apiDocumentation, setApiDocumentation] = useState('');
+  const [apiDocsLoading, setApiDocsLoading] = useState(false);
+
+  const loadApiDocumentation = async () => {
+    setApiDocsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'partner_api_documentation')
+        .maybeSingle();
+
+      if (error) throw error;
+      setApiDocumentation(data?.value || 'Dokumentace API zatím nebyla nastavena.');
+    } catch (error) {
+      console.error('Error loading API documentation:', error);
+      setApiDocumentation('Nepodařilo se načíst dokumentaci.');
+    } finally {
+      setApiDocsLoading(false);
+    }
+  };
+
+  const openApiDocsModal = () => {
+    setApiDocsModalOpen(true);
+    loadApiDocumentation();
+  };
 
   const handleActivateRewardSubmit = async () => {
     const success = await activatePartnerReward(rewardCodeInput, apiKeyInput);
@@ -514,7 +544,7 @@ const PartnerDashboard = () => {
                 </div>
               </a>
 
-              <a href="https://docs.onemil.cz/partner-api" target="_blank" rel="noopener noreferrer" className="block">
+              <button onClick={openApiDocsModal} className="block w-full text-left">
                 <div className="p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors cursor-pointer h-full">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -522,14 +552,13 @@ const PartnerDashboard = () => {
                     </div>
                     <span className="font-medium text-foreground flex items-center gap-1">
                       Dokumentace API
-                      <ExternalLink className="w-3 h-3" />
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Návody a reference pro integraci
                   </p>
                 </div>
-              </a>
+              </button>
 
               <a href="mailto:podpora@onemil.cz" className="block">
                 <div className="p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors cursor-pointer h-full">
@@ -1105,6 +1134,39 @@ const PartnerDashboard = () => {
           <DialogFooter>
             <Button onClick={closeRotateSuccessModal}>
               Rozumím, zavřít
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* API Documentation Modal */}
+      <Dialog open={apiDocsModalOpen} onOpenChange={setApiDocsModalOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-primary" />
+              Dokumentace API
+            </DialogTitle>
+            <DialogDescription>
+              Návody a reference pro integraci MioCoinů do vašeho e-shopu
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] pr-4">
+            {apiDocsLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <pre className="whitespace-pre-wrap font-sans text-sm text-foreground leading-relaxed bg-transparent p-0 m-0">
+                  {apiDocumentation}
+                </pre>
+              </div>
+            )}
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApiDocsModalOpen(false)}>
+              Zavřít
             </Button>
           </DialogFooter>
         </DialogContent>
