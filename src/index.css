@@ -72,6 +72,8 @@
     
     /* Premium Typography Colors - matched to OneMil logo */
     --heading-gold: 43 78% 54%;
+    --heading-gold-soft: 43 65% 48%;
+    --heading-gold-muted: 43 50% 42%;
     --text-silver: 210 18% 88%;
     --text-muted-gray: 215 10% 55%;
 
