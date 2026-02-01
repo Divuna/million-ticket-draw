@@ -1187,101 +1187,101 @@ const PartnerDashboard = () => {
               </div>
             ) : (
               <div className="
-                prose prose-base dark:prose-invert max-w-none py-6
+                prose prose-lg dark:prose-invert max-w-none py-6
                 
-                /* Main Section Headings - Softer gold, lighter weight, more breathing room above */
-                prose-headings:font-heading prose-headings:tracking-tight
+                /* Main Section Headings (# or ## in MD) - Gold, bold, extra spacing */
+                prose-headings:font-heading prose-headings:font-bold prose-headings:tracking-tight
                 
-                prose-h1:text-lg prose-h1:md:text-xl prose-h1:font-medium prose-h1:mt-10 prose-h1:first:mt-0 prose-h1:mb-4
-                prose-h1:text-[hsl(var(--heading-gold))]/85 prose-h1:border-b prose-h1:border-[hsl(var(--heading-gold))]/20 prose-h1:pb-3
+                prose-h1:text-2xl prose-h1:md:text-[1.75rem] prose-h1:mt-12 prose-h1:first:mt-0 prose-h1:mb-6
+                prose-h1:text-[hsl(var(--heading-gold))] prose-h1:border-b-2 prose-h1:border-[hsl(var(--heading-gold))]/40 prose-h1:pb-4
                 
-                prose-h2:text-base prose-h2:md:text-lg prose-h2:font-medium prose-h2:mt-8 prose-h2:mb-3
-                prose-h2:text-[hsl(var(--heading-gold))]/85 prose-h2:border-b prose-h2:border-[hsl(var(--heading-gold))]/15 prose-h2:pb-2
+                prose-h2:text-xl prose-h2:md:text-[1.35rem] prose-h2:mt-10 prose-h2:mb-5
+                prose-h2:text-[hsl(var(--heading-gold))] prose-h2:border-b prose-h2:border-[hsl(var(--heading-gold))]/25 prose-h2:pb-3
                 
-                prose-h3:text-[15px] prose-h3:mt-6 prose-h3:mb-2.5
-                prose-h3:text-[hsl(var(--heading-gold))]/75 prose-h3:font-medium
+                prose-h3:text-lg prose-h3:mt-8 prose-h3:mb-4
+                prose-h3:text-[hsl(var(--heading-gold))] prose-h3:font-semibold
                 
-                prose-h4:text-sm prose-h4:mt-5 prose-h4:mb-2
-                prose-h4:text-[hsl(var(--heading-gold))]/70 prose-h4:font-medium
+                prose-h4:text-base prose-h4:mt-6 prose-h4:mb-3
+                prose-h4:text-[hsl(var(--heading-gold))]/90 prose-h4:font-semibold
                 
-                /* Body text - Calmer, tighter line-height */
-                prose-p:text-muted-foreground/90 prose-p:leading-[1.7] prose-p:mb-4 prose-p:text-sm
+                /* Body text - Readable paragraphs with good spacing */
+                prose-p:text-muted-foreground prose-p:leading-[1.85] prose-p:mb-5 prose-p:text-[15px]
                 
-                /* Bullet Lists - Softer markers, tighter grouping */
-                prose-ul:my-3 prose-ul:mb-4 prose-ul:space-y-1.5 prose-ul:pl-5
-                [&_ul>li]:text-muted-foreground/85 [&_ul>li]:leading-[1.65] [&_ul>li]:text-sm
-                [&_ul>li]:pl-1.5 [&_ul>li::marker]:text-[hsl(var(--heading-gold))]/60 [&_ul>li::marker]:text-sm
+                /* Bullet Lists - Gold markers, generous spacing */
+                prose-ul:my-5 prose-ul:mb-6 prose-ul:space-y-3 prose-ul:pl-6
+                [&_ul>li]:text-muted-foreground [&_ul>li]:leading-[1.75] [&_ul>li]:text-[15px]
+                [&_ul>li]:pl-2 [&_ul>li::marker]:text-[hsl(var(--heading-gold))] [&_ul>li::marker]:text-lg [&_ul>li::marker]:font-bold
                 
-                /* Numbered Lists - Softer numbers, calmer spacing */
-                prose-ol:my-3 prose-ol:mb-4 prose-ol:space-y-2 prose-ol:pl-5 prose-ol:list-decimal
-                [&_ol>li]:text-muted-foreground/85 [&_ol>li]:leading-[1.65] [&_ol>li]:text-sm
-                [&_ol>li]:pl-1.5 [&_ol>li::marker]:text-[hsl(var(--heading-gold))]/60 [&_ol>li::marker]:font-medium
+                /* Numbered Lists - Bold gold numbers, step-like spacing */
+                prose-ol:my-5 prose-ol:mb-6 prose-ol:space-y-4 prose-ol:pl-6 prose-ol:list-decimal
+                [&_ol>li]:text-muted-foreground [&_ol>li]:leading-[1.75] [&_ol>li]:text-[15px]
+                [&_ol>li]:pl-2 [&_ol>li::marker]:text-[hsl(var(--heading-gold))] [&_ol>li::marker]:font-bold
                 
                 /* Nested lists */
-                [&_ul_ul]:mt-2 [&_ul_ul]:mb-1 [&_ol_ol]:mt-2 [&_ol_ol]:mb-1
-                [&_ul_ol]:mt-2 [&_ol_ul]:mt-2
+                [&_ul_ul]:mt-3 [&_ul_ul]:mb-1 [&_ol_ol]:mt-3 [&_ol_ol]:mb-1
+                [&_ul_ol]:mt-3 [&_ol_ul]:mt-3
                 
-                /* Code blocks - Subtle styling */
-                prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-[13px] 
-                prose-code:text-[hsl(var(--heading-gold))]/80 prose-code:font-mono prose-code:font-normal
+                /* Code blocks - Technical documentation style */
+                prose-code:bg-muted/70 prose-code:px-2 prose-code:py-1 prose-code:rounded-md prose-code:text-sm 
+                prose-code:text-[hsl(var(--heading-gold))] prose-code:font-mono prose-code:font-medium
                 prose-code:before:content-none prose-code:after:content-none
-                prose-pre:bg-muted/40 prose-pre:border prose-pre:border-border/30 prose-pre:rounded-lg 
-                prose-pre:p-4 prose-pre:my-4 prose-pre:overflow-x-auto
-                [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-[13px] [&_pre_code]:leading-relaxed
-                [&_pre_code]:text-foreground/80
+                prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border/40 prose-pre:rounded-xl 
+                prose-pre:p-5 prose-pre:my-6 prose-pre:overflow-x-auto prose-pre:shadow-inner
+                [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-sm [&_pre_code]:leading-relaxed
+                [&_pre_code]:text-foreground/90
                 
-                /* Links - Softer gold */
-                prose-a:text-[hsl(var(--heading-gold))]/80 prose-a:no-underline hover:prose-a:underline 
-                prose-a:font-normal prose-a:transition-colors
+                /* Links - Gold with hover effect */
+                prose-a:text-[hsl(var(--heading-gold))] prose-a:no-underline hover:prose-a:underline 
+                prose-a:font-medium prose-a:transition-colors
                 
-                /* Strong/Bold - Less aggressive */
-                prose-strong:text-foreground/90 prose-strong:font-medium
+                /* Strong/Bold - Emphasized */
+                prose-strong:text-foreground prose-strong:font-bold
                 
-                /* Blockquotes - Softer callout style */
-                prose-blockquote:border-l-2 prose-blockquote:border-[hsl(var(--heading-gold))]/30 
-                prose-blockquote:bg-[hsl(var(--heading-gold))]/[0.03] prose-blockquote:py-2.5 prose-blockquote:px-4 
-                prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:text-foreground/80
-                prose-blockquote:my-4
-                [&_blockquote_p]:mb-0 [&_blockquote_p]:text-foreground/80 [&_blockquote_p]:text-sm
+                /* Blockquotes - Warning/Info callout style */
+                prose-blockquote:border-l-4 prose-blockquote:border-[hsl(var(--heading-gold))]/50 
+                prose-blockquote:bg-[hsl(var(--heading-gold))]/5 prose-blockquote:py-3 prose-blockquote:px-5 
+                prose-blockquote:rounded-r-xl prose-blockquote:not-italic prose-blockquote:text-foreground/90
+                prose-blockquote:my-6 prose-blockquote:shadow-sm
+                [&_blockquote_p]:mb-0 [&_blockquote_p]:text-foreground/90
                 
-                /* Horizontal rules - Subtle dividers */
-                prose-hr:border-[hsl(var(--heading-gold))]/10 prose-hr:my-8
+                /* Horizontal rules - Clear section breaks */
+                prose-hr:border-[hsl(var(--heading-gold))]/20 prose-hr:my-10
                 
-                /* Tables - Calmer styling */
-                prose-table:border-collapse prose-table:w-full prose-table:my-4
-                prose-th:bg-muted/30 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:font-medium prose-th:text-sm
-                prose-th:text-[hsl(var(--heading-gold))]/75 prose-th:border-b prose-th:border-[hsl(var(--heading-gold))]/20
-                prose-td:px-3 prose-td:py-2 prose-td:border-b prose-td:border-border/15 prose-td:text-muted-foreground/85 prose-td:text-sm
+                /* Tables - if used in docs */
+                prose-table:border-collapse prose-table:w-full prose-table:my-6
+                prose-th:bg-muted/40 prose-th:px-4 prose-th:py-3 prose-th:text-left prose-th:font-semibold 
+                prose-th:text-[hsl(var(--heading-gold))] prose-th:border-b prose-th:border-[hsl(var(--heading-gold))]/30
+                prose-td:px-4 prose-td:py-3 prose-td:border-b prose-td:border-border/20 prose-td:text-muted-foreground
               ">
                 <ReactMarkdown
                   components={{
-                    // Custom paragraph renderer to detect callout lines - softer styling
+                    // Custom paragraph renderer to detect warning lines
                     p: ({ children, ...props }) => {
                       const text = String(children);
-                      // Warning callouts - softer amber
+                      // Check if paragraph starts with warning emoji
                       if (text.startsWith('⚠️') || text.startsWith('⚠')) {
                         return (
-                          <div className="flex items-start gap-2.5 my-4 p-3 bg-amber-500/[0.06] border border-amber-500/15 rounded-lg text-foreground/80">
-                            <span className="text-base flex-shrink-0 mt-0.5 opacity-70">⚠️</span>
-                            <span className="text-sm leading-[1.6]">{text.replace(/^⚠️?\s*/, '')}</span>
+                          <div className="flex items-start gap-3 my-5 p-4 bg-amber-500/15 border border-amber-500/30 rounded-xl text-foreground/90">
+                            <span className="text-xl flex-shrink-0 mt-0.5">⚠️</span>
+                            <span className="text-[15px] leading-[1.75]">{text.replace(/^⚠️?\s*/, '')}</span>
                           </div>
                         );
                       }
-                      // Info callouts - softer blue
+                      // Check for info/note indicators
                       if (text.startsWith('ℹ️') || text.toLowerCase().startsWith('note:') || text.toLowerCase().startsWith('poznámka:')) {
                         return (
-                          <div className="flex items-start gap-2.5 my-4 p-3 bg-blue-500/[0.04] border border-blue-500/12 rounded-lg text-foreground/80">
-                            <span className="text-base flex-shrink-0 mt-0.5 opacity-70">ℹ️</span>
-                            <span className="text-sm leading-[1.6]">{text.replace(/^(ℹ️|note:|poznámka:)\s*/i, '')}</span>
+                          <div className="flex items-start gap-3 my-5 p-4 bg-blue-500/10 border border-blue-500/25 rounded-xl text-foreground/90">
+                            <span className="text-xl flex-shrink-0 mt-0.5">ℹ️</span>
+                            <span className="text-[15px] leading-[1.75]">{text.replace(/^(ℹ️|note:|poznámka:)\s*/i, '')}</span>
                           </div>
                         );
                       }
-                      // Success callouts - softer green
+                      // Check for success/tip indicators
                       if (text.startsWith('✅') || text.toLowerCase().startsWith('tip:')) {
                         return (
-                          <div className="flex items-start gap-2.5 my-4 p-3 bg-green-500/[0.04] border border-green-500/12 rounded-lg text-foreground/80">
-                            <span className="text-base flex-shrink-0 mt-0.5 opacity-70">✅</span>
-                            <span className="text-sm leading-[1.6]">{text.replace(/^(✅|tip:)\s*/i, '')}</span>
+                          <div className="flex items-start gap-3 my-5 p-4 bg-green-500/10 border border-green-500/25 rounded-xl text-foreground/90">
+                            <span className="text-xl flex-shrink-0 mt-0.5">✅</span>
+                            <span className="text-[15px] leading-[1.75]">{text.replace(/^(✅|tip:)\s*/i, '')}</span>
                           </div>
                         );
                       }
