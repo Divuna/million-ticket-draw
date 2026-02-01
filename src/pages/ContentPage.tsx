@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,11 +16,52 @@ interface ContentPageData {
   is_active: boolean;
 }
 
+/**
+ * Transforms plain text content into structured HTML.
+ * - Splits by empty lines into paragraphs
+ * - Lines starting with "1.", "2.", "1.1", etc. become h3 headings
+ */
+const transformContentToHtml = (content: string): string => {
+  // If content already contains HTML tags, return as-is
+  if (/<[a-z][\s\S]*>/i.test(content)) {
+    return content;
+  }
+
+  // Split content by double newlines (empty lines)
+  const blocks = content.split(/\n\s*\n/);
+  
+  return blocks
+    .map((block) => {
+      const trimmedBlock = block.trim();
+      if (!trimmedBlock) return '';
+
+      // Check if block starts with numbered pattern like "1.", "2.", "1.1", "1.1.1", etc.
+      const numberedHeadingPattern = /^(\d+\.)+\s+/;
+      
+      if (numberedHeadingPattern.test(trimmedBlock)) {
+        // It's a numbered section heading
+        return `<h3>${trimmedBlock}</h3>`;
+      }
+      
+      // Regular paragraph - handle single newlines within the block
+      const formattedBlock = trimmedBlock.replace(/\n/g, '<br />');
+      return `<p>${formattedBlock}</p>`;
+    })
+    .filter(Boolean)
+    .join('\n');
+};
+
 const ContentPage: React.FC = () => {
   const { section, slug } = useParams<{ section: string; slug: string }>();
   const [page, setPage] = useState<ContentPageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  // Transform content to structured HTML
+  const transformedContent = useMemo(() => {
+    if (!page?.content) return '';
+    return transformContentToHtml(page.content);
+  }, [page?.content]);
 
   useEffect(() => {
     const fetchPage = async () => {
@@ -160,7 +201,7 @@ const ContentPage: React.FC = () => {
                   /* Images */
                   prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8
                 "
-                dangerouslySetInnerHTML={{ __html: page.content }}
+                dangerouslySetInnerHTML={{ __html: transformedContent }}
               />
             </div>
           </article>
