@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { Skeleton } from '@/components/ui/skeleton';
 import SupportForm from '@/components/SupportForm';
+import ContactForm from '@/components/ContactForm';
 import { Separator } from '@/components/ui/separator';
 
 interface ContentPageData {
@@ -206,6 +207,7 @@ const ContentPage: React.FC = () => {
   // Check if this is the support form page (normalize slug to handle diacritics)
   const normalizedSlug = slug ? normalizeSlug(slug) : '';
   const showSupportForm = section === 'support' && normalizedSlug === 'nahlasit-problem';
+  const showContactForm = section === 'support' && normalizedSlug === 'kontakt';
 
   // Transform content to structured HTML
   const transformedContent = useMemo(() => {
@@ -394,6 +396,13 @@ const ContentPage: React.FC = () => {
                 dangerouslySetInnerHTML={{ __html: transformedContent }}
               />
             </div>
+            
+            {/* Contact Form - Only on support/kontakt page */}
+            {showContactForm && (
+              <div className="px-8 md:px-12 pb-10 md:pb-12">
+                <ContactForm />
+              </div>
+            )}
             
             {/* Support Form - Only on nahlasit-problem page (handles diacritics) */}
             {showSupportForm && (
