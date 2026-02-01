@@ -139,19 +139,6 @@ const Kontakt: React.FC = () => {
               </div>
             </section>
 
-            {/* Odkazy na právní dokumenty */}
-            <div className="bg-muted/20 rounded-xl p-5 border border-border/20 text-[15px] text-muted-foreground leading-relaxed">
-              <p>
-                Pro více informací navštivte naše{' '}
-                <a href="/terms" className="text-[hsl(var(--heading-gold))] hover:underline font-medium">
-                  Obchodní podmínky
-                </a>
-                {' '}nebo{' '}
-                <a href="/privacy" className="text-[hsl(var(--heading-gold))] hover:underline font-medium">
-                  Zásady ochrany osobních údajů
-                </a>.
-              </p>
-            </div>
           </div>
         </article>
       </main>
