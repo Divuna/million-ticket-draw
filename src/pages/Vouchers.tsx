@@ -399,17 +399,17 @@ const Vouchers: React.FC = () => {
 
                       <div className="flex h-48 relative">
                         {/* Left side - Content */}
-                        <div className="flex-1 p-5 flex flex-col justify-between">
+                        <div className="flex-1 p-5 flex flex-col justify-between text-center">
                           {/* Header */}
                           <div>
-                            <h2 className="text-foreground font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
-                            <p className="text-muted-foreground text-sm font-medium">HRAJ O CENY</p>
+                            <h2 className="text-foreground font-extrabold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
+                            <p className="text-muted-foreground/70 text-xs font-normal tracking-wide">HRAJ O CENY</p>
                           </div>
 
                           {/* Voucher name */}
-                          <div className="my-3">
-                            <h3 className="text-foreground font-bold text-lg mb-2">{voucher.name}</h3>
-                            <div className="text-primary font-bold text-2xl">5 MioCoinů</div>
+                          <div className="my-3 space-y-1">
+                            <h3 className="text-foreground font-bold text-lg leading-tight">{voucher.name}</h3>
+                            <div className="text-[hsl(45_80%_55%)] font-semibold text-xl">5 MioCoinů</div>
                           </div>
 
                           {/* Button */}
@@ -417,7 +417,7 @@ const Vouchers: React.FC = () => {
                             <Button
                               onClick={() => handleVoucherPurchase(voucher.id)}
                               disabled={!isAvailable || isPurchasing || isAdmin}
-                              className="w-full bg-primary text-primary-foreground font-bold shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
+                              className="w-full rounded-xl bg-gradient-to-r from-[hsl(45_80%_45%)] via-[hsl(40_85%_50%)] to-[hsl(35_80%_45%)] text-[hsl(220_45%_8%)] font-bold shadow-[0_2px_12px_hsl(45_80%_50%/0.25)] hover:shadow-[0_4px_16px_hsl(45_80%_50%/0.35)] hover:brightness-110 transition-all duration-200"
                             >
                               {isPurchasing ? "Kupuji..." : "KOUPIT ZA 5 MC"}
                             </Button>
@@ -511,17 +511,17 @@ const Vouchers: React.FC = () => {
 
                       <div className="flex h-48 relative">
                         {/* Left side - Content */}
-                        <div className="flex-1 p-5 flex flex-col justify-between">
+                        <div className="flex-1 p-5 flex flex-col justify-between text-center">
                           {/* Header */}
                           <div>
-                            <h2 className="text-foreground font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
-                            <p className="text-muted-foreground text-sm font-medium">HRAJ O CENY</p>
+                            <h2 className="text-foreground font-extrabold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
+                            <p className="text-muted-foreground/70 text-xs font-normal tracking-wide">HRAJ O CENY</p>
                           </div>
 
                           {/* Voucher name */}
-                          <div className="my-3">
-                            <h3 className="text-foreground font-bold text-lg mb-2">{userVoucher.voucher?.name}</h3>
-                            <div className="text-primary font-bold text-2xl">5 MioCoinů</div>
+                          <div className="my-3 space-y-1">
+                            <h3 className="text-foreground font-bold text-lg leading-tight">{userVoucher.voucher?.name}</h3>
+                            <div className="text-[hsl(45_80%_55%)] font-semibold text-xl">5 MioCoinů</div>
                           </div>
 
                           {/* Button */}
@@ -529,7 +529,7 @@ const Vouchers: React.FC = () => {
                             <Button
                               onClick={() => handleVoucherPurchase(userVoucher.voucher_id)}
                               disabled={isPurchasing || isAdmin}
-                              className="w-full bg-primary text-primary-foreground font-bold shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
+                              className="w-full rounded-xl bg-gradient-to-r from-[hsl(45_80%_45%)] via-[hsl(40_85%_50%)] to-[hsl(35_80%_45%)] text-[hsl(220_45%_8%)] font-bold shadow-[0_2px_12px_hsl(45_80%_50%/0.25)] hover:shadow-[0_4px_16px_hsl(45_80%_50%/0.35)] hover:brightness-110 transition-all duration-200"
                             >
                               {isPurchasing ? "Kupuji..." : "KOUPIT ZA 5 MC"}
                             </Button>
@@ -609,18 +609,18 @@ const Vouchers: React.FC = () => {
                     >
                       <div className="flex h-48 relative">
                         {/* Left side - Content */}
-                        <div className="flex-1 p-5 flex flex-col justify-between">
+                        <div className="flex-1 p-5 flex flex-col justify-between text-center">
                           {/* Header */}
                           <div>
-                            <h2 className="text-foreground font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
-                            <p className="text-muted-foreground text-sm font-medium">ZAKOUPENO</p>
+                            <h2 className="text-foreground font-extrabold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
+                            <p className="text-muted-foreground/70 text-xs font-normal tracking-wide">ZAKOUPENO</p>
                           </div>
 
                           {/* Voucher name and code */}
-                          <div className="my-2">
-                            <h3 className="text-foreground font-bold text-lg mb-1">{userVoucher.voucher?.name}</h3>
+                          <div className="my-2 space-y-1">
+                            <h3 className="text-foreground font-bold text-lg leading-tight">{userVoucher.voucher?.name}</h3>
                             {!expiration.isExpired && (
-                              <div className="font-mono font-bold text-lg text-secondary">{userVoucher.code}</div>
+                              <div className="font-mono font-bold text-lg text-[hsl(45_80%_55%)]">{userVoucher.code}</div>
                             )}
                           </div>
 
@@ -629,7 +629,7 @@ const Vouchers: React.FC = () => {
                             {!expiration.isExpired ? (
                               <Button
                                 variant="outline"
-                                className="w-full border-[hsl(40_30%_35%)] hover:bg-secondary/10 hover:border-secondary/50 transition-all duration-200"
+                                className="w-full rounded-xl border-[hsl(40_30%_35%)] hover:bg-[hsl(45_80%_50%/0.1)] hover:border-[hsl(45_80%_50%/0.5)] transition-all duration-200"
                                 onClick={() => handleCopyVoucherCode(userVoucher.code)}
                               >
                                 <Copy className="w-4 h-4 mr-2" />
@@ -640,7 +640,7 @@ const Vouchers: React.FC = () => {
                                 Voucher vypršel
                               </Badge>
                             )}
-                            <div className={`flex items-center justify-center gap-1 text-xs ${expiration.isExpired ? 'text-destructive' : 'text-muted-foreground'}`}>
+                            <div className={`flex items-center justify-center gap-1 text-xs ${expiration.isExpired ? 'text-destructive' : 'text-muted-foreground/70'}`}>
                               <Clock className="w-3 h-3" />
                               <span>{expiration.isExpired ? 'Vypršel' : `Platnost: ${expiration.text}`}</span>
                             </div>
