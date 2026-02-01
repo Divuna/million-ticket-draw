@@ -105,6 +105,10 @@ const ContentPage: React.FC = () => {
     return transformContentToHtml(page.content);
   }, [page?.content]);
 
+  // Debug logging to verify route params
+  console.log('[ContentPage] Route params:', { section, slug });
+  console.log('[ContentPage] Should show support form:', section === 'support' && slug === 'nahlasit-problem');
+
   useEffect(() => {
     const fetchPage = async () => {
       if (!section || !slug) {
