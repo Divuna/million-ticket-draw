@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift, RefreshCw, Copy, Eye, EyeOff, Activity } from 'lucide-react';
-import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
+import { format, startOfWeek, endOfWeek, subWeeks, subDays, isAfter } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useUserRole } from '@/hooks/useUserRole';
 
@@ -510,17 +510,29 @@ const PartnerDashboard = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Integrace API:</span>
-                  {apiActivity.length > 0 ? (
-                    <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
-                      <Activity className="w-3 h-3 mr-1" />
-                      aktivní
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="bg-muted text-muted-foreground border-border">
-                      <Activity className="w-3 h-3 mr-1" />
-                      neaktivní (zatím žádná API aktivita)
-                    </Badge>
-                  )}
+                  {(() => {
+                    const testEndpoints = ['partner_api_ping', 'example', 'healthcheck', 'ping', 'test'];
+                    const thirtyDaysAgo = subDays(new Date(), 30);
+                    const hasRecentRealActivity = apiActivity.some(activity => {
+                      if (!activity.endpoint || !activity.created_at) return false;
+                      const endpointLower = activity.endpoint.toLowerCase();
+                      const isTestEndpoint = testEndpoints.some(test => endpointLower.includes(test));
+                      if (isTestEndpoint) return false;
+                      const activityDate = new Date(activity.created_at);
+                      return isAfter(activityDate, thirtyDaysAgo);
+                    });
+                    return hasRecentRealActivity ? (
+                      <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                        <Activity className="w-3 h-3 mr-1" />
+                        aktivní
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="bg-muted text-muted-foreground border-border">
+                        <Activity className="w-3 h-3 mr-1" />
+                        neaktivní (zatím žádná API aktivita)
+                      </Badge>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
