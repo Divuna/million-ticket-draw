@@ -40,10 +40,51 @@ const isPlainHeading = (line: string, nextLine: string | undefined): boolean => 
 };
 
 /**
+ * Detects if a line looks like a bullet/list item.
+ * List items are typically:
+ * - Short lines ending with comma
+ * - Lines starting with dash, bullet, or similar markers
+ * - Short lines in a sequence (detected by context)
+ */
+const isListItemLine = (line: string): boolean => {
+  const trimmed = line.trim();
+  
+  // Empty lines are not list items
+  if (!trimmed) return false;
+  
+  // Explicit bullet markers
+  if (/^[-–—•·*]\s+/.test(trimmed)) return true;
+  
+  // Ends with comma (continuation list item)
+  if (trimmed.endsWith(',')) return true;
+  
+  // Short line (under 100 chars) that doesn't end with period
+  // and starts with lowercase (continuation of a list)
+  if (trimmed.length < 100 && /^[a-záčďéěíňóřšťúůýž]/.test(trimmed) && !trimmed.endsWith('.')) {
+    return true;
+  }
+  
+  return false;
+};
+
+/**
+ * Cleans a list item text by removing bullet markers and trailing commas.
+ */
+const cleanListItemText = (line: string): string => {
+  let cleaned = line.trim();
+  // Remove leading bullet markers
+  cleaned = cleaned.replace(/^[-–—•·*]\s+/, '');
+  // Remove trailing comma
+  cleaned = cleaned.replace(/,$/, '');
+  return cleaned;
+};
+
+/**
  * Transforms plain text content into structured HTML for ALL CMS pages.
  * Uses the Legal pages format as the unified rendering style:
  * - Lines starting with "1.", "2.", "1.1", etc. become questions with gold-accented numbers
  * - Plain headings (short lines followed by empty line) become questions without numbers
+ * - Consecutive list-like lines become bullet lists with gold markers
  * - Text following until the next heading becomes the answer
  * - Empty lines split content into paragraphs
  * 
@@ -63,8 +104,21 @@ export const transformContentToHtml = (content: string): string => {
   
   const result: string[] = [];
   let currentAnswer: string[] = [];
+  let currentListItems: string[] = [];
+
+  const flushList = () => {
+    if (currentListItems.length > 0) {
+      result.push('<ul class="cms-bullet-list">');
+      currentListItems.forEach((item) => {
+        result.push(`<li>${item}</li>`);
+      });
+      result.push('</ul>');
+      currentListItems = [];
+    }
+  };
 
   const flushAnswer = () => {
+    flushList();
     if (currentAnswer.length > 0) {
       const answerText = currentAnswer.join('\n').trim();
       if (answerText) {
@@ -102,12 +156,27 @@ export const transformContentToHtml = (content: string): string => {
       flushAnswer();
       result.push(`<h3 class="cms-question">${trimmedLine}</h3>`);
     } else if (trimmedLine === '') {
-      // Empty line - may split paragraphs
+      // Empty line - flush list if we were building one, may split paragraphs
+      flushList();
       if (currentAnswer.length > 0) {
         currentAnswer.push('');
       }
+    } else if (isListItemLine(trimmedLine)) {
+      // List item detected - flush any pending answer text first
+      if (currentAnswer.length > 0) {
+        const answerText = currentAnswer.join('\n').trim();
+        if (answerText) {
+          const formattedPara = answerText.replace(/\n/g, '<br />');
+          result.push(`<p class="cms-answer">${formattedPara}</p>`);
+        }
+        currentAnswer = [];
+      }
+      // Add to current list
+      currentListItems.push(cleanListItemText(trimmedLine));
     } else {
-      // Regular content line - add to current answer
+      // Regular content line
+      // If we were building a list, flush it first
+      flushList();
       currentAnswer.push(trimmedLine);
     }
   }
