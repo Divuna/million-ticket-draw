@@ -42,11 +42,33 @@ export const WinnerCard = ({
   });
 
   return (
-    <Card className="rounded-xl overflow-hidden bg-card/60 border border-border/50 hover:bg-card hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 cursor-pointer relative h-[120px]">
-      {/* Decorative background layer from placement banner */}
+    <Card className="rounded-xl overflow-hidden bg-[hsl(220_30%_8%)] border border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 cursor-pointer relative h-[120px]">
+      {/* Stars/Particles Background */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+        {/* Star pattern layer */}
+        <div className="absolute inset-0" style={{
+          background: `
+            radial-gradient(1.5px 1.5px at 8% 20%, hsla(45, 80%, 70%, 0.7) 50%, transparent 100%),
+            radial-gradient(1px 1px at 20% 45%, hsla(45, 70%, 60%, 0.5) 50%, transparent 100%),
+            radial-gradient(1.5px 1.5px at 35% 15%, hsla(45, 85%, 75%, 0.8) 50%, transparent 100%),
+            radial-gradient(1px 1px at 50% 55%, hsla(45, 75%, 65%, 0.4) 50%, transparent 100%),
+            radial-gradient(2px 2px at 65% 25%, hsla(45, 90%, 80%, 0.9) 50%, transparent 100%),
+            radial-gradient(1px 1px at 80% 60%, hsla(45, 70%, 60%, 0.5) 50%, transparent 100%),
+            radial-gradient(1.5px 1.5px at 92% 35%, hsla(45, 80%, 70%, 0.6) 50%, transparent 100%),
+            radial-gradient(1px 1px at 15% 75%, hsla(45, 75%, 65%, 0.4) 50%, transparent 100%),
+            radial-gradient(1px 1px at 45% 85%, hsla(45, 70%, 60%, 0.5) 50%, transparent 100%),
+            radial-gradient(1.5px 1.5px at 70% 80%, hsla(45, 85%, 75%, 0.7) 50%, transparent 100%),
+            radial-gradient(1px 1px at 88% 90%, hsla(45, 75%, 65%, 0.4) 50%, transparent 100%)
+          `
+        }} />
+        {/* Subtle golden ambient glow */}
+        <div className="absolute inset-0 bg-gradient-to-r from-amber-500/[0.02] via-transparent to-amber-400/[0.02]" />
+      </div>
+      
+      {/* Decorative background layer from placement banner (on top of stars if provided) */}
       {cardStyleImageUrl && (
         <div 
-          className="absolute inset-0 pointer-events-none z-0"
+          className="absolute inset-0 pointer-events-none z-[1]"
           style={{
             backgroundImage: `url(${cardStyleImageUrl})`,
             backgroundSize: 'cover',
@@ -55,7 +77,7 @@ export const WinnerCard = ({
         />
       )}
       
-      <div className="flex relative z-10 h-full">
+      <div className="flex relative z-[2] h-full">
         {/* Prize Image Slot - Left Side (fixed width, full height) */}
         <div className="w-[100px] flex-shrink-0 bg-muted/50 flex items-center justify-center overflow-hidden">
           {prizeImageUrl ? (
