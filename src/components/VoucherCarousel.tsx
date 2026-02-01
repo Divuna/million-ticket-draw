@@ -152,43 +152,38 @@ export const VoucherCarousel: React.FC = () => {
                 />
               )}
 
-              <CardContent className="p-6 space-y-5 text-center">
-                {/* Centered image + title block */}
-                <div className="flex flex-col items-center gap-3">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center gap-4">
                   {voucher.image_url && (
                     <div className="flex-shrink-0">
                       <img
                         src={voucher.image_url}
                         alt={voucher.name}
-                        className="w-14 h-14 object-cover rounded-xl border border-border/50 shadow-sm"
+                        className="w-12 h-12 object-cover rounded-lg border border-border"
                         loading="lazy"
                       />
                     </div>
                   )}
 
-                  <div className="space-y-1">
-                    <h3 className="text-xl font-bold tracking-tight text-foreground leading-tight">
-                      {voucher.name}
-                    </h3>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-foreground">{voucher.name}</h3>
                     {!isVoucherAvailable(voucher) && (
-                      <Badge variant="destructive" className="mt-1.5">Nedostupný</Badge>
+                      <Badge variant="destructive" className="mt-1">Nedostupný</Badge>
                     )}
                   </div>
                 </div>
 
-                {/* Remaining count */}
-                <div className="py-1">
-                  <p className="text-sm font-medium text-muted-foreground tracking-wide">
-                    Zbývá: <span className="text-primary font-semibold">{getRemainingCount(voucher)}</span>
-                  </p>
+                <div className="text-center py-1">
+                  <div className="text-lg font-medium text-primary">
+                    Zbývá: {getRemainingCount(voucher)}
+                  </div>
                 </div>
 
-                {/* Redesigned gold gradient button */}
-                <div className="pt-1">
+                <div className="pt-2">
                   <Button
                     onClick={() => redeemVoucher(voucher.id)}
                     disabled={!isVoucherAvailable(voucher)}
-                    className="w-full max-w-[220px] mx-auto h-12 text-base font-bold tracking-wide rounded-xl bg-gradient-to-r from-[hsl(45_80%_45%)] via-[hsl(40_85%_50%)] to-[hsl(35_80%_45%)] text-[hsl(220_30%_10%)] border border-[hsl(45_70%_55%/0.4)] shadow-[0_2px_12px_hsl(45_80%_50%/0.25)] hover:shadow-[0_4px_20px_hsl(45_80%_50%/0.35)] hover:brightness-110 transition-all duration-200"
+                    className="w-full h-11 text-base font-semibold"
                   >
                     POUŽÍT VOUCHER
                   </Button>
