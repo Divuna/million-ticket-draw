@@ -75,124 +75,125 @@ const SupportForm: React.FC = () => {
   };
 
   return (
-    <Card className="mt-10 border-border/30 bg-gradient-to-b from-card/60 to-card/40 backdrop-blur-sm shadow-[0_8px_32px_hsl(222_50%_3%/0.4)]">
-      <CardHeader className="pb-4 pt-8 px-8 md:px-10">
-        <CardTitle className="text-xl md:text-2xl font-heading bg-gradient-to-r from-[hsl(var(--heading-gold))] via-[hsl(45_85%_60%)] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent">
-          Formulář pro nahlášení problému
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-8 md:px-10 pb-8">
-        {/* Status Messages */}
-        {submitStatus === 'success' && (
-          <Alert className="mb-8 border-[hsl(45_80%_45%/0.4)] bg-[hsl(220_30%_12%)] rounded-xl">
-            <CheckCircle2 className="h-5 w-5 text-[hsl(45_85%_55%)]" />
-            <AlertDescription className="text-[hsl(45_85%_65%)] font-medium leading-relaxed">
+    <div className="mt-12 pt-8 border-t border-border/20">
+      <h2 className="text-xl md:text-2xl font-heading mb-6 bg-gradient-to-r from-[hsl(var(--heading-gold))] via-[hsl(45_85%_60%)] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent">
+        Formulář pro nahlášení problému
+      </h2>
+      
+      {/* Status Messages */}
+      {submitStatus === 'success' && (
+        <div className="mb-6 p-4 rounded-lg border border-[hsl(45_80%_50%/0.3)] bg-[hsl(45_80%_50%/0.08)]">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 text-[hsl(45_85%_50%)] flex-shrink-0 mt-0.5" />
+            <p className="text-[hsl(45_85%_70%)] text-sm leading-relaxed">
               {statusMessage}
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        {submitStatus === 'error' && (
-          <Alert className="mb-8 border-destructive/40 bg-destructive/10 rounded-xl">
-            <AlertCircle className="h-5 w-5 text-destructive" />
-            <AlertDescription className="text-destructive/90 leading-relaxed">
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {submitStatus === 'error' && (
+        <div className="mb-6 p-4 rounded-lg border border-destructive/30 bg-destructive/10">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+            <p className="text-destructive/90 text-sm leading-relaxed">
               {statusMessage}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          {/* Name Field */}
-          <div className="space-y-2.5">
-            <Label htmlFor="support-name" className="text-foreground/90 text-sm font-medium">
-              Jméno
-            </Label>
-            <Input
-              id="support-name"
-              type="text"
-              placeholder="Vaše jméno"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="h-11 bg-background/60 border-border/40 rounded-lg focus:border-[hsl(45_80%_50%/0.5)] focus:ring-[hsl(45_80%_50%/0.15)] transition-colors"
-              disabled={isSubmitting}
-              maxLength={100}
-            />
+            </p>
           </div>
+        </div>
+      )}
 
-          {/* Email Field */}
-          <div className="space-y-2.5">
-            <Label htmlFor="support-email" className="text-foreground/90 text-sm font-medium">
-              E-mail
-            </Label>
-            <Input
-              id="support-email"
-              type="email"
-              placeholder="vas@email.cz"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-11 bg-background/60 border-border/40 rounded-lg focus:border-[hsl(45_80%_50%/0.5)] focus:ring-[hsl(45_80%_50%/0.15)] transition-colors"
-              disabled={isSubmitting}
-              maxLength={255}
-            />
-          </div>
+      <form className="space-y-6" onSubmit={handleSubmit}>
+        {/* Name Field */}
+        <div className="space-y-2">
+          <Label htmlFor="support-name" className="text-foreground/80 text-sm">
+            Jméno
+          </Label>
+          <Input
+            id="support-name"
+            type="text"
+            placeholder="Vaše jméno"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-11 bg-muted/30 border-border/50 rounded-md focus:border-primary/50 focus:ring-primary/20 transition-colors"
+            disabled={isSubmitting}
+            maxLength={100}
+          />
+        </div>
 
-          {/* Category Select */}
-          <div className="space-y-2.5">
-            <Label htmlFor="support-category" className="text-foreground/90 text-sm font-medium">
-              Kategorie
-            </Label>
-            <Select value={category} onValueChange={setCategory} disabled={isSubmitting}>
-              <SelectTrigger className="h-11 bg-background/60 border-border/40 rounded-lg focus:border-[hsl(45_80%_50%/0.5)] focus:ring-[hsl(45_80%_50%/0.15)] transition-colors">
-                <SelectValue placeholder="Vyberte kategorii" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="technical">Technický problém</SelectItem>
-                <SelectItem value="payment">Platby a transakce</SelectItem>
-                <SelectItem value="account">Účet a přihlášení</SelectItem>
-                <SelectItem value="contest">Soutěže a výhry</SelectItem>
-                <SelectItem value="other">Jiné</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Email Field */}
+        <div className="space-y-2">
+          <Label htmlFor="support-email" className="text-foreground/80 text-sm">
+            E-mail
+          </Label>
+          <Input
+            id="support-email"
+            type="email"
+            placeholder="vas@email.cz"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="h-11 bg-muted/30 border-border/50 rounded-md focus:border-primary/50 focus:ring-primary/20 transition-colors"
+            disabled={isSubmitting}
+            maxLength={255}
+          />
+        </div>
 
-          {/* Message Textarea */}
-          <div className="space-y-2.5">
-            <Label htmlFor="support-message" className="text-foreground/90 text-sm font-medium">
-              Zpráva
-            </Label>
-            <Textarea
-              id="support-message"
-              placeholder="Popište váš problém..."
-              rows={5}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="bg-background/60 border-border/40 rounded-lg focus:border-[hsl(45_80%_50%/0.5)] focus:ring-[hsl(45_80%_50%/0.15)] resize-none leading-relaxed transition-colors"
-              disabled={isSubmitting}
-              maxLength={2000}
-            />
-          </div>
+        {/* Category Select */}
+        <div className="space-y-2">
+          <Label htmlFor="support-category" className="text-foreground/80 text-sm">
+            Kategorie
+          </Label>
+          <Select value={category} onValueChange={setCategory} disabled={isSubmitting}>
+            <SelectTrigger className="h-11 bg-muted/30 border-border/50 rounded-md focus:border-primary/50 focus:ring-primary/20 transition-colors">
+              <SelectValue placeholder="Vyberte kategorii" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="technical">Technický problém</SelectItem>
+              <SelectItem value="payment">Platby a transakce</SelectItem>
+              <SelectItem value="account">Účet a přihlášení</SelectItem>
+              <SelectItem value="contest">Soutěže a výhry</SelectItem>
+              <SelectItem value="other">Jiné</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-          {/* Submit Button */}
-          <div className="pt-2">
-            <Button
-              type="submit"
-              variant="premium"
-              className="w-full md:w-auto h-11 px-10 rounded-lg text-base font-medium"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Odesílám...
-                </>
-              ) : (
-                'Odeslat'
-              )}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        {/* Message Textarea */}
+        <div className="space-y-2">
+          <Label htmlFor="support-message" className="text-foreground/80 text-sm">
+            Zpráva
+          </Label>
+          <Textarea
+            id="support-message"
+            placeholder="Popište váš problém..."
+            rows={5}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            className="bg-muted/30 border-border/50 rounded-md focus:border-primary/50 focus:ring-primary/20 resize-none leading-relaxed transition-colors"
+            disabled={isSubmitting}
+            maxLength={2000}
+          />
+        </div>
+
+        {/* Submit Button */}
+        <div className="pt-2">
+          <Button
+            type="submit"
+            variant="premium"
+            className="h-11 px-8 rounded-md text-sm font-medium"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Odesílám...
+              </>
+            ) : (
+              'Odeslat'
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 };
 
