@@ -101,8 +101,8 @@ export const Footer: React.FC = () => {
           <p>IČO: 177 95 851 | Sídlo: Na Folimance 2155/15, Vinohrady, 120 00 Praha 2</p>
           <p>Zapsáno v obchodním rejstříku vedeném Městským soudem v Praze, oddíl C, vložka 376856</p>
           <p>
-            <span className="font-medium text-foreground">E-mail:</span> <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a> | 
-            <span className="font-medium text-foreground"> Tel:</span> <a href="tel:+420776532562" className="text-primary hover:underline">+420 776 532 562</a>
+            <span className="font-medium text-heading-gold">E-mail:</span> <a href="mailto:podpora@onemil.cz" className="text-heading-gold hover:underline">podpora@onemil.cz</a> | 
+            <span className="font-medium text-heading-gold"> Tel:</span> <a href="tel:+420776532562" className="text-heading-gold hover:underline">+420 776 532 562</a>
           </p>
         </div>
       </div>
