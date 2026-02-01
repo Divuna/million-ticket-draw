@@ -37,11 +37,11 @@ const ContentPage: React.FC = () => {
   const showSupportForm = section === 'support' && normalizedSlug === 'nahlasit-problem';
   const showContactForm = section === 'support' && normalizedSlug === 'kontakt';
 
-  // Transform content to structured HTML
+  // Transform content to structured HTML (unified Legal pages format)
   const transformedContent = useMemo(() => {
     if (!page?.content) return '';
-    return transformContentToHtml(page.content, page.section, page.slug);
-  }, [page?.content, page?.section, page?.slug]);
+    return transformContentToHtml(page.content);
+  }, [page?.content]);
 
   useEffect(() => {
     const fetchPage = async () => {

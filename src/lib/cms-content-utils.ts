@@ -1,6 +1,7 @@
 /**
  * CMS Content Transformation Utilities
- * Transforms plain text content into structured HTML for CMS pages.
+ * Transforms plain text content into structured HTML for all CMS pages.
+ * Uses the Legal pages format as the single unified rendering style.
  */
 
 /**
@@ -12,99 +13,18 @@ export const normalizeSlug = (str: string): string => {
 };
 
 /**
- * Transforms the "nahlásit-problém" support page content into structured HTML.
- * This page has a specific format with section headings and bullet lists.
- */
-const transformSupportPageContent = (content: string): string => {
-  const lines = content.replace(/\r\n/g, '\n').split('\n');
-  const result: string[] = [];
-  let inList = false;
-  
-  const sectionHeadings = [
-    'Formulář slouží k nahlášení například:',
-    'Co se stane po odeslání',
-    'Doporučení pro rychlejší vyřešení',
-    'Jiný způsob kontaktu',
-    'Jaký typ problému řešíte?'
-  ];
-  
-  const listStarters = [
-    'Po odeslání formuláře:',
-    'Do zprávy uveďte co nejpřesnější informace, například:'
-  ];
-
-  const closeList = () => {
-    if (inList) {
-      result.push('</ul>');
-      inList = false;
-    }
-  };
-
-  lines.forEach((line) => {
-    const trimmedLine = line.trim();
-    
-    if (!trimmedLine) {
-      closeList();
-      return;
-    }
-
-    if (sectionHeadings.includes(trimmedLine)) {
-      closeList();
-      result.push(`<h3 class="cms-section-heading">${trimmedLine}</h3>`);
-      return;
-    }
-
-    if (listStarters.includes(trimmedLine)) {
-      closeList();
-      result.push(`<p class="cms-list-intro">${trimmedLine}</p>`);
-      return;
-    }
-
-    const isListItem = 
-      trimmedLine.endsWith(',') || 
-      (trimmedLine.match(/^[a-záčďéěíňóřšťúůýž]/) && !trimmedLine.includes('Pokud')) ||
-      trimmedLine.startsWith('obdržíte') ||
-      trimmedLine.startsWith('váš dotaz') ||
-      trimmedLine.startsWith('v případě potřeby') ||
-      trimmedLine.startsWith('e-mail,') ||
-      trimmedLine.startsWith('popis') ||
-      trimmedLine.startsWith('kdy k') ||
-      trimmedLine.startsWith('případně');
-
-    if (isListItem) {
-      if (!inList) {
-        result.push('<ul class="cms-bullet-list">');
-        inList = true;
-      }
-      const cleanText = trimmedLine.replace(/,$/, '');
-      result.push(`<li>${cleanText}</li>`);
-      return;
-    }
-
-    closeList();
-    result.push(`<p>${trimmedLine}</p>`);
-  });
-
-  closeList();
-  return result.join('\n');
-};
-
-/**
- * Transforms plain text content into structured HTML for FAQ/legal documents.
+ * Transforms plain text content into structured HTML for ALL CMS pages.
+ * Uses the Legal pages format as the unified rendering style:
  * - Lines starting with "1.", "2.", "1.1", etc. become questions with gold-accented numbers
  * - Text following until the next numbered line becomes the answer
  * - Empty lines split content into paragraphs
+ * 
+ * This single transformation is applied identically to Info, Support, and Legal pages.
  */
-export const transformContentToHtml = (content: string, section?: string, slug?: string): string => {
+export const transformContentToHtml = (content: string): string => {
   // If content already contains significant HTML tags, return as-is
   if (/<(div|section|article|h[1-6]|ul|ol|table)[^>]*>/i.test(content)) {
     return content;
-  }
-
-  // Special handling for the support/nahlásit-problém page
-  const normalizedSlug = slug ? normalizeSlug(slug) : '';
-  if (section === 'support' && normalizedSlug === 'nahlasit-problem') {
-    return transformSupportPageContent(content);
   }
 
   // Normalize line endings and split into lines
