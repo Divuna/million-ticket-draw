@@ -93,21 +93,29 @@ const transformContentToHtml = (content: string): string => {
   return result.join('\n');
 };
 
+/**
+ * Normalizes a string by removing diacritics (accents) for comparison.
+ * e.g., "nahlásit-problém" → "nahlasit-problem"
+ */
+const normalizeSlug = (str: string): string => {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+};
+
 const ContentPage: React.FC = () => {
   const { section, slug } = useParams<{ section: string; slug: string }>();
   const [page, setPage] = useState<ContentPageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
+  // Check if this is the support form page (normalize slug to handle diacritics)
+  const normalizedSlug = slug ? normalizeSlug(slug) : '';
+  const showSupportForm = section === 'support' && normalizedSlug === 'nahlasit-problem';
+
   // Transform content to structured HTML
   const transformedContent = useMemo(() => {
     if (!page?.content) return '';
     return transformContentToHtml(page.content);
   }, [page?.content]);
-
-  // Debug logging to verify route params
-  console.log('[ContentPage] Route params:', { section, slug });
-  console.log('[ContentPage] Should show support form:', section === 'support' && slug === 'nahlasit-problem');
 
   useEffect(() => {
     const fetchPage = async () => {
@@ -272,8 +280,8 @@ const ContentPage: React.FC = () => {
               />
             </div>
             
-            {/* Support Form - Only on nahlasit-problem page */}
-            {section === 'support' && slug === 'nahlasit-problem' && (
+            {/* Support Form - Only on nahlasit-problem page (handles diacritics) */}
+            {showSupportForm && (
               <div className="px-8 md:px-12 pb-10 md:pb-12">
                 <SupportForm />
               </div>
