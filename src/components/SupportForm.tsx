@@ -75,18 +75,18 @@ const SupportForm: React.FC = () => {
   };
 
   return (
-    <Card className="mt-8 border-border/30 bg-card/60 backdrop-blur-sm">
+    <Card className="mt-10 border-border/30 bg-gradient-to-b from-card/60 to-card/40 backdrop-blur-sm shadow-[0_8px_32px_hsl(222_50%_3%/0.4)]">
       <CardHeader className="pb-4 pt-8 px-8 md:px-10">
-        <CardTitle className="text-xl md:text-2xl font-heading text-foreground">
+        <CardTitle className="text-xl md:text-2xl font-heading bg-gradient-to-r from-[hsl(var(--heading-gold))] via-[hsl(45_85%_60%)] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent">
           Formulář pro nahlášení problému
         </CardTitle>
       </CardHeader>
       <CardContent className="px-8 md:px-10 pb-8">
         {/* Status Messages */}
         {submitStatus === 'success' && (
-          <Alert className="mb-8 border-primary/30 bg-muted/40 rounded-xl">
-            <CheckCircle2 className="h-5 w-5 text-primary" />
-            <AlertDescription className="text-foreground/90 font-medium leading-relaxed">
+          <Alert className="mb-8 border-[hsl(45_80%_45%/0.4)] bg-[hsl(220_30%_12%)] rounded-xl">
+            <CheckCircle2 className="h-5 w-5 text-[hsl(45_85%_55%)]" />
+            <AlertDescription className="text-[hsl(45_85%_65%)] font-medium leading-relaxed">
               {statusMessage}
             </AlertDescription>
           </Alert>
@@ -113,7 +113,7 @@ const SupportForm: React.FC = () => {
               placeholder="Vaše jméno"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="h-11 bg-background/60 border-border/40 rounded-lg focus:border-primary/50 focus:ring-primary/15 transition-colors"
+              className="h-11 bg-background/60 border-border/40 rounded-lg focus:border-[hsl(45_80%_50%/0.5)] focus:ring-[hsl(45_80%_50%/0.15)] transition-colors"
               disabled={isSubmitting}
               maxLength={100}
             />
@@ -130,7 +130,7 @@ const SupportForm: React.FC = () => {
               placeholder="vas@email.cz"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-11 bg-background/60 border-border/40 rounded-lg focus:border-primary/50 focus:ring-primary/15 transition-colors"
+              className="h-11 bg-background/60 border-border/40 rounded-lg focus:border-[hsl(45_80%_50%/0.5)] focus:ring-[hsl(45_80%_50%/0.15)] transition-colors"
               disabled={isSubmitting}
               maxLength={255}
             />
@@ -142,7 +142,7 @@ const SupportForm: React.FC = () => {
               Kategorie
             </Label>
             <Select value={category} onValueChange={setCategory} disabled={isSubmitting}>
-              <SelectTrigger className="h-11 bg-background/60 border-border/40 rounded-lg focus:border-primary/50 focus:ring-primary/15 transition-colors">
+              <SelectTrigger className="h-11 bg-background/60 border-border/40 rounded-lg focus:border-[hsl(45_80%_50%/0.5)] focus:ring-[hsl(45_80%_50%/0.15)] transition-colors">
                 <SelectValue placeholder="Vyberte kategorii" />
               </SelectTrigger>
               <SelectContent>
@@ -166,7 +166,7 @@ const SupportForm: React.FC = () => {
               rows={5}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="bg-background/60 border-border/40 rounded-lg focus:border-primary/50 focus:ring-primary/15 resize-none leading-relaxed transition-colors"
+              className="bg-background/60 border-border/40 rounded-lg focus:border-[hsl(45_80%_50%/0.5)] focus:ring-[hsl(45_80%_50%/0.15)] resize-none leading-relaxed transition-colors"
               disabled={isSubmitting}
               maxLength={2000}
             />

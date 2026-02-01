@@ -282,8 +282,7 @@ const ContentPage: React.FC = () => {
             
             {/* Support Form - Only on nahlasit-problem page (handles diacritics) */}
             {showSupportForm && (
-              <div className="px-8 md:px-12 pb-10 md:pb-12 pt-4">
-                <Separator className="mb-8 bg-border/30" />
+              <div className="px-8 md:px-12 pb-10 md:pb-12">
                 <SupportForm />
               </div>
             )}
