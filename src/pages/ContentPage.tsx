@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { Skeleton } from '@/components/ui/skeleton';
+import SupportForm from '@/components/SupportForm';
 import { Separator } from '@/components/ui/separator';
 
 interface ContentPageData {
@@ -266,6 +267,13 @@ const ContentPage: React.FC = () => {
                 dangerouslySetInnerHTML={{ __html: transformedContent }}
               />
             </div>
+            
+            {/* Support Form - Only on nahlasit-problem page */}
+            {section === 'support' && slug === 'nahlasit-problem' && (
+              <div className="px-8 md:px-12 pb-10 md:pb-12">
+                <SupportForm />
+              </div>
+            )}
           </article>
         ) : null}
       </main>
