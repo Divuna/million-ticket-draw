@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { Facebook, Twitter, Instagram } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useFooterLinks } from '@/hooks/useFooterLinks';
 
 export const Footer: React.FC = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
+  const { links } = useFooterLinks();
 
   return (
     <footer className="mt-20 pt-10 bg-[hsl(220_50%_5%)]">
@@ -31,94 +33,45 @@ export const Footer: React.FC = () => {
             </div>
           </div>
 
-          {/* Information Links */}
+          {/* Information Links - from CMS */}
           <div className="space-y-4">
             <h4 className="font-semibold text-base text-foreground">Informace</h4>
             <ul className="space-y-2.5 text-sm">
-              <li>
-                <Link to="/info/o-spolecnosti" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                  O společnosti
-                </Link>
-              </li>
-              <li>
-                <Link to="/info/jak-to-funguje" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                  Jak to funguje
-                </Link>
-              </li>
-              <li>
-                <Link to="/info/nase-mise" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                  Naše mise
-                </Link>
-              </li>
+              {links.info.map((page) => (
+                <li key={page.id}>
+                  <Link to={`/${page.section}/${page.slug}`} className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                    {page.title}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* FAQ & Support */}
+          {/* FAQ & Support - from CMS */}
           <div className="space-y-4">
             <h4 className="font-semibold text-base text-foreground">Podpora</h4>
             <ul className="space-y-2.5 text-sm">
-              <li>
-                <Link to="/support/faq" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                  Často kladené otázky
-                </Link>
-              </li>
-              <li>
-                <Link to="/support/napoveda" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                  Centrum nápovědy
-                </Link>
-              </li>
-              <li>
-                <Link to="/support/kontakt" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                  Kontaktujte nás
-                </Link>
-              </li>
-              <li>
-                <Link to="/support/nahlasit-problem" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                  Nahlásit problém
-                </Link>
-              </li>
-              <li>
-                <Link to="/support/zivy-chat" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                  Živý chat
-                </Link>
-              </li>
-          </ul>
+              {links.support.map((page) => (
+                <li key={page.id}>
+                  <Link to={`/${page.section}/${page.slug}`} className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                    {page.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          {/* Legal Terms */}
+          {/* Legal Terms - from CMS */}
           <div className="space-y-4">
             <h4 className="font-semibold text-base text-foreground">Právní podmínky</h4>
             <ul className="space-y-2.5 text-sm">
-              <li>
-                <Link to="/terms" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                  Obchodní podmínky
-                </Link>
-              </li>
-              <li>
-                <Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                  Zásady ochrany osobních údajů
-                </Link>
-              </li>
-              <li>
-                <Link to="/legal/pravidla-soutezi" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                  Pravidla soutěží
-                </Link>
-              </li>
-              <li>
-                <Link to="/legal/cookies" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                  Zásady použití cookies
-                </Link>
-              </li>
-              <li>
-                <Link to="/legal/autorska-prava" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                  Autorská práva
-                </Link>
-              </li>
-              <li>
-                <Link to="/delete-account" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                  Smazání účtu
-                </Link>
-              </li>
+              {links.legal.map((page) => (
+                <li key={page.id}>
+                  <Link to={`/${page.section}/${page.slug}`} className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                    {page.title}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
