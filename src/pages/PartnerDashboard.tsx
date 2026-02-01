@@ -1189,20 +1189,20 @@ const PartnerDashboard = () => {
               <div className="
                 prose prose-lg dark:prose-invert max-w-none py-6
                 
-                /* Main Section Headings - Bold, large, extra spacing */
-                prose-headings:font-heading prose-headings:font-bold
-                prose-h1:text-2xl prose-h1:md:text-[1.75rem] prose-h1:mt-10 prose-h1:first:mt-0 prose-h1:mb-6
-                prose-h1:text-[hsl(var(--heading-gold))] prose-h1:border-b-2 prose-h1:border-[hsl(var(--heading-gold))]/30 prose-h1:pb-4
-                prose-h1:tracking-tight
+                /* Main Section Headings (# or ## in MD) - Gold, bold, extra spacing */
+                prose-headings:font-heading prose-headings:font-bold prose-headings:tracking-tight
                 
-                /* Sub-section Headings - Distinct but secondary */
-                prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-foreground 
-                prose-h2:border-b prose-h2:border-border/25 prose-h2:pb-3
-                prose-h2:bg-muted/15 prose-h2:-mx-3 prose-h2:px-3 prose-h2:pt-3 prose-h2:rounded-t-lg
+                prose-h1:text-2xl prose-h1:md:text-[1.75rem] prose-h1:mt-12 prose-h1:first:mt-0 prose-h1:mb-6
+                prose-h1:text-[hsl(var(--heading-gold))] prose-h1:border-b-2 prose-h1:border-[hsl(var(--heading-gold))]/40 prose-h1:pb-4
                 
-                /* Tertiary Headings */
-                prose-h3:text-lg prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-foreground/90 prose-h3:font-semibold
-                prose-h4:text-base prose-h4:mt-6 prose-h4:mb-2 prose-h4:text-foreground/85 prose-h4:font-semibold
+                prose-h2:text-xl prose-h2:md:text-[1.35rem] prose-h2:mt-10 prose-h2:mb-5
+                prose-h2:text-[hsl(var(--heading-gold))] prose-h2:border-b prose-h2:border-[hsl(var(--heading-gold))]/25 prose-h2:pb-3
+                
+                prose-h3:text-lg prose-h3:mt-8 prose-h3:mb-4
+                prose-h3:text-[hsl(var(--heading-gold))] prose-h3:font-semibold
+                
+                prose-h4:text-base prose-h4:mt-6 prose-h4:mb-3
+                prose-h4:text-[hsl(var(--heading-gold))]/90 prose-h4:font-semibold
                 
                 /* Body text - Readable paragraphs with good spacing */
                 prose-p:text-muted-foreground prose-p:leading-[1.85] prose-p:mb-5 prose-p:text-[15px]
@@ -1210,7 +1210,7 @@ const PartnerDashboard = () => {
                 /* Bullet Lists - Gold markers, generous spacing */
                 prose-ul:my-5 prose-ul:mb-6 prose-ul:space-y-3 prose-ul:pl-6
                 [&_ul>li]:text-muted-foreground [&_ul>li]:leading-[1.75] [&_ul>li]:text-[15px]
-                [&_ul>li]:pl-2 [&_ul>li::marker]:text-[hsl(var(--heading-gold))] [&_ul>li::marker]:text-lg
+                [&_ul>li]:pl-2 [&_ul>li::marker]:text-[hsl(var(--heading-gold))] [&_ul>li::marker]:text-lg [&_ul>li::marker]:font-bold
                 
                 /* Numbered Lists - Bold gold numbers, step-like spacing */
                 prose-ol:my-5 prose-ol:mb-6 prose-ol:space-y-4 prose-ol:pl-6 prose-ol:list-decimal
@@ -1238,19 +1238,19 @@ const PartnerDashboard = () => {
                 prose-strong:text-foreground prose-strong:font-bold
                 
                 /* Blockquotes - Warning/Info callout style */
-                prose-blockquote:border-l-4 prose-blockquote:border-amber-500/60 
-                prose-blockquote:bg-amber-500/10 prose-blockquote:py-3 prose-blockquote:px-5 
+                prose-blockquote:border-l-4 prose-blockquote:border-[hsl(var(--heading-gold))]/50 
+                prose-blockquote:bg-[hsl(var(--heading-gold))]/5 prose-blockquote:py-3 prose-blockquote:px-5 
                 prose-blockquote:rounded-r-xl prose-blockquote:not-italic prose-blockquote:text-foreground/90
                 prose-blockquote:my-6 prose-blockquote:shadow-sm
                 [&_blockquote_p]:mb-0 [&_blockquote_p]:text-foreground/90
                 
                 /* Horizontal rules - Clear section breaks */
-                prose-hr:border-border/40 prose-hr:my-10
+                prose-hr:border-[hsl(var(--heading-gold))]/20 prose-hr:my-10
                 
                 /* Tables - if used in docs */
                 prose-table:border-collapse prose-table:w-full prose-table:my-6
                 prose-th:bg-muted/40 prose-th:px-4 prose-th:py-3 prose-th:text-left prose-th:font-semibold 
-                prose-th:text-foreground/90 prose-th:border-b prose-th:border-border/30
+                prose-th:text-[hsl(var(--heading-gold))] prose-th:border-b prose-th:border-[hsl(var(--heading-gold))]/30
                 prose-td:px-4 prose-td:py-3 prose-td:border-b prose-td:border-border/20 prose-td:text-muted-foreground
               ">
                 <ReactMarkdown
