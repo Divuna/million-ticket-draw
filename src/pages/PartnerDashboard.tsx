@@ -1189,73 +1189,73 @@ const PartnerDashboard = () => {
               <div className="
                 prose prose-base dark:prose-invert max-w-none py-6
                 
-                /* Unified heading hierarchy - Subtle gold, semibold, consistent sizing */
+                /* Unified heading hierarchy - Subtle muted gold, semibold, consistent sizing */
                 prose-headings:font-heading prose-headings:font-semibold prose-headings:tracking-tight
                 
                 /* H1 - Document title only (rarely used) */
-                prose-h1:text-xl prose-h1:md:text-[1.375rem] prose-h1:mt-10 prose-h1:first:mt-0 prose-h1:mb-5
-                prose-h1:text-[hsl(var(--heading-gold))]/90 prose-h1:border-b prose-h1:border-border/30 prose-h1:pb-3
+                prose-h1:text-lg prose-h1:md:text-xl prose-h1:mt-8 prose-h1:first:mt-0 prose-h1:mb-4
+                prose-h1:text-[hsl(var(--heading-gold-soft))] prose-h1:border-b prose-h1:border-border/25 prose-h1:pb-3
                 
-                /* H2 - Main sections (## 1. K čemu slouží...) - All same size */
-                prose-h2:text-lg prose-h2:md:text-[1.2rem] prose-h2:mt-10 prose-h2:first:mt-0 prose-h2:mb-4
-                prose-h2:text-[hsl(var(--heading-gold))]/85 prose-h2:border-b prose-h2:border-border/25 prose-h2:pb-3
+                /* H2 - Main sections (## 1. K čemu slouží...) - All same size, muted gold */
+                prose-h2:text-base prose-h2:md:text-[1.0625rem] prose-h2:mt-8 prose-h2:first:mt-0 prose-h2:mb-3
+                prose-h2:text-[hsl(var(--heading-gold-soft))] prose-h2:border-b prose-h2:border-border/20 prose-h2:pb-2.5
                 
-                /* H3 - Subsections (### Endpoint, ### Body...) */
-                prose-h3:text-base prose-h3:md:text-[1.05rem] prose-h3:mt-7 prose-h3:mb-3
-                prose-h3:text-[hsl(var(--heading-gold))]/80
+                /* H3 - Subsections (### Endpoint, ### Body...) - Even more subtle */
+                prose-h3:text-[0.9375rem] prose-h3:md:text-base prose-h3:mt-6 prose-h3:mb-2.5
+                prose-h3:text-[hsl(var(--heading-gold-muted))]
                 
                 /* H4 - Minor subsections */
-                prose-h4:text-[0.95rem] prose-h4:mt-5 prose-h4:mb-2
-                prose-h4:text-[hsl(var(--heading-gold))]/75
+                prose-h4:text-[0.875rem] prose-h4:mt-4 prose-h4:mb-2
+                prose-h4:text-[hsl(var(--heading-gold-muted))]
                 
                 /* Body text - Readable paragraphs with consistent spacing */
-                prose-p:text-muted-foreground prose-p:leading-[1.8] prose-p:mb-4 prose-p:text-[0.9375rem]
+                prose-p:text-muted-foreground prose-p:leading-[1.75] prose-p:mb-3.5 prose-p:text-[0.9rem]
                 
-                /* Bullet Lists - Subtle gold markers */
-                prose-ul:my-4 prose-ul:mb-5 prose-ul:space-y-2.5 prose-ul:pl-5
-                [&_ul>li]:text-muted-foreground [&_ul>li]:leading-[1.7] [&_ul>li]:text-[0.9375rem]
-                [&_ul>li]:pl-1.5 [&_ul>li::marker]:text-[hsl(var(--heading-gold))]/70 [&_ul>li::marker]:text-base
+                /* Bullet Lists - Subtle muted gold markers */
+                prose-ul:my-3 prose-ul:mb-4 prose-ul:space-y-2 prose-ul:pl-5
+                [&_ul>li]:text-muted-foreground [&_ul>li]:leading-[1.65] [&_ul>li]:text-[0.9rem]
+                [&_ul>li]:pl-1 [&_ul>li::marker]:text-[hsl(var(--heading-gold-muted))]
                 
                 /* Numbered Lists - Consistent with bullet lists */
-                prose-ol:my-4 prose-ol:mb-5 prose-ol:space-y-2.5 prose-ol:pl-5 prose-ol:list-decimal
-                [&_ol>li]:text-muted-foreground [&_ol>li]:leading-[1.7] [&_ol>li]:text-[0.9375rem]
-                [&_ol>li]:pl-1.5 [&_ol>li::marker]:text-[hsl(var(--heading-gold))]/70 [&_ol>li::marker]:font-medium
+                prose-ol:my-3 prose-ol:mb-4 prose-ol:space-y-2 prose-ol:pl-5 prose-ol:list-decimal
+                [&_ol>li]:text-muted-foreground [&_ol>li]:leading-[1.65] [&_ol>li]:text-[0.9rem]
+                [&_ol>li]:pl-1 [&_ol>li::marker]:text-[hsl(var(--heading-gold-muted))] [&_ol>li::marker]:font-medium
                 
                 /* Nested lists - Tighter spacing */
-                [&_ul_ul]:mt-2 [&_ul_ul]:mb-1 [&_ol_ol]:mt-2 [&_ol_ol]:mb-1
-                [&_ul_ol]:mt-2 [&_ol_ul]:mt-2
+                [&_ul_ul]:mt-1.5 [&_ul_ul]:mb-0.5 [&_ol_ol]:mt-1.5 [&_ol_ol]:mb-0.5
+                [&_ul_ol]:mt-1.5 [&_ol_ul]:mt-1.5
                 
-                /* Code blocks - Clean technical style */
-                prose-code:bg-muted/60 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm 
-                prose-code:text-[hsl(var(--heading-gold))]/90 prose-code:font-mono
+                /* Code blocks - Clean technical style with subtle gold */
+                prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-[0.8125rem] 
+                prose-code:text-[hsl(var(--heading-gold-soft))] prose-code:font-mono
                 prose-code:before:content-none prose-code:after:content-none
-                prose-pre:bg-muted/40 prose-pre:border prose-pre:border-border/30 prose-pre:rounded-lg 
-                prose-pre:p-4 prose-pre:my-5 prose-pre:overflow-x-auto
-                [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-sm [&_pre_code]:leading-relaxed
-                [&_pre_code]:text-foreground/85
+                prose-pre:bg-muted/30 prose-pre:border prose-pre:border-border/25 prose-pre:rounded-lg 
+                prose-pre:p-3.5 prose-pre:my-4 prose-pre:overflow-x-auto
+                [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-[0.8125rem] [&_pre_code]:leading-relaxed
+                [&_pre_code]:text-foreground/80
                 
-                /* Links - Subtle gold */
-                prose-a:text-[hsl(var(--heading-gold))]/85 prose-a:no-underline hover:prose-a:underline 
+                /* Links - Subtle muted gold */
+                prose-a:text-[hsl(var(--heading-gold-soft))] prose-a:no-underline hover:prose-a:underline 
                 prose-a:font-medium prose-a:transition-colors
                 
                 /* Strong/Bold */
-                prose-strong:text-foreground/95 prose-strong:font-semibold
+                prose-strong:text-foreground/90 prose-strong:font-semibold
                 
                 /* Blockquotes - Subtle callout style */
-                prose-blockquote:border-l-3 prose-blockquote:border-[hsl(var(--heading-gold))]/40 
-                prose-blockquote:bg-[hsl(var(--heading-gold))]/5 prose-blockquote:py-2.5 prose-blockquote:px-4 
-                prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:text-foreground/85
-                prose-blockquote:my-5
-                [&_blockquote_p]:mb-0 [&_blockquote_p]:text-foreground/85
+                prose-blockquote:border-l-2 prose-blockquote:border-[hsl(var(--heading-gold-muted))] 
+                prose-blockquote:bg-muted/20 prose-blockquote:py-2 prose-blockquote:px-3.5 
+                prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:text-foreground/80
+                prose-blockquote:my-4
+                [&_blockquote_p]:mb-0 [&_blockquote_p]:text-foreground/80
                 
                 /* Horizontal rules - Subtle section breaks */
-                prose-hr:border-border/30 prose-hr:my-8
+                prose-hr:border-border/25 prose-hr:my-6
                 
                 /* Tables */
-                prose-table:border-collapse prose-table:w-full prose-table:my-5
-                prose-th:bg-muted/30 prose-th:px-3 prose-th:py-2.5 prose-th:text-left prose-th:font-medium 
-                prose-th:text-[hsl(var(--heading-gold))]/80 prose-th:border-b prose-th:border-border/30
-                prose-td:px-3 prose-td:py-2.5 prose-td:border-b prose-td:border-border/20 prose-td:text-muted-foreground
+                prose-table:border-collapse prose-table:w-full prose-table:my-4
+                prose-th:bg-muted/25 prose-th:px-2.5 prose-th:py-2 prose-th:text-left prose-th:font-medium prose-th:text-[0.8125rem]
+                prose-th:text-[hsl(var(--heading-gold-muted))] prose-th:border-b prose-th:border-border/25
+                prose-td:px-2.5 prose-td:py-2 prose-td:border-b prose-td:border-border/15 prose-td:text-muted-foreground prose-td:text-[0.875rem]
               ">
                 <ReactMarkdown
                   components={{
