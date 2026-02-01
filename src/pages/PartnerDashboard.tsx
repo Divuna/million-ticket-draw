@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1169,30 +1170,67 @@ const PartnerDashboard = () => {
 
       {/* API Documentation Modal */}
       <Dialog open={apiDocsModalOpen} onOpenChange={setApiDocsModalOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-primary" />
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] bg-gradient-to-b from-card/95 to-card/80 backdrop-blur-sm border-border/40">
+          <DialogHeader className="pb-4 border-b border-border/30">
+            <DialogTitle className="flex items-center gap-2 text-xl font-heading bg-gradient-to-r from-[hsl(var(--heading-gold))] via-[hsl(45_85%_60%)] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent">
+              <BookOpen className="w-5 h-5 text-[hsl(var(--heading-gold))]" />
               Dokumentace API
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-muted-foreground">
               Návody a reference pro integraci MioCoinů do vašeho e-shopu
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh] pr-4">
             {apiDocsLoading ? (
               <div className="flex justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <Loader2 className="w-6 h-6 animate-spin text-[hsl(var(--heading-gold))]" />
               </div>
             ) : (
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <pre className="whitespace-pre-wrap font-sans text-sm text-foreground leading-relaxed bg-transparent p-0 m-0">
-                  {apiDocumentation}
-                </pre>
+              <div className="
+                prose prose-lg dark:prose-invert max-w-none py-4
+                
+                /* Headings - Gold accented with proper hierarchy */
+                prose-headings:font-heading prose-headings:font-semibold
+                prose-h1:text-2xl prose-h1:mt-6 prose-h1:mb-4 prose-h1:text-[hsl(var(--heading-gold))] prose-h1:border-b prose-h1:border-border/30 prose-h1:pb-3
+                prose-h2:text-xl prose-h2:mt-8 prose-h2:mb-3 prose-h2:text-foreground prose-h2:border-b prose-h2:border-border/20 prose-h2:pb-2
+                prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-2 prose-h3:text-foreground/90
+                prose-h4:text-base prose-h4:mt-4 prose-h4:mb-2 prose-h4:text-foreground/85 prose-h4:font-medium
+                
+                /* Body text - Readable paragraphs */
+                prose-p:text-muted-foreground prose-p:leading-[1.8] prose-p:mb-4 prose-p:text-[15px]
+                
+                /* Lists - Gold markers */
+                prose-ul:my-4 prose-ul:space-y-2 prose-ul:pl-5
+                prose-ol:my-4 prose-ol:space-y-2 prose-ol:pl-5
+                prose-li:text-muted-foreground prose-li:leading-[1.7] prose-li:text-[15px]
+                [&_ul>li::marker]:text-[hsl(var(--heading-gold))]
+                [&_ol>li::marker]:text-[hsl(var(--heading-gold))] [&_ol>li::marker]:font-semibold
+                
+                /* Code blocks - Dark styled */
+                prose-code:bg-muted/60 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:text-foreground/90 prose-code:font-mono prose-code:before:content-none prose-code:after:content-none
+                prose-pre:bg-muted/40 prose-pre:border prose-pre:border-border/30 prose-pre:rounded-lg prose-pre:p-4 prose-pre:my-4 prose-pre:overflow-x-auto
+                [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-sm [&_pre_code]:leading-relaxed
+                
+                /* Links */
+                prose-a:text-[hsl(var(--heading-gold))] prose-a:no-underline hover:prose-a:underline prose-a:font-medium
+                
+                /* Strong/Bold */
+                prose-strong:text-foreground prose-strong:font-semibold
+                
+                /* Blockquotes */
+                prose-blockquote:border-l-4 prose-blockquote:border-[hsl(var(--heading-gold))]/40 
+                prose-blockquote:bg-muted/20 prose-blockquote:py-2 prose-blockquote:px-4 
+                prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:text-muted-foreground
+                prose-blockquote:my-4
+                
+                /* Horizontal rules */
+                prose-hr:border-border/30 prose-hr:my-6
+              ">
+                <ReactMarkdown>{apiDocumentation}</ReactMarkdown>
               </div>
             )}
           </ScrollArea>
-          <DialogFooter>
+          <DialogFooter className="pt-4 border-t border-border/30">
             <Button variant="outline" onClick={() => setApiDocsModalOpen(false)}>
               Zavřít
             </Button>
