@@ -656,8 +656,33 @@ const Homepage = () => {
           </Card>
 
           {/* Right Column - Poslední výherci */}
-          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-amber-300/20 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
-            <CardContent className="p-5 h-full flex flex-col">
+          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-amber-300/20 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
+            {/* Stars/Particles Background */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+              {/* Star pattern layer */}
+              <div className="absolute inset-0" style={{
+                background: `
+                  radial-gradient(1.5px 1.5px at 10% 15%, hsla(45, 80%, 70%, 0.8) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 25% 35%, hsla(45, 70%, 60%, 0.6) 50%, transparent 100%),
+                  radial-gradient(1.5px 1.5px at 45% 10%, hsla(45, 85%, 75%, 0.9) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 60% 45%, hsla(45, 75%, 65%, 0.5) 50%, transparent 100%),
+                  radial-gradient(2px 2px at 75% 20%, hsla(45, 90%, 80%, 1) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 85% 55%, hsla(45, 70%, 60%, 0.6) 50%, transparent 100%),
+                  radial-gradient(1.5px 1.5px at 15% 70%, hsla(45, 80%, 70%, 0.7) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 35% 85%, hsla(45, 75%, 65%, 0.5) 50%, transparent 100%),
+                  radial-gradient(2px 2px at 55% 75%, hsla(45, 90%, 80%, 0.9) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 70% 90%, hsla(45, 70%, 60%, 0.4) 50%, transparent 100%),
+                  radial-gradient(1.5px 1.5px at 90% 70%, hsla(45, 85%, 75%, 0.8) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 5% 50%, hsla(45, 75%, 65%, 0.5) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 95% 40%, hsla(45, 70%, 60%, 0.6) 50%, transparent 100%),
+                  radial-gradient(1.5px 1.5px at 40% 60%, hsla(45, 80%, 70%, 0.7) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 80% 80%, hsla(45, 75%, 65%, 0.5) 50%, transparent 100%)
+                `
+              }} />
+              {/* Subtle golden glow overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/[0.03] via-transparent to-amber-400/[0.02]" />
+            </div>
+            <CardContent className="p-5 h-full flex flex-col relative z-10">
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
                   <h2 className="text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
