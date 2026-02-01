@@ -75,36 +75,36 @@ const SupportForm: React.FC = () => {
   };
 
   return (
-    <Card className="mt-12 border-border/30 bg-gradient-to-b from-card/60 to-card/40 backdrop-blur-sm shadow-[0_8px_32px_hsl(222_50%_3%/0.4)]">
-      <CardHeader className="pb-6">
+    <Card className="mt-10 border-border/30 bg-gradient-to-b from-card/60 to-card/40 backdrop-blur-sm shadow-[0_8px_32px_hsl(222_50%_3%/0.4)]">
+      <CardHeader className="pb-4 pt-8 px-8 md:px-10">
         <CardTitle className="text-xl md:text-2xl font-heading bg-gradient-to-r from-[hsl(var(--heading-gold))] via-[hsl(45_85%_60%)] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent">
           Formulář pro nahlášení problému
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-8 md:px-10 pb-8">
         {/* Status Messages */}
         {submitStatus === 'success' && (
-          <Alert className="mb-6 border-primary/50 bg-primary/10">
-            <CheckCircle2 className="h-4 w-4 text-primary" />
-            <AlertDescription className="text-primary">
+          <Alert className="mb-8 border-[hsl(45_80%_45%/0.4)] bg-[hsl(220_30%_12%)] rounded-xl">
+            <CheckCircle2 className="h-5 w-5 text-[hsl(45_85%_55%)]" />
+            <AlertDescription className="text-[hsl(45_85%_65%)] font-medium leading-relaxed">
               {statusMessage}
             </AlertDescription>
           </Alert>
         )}
         
         {submitStatus === 'error' && (
-          <Alert className="mb-6 border-destructive/50 bg-destructive/10">
-            <AlertCircle className="h-4 w-4 text-destructive" />
-            <AlertDescription className="text-destructive">
+          <Alert className="mb-8 border-destructive/40 bg-destructive/10 rounded-xl">
+            <AlertCircle className="h-5 w-5 text-destructive" />
+            <AlertDescription className="text-destructive/90 leading-relaxed">
               {statusMessage}
             </AlertDescription>
           </Alert>
         )}
 
-        <form className="space-y-6" onSubmit={handleSubmit}>
+        <form className="space-y-5" onSubmit={handleSubmit}>
           {/* Name Field */}
-          <div className="space-y-2">
-            <Label htmlFor="support-name" className="text-foreground/90">
+          <div className="space-y-2.5">
+            <Label htmlFor="support-name" className="text-foreground/90 text-sm font-medium">
               Jméno
             </Label>
             <Input
@@ -113,15 +113,15 @@ const SupportForm: React.FC = () => {
               placeholder="Vaše jméno"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="bg-background/50 border-border/40 focus:border-primary/50"
+              className="h-11 bg-background/60 border-border/40 rounded-lg focus:border-[hsl(45_80%_50%/0.5)] focus:ring-[hsl(45_80%_50%/0.15)] transition-colors"
               disabled={isSubmitting}
               maxLength={100}
             />
           </div>
 
           {/* Email Field */}
-          <div className="space-y-2">
-            <Label htmlFor="support-email" className="text-foreground/90">
+          <div className="space-y-2.5">
+            <Label htmlFor="support-email" className="text-foreground/90 text-sm font-medium">
               E-mail
             </Label>
             <Input
@@ -130,19 +130,19 @@ const SupportForm: React.FC = () => {
               placeholder="vas@email.cz"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="bg-background/50 border-border/40 focus:border-primary/50"
+              className="h-11 bg-background/60 border-border/40 rounded-lg focus:border-[hsl(45_80%_50%/0.5)] focus:ring-[hsl(45_80%_50%/0.15)] transition-colors"
               disabled={isSubmitting}
               maxLength={255}
             />
           </div>
 
           {/* Category Select */}
-          <div className="space-y-2">
-            <Label htmlFor="support-category" className="text-foreground/90">
+          <div className="space-y-2.5">
+            <Label htmlFor="support-category" className="text-foreground/90 text-sm font-medium">
               Kategorie
             </Label>
             <Select value={category} onValueChange={setCategory} disabled={isSubmitting}>
-              <SelectTrigger className="bg-background/50 border-border/40 focus:border-primary/50">
+              <SelectTrigger className="h-11 bg-background/60 border-border/40 rounded-lg focus:border-[hsl(45_80%_50%/0.5)] focus:ring-[hsl(45_80%_50%/0.15)] transition-colors">
                 <SelectValue placeholder="Vyberte kategorii" />
               </SelectTrigger>
               <SelectContent>
@@ -156,8 +156,8 @@ const SupportForm: React.FC = () => {
           </div>
 
           {/* Message Textarea */}
-          <div className="space-y-2">
-            <Label htmlFor="support-message" className="text-foreground/90">
+          <div className="space-y-2.5">
+            <Label htmlFor="support-message" className="text-foreground/90 text-sm font-medium">
               Zpráva
             </Label>
             <Textarea
@@ -166,28 +166,30 @@ const SupportForm: React.FC = () => {
               rows={5}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="bg-background/50 border-border/40 focus:border-primary/50 resize-none"
+              className="bg-background/60 border-border/40 rounded-lg focus:border-[hsl(45_80%_50%/0.5)] focus:ring-[hsl(45_80%_50%/0.15)] resize-none leading-relaxed transition-colors"
               disabled={isSubmitting}
               maxLength={2000}
             />
           </div>
 
           {/* Submit Button */}
-          <Button
-            type="submit"
-            variant="premium"
-            className="w-full md:w-auto px-8"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Odesílám...
-              </>
-            ) : (
-              'Odeslat'
-            )}
-          </Button>
+          <div className="pt-2">
+            <Button
+              type="submit"
+              variant="premium"
+              className="w-full md:w-auto h-11 px-10 rounded-lg text-base font-medium"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Odesílám...
+                </>
+              ) : (
+                'Odeslat'
+              )}
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>
