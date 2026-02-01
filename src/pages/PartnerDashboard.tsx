@@ -488,24 +488,40 @@ const PartnerDashboard = () => {
                   {partner.company_name || partner.name}
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Status účtu:</span>
-                {partner.status === 'approved' ? (
-                  <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    Aktivní
-                  </Badge>
-                ) : partner.status === 'pending' ? (
-                  <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
-                    <Clock className="w-3 h-3 mr-1" />
-                    Čeká na schválení
-                  </Badge>
-                ) : (
-                  <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-500/20">
-                    <XCircle className="w-3 h-3 mr-1" />
-                    Pozastaveno
-                  </Badge>
-                )}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Status účtu:</span>
+                  {partner.status === 'approved' ? (
+                    <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Aktivní
+                    </Badge>
+                  ) : partner.status === 'pending' ? (
+                    <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+                      <Clock className="w-3 h-3 mr-1" />
+                      Čeká na schválení
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-500/20">
+                      <XCircle className="w-3 h-3 mr-1" />
+                      Pozastaveno
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Integrace API:</span>
+                  {apiActivity.length > 0 ? (
+                    <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                      <Activity className="w-3 h-3 mr-1" />
+                      aktivní
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="bg-muted text-muted-foreground border-border">
+                      <Activity className="w-3 h-3 mr-1" />
+                      neaktivní (zatím žádná API aktivita)
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
           </CardHeader>
