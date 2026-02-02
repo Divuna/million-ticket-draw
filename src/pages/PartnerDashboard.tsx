@@ -497,29 +497,40 @@ const PartnerDashboard = () => {
     }
   };
 
-  // Calculate live preview values based on current reward settings
+  // Investment simulation state
+  const [simOrders, setSimOrders] = useState<string>('10');
+  const [simOrderAmount, setSimOrderAmount] = useState<string>('500');
+
+  // Calculate live preview values based on current reward settings and simulation
   const calculateRewardPreview = () => {
     const baseCzk = parseFloat(rewardBaseCzk) || 0;
     const mcReward = parseFloat(rewardMc) || 0;
     const pricePerCoin = partner?.price_per_coin ?? 1; // 1 Kč per MC
     const vatRate = partner?.vat_rate ?? 0;
     
-    // Sample order preview (500 CZK order)
-    const sampleOrderCzk = 500;
-    const sampleMc = baseCzk > 0 ? (mcReward / baseCzk) * sampleOrderCzk : 0;
+    // Simulation parameters
+    const ordersCount = parseInt(simOrders) || 10;
+    const orderAmount = parseFloat(simOrderAmount) || 500;
     
-    // Monthly cost estimate (assuming ~10 orders per month as example)
-    const monthlyOrders = 10;
-    const monthlyMc = sampleMc * monthlyOrders;
-    const monthlyNet = monthlyMc * pricePerCoin;
-    const monthlyVat = monthlyNet * (vatRate / 100);
-    const monthlyGross = monthlyNet + monthlyVat;
+    // Sample order preview (single order)
+    const sampleMc = baseCzk > 0 ? (mcReward / baseCzk) * orderAmount : 0;
+    
+    // Investment simulation
+    const totalRevenue = ordersCount * orderAmount;
+    const totalMc = sampleMc * ordersCount;
+    const investmentNet = totalMc * pricePerCoin;
+    const investmentVat = investmentNet * (vatRate / 100);
+    const investmentGross = investmentNet + investmentVat;
+    const investmentPercentage = totalRevenue > 0 ? (investmentNet / totalRevenue) * 100 : 0;
     
     return {
       sampleMc: sampleMc.toFixed(1),
-      monthlyNet: monthlyNet.toFixed(2),
-      monthlyVat: monthlyVat.toFixed(2),
-      monthlyGross: monthlyGross.toFixed(2),
+      totalRevenue: totalRevenue.toFixed(0),
+      totalMc: totalMc.toFixed(1),
+      investmentNet: investmentNet.toFixed(2),
+      investmentVat: investmentVat.toFixed(2),
+      investmentGross: investmentGross.toFixed(2),
+      investmentPercentage: investmentPercentage.toFixed(2),
     };
   };
 
@@ -978,34 +989,81 @@ const PartnerDashboard = () => {
               <div className="border-t border-border/50 pt-4">
                 <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-primary" />
-                  Ukázka: Objednávka za 500 Kč
+                  Ukázka: Objednávka za {simOrderAmount || 500} Kč
                 </h4>
                 <div className="p-4 rounded-lg bg-muted/20 border border-border/30">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">MioCoiny pro zákazníka:</span>
                     <span className="font-semibold text-primary">{rewardPreview.sampleMc} MC</span>
                   </div>
                 </div>
               </div>
 
-              {/* Live preview: Monthly cost estimate */}
+              {/* Marketingová investice (simulace) */}
               <div className="border-t border-border/50 pt-4">
                 <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
                   <Coins className="w-4 h-4 text-primary" />
-                  Odhad měsíčních nákladů (10 objednávek po 500 Kč)
+                  Marketingová investice (simulace)
                 </h4>
+                
+                {/* Simulation config inputs */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div>
+                    <Label htmlFor="simOrders" className="text-xs text-muted-foreground">Počet objednávek</Label>
+                    <Input
+                      id="simOrders"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={simOrders}
+                      onChange={(e) => setSimOrders(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="simOrderAmount" className="text-xs text-muted-foreground">Průměrná objednávka (Kč)</Label>
+                    <Input
+                      id="simOrderAmount"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={simOrderAmount}
+                      onChange={(e) => setSimOrderAmount(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                {/* Investment percentage - Primary metric */}
+                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 text-center mb-4">
+                  <p className="text-xs text-muted-foreground mb-1">Investice z obratu</p>
+                  <p className="text-2xl font-bold text-primary">{rewardPreview.investmentPercentage} %</p>
+                </div>
+
+                {/* Breakdown */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="p-3 rounded-lg bg-muted/20 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Celkový obrat</p>
+                    <p className="text-base font-medium">{rewardPreview.totalRevenue} Kč</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/20 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Vydané MioCoiny</p>
+                    <p className="text-base font-medium">{rewardPreview.totalMc} MC</p>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-3 gap-3">
                   <div className="p-3 rounded-lg bg-muted/20 text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Netto</p>
-                    <p className="text-base font-medium">{rewardPreview.monthlyNet} Kč</p>
+                    <p className="text-xs text-muted-foreground mb-1">Náklad (netto)</p>
+                    <p className="text-base font-medium">{rewardPreview.investmentNet} Kč</p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/20 text-center">
                     <p className="text-xs text-muted-foreground mb-1">DPH</p>
-                    <p className="text-base font-medium">{rewardPreview.monthlyVat} Kč</p>
+                    <p className="text-sm text-muted-foreground">{rewardPreview.investmentVat} Kč</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-primary/10 text-center border border-primary/20">
-                    <p className="text-xs text-muted-foreground mb-1">Brutto</p>
-                    <p className="text-base font-semibold text-primary">{rewardPreview.monthlyGross} Kč</p>
+                  <div className="p-3 rounded-lg bg-muted/20 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Celkem (brutto)</p>
+                    <p className="text-base font-medium">{rewardPreview.investmentGross} Kč</p>
                   </div>
                 </div>
               </div>
