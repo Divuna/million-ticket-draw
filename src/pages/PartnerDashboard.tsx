@@ -774,7 +774,7 @@ const PartnerDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalIssued}</div>
-              <p className="text-xs text-muted-foreground">{stats.totalIssuedCoins.toLocaleString()} MioCoinů</p>
+              <p className="text-xs text-muted-foreground">{stats.totalIssuedCoins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MioCoinů</p>
             </CardContent>
           </Card>
 
@@ -785,7 +785,7 @@ const PartnerDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary">{stats.totalActivated}</div>
-              <p className="text-xs text-muted-foreground">{stats.totalActivatedCoins.toLocaleString()} MioCoinů</p>
+              <p className="text-xs text-muted-foreground">{stats.totalActivatedCoins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MioCoinů</p>
             </CardContent>
           </Card>
 
@@ -1222,9 +1222,9 @@ const PartnerDashboard = () => {
                       {report.week_start} – {report.week_end}
                     </TableCell>
                     <TableCell className="text-right">{report.issued_count}</TableCell>
-                    <TableCell className="text-right">{report.issued_coins.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{report.issued_coins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</TableCell>
                     <TableCell className="text-right text-primary">{report.activated_count}</TableCell>
-                    <TableCell className="text-right text-primary">{report.activated_coins.toLocaleString()}</TableCell>
+                    <TableCell className="text-right text-primary">{report.activated_coins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</TableCell>
                   </TableRow>
                 ))}
                 {weeklyReports.length === 0 && (
