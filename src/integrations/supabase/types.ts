@@ -761,6 +761,38 @@ export type Database = {
           },
         ]
       }
+      partner_invoice_exports: {
+        Row: {
+          created_at: string | null
+          file_url: string | null
+          format: string
+          id: string
+          invoice_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_url?: string | null
+          format: string
+          id?: string
+          invoice_id: string
+        }
+        Update: {
+          created_at?: string | null
+          file_url?: string | null
+          format?: string
+          id?: string
+          invoice_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_invoice_exports_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_invoice_lines: {
         Row: {
           activated_at: string
@@ -1876,6 +1908,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      build_isdoc_payload: { Args: { p_invoice_id: string }; Returns: Json }
       buy_ticket_atomic: {
         Args: { p_contest_id: string; p_user_id: string }
         Returns: Json
