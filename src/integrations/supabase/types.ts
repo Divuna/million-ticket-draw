@@ -918,6 +918,7 @@ export type Database = {
           id: string
           logo_status: string
           logo_url: string
+          mc_per_99_czk: number
           name: string
           notes: string | null
           price_per_coin: number
@@ -945,6 +946,7 @@ export type Database = {
           id?: string
           logo_status?: string
           logo_url: string
+          mc_per_99_czk?: number
           name: string
           notes?: string | null
           price_per_coin?: number
@@ -972,6 +974,7 @@ export type Database = {
           id?: string
           logo_status?: string
           logo_url?: string
+          mc_per_99_czk?: number
           name?: string
           notes?: string | null
           price_per_coin?: number
@@ -1754,6 +1757,15 @@ export type Database = {
     }
     Functions: {
       _invoke_forward_messages_to_sofinity: { Args: never; Returns: undefined }
+      activate_partner_coins_from_order: {
+        Args: {
+          p_external_order_id: string
+          p_order_amount_czk: number
+          p_partner_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       activate_partner_reward_code: {
         Args: { p_reward_code: string }
         Returns: undefined
@@ -1884,6 +1896,14 @@ export type Database = {
           key_id: string
           key_prefix: string
         }[]
+      }
+      generate_partner_invoice: {
+        Args: {
+          p_partner_id: string
+          p_period_from: string
+          p_period_to: string
+        }
+        Returns: string
       }
       generate_partner_reward_code: {
         Args: {
