@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, startOfWeek, endOfWeek, subWeeks, addWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, FileText, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -69,6 +69,7 @@ const AdminInvoices: React.FC = () => {
   const [invoiceLines, setInvoiceLines] = useState<InvoiceLine[]>([]);
   const [linesLoading, setLinesLoading] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   // ISDOC generation temporarily disabled
   // const [generatingIsdoc, setGeneratingIsdoc] = useState(false);
 
@@ -213,6 +214,27 @@ const AdminInvoices: React.FC = () => {
     if (current === 'draft') return 'sent';
     if (current === 'sent') return 'paid';
     return null;
+  };
+
+  const sendInvoiceEmail = async () => {
+    if (!selectedInvoice) return;
+
+    setSendingEmail(true);
+    try {
+      const { error } = await supabase.rpc('enqueue_partner_invoice_email', {
+        p_partner_id: selectedInvoice.partner_id,
+        p_period_start: selectedInvoice.period_start,
+        p_period_end: selectedInvoice.period_end,
+      });
+
+      if (error) throw error;
+      toast.success('Faktura byla zařazena k odeslání emailem');
+    } catch (err) {
+      console.error('Error sending invoice email:', err);
+      toast.error('Chyba při odesílání faktury emailem');
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -479,6 +501,23 @@ const AdminInvoices: React.FC = () => {
                   )}
                   ISDOC
                 </Button> */}
+
+                {/* Send email button - visible for draft or sent status */}
+                {(selectedInvoice.status === 'draft' || selectedInvoice.status === 'sent') && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={sendInvoiceEmail}
+                    disabled={sendingEmail}
+                  >
+                    {sendingEmail ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Mail className="h-4 w-4 mr-2" />
+                    )}
+                    Odeslat fakturu emailem
+                  </Button>
+                )}
 
                 {/* Status transition button */}
                 {getNextStatus(selectedInvoice.status) && (
