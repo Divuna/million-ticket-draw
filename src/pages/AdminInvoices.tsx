@@ -221,8 +221,8 @@ const AdminInvoices: React.FC = () => {
 
       const { error } = await supabase.rpc('enqueue_partner_invoice_email', {
         p_partner_id: selectedInvoice.partner_id,
-        p_period_start: periodStartDate,
-        p_period_end: periodEndDate,
+        p_period_from: periodStartDate,
+        p_period_to: periodEndDate,
       });
 
       if (error) throw error;
