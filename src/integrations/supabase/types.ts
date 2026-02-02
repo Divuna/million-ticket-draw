@@ -379,6 +379,36 @@ export type Database = {
         }
         Relationships: []
       }
+      email_queue: {
+        Row: {
+          body: string
+          created_at: string | null
+          email: string
+          id: string
+          sent_at: string | null
+          status: string | null
+          subject: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          email: string
+          id?: string
+          sent_at?: string | null
+          status?: string | null
+          subject: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          sent_at?: string | null
+          status?: string | null
+          subject?: string
+        }
+        Relationships: []
+      }
       event_forward_log: {
         Row: {
           created_at: string | null
@@ -1837,6 +1867,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      api_activate_partner_coins: {
+        Args: {
+          p_api_key: string
+          p_external_order_id: string
+          p_order_amount_czk: number
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       buy_ticket_atomic: {
         Args: { p_contest_id: string; p_user_id: string }
         Returns: Json
@@ -2171,6 +2210,10 @@ export type Database = {
       run_deep_sofinity_test_suite: {
         Args: { p_performance_events?: number }
         Returns: Json
+      }
+      run_monthly_partner_invoicing: {
+        Args: { p_period_from: string; p_period_to: string }
+        Returns: undefined
       }
       safe_send_message: {
         Args: { p_content: string; p_sender: string; p_user_id: string }
