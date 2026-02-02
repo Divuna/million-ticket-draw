@@ -500,8 +500,8 @@ const AdminInvoices: React.FC = () => {
                   ISDOC
                 </Button> */}
 
-                {/* Send email button - visible for draft or issued status */}
-                {(selectedInvoice.status === 'draft' || selectedInvoice.status === 'issued') && (
+                {/* Send email button - visible for draft, issued, or paid status */}
+                {(selectedInvoice.status === 'draft' || selectedInvoice.status === 'issued' || selectedInvoice.status === 'paid') && (
                   <Button
                     variant="outline"
                     size="sm"
