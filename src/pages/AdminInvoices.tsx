@@ -226,7 +226,20 @@ const AdminInvoices: React.FC = () => {
       });
 
       if (error) throw error;
-      toast.success('Faktura byla zařazena k odeslání emailem');
+
+      // Check the email queue status to show appropriate message
+      const { data: queueData } = await supabase
+        .from('email_queue')
+        .select('status')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (queueData?.status === 'sent') {
+        toast.success('Faktura byla odeslána emailem');
+      } else {
+        toast.success('Faktura byla zařazena k odeslání emailem');
+      }
     } catch (err) {
       console.error('Error sending invoice email:', err);
       toast.error('Chyba při odesílání faktury emailem');
