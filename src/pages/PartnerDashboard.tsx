@@ -914,7 +914,7 @@ const PartnerDashboard = () => {
         {/* Partner Reward Settings */}
         {isAccountApproved && (
           <Card className="border-border/50">
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5" />
                 Nastavení konverze MioCoinů
@@ -923,11 +923,11 @@ const PartnerDashboard = () => {
                 Nastavte kolik MioCoinů zákazník získá za hodnotu objednávky
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Editable fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="reward-base-czk">Základ objednávky (Kč bez DPH)</Label>
+            <CardContent className="space-y-4">
+              {/* Compact single row: editable + read-only fields */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="reward-base-czk" className="text-xs">Základ (Kč)</Label>
                   <Input
                     id="reward-base-czk"
                     type="number"
@@ -936,10 +936,11 @@ const PartnerDashboard = () => {
                     value={rewardBaseCzk}
                     onChange={(e) => setRewardBaseCzk(e.target.value)}
                     placeholder="0.00"
+                    className="h-9"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reward-mc">MioCoiny za tento základ</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="reward-mc" className="text-xs">MioCoiny</Label>
                   <Input
                     id="reward-mc"
                     type="number"
@@ -948,11 +949,24 @@ const PartnerDashboard = () => {
                     value={rewardMc}
                     onChange={(e) => setRewardMc(e.target.value)}
                     placeholder="0.00"
+                    className="h-9"
                   />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Cena/MC</Label>
+                  <div className="h-9 px-3 flex items-center rounded-md bg-muted/30 border border-border/50 text-sm">
+                    {partner?.price_per_coin?.toFixed(2) ?? '1.00'} Kč
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">DPH</Label>
+                  <div className="h-9 px-3 flex items-center rounded-md bg-muted/30 border border-border/50 text-sm">
+                    {((partner?.vat_rate ?? 0) * 100).toFixed(0)} %
+                  </div>
                 </div>
               </div>
 
-              {/* Save button */}
+              {/* Save button inline */}
               <div className="flex justify-end">
                 <Button
                   onClick={handleSaveRewardSettings}
@@ -973,43 +987,14 @@ const PartnerDashboard = () => {
                 </Button>
               </div>
 
-              {/* Read-only fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                  <p className="text-xs text-muted-foreground mb-1">Cena za 1 MioCoin</p>
-                  <p className="text-lg font-semibold">{partner?.price_per_coin?.toFixed(2) ?? '1.00'} Kč</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                  <p className="text-xs text-muted-foreground mb-1">Sazba DPH</p>
-                  <p className="text-lg font-semibold">{((partner?.vat_rate ?? 0) * 100).toFixed(0)} %</p>
-                </div>
-              </div>
-
-              {/* Live preview: Sample order */}
+              {/* Marketingová investice (simulace) - Compact KPI section */}
               <div className="border-t border-border/50 pt-4">
-                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-primary" />
-                  Ukázka: Objednávka za {simOrderAmount || 500} Kč
-                </h4>
-                <div className="p-4 rounded-lg bg-muted/20 border border-border/30">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">MioCoiny pro zákazníka:</span>
-                    <span className="font-semibold text-primary">{rewardPreview.sampleMc} MC</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Marketingová investice (simulace) */}
-              <div className="border-t border-border/50 pt-4">
-                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <Coins className="w-4 h-4 text-primary" />
-                  Marketingová investice (simulace)
-                </h4>
-                
-                {/* Simulation config inputs */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div>
-                    <Label htmlFor="simOrders" className="text-xs text-muted-foreground">Počet objednávek</Label>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-medium flex items-center gap-2">
+                    <Coins className="w-4 h-4 text-primary" />
+                    Marketingová investice (simulace)
+                  </h4>
+                  <div className="flex items-center gap-2">
                     <Input
                       id="simOrders"
                       type="number"
@@ -1017,11 +1002,10 @@ const PartnerDashboard = () => {
                       step="1"
                       value={simOrders}
                       onChange={(e) => setSimOrders(e.target.value)}
-                      className="mt-1"
+                      className="h-7 w-16 text-xs"
+                      title="Počet objednávek"
                     />
-                  </div>
-                  <div>
-                    <Label htmlFor="simOrderAmount" className="text-xs text-muted-foreground">Průměrná objednávka (Kč)</Label>
+                    <span className="text-xs text-muted-foreground">×</span>
                     <Input
                       id="simOrderAmount"
                       type="number"
@@ -1029,41 +1013,44 @@ const PartnerDashboard = () => {
                       step="1"
                       value={simOrderAmount}
                       onChange={(e) => setSimOrderAmount(e.target.value)}
-                      className="mt-1"
+                      className="h-7 w-20 text-xs"
+                      title="Průměrná objednávka (Kč)"
                     />
+                    <span className="text-xs text-muted-foreground">Kč</span>
                   </div>
                 </div>
 
-                {/* Investment percentage - Primary metric */}
-                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 text-center mb-4">
+                {/* Primary KPI - Investment percentage */}
+                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 text-center mb-3">
                   <p className="text-xs text-muted-foreground mb-1">Investice z obratu</p>
-                  <p className="text-2xl font-bold text-primary">{rewardPreview.investmentPercentage} %</p>
+                  <p className="text-3xl font-bold text-primary">{rewardPreview.investmentPercentage} %</p>
                 </div>
 
-                {/* Breakdown */}
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div className="p-3 rounded-lg bg-muted/20 text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Celkový obrat</p>
-                    <p className="text-base font-medium">{rewardPreview.totalRevenue} Kč</p>
+                {/* Single-line breakdown */}
+                <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-muted/20 text-xs">
+                  <div className="text-center flex-1">
+                    <span className="text-muted-foreground">Obrat</span>
+                    <p className="font-medium">{rewardPreview.totalRevenue} Kč</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/20 text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Vydané MioCoiny</p>
-                    <p className="text-base font-medium">{rewardPreview.totalMc} MC</p>
+                  <div className="text-muted-foreground">|</div>
+                  <div className="text-center flex-1">
+                    <span className="text-muted-foreground">MC</span>
+                    <p className="font-medium">{rewardPreview.totalMc}</p>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3 rounded-lg bg-muted/20 text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Náklad (netto)</p>
-                    <p className="text-base font-medium">{rewardPreview.investmentNet} Kč</p>
+                  <div className="text-muted-foreground">|</div>
+                  <div className="text-center flex-1">
+                    <span className="text-muted-foreground">Náklad</span>
+                    <p className="font-medium">{rewardPreview.investmentNet} Kč</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/20 text-center">
-                    <p className="text-xs text-muted-foreground mb-1">DPH</p>
-                    <p className="text-sm text-muted-foreground">{rewardPreview.investmentVat} Kč</p>
+                  <div className="text-muted-foreground">|</div>
+                  <div className="text-center flex-1">
+                    <span className="text-muted-foreground">DPH</span>
+                    <p className="text-muted-foreground">{rewardPreview.investmentVat} Kč</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/20 text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Celkem (brutto)</p>
-                    <p className="text-base font-medium">{rewardPreview.investmentGross} Kč</p>
+                  <div className="text-muted-foreground">|</div>
+                  <div className="text-center flex-1">
+                    <span className="text-muted-foreground">Celkem</span>
+                    <p className="font-medium">{rewardPreview.investmentGross} Kč</p>
                   </div>
                 </div>
               </div>
