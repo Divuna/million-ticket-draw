@@ -27,6 +27,8 @@ interface Partner {
   mc_per_99_czk: number;
   price_per_coin: number;
   vat_rate: number;
+  reward_base_czk: number;
+  reward_mc: number;
 }
 
 interface ApiKey {
@@ -69,9 +71,10 @@ const PartnerDashboard = () => {
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
   const [activatingReward, setActivatingReward] = useState(false);
   
-  // MioCoin conversion settings state
-  const [mcPer99Czk, setMcPer99Czk] = useState<string>('');
-  const [savingConversion, setSavingConversion] = useState(false);
+  // Partner reward settings state
+  const [rewardBaseCzk, setRewardBaseCzk] = useState<string>('');
+  const [rewardMc, setRewardMc] = useState<string>('');
+  const [savingRewardSettings, setSavingRewardSettings] = useState(false);
   
   // Activate reward modal state
   const [activateModalOpen, setActivateModalOpen] = useState(false);
@@ -306,7 +309,8 @@ const PartnerDashboard = () => {
       }
 
       setPartner(partnerData);
-      setMcPer99Czk(String(partnerData.mc_per_99_czk ?? 0));
+      setRewardBaseCzk(String(partnerData.reward_base_czk ?? 0));
+      setRewardMc(String(partnerData.reward_mc ?? 0));
       // Load API keys
       const { data: keysData } = await supabase
         .from('partner_api_keys')
@@ -449,72 +453,77 @@ const PartnerDashboard = () => {
     }
   };
 
-  // Handle MioCoin conversion settings save
-  const handleSaveConversionSettings = async () => {
+  // Handle Partner reward settings save
+  const handleSaveRewardSettings = async () => {
     if (!partner) return;
     
-    const numericValue = parseFloat(mcPer99Czk);
-    if (isNaN(numericValue) || numericValue < 0) {
-      toast.error('Zadejte platné kladné číslo');
+    const baseCzkValue = parseFloat(rewardBaseCzk);
+    const mcValue = parseFloat(rewardMc);
+    
+    if (isNaN(baseCzkValue) || baseCzkValue <= 0) {
+      toast.error('Částka v Kč musí být větší než 0');
+      return;
+    }
+    if (isNaN(mcValue) || mcValue <= 0) {
+      toast.error('Počet MioCoinů musí být větší než 0');
       return;
     }
 
-    setSavingConversion(true);
+    setSavingRewardSettings(true);
     
     // Optimistic update
-    const previousValue = partner.mc_per_99_czk;
-    setPartner({ ...partner, mc_per_99_czk: numericValue });
+    const previousBaseCzk = partner.reward_base_czk;
+    const previousMc = partner.reward_mc;
+    setPartner({ ...partner, reward_base_czk: baseCzkValue, reward_mc: mcValue });
 
     try {
       const { error } = await supabase
         .from('partners')
-        .update({ mc_per_99_czk: numericValue })
+        .update({ reward_base_czk: baseCzkValue, reward_mc: mcValue })
         .eq('id', partner.id);
 
       if (error) throw error;
       
-      toast.success('Nastavení konverze bylo uloženo');
+      toast.success('Nastavení odměn bylo uloženo');
     } catch (error) {
-      console.error('Error saving conversion settings:', error);
+      console.error('Error saving reward settings:', error);
       // Rollback optimistic update
-      setPartner({ ...partner, mc_per_99_czk: previousValue });
-      setMcPer99Czk(String(previousValue));
+      setPartner({ ...partner, reward_base_czk: previousBaseCzk, reward_mc: previousMc });
+      setRewardBaseCzk(String(previousBaseCzk));
+      setRewardMc(String(previousMc));
       toast.error('Nepodařilo se uložit nastavení');
     } finally {
-      setSavingConversion(false);
+      setSavingRewardSettings(false);
     }
   };
 
-  // Calculate live preview values based on current settings
-  const calculateConversionPreview = () => {
-    const mcValue = parseFloat(mcPer99Czk) || 0;
-    const pricePerCoin = partner?.price_per_coin ?? 0;
+  // Calculate live preview values based on current reward settings
+  const calculateRewardPreview = () => {
+    const baseCzk = parseFloat(rewardBaseCzk) || 0;
+    const mcReward = parseFloat(rewardMc) || 0;
+    const pricePerCoin = partner?.price_per_coin ?? 1; // 1 Kč per MC
     const vatRate = partner?.vat_rate ?? 0;
-    
-    // Cost for 99 CZK order (mcValue coins)
-    const costNet = mcValue * pricePerCoin;
-    const costVat = costNet * (vatRate / 100);
-    const costGross = costNet + costVat;
     
     // Sample order preview (500 CZK order)
     const sampleOrderCzk = 500;
-    const sampleMc = (mcValue / 99) * sampleOrderCzk;
-    const sampleNet = sampleMc * pricePerCoin;
-    const sampleVat = sampleNet * (vatRate / 100);
-    const sampleGross = sampleNet + sampleVat;
+    const sampleMc = baseCzk > 0 ? (mcReward / baseCzk) * sampleOrderCzk : 0;
+    
+    // Monthly cost estimate (assuming ~10 orders per month as example)
+    const monthlyOrders = 10;
+    const monthlyMc = sampleMc * monthlyOrders;
+    const monthlyNet = monthlyMc * pricePerCoin;
+    const monthlyVat = monthlyNet * (vatRate / 100);
+    const monthlyGross = monthlyNet + monthlyVat;
     
     return {
-      costNet: costNet.toFixed(2),
-      costVat: costVat.toFixed(2),
-      costGross: costGross.toFixed(2),
       sampleMc: sampleMc.toFixed(1),
-      sampleNet: sampleNet.toFixed(2),
-      sampleVat: sampleVat.toFixed(2),
-      sampleGross: sampleGross.toFixed(2),
+      monthlyNet: monthlyNet.toFixed(2),
+      monthlyVat: monthlyVat.toFixed(2),
+      monthlyGross: monthlyGross.toFixed(2),
     };
   };
 
-  const conversionPreview = calculateConversionPreview();
+  const rewardPreview = calculateRewardPreview();
 
   if (loading) {
     return (
@@ -891,7 +900,7 @@ const PartnerDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* MioCoin Conversion Settings */}
+        {/* Partner Reward Settings */}
         {isAccountApproved && (
           <Card className="border-border/50">
             <CardHeader>
@@ -900,72 +909,68 @@ const PartnerDashboard = () => {
                 Nastavení konverze MioCoinů
               </CardTitle>
               <CardDescription>
-                Nastavte kolik MioCoinů zákazník získá za 99 Kč objednávky
+                Nastavte kolik MioCoinů zákazník získá za hodnotu objednávky
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Editable field */}
-              <div className="space-y-2">
-                <Label htmlFor="mc-per-99">MioCoiny za 99 Kč objednávky</Label>
-                <div className="flex items-center gap-3">
+              {/* Editable fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reward-base-czk">Základ objednávky (Kč bez DPH)</Label>
                   <Input
-                    id="mc-per-99"
+                    id="reward-base-czk"
                     type="number"
-                    min="0"
+                    min="0.01"
                     step="0.01"
-                    value={mcPer99Czk}
-                    onChange={(e) => setMcPer99Czk(e.target.value)}
-                    className="max-w-[180px]"
+                    value={rewardBaseCzk}
+                    onChange={(e) => setRewardBaseCzk(e.target.value)}
                     placeholder="0.00"
                   />
-                  <span className="text-sm text-muted-foreground">MC / 99 Kč</span>
-                  <Button
-                    onClick={handleSaveConversionSettings}
-                    disabled={savingConversion || mcPer99Czk === String(partner?.mc_per_99_czk ?? 0)}
-                    size="sm"
-                    className="gap-2"
-                  >
-                    {savingConversion ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
-                    Uložit
-                  </Button>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reward-mc">MioCoiny za tento základ</Label>
+                  <Input
+                    id="reward-mc"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={rewardMc}
+                    onChange={(e) => setRewardMc(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              {/* Save button */}
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSaveRewardSettings}
+                  disabled={
+                    savingRewardSettings || 
+                    (rewardBaseCzk === String(partner?.reward_base_czk ?? 0) && 
+                     rewardMc === String(partner?.reward_mc ?? 0))
+                  }
+                  size="sm"
+                  className="gap-2"
+                >
+                  {savingRewardSettings ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  Uložit
+                </Button>
               </div>
 
               {/* Read-only fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
                   <p className="text-xs text-muted-foreground mb-1">Cena za 1 MioCoin</p>
-                  <p className="text-lg font-semibold">{partner?.price_per_coin?.toFixed(2) ?? '0.00'} Kč</p>
+                  <p className="text-lg font-semibold">{partner?.price_per_coin?.toFixed(2) ?? '1.00'} Kč</p>
                 </div>
                 <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
                   <p className="text-xs text-muted-foreground mb-1">Sazba DPH</p>
                   <p className="text-lg font-semibold">{partner?.vat_rate ?? 0} %</p>
-                </div>
-              </div>
-
-              {/* Live preview: Cost for 99 CZK */}
-              <div className="border-t border-border/50 pt-4">
-                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <Coins className="w-4 h-4 text-primary" />
-                  Náklady za 99 Kč objednávky
-                </h4>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3 rounded-lg bg-muted/20 text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Netto</p>
-                    <p className="text-base font-medium">{conversionPreview.costNet} Kč</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/20 text-center">
-                    <p className="text-xs text-muted-foreground mb-1">DPH</p>
-                    <p className="text-base font-medium">{conversionPreview.costVat} Kč</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-primary/10 text-center border border-primary/20">
-                    <p className="text-xs text-muted-foreground mb-1">Brutto</p>
-                    <p className="text-base font-semibold text-primary">{conversionPreview.costGross} Kč</p>
-                  </div>
                 </div>
               </div>
 
@@ -978,21 +983,29 @@ const PartnerDashboard = () => {
                 <div className="p-4 rounded-lg bg-muted/20 border border-border/30">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm text-muted-foreground">MioCoiny pro zákazníka:</span>
-                    <span className="font-semibold text-primary">{conversionPreview.sampleMc} MC</span>
+                    <span className="font-semibold text-primary">{rewardPreview.sampleMc} MC</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Netto</p>
-                      <p className="text-sm font-medium">{conversionPreview.sampleNet} Kč</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">DPH</p>
-                      <p className="text-sm font-medium">{conversionPreview.sampleVat} Kč</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Brutto</p>
-                      <p className="text-sm font-semibold">{conversionPreview.sampleGross} Kč</p>
-                    </div>
+                </div>
+              </div>
+
+              {/* Live preview: Monthly cost estimate */}
+              <div className="border-t border-border/50 pt-4">
+                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <Coins className="w-4 h-4 text-primary" />
+                  Odhad měsíčních nákladů (10 objednávek po 500 Kč)
+                </h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3 rounded-lg bg-muted/20 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Netto</p>
+                    <p className="text-base font-medium">{rewardPreview.monthlyNet} Kč</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/20 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">DPH</p>
+                    <p className="text-base font-medium">{rewardPreview.monthlyVat} Kč</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-primary/10 text-center border border-primary/20">
+                    <p className="text-xs text-muted-foreground mb-1">Brutto</p>
+                    <p className="text-base font-semibold text-primary">{rewardPreview.monthlyGross} Kč</p>
                   </div>
                 </div>
               </div>
