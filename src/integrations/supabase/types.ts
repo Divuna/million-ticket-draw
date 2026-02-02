@@ -358,6 +358,36 @@ export type Database = {
         }
         Relationships: []
       }
+      cron_audit_log: {
+        Row: {
+          executed_at: string
+          id: string
+          invoices_count: number | null
+          job_name: string
+          partners_count: number | null
+          period_from: string | null
+          period_to: string | null
+        }
+        Insert: {
+          executed_at?: string
+          id?: string
+          invoices_count?: number | null
+          job_name: string
+          partners_count?: number | null
+          period_from?: string | null
+          period_to?: string | null
+        }
+        Update: {
+          executed_at?: string
+          id?: string
+          invoices_count?: number | null
+          job_name?: string
+          partners_count?: number | null
+          period_from?: string | null
+          period_to?: string | null
+        }
+        Relationships: []
+      }
       debug_event_log: {
         Row: {
           created_at: string | null
@@ -1950,6 +1980,7 @@ export type Database = {
         Args: { p_partner_id: string }
         Returns: string
       }
+      create_partner_invoices_for_last_week: { Args: never; Returns: undefined }
       create_test_result: {
         Args: {
           p_details?: Json
@@ -1959,6 +1990,14 @@ export type Database = {
           p_test_name: string
         }
         Returns: Json
+      }
+      enqueue_partner_invoice_email: {
+        Args: {
+          p_partner_id: string
+          p_period_from: string
+          p_period_to: string
+        }
+        Returns: undefined
       }
       fn_close_contest: { Args: { p_contest: string }; Returns: undefined }
       forward_event_to_sofinity: {
