@@ -381,6 +381,7 @@ export type Database = {
       }
       email_queue: {
         Row: {
+          attachment_url: string | null
           body: string
           created_at: string | null
           email: string
@@ -390,6 +391,7 @@ export type Database = {
           subject: string
         }
         Insert: {
+          attachment_url?: string | null
           body: string
           created_at?: string | null
           email: string
@@ -399,6 +401,7 @@ export type Database = {
           subject: string
         }
         Update: {
+          attachment_url?: string | null
           body?: string
           created_at?: string | null
           email?: string
