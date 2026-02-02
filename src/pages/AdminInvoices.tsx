@@ -13,7 +13,7 @@ import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, Dr
 import { Skeleton } from '@/components/ui/skeleton';
 import { AdminMenu } from '@/components/AdminMenu';
 
-type InvoiceStatus = 'draft' | 'sent' | 'paid';
+type InvoiceStatus = 'draft' | 'issued' | 'paid';
 
 interface Invoice {
   id: string;
@@ -46,13 +46,13 @@ interface Partner {
 
 const statusLabels: Record<InvoiceStatus, string> = {
   draft: 'Koncept',
-  sent: 'Odesláno',
+  issued: 'Odesláno',
   paid: 'Zaplaceno',
 };
 
 const statusColors: Record<InvoiceStatus, string> = {
   draft: 'bg-muted text-muted-foreground',
-  sent: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  issued: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
   paid: 'bg-green-500/10 text-green-600 border-green-500/20',
 };
 
@@ -205,8 +205,8 @@ const AdminInvoices: React.FC = () => {
   // };
 
   const getNextStatus = (current: InvoiceStatus): InvoiceStatus | null => {
-    if (current === 'draft') return 'sent';
-    if (current === 'sent') return 'paid';
+    if (current === 'draft') return 'issued';
+    if (current === 'issued') return 'paid';
     return null;
   };
 
@@ -282,7 +282,7 @@ const AdminInvoices: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="all">Všechny stavy</SelectItem>
                     <SelectItem value="draft">Koncept</SelectItem>
-                    <SelectItem value="sent">Odesláno</SelectItem>
+                    <SelectItem value="issued">Odesláno</SelectItem>
                     <SelectItem value="paid">Zaplaceno</SelectItem>
                   </SelectContent>
                 </Select>
@@ -500,8 +500,8 @@ const AdminInvoices: React.FC = () => {
                   ISDOC
                 </Button> */}
 
-                {/* Send email button - visible for draft or sent status */}
-                {(selectedInvoice.status === 'draft' || selectedInvoice.status === 'sent') && (
+                {/* Send email button - visible for draft or issued status */}
+                {(selectedInvoice.status === 'draft' || selectedInvoice.status === 'issued') && (
                   <Button
                     variant="outline"
                     size="sm"
