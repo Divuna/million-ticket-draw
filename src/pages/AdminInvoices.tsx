@@ -221,10 +221,14 @@ const AdminInvoices: React.FC = () => {
 
     setSendingEmail(true);
     try {
+      // Format dates as YYYY-MM-DD to ensure DATE type compatibility
+      const periodStartDate = format(new Date(selectedInvoice.period_start), 'yyyy-MM-dd');
+      const periodEndDate = format(new Date(selectedInvoice.period_end), 'yyyy-MM-dd');
+
       const { error } = await supabase.rpc('enqueue_partner_invoice_email', {
         p_partner_id: selectedInvoice.partner_id,
-        p_period_start: selectedInvoice.period_start,
-        p_period_end: selectedInvoice.period_end,
+        p_period_start: periodStartDate,
+        p_period_end: periodEndDate,
       });
 
       if (error) throw error;
