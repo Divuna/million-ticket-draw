@@ -10,6 +10,57 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+interface Attachment {
+  filename: string;
+  content: string; // base64 encoded
+  content_type?: string;
+}
+
+async function fetchAttachment(url: string): Promise<Attachment | null> {
+  try {
+    console.log(`📎 Fetching attachment from: ${url}`);
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`❌ Failed to fetch attachment: ${response.status} ${response.statusText}`);
+      return null;
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const base64Content = btoa(
+      String.fromCharCode(...new Uint8Array(arrayBuffer))
+    );
+
+    // Extract filename from URL
+    const urlParts = url.split('/');
+    let filename = urlParts[urlParts.length - 1] || 'attachment';
+    
+    // Remove query params from filename
+    if (filename.includes('?')) {
+      filename = filename.split('?')[0];
+    }
+
+    // Determine content type based on file extension
+    let contentType = 'application/octet-stream';
+    if (filename.endsWith('.isdoc') || filename.endsWith('.xml')) {
+      contentType = 'application/xml';
+    } else if (filename.endsWith('.pdf')) {
+      contentType = 'application/pdf';
+    }
+
+    console.log(`✅ Attachment fetched: ${filename} (${contentType}, ${arrayBuffer.byteLength} bytes)`);
+
+    return {
+      filename,
+      content: base64Content,
+      content_type: contentType,
+    };
+  } catch (error) {
+    console.error(`❌ Error fetching attachment:`, error);
+    return null;
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -59,12 +110,36 @@ const handler = async (req: Request): Promise<Response> => {
       try {
         console.log(`📤 Sending email to: ${emailRecord.email}`);
 
-        const emailResponse = await resend.emails.send({
+        // Prepare email options
+        const emailOptions: {
+          from: string;
+          to: string[];
+          subject: string;
+          html: string;
+          attachments?: Array<{ filename: string; content: string; content_type?: string }>;
+        } = {
           from: "OneMil <noreply@onemil.cz>",
           to: [emailRecord.email],
           subject: emailRecord.subject,
           html: emailRecord.body,
-        });
+        };
+
+        // If attachment_url is present, fetch and attach the file
+        if (emailRecord.attachment_url) {
+          const attachment = await fetchAttachment(emailRecord.attachment_url);
+          if (attachment) {
+            emailOptions.attachments = [{
+              filename: attachment.filename,
+              content: attachment.content,
+              content_type: attachment.content_type,
+            }];
+            console.log(`📎 Attachment added: ${attachment.filename}`);
+          } else {
+            console.warn(`⚠️ Could not fetch attachment, sending email without it`);
+          }
+        }
+
+        const emailResponse = await resend.emails.send(emailOptions);
 
         if (emailResponse.error) {
           throw new Error(emailResponse.error.message);
