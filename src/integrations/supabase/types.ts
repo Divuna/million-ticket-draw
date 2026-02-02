@@ -923,6 +923,8 @@ export type Database = {
           notes: string | null
           price_per_coin: number
           rejected_at: string | null
+          reward_base_czk: number
+          reward_mc: number
           status: Database["public"]["Enums"]["partner_status"]
           suspended_at: string | null
           updated_at: string
@@ -951,6 +953,8 @@ export type Database = {
           notes?: string | null
           price_per_coin?: number
           rejected_at?: string | null
+          reward_base_czk?: number
+          reward_mc?: number
           status?: Database["public"]["Enums"]["partner_status"]
           suspended_at?: string | null
           updated_at?: string
@@ -979,6 +983,8 @@ export type Database = {
           notes?: string | null
           price_per_coin?: number
           rejected_at?: string | null
+          reward_base_czk?: number
+          reward_mc?: number
           status?: Database["public"]["Enums"]["partner_status"]
           suspended_at?: string | null
           updated_at?: string
