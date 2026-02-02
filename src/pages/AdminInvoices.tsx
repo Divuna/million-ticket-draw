@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, startOfWeek, endOfWeek, subWeeks, addWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, FileText, Download, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,17 +13,17 @@ import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, Dr
 import { Skeleton } from '@/components/ui/skeleton';
 import { AdminMenu } from '@/components/AdminMenu';
 
-type InvoiceStatus = 'draft' | 'issued' | 'paid';
+type InvoiceStatus = 'draft' | 'sent' | 'paid';
 
 interface Invoice {
   id: string;
   partner_id: string;
   period_start: string;
   period_end: string;
-  coins_activated: number;
-  amount_ex_vat: number;
+  coins_total: number | null;
+  amount_net: number | null;
   vat_amount: number;
-  amount_inc_vat: number;
+  amount_gross: number | null;
   status: InvoiceStatus;
   created_at: string;
   partner?: { name: string; company_name: string | null };
@@ -46,13 +46,13 @@ interface Partner {
 
 const statusLabels: Record<InvoiceStatus, string> = {
   draft: 'Koncept',
-  issued: 'Odesláno',
+  sent: 'Odesláno',
   paid: 'Zaplaceno',
 };
 
 const statusColors: Record<InvoiceStatus, string> = {
   draft: 'bg-muted text-muted-foreground',
-  issued: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  sent: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
   paid: 'bg-green-500/10 text-green-600 border-green-500/20',
 };
 
@@ -69,7 +69,8 @@ const AdminInvoices: React.FC = () => {
   const [invoiceLines, setInvoiceLines] = useState<InvoiceLine[]>([]);
   const [linesLoading, setLinesLoading] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
-  const [generatingIsdoc, setGeneratingIsdoc] = useState(false);
+  // ISDOC generation temporarily disabled
+  // const [generatingIsdoc, setGeneratingIsdoc] = useState(false);
 
   const currentWeekStart = startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
   const currentWeekEnd = endOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
@@ -159,7 +160,7 @@ const AdminInvoices: React.FC = () => {
     setStatusUpdating(true);
 
     const updateData: Record<string, unknown> = { status: newStatus };
-    if (newStatus === 'issued') {
+    if (newStatus === 'sent') {
       updateData.issued_at = new Date().toISOString();
     } else if (newStatus === 'paid') {
       updateData.paid_at = new Date().toISOString();
@@ -184,32 +185,33 @@ const AdminInvoices: React.FC = () => {
     setStatusUpdating(false);
   };
 
-  const generateIsdoc = async () => {
-    if (!selectedInvoice) return;
-    setGeneratingIsdoc(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-isdoc', {
-        body: { invoice_id: selectedInvoice.id }
-      });
-
-      if (error) throw error;
-
-      if (data?.file_url) {
-        toast.success('ISDOC vygenerován');
-        window.open(data.file_url, '_blank');
-      }
-    } catch (err) {
-      toast.error('Chyba při generování ISDOC');
-      console.error(err);
-    } finally {
-      setGeneratingIsdoc(false);
-    }
-  };
+  // ISDOC generation temporarily disabled
+  // const generateIsdoc = async () => {
+  //   if (!selectedInvoice) return;
+  //   setGeneratingIsdoc(true);
+  //
+  //   try {
+  //     const { data, error } = await supabase.functions.invoke('generate-isdoc', {
+  //       body: { invoice_id: selectedInvoice.id }
+  //     });
+  //
+  //     if (error) throw error;
+  //
+  //     if (data?.file_url) {
+  //       toast.success('ISDOC vygenerován');
+  //       window.open(data.file_url, '_blank');
+  //     }
+  //   } catch (err) {
+  //     toast.error('Chyba při generování ISDOC');
+  //     console.error(err);
+  //   } finally {
+  //     setGeneratingIsdoc(false);
+  //   }
+  // };
 
   const getNextStatus = (current: InvoiceStatus): InvoiceStatus | null => {
-    if (current === 'draft') return 'issued';
-    if (current === 'issued') return 'paid';
+    if (current === 'draft') return 'sent';
+    if (current === 'sent') return 'paid';
     return null;
   };
 
@@ -260,7 +262,7 @@ const AdminInvoices: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="all">Všechny stavy</SelectItem>
                     <SelectItem value="draft">Koncept</SelectItem>
-                    <SelectItem value="issued">Odesláno</SelectItem>
+                    <SelectItem value="sent">Odesláno</SelectItem>
                     <SelectItem value="paid">Zaplaceno</SelectItem>
                   </SelectContent>
                 </Select>
@@ -346,16 +348,16 @@ const AdminInvoices: React.FC = () => {
                           {format(new Date(invoice.period_start), 'd. M.', { locale: cs })} – {format(new Date(invoice.period_end), 'd. M.', { locale: cs })}
                         </TableCell>
                         <TableCell className="text-right">
-                          {invoice.coins_activated.toLocaleString('cs-CZ')}
+                          {(invoice.coins_total ?? 0).toLocaleString('cs-CZ')}
                         </TableCell>
                         <TableCell className="text-right">
-                          {formatCurrency(Number(invoice.amount_ex_vat))}
+                          {formatCurrency(Number(invoice.amount_net ?? 0))}
                         </TableCell>
                         <TableCell className="text-right">
                           {formatCurrency(Number(invoice.vat_amount))}
                         </TableCell>
                         <TableCell className="text-right font-semibold">
-                          {formatCurrency(Number(invoice.amount_inc_vat))}
+                          {formatCurrency(Number(invoice.amount_gross ?? 0))}
                         </TableCell>
                         <TableCell>
                           <Badge className={statusColors[invoice.status]}>
@@ -394,11 +396,11 @@ const AdminInvoices: React.FC = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xs text-muted-foreground">Coiny</div>
-                  <div className="font-semibold">{selectedInvoice.coins_activated.toLocaleString('cs-CZ')}</div>
+                  <div className="font-semibold">{(selectedInvoice.coins_total ?? 0).toLocaleString('cs-CZ')}</div>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xs text-muted-foreground">Netto</div>
-                  <div className="font-semibold">{formatCurrency(Number(selectedInvoice.amount_ex_vat))}</div>
+                  <div className="font-semibold">{formatCurrency(Number(selectedInvoice.amount_net ?? 0))}</div>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xs text-muted-foreground">DPH</div>
@@ -406,7 +408,7 @@ const AdminInvoices: React.FC = () => {
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xs text-muted-foreground">Brutto</div>
-                  <div className="font-semibold">{formatCurrency(Number(selectedInvoice.amount_inc_vat))}</div>
+                  <div className="font-semibold">{formatCurrency(Number(selectedInvoice.amount_gross ?? 0))}</div>
                 </div>
               </div>
             )}
@@ -463,8 +465,8 @@ const AdminInvoices: React.FC = () => {
                   {statusLabels[selectedInvoice.status]}
                 </Badge>
 
-                {/* Generate ISDOC button */}
-                <Button
+                {/* ISDOC button temporarily disabled */}
+                {/* <Button
                   variant="outline"
                   size="sm"
                   onClick={generateIsdoc}
@@ -476,7 +478,7 @@ const AdminInvoices: React.FC = () => {
                     <Download className="h-4 w-4 mr-2" />
                   )}
                   ISDOC
-                </Button>
+                </Button> */}
 
                 {/* Status transition button */}
                 {getNextStatus(selectedInvoice.status) && (
