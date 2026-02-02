@@ -160,16 +160,10 @@ const AdminInvoices: React.FC = () => {
     ));
     setStatusUpdating(true);
 
-    const updateData: Record<string, unknown> = { status: newStatus };
-    if (newStatus === 'sent') {
-      updateData.issued_at = new Date().toISOString();
-    } else if (newStatus === 'paid') {
-      updateData.paid_at = new Date().toISOString();
-    }
-
+    // Only update the status column, do not touch any timestamp columns
     const { error } = await supabase
       .from('partner_invoices')
-      .update(updateData)
+      .update({ status: newStatus })
       .eq('id', selectedInvoice.id);
 
     if (error) {
