@@ -944,11 +944,17 @@ const PartnerDashboard = () => {
                   <Input
                     id="reward-mc"
                     type="number"
-                    min="0.01"
-                    step="0.01"
+                    min="0.1"
+                    step="0.1"
                     value={rewardMc}
                     onChange={(e) => setRewardMc(e.target.value)}
-                    placeholder="0.00"
+                    onBlur={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) {
+                        setRewardMc((Math.round(val * 10) / 10).toFixed(1));
+                      }
+                    }}
+                    placeholder="0.0"
                     className="h-9"
                   />
                 </div>
