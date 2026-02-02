@@ -519,7 +519,7 @@ const PartnerDashboard = () => {
     const totalRevenue = ordersCount * orderAmount;
     const totalMc = sampleMc * ordersCount;
     const investmentNet = totalMc * pricePerCoin;
-    const investmentVat = investmentNet * (vatRate / 100);
+    const investmentVat = investmentNet * vatRate;
     const investmentGross = investmentNet + investmentVat;
     const investmentPercentage = totalRevenue > 0 ? (investmentNet / totalRevenue) * 100 : 0;
     
@@ -981,7 +981,7 @@ const PartnerDashboard = () => {
                 </div>
                 <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
                   <p className="text-xs text-muted-foreground mb-1">Sazba DPH</p>
-                  <p className="text-lg font-semibold">{partner?.vat_rate ?? 0} %</p>
+                  <p className="text-lg font-semibold">{((partner?.vat_rate ?? 0) * 100).toFixed(0)} %</p>
                 </div>
               </div>
 
