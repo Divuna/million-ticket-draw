@@ -931,11 +931,17 @@ const PartnerDashboard = () => {
                   <Input
                     id="reward-base-czk"
                     type="number"
-                    min="0.01"
-                    step="0.01"
+                    min="1"
+                    step="1"
                     value={rewardBaseCzk}
                     onChange={(e) => setRewardBaseCzk(e.target.value)}
-                    placeholder="0.00"
+                    onBlur={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) {
+                        setRewardBaseCzk(Math.round(val).toString());
+                      }
+                    }}
+                    placeholder="0"
                     className="h-9"
                   />
                 </div>
