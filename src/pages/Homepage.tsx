@@ -1255,19 +1255,28 @@ const Homepage = () => {
                 <h4 className="text-xl sm:text-2xl font-semibold text-foreground leading-snug">
                   Jak hra funguje, co se vyhrává a jak probíhá nákup voucherů
                 </h4>
-                <div className="space-y-3 max-w-2xl mx-auto text-left">
-                  <p className="text-base text-muted-foreground leading-relaxed">
-                    🎯 <strong className="text-foreground">Kupte tikety</strong> do soutěží o luxusní ceny za pouhý 1 MioCoin
-                  </p>
-                  <p className="text-base text-muted-foreground leading-relaxed">
-                    🏆 <strong className="text-foreground">Vyhrajte hlavní ceny</strong> jako jsou auta, dovolené nebo elektronika
-                  </p>
-                  <p className="text-base text-muted-foreground leading-relaxed">
-                    🎁 <strong className="text-foreground">Získejte bonusové výhry</strong> na každé 100. pozici tiketu
-                  </p>
-                  <p className="text-base text-muted-foreground leading-relaxed">
-                    💳 <strong className="text-foreground">Nakupte vouchery</strong> u našich partnerů a získejte MioCoiny za každý nákup
-                  </p>
+                <div className="space-y-4 max-w-2xl mx-auto text-left">
+                  <div className="text-base leading-relaxed">
+                    <p className="text-foreground font-medium">🛒 Nakupujete u partnerských e-shopů</p>
+                    <p className="text-muted-foreground mt-1">Za nákup u zapojených e-shopů můžete získat digitální kredity MioCoiny jako marketingovou odměnu.</p>
+                  </div>
+                  <div className="text-base leading-relaxed">
+                    <p className="text-foreground font-medium">💎 Získáváte MioCoiny za nákup</p>
+                    <p className="text-muted-foreground mt-1">Počet MioCoinů se odvíjí od hodnoty nákupu nebo konkrétních produktů – vždy podle pravidel daného e-shopu.</p>
+                  </div>
+                  <div className="text-base leading-relaxed">
+                    <p className="text-foreground font-medium">🎟 MioCoiny využijete k účasti v soutěžích</p>
+                    <p className="text-muted-foreground mt-1">MioCoiny slouží výhradně k účasti ve spotřebitelských soutěžích o věcné ceny v aplikaci OneMil.</p>
+                  </div>
+                  <div className="text-base leading-relaxed">
+                    <p className="text-foreground font-medium">🏆 Hrajete o luxusní věcné ceny</p>
+                    <p className="text-muted-foreground mt-1">Soutěže probíhají o ceny jako auta, dovolené, elektroniku nebo jiné hodnotné věcné výhry.</p>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground/70 max-w-2xl mx-auto pt-2 space-y-0.5">
+                  <p>MioCoiny nejsou peníze a nelze je vybrat.</p>
+                  <p>Nejedná se o hazardní hru.</p>
+                  <p>Výhry jsou výhradně věcné.</p>
                 </div>
               </div>
             </div>
