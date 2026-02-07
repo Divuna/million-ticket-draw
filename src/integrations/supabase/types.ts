@@ -2083,6 +2083,10 @@ export type Database = {
         Args: { p_api_key: string; p_partner_id: string; p_reward_code: string }
         Returns: Json
       }
+      admin_block_referrer: {
+        Args: { p_blocked: boolean; p_reason?: string; p_user_id: string }
+        Returns: undefined
+      }
       admin_manage_bonus_prize: {
         Args: {
           p_amount?: number
@@ -2134,6 +2138,10 @@ export type Database = {
           p_partner_id: string
           p_status: Database["public"]["Enums"]["partner_status"]
         }
+        Returns: undefined
+      }
+      admin_update_referral_reward: {
+        Args: { p_new_status: string; p_reward_id: string }
         Returns: undefined
       }
       api_activate_partner_coins: {

@@ -212,13 +212,11 @@ const AdminReferrals: React.FC = () => {
 
     try {
       if (confirmAction.type === 'block' && confirmAction.referrerId) {
-        // Upsert into referral_blocked_users
-        const { error } = await supabase
-          .from('referral_blocked_users')
-          .upsert(
-            { user_id: confirmAction.referrerId, blocked: true, reason: 'admin_manual' },
-            { onConflict: 'user_id' }
-          );
+        const { error } = await (supabase.rpc as any)('admin_block_referrer', {
+          p_user_id: confirmAction.referrerId,
+          p_blocked: true,
+          p_reason: 'admin_manual',
+        });
         if (error) throw error;
 
         // Optimistic update
@@ -235,10 +233,11 @@ const AdminReferrals: React.FC = () => {
       }
 
       if (confirmAction.type === 'unblock' && confirmAction.referrerId) {
-        const { error } = await supabase
-          .from('referral_blocked_users')
-          .update({ blocked: false })
-          .eq('user_id', confirmAction.referrerId);
+        const { error } = await (supabase.rpc as any)('admin_block_referrer', {
+          p_user_id: confirmAction.referrerId,
+          p_blocked: false,
+          p_reason: 'admin_manual',
+        });
         if (error) throw error;
 
         setReferrers((prev) =>
@@ -258,10 +257,10 @@ const AdminReferrals: React.FC = () => {
         confirmAction.targetId
       ) {
         const newStatus = confirmAction.type === 'reverse' ? 'reversed' : 'blocked';
-        const { error } = await supabase
-          .from('referral_rewards')
-          .update({ status: newStatus })
-          .eq('id', confirmAction.targetId);
+        const { error } = await (supabase.rpc as any)('admin_update_referral_reward', {
+          p_reward_id: confirmAction.targetId,
+          p_new_status: newStatus,
+        });
         if (error) throw error;
 
         // Optimistic update in detail
