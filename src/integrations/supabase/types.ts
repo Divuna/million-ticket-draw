@@ -1269,6 +1269,165 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_attempts: {
+        Row: {
+          attempted_code: string | null
+          created_at: string
+          device_id: string | null
+          fingerprint_hash: string | null
+          id: string
+          ip_hash: string | null
+          reason: string | null
+          referred_user_id: string
+          result: string
+          source: string | null
+        }
+        Insert: {
+          attempted_code?: string | null
+          created_at?: string
+          device_id?: string | null
+          fingerprint_hash?: string | null
+          id?: string
+          ip_hash?: string | null
+          reason?: string | null
+          referred_user_id: string
+          result: string
+          source?: string | null
+        }
+        Update: {
+          attempted_code?: string | null
+          created_at?: string
+          device_id?: string | null
+          fingerprint_hash?: string | null
+          id?: string
+          ip_hash?: string | null
+          reason?: string | null
+          referred_user_id?: string
+          result?: string
+          source?: string | null
+        }
+        Relationships: []
+      }
+      referral_blocked_users: {
+        Row: {
+          blocked: boolean
+          blocked_at: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          blocked?: boolean
+          blocked_at?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          blocked?: boolean
+          blocked_at?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referral_rewards: {
+        Row: {
+          commission_rate: number
+          created_at: string
+          id: string
+          paid_amount_mc: number
+          payment_id: string
+          payment_stripe_session_id: string | null
+          referred_user_id: string
+          referrer_user_id: string
+          reverse_reason: string | null
+          reversed_at: string | null
+          reward_mc: number
+          status: string
+        }
+        Insert: {
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          paid_amount_mc: number
+          payment_id: string
+          payment_stripe_session_id?: string | null
+          referred_user_id: string
+          referrer_user_id: string
+          reverse_reason?: string | null
+          reversed_at?: string | null
+          reward_mc: number
+          status?: string
+        }
+        Update: {
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          paid_amount_mc?: number
+          payment_id?: string
+          payment_stripe_session_id?: string | null
+          referred_user_id?: string
+          referrer_user_id?: string
+          reverse_reason?: string | null
+          reversed_at?: string | null
+          reward_mc?: number
+          status?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          blocked_at: string | null
+          blocked_reason: string | null
+          code_used: string
+          created_at: string
+          permanently_inactive_at: string | null
+          referred_user_id: string
+          referrer_user_id: string
+          source: string | null
+          status: string
+        }
+        Insert: {
+          blocked_at?: string | null
+          blocked_reason?: string | null
+          code_used: string
+          created_at?: string
+          permanently_inactive_at?: string | null
+          referred_user_id: string
+          referrer_user_id: string
+          source?: string | null
+          status?: string
+        }
+        Update: {
+          blocked_at?: string | null
+          blocked_reason?: string | null
+          code_used?: string
+          created_at?: string
+          permanently_inactive_at?: string | null
+          referred_user_id?: string
+          referrer_user_id?: string
+          source?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       roles: {
         Row: {
           name: string
@@ -1438,6 +1597,24 @@ export type Database = {
         }
         Relationships: []
       }
+      user_play_activity: {
+        Row: {
+          last_played_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          last_played_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          last_played_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1455,6 +1632,33 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_security_signals: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          fingerprint_hash: string | null
+          ip_hash: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          fingerprint_hash?: string | null
+          ip_hash?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          fingerprint_hash?: string | null
+          ip_hash?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -1999,6 +2203,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      ensure_referral_code: { Args: { p_user_id: string }; Returns: string }
       fn_close_contest: { Args: { p_contest: string }; Returns: undefined }
       forward_event_to_sofinity: {
         Args: { v_payload: Json }
@@ -2035,6 +2240,7 @@ export type Database = {
         }
         Returns: string
       }
+      generate_referral_code: { Args: never; Returns: string }
       get_active_banners_summary: { Args: never; Returns: string }
       get_admin_actions_summary: {
         Args: {
@@ -2183,6 +2389,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_self_referral: {
+        Args: { p_referred_user_id: string; p_referrer_user_id: string }
+        Returns: boolean
+      }
       log_admin_action: {
         Args: {
           action_name: string
@@ -2209,6 +2419,10 @@ export type Database = {
           }
       log_partner_api_request: {
         Args: { p_endpoint: string; p_partner_id: string }
+        Returns: undefined
+      }
+      mark_user_played: {
+        Args: { p_played_at?: string; p_user_id: string }
         Returns: undefined
       }
       mark_wins_as_seen: { Args: never; Returns: undefined }
@@ -2246,6 +2460,7 @@ export type Database = {
       }
       process_event_queue_miocoin: { Args: never; Returns: undefined }
       process_push_retries: { Args: never; Returns: undefined }
+      process_referral_inactivity: { Args: never; Returns: number }
       proxy_post_to_onesignal: {
         Args: {
           event_name: string
@@ -2321,6 +2536,16 @@ export type Database = {
               status_code: number
             }[]
           }
+      set_my_referrer_by_code: {
+        Args: {
+          p_code: string
+          p_device_id?: string
+          p_fingerprint_hash?: string
+          p_ip_hash?: string
+          p_source?: string
+        }
+        Returns: string
+      }
       setup_crud_test_data: { Args: { p_user_email?: string }; Returns: Json }
       test_admin_crud_operations: { Args: never; Returns: Json }
       test_admin_security_rls: { Args: never; Returns: Json }
@@ -2343,6 +2568,10 @@ export type Database = {
       transfer_bonus_to_main:
         | { Args: never; Returns: undefined }
         | { Args: { p_user_id: string }; Returns: undefined }
+      try_credit_wallet_mc: {
+        Args: { p_amount_mc: number; p_user_id: string }
+        Returns: boolean
+      }
       unlock_ticket: {
         Args: { contest_id: string; user_id: string }
         Returns: Json
@@ -2354,6 +2583,15 @@ export type Database = {
       update_onesignal_id: {
         Args: { p_player_id: string; p_user_id: string }
         Returns: Json
+      }
+      upsert_user_security_signals: {
+        Args: {
+          p_device_id: string
+          p_fingerprint_hash: string
+          p_ip_hash: string
+          p_user_id: string
+        }
+        Returns: undefined
       }
       validate_crud_test_data: {
         Args: { p_user_email?: string }
