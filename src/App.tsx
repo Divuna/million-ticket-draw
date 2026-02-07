@@ -69,6 +69,7 @@ import PartnerRegister from "@/pages/PartnerRegister";
 import PartnerDashboard from "@/pages/PartnerDashboard";
 import AdminPartnersPortal from "@/pages/AdminPartnersPortal";
 import AdminInvoices from "@/pages/AdminInvoices";
+import AdminReferrals from "@/pages/AdminReferrals";
 import NotFound from "@/pages/NotFound";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -355,6 +356,7 @@ function AppContent() {
           <Route path="/admin/onboarding-incomplete" element={<AdminOnboardingIncomplete />} />
           <Route path="/admin/partners-portal" element={<AdminPartnersPortal />} />
           <Route path="/admin/invoices" element={<AdminInvoices />} />
+          <Route path="/admin/referrals" element={<AdminReferrals />} />
           <Route path="/partner/login" element={<PartnerLogin />} />
           <Route path="/partner/register" element={<PartnerRegister />} />
           <Route path="/partner/dashboard" element={<PartnerDashboard />} />
