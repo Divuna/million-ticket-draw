@@ -1353,7 +1353,7 @@ export type Database = {
           created_at: string
           id: string
           paid_amount_mc: number
-          payment_id: string
+          payment_id: string | null
           payment_stripe_session_id: string | null
           referred_user_id: string
           referrer_user_id: string
@@ -1367,7 +1367,7 @@ export type Database = {
           created_at?: string
           id?: string
           paid_amount_mc: number
-          payment_id: string
+          payment_id?: string | null
           payment_stripe_session_id?: string | null
           referred_user_id: string
           referrer_user_id: string
@@ -1381,7 +1381,7 @@ export type Database = {
           created_at?: string
           id?: string
           paid_amount_mc?: number
-          payment_id?: string
+          payment_id?: string | null
           payment_stripe_session_id?: string | null
           referred_user_id?: string
           referrer_user_id?: string
@@ -2194,7 +2194,7 @@ export type Database = {
       }
       create_partner_invoices_for_last_week: { Args: never; Returns: undefined }
       create_referral_reward_from_wallet_credit: {
-        Args: { p_amount_mc: number; p_user_id: string }
+        Args: { p_amount: number; p_user_id: string }
         Returns: undefined
       }
       create_test_result: {
