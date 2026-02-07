@@ -74,11 +74,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("📧 Processing email queue...");
 
-    // Select pending emails
+    // Select pending emails: skip invoices ("faktura") that have no attachment yet
     const { data: pendingEmails, error: selectError } = await supabaseClient
       .from("email_queue")
       .select("*")
       .eq("status", "pending")
+      .or("subject.not.ilike.%faktura%,attachment_url.not.is.null")
       .order("created_at", { ascending: true })
       .limit(50);
 
