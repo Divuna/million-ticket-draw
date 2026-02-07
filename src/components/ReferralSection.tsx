@@ -310,8 +310,33 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
             <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
               Pozvi přátele
             </h2>
-            <p className="text-sm text-muted-foreground/70 mt-0.5">Doporučte OneMil a získejte MioCoiny</p>
+            <p className="text-sm text-muted-foreground/70 mt-0.5">
+              Získejte <span className="text-primary font-semibold">5 %</span> z každého dobití pozvaného uživatele + <span className="text-primary font-semibold">15 MC bonus</span> za jeho první dobití
+            </p>
           </div>
+        </div>
+
+        {/* Rules */}
+        <div className="mb-6 p-4 rounded-xl bg-muted/30 border border-border/30 space-y-1.5">
+          <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2">Jak to funguje</p>
+          <ul className="space-y-1 text-sm text-muted-foreground">
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Za každé <strong className="text-foreground">placené dobití</strong> pozvaného uživatele získáte <strong className="text-primary">5 % v MioCoinech</strong>.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Jednorázový bonus <strong className="text-primary">+15 MC</strong> po prvním placeném dobití pozvaného uživatele.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-muted-foreground mt-0.5">•</span>
+              <span>Odměna se nepřipisuje za registraci – pouze za placená dobití.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-muted-foreground mt-0.5">•</span>
+              <span>MioCoiny nelze vybrat ani směnit za peníze.</span>
+            </li>
+          </ul>
         </div>
 
         {/* Referral Code & Link */}
