@@ -39,6 +39,7 @@ export const AdminMenu: React.FC = () => {
     { label: 'Partneři', icon: Handshake, path: '/admin/partners' },
     { label: 'Faktury', icon: Receipt, path: '/admin/invoices' },
     { label: 'Referraly', icon: Link2, path: '/admin/referrals' },
+    { label: 'Ref. Dashboard', icon: BarChart3, path: '/admin/referral-dashboard' },
     { label: 'Obsah', icon: BookOpen, path: '/admin/content' },
     { label: 'Souhlasy', icon: FileText, path: '/admin/legal-acceptances' },
     { label: 'Notifikace', icon: Bell, path: '/admin/notifications' },
