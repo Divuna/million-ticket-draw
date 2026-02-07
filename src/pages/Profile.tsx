@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
 import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2, ChevronDown, Mail, CheckCircle, XCircle, Info, Crown, Sparkles, Wallet, Shield } from 'lucide-react';
+import ReferralSection from '@/components/ReferralSection';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
@@ -1750,6 +1751,11 @@ const Profile: React.FC = () => {
               </div>
             </div>
           </VIPCard>
+
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* REFERRAL SECTION - Invite Friends */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          <ReferralSection isLoaded={pageLoaded} />
         </div>
       </div>
 
