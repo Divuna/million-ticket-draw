@@ -487,18 +487,19 @@ const Profile: React.FC = () => {
   };
 
   const handleTransferBonus = async () => {
+    const bonusBefore = wallet?.bonus_balance_coins ?? 0;
     setTransferring(true);
     try {
       const { error } = await supabase.rpc('transfer_bonus_to_main');
       if (error) throw error;
       
-      toast({
-        title: "Úspěch",
-        description: "Bonusové MioCoiny byly převedeny do hlavní peněženky."
-      });
-      
       await fetchUserWallet();
       await fetchBonusTransfers();
+
+      toast({
+        title: "Úspěch",
+        description: `Převedeno ${bonusBefore.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} MioCoinů do hlavní peněženky.`
+      });
     } catch (error) {
       console.error('Error transferring bonus:', error);
       toast({
@@ -1024,11 +1025,10 @@ const Profile: React.FC = () => {
                         </div>
                       </div>
                       <Button
-                        variant="outline"
                         size="sm"
                         onClick={handleTransferBonus}
                         disabled={transferring || (wallet?.bonus_balance_coins ?? 0) === 0}
-                        className="border-green-500/30 text-green-500 hover:border-green-500/50 hover:bg-green-500/10 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-green-500/10"
+                        className="bg-gradient-to-r from-green-600 via-green-500 to-green-600 hover:from-green-500 hover:via-green-600 hover:to-green-500 text-white font-semibold shadow-lg shadow-green-500/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-green-500/30 border-0"
                       >
                         {transferring ? (
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
