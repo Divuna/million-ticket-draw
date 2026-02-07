@@ -2193,6 +2193,10 @@ export type Database = {
         Returns: string
       }
       create_partner_invoices_for_last_week: { Args: never; Returns: undefined }
+      create_referral_reward_from_wallet_credit: {
+        Args: { p_amount_mc: number; p_user_id: string }
+        Returns: undefined
+      }
       create_test_result: {
         Args: {
           p_details?: Json
@@ -2573,13 +2577,16 @@ export type Database = {
         Returns: Json
       }
       test_sofinity_player_sync: { Args: never; Returns: Json }
+      transfer_all_bonus_to_main_wallet: { Args: never; Returns: number }
       transfer_bonus_to_main:
         | { Args: never; Returns: undefined }
         | { Args: { p_user_id: string }; Returns: undefined }
-      try_credit_wallet_mc: {
-        Args: { p_amount_mc: number; p_user_id: string }
-        Returns: boolean
-      }
+      try_credit_wallet_mc:
+        | {
+            Args: { p_amount: number; p_reason?: string; p_user_id: string }
+            Returns: undefined
+          }
+        | { Args: { p_amount_mc: number; p_user_id: string }; Returns: boolean }
       unlock_ticket: {
         Args: { contest_id: string; user_id: string }
         Returns: Json
