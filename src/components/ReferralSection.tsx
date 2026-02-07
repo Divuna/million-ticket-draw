@@ -230,12 +230,12 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'credited':
+      case 'earned':
         return { text: 'Připsáno', cls: 'text-green-500 bg-green-500/15 border-green-500/25' };
-      case 'pending':
-        return { text: 'Čeká', cls: 'text-yellow-500 bg-yellow-500/15 border-yellow-500/25' };
       case 'reversed':
         return { text: 'Stornováno', cls: 'text-destructive bg-destructive/15 border-destructive/25' };
+      case 'blocked':
+        return { text: 'Zablokováno', cls: 'text-muted-foreground bg-muted/15 border-border/25' };
       default:
         return { text: status, cls: 'text-muted-foreground bg-muted/15 border-border/25' };
     }
