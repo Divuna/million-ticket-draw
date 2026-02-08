@@ -19,7 +19,12 @@ import {
   Mail,
   Phone,
   RefreshCw,
+  ChevronDown,
+  Instagram,
+  Youtube,
+  Facebook,
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminMenu } from "@/components/AdminMenu";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
@@ -527,16 +532,91 @@ const AdminInfluencers = () => {
                   </div>
                 </div>
 
-                {/* Notes (raw, read-only) */}
-                <div>
-                  <Label className="text-xs text-muted-foreground">Poznámky (raw)</Label>
-                  <Textarea
-                    value={selectedInfluencer.notes || ""}
-                    readOnly
-                    className="mt-1 text-xs font-mono bg-muted/50 resize-none"
-                    rows={6}
-                  />
-                </div>
+                {/* Parsed influencer profile */}
+                {(() => {
+                  let parsed: Record<string, any> | null = null;
+                  try {
+                    if (selectedInfluencer.notes) parsed = JSON.parse(selectedInfluencer.notes);
+                  } catch { /* not valid JSON */ }
+
+                  if (parsed && typeof parsed === "object") {
+                    const socialNetworks = parsed.social_networks as Record<string, string | null> | undefined;
+                    const hasSocials = socialNetworks && Object.values(socialNetworks).some(Boolean);
+
+                    const socialIcons: Record<string, React.ReactNode> = {
+                      instagram: <Instagram className="w-3.5 h-3.5" />,
+                      tiktok: <span className="text-xs font-bold">TT</span>,
+                      youtube: <Youtube className="w-3.5 h-3.5" />,
+                      facebook: <Facebook className="w-3.5 h-3.5" />,
+                    };
+
+                    const socialLabels: Record<string, string> = {
+                      instagram: "Instagram",
+                      tiktok: "TikTok",
+                      youtube: "YouTube",
+                      facebook: "Facebook",
+                    };
+
+                    return (
+                      <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+                        <p className="text-xs font-semibold text-foreground">Profil influencera</p>
+
+                        {parsed.follower_range && (
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Rozsah sledujících</Label>
+                            <p className="text-sm">{parsed.follower_range}</p>
+                          </div>
+                        )}
+
+                        {parsed.content_category && (
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Kategorie obsahu</Label>
+                            <p className="text-sm">{parsed.content_category}</p>
+                          </div>
+                        )}
+
+                        {hasSocials && (
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Sociální sítě</Label>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {Object.entries(socialNetworks!).map(([key, value]) =>
+                                value ? (
+                                  <a
+                                    key={key}
+                                    href={value.startsWith("http") ? value : `https://${value}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline bg-primary/10 rounded-full px-2.5 py-1"
+                                  >
+                                    {socialIcons[key] || <Globe className="w-3.5 h-3.5" />}
+                                    {socialLabels[key] || key}
+                                  </a>
+                                ) : null
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* Raw notes – collapsible */}
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    <ChevronDown className="w-3.5 h-3.5" />
+                    Poznámky (raw)
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <Textarea
+                      value={selectedInfluencer.notes || ""}
+                      readOnly
+                      className="mt-1 text-xs font-mono bg-muted/50 resize-none"
+                      rows={6}
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
             </div>
           )}
