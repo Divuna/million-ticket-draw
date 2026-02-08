@@ -17,8 +17,7 @@ import {
   BookOpen,
   UserX,
   Receipt,
-  Link2,
-  Megaphone
+  Link2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount';
@@ -41,7 +40,6 @@ export const AdminMenu: React.FC = () => {
     { label: 'Faktury', icon: Receipt, path: '/admin/invoices' },
     { label: 'Referraly', icon: Link2, path: '/admin/referrals' },
     { label: 'Ref. Dashboard', icon: BarChart3, path: '/admin/referral-dashboard' },
-    { label: 'Influenceři', icon: Megaphone, path: '/admin/influencers' },
     { label: 'Obsah', icon: BookOpen, path: '/admin/content' },
     { label: 'Souhlasy', icon: FileText, path: '/admin/legal-acceptances' },
     { label: 'Notifikace', icon: Bell, path: '/admin/notifications' },
