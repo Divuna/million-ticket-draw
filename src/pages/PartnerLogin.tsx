@@ -53,10 +53,9 @@ const PartnerLogin = () => {
 
       toast.success('Úspěšně přihlášeno');
 
-      // Redirect influencers to their dashboard
-      const isInfluencer = partner.status === 'approved' && 
-        typeof (partner as any).notes === 'string' && 
-        (partner as any).notes.toLowerCase().includes('influencer');
+      // Redirect approved influencers to their dashboard
+      const notesStr = typeof partner.notes === 'string' ? partner.notes : '';
+      const isInfluencer = notesStr.toLowerCase().includes('influencer');
       
       navigate(isInfluencer ? '/influencer/dashboard' : '/partner/dashboard');
     } catch (error: any) {
