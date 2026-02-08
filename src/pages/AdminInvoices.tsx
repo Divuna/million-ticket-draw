@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, startOfWeek, endOfWeek, subWeeks, addWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, FileText, Loader2, Mail } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, FileText, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AdminMenu } from '@/components/AdminMenu';
+import { useUserRole } from '@/hooks/useUserRole';
 
 type InvoiceStatus = 'draft' | 'issued' | 'paid';
 
@@ -57,6 +58,7 @@ const statusColors: Record<InvoiceStatus, string> = {
 };
 
 const AdminInvoices: React.FC = () => {
+  const { isAdmin } = useUserRole();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,8 +72,8 @@ const AdminInvoices: React.FC = () => {
   const [linesLoading, setLinesLoading] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
-  // ISDOC generation temporarily disabled
-  // const [generatingIsdoc, setGeneratingIsdoc] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   const currentWeekStart = startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
   const currentWeekEnd = endOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
@@ -140,12 +142,49 @@ const AdminInvoices: React.FC = () => {
 
   const openInvoiceDetail = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
+    setPdfUrl(null);
     fetchInvoiceLines(invoice.id);
+    fetchExistingPdf(invoice.id);
   };
 
   const closeDrawer = () => {
     setSelectedInvoice(null);
     setInvoiceLines([]);
+    setPdfUrl(null);
+  };
+
+  const fetchExistingPdf = async (invoiceId: string) => {
+    const { data } = await supabase
+      .from('partner_invoice_exports')
+      .select('file_url')
+      .eq('invoice_id', invoiceId)
+      .eq('format', 'pdf')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data?.file_url) setPdfUrl(data.file_url);
+  };
+
+  const generatePdf = async () => {
+    if (!selectedInvoice) return;
+    setGeneratingPdf(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-partner-invoice-pdf', {
+        body: { invoice_id: selectedInvoice.id },
+      });
+      if (error) throw error;
+      if (data?.file_url) {
+        setPdfUrl(data.file_url);
+        toast.success('PDF faktura byla vygenerována');
+      } else {
+        throw new Error('Chybí URL souboru');
+      }
+    } catch (err: any) {
+      console.error('PDF generation error:', err);
+      toast.error('Chyba při generování PDF faktury');
+    } finally {
+      setGeneratingPdf(false);
+    }
   };
 
   const updateInvoiceStatus = async (newStatus: InvoiceStatus) => {
@@ -477,7 +516,7 @@ const AdminInvoices: React.FC = () => {
             </div>
           </div>
 
-          <DrawerFooter className="flex-row gap-2">
+          <DrawerFooter className="flex-row flex-wrap gap-2">
             {/* Status badge & action */}
             {selectedInvoice && (
               <>
@@ -485,20 +524,36 @@ const AdminInvoices: React.FC = () => {
                   {statusLabels[selectedInvoice.status]}
                 </Badge>
 
-                {/* ISDOC button temporarily disabled */}
-                {/* <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={generateIsdoc}
-                  disabled={generatingIsdoc}
-                >
-                  {generatingIsdoc ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <Download className="h-4 w-4 mr-2" />
-                  )}
-                  ISDOC
-                </Button> */}
+                {/* Generate PDF button - admin only */}
+                {isAdmin && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={generatePdf}
+                      disabled={generatingPdf}
+                    >
+                      {generatingPdf ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <FileText className="h-4 w-4 mr-2" />
+                      )}
+                      Generovat PDF
+                    </Button>
+                    {pdfUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                      >
+                        <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" />
+                          Stáhnout PDF
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                )}
 
                 {/* Send email button - visible for draft, issued, or paid status */}
                 {(selectedInvoice.status === 'draft' || selectedInvoice.status === 'issued' || selectedInvoice.status === 'paid') && (
