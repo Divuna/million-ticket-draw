@@ -116,6 +116,11 @@ export const Footer: React.FC = () => {
                   Registrace influencera
                 </Link>
               </li>
+              <li>
+                <Link to="/partner/login?role=influencer" className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                  Přihlášení influencera
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
