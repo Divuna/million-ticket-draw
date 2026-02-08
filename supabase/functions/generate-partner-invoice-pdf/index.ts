@@ -202,14 +202,19 @@ serve(async (req) => {
     });
     y -= 22;
 
-    const invoiceNumber = invoice.invoice_number || `INV-${invoice_id.substring(0, 8).toUpperCase()}`;
-    currentPage.drawText(`Číslo faktury: ${invoiceNumber}`, {
+    // Display invoice number with OMA- prefix if not already present
+    const rawInvoiceNumber = invoice.invoice_number || `INV-${invoice_id.substring(0, 8).toUpperCase()}`;
+    const displayInvoiceNumber = rawInvoiceNumber.startsWith('OMA-') ? rawInvoiceNumber : `OMA-${rawInvoiceNumber.replace(/^OMA-/, '')}`;
+    currentPage.drawText(`Číslo faktury: ${displayInvoiceNumber}`, {
       x: leftMargin, y, size: 10, font, color: rgb(0.3, 0.3, 0.3),
     });
     y -= 14;
 
-    if (invoice.variable_symbol) {
-      currentPage.drawText(`Variabilní symbol: ${invoice.variable_symbol}`, {
+    // Display variable symbol as numeric part only (YYYYNNNN)
+    const rawVs = invoice.variable_symbol || rawInvoiceNumber;
+    const numericVs = rawVs.replace(/\D/g, '');
+    if (numericVs) {
+      currentPage.drawText(`Variabilní symbol: ${numericVs}`, {
         x: leftMargin, y, size: 10, font, color: rgb(0.3, 0.3, 0.3),
       });
       y -= 14;
