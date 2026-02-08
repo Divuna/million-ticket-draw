@@ -2071,6 +2071,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      activate_partner_reward: {
+        Args: { p_code: string; p_user_id: string }
+        Returns: undefined
+      }
       activate_partner_reward_code: {
         Args: { p_reward_code: string }
         Returns: undefined
@@ -2193,6 +2197,10 @@ export type Database = {
         Returns: string
       }
       create_partner_invoices_for_last_week: { Args: never; Returns: undefined }
+      create_partner_invoices_for_period: {
+        Args: { p_period_from: string; p_period_to: string }
+        Returns: undefined
+      }
       create_referral_reward_from_wallet_credit: {
         Args: { p_amount: number; p_user_id: string }
         Returns: undefined
