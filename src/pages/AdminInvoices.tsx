@@ -254,21 +254,17 @@ const AdminInvoices: React.FC = () => {
 
     setSendingEmail(true);
     try {
-      // Format dates as YYYY-MM-DD to ensure DATE type compatibility
-      const periodStartDate = format(new Date(selectedInvoice.period_start), 'yyyy-MM-dd');
-      const periodEndDate = format(new Date(selectedInvoice.period_end), 'yyyy-MM-dd');
-
-      const { error } = await supabase.rpc('enqueue_partner_invoice_email', {
-        p_partner_id: selectedInvoice.partner_id,
-        p_period_from: periodStartDate,
-        p_period_to: periodEndDate,
+      const { data, error } = await supabase.functions.invoke('send-partner-invoice-email', {
+        body: { invoice_id: selectedInvoice.id },
       });
 
       if (error) throw error;
-      toast.success('Faktura byla zařazena do emailové fronty');
-    } catch (err) {
+      if (data?.error) throw new Error(data.error);
+
+      toast.success(`Faktura byla odeslána na ${data.sent_to}`);
+    } catch (err: any) {
       console.error('Error sending invoice email:', err);
-      toast.error('Chyba při odesílání faktury emailem');
+      toast.error(err?.message || 'Chyba při odesílání faktury emailem');
     } finally {
       setSendingEmail(false);
     }
