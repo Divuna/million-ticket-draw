@@ -19,6 +19,7 @@ const SUPPLIER = {
   register: 'Městský soud v Praze, oddíl C, vložka 376856',
 };
 const CONSTANT_SYMBOL = '0308';
+const BANK_ACCOUNT = '3151752019 / 3030';
 const BANK_IBAN = 'CZ7630300000003151752019';
 const BANK_BIC = 'AIRACZPP';
 
@@ -307,6 +308,20 @@ serve(async (req) => {
     }
     y -= 75;
 
+    // ── Payment info section ────────────────────────────────────────
+    currentPage.drawText('Platební údaje:', { x: leftMargin, y, size: 10, font: fontBold });
+    y -= 15;
+    currentPage.drawText(`Číslo účtu: ${BANK_ACCOUNT}`, { x: leftMargin, y, size: 9, font, color: rgb(0.4, 0.4, 0.4) });
+    y -= 12;
+    currentPage.drawText(`IBAN: ${BANK_IBAN}`, { x: leftMargin, y, size: 9, font, color: rgb(0.4, 0.4, 0.4) });
+    y -= 12;
+    currentPage.drawText(`BIC: ${BANK_BIC}`, { x: leftMargin, y, size: 9, font, color: rgb(0.4, 0.4, 0.4) });
+    y -= 12;
+    currentPage.drawText(`Variabilní symbol: ${numericVs || '-'}`, { x: leftMargin, y, size: 9, font, color: rgb(0.4, 0.4, 0.4) });
+    y -= 12;
+    currentPage.drawText(`Konstantní symbol: ${CONSTANT_SYMBOL}`, { x: leftMargin, y, size: 9, font, color: rgb(0.4, 0.4, 0.4) });
+    y -= 20;
+
     // ── Invoice lines table ─────────────────────────────────────────
     if (lines && lines.length > 0) {
       currentPage.drawText('Položky faktury', { x: leftMargin, y, size: 12, font: fontBold });
@@ -353,7 +368,7 @@ serve(async (req) => {
         y = 842 - 50;
       }
 
-      currentPage.drawText('Přehled aktivací MioCoinů (kontrolní seznam)', {
+      currentPage.drawText('Kontrolní přehled aktivací MioCoinů', {
         x: leftMargin, y, size: 12, font: fontBold,
       });
       y -= 20;
@@ -430,6 +445,9 @@ serve(async (req) => {
 
     // ── Footer ──────────────────────────────────────────────────────
     const lastPageFooter = pdfDoc.getPages()[pdfDoc.getPageCount() - 1];
+    lastPageFooter.drawText('Faktura slouží jako daňový doklad.', {
+      x: leftMargin, y: 42, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3),
+    });
     lastPageFooter.drawText(`Vygenerováno: ${new Date().toLocaleString('cs-CZ')}`, {
       x: leftMargin, y: 30, size: 7, font, color: rgb(0.6, 0.6, 0.6),
     });
