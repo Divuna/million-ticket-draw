@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Building2, Key, LogOut, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Building2, Key, LogOut, CheckCircle, Clock, XCircle, FileText } from "lucide-react";
 
 import Homepage from "@/pages/Homepage";
 import Login from "@/pages/Login";
@@ -176,6 +176,15 @@ function PartnerHeader({ partnerName, partnerLogoUrl, partnerStatus }: PartnerHe
           </TooltipContent>
         </Tooltip>
         <div className="flex items-center gap-2">
+          <Link to="/partner/invoices">
+            <Button variant="ghost" size="sm" className="hidden sm:flex">
+              <FileText className="w-4 h-4 mr-2" />
+              Faktury
+            </Button>
+            <Button variant="ghost" size="icon" className="sm:hidden">
+              <FileText className="w-4 h-4" />
+            </Button>
+          </Link>
           <Link to="/partner/dashboard#api-keys">
             <Button variant="ghost" size="sm" className="hidden sm:flex">
               <Key className="w-4 h-4 mr-2" />
