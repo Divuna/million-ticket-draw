@@ -77,6 +77,7 @@ import AdminInvoices from "@/pages/AdminInvoices";
 import AdminReferrals from "@/pages/AdminReferrals";
 import AdminReferralDashboard from "@/pages/AdminReferralDashboard";
 import AdminInfluencers from "@/pages/AdminInfluencers";
+import AdminInfluencerCommissions from "@/pages/AdminInfluencerCommissions";
 import NotFound from "@/pages/NotFound";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -375,6 +376,7 @@ function AppContent() {
           <Route path="/admin/referrals" element={<AdminReferrals />} />
           <Route path="/admin/referral-dashboard" element={<AdminReferralDashboard />} />
           <Route path="/admin/influencers" element={<AdminInfluencers />} />
+          <Route path="/admin/influencer-commissions" element={<AdminInfluencerCommissions />} />
           <Route path="/partner/login" element={<PartnerLogin />} />
             <Route path="/partner/register" element={<PartnerRegister />} />
             <Route path="/influencer" element={<InfluencerLanding />} />

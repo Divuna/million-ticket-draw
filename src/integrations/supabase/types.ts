@@ -574,6 +574,73 @@ export type Database = {
         }
         Relationships: []
       }
+      influencer_commissions: {
+        Row: {
+          amount_czk: number
+          created_at: string
+          id: string
+          influencer_partner_id: string
+          period_month: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_czk?: number
+          created_at?: string
+          id?: string
+          influencer_partner_id: string
+          period_month: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_czk?: number
+          created_at?: string
+          id?: string
+          influencer_partner_id?: string
+          period_month?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "influencer_commissions_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      influencer_referrals: {
+        Row: {
+          created_at: string
+          id: string
+          influencer_partner_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          influencer_partner_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          influencer_partner_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "influencer_referrals_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -2176,6 +2243,10 @@ export type Database = {
       buy_ticket_atomic: {
         Args: { p_contest_id: string; p_user_id: string }
         Returns: Json
+      }
+      calculate_influencer_commissions_current_month: {
+        Args: never
+        Returns: undefined
       }
       check_guardian_notifications_batch: { Args: never; Returns: Json }
       check_partner_api_rate_limit: {
