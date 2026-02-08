@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,8 +10,6 @@ import { Loader2, Building2, ArrowLeft } from 'lucide-react';
 
 const PartnerLogin = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const isInfluencerLogin = searchParams.get('role') === 'influencer';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,35 +35,24 @@ const PartnerLogin = () => {
       // Check if user is a partner
       const { data: partner, error: partnerError } = await supabase
         .from('partners')
-        .select('id, status, notes')
+        .select('id, status')
         .eq('auth_user_id', authData.user.id)
-        .maybeSingle();
+        .single();
 
       if (partnerError || !partner) {
         await supabase.auth.signOut();
-        toast.error(isInfluencerLogin ? 'Tento účet nemá influencer přístup' : 'Tento účet nemá partnerský přístup');
+        toast.error('Tento účet nemá partnerský přístup');
         return;
       }
 
-      const isInfluencer = partner.notes && partner.notes.toLowerCase().includes('influencer');
-
-      if (isInfluencerLogin || isInfluencer) {
-        if (partner.status !== 'approved') {
-          await supabase.auth.signOut();
-          toast.error('Váš influencer účet čeká na schválení administrátorem.');
-          return;
-        }
-        toast.success('Úspěšně přihlášeno');
-        navigate('/influencer/dashboard');
-      } else {
-        if (partner.status !== 'approved') {
-          await supabase.auth.signOut();
-          toast.error('Váš partnerský účet čeká na schválení');
-          return;
-        }
-        toast.success('Úspěšně přihlášeno');
-        navigate('/partner/dashboard');
+      if (partner.status !== 'approved') {
+        await supabase.auth.signOut();
+        toast.error('Váš partnerský účet čeká na schválení');
+        return;
       }
+
+      toast.success('Úspěšně přihlášeno');
+      navigate('/partner/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
       toast.error(error.message || 'Nepodařilo se přihlásit');
@@ -83,8 +70,8 @@ const PartnerLogin = () => {
               <Building2 className="w-8 h-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">{isInfluencerLogin ? 'Influencer portál' : 'Partnerský portál'}</CardTitle>
-          <CardDescription>{isInfluencerLogin ? 'Přihlaste se do svého influencer účtu' : 'Přihlaste se do svého partnerského účtu'}</CardDescription>
+          <CardTitle className="text-2xl font-bold">Partnerský portál</CardTitle>
+          <CardDescription>Přihlaste se do svého partnerského účtu</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

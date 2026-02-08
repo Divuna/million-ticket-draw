@@ -574,48 +574,6 @@ export type Database = {
         }
         Relationships: []
       }
-      influencer_campaign_bonuses_czk: {
-        Row: {
-          amount_czk: number
-          campaign_id: string
-          created_at: string
-          id: string
-          influencer_partner_id: string
-          user_id: string
-        }
-        Insert: {
-          amount_czk: number
-          campaign_id: string
-          created_at?: string
-          id?: string
-          influencer_partner_id: string
-          user_id: string
-        }
-        Update: {
-          amount_czk?: number
-          campaign_id?: string
-          created_at?: string
-          id?: string
-          influencer_partner_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "influencer_campaign_bonuses_czk_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "influencer_campaigns"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "influencer_campaign_bonuses_czk_influencer_partner_id_fkey"
-            columns: ["influencer_partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       influencer_campaign_events: {
         Row: {
           campaign_id: string
@@ -2637,10 +2595,6 @@ export type Database = {
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
-      }
-      handle_influencer_signup: {
-        Args: { p_influencer_partner_id: string; p_user_id: string }
-        Returns: undefined
       }
       has_role: {
         Args: {
