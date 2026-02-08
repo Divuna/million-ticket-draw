@@ -29,6 +29,25 @@ function formatDate(dateStr: string): string {
   return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
 }
 
+/** Return the first Monday strictly after the given date */
+function firstMondayAfter(dateStr: string): Date {
+  const d = new Date(dateStr);
+  // Move to next day first (strictly after)
+  d.setDate(d.getDate() + 1);
+  // Advance until Monday (day === 1)
+  while (d.getDay() !== 1) {
+    d.setDate(d.getDate() + 1);
+  }
+  return d;
+}
+
+/** Add N days to a Date and return a new Date */
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
 function formatCurrency(amount: number): string {
   return amount.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' CZK';
 }
@@ -267,19 +286,22 @@ serve(async (req) => {
     const periodFrom = invoice.period_start || invoice.period_from;
     const periodTo = invoice.period_end || invoice.period_to;
 
+    // Compute issue date = first Monday after period_to
+    const issueDate = firstMondayAfter(periodTo);
+    // Due date = issue date + 7 days
+    const dueDate = addDays(issueDate, 7);
+
     currentPage.drawText(`Období: ${formatDate(periodFrom)} – ${formatDate(periodTo)}`, {
       x: leftMargin, y, size: 10, font,
     });
     y -= 14;
-    currentPage.drawText(`Datum vystavení: ${formatDate(invoice.issue_date || new Date().toISOString())}`, {
+    currentPage.drawText(`Datum vystavení: ${formatDate(issueDate.toISOString())}`, {
       x: leftMargin, y, size: 10, font, color: rgb(0.4, 0.4, 0.4),
     });
-    if (invoice.due_date) {
-      y -= 14;
-      currentPage.drawText(`Datum splatnosti: ${formatDate(invoice.due_date)}`, {
-        x: leftMargin, y, size: 10, font, color: rgb(0.4, 0.4, 0.4),
-      });
-    }
+    y -= 14;
+    currentPage.drawText(`Datum splatnosti: ${formatDate(dueDate.toISOString())}`, {
+      x: leftMargin, y, size: 10, font, color: rgb(0.4, 0.4, 0.4),
+    });
     y -= 25;
 
     // ── Summary box ─────────────────────────────────────────────────
