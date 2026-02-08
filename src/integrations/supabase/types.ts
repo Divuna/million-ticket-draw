@@ -877,7 +877,10 @@ export type Database = {
           coins_activated: number
           coins_total: number | null
           created_at: string
+          due_date: string | null
           id: string
+          invoice_number: string | null
+          issue_date: string | null
           issued_at: string | null
           paid_at: string | null
           partner_id: string
@@ -886,6 +889,8 @@ export type Database = {
           period_start: string
           period_to: string | null
           status: Database["public"]["Enums"]["partner_invoice_status"]
+          taxable_date: string | null
+          variable_symbol: string | null
           vat_amount: number
           vat_rate: number
         }
@@ -897,7 +902,10 @@ export type Database = {
           coins_activated?: number
           coins_total?: number | null
           created_at?: string
+          due_date?: string | null
           id?: string
+          invoice_number?: string | null
+          issue_date?: string | null
           issued_at?: string | null
           paid_at?: string | null
           partner_id: string
@@ -906,6 +914,8 @@ export type Database = {
           period_start: string
           period_to?: string | null
           status?: Database["public"]["Enums"]["partner_invoice_status"]
+          taxable_date?: string | null
+          variable_symbol?: string | null
           vat_amount?: number
           vat_rate?: number
         }
@@ -917,7 +927,10 @@ export type Database = {
           coins_activated?: number
           coins_total?: number | null
           created_at?: string
+          due_date?: string | null
           id?: string
+          invoice_number?: string | null
+          issue_date?: string | null
           issued_at?: string | null
           paid_at?: string | null
           partner_id?: string
@@ -926,6 +939,8 @@ export type Database = {
           period_start?: string
           period_to?: string | null
           status?: Database["public"]["Enums"]["partner_invoice_status"]
+          taxable_date?: string | null
+          variable_symbol?: string | null
           vat_amount?: number
           vat_rate?: number
         }
@@ -2228,6 +2243,13 @@ export type Database = {
       forward_event_to_sofinity: {
         Args: { v_payload: Json }
         Returns: undefined
+      }
+      generate_invoice_number: {
+        Args: { p_issue_date: string }
+        Returns: {
+          invoice_number: string
+          variable_symbol: string
+        }[]
       }
       generate_miocoin_bonus: {
         Args: { p_contest_id: string; p_count: number }
