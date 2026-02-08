@@ -125,15 +125,20 @@ serve(async (req) => {
         activations = actData || [];
       }
 
-      // Fetch user emails for activations
+      // Fetch user emails from auth.users
       if (activations.length > 0) {
         const userIds = [...new Set(activations.map((a: any) => a.user_id))];
-        const { data: usersData } = await supabase
-          .from('users')
-          .select('id, email')
-          .in('id', userIds);
+        const emailMap = new Map<string, string>();
 
-        const emailMap = new Map((usersData || []).map((u: any) => [u.id, u.email]));
+        const userResults = await Promise.all(
+          userIds.map((uid: string) => supabase.auth.admin.getUserById(uid))
+        );
+        for (const result of userResults) {
+          if (result.data?.user) {
+            emailMap.set(result.data.user.id, result.data.user.email || '-');
+          }
+        }
+
         activations = activations.map((a: any) => ({
           ...a,
           user_email: emailMap.get(a.user_id) || '-',
