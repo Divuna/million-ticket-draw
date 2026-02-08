@@ -67,6 +67,7 @@ import Kontakt from "@/pages/Kontakt";
 import PartnerLogin from "@/pages/PartnerLogin";
 import PartnerRegister from "@/pages/PartnerRegister";
 import PartnerDashboard from "@/pages/PartnerDashboard";
+import PartnerInvoices from "@/pages/PartnerInvoices";
 import AdminPartnersPortal from "@/pages/AdminPartnersPortal";
 import AdminInvoices from "@/pages/AdminInvoices";
 import AdminReferrals from "@/pages/AdminReferrals";
@@ -362,6 +363,7 @@ function AppContent() {
           <Route path="/partner/login" element={<PartnerLogin />} />
           <Route path="/partner/register" element={<PartnerRegister />} />
           <Route path="/partner/dashboard" element={<PartnerDashboard />} />
+          <Route path="/partner/invoices" element={<PartnerInvoices />} />
           <Route path="/unsubscribe/marketing" element={<UnsubscribeMarketing />} />
           <Route path="/delete-account" element={<DeleteAccount />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
