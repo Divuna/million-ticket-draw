@@ -35,7 +35,7 @@ const PartnerLogin = () => {
       // Check if user is a partner
       const { data: partner, error: partnerError } = await supabase
         .from('partners')
-        .select('id, status')
+        .select('id, status, notes')
         .eq('auth_user_id', authData.user.id)
         .single();
 
@@ -52,7 +52,13 @@ const PartnerLogin = () => {
       }
 
       toast.success('Úspěšně přihlášeno');
-      navigate('/partner/dashboard');
+
+      // Redirect influencers to their dashboard
+      const isInfluencer = partner.status === 'approved' && 
+        typeof (partner as any).notes === 'string' && 
+        (partner as any).notes.toLowerCase().includes('influencer');
+      
+      navigate(isInfluencer ? '/influencer/dashboard' : '/partner/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
       toast.error(error.message || 'Nepodařilo se přihlásit');
