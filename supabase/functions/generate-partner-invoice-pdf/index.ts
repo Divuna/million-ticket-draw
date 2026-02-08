@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { PDFDocument, rgb, StandardFonts } from "npm:pdf-lib@1.17.1";
+import { PDFDocument, rgb } from "npm:pdf-lib@1.17.1";
+import fontkit from "npm:@pdf-lib/fontkit@1.1.1";
 import QRCode from "npm:qrcode@1.5.4";
 
 const corsHeaders = {
@@ -167,8 +168,15 @@ serve(async (req) => {
 
     // ── 5. Build PDF ────────────────────────────────────────────────
     const pdfDoc = await PDFDocument.create();
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    pdfDoc.registerFontkit(fontkit);
+
+    // Fetch and embed DejaVuSans TTF for full Czech Unicode support
+    const [regularBytes, boldBytes] = await Promise.all([
+      fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf').then(r => r.arrayBuffer()),
+      fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf').then(r => r.arrayBuffer()),
+    ]);
+    const font = await pdfDoc.embedFont(regularBytes, { subset: true });
+    const fontBold = await pdfDoc.embedFont(boldBytes, { subset: true });
 
     let currentPage = pdfDoc.addPage([595, 842]);
     let y = 842 - 50;
