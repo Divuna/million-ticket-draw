@@ -383,18 +383,23 @@ serve(async (req) => {
       y -= 10;
     }
 
-    // ── Activation control list ─────────────────────────────────────
-    if (activations.length > 0) {
-      if (y < 120) {
-        currentPage = pdfDoc.addPage([595, 842]);
-        y = 842 - 50;
-      }
+    // ── Activation control list (always rendered) ─────────────────
+    if (y < 120) {
+      currentPage = pdfDoc.addPage([595, 842]);
+      y = 842 - 50;
+    }
 
-      currentPage.drawText('Kontrolní přehled aktivací MioCoinů', {
-        x: leftMargin, y, size: 12, font: fontBold,
+    currentPage.drawText('Kontrolní přehled aktivací MioCoinů', {
+      x: leftMargin, y, size: 12, font: fontBold,
+    });
+    y -= 20;
+
+    if (activations.length === 0) {
+      currentPage.drawText('Žádné aktivace v tomto období.', {
+        x: leftMargin, y, size: 9, font, color: rgb(0.5, 0.5, 0.5),
       });
       y -= 20;
-
+    } else {
       // Table header
       currentPage.drawRectangle({
         x: leftMargin, y: y - 2, width: 495, height: 16,
