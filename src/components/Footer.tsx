@@ -96,6 +96,28 @@ export const Footer: React.FC = () => {
               </li>
             </ul>
           </div>
+
+          {/* Influencer Section */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-base text-foreground">Pro influencery</h4>
+            <ul className="space-y-2.5 text-sm">
+              <li>
+                <Link to="/influencer" className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                  Pro influencery
+                </Link>
+              </li>
+              <li>
+                <Link to="/influencer/how-to-earn" className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                  Jak vydělávat s OneMil
+                </Link>
+              </li>
+              <li>
+                <Link to="/influencer/register" className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                  Registrace influencera
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
 

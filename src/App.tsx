@@ -68,6 +68,9 @@ import PartnerLogin from "@/pages/PartnerLogin";
 import PartnerRegister from "@/pages/PartnerRegister";
 import PartnerDashboard from "@/pages/PartnerDashboard";
 import PartnerInvoices from "@/pages/PartnerInvoices";
+import InfluencerLanding from "@/pages/InfluencerLanding";
+import InfluencerHowToEarn from "@/pages/InfluencerHowToEarn";
+import InfluencerRegister from "@/pages/InfluencerRegister";
 import AdminPartnersPortal from "@/pages/AdminPartnersPortal";
 import AdminInvoices from "@/pages/AdminInvoices";
 import AdminReferrals from "@/pages/AdminReferrals";
@@ -370,7 +373,10 @@ function AppContent() {
           <Route path="/admin/referrals" element={<AdminReferrals />} />
           <Route path="/admin/referral-dashboard" element={<AdminReferralDashboard />} />
           <Route path="/partner/login" element={<PartnerLogin />} />
-          <Route path="/partner/register" element={<PartnerRegister />} />
+            <Route path="/partner/register" element={<PartnerRegister />} />
+            <Route path="/influencer" element={<InfluencerLanding />} />
+            <Route path="/influencer/how-to-earn" element={<InfluencerHowToEarn />} />
+            <Route path="/influencer/register" element={<InfluencerRegister />} />
           <Route path="/partner/dashboard" element={<PartnerDashboard />} />
           <Route path="/partner/invoices" element={<PartnerInvoices />} />
           <Route path="/unsubscribe/marketing" element={<UnsubscribeMarketing />} />
