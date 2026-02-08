@@ -71,6 +71,7 @@ import PartnerInvoices from "@/pages/PartnerInvoices";
 import InfluencerLanding from "@/pages/InfluencerLanding";
 import InfluencerHowToEarn from "@/pages/InfluencerHowToEarn";
 import InfluencerRegister from "@/pages/InfluencerRegister";
+import InfluencerDashboard from "@/pages/InfluencerDashboard";
 import AdminPartnersPortal from "@/pages/AdminPartnersPortal";
 import AdminInvoices from "@/pages/AdminInvoices";
 import AdminReferrals from "@/pages/AdminReferrals";
@@ -379,6 +380,7 @@ function AppContent() {
             <Route path="/influencer" element={<InfluencerLanding />} />
             <Route path="/influencer/how-to-earn" element={<InfluencerHowToEarn />} />
             <Route path="/influencer/register" element={<InfluencerRegister />} />
+            <Route path="/influencer/dashboard" element={<InfluencerDashboard />} />
           <Route path="/partner/dashboard" element={<PartnerDashboard />} />
           <Route path="/partner/invoices" element={<PartnerInvoices />} />
           <Route path="/unsubscribe/marketing" element={<UnsubscribeMarketing />} />
