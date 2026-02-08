@@ -266,14 +266,15 @@ function isCustomerBlockedRoute(pathname: string): boolean {
 
 function AppContent() {
   const { user } = useAuth();
-  const { isAdmin, isPartnerAccount, loading: roleLoading } = useUserRole();
+  const { isAdmin, isPartnerAccount, isInfluencerAccount, loading: roleLoading } = useUserRole();
   const location = useLocation();
   const navigate = useNavigate();
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isPartnerRoute = location.pathname.startsWith('/partner');
+  const isInfluencerRoute = location.pathname.startsWith('/influencer');
   
-  // Fetch partner data for header (only when partner account)
-  const partnerData = usePartnerData(isPartnerAccount ? user?.id : undefined);
+  // Fetch partner data for header (only when partner account and NOT influencer)
+  const partnerData = usePartnerData(isPartnerAccount && !isInfluencerAccount ? user?.id : undefined);
 
   useOneSignal();
 
@@ -281,10 +282,20 @@ function AppContent() {
   React.useEffect(() => {
     if (roleLoading) return;
     
-    if (isPartnerAccount && user && isCustomerBlockedRoute(location.pathname)) {
+    // Influencer accounts: block partner routes, redirect to influencer dashboard
+    if (isInfluencerAccount && user && isPartnerRoute && location.pathname !== '/partner/login' && location.pathname !== '/partner/register') {
+      navigate('/influencer/dashboard', { replace: true });
+      return;
+    }
+
+    if (isPartnerAccount && !isInfluencerAccount && user && isCustomerBlockedRoute(location.pathname)) {
       navigate('/partner/dashboard', { replace: true });
     }
-  }, [isPartnerAccount, user, location.pathname, navigate, roleLoading]);
+
+    if (isInfluencerAccount && user && isCustomerBlockedRoute(location.pathname)) {
+      navigate('/influencer/dashboard', { replace: true });
+    }
+  }, [isPartnerAccount, isInfluencerAccount, user, location.pathname, navigate, roleLoading]);
 
   // Block rendering of customer routes while checking account type (prevents flash)
   if (user && roleLoading) {
@@ -295,8 +306,8 @@ function AppContent() {
     );
   }
 
-  // Hard-block: If partner tries to access customer route, show nothing (redirect in effect)
-  if (isPartnerAccount && user && isCustomerBlockedRoute(location.pathname)) {
+  // Hard-block: If partner/influencer tries to access blocked route, show spinner (redirect in effect)
+  if (isPartnerAccount && user && !isInfluencerAccount && isCustomerBlockedRoute(location.pathname)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -304,9 +315,17 @@ function AppContent() {
     );
   }
 
-  // Render partner header for partner accounts on partner routes
+  if (isInfluencerAccount && user && (isCustomerBlockedRoute(location.pathname) || (isPartnerRoute && location.pathname !== '/partner/login' && location.pathname !== '/partner/register'))) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Render partner header for partner accounts on partner routes (not influencers)
   const renderPartnerHeader = () => {
-    if (isPartnerAccount && isPartnerRoute && location.pathname !== '/partner/login' && location.pathname !== '/partner/register') {
+    if (isPartnerAccount && !isInfluencerAccount && isPartnerRoute && location.pathname !== '/partner/login' && location.pathname !== '/partner/register') {
       return <PartnerHeader partnerName={partnerData.name} partnerLogoUrl={partnerData.logoUrl} partnerStatus={partnerData.status} />;
     }
     return null;

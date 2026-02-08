@@ -12,11 +12,13 @@ export const useUserRole = (): {
   isPartner: boolean; 
   accountType: AccountType;
   isPartnerAccount: boolean;
+  isInfluencerAccount: boolean;
   loading: boolean 
 } => {
   const { user } = useAuth();
   const [role, setRole] = useState<UserRole>('user');
   const [accountType, setAccountType] = useState<AccountType>('customer');
+  const [isInfluencerAccount, setIsInfluencerAccount] = useState(false);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -24,6 +26,7 @@ export const useUserRole = (): {
       if (!user?.id) {
         setRole('user');
         setAccountType('customer');
+        setIsInfluencerAccount(false);
         setLoading(false);
         return;
       }
@@ -32,14 +35,20 @@ export const useUserRole = (): {
         // Check if user exists in partners table (auth_user_id = user.id)
         const { data: partnerData } = await supabase
           .from('partners')
-          .select('id')
+          .select('id, status, notes')
           .eq('auth_user_id', user.id)
           .maybeSingle();
 
         if (partnerData) {
           setAccountType('partner');
+          // Detect approved influencer accounts
+          const notesStr = typeof partnerData.notes === 'string' ? partnerData.notes : '';
+          setIsInfluencerAccount(
+            partnerData.status === 'approved' && notesStr.toLowerCase().includes('influencer')
+          );
         } else {
           setAccountType('customer');
+          setIsInfluencerAccount(false);
         }
 
         // Also fetch role from user_roles table
@@ -61,6 +70,7 @@ export const useUserRole = (): {
         console.error('Error fetching user data:', error);
         setRole('user');
         setAccountType('customer');
+        setIsInfluencerAccount(false);
       } finally {
         setLoading(false);
       }
@@ -74,5 +84,5 @@ export const useUserRole = (): {
   const isPartner = role === 'partner';
   const isPartnerAccount = accountType === 'partner';
   
-  return { role, isAdmin, isSuperAdmin, isPartner, accountType, isPartnerAccount, loading };
+  return { role, isAdmin, isSuperAdmin, isPartner, accountType, isPartnerAccount, isInfluencerAccount, loading };
 };
