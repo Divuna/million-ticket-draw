@@ -36,6 +36,15 @@ serve(async (req: Request) => {
     if (invError) throw new Error(`Chyba při načítání faktury: ${invError.message}`);
     if (!invoice) throw new Error("Faktura nenalezena");
 
+    // 1a. Only send if status is 'draft'
+    if (invoice.status !== "draft") {
+      console.log(`⏭️ Invoice ${invoice_id} has status '${invoice.status}', skipping (only 'draft' allowed)`);
+      return new Response(
+        JSON.stringify({ success: false, skipped: true, reason: `Faktura má stav '${invoice.status}', odesílání je povoleno pouze pro stav 'draft'.` }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const partner = invoice.partner;
     if (!partner) throw new Error("Partner nenalezen");
 
@@ -137,8 +146,21 @@ serve(async (req: Request) => {
 
     console.log(`✅ Invoice email sent successfully to ${recipientEmail}`);
 
+    // 5. Update invoice status to 'issued' and set issued_at
+    const { error: updateError } = await supabaseClient
+      .from("partner_invoices")
+      .update({ status: "issued", issued_at: new Date().toISOString() })
+      .eq("id", invoice_id)
+      .eq("status", "draft"); // extra guard against race conditions
+
+    if (updateError) {
+      console.warn(`⚠️ Email sent but status update failed:`, updateError.message);
+    } else {
+      console.log(`✅ Invoice ${invoice_id} status updated to 'issued'`);
+    }
+
     return new Response(
-      JSON.stringify({ success: true, sent_to: recipientEmail }),
+      JSON.stringify({ success: true, sent_to: recipientEmail, status_updated: !updateError }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {
