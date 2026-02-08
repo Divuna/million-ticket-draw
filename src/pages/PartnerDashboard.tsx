@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift, RefreshCw, Copy, Eye, EyeOff, Activity, Settings, Save } from 'lucide-react';
+import PartnerBillingForm from '@/components/PartnerBillingForm';
 import { format, startOfWeek, endOfWeek, subWeeks, subDays, isAfter } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -29,6 +30,13 @@ interface Partner {
   vat_rate: number;
   reward_base_czk: number;
   reward_mc: number;
+  ico: string | null;
+  dic: string | null;
+  billing_street: string | null;
+  billing_city: string | null;
+  billing_zip: string | null;
+  billing_country: string | null;
+  contact_email: string | null;
 }
 
 interface ApiKey {
@@ -910,6 +918,22 @@ const PartnerDashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Billing Details Section */}
+        <PartnerBillingForm
+          partnerId={partner.id}
+          initialData={{
+            company_name: partner.company_name ?? '',
+            ico: partner.ico ?? '',
+            dic: partner.dic ?? '',
+            billing_street: partner.billing_street ?? '',
+            billing_city: partner.billing_city ?? '',
+            billing_zip: partner.billing_zip ?? '',
+            billing_country: partner.billing_country ?? '',
+            contact_email: partner.contact_email ?? '',
+          }}
+          onSaved={loadPartnerData}
+        />
 
         {/* Partner Reward Settings */}
         {isAccountApproved && (
