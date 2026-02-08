@@ -278,22 +278,26 @@ function AppContent() {
 
   useOneSignal();
 
-  // Hard-block: Redirect partner accounts away from customer routes (works on direct URL access)
+  // Hard-block: Redirect accounts away from unauthorized routes
   React.useEffect(() => {
-    if (roleLoading) return;
+    if (roleLoading || !user) return;
     
-    // Influencer accounts: block partner routes, redirect to influencer dashboard
-    if (isInfluencerAccount && user && isPartnerRoute && location.pathname !== '/partner/login' && location.pathname !== '/partner/register') {
-      navigate('/influencer/dashboard', { replace: true });
-      return;
+    // Influencer accounts: ONLY allow /influencer/* routes and login/register
+    if (isInfluencerAccount) {
+      const allowedForInfluencer = 
+        location.pathname.startsWith('/influencer') || 
+        location.pathname === '/partner/login' || 
+        location.pathname === '/partner/register';
+      
+      if (!allowedForInfluencer) {
+        navigate('/influencer/dashboard', { replace: true });
+        return;
+      }
     }
 
-    if (isPartnerAccount && !isInfluencerAccount && user && isCustomerBlockedRoute(location.pathname)) {
+    // Non-influencer partner accounts: block customer routes
+    if (isPartnerAccount && !isInfluencerAccount && isCustomerBlockedRoute(location.pathname)) {
       navigate('/partner/dashboard', { replace: true });
-    }
-
-    if (isInfluencerAccount && user && isCustomerBlockedRoute(location.pathname)) {
-      navigate('/influencer/dashboard', { replace: true });
     }
   }, [isPartnerAccount, isInfluencerAccount, user, location.pathname, navigate, roleLoading]);
 
@@ -315,12 +319,20 @@ function AppContent() {
     );
   }
 
-  if (isInfluencerAccount && user && (isCustomerBlockedRoute(location.pathname) || (isPartnerRoute && location.pathname !== '/partner/login' && location.pathname !== '/partner/register'))) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+  // Influencer: block all non-influencer routes (render guard matches useEffect logic)
+  if (isInfluencerAccount && user) {
+    const allowedForInfluencer = 
+      location.pathname.startsWith('/influencer') || 
+      location.pathname === '/partner/login' || 
+      location.pathname === '/partner/register';
+    
+    if (!allowedForInfluencer) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
   }
 
   // Render partner header for partner accounts on partner routes (not influencers)

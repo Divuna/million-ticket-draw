@@ -41,8 +41,10 @@ export const useUserRole = (): {
 
         if (partnerData) {
           setAccountType('partner');
-          // Detect approved influencer accounts
-          const notesStr = typeof partnerData.notes === 'string' ? partnerData.notes : '';
+          // Detect approved influencer accounts (handle notes as string or object)
+          const notesStr = typeof partnerData.notes === 'string' 
+            ? partnerData.notes 
+            : (partnerData.notes ? JSON.stringify(partnerData.notes) : '');
           setIsInfluencerAccount(
             partnerData.status === 'approved' && notesStr.toLowerCase().includes('influencer')
           );
