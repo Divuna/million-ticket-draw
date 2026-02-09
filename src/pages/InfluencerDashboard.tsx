@@ -35,6 +35,7 @@ import {
   Zap,
 } from 'lucide-react';
 import InfluencerProfileSection from '@/components/InfluencerProfileSection';
+import InfluencerPromoMaterials from '@/components/InfluencerPromoMaterials';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -308,6 +309,9 @@ const InfluencerDashboard = () => {
 
         {/* ══════ PROFILE & PAYOUTS ══════ */}
         <InfluencerProfileSection partnerId={data.partnerId} />
+
+        {/* ══════ PROMO MATERIALS ══════ */}
+        <InfluencerPromoMaterials />
 
         {/* ══════ CAMPAIGNS ══════ */}
         <div className="luxury-card overflow-hidden">
