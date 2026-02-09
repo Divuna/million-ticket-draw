@@ -40,6 +40,7 @@ export interface InfluencerData {
   campaigns: Campaign[];
   referralLink: string;
   currentRewardPerUser: number | null;
+  nextPayoutDate: string;
 }
 
 export const useInfluencerData = () => {
@@ -122,16 +123,17 @@ export const useInfluencerData = () => {
           campaigns = (campaignData || []) as Campaign[];
         }
 
-        // Check conversion: referral users who have at least one payment
+        // Check conversion: count UNIQUE paying users
         let payingUsersCount = 0;
         if (referrals.length > 0) {
           const userIds = referrals.map((r) => r.user_id);
-          const { count } = await supabase
+          const { data: paymentRows } = await supabase
             .from('payments')
-            .select('user_id', { count: 'exact', head: true })
+            .select('user_id')
             .in('user_id', userIds)
             .eq('status', 'completed');
-          payingUsersCount = count || 0;
+          const uniquePayingUsers = new Set((paymentRows || []).map((p) => p.user_id));
+          payingUsersCount = uniquePayingUsers.size;
         }
 
         // Calculate stats
@@ -160,7 +162,7 @@ export const useInfluencerData = () => {
           : 0;
 
         const totalEarnedCzk = commissions
-          .filter((c) => c.status === 'paid' || c.status === 'approved')
+          .filter((c) => c.status === 'paid')
           .reduce((sum, c) => sum + Number(c.amount_czk), 0);
 
         const pendingPayoutCzk = commissions
@@ -174,11 +176,18 @@ export const useInfluencerData = () => {
           ? Number(currentMonthCommission.amount_czk)
           : 0;
 
-        // Current reward per user from active campaign
-        const activeCampaign = campaigns.find((c) => c.active);
+        // Current reward per user from truly active campaign (active + date range)
+        const activeCampaign = campaigns.find((c) => {
+          if (!c.active) return false;
+          const nowMs = now.getTime();
+          return nowMs >= new Date(c.starts_at).getTime() && nowMs <= new Date(c.ends_at).getTime();
+        });
         const currentRewardPerUser = activeCampaign
           ? Number(activeCampaign.bonus_czk_per_new_user)
           : null;
+
+        // Next payout date: first day of next month
+        const nextPayoutDate = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
         const origin = window.location.origin;
         const referralLink = `${origin}/?ref=${partnerId}`;
@@ -202,6 +211,7 @@ export const useInfluencerData = () => {
           campaigns,
           referralLink,
           currentRewardPerUser,
+          nextPayoutDate,
         });
       } catch (err) {
         console.error('Error loading influencer data:', err);

@@ -162,7 +162,7 @@ const InfluencerDashboard = () => {
   }
 
   /* ── Dashboard ── */
-  const { stats, commissions, campaigns, referralLink, currentRewardPerUser } = data;
+  const { stats, commissions, campaigns, referralLink, currentRewardPerUser, nextPayoutDate } = data;
 
   return (
     <div className="min-h-screen bg-background">
@@ -183,7 +183,7 @@ const InfluencerDashboard = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <StatCard icon={UserPlus} label="Registrace dnes" value={stats.todayReferrals} />
           <StatCard icon={Users} label="Registrace tento měsíc" value={stats.thisMonthReferrals} />
-          <StatCard icon={UserCheck} label="Aktivní (30 dní)" value={stats.activeReferrals} />
+          <StatCard icon={UserCheck} label="Registrace (30 dní)" value={stats.activeReferrals} />
           <StatCard icon={Percent} label="Konverze (registrace → platba)" value={stats.conversionRate} suffix="%" />
           <StatCard icon={Banknote} label="Celkem vyděláno" value={stats.totalEarnedCzk.toLocaleString('cs-CZ')} suffix="Kč" />
           <StatCard icon={TrendingUp} label="Tento měsíc" value={stats.currentMonthCzk.toLocaleString('cs-CZ')} suffix="Kč" />
@@ -265,6 +265,14 @@ const InfluencerDashboard = () => {
                 </span>
               </div>
             )}
+
+            {/* Next payout date */}
+            <div className="flex items-center justify-between rounded-lg border border-border/40 bg-muted/30 px-4 py-3">
+              <span className="text-sm text-muted-foreground">Další výplata</span>
+              <span className="text-sm font-semibold">
+                {format(new Date(nextPayoutDate), 'd. MMMM yyyy', { locale: cs })}
+              </span>
+            </div>
 
             {commissions.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">
