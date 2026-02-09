@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import InfluencerProfileSection from '@/components/InfluencerProfileSection';
 import InfluencerPromoMaterials from '@/components/InfluencerPromoMaterials';
+import InfluencerTermsSection from '@/components/InfluencerTermsSection';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -374,6 +375,9 @@ const InfluencerDashboard = () => {
             )}
           </div>
         </div>
+
+        {/* ══════ TERMS ══════ */}
+        <InfluencerTermsSection partnerId={data.partnerId} />
       </div>
     </div>
   );
