@@ -37,6 +37,7 @@ import {
 import InfluencerProfileSection from '@/components/InfluencerProfileSection';
 import InfluencerPromoMaterials from '@/components/InfluencerPromoMaterials';
 import InfluencerTermsSection from '@/components/InfluencerTermsSection';
+import InfluencerCollaborationStatus from '@/components/InfluencerCollaborationStatus';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -378,6 +379,9 @@ const InfluencerDashboard = () => {
 
         {/* ══════ TERMS ══════ */}
         <InfluencerTermsSection partnerId={data.partnerId} />
+
+        {/* ══════ COLLABORATION STATUS ══════ */}
+        <InfluencerCollaborationStatus partnerId={data.partnerId} />
       </div>
     </div>
   );
