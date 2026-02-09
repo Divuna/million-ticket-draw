@@ -222,12 +222,14 @@ const InfluencerProfileSection: React.FC<Props> = ({ partnerId }) => {
           <p className="text-xs text-[hsl(var(--text-muted-gray))] mb-3">Na tento účet budou zasílány vaše výplaty.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className={labelClass}><Landmark className="w-3.5 h-3.5" />IBAN / Číslo účtu</label>
-              <input className={inputClass} value={profile.payout_account} onChange={e => handleChange('payout_account', e.target.value)} placeholder="CZ65 0800 0000 0012 3456 7899" />
+              <label className={labelClass}><Landmark className="w-3.5 h-3.5" />Číslo účtu / IBAN</label>
+              <input className={inputClass} value={profile.payout_account} onChange={e => handleChange('payout_account', e.target.value)} placeholder="123456789/0800 nebo CZ65 0800 0000 0012 3456 7899" />
+              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">U českého účtu uveďte i kód banky za lomítkem.</p>
             </div>
             <div className="space-y-1.5">
               <label className={labelClass}><Building className="w-3.5 h-3.5" />Banka (volitelné)</label>
               <input className={inputClass} value={profile.payout_bank} onChange={e => handleChange('payout_bank', e.target.value)} placeholder="Název banky" />
+              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Pouze pro přehled – výplata se řídí číslem účtu.</p>
             </div>
             <div className="space-y-1.5">
               <label className={labelClass}><CreditCard className="w-3.5 h-3.5" />Měna výplaty</label>
