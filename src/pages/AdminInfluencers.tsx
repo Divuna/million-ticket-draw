@@ -46,6 +46,10 @@ interface Influencer {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  payout_account: string | null;
+  payout_bank: string | null;
+  payout_currency: string | null;
+  payout_ready: boolean;
 }
 
 const statusLabels: Record<InfluencerStatus, string> = {
@@ -85,7 +89,7 @@ const AdminInfluencers = () => {
     try {
       const { data, error } = await supabase
         .from("partners")
-        .select("id, name, company_name, logo_url, website_url, contact_email, contact_phone, status, notes, created_at, updated_at")
+        .select("id, name, company_name, logo_url, website_url, contact_email, contact_phone, status, notes, created_at, updated_at, payout_account, payout_bank, payout_currency, payout_ready")
         .ilike("notes", "%influencer%")
         .order("created_at", { ascending: false });
 
@@ -529,6 +533,30 @@ const AdminInfluencers = () => {
                     <p className="text-sm">
                       {format(new Date(selectedInfluencer.updated_at), "d. M. yyyy HH:mm", { locale: cs })}
                     </p>
+                  </div>
+                </div>
+
+                {/* Payout details */}
+                <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+                  <p className="text-xs font-semibold text-foreground">Údaje pro výplatu</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant={selectedInfluencer.payout_ready ? "default" : "secondary"}>
+                      {selectedInfluencer.payout_ready ? "Údaje vyplněny" : "Chybí údaje pro výplatu"}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">IBAN / Číslo účtu</Label>
+                      <p className="text-sm font-medium">{selectedInfluencer.payout_account || "—"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Banka</Label>
+                      <p className="text-sm">{selectedInfluencer.payout_bank || "—"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Měna</Label>
+                      <p className="text-sm">{selectedInfluencer.payout_currency || "CZK"}</p>
+                    </div>
                   </div>
                 </div>
 
