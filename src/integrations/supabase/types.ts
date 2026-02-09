@@ -1242,6 +1242,11 @@ export type Database = {
           mc_per_99_czk: number
           name: string
           notes: string | null
+          payout_account: string | null
+          payout_bank: string | null
+          payout_currency: string | null
+          payout_ready: boolean
+          payout_updated_at: string | null
           price_per_coin: number
           rejected_at: string | null
           reward_base_czk: number
@@ -1272,6 +1277,11 @@ export type Database = {
           mc_per_99_czk?: number
           name: string
           notes?: string | null
+          payout_account?: string | null
+          payout_bank?: string | null
+          payout_currency?: string | null
+          payout_ready?: boolean
+          payout_updated_at?: string | null
           price_per_coin?: number
           rejected_at?: string | null
           reward_base_czk?: number
@@ -1302,6 +1312,11 @@ export type Database = {
           mc_per_99_czk?: number
           name?: string
           notes?: string | null
+          payout_account?: string | null
+          payout_bank?: string | null
+          payout_currency?: string | null
+          payout_ready?: boolean
+          payout_updated_at?: string | null
           price_per_coin?: number
           rejected_at?: string | null
           reward_base_czk?: number
