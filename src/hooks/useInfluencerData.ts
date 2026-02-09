@@ -4,8 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 interface InfluencerStats {
   totalReferrals: number;
   activeReferrals: number;
+  todayReferrals: number;
+  thisMonthReferrals: number;
+  conversionRate: number;
   totalEarnedCzk: number;
   currentMonthCzk: number;
+  pendingPayoutCzk: number;
 }
 
 interface Commission {
@@ -35,6 +39,7 @@ export interface InfluencerData {
   commissions: Commission[];
   campaigns: Campaign[];
   referralLink: string;
+  currentRewardPerUser: number | null;
 }
 
 export const useInfluencerData = () => {
@@ -54,7 +59,6 @@ export const useInfluencerData = () => {
 
         const userId = sessionData.session.user.id;
 
-        // Get partner record
         const { data: partner, error: partnerError } = await supabase
           .from('partners')
           .select('id, name, contact_email, website_url, status, notes')
@@ -80,7 +84,6 @@ export const useInfluencerData = () => {
 
         const partnerId = partner.id;
 
-        // Fetch referrals, commissions, campaigns in parallel
         const [referralsRes, commissionsRes, campaignPartnersRes] = await Promise.all([
           supabase
             .from('influencer_referrals')
@@ -105,7 +108,7 @@ export const useInfluencerData = () => {
         const commissions = commissionsRes.data || [];
         const campaignPartners = campaignPartnersRes.data || [];
 
-        // Fetch campaign details if any
+        // Fetch campaigns
         let campaigns: Campaign[] = [];
         if (campaignPartners.length > 0) {
           const campaignIds = campaignPartners.map((cp) => cp.campaign_id);
@@ -119,19 +122,49 @@ export const useInfluencerData = () => {
           campaigns = (campaignData || []) as Campaign[];
         }
 
+        // Check conversion: referral users who have at least one payment
+        let payingUsersCount = 0;
+        if (referrals.length > 0) {
+          const userIds = referrals.map((r) => r.user_id);
+          const { count } = await supabase
+            .from('payments')
+            .select('user_id', { count: 'exact', head: true })
+            .in('user_id', userIds)
+            .eq('status', 'completed');
+          payingUsersCount = count || 0;
+        }
+
         // Calculate stats
         const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-        // Active referrals: users who registered in the last 30 days
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const todayReferrals = referrals.filter(
+          (r) => new Date(r.created_at) >= todayStart
+        ).length;
+
+        const thisMonthReferrals = referrals.filter(
+          (r) => new Date(r.created_at) >= monthStart
+        ).length;
+
         const activeReferrals = referrals.filter(
           (r) => new Date(r.created_at) >= thirtyDaysAgo
         ).length;
 
+        const conversionRate = referrals.length > 0
+          ? Math.round((payingUsersCount / referrals.length) * 100)
+          : 0;
+
         const totalEarnedCzk = commissions
           .filter((c) => c.status === 'paid' || c.status === 'approved')
+          .reduce((sum, c) => sum + Number(c.amount_czk), 0);
+
+        const pendingPayoutCzk = commissions
+          .filter((c) => c.status === 'calculated' || c.status === 'approved')
           .reduce((sum, c) => sum + Number(c.amount_czk), 0);
 
         const currentMonthCommission = commissions.find(
@@ -141,7 +174,12 @@ export const useInfluencerData = () => {
           ? Number(currentMonthCommission.amount_czk)
           : 0;
 
-        // Build referral link using partner ID
+        // Current reward per user from active campaign
+        const activeCampaign = campaigns.find((c) => c.active);
+        const currentRewardPerUser = activeCampaign
+          ? Number(activeCampaign.bonus_czk_per_new_user)
+          : null;
+
         const origin = window.location.origin;
         const referralLink = `${origin}/?ref=${partnerId}`;
 
@@ -153,12 +191,17 @@ export const useInfluencerData = () => {
           stats: {
             totalReferrals: referrals.length,
             activeReferrals,
+            todayReferrals,
+            thisMonthReferrals,
+            conversionRate,
             totalEarnedCzk,
             currentMonthCzk,
+            pendingPayoutCzk,
           },
           commissions: commissions as Commission[],
           campaigns,
           referralLink,
+          currentRewardPerUser,
         });
       } catch (err) {
         console.error('Error loading influencer data:', err);
