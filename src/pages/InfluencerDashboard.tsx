@@ -31,7 +31,8 @@ import {
   Megaphone,
   Percent,
   Wallet,
-  Info,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -48,44 +49,13 @@ const commissionStatusLabel = (status: string) => {
   }
 };
 
-const commissionStatusVariant = (status: string): 'default' | 'secondary' | 'outline' => {
+const commissionStatusColor = (status: string) => {
   switch (status) {
-    case 'paid': return 'default';
-    case 'approved': return 'secondary';
-    default: return 'outline';
+    case 'paid': return 'bg-[hsl(160_55%_45%/0.15)] text-[hsl(160_55%_45%)] border-[hsl(160_55%_45%/0.3)]';
+    case 'approved': return 'bg-[hsl(43_90%_55%/0.15)] text-[hsl(43_90%_55%)] border-[hsl(43_90%_55%/0.3)]';
+    default: return 'bg-[hsl(215_15%_70%/0.1)] text-[hsl(215_15%_70%)] border-[hsl(215_15%_70%/0.2)]';
   }
 };
-
-/* ─── Sub-components ─── */
-
-const StatCard = ({
-  icon: Icon,
-  label,
-  value,
-  suffix,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  suffix?: string;
-}) => (
-  <Card>
-    <CardContent className="p-5">
-      <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-lg bg-primary/10">
-          <Icon className="w-5 h-5 text-primary" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs text-muted-foreground truncate">{label}</p>
-          <p className="text-xl font-bold tabular-nums">
-            {value}
-            {suffix && <span className="text-sm font-medium ml-1">{suffix}</span>}
-          </p>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
 
 /* ─── Main page ─── */
 
@@ -105,205 +75,226 @@ const InfluencerDashboard = () => {
     }
   };
 
-  /* ── Loading ── */
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[hsl(var(--neon-gold))]" />
       </div>
     );
   }
 
-  /* ── Not logged in ── */
   if (error === 'not_authenticated') {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <Card className="max-w-md w-full text-center">
-          <CardContent className="pt-8 pb-8 space-y-4">
-            <User className="w-12 h-12 mx-auto text-muted-foreground" />
-            <h2 className="text-xl font-semibold">Přihlášení vyžadováno</h2>
-            <p className="text-muted-foreground text-sm">
-              Pro přístup k influencer dashboardu se musíte nejdříve přihlásit.
-            </p>
-            <Link
-              to="/partner/login"
-              className="inline-block text-sm text-primary hover:underline mt-2"
-            >
-              Přejít na přihlášení →
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="luxury-card max-w-md w-full text-center p-8 space-y-4">
+          <User className="w-12 h-12 mx-auto text-muted-foreground" />
+          <h2 className="text-xl font-semibold text-[hsl(var(--text-silver))]">Přihlášení vyžadováno</h2>
+          <p className="text-muted-foreground text-sm">
+            Pro přístup k influencer dashboardu se musíte nejdříve přihlásit.
+          </p>
+          <Link to="/partner/login" className="inline-block text-sm text-[hsl(var(--neon-gold))] hover:underline mt-2">
+            Přejít na přihlášení →
+          </Link>
+        </div>
       </div>
     );
   }
 
-  /* ── Access denied ── */
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <Card className="max-w-md w-full text-center">
-          <CardContent className="pt-8 pb-8 space-y-4">
-            <Clock className="w-12 h-12 mx-auto text-muted-foreground" />
-            <h2 className="text-xl font-semibold">Přístup zamítnut</h2>
-            <p className="text-muted-foreground text-sm">
-              Váš influencer účet nebyl nalezen nebo nemáte oprávnění k přístupu.
-            </p>
-            <Link
-              to="/"
-              className="inline-flex items-center text-sm text-primary hover:underline mt-2"
-            >
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              Zpět na hlavní stránku
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="luxury-card max-w-md w-full text-center p-8 space-y-4">
+          <Clock className="w-12 h-12 mx-auto text-muted-foreground" />
+          <h2 className="text-xl font-semibold text-[hsl(var(--text-silver))]">Přístup zamítnut</h2>
+          <p className="text-muted-foreground text-sm">
+            Váš influencer účet nebyl nalezen nebo nemáte oprávnění.
+          </p>
+          <Link to="/" className="inline-flex items-center text-sm text-[hsl(var(--neon-gold))] hover:underline mt-2">
+            <ArrowLeft className="mr-1 h-4 w-4" /> Zpět na hlavní stránku
+          </Link>
+        </div>
       </div>
     );
   }
 
-  /* ── Dashboard ── */
   const { stats, commissions, campaigns, referralLink, currentRewardPerUser, nextPayoutDate } = data;
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
-        {/* Header */}
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-secondary/30 bg-secondary/5">
-            <Star className="w-4 h-4 text-secondary" />
-            <span className="text-sm font-medium text-secondary">Influencer</span>
+    <div className="min-h-screen">
+      <div className="container mx-auto px-4 py-8 max-w-5xl space-y-8">
+
+        {/* ══════ HERO ══════ */}
+        <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--neon-gold)/0.25)] p-6 sm:p-8"
+          style={{
+            background: 'linear-gradient(135deg, hsl(222 47% 8%) 0%, hsl(222 40% 12%) 50%, hsl(43 30% 12%) 100%)',
+          }}
+        >
+          {/* Decorative glow */}
+          <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-20 blur-3xl pointer-events-none"
+            style={{ background: 'radial-gradient(circle, hsl(43 90% 55%), transparent 70%)' }}
+          />
+
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[hsl(var(--neon-gold)/0.4)] bg-[hsl(var(--neon-gold)/0.1)]">
+                <Star className="w-3.5 h-3.5 text-[hsl(var(--neon-gold))]" />
+                <span className="text-xs font-semibold tracking-wide uppercase text-[hsl(var(--neon-gold))]">
+                  Aktivní influencer
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-heading-gold !text-[hsl(var(--heading-gold))]">
+                Vydělávejte s OneMil
+              </h1>
+              <p className="text-sm text-[hsl(var(--text-muted-gray))] max-w-md">
+                Sdílejte svůj odkaz, přivádějte nové hráče a sledujte své výdělky v reálném čase.
+              </p>
+            </div>
+
+            {/* Hero earning highlight */}
+            <div className="shrink-0 rounded-xl border border-[hsl(var(--neon-gold)/0.3)] bg-[hsl(var(--neon-gold)/0.08)] px-6 py-4 text-center sm:text-right">
+              <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--neon-gold)/0.7)] mb-1">Tento měsíc</p>
+              <p className="text-3xl font-extrabold tabular-nums text-[hsl(var(--neon-gold))]">
+                {stats.currentMonthCzk.toLocaleString('cs-CZ')} <span className="text-lg">Kč</span>
+              </p>
+            </div>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold mt-3">
-            Vítejte, {data.name}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">Váš influencer přehled</p>
         </div>
 
-        {/* ── 1. Statistics ── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <StatCard icon={UserPlus} label="Registrace dnes" value={stats.todayReferrals} />
-          <StatCard icon={Users} label="Registrace tento měsíc" value={stats.thisMonthReferrals} />
-          <StatCard icon={UserCheck} label="Registrace (30 dní)" value={stats.activeReferrals} />
-          <StatCard icon={Percent} label="Konverze (registrace → platba)" value={stats.conversionRate} suffix="%" />
-          <StatCard icon={Banknote} label="Celkem vyděláno" value={stats.totalEarnedCzk.toLocaleString('cs-CZ')} suffix="Kč" />
-          <StatCard icon={TrendingUp} label="Tento měsíc" value={stats.currentMonthCzk.toLocaleString('cs-CZ')} suffix="Kč" />
+        {/* ══════ STAT CARDS ══════ */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {[
+            { icon: Banknote, label: 'Celkem vyděláno', value: `${stats.totalEarnedCzk.toLocaleString('cs-CZ')} Kč`, accent: true },
+            { icon: TrendingUp, label: 'Tento měsíc', value: `${stats.currentMonthCzk.toLocaleString('cs-CZ')} Kč`, accent: true },
+            { icon: Percent, label: 'Konverze', value: `${stats.conversionRate} %`, accent: false },
+            { icon: UserPlus, label: 'Registrace dnes', value: stats.todayReferrals, accent: false },
+            { icon: Users, label: 'Registrace tento měsíc', value: stats.thisMonthReferrals, accent: false },
+            { icon: UserCheck, label: 'Registrace (30 dní)', value: stats.activeReferrals, accent: false },
+          ].map((s, i) => (
+            <div key={i} className="luxury-card p-5 group hover:border-[hsl(var(--neon-gold)/0.3)] transition-all">
+              <div className="flex items-start gap-3">
+                <div className={`p-2.5 rounded-lg ${s.accent ? 'bg-[hsl(var(--neon-gold)/0.12)] border border-[hsl(var(--neon-gold)/0.2)]' : 'bg-[hsl(var(--muted)/0.5)] border border-[hsl(var(--border)/0.4)]'}`}>
+                  <s.icon className={`w-5 h-5 ${s.accent ? 'text-[hsl(var(--neon-gold))]' : 'text-[hsl(var(--text-muted-gray))]'}`} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-wider text-[hsl(var(--text-muted-gray))] mb-0.5">{s.label}</p>
+                  <p className={`text-xl font-bold tabular-nums ${s.accent ? 'text-[hsl(var(--neon-gold))]' : 'text-[hsl(var(--text-silver))]'}`}>
+                    {s.value}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* ── 2. Referral Link ── */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Link2 className="w-4 h-4" />
-              Váš referral odkaz
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {/* ══════ REFERRAL LINK ══════ */}
+        <div className="luxury-card overflow-hidden">
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Link2 className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
+              <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Váš referral odkaz</h3>
+            </div>
+
             <div className="flex gap-2">
               <Input
                 value={referralLink}
                 readOnly
-                className="font-mono text-sm bg-muted/50"
+                className="font-mono text-sm bg-[hsl(var(--muted)/0.4)] border-[hsl(var(--border)/0.5)]"
               />
               <Button
-                variant="outline"
-                size="icon"
                 onClick={handleCopy}
-                className="shrink-0"
-                aria-label="Kopírovat odkaz"
+                className="shrink-0 gap-2 bg-[hsl(var(--neon-gold))] text-[hsl(220_45%_8%)] hover:bg-[hsl(43_90%_48%)] font-semibold"
               >
-                {copied ? (
-                  <Check className="w-4 h-4 text-primary" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? 'Zkopírováno' : 'Kopírovat'}
               </Button>
             </div>
 
             {/* How it works */}
-            <div className="rounded-lg border border-border/40 bg-muted/30 p-4 space-y-2">
-              <div className="flex items-start gap-2">
-                <Info className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p className="font-medium text-foreground">Jak to funguje?</p>
-                  <p>Sdílejte tento odkaz se svými sledujícími. Každý nový uživatel, který se přes váš odkaz zaregistruje, bude automaticky přiřazen k vašemu účtu.</p>
-                  <p>Za každého uživatele, který provede platbu, získáváte provizi, která se automaticky počítá a vyplácí měsíčně.</p>
-                </div>
-              </div>
+            <div className="rounded-xl border border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.2)] p-4 space-y-2">
+              <p className="text-sm font-medium text-[hsl(var(--text-silver))] flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
+                Jak to funguje?
+              </p>
+              <p className="text-sm text-[hsl(var(--text-muted-gray))] leading-relaxed">
+                Sdílejte tento odkaz se svými sledujícími. Za každého nového uživatele, který se přes váš odkaz zaregistruje a provede platbu, získáváte provizi. Provize se automaticky počítají a vyplácejí měsíčně.
+              </p>
             </div>
 
-            {/* Current reward */}
+            {/* Current campaign reward */}
             {currentRewardPerUser !== null && (
-              <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
-                <Banknote className="w-4 h-4 text-primary shrink-0" />
-                <span className="text-sm">
+              <div className="flex items-center gap-3 rounded-xl border border-[hsl(var(--neon-gold)/0.25)] bg-[hsl(var(--neon-gold)/0.06)] px-4 py-3">
+                <Zap className="w-5 h-5 text-[hsl(var(--neon-gold))] shrink-0" />
+                <span className="text-sm text-[hsl(var(--text-silver))]">
                   Aktuální odměna z aktivní kampaně:{' '}
-                  <span className="font-bold text-primary">
+                  <span className="font-bold text-[hsl(var(--neon-gold))]">
                     {currentRewardPerUser.toLocaleString('cs-CZ')} Kč
                   </span>{' '}
                   za nového uživatele
                 </span>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* ── 3. Commissions & Payouts ── */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Wallet className="w-4 h-4" />
-              Provize a výplaty
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Pending payout summary */}
-            {stats.pendingPayoutCzk > 0 && (
-              <div className="flex items-center justify-between rounded-lg border border-secondary/20 bg-secondary/5 px-4 py-3">
-                <span className="text-sm text-muted-foreground">Čeká na výplatu</span>
-                <span className="text-lg font-bold tabular-nums">
-                  {stats.pendingPayoutCzk.toLocaleString('cs-CZ')} Kč
+        {/* ══════ COMMISSIONS & PAYOUTS ══════ */}
+        <div className="luxury-card overflow-hidden">
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Wallet className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
+              <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Provize a výplaty</h3>
+            </div>
+
+            {/* Payout summary row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {stats.pendingPayoutCzk > 0 && (
+                <div className="flex items-center justify-between rounded-xl border border-[hsl(var(--neon-gold)/0.2)] bg-[hsl(var(--neon-gold)/0.06)] px-4 py-3">
+                  <span className="text-sm text-[hsl(var(--text-muted-gray))]">Čeká na výplatu</span>
+                  <span className="text-lg font-bold tabular-nums text-[hsl(var(--neon-gold))]">
+                    {stats.pendingPayoutCzk.toLocaleString('cs-CZ')} Kč
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between rounded-xl border border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.2)] px-4 py-3">
+                <span className="text-sm text-[hsl(var(--text-muted-gray))]">Další výplata</span>
+                <span className="text-sm font-semibold text-[hsl(var(--text-silver))]">
+                  {format(new Date(nextPayoutDate), 'd. MMMM yyyy', { locale: cs })}
                 </span>
               </div>
-            )}
-
-            {/* Next payout date */}
-            <div className="flex items-center justify-between rounded-lg border border-border/40 bg-muted/30 px-4 py-3">
-              <span className="text-sm text-muted-foreground">Další výplata</span>
-              <span className="text-sm font-semibold">
-                {format(new Date(nextPayoutDate), 'd. MMMM yyyy', { locale: cs })}
-              </span>
             </div>
 
             {commissions.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                Zatím žádné provize. Jakmile přivedete první uživatele, provize se zde zobrazí.
-              </p>
+              <div className="text-center py-10 space-y-2">
+                <Banknote className="w-10 h-10 mx-auto text-[hsl(var(--text-muted-gray)/0.4)]" />
+                <p className="text-sm text-[hsl(var(--text-muted-gray))]">
+                  Zatím žádné provize. Sdílejte svůj odkaz a začněte vydělávat!
+                </p>
+              </div>
             ) : (
-              <div className="overflow-auto">
+              <div className="overflow-auto rounded-lg border border-[hsl(var(--border)/0.3)]">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Měsíc</TableHead>
-                      <TableHead className="text-right">Částka</TableHead>
-                      <TableHead className="text-right">Stav</TableHead>
+                    <TableRow className="border-b border-[hsl(var(--border)/0.3)] hover:bg-transparent">
+                      <TableHead className="text-[hsl(var(--text-muted-gray))] text-xs uppercase tracking-wider">Měsíc</TableHead>
+                      <TableHead className="text-right text-[hsl(var(--text-muted-gray))] text-xs uppercase tracking-wider">Částka</TableHead>
+                      <TableHead className="text-right text-[hsl(var(--text-muted-gray))] text-xs uppercase tracking-wider">Stav</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {commissions.map((c) => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium">
+                      <TableRow key={c.id} className="border-b border-[hsl(var(--border)/0.15)] hover:bg-[hsl(var(--muted)/0.2)]">
+                        <TableCell className="font-medium text-[hsl(var(--text-silver))]">
                           <div className="flex items-center gap-2">
-                            <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0" />
+                            <CalendarDays className="w-4 h-4 text-[hsl(var(--text-muted-gray))] shrink-0" />
                             {format(new Date(c.period_month), 'LLLL yyyy', { locale: cs })}
                           </div>
                         </TableCell>
-                        <TableCell className="text-right font-bold tabular-nums">
+                        <TableCell className="text-right font-bold tabular-nums text-[hsl(var(--text-silver))]">
                           {Number(c.amount_czk).toLocaleString('cs-CZ')} Kč
                         </TableCell>
                         <TableCell className="text-right">
-                          <Badge variant={commissionStatusVariant(c.status)}>
+                          <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${commissionStatusColor(c.status)}`}>
                             {commissionStatusLabel(c.status)}
-                          </Badge>
+                          </span>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -311,61 +302,70 @@ const InfluencerDashboard = () => {
                 </Table>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* ── 4. Campaigns ── */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Megaphone className="w-4 h-4" />
-              Kampaně
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        {/* ══════ CAMPAIGNS ══════ */}
+        <div className="luxury-card overflow-hidden">
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Megaphone className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
+              <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Kampaně</h3>
+            </div>
+
             {campaigns.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                Momentálně nejste zařazeni do žádné kampaně.
-              </p>
+              <div className="text-center py-10 space-y-2">
+                <Megaphone className="w-10 h-10 mx-auto text-[hsl(var(--text-muted-gray)/0.4)]" />
+                <p className="text-sm text-[hsl(var(--text-muted-gray))]">
+                  Momentálně nejste zařazeni do žádné kampaně.
+                </p>
+              </div>
             ) : (
               <div className="space-y-3">
-                {campaigns.map((camp) => (
-                  <div
-                    key={camp.id}
-                    className="rounded-lg border border-border/40 px-4 py-3 space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold">{camp.name}</span>
-                      <Badge variant={camp.active ? 'default' : 'secondary'}>
-                        {camp.active ? 'Aktivní' : 'Ukončená'}
-                      </Badge>
+                {campaigns.map((camp) => {
+                  const isActive = camp.active && new Date() >= new Date(camp.starts_at) && new Date() <= new Date(camp.ends_at);
+                  return (
+                    <div
+                      key={camp.id}
+                      className={`rounded-xl border p-4 space-y-3 transition-all ${isActive
+                          ? 'border-[hsl(var(--neon-gold)/0.3)] bg-[hsl(var(--neon-gold)/0.04)]'
+                          : 'border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.15)]'
+                        }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-[hsl(var(--text-silver))]">{camp.name}</span>
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${isActive
+                            ? 'bg-[hsl(160_55%_45%/0.15)] text-[hsl(160_55%_45%)] border-[hsl(160_55%_45%/0.3)]'
+                            : 'bg-[hsl(215_15%_70%/0.1)] text-[hsl(215_15%_70%)] border-[hsl(215_15%_70%/0.2)]'
+                          }`}>
+                          {isActive ? 'Aktivní' : 'Ukončená'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {[
+                          { label: 'Bonus za registraci', value: `${Number(camp.bonus_czk_per_new_user).toLocaleString('cs-CZ')} Kč` },
+                          { label: 'Bonus pro uživatele', value: `${Number(camp.bonus_mc_for_user)} MC` },
+                          { label: 'Platnost', value: `${format(new Date(camp.starts_at), 'd. M. yyyy', { locale: cs })} – ${format(new Date(camp.ends_at), 'd. M. yyyy', { locale: cs })}` },
+                        ].map((item, idx) => (
+                          <div key={idx} className="rounded-lg bg-[hsl(var(--muted)/0.3)] border border-[hsl(var(--border)/0.2)] px-3 py-2.5">
+                            <span className="block text-[10px] uppercase tracking-widest text-[hsl(var(--text-muted-gray))] mb-0.5">{item.label}</span>
+                            <span className="font-semibold text-sm text-[hsl(var(--text-silver))]">{item.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {isActive && (
+                        <p className="text-xs text-[hsl(var(--neon-gold)/0.7)] flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5" />
+                          Tato kampaň je právě aktivní — každý nový uživatel se vám počítá!
+                        </p>
+                      )}
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-muted-foreground">
-                      <div className="rounded bg-muted/40 px-3 py-2">
-                        <span className="block text-[10px] uppercase tracking-wide mb-0.5">Bonus za registraci</span>
-                        <span className="font-semibold text-foreground">
-                          {Number(camp.bonus_czk_per_new_user).toLocaleString('cs-CZ')} Kč
-                        </span>
-                      </div>
-                      <div className="rounded bg-muted/40 px-3 py-2">
-                        <span className="block text-[10px] uppercase tracking-wide mb-0.5">Bonus pro uživatele</span>
-                        <span className="font-semibold text-foreground">
-                          {Number(camp.bonus_mc_for_user)} MC
-                        </span>
-                      </div>
-                      <div className="rounded bg-muted/40 px-3 py-2">
-                        <span className="block text-[10px] uppercase tracking-wide mb-0.5">Platnost</span>
-                        <span className="font-semibold text-foreground">
-                          {format(new Date(camp.starts_at), 'd. M. yyyy', { locale: cs })} – {format(new Date(camp.ends_at), 'd. M. yyyy', { locale: cs })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
