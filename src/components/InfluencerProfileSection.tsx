@@ -30,10 +30,6 @@ interface ProfileData {
   status: string;
   company_name: string;
   ico: string;
-  payout_account: string;
-  payout_bank: string;
-  payout_currency: string;
-  payout_ready: boolean;
 }
 
 interface Props {
@@ -49,7 +45,7 @@ const InfluencerProfileSection: React.FC<Props> = ({ partnerId }) => {
     const load = async () => {
       const { data, error } = await supabase
         .from('partners')
-        .select('name, contact_email, contact_phone, website_url, billing_street, billing_city, billing_zip, billing_country, currency, status, company_name, ico, payout_account, payout_bank, payout_currency, payout_ready')
+        .select('name, contact_email, contact_phone, website_url, billing_street, billing_city, billing_zip, billing_country, currency, status, company_name, ico')
         .eq('id', partnerId)
         .single();
       if (!error && data) {
@@ -66,10 +62,6 @@ const InfluencerProfileSection: React.FC<Props> = ({ partnerId }) => {
           status: data.status || '',
           company_name: (data.company_name as string) || '',
           ico: (data.ico as string) || '',
-          payout_account: (data.payout_account as string) || '',
-          payout_bank: (data.payout_bank as string) || '',
-          payout_currency: (data.payout_currency as string) || 'CZK',
-          payout_ready: data.payout_ready || false,
         });
       }
       setLoading(false);
@@ -85,7 +77,6 @@ const InfluencerProfileSection: React.FC<Props> = ({ partnerId }) => {
   const handleSave = async () => {
     if (!profile) return;
     setSaving(true);
-    const hasPayoutAccount = !!(profile.payout_account?.trim());
     const { error } = await supabase
       .from('partners')
       .update({
@@ -98,10 +89,6 @@ const InfluencerProfileSection: React.FC<Props> = ({ partnerId }) => {
         billing_zip: profile.billing_zip || null,
         billing_country: profile.billing_country || null,
         currency: profile.currency,
-        payout_account: profile.payout_account || null,
-        payout_bank: profile.payout_bank || null,
-        payout_ready: hasPayoutAccount,
-        payout_updated_at: hasPayoutAccount ? new Date().toISOString() : undefined,
       })
       .eq('id', partnerId);
     setSaving(false);
@@ -113,7 +100,7 @@ const InfluencerProfileSection: React.FC<Props> = ({ partnerId }) => {
   };
 
   const isPayoutReady = profile
-    ? !!(profile.payout_account?.trim())
+    ? !!(profile.billing_street && profile.billing_city && profile.billing_zip && profile.contact_email)
     : false;
 
   const statusLabel = (s: string) => {
@@ -147,7 +134,7 @@ const InfluencerProfileSection: React.FC<Props> = ({ partnerId }) => {
   const Field = ({ icon: Icon, label, field, placeholder, readOnly = false }: {
     icon: React.ElementType;
     label: string;
-    field: Exclude<keyof ProfileData, 'payout_ready'>;
+    field: keyof ProfileData;
     placeholder: string;
     readOnly?: boolean;
   }) => (
@@ -191,12 +178,12 @@ const InfluencerProfileSection: React.FC<Props> = ({ partnerId }) => {
           {isPayoutReady ? (
             <>
               <CheckCircle2 className="w-4 h-4 text-[hsl(160_55%_45%)] shrink-0" />
-              <span className="text-sm text-[hsl(160_55%_45%)]">Údaje pro výplatu vyplněny</span>
+              <span className="text-sm text-[hsl(160_55%_45%)]">Připraveno k výplatě</span>
             </>
           ) : (
             <>
               <AlertTriangle className="w-4 h-4 text-[hsl(43_90%_55%)] shrink-0" />
-              <span className="text-sm text-[hsl(43_90%_55%)]">Chybí údaje pro výplatu</span>
+              <span className="text-sm text-[hsl(43_90%_55%)]">Chybí údaje pro výplatu — doplňte adresu a e-mail</span>
             </>
           )}
         </div>
@@ -212,20 +199,10 @@ const InfluencerProfileSection: React.FC<Props> = ({ partnerId }) => {
           </div>
         </div>
 
-        {/* Payout details */}
-        <div>
-          <p className="text-xs font-medium text-[hsl(var(--text-muted-gray))] uppercase tracking-wider mb-1">Údaje pro výplatu</p>
-          <p className="text-xs text-[hsl(var(--text-muted-gray))] mb-3">Na tento účet budou zasílány vaše výplaty.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field icon={CreditCard} label="IBAN / Číslo účtu" field="payout_account" placeholder="CZ65 0800 0000 0019 2000 0145" />
-            <Field icon={Building} label="Banka (nepovinné)" field="payout_bank" placeholder="např. Česká spořitelna" />
-            <Field icon={CreditCard} label="Měna výplaty" field="payout_currency" placeholder="CZK" readOnly />
-          </div>
-        </div>
-
-        {/* Billing address */}
+        {/* Payout fields */}
         <div>
           <p className="text-xs font-medium text-[hsl(var(--text-muted-gray))] uppercase tracking-wider mb-1">Fakturační adresa</p>
+          <p className="text-xs text-[hsl(var(--text-muted-gray))] mb-3">Na tuto adresu budou zasílány vaše výplaty.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field icon={Building} label="Ulice" field="billing_street" placeholder="Ulice a číslo popisné" />
             <Field icon={Building} label="Město" field="billing_city" placeholder="Praha" />
