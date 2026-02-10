@@ -15,7 +15,10 @@ const EXEMPT_ROUTES = [
   '/unsubscribe/marketing',
   '/share/ticket',
   '/legal/',
-  '/test-login'
+  '/test-login',
+  '/admin',
+  '/influencer',
+  '/partner',
 ];
 
 export const DateOfBirthGuard: React.FC<DateOfBirthGuardProps> = ({ children }) => {
