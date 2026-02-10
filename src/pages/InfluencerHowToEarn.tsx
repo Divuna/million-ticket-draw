@@ -113,8 +113,8 @@ const InfluencerHowToEarn = () => {
                 a: 'Po schválení získáte přístup k bannerům, odkazům, promo kódům a dalším materiálům pro propagaci.',
               },
             ].map((faq, i) => (
-              <Card key={i} className="rounded-[16px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border border-[hsl(40_30%_35%/0.5)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[hsl(40_40%_45%/0.6)]">
-                <CardContent className="p-5">
+              <Card key={i} className={premiumCard}>
+                <CardContent className="p-6 sm:p-8">
                   <h4 className="font-semibold mb-2 text-heading-gold">{faq.q}</h4>
                   <p className="text-muted-foreground text-sm">{faq.a}</p>
                 </CardContent>
