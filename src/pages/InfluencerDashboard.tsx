@@ -40,6 +40,7 @@ import {
   Sparkles,
   Zap,
   LogOut,
+  MessageCircle,
 } from 'lucide-react';
 import InfluencerProfileSection from '@/components/InfluencerProfileSection';
 import InfluencerPromoMaterials from '@/components/InfluencerPromoMaterials';
@@ -225,15 +226,27 @@ const InfluencerDashboard = () => {
             </div>
 
             <div className="flex flex-col items-end gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="hidden sm:inline-flex gap-2 border-[hsl(var(--border)/0.5)] text-[hsl(var(--text-muted-gray))] hover:text-[hsl(var(--text-silver))] hover:border-[hsl(var(--border))]"
-              >
-                <LogOut className="w-4 h-4" />
-                Odhlásit se
-              </Button>
+              <div className="flex items-center gap-2">
+                <Link to="/influencer/messages">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 border-[hsl(var(--border)/0.5)] text-[hsl(var(--text-muted-gray))] hover:text-[hsl(var(--text-silver))] hover:border-[hsl(var(--border))]"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span className="hidden sm:inline">Zprávy</span>
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="hidden sm:inline-flex gap-2 border-[hsl(var(--border)/0.5)] text-[hsl(var(--text-muted-gray))] hover:text-[hsl(var(--text-silver))] hover:border-[hsl(var(--border))]"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Odhlásit se
+                </Button>
+              </div>
               {/* Hero earning highlight */}
               <div className="shrink-0 rounded-xl border border-[hsl(var(--neon-gold)/0.3)] bg-[hsl(var(--neon-gold)/0.08)] px-6 py-4 text-center sm:text-right">
                 <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--neon-gold)/0.7)] mb-1">Tento měsíc</p>

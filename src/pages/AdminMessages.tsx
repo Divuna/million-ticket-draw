@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { Star } from "lucide-react";
 
 interface Thread {
   user_id: string;
@@ -12,6 +14,7 @@ interface Thread {
   last_message: string;
   last_date: string;
   has_unread: boolean;
+  is_influencer: boolean;
 }
 
 export default function AdminMessages() {
@@ -50,20 +53,33 @@ export default function AdminMessages() {
     // Get unique user IDs
     const userIds = Object.keys(grouped);
 
-    // Fetch user info for all users
-    const { data: usersData } = await supabase
-      .from("users")
-      .select("id, email, name, first_name, last_name")
-      .in("id", userIds);
+    // Fetch user info and influencer status in parallel
+    const [usersRes, influencerRes] = await Promise.all([
+      supabase
+        .from("users")
+        .select("id, email, name, first_name, last_name")
+        .in("id", userIds),
+      supabase
+        .from("partners")
+        .select("auth_user_id")
+        .ilike("notes", "%influencer%")
+        .eq("status", "approved")
+        .in("auth_user_id", userIds),
+    ]);
 
     // Create a map of user info
     const userMap: Record<string, { email: string | null; name: string | null }> = {};
-    usersData?.forEach((user) => {
+    usersRes.data?.forEach((user) => {
       const displayName = user.name || 
         (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : null) ||
         user.first_name || null;
       userMap[user.id] = { email: user.email, name: displayName };
     });
+
+    // Create set of influencer user IDs
+    const influencerUserIds = new Set(
+      (influencerRes.data || []).map((p) => p.auth_user_id).filter(Boolean)
+    );
 
     const result: Thread[] = userIds.map((uid) => {
       const userMessages = grouped[uid];
@@ -77,11 +93,21 @@ export default function AdminMessages() {
         last_message: userMessages[0]?.content || "",
         last_date: userMessages[0]?.created_at || "",
         has_unread: hasUnread,
+        is_influencer: influencerUserIds.has(uid),
       };
     });
 
-    // Sort by last_date DESC
-    result.sort((a, b) => new Date(b.last_date).getTime() - new Date(a.last_date).getTime());
+    // Sort: influencers first (with unread), then unread, then by date
+    result.sort((a, b) => {
+      // Influencer unread first
+      if (a.is_influencer && a.has_unread && !(b.is_influencer && b.has_unread)) return -1;
+      if (b.is_influencer && b.has_unread && !(a.is_influencer && a.has_unread)) return -1;
+      // Then influencers
+      if (a.is_influencer && !b.is_influencer) return -1;
+      if (b.is_influencer && !a.is_influencer) return 1;
+      // Then by date
+      return new Date(b.last_date).getTime() - new Date(a.last_date).getTime();
+    });
 
     setThreads(result);
     setLoading(false);
@@ -118,19 +144,37 @@ export default function AdminMessages() {
                 relative p-4 rounded-2xl cursor-pointer 
                 transition-all duration-200 ease-in-out
                 hover:scale-[1.02] hover:shadow-xl
-                ${thread.has_unread 
-                  ? "bg-destructive/10 border-2 border-destructive/40 shadow-md shadow-destructive/10" 
-                  : "bg-card border border-border/50 shadow-md hover:bg-accent/50"
+                ${thread.is_influencer
+                  ? thread.has_unread
+                    ? "bg-[hsl(280,40%,15%)] border-2 border-[hsl(280,60%,50%,0.5)] shadow-md shadow-[hsl(280,60%,50%,0.15)]"
+                    : "bg-[hsl(280,30%,12%)] border-2 border-[hsl(280,40%,40%,0.3)] shadow-md"
+                  : thread.has_unread 
+                    ? "bg-destructive/10 border-2 border-destructive/40 shadow-md shadow-destructive/10" 
+                    : "bg-card border border-border/50 shadow-md hover:bg-accent/50"
                 }
               `}
             >
-              {/* Unread red dot */}
+              {/* Unread dot */}
               {thread.has_unread && (
-                <div className="absolute top-3 right-3 w-3 h-3 bg-destructive rounded-full animate-pulse" />
+                <div className={`absolute top-3 right-3 w-3 h-3 rounded-full animate-pulse ${
+                  thread.is_influencer ? "bg-[hsl(280,60%,55%)]" : "bg-destructive"
+                }`} />
+              )}
+
+              {/* Influencer badge */}
+              {thread.is_influencer && (
+                <div className="mb-2">
+                  <Badge className="bg-[hsl(280,50%,45%)] text-white border-[hsl(280,60%,55%,0.3)] text-[10px] uppercase tracking-wider gap-1">
+                    <Star className="w-3 h-3" />
+                    Influencer
+                  </Badge>
+                </div>
               )}
               
               {/* Sender / User name or email */}
-              <p className="text-foreground font-semibold text-sm truncate pr-6">
+              <p className={`font-semibold text-sm truncate ${thread.is_influencer ? "pr-2" : "pr-6"} ${
+                thread.is_influencer ? "text-[hsl(280,70%,80%)]" : "text-foreground"
+              }`}>
                 {thread.user_name || thread.user_email || `${thread.user_id.slice(0, 8)}…`}
               </p>
               
