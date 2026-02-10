@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useDateOfBirthCheck } from '@/hooks/useDateOfBirthCheck';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface DateOfBirthGuardProps {
   children: React.ReactNode;
@@ -21,6 +22,7 @@ const EXEMPT_ROUTES = [
 export const DateOfBirthGuard: React.FC<DateOfBirthGuardProps> = ({ children }) => {
   const { user } = useAuth();
   const { isLoading, hasDateOfBirth } = useDateOfBirthCheck();
+  const { role, loading: roleLoading } = useUserRole();
   const location = useLocation();
 
   // Check if current route is exempt
@@ -47,8 +49,14 @@ export const DateOfBirthGuard: React.FC<DateOfBirthGuardProps> = ({ children }) 
     return <>{children}</>;
   }
 
+  // Admin and superadmin users are always exempt from onboarding guards
+  // (they must never be redirected to date-of-birth or other onboarding flows)
+  if (!roleLoading && (role === 'admin' || role === 'superadmin')) {
+    return <>{children}</>;
+  }
+
   // If still loading, show loading state
-  if (isLoading) {
+  if (isLoading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
