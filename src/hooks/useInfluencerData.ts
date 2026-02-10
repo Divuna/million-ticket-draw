@@ -56,6 +56,7 @@ export interface InfluencerData {
   name: string;
   contactEmail: string | null;
   websiteUrl: string;
+  logoUrl: string;
   stats: InfluencerStats;
   commissions: Commission[];
   campaigns: Campaign[];
@@ -86,7 +87,7 @@ export const useInfluencerData = () => {
 
         const { data: partner, error: partnerError } = await supabase
           .from('partners')
-          .select('id, name, contact_email, website_url, status, notes')
+          .select('id, name, contact_email, website_url, status, notes, logo_url')
           .eq('auth_user_id', userId)
           .maybeSingle();
 
@@ -227,6 +228,7 @@ export const useInfluencerData = () => {
           name: partner.name,
           contactEmail: partner.contact_email as string | null,
           websiteUrl: partner.website_url,
+          logoUrl: partner.logo_url,
           stats: {
             totalReferrals: referrals.length,
             activeReferrals,

@@ -3,8 +3,9 @@
  * Manages influencer profile & payout details via the `partners` table.
  * ⚠️  Intentionally separate from the Player referral system. MUST NOT be unified.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -19,6 +20,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Landmark,
+  Camera,
 } from 'lucide-react';
 
 interface ProfileData {
@@ -42,12 +44,16 @@ interface ProfileData {
 
 interface Props {
   partnerId: string;
+  logoUrl?: string;
+  onLogoUpdated?: () => void;
 }
 
-const InfluencerProfileSection: React.FC<Props> = ({ partnerId }) => {
+const InfluencerProfileSection: React.FC<Props> = ({ partnerId, logoUrl, onLogoUpdated }) => {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -131,6 +137,53 @@ const InfluencerProfileSection: React.FC<Props> = ({ partnerId }) => {
 
   const isPayoutReady = profile ? computePayoutReady(profile.payout_account) : false;
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Nahrajte prosím obrázek (JPG, PNG, WebP)');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Maximální velikost souboru je 5 MB');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const filePath = `${partnerId}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('partner-logos')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('partner-logos')
+        .getPublicUrl(filePath);
+
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+      const { error: updateError } = await supabase
+        .from('partners')
+        .update({ logo_url: publicUrl })
+        .eq('id', partnerId);
+
+      if (updateError) throw updateError;
+
+      toast.success('Profilové foto bylo aktualizováno');
+      onLogoUpdated?.();
+    } catch (err) {
+      console.error('Photo upload error:', err);
+      toast.error('Nepodařilo se nahrát foto');
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
   const statusLabel = (s: string) => {
     switch (s) {
       case 'approved': return 'Schválený';
@@ -166,11 +219,42 @@ const InfluencerProfileSection: React.FC<Props> = ({ partnerId }) => {
   return (
     <div className="luxury-card overflow-hidden">
       <div className="p-6 space-y-6">
-        {/* Header */}
+        {/* Header with avatar */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <User className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
-            <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Profil a výplaty</h3>
+          <div className="flex items-center gap-3">
+            <div className="relative group">
+              <Avatar className="w-14 h-14 border-2 border-[hsl(var(--border)/0.5)]">
+                {logoUrl ? (
+                  <AvatarImage src={logoUrl} alt="Profilové foto" />
+                ) : null}
+                <AvatarFallback className="bg-[hsl(var(--muted)/0.5)] text-[hsl(var(--text-muted-gray))]">
+                  <User className="w-6 h-6" />
+                </AvatarFallback>
+              </Avatar>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-wait"
+              >
+                {uploadingPhoto ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-white" />
+                ) : (
+                  <Camera className="w-5 h-5 text-white" />
+                )}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Profil a výplaty</h3>
+              <p className="text-[11px] text-[hsl(var(--text-muted-gray))]">Klikněte na foto pro změnu</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusColor(profile.status)}`}>
