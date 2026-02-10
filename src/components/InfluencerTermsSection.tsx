@@ -1,6 +1,13 @@
+/**
+ * ⚠️ INFLUENCER SYSTEM — Monetary CZK payouts, invoiced, admin-controlled.
+ * Terms acceptance uses the shared `user_legal_acceptances` table (same mechanism as user profiles).
+ * This component is intentionally separate from the Player Referral system.
+ */
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { FileText, CheckCircle2, AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface TermsData {
   termsSlug: string;
@@ -16,49 +23,79 @@ interface Props {
 }
 
 const InfluencerTermsSection: React.FC<Props> = ({ partnerId }) => {
+  const { user } = useAuth();
   const [data, setData] = useState<TermsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accepting, setAccepting] = useState(false);
+
+  const loadData = async () => {
+    if (!user) return;
+
+    const [termsRes, acceptanceRes] = await Promise.all([
+      supabase
+        .from('content_pages')
+        .select('slug, title, version, updated_at')
+        .eq('slug', 'obchodni-podminky')
+        .eq('section', 'legal')
+        .maybeSingle(),
+      supabase
+        .from('user_legal_acceptances')
+        .select('accepted_at, document_version')
+        .eq('user_id', user.id)
+        .eq('document_slug', 'obchodni-podminky')
+        .order('accepted_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    const terms = termsRes.data;
+    const acceptance = acceptanceRes.data;
+
+    const agreedAt = acceptance?.accepted_at || null;
+    const termsVersion = terms?.version || null;
+    const termsUpdatedAt = terms?.updated_at || null;
+
+    // Needs update if terms version changed since last acceptance
+    const needsUpdate = !!(
+      agreedAt &&
+      termsVersion &&
+      acceptance?.document_version &&
+      termsVersion !== acceptance.document_version
+    );
+
+    setData({
+      termsSlug: terms?.slug || 'obchodni-podminky',
+      termsTitle: terms?.title || 'Všeobecné obchodní podmínky',
+      termsVersion,
+      termsUpdatedAt,
+      agreedAt,
+      needsUpdate,
+    });
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const load = async () => {
-      const [partnerRes, termsRes] = await Promise.all([
-        supabase
-          .from('partners')
-          .select('approved_at')
-          .eq('id', partnerId)
-          .single(),
-        supabase
-          .from('content_pages')
-          .select('slug, title, version, updated_at')
-          .eq('slug', 'obchodni-podminky')
-          .eq('section', 'legal')
-          .maybeSingle(),
-      ]);
+    loadData();
+  }, [partnerId, user?.id]);
 
-      const partner = partnerRes.data;
-      const terms = termsRes.data;
-
-      const agreedAt = partner?.approved_at || null;
-      const termsUpdatedAt = terms?.updated_at || null;
-
-      const needsUpdate = !!(
-        agreedAt &&
-        termsUpdatedAt &&
-        new Date(termsUpdatedAt) > new Date(agreedAt)
-      );
-
-      setData({
-        termsSlug: terms?.slug || 'obchodni-podminky',
-        termsTitle: terms?.title || 'Všeobecné obchodní podmínky',
-        termsVersion: terms?.version || null,
-        termsUpdatedAt,
-        agreedAt,
-        needsUpdate,
+  const handleAccept = async () => {
+    if (!user || !data) return;
+    setAccepting(true);
+    try {
+      const { error } = await supabase.from('user_legal_acceptances').insert({
+        user_id: user.id,
+        document_slug: 'obchodni-podminky',
+        document_version: data.termsVersion || '1.0',
       });
-      setLoading(false);
-    };
-    load();
-  }, [partnerId]);
+      if (error) throw error;
+      toast.success('Podmínky byly úspěšně přijaty');
+      await loadData();
+    } catch (e: any) {
+      toast.error('Nepodařilo se uložit souhlas: ' + (e.message || ''));
+    } finally {
+      setAccepting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -146,6 +183,22 @@ const InfluencerTermsSection: React.FC<Props> = ({ partnerId }) => {
             </span>
           </div>
         </div>
+
+        {/* Accept button — only shown when terms are not yet accepted or need re-acceptance */}
+        {!accepted && (
+          <button
+            onClick={handleAccept}
+            disabled={accepting}
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-[hsl(var(--neon-gold)/0.4)] bg-[hsl(var(--neon-gold)/0.08)] hover:bg-[hsl(var(--neon-gold)/0.15)] text-[hsl(var(--neon-gold))] font-semibold text-sm px-5 py-3 transition-colors disabled:opacity-50"
+          >
+            {accepting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4" />
+            )}
+            {accepting ? 'Ukládám…' : 'Souhlasím s podmínkami'}
+          </button>
+        )}
       </div>
     </div>
   );
