@@ -391,7 +391,7 @@ const InfluencerDashboard = () => {
         </div>
 
         {/* ══════ PROFILE & PAYOUTS ══════ */}
-        <InfluencerProfileSection partnerId={data.partnerId} />
+        <InfluencerProfileSection partnerId={data.partnerId} logoUrl={data.logoUrl} onLogoUpdated={refetch} />
 
         {/* ══════ PROMO MATERIALS ══════ */}
         <InfluencerPromoMaterials />
