@@ -4,12 +4,13 @@
  * ⚠️  Intentionally separate from the Player referral system (AdminReferrals.tsx).
  * These two systems MUST NEVER be merged or unified.
  */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +30,10 @@ import {
   Instagram,
   Youtube,
   Facebook,
+  Banknote,
+  Megaphone,
+  UserCheck,
+  CreditCard,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminMenu } from "@/components/AdminMenu";
@@ -49,6 +54,7 @@ interface Influencer {
   contact_email: string | null;
   contact_phone: string | null;
   status: InfluencerStatus;
+  payout_ready: boolean;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -56,6 +62,39 @@ interface Influencer {
   total_commissions_czk: number;
   commissions_paid_czk: number;
   commissions_pending_czk: number;
+  valid_referrals: number;
+  paid_referrals: number;
+}
+
+interface DetailReferral {
+  id: string;
+  user_id: string;
+  created_at: string;
+}
+
+interface DetailCommission {
+  id: string;
+  period_month: string;
+  amount_czk: number;
+  status: string;
+  updated_at: string;
+}
+
+interface DetailCampaign {
+  id: string;
+  name: string;
+  bonus_czk_per_new_user: number;
+  bonus_mc_for_user: number;
+  starts_at: string;
+  ends_at: string;
+  active: boolean;
+}
+
+interface DetailData {
+  validReferrals: DetailReferral[];
+  paidReferrals: DetailReferral[];
+  commissions: DetailCommission[];
+  campaigns: DetailCampaign[];
 }
 
 const statusLabels: Record<InfluencerStatus, string> = {
@@ -76,6 +115,12 @@ const statusIcons: Record<InfluencerStatus, React.ElementType> = {
   rejected: XCircle,
 };
 
+const commissionStatusLabels: Record<string, string> = {
+  calculated: "Vypočteno",
+  approved: "Schváleno",
+  paid: "Vyplaceno",
+};
+
 /* ===================== COMPONENT ===================== */
 
 const AdminInfluencers = () => {
@@ -87,6 +132,8 @@ const AdminInfluencers = () => {
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedInfluencer, setSelectedInfluencer] = useState<Influencer | null>(null);
+  const [detailData, setDetailData] = useState<DetailData | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   /* ===================== DATA ===================== */
 
@@ -95,7 +142,7 @@ const AdminInfluencers = () => {
     try {
       const { data, error } = await supabase
         .from("partners")
-        .select("id, name, company_name, logo_url, website_url, contact_email, contact_phone, status, notes, created_at, updated_at")
+        .select("id, name, company_name, logo_url, website_url, contact_email, contact_phone, status, payout_ready, notes, created_at, updated_at")
         .ilike("notes", "%influencer%")
         .order("created_at", { ascending: false });
 
@@ -103,20 +150,30 @@ const AdminInfluencers = () => {
 
       const partnerIds = (data || []).map((p) => p.id);
 
-      // Fetch referral counts and commission aggregates in parallel
-      const [referralsRes, commissionsRes] = await Promise.all([
-        partnerIds.length > 0
-          ? supabase
-              .from("influencer_referrals")
-              .select("influencer_partner_id")
-              .in("influencer_partner_id", partnerIds)
-          : Promise.resolve({ data: [] as { influencer_partner_id: string }[], error: null }),
-        partnerIds.length > 0
-          ? supabase
-              .from("influencer_commissions")
-              .select("influencer_partner_id, amount_czk, status")
-              .in("influencer_partner_id", partnerIds)
-          : Promise.resolve({ data: [] as { influencer_partner_id: string; amount_czk: number; status: string }[], error: null }),
+      if (partnerIds.length === 0) {
+        setInfluencers([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch referral counts, commission aggregates, and view counts in parallel
+      const [referralsRes, commissionsRes, validRes, paidRes] = await Promise.all([
+        supabase
+          .from("influencer_referrals")
+          .select("influencer_partner_id")
+          .in("influencer_partner_id", partnerIds),
+        supabase
+          .from("influencer_commissions")
+          .select("influencer_partner_id, amount_czk, status")
+          .in("influencer_partner_id", partnerIds),
+        supabase
+          .from("v_influencer_referrals_valid" as any)
+          .select("influencer_partner_id")
+          .in("influencer_partner_id", partnerIds),
+        supabase
+          .from("v_influencer_referrals_paid" as any)
+          .select("influencer_partner_id")
+          .in("influencer_partner_id", partnerIds),
       ]);
 
       // Build referral count map
@@ -139,13 +196,26 @@ const AdminInfluencers = () => {
         }
       }
 
+      // Build valid/paid referral count maps
+      const validCountMap = new Map<string, number>();
+      for (const r of (validRes.data || []) as any[]) {
+        validCountMap.set(r.influencer_partner_id, (validCountMap.get(r.influencer_partner_id) || 0) + 1);
+      }
+      const paidCountMap = new Map<string, number>();
+      for (const r of (paidRes.data || []) as any[]) {
+        paidCountMap.set(r.influencer_partner_id, (paidCountMap.get(r.influencer_partner_id) || 0) + 1);
+      }
+
       const enriched: Influencer[] = (data || []).map((p) => ({
         ...p,
         status: p.status as InfluencerStatus,
+        payout_ready: p.payout_ready as boolean,
         referral_count: referralCountMap.get(p.id) || 0,
         total_commissions_czk: commTotalMap.get(p.id) || 0,
         commissions_paid_czk: commPaidMap.get(p.id) || 0,
         commissions_pending_czk: commPendingMap.get(p.id) || 0,
+        valid_referrals: validCountMap.get(p.id) || 0,
+        paid_referrals: paidCountMap.get(p.id) || 0,
       }));
 
       setInfluencers(enriched);
@@ -159,6 +229,60 @@ const AdminInfluencers = () => {
 
   useEffect(() => {
     fetchInfluencers();
+  }, []);
+
+  /* ===================== DETAIL FETCH ===================== */
+
+  const fetchDetailData = useCallback(async (partnerId: string) => {
+    setDetailLoading(true);
+    setDetailData(null);
+    try {
+      const [validRes, paidRes, commissionsRes, campaignPartnersRes] = await Promise.all([
+        supabase
+          .from("v_influencer_referrals_valid" as any)
+          .select("id, user_id, created_at")
+          .eq("influencer_partner_id", partnerId)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("v_influencer_referrals_paid" as any)
+          .select("id, user_id, created_at")
+          .eq("influencer_partner_id", partnerId)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("influencer_commissions")
+          .select("id, period_month, amount_czk, status, updated_at")
+          .eq("influencer_partner_id", partnerId)
+          .order("period_month", { ascending: false }),
+        supabase
+          .from("influencer_campaign_partners")
+          .select("campaign_id")
+          .eq("influencer_partner_id", partnerId),
+      ]);
+
+      let campaigns: DetailCampaign[] = [];
+      const cpData = campaignPartnersRes.data || [];
+      if (cpData.length > 0) {
+        const campaignIds = cpData.map((cp) => cp.campaign_id);
+        const { data: cData } = await supabase
+          .from("influencer_campaigns")
+          .select("id, name, bonus_czk_per_new_user, bonus_mc_for_user, starts_at, ends_at, active")
+          .in("id", campaignIds)
+          .order("starts_at", { ascending: false });
+        campaigns = (cData || []) as DetailCampaign[];
+      }
+
+      setDetailData({
+        validReferrals: ((validRes.data || []) as any[]) as DetailReferral[],
+        paidReferrals: ((paidRes.data || []) as any[]) as DetailReferral[],
+        commissions: (commissionsRes.data || []) as DetailCommission[],
+        campaigns,
+      });
+    } catch (err) {
+      console.error("Error fetching detail data:", err);
+      toast.error("Nepodařilo se načíst detailní data");
+    } finally {
+      setDetailLoading(false);
+    }
   }, []);
 
   /* ===================== ACTIONS ===================== */
@@ -205,6 +329,7 @@ const AdminInfluencers = () => {
   const openDetail = (influencer: Influencer) => {
     setSelectedInfluencer(influencer);
     setDetailOpen(true);
+    fetchDetailData(influencer.id);
   };
 
   /* ===================== LOADING / AUTH ===================== */
@@ -310,9 +435,11 @@ const AdminInfluencers = () => {
                       <TableHead>Jméno</TableHead>
                       <TableHead>E-mail</TableHead>
                       <TableHead>Web / Sociální sítě</TableHead>
-                      <TableHead className="text-right">Referraly</TableHead>
-                      <TableHead className="text-right">Provize CZK</TableHead>
                       <TableHead>Stav</TableHead>
+                      <TableHead className="text-center">Payout</TableHead>
+                      <TableHead className="text-right">Validní ref.</TableHead>
+                      <TableHead className="text-right">Platící ref.</TableHead>
+                      <TableHead className="text-right">Provize CZK</TableHead>
                       <TableHead>Registrace</TableHead>
                       <TableHead className="text-right">Akce</TableHead>
                     </TableRow>
@@ -367,17 +494,27 @@ const AdminInfluencers = () => {
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums font-medium">
-                            {influencer.referral_count}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums font-medium">
-                            {influencer.total_commissions_czk.toLocaleString("cs-CZ")} Kč
-                          </TableCell>
                           <TableCell>
                             <Badge variant={statusColors[influencer.status as InfluencerStatus] || "secondary"}>
                               <StatusIcon className="w-3 h-3 mr-1" />
                               {statusLabels[influencer.status as InfluencerStatus] || influencer.status}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {influencer.payout_ready ? (
+                              <Badge variant="default" className="text-xs">Ano</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs">Ne</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">
+                            {influencer.valid_referrals}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">
+                            {influencer.paid_referrals}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">
+                            {influencer.total_commissions_czk.toLocaleString("cs-CZ")} Kč
                           </TableCell>
                           <TableCell>
                             <span className="text-xs text-muted-foreground">
@@ -473,7 +610,7 @@ const AdminInfluencers = () => {
 
       {/* Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" />
@@ -483,14 +620,19 @@ const AdminInfluencers = () => {
 
           {selectedInfluencer && (
             <div className="space-y-4">
-              {/* Status badge */}
+              {/* Status badge + actions */}
               <div className="flex items-center justify-between">
-                <Badge
-                  variant={statusColors[selectedInfluencer.status as InfluencerStatus] || "secondary"}
-                  className="text-sm"
-                >
-                  {statusLabels[selectedInfluencer.status as InfluencerStatus] || selectedInfluencer.status}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={statusColors[selectedInfluencer.status as InfluencerStatus] || "secondary"}
+                    className="text-sm"
+                  >
+                    {statusLabels[selectedInfluencer.status as InfluencerStatus] || selectedInfluencer.status}
+                  </Badge>
+                  <Badge variant={selectedInfluencer.payout_ready ? "default" : "secondary"} className="text-xs">
+                    Payout: {selectedInfluencer.payout_ready ? "Ano" : "Ne"}
+                  </Badge>
+                </div>
                 <div className="flex gap-1">
                   {selectedInfluencer.status !== "approved" && (
                     <Button
@@ -528,14 +670,14 @@ const AdminInfluencers = () => {
               {/* Performance summary */}
               <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
                 <p className="text-xs font-semibold text-foreground">Přehled výkonu</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
-                    <p className="text-xs text-muted-foreground">Celkem referralů</p>
-                    <p className="text-lg font-bold tabular-nums text-foreground">{selectedInfluencer.referral_count}</p>
+                    <p className="text-xs text-muted-foreground">Validní referraly</p>
+                    <p className="text-lg font-bold tabular-nums text-foreground">{selectedInfluencer.valid_referrals}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Celkem provize</p>
-                    <p className="text-lg font-bold tabular-nums text-foreground">{selectedInfluencer.total_commissions_czk.toLocaleString("cs-CZ")} Kč</p>
+                    <p className="text-xs text-muted-foreground">Platící referraly</p>
+                    <p className="text-lg font-bold tabular-nums text-foreground">{selectedInfluencer.paid_referrals}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Vyplaceno</p>
@@ -707,6 +849,165 @@ const AdminInfluencers = () => {
                   </CollapsibleContent>
                 </Collapsible>
               </div>
+
+              {/* Detail Tabs */}
+              <Tabs defaultValue="referrals" className="mt-4">
+                <TabsList className="w-full">
+                  <TabsTrigger value="referrals" className="flex-1 gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5" />
+                    Referraly
+                  </TabsTrigger>
+                  <TabsTrigger value="commissions" className="flex-1 gap-1.5">
+                    <Banknote className="w-3.5 h-3.5" />
+                    Provize
+                  </TabsTrigger>
+                  <TabsTrigger value="campaigns" className="flex-1 gap-1.5">
+                    <Megaphone className="w-3.5 h-3.5" />
+                    Kampaně
+                  </TabsTrigger>
+                </TabsList>
+
+                {detailLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : detailData ? (
+                  <>
+                    {/* Referrals Tab */}
+                    <TabsContent value="referrals" className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-lg border border-border bg-muted/30 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">Validní</p>
+                          <p className="text-xl font-bold tabular-nums text-foreground">{detailData.validReferrals.length}</p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-muted/30 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">Platící</p>
+                          <p className="text-xl font-bold tabular-nums text-foreground">{detailData.paidReferrals.length}</p>
+                        </div>
+                      </div>
+
+                      {detailData.validReferrals.length > 0 ? (
+                        <div className="overflow-x-auto max-h-48 overflow-y-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>User ID</TableHead>
+                                <TableHead>Datum</TableHead>
+                                <TableHead className="text-center">Platící</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {detailData.validReferrals.map((ref) => {
+                                const isPaid = detailData.paidReferrals.some((pr) => pr.user_id === ref.user_id);
+                                return (
+                                  <TableRow key={ref.id}>
+                                    <TableCell className="text-xs font-mono">{ref.user_id.slice(0, 8)}…</TableCell>
+                                    <TableCell className="text-xs">
+                                      {format(new Date(ref.created_at), "d. M. yyyy", { locale: cs })}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                      {isPaid ? (
+                                        <Badge variant="default" className="text-xs"><CreditCard className="w-3 h-3 mr-1" />Ano</Badge>
+                                      ) : (
+                                        <Badge variant="secondary" className="text-xs">Ne</Badge>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">Žádné validní referraly.</p>
+                      )}
+                    </TabsContent>
+
+                    {/* Commissions Tab */}
+                    <TabsContent value="commissions">
+                      {detailData.commissions.length > 0 ? (
+                        <div className="overflow-x-auto max-h-64 overflow-y-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Období</TableHead>
+                                <TableHead className="text-right">Částka CZK</TableHead>
+                                <TableHead>Stav</TableHead>
+                                <TableHead>Aktualizováno</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {detailData.commissions.map((comm) => (
+                                <TableRow key={comm.id}>
+                                  <TableCell className="text-sm font-medium">{comm.period_month}</TableCell>
+                                  <TableCell className="text-right tabular-nums font-medium">
+                                    {Number(comm.amount_czk).toLocaleString("cs-CZ")} Kč
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      variant={comm.status === "paid" ? "default" : comm.status === "approved" ? "secondary" : "outline"}
+                                      className="text-xs"
+                                    >
+                                      {commissionStatusLabels[comm.status] || comm.status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-xs text-muted-foreground">
+                                    {format(new Date(comm.updated_at), "d. M. yyyy", { locale: cs })}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">Žádné provize.</p>
+                      )}
+                    </TabsContent>
+
+                    {/* Campaigns Tab */}
+                    <TabsContent value="campaigns">
+                      {detailData.campaigns.length > 0 ? (
+                        <div className="overflow-x-auto max-h-64 overflow-y-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Kampaň</TableHead>
+                                <TableHead className="text-right">CZK / uživatel</TableHead>
+                                <TableHead className="text-right">MC / uživatel</TableHead>
+                                <TableHead>Období</TableHead>
+                                <TableHead className="text-center">Aktivní</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {detailData.campaigns.map((camp) => (
+                                <TableRow key={camp.id}>
+                                  <TableCell className="text-sm font-medium">{camp.name}</TableCell>
+                                  <TableCell className="text-right tabular-nums">
+                                    {Number(camp.bonus_czk_per_new_user).toLocaleString("cs-CZ")} Kč
+                                  </TableCell>
+                                  <TableCell className="text-right tabular-nums">
+                                    {Number(camp.bonus_mc_for_user)}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-muted-foreground">
+                                    {format(new Date(camp.starts_at), "d. M. yy", { locale: cs })} – {format(new Date(camp.ends_at), "d. M. yy", { locale: cs })}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <Badge variant={camp.active ? "default" : "secondary"} className="text-xs">
+                                      {camp.active ? "Ano" : "Ne"}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">Žádné přiřazené kampaně.</p>
+                      )}
+                    </TabsContent>
+                  </>
+                ) : null}
+              </Tabs>
             </div>
           )}
         </DialogContent>

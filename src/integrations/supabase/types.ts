@@ -2259,6 +2259,55 @@ export type Database = {
         }
         Relationships: []
       }
+      v_first_topup_valid: {
+        Row: {
+          first_topup_at: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_influencer_referrals_paid: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          influencer_partner_id: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "influencer_referrals_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_influencer_referrals_valid: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          influencer_partner_id: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "influencer_referrals_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_user_wallets: {
         Row: {
           balance_coins: number | null
