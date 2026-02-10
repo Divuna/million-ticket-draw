@@ -61,25 +61,39 @@ export default function AdminMessages() {
         .in("id", userIds),
       supabase
         .from("partners")
-        .select("auth_user_id")
+        .select("auth_user_id, name, contact_email")
         .ilike("notes", "%influencer%")
         .eq("status", "approved")
         .in("auth_user_id", userIds),
     ]);
 
-    // Create a map of user info
+    // Create influencer map with name/email fallback
+    const influencerMap: Record<string, { name: string | null; email: string | null }> = {};
+    (influencerRes.data || []).forEach((p) => {
+      if (p.auth_user_id) {
+        influencerMap[p.auth_user_id] = { name: p.name || null, email: p.contact_email || null };
+      }
+    });
+
+    // Create a map of user info, using influencer data as fallback
     const userMap: Record<string, { email: string | null; name: string | null }> = {};
     usersRes.data?.forEach((user) => {
+      const inf = influencerMap[user.id];
       const displayName = user.name || 
         (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : null) ||
-        user.first_name || null;
-      userMap[user.id] = { email: user.email, name: displayName };
+        user.first_name || inf?.name || null;
+      userMap[user.id] = { email: user.email || inf?.email || null, name: displayName };
+    });
+
+    // Also add entries for influencer users not in users table
+    Object.keys(influencerMap).forEach((uid) => {
+      if (!userMap[uid]) {
+        userMap[uid] = { name: influencerMap[uid].name, email: influencerMap[uid].email };
+      }
     });
 
     // Create set of influencer user IDs
-    const influencerUserIds = new Set(
-      (influencerRes.data || []).map((p) => p.auth_user_id).filter(Boolean)
-    );
+    const influencerUserIds = new Set(Object.keys(influencerMap));
 
     const result: Thread[] = userIds.map((uid) => {
       const userMessages = grouped[uid];
