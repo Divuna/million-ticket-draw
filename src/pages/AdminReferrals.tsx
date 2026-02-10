@@ -20,6 +20,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { Header } from '@/components/Header';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Users,
   Search,
@@ -32,7 +33,9 @@ import {
   Loader2,
   Ban,
   RotateCcw,
+  ClipboardCheck,
 } from 'lucide-react';
+import AdminReferralAudit from '@/components/AdminReferralAudit';
 
 /* ──────────────────────── Types ──────────────────────── */
 
@@ -536,132 +539,151 @@ const AdminReferrals: React.FC = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto px-4 py-6 pb-20">
-        <Card className="luxury-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-primary">
-              <Users className="h-5 w-5 text-neon-gold" />
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm">
+              <Users className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />
               Přehled doporučitelů
-            </CardTitle>
-            <CardDescription>
-              Správa referral programu – přehled, blokování, stornování odměn
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Search */}
-            <div className="relative mb-6">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Hledat podle user ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="text-xs sm:text-sm">
+              <ClipboardCheck className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />
+              Audit referralů
+            </TabsTrigger>
+          </TabsList>
 
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              </div>
-            ) : filteredReferrers.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">
-                {searchTerm ? 'Nenalezeni žádní doporučitelé.' : 'Zatím žádná data.'}
-              </p>
-            ) : (
-              <div className="rounded-md border border-neon-blue/20">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-b border-neon-blue/20 bg-gradient-to-r from-background to-background/80">
-                      <TableHead className="text-primary">User ID</TableHead>
-                      <TableHead className="text-primary">Celkem MC</TableHead>
-                      <TableHead className="text-primary">Doporučení</TableHead>
-                      <TableHead className="text-primary hidden sm:table-cell">
-                        Aktivní / Neaktivní
-                      </TableHead>
-                      <TableHead className="text-primary hidden sm:table-cell">
-                        Poslední odměna
-                      </TableHead>
-                      <TableHead className="text-primary">Status</TableHead>
-                      <TableHead className="text-primary text-right">Akce</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredReferrers.map((r) => (
-                      <TableRow
-                        key={r.referrer_user_id}
-                        className="border-b border-border/50 cursor-pointer hover:bg-muted/30 transition-colors"
-                        onClick={() => openDetail(r.referrer_user_id)}
-                      >
-                        <TableCell className="font-mono text-xs max-w-[120px] truncate">
-                          {r.referrer_user_id.slice(0, 8)}…
-                        </TableCell>
-                        <TableCell className="font-bold tabular-nums">
-                          {r.total_earned.toLocaleString('cs-CZ')}
-                        </TableCell>
-                        <TableCell className="tabular-nums">{r.referral_count}</TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <span className="text-green-500 font-medium">{r.active_count}</span>
-                          {' / '}
-                          <span className="text-muted-foreground">{r.inactive_count}</span>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-sm tabular-nums text-muted-foreground">
-                          {r.last_reward_date
-                            ? format(new Date(r.last_reward_date), 'dd.MM.yyyy', { locale: cs })
-                            : '—'}
-                        </TableCell>
-                        <TableCell>
-                          {r.is_blocked ? (
-                            <Badge variant="destructive" className="text-[10px]">
-                              Blokován
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-500">
-                              Aktivní
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (r.is_blocked) {
-                                setConfirmAction({
-                                  type: 'unblock',
-                                  referrerId: r.referrer_user_id,
-                                });
-                              } else {
-                                setConfirmAction({
-                                  type: 'block',
-                                  referrerId: r.referrer_user_id,
-                                });
-                              }
-                            }}
-                            className={`h-7 px-2 text-xs ${
-                              r.is_blocked
-                                ? 'text-green-500 hover:bg-green-500/10'
-                                : 'text-destructive hover:bg-destructive/10'
-                            }`}
+          <TabsContent value="overview">
+            <Card className="luxury-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-primary">
+                  <Users className="h-5 w-5 text-neon-gold" />
+                  Přehled doporučitelů
+                </CardTitle>
+                <CardDescription>
+                  Správa referral programu – přehled, blokování, stornování odměn
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Search */}
+                <div className="relative mb-6">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Hledat podle user ID..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : filteredReferrers.length === 0 ? (
+                  <p className="text-center py-8 text-muted-foreground">
+                    {searchTerm ? 'Nenalezeni žádní doporučitelé.' : 'Zatím žádná data.'}
+                  </p>
+                ) : (
+                  <div className="rounded-md border border-neon-blue/20">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-b border-neon-blue/20 bg-gradient-to-r from-background to-background/80">
+                          <TableHead className="text-primary">User ID</TableHead>
+                          <TableHead className="text-primary">Celkem MC</TableHead>
+                          <TableHead className="text-primary">Doporučení</TableHead>
+                          <TableHead className="text-primary hidden sm:table-cell">
+                            Aktivní / Neaktivní
+                          </TableHead>
+                          <TableHead className="text-primary hidden sm:table-cell">
+                            Poslední odměna
+                          </TableHead>
+                          <TableHead className="text-primary">Status</TableHead>
+                          <TableHead className="text-primary text-right">Akce</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredReferrers.map((r) => (
+                          <TableRow
+                            key={r.referrer_user_id}
+                            className="border-b border-border/50 cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => openDetail(r.referrer_user_id)}
                           >
-                            {r.is_blocked ? (
-                              <>
-                                <ShieldCheck className="h-3 w-3 mr-1" /> Odblokovat
-                              </>
-                            ) : (
-                              <>
-                                <ShieldBan className="h-3 w-3 mr-1" /> Blokovat
-                              </>
-                            )}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                            <TableCell className="font-mono text-xs max-w-[120px] truncate">
+                              {r.referrer_user_id.slice(0, 8)}…
+                            </TableCell>
+                            <TableCell className="font-bold tabular-nums">
+                              {r.total_earned.toLocaleString('cs-CZ')}
+                            </TableCell>
+                            <TableCell className="tabular-nums">{r.referral_count}</TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              <span className="text-green-500 font-medium">{r.active_count}</span>
+                              {' / '}
+                              <span className="text-muted-foreground">{r.inactive_count}</span>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-sm tabular-nums text-muted-foreground">
+                              {r.last_reward_date
+                                ? format(new Date(r.last_reward_date), 'dd.MM.yyyy', { locale: cs })
+                                : '—'}
+                            </TableCell>
+                            <TableCell>
+                              {r.is_blocked ? (
+                                <Badge variant="destructive" className="text-[10px]">
+                                  Blokován
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-500">
+                                  Aktivní
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (r.is_blocked) {
+                                    setConfirmAction({
+                                      type: 'unblock',
+                                      referrerId: r.referrer_user_id,
+                                    });
+                                  } else {
+                                    setConfirmAction({
+                                      type: 'block',
+                                      referrerId: r.referrer_user_id,
+                                    });
+                                  }
+                                }}
+                                className={`h-7 px-2 text-xs ${
+                                  r.is_blocked
+                                    ? 'text-green-500 hover:bg-green-500/10'
+                                    : 'text-destructive hover:bg-destructive/10'
+                                }`}
+                              >
+                                {r.is_blocked ? (
+                                  <>
+                                    <ShieldCheck className="h-3 w-3 mr-1" /> Odblokovat
+                                  </>
+                                ) : (
+                                  <>
+                                    <ShieldBan className="h-3 w-3 mr-1" /> Blokovat
+                                  </>
+                                )}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="audit">
+            <AdminReferralAudit />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Confirm dialog */}
