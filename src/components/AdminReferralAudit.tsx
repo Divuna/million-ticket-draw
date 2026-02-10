@@ -357,6 +357,10 @@ const AdminReferralAudit: React.FC = () => {
           <Card className="luxury-card">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Odměny</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                <Ban className="h-3 w-3 shrink-0" />
+                Blokace odměny neblokuje doporučitele. Pro blokaci doporučitele použijte záložku „Referraly".
+              </p>
             </CardHeader>
             <CardContent>
               {filteredRewards.length === 0 ? (
@@ -400,10 +404,10 @@ const AdminReferralAudit: React.FC = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-7 px-2 text-xs text-muted-foreground hover:bg-muted/20"
+                                  className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
                                   onClick={() => setConfirmAction({ type: 'block_reward', targetId: r.id })}
                                 >
-                                  <Ban className="h-3 w-3 mr-1" /> Blokovat
+                                  <Ban className="h-3 w-3 mr-1" /> Trvale zablokovat odměnu
                                 </Button>
                               </div>
                             )}
@@ -458,13 +462,13 @@ function AuditConfirmDialog({
     },
     reverse: {
       title: 'Stornovat odměnu',
-      desc: 'Odměna bude označena jako stornovaná. Tuto akci nelze vrátit.',
+      desc: 'Odměna bude označena jako stornovaná. ⚠️ Tato akce je NEVRATNÁ. Storno odměny neblokuje doporučitele.',
       btn: 'Stornovat',
     },
     block_reward: {
-      title: 'Zablokovat odměnu',
-      desc: 'Odměna bude označena jako zablokovaná. Tuto akci nelze vrátit.',
-      btn: 'Zablokovat',
+      title: 'Trvale zablokovat odměnu',
+      desc: 'Odměna bude trvale zablokovaná. ⚠️ Tato akce je NEVRATNÁ. Blokace odměny neblokuje doporučitele.',
+      btn: 'Trvale zablokovat',
     },
   };
 
