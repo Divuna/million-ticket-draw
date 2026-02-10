@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { Star } from "lucide-react";
 
 interface Message {
   id: string;
@@ -17,6 +19,7 @@ export default function AdminMessageThread() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
+  const [isInfluencer, setIsInfluencer] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -62,6 +65,19 @@ export default function AdminMessageThread() {
   useEffect(() => {
     loadMessages();
 
+    // Check if user is influencer
+    const checkInfluencer = async () => {
+      if (!userId) return;
+      const { data } = await supabase
+        .from("partners")
+        .select("id")
+        .ilike("notes", "%influencer%")
+        .eq("auth_user_id", userId)
+        .maybeSingle();
+      setIsInfluencer(!!data);
+    };
+    checkInfluencer();
+
     const channel = supabase
       .channel("admin-thread")
       .on("postgres_changes", { event: "*", table: "messages", schema: "public", filter: `user_id=eq.${userId}` }, () =>
@@ -104,6 +120,16 @@ export default function AdminMessageThread() {
 
   return (
     <div className="flex flex-col h-[100vh] bg-[#0b0d11] p-4 pb-24">
+      {/* Influencer indicator */}
+      {isInfluencer && (
+        <div className="mb-3 flex items-center gap-2">
+          <Badge className="bg-[hsl(280,50%,45%)] text-white border-[hsl(280,60%,55%,0.3)] text-xs gap-1">
+            <Star className="w-3 h-3" />
+            Influencer
+          </Badge>
+          <span className="text-xs text-muted-foreground">Konverzace s influencerem</span>
+        </div>
+      )}
       {/* MESSAGES */}
       <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto h-full pr-1">
         {loading && messages.length === 0 ? (

@@ -34,12 +34,14 @@ import {
   Megaphone,
   UserCheck,
   CreditCard,
+  MessageCircle,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminMenu } from "@/components/AdminMenu";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useNavigate } from "react-router-dom";
 
 /* ===================== TYPES ===================== */
 
@@ -58,6 +60,7 @@ interface Influencer {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  auth_user_id: string | null;
   referral_count: number;
   total_commissions_czk: number;
   commissions_paid_czk: number;
@@ -125,6 +128,7 @@ const commissionStatusLabels: Record<string, string> = {
 
 const AdminInfluencers = () => {
   const { loading: roleLoading, isAdmin } = useUserRole();
+  const navigate = useNavigate();
 
   const [influencers, setInfluencers] = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,7 +146,7 @@ const AdminInfluencers = () => {
     try {
       const { data, error } = await supabase
         .from("partners")
-        .select("id, name, company_name, logo_url, website_url, contact_email, contact_phone, status, payout_ready, notes, created_at, updated_at")
+        .select("id, name, company_name, logo_url, website_url, contact_email, contact_phone, status, payout_ready, notes, created_at, updated_at, auth_user_id")
         .ilike("notes", "%influencer%")
         .order("created_at", { ascending: false });
 
@@ -633,7 +637,20 @@ const AdminInfluencers = () => {
                     Payout: {selectedInfluencer.payout_ready ? "Ano" : "Ne"}
                   </Badge>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 flex-wrap">
+                  {selectedInfluencer.auth_user_id && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setDetailOpen(false);
+                        navigate(`/admin/messages/${selectedInfluencer.auth_user_id}`);
+                      }}
+                    >
+                      <MessageCircle className="w-3 h-3 mr-1" />
+                      Napsat zprávu
+                    </Button>
+                  )}
                   {selectedInfluencer.status !== "approved" && (
                     <Button
                       size="sm"
