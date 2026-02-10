@@ -4,7 +4,7 @@
  * ⚠️  Intentionally separate from the Player referral system. MUST NOT be unified.
  */
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -49,19 +49,12 @@ function getStatusBadge(status: string) {
 
 export default function AdminInfluencerCommissions() {
   const { user } = useAuth();
-  const { isAdmin } = useUserRole();
-  const navigate = useNavigate();
+  const { role, isAdmin, loading: roleLoading } = useUserRole();
 
   const [commissions, setCommissions] = useState<CommissionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-
-  useEffect(() => {
-    if (!user || isAdmin === false) {
-      navigate("/login");
-    }
-  }, [user, isAdmin, navigate]);
 
   const fetchCommissions = async () => {
     setLoading(true);
@@ -117,8 +110,24 @@ export default function AdminInfluencerCommissions() {
     }
   }, [isAdmin, statusFilter]);
 
-  if (!isAdmin) return null;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
+  if (roleLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Načítám...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (role !== 'admin' && role !== 'superadmin') {
+    return <Navigate to="/" replace />;
+  }
   return (
     <div className="container mx-auto px-4 py-6 pb-24 space-y-6">
       <div>
