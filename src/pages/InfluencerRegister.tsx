@@ -138,6 +138,9 @@ const InfluencerRegister = () => {
         console.warn('Partner record creation failed, but auth user created successfully');
       }
 
+      // Sign out so the new pending account doesn't trigger onboarding guards
+      await supabase.auth.signOut();
+
       setSubmitted(true);
       toast.success('Registrace odeslána ke schválení');
     } catch (error: any) {
