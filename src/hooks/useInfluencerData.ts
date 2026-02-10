@@ -1,3 +1,38 @@
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * INFLUENCER REFERRAL SYSTEM — Monetary (CZK) payouts
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * This hook powers the **Influencer Account** flow, which is an entirely
+ * separate system from the Player Referral ("Pozvi přátele") feature.
+ *
+ * ┌─────────────────────────────────────────────────────────────────┐
+ * │  INFLUENCER ACCOUNT (this file)                                │
+ * │  Tables: partners, influencer_referrals, influencer_commissions│
+ * │          influencer_campaigns, influencer_campaign_partners,    │
+ * │          influencer_campaign_events,                            │
+ * │          influencer_campaign_bonuses_czk                        │
+ * │  Currency: CZK (real money, invoice-based, admin-controlled)   │
+ * │  Identity: partners.auth_user_id + notes containing            │
+ * │            "influencer" metadata                                │
+ * │  Payout: Monthly commissions via partner invoicing system       │
+ * └─────────────────────────────────────────────────────────────────┘
+ *
+ * ┌─────────────────────────────────────────────────────────────────┐
+ * │  PLAYER REFERRAL (see ReferralSection.tsx)                     │
+ * │  Tables: referral_codes, referrals, referral_rewards,          │
+ * │          referral_attempts, referral_blocked_users              │
+ * │  Currency: MioCoin (non-monetary, in-game only)                │
+ * │  Identity: auth.users via referral_codes.user_id               │
+ * │  Payout: Automatic MC credit to wallet (no cash value)         │
+ * └─────────────────────────────────────────────────────────────────┘
+ *
+ * ⚠️  These two systems are INTENTIONALLY SEPARATE and MUST NEVER
+ *     be merged, unified, or cross-linked. They serve fundamentally
+ *     different business purposes with different legal implications.
+ *
+ * @see src/components/ReferralSection.tsx — Player Referral (MioCoin)
+ */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
