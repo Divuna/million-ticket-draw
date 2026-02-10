@@ -6,8 +6,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { FileText, CheckCircle2, AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
+import { FileText, CheckCircle2, AlertTriangle, ExternalLink, Loader2, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { transformContentToHtml } from '@/lib/cms-content-utils';
 
 interface TermsData {
   termsSlug: string;
@@ -16,6 +17,7 @@ interface TermsData {
   termsUpdatedAt: string | null;
   agreedAt: string | null;
   needsUpdate: boolean;
+  termsContent: string | null;
 }
 
 interface Props {
@@ -27,6 +29,7 @@ const InfluencerTermsSection: React.FC<Props> = ({ partnerId }) => {
   const [data, setData] = useState<TermsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   const loadData = async () => {
     if (!user) return;
@@ -34,7 +37,7 @@ const InfluencerTermsSection: React.FC<Props> = ({ partnerId }) => {
     const [termsRes, acceptanceRes] = await Promise.all([
       supabase
         .from('content_pages')
-        .select('slug, title, version, updated_at')
+        .select('slug, title, version, updated_at, content')
         .eq('slug', 'obchodni-podminky')
         .eq('section', 'legal')
         .maybeSingle(),
@@ -55,7 +58,6 @@ const InfluencerTermsSection: React.FC<Props> = ({ partnerId }) => {
     const termsVersion = terms?.version || null;
     const termsUpdatedAt = terms?.updated_at || null;
 
-    // Needs update if terms version changed since last acceptance
     const needsUpdate = !!(
       agreedAt &&
       termsVersion &&
@@ -70,6 +72,7 @@ const InfluencerTermsSection: React.FC<Props> = ({ partnerId }) => {
       termsUpdatedAt,
       agreedAt,
       needsUpdate,
+      termsContent: terms?.content || null,
     });
     setLoading(false);
   };
@@ -89,6 +92,7 @@ const InfluencerTermsSection: React.FC<Props> = ({ partnerId }) => {
       });
       if (error) throw error;
       toast.success('Podmínky byly úspěšně přijaty');
+      setShowTerms(false);
       await loadData();
     } catch (e: any) {
       toast.error('Nepodařilo se uložit souhlas: ' + (e.message || ''));
@@ -151,15 +155,13 @@ const InfluencerTermsSection: React.FC<Props> = ({ partnerId }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="rounded-lg bg-[hsl(var(--muted)/0.3)] border border-[hsl(var(--border)/0.2)] px-4 py-3">
             <span className="block text-[10px] uppercase tracking-widest text-[hsl(var(--text-muted-gray))] mb-1">Dokument</span>
-            <a
-              href={`/legal/${data.termsSlug}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => setShowTerms(!showTerms)}
               className="text-sm font-medium text-[hsl(var(--neon-gold))] hover:underline inline-flex items-center gap-1.5"
             >
               {data.termsTitle}
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+              {showTerms ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
           </div>
 
           <div className="rounded-lg bg-[hsl(var(--muted)/0.3)] border border-[hsl(var(--border)/0.2)] px-4 py-3">
@@ -184,19 +186,49 @@ const InfluencerTermsSection: React.FC<Props> = ({ partnerId }) => {
           </div>
         </div>
 
-        {/* Accept button — only shown when terms are not yet accepted or need re-acceptance */}
-        {!accepted && (
+        {/* Inline terms content — displayed without navigating away */}
+        {showTerms && data.termsContent && (
+          <div className="space-y-4">
+            <div
+              className="rounded-xl border border-[hsl(var(--border)/0.2)] bg-[hsl(var(--muted)/0.15)] p-5 max-h-[60vh] overflow-y-auto cms-content"
+              dangerouslySetInnerHTML={{ __html: transformContentToHtml(data.termsContent) }}
+            />
+
+            {/* Sticky action area */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              {!accepted && (
+                <button
+                  onClick={handleAccept}
+                  disabled={accepting}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-[hsl(var(--neon-gold)/0.4)] bg-[hsl(var(--neon-gold)/0.12)] hover:bg-[hsl(var(--neon-gold)/0.2)] text-[hsl(var(--neon-gold))] font-semibold text-sm px-5 py-3 transition-colors disabled:opacity-50"
+                >
+                  {accepting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4" />
+                  )}
+                  {accepting ? 'Ukládám…' : 'Souhlasím a vrátit se zpět'}
+                </button>
+              )}
+              <button
+                onClick={() => setShowTerms(false)}
+                className="flex items-center justify-center gap-2 rounded-xl border border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.2)] hover:bg-[hsl(var(--muted)/0.4)] text-[hsl(var(--text-silver))] text-sm px-5 py-3 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Zpět do administrace
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Accept button when terms are collapsed but not yet accepted */}
+        {!showTerms && !accepted && (
           <button
-            onClick={handleAccept}
-            disabled={accepting}
-            className="w-full flex items-center justify-center gap-2 rounded-xl border border-[hsl(var(--neon-gold)/0.4)] bg-[hsl(var(--neon-gold)/0.08)] hover:bg-[hsl(var(--neon-gold)/0.15)] text-[hsl(var(--neon-gold))] font-semibold text-sm px-5 py-3 transition-colors disabled:opacity-50"
+            onClick={() => setShowTerms(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-[hsl(var(--neon-gold)/0.4)] bg-[hsl(var(--neon-gold)/0.08)] hover:bg-[hsl(var(--neon-gold)/0.15)] text-[hsl(var(--neon-gold))] font-semibold text-sm px-5 py-3 transition-colors"
           >
-            {accepting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <CheckCircle2 className="w-4 h-4" />
-            )}
-            {accepting ? 'Ukládám…' : 'Souhlasím s podmínkami'}
+            <FileText className="w-4 h-4" />
+            Zobrazit a přijmout podmínky
           </button>
         )}
       </div>
