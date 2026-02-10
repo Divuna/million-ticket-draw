@@ -1253,6 +1253,7 @@ export type Database = {
           reward_mc: number
           status: Database["public"]["Enums"]["partner_status"]
           suspended_at: string | null
+          terms_accepted_at: string | null
           updated_at: string
           vat_rate: number
           website_url: string
@@ -1288,6 +1289,7 @@ export type Database = {
           reward_mc?: number
           status?: Database["public"]["Enums"]["partner_status"]
           suspended_at?: string | null
+          terms_accepted_at?: string | null
           updated_at?: string
           vat_rate?: number
           website_url: string
@@ -1323,6 +1325,7 @@ export type Database = {
           reward_mc?: number
           status?: Database["public"]["Enums"]["partner_status"]
           suspended_at?: string | null
+          terms_accepted_at?: string | null
           updated_at?: string
           vat_rate?: number
           website_url?: string
