@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import '@/components/ContestCard.css';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Building2, ArrowLeft } from 'lucide-react';
+import logo from '@/assets/logo-onemil.png';
 
 const PartnerLogin = () => {
   const navigate = useNavigate();
@@ -67,15 +69,17 @@ const PartnerLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-[hsl(222_40%_8%)] p-4">
+      <div className="w-full max-w-md">
+        <img src={logo} alt="OneMil logo" className="h-16 w-auto mx-auto mb-4 object-contain onemil-logo-animated" />
+        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[hsl(40_30%_35%/0.5)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center border border-primary/30">
-              <Building2 className="w-8 h-8 text-primary" />
+            <div className="w-16 h-16 rounded-full bg-[hsl(40_30%_15%/0.3)] flex items-center justify-center border border-[hsl(40_40%_45%/0.4)]">
+              <Building2 className="w-8 h-8 text-[hsl(40_60%_55%)]" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Partnerský portál</CardTitle>
+          <CardTitle className="text-heading-gold text-2xl font-bold">Partnerský portál</CardTitle>
           <CardDescription>Přihlaste se do svého partnerského účtu</CardDescription>
         </CardHeader>
         <CardContent>
@@ -102,7 +106,7 @@ const PartnerLogin = () => {
                 disabled={loading}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[hsl(45_80%_45%)] via-[hsl(40_85%_50%)] to-[hsl(35_80%_45%)] text-secondary-foreground shadow-[0_2px_12px_hsl(45_80%_50%/0.25)] hover:shadow-[0_4px_16px_hsl(45_80%_50%/0.35)] hover:brightness-110 transition-all" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -130,7 +134,8 @@ const PartnerLogin = () => {
             </Link>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };
