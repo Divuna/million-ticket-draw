@@ -115,7 +115,7 @@ const InfluencerTermsSection: React.FC<Props> = ({ partnerId }) => {
           <div className="rounded-lg bg-[hsl(var(--muted)/0.3)] border border-[hsl(var(--border)/0.2)] px-4 py-3">
             <span className="block text-[10px] uppercase tracking-widest text-[hsl(var(--text-muted-gray))] mb-1">Dokument</span>
             <a
-              href={`/stranka/${data.termsSlug}`}
+              href={`/legal/${data.termsSlug}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm font-medium text-[hsl(var(--neon-gold))] hover:underline inline-flex items-center gap-1.5"
