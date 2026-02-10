@@ -1,3 +1,9 @@
+/**
+ * INFLUENCER SYSTEM (Admin) — Monetary CZK payouts, invoiced, admin-controlled.
+ * Manages influencer accounts via `partners` table (filtered by 'influencer' in notes).
+ * ⚠️  Intentionally separate from the Player referral system (AdminReferrals.tsx).
+ * These two systems MUST NEVER be merged or unified.
+ */
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

@@ -1,3 +1,24 @@
+/**
+ * ╔══════════════════════════════════════════════════════════════════════════════╗
+ * ║  INFLUENCER SYSTEM — Monetary CZK payouts, invoiced, admin-controlled      ║
+ * ║                                                                            ║
+ * ║  This hook is part of the INFLUENCER partnership system. It uses:           ║
+ * ║    • partners — influencer accounts (identified by 'influencer' in notes)   ║
+ * ║    • influencer_referrals — tracking user registrations via influencer link ║
+ * ║    • influencer_commissions — monthly CZK commission calculations          ║
+ * ║    • influencer_campaigns — marketing campaigns with CZK/MC bonuses        ║
+ * ║    • influencer_campaign_partners — campaign ↔ influencer assignments       ║
+ * ║    • influencer_campaign_events — campaign conversion tracking              ║
+ * ║    • influencer_campaign_bonuses_czk — per-user CZK bonus records          ║
+ * ║                                                                            ║
+ * ║  ⚠️  THIS SYSTEM IS INTENTIONALLY SEPARATE from the Player referral system.║
+ * ║  These two systems MUST NEVER be merged or unified.                        ║
+ * ║                                                                            ║
+ * ║  Influencer system: monetary CZK payouts, invoiced, admin-controlled.      ║
+ * ║  Player referrals: non-monetary, in-game MioCoin rewards only.             ║
+ * ║  See: src/components/ReferralSection.tsx for the player counterpart.        ║
+ * ╚══════════════════════════════════════════════════════════════════════════════╝
+ */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 

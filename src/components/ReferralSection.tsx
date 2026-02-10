@@ -1,3 +1,22 @@
+/**
+ * ╔══════════════════════════════════════════════════════════════════════════════╗
+ * ║  PLAYER REFERRAL SYSTEM — Non-monetary, in-game MioCoin rewards            ║
+ * ║                                                                            ║
+ * ║  This component is part of the PLAYER referral system. It uses:            ║
+ * ║    • referral_codes — unique codes per player                              ║
+ * ║    • referrals — tracking who referred whom                                ║
+ * ║    • referral_rewards — MioCoin rewards (5% commission + 15 MC bonus)      ║
+ * ║    • referral_attempts — anti-abuse logging                                ║
+ * ║    • referral_blocked_users — fraud prevention                             ║
+ * ║                                                                            ║
+ * ║  ⚠️  THIS SYSTEM IS INTENTIONALLY SEPARATE from the Influencer system.     ║
+ * ║  These two systems MUST NEVER be merged or unified.                        ║
+ * ║                                                                            ║
+ * ║  Player referrals: non-monetary, in-game MioCoin rewards only.             ║
+ * ║  Influencer system: monetary CZK payouts, invoiced, admin-controlled.      ║
+ * ║  See: src/hooks/useInfluencerData.ts for the influencer counterpart.       ║
+ * ╚══════════════════════════════════════════════════════════════════════════════╝
+ */
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
