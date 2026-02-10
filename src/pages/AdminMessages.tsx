@@ -111,15 +111,11 @@ export default function AdminMessages() {
       };
     });
 
-    // Sort: influencers first (with unread), then unread, then by date
+    // Sort: influencer+unread → unread → influencer+read → read, then by date
     result.sort((a, b) => {
-      // Influencer unread first
-      if (a.is_influencer && a.has_unread && !(b.is_influencer && b.has_unread)) return -1;
-      if (b.is_influencer && b.has_unread && !(a.is_influencer && a.has_unread)) return -1;
-      // Then influencers
-      if (a.is_influencer && !b.is_influencer) return -1;
-      if (b.is_influencer && !a.is_influencer) return 1;
-      // Then by date
+      const aScore = (a.has_unread ? 2 : 0) + (a.is_influencer ? 1 : 0);
+      const bScore = (b.has_unread ? 2 : 0) + (b.is_influencer ? 1 : 0);
+      if (aScore !== bScore) return bScore - aScore;
       return new Date(b.last_date).getTime() - new Date(a.last_date).getTime();
     });
 
@@ -150,64 +146,91 @@ export default function AdminMessages() {
         <p className="text-muted-foreground">Zatím žádné zprávy.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {threads.map((thread) => (
-            <div
-              key={thread.user_id}
-              onClick={() => navigate(`/admin/messages/${thread.user_id}`)}
-              className={`
-                relative p-4 rounded-2xl cursor-pointer 
-                transition-all duration-200 ease-in-out
-                hover:scale-[1.02] hover:shadow-xl
-                ${thread.is_influencer
-                  ? thread.has_unread
-                    ? "bg-[hsl(280,40%,15%)] border-2 border-[hsl(280,60%,50%,0.5)] shadow-md shadow-[hsl(280,60%,50%,0.15)]"
-                    : "bg-[hsl(280,30%,12%)] border-2 border-[hsl(280,40%,40%,0.3)] shadow-md"
-                  : thread.has_unread 
-                    ? "bg-destructive/10 border-2 border-destructive/40 shadow-md shadow-destructive/10" 
-                    : "bg-card border border-border/50 shadow-md hover:bg-accent/50"
-                }
-              `}
-            >
-              {/* Unread dot */}
-              {thread.has_unread && (
-                <div className={`absolute top-3 right-3 w-3 h-3 rounded-full animate-pulse ${
-                  thread.is_influencer ? "bg-[hsl(280,60%,55%)]" : "bg-destructive"
-                }`} />
-              )}
+          {threads.map((thread) => {
+            const isInfluencerUnread = thread.is_influencer && thread.has_unread;
+            const isInfluencerRead = thread.is_influencer && !thread.has_unread;
+            const isUserUnread = !thread.is_influencer && thread.has_unread;
 
-              {/* Influencer badge */}
-              {thread.is_influencer && (
-                <div className="mb-2">
-                  <Badge className="bg-[hsl(280,50%,45%)] text-white border-[hsl(280,60%,55%,0.3)] text-[10px] uppercase tracking-wider gap-1">
-                    <Star className="w-3 h-3" />
-                    Influencer
-                  </Badge>
+            return (
+              <div
+                key={thread.user_id}
+                onClick={() => navigate(`/admin/messages/${thread.user_id}`)}
+                className={`
+                  relative rounded-2xl cursor-pointer 
+                  transition-all duration-200 ease-in-out
+                  hover:scale-[1.02] hover:shadow-xl
+                  ${isInfluencerUnread
+                    ? "p-[2px] bg-gradient-to-br from-[hsl(280,70%,55%)] to-[hsl(300,60%,45%)] shadow-lg shadow-[hsl(280,60%,50%,0.3)]"
+                    : isInfluencerRead
+                      ? "p-[2px] bg-gradient-to-br from-[hsl(280,40%,35%)] to-[hsl(280,30%,25%)] shadow-md"
+                      : isUserUnread
+                        ? "p-[2px] bg-gradient-to-br from-destructive/60 to-destructive/30 shadow-md shadow-destructive/15"
+                        : "p-0 border border-border/30 shadow-sm"
+                  }
+                `}
+              >
+                <div className={`
+                  rounded-[14px] p-4 h-full
+                  ${isInfluencerUnread
+                    ? "bg-[hsl(280,40%,12%)]"
+                    : isInfluencerRead
+                      ? "bg-[hsl(280,25%,10%)]"
+                      : isUserUnread
+                        ? "bg-destructive/10"
+                        : "bg-card/60 hover:bg-accent/30"
+                  }
+                `}>
+                  {/* Unread dot */}
+                  {thread.has_unread && (
+                    <div className={`absolute top-3 right-3 w-3 h-3 rounded-full animate-pulse ring-2 ${
+                      thread.is_influencer
+                        ? "bg-[hsl(280,70%,60%)] ring-[hsl(280,70%,60%,0.4)]"
+                        : "bg-destructive ring-destructive/40"
+                    }`} />
+                  )}
+
+                  {/* Influencer badge */}
+                  {thread.is_influencer && (
+                    <div className="mb-2">
+                      <Badge className="bg-[hsl(280,50%,45%)] text-white border-[hsl(280,60%,55%,0.3)] text-[10px] uppercase tracking-wider gap-1">
+                        <Star className="w-3 h-3" />
+                        Influencer
+                      </Badge>
+                    </div>
+                  )}
+                  
+                  {/* Sender */}
+                  <p className={`font-semibold text-sm truncate ${thread.is_influencer ? "pr-2" : "pr-6"} ${
+                    isInfluencerUnread ? "text-[hsl(280,80%,85%)]"
+                      : isInfluencerRead ? "text-[hsl(280,40%,65%)]"
+                        : isUserUnread ? "text-foreground"
+                          : "text-muted-foreground"
+                  }`}>
+                    {thread.user_name || thread.user_email || `${thread.user_id.slice(0, 8)}…`}
+                  </p>
+                  
+                  {/* Last message */}
+                  <p className={`text-sm mt-2 line-clamp-2 min-h-[2.5rem] ${
+                    thread.has_unread ? "text-muted-foreground" : "text-muted-foreground/50"
+                  }`}>
+                    {thread.last_message}
+                  </p>
+                  
+                  {/* Timestamp */}
+                  <p className={`text-xs mt-3 font-medium ${
+                    thread.has_unread ? "text-muted-foreground/70" : "text-muted-foreground/40"
+                  }`}>
+                    {new Date(thread.last_date).toLocaleString("cs-CZ", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit"
+                    })}
+                  </p>
                 </div>
-              )}
-              
-              {/* Sender / User name or email */}
-              <p className={`font-semibold text-sm truncate ${thread.is_influencer ? "pr-2" : "pr-6"} ${
-                thread.is_influencer ? "text-[hsl(280,70%,80%)]" : "text-foreground"
-              }`}>
-                {thread.user_name || thread.user_email || `${thread.user_id.slice(0, 8)}…`}
-              </p>
-              
-              {/* Last message preview */}
-              <p className="text-muted-foreground text-sm mt-2 line-clamp-2 min-h-[2.5rem]">
-                {thread.last_message}
-              </p>
-              
-              {/* Timestamp */}
-              <p className="text-muted-foreground/70 text-xs mt-3 font-medium">
-                {new Date(thread.last_date).toLocaleString("cs-CZ", {
-                  day: "numeric",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit"
-                })}
-              </p>
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
