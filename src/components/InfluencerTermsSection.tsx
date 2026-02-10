@@ -22,9 +22,10 @@ interface TermsData {
 
 interface Props {
   partnerId: string;
+  onAccepted?: () => void;
 }
 
-const InfluencerTermsSection: React.FC<Props> = ({ partnerId }) => {
+const InfluencerTermsSection: React.FC<Props> = ({ partnerId, onAccepted }) => {
   const { user } = useAuth();
   const [data, setData] = useState<TermsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,6 +101,7 @@ const InfluencerTermsSection: React.FC<Props> = ({ partnerId }) => {
       toast.success('Podmínky byly úspěšně přijaty');
       setShowTerms(false);
       await loadData();
+      onAccepted?.();
     } catch (e: any) {
       toast.error('Nepodařilo se uložit souhlas: ' + (e.message || ''));
     } finally {
