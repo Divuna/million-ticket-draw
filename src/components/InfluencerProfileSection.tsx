@@ -1,3 +1,8 @@
+/**
+ * INFLUENCER SYSTEM — Monetary CZK payouts, invoiced, admin-controlled.
+ * Manages influencer profile & payout details via the `partners` table.
+ * ⚠️  Intentionally separate from the Player referral system. MUST NOT be unified.
+ */
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';

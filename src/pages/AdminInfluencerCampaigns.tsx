@@ -1,3 +1,8 @@
+/**
+ * INFLUENCER SYSTEM (Admin Campaigns) — Monetary CZK payouts, invoiced, admin-controlled.
+ * CRUD for influencer_campaigns + assignment via influencer_campaign_partners.
+ * ⚠️  Intentionally separate from the Player referral system. MUST NOT be unified.
+ */
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";

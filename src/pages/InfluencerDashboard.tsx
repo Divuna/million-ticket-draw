@@ -1,3 +1,9 @@
+/**
+ * INFLUENCER SYSTEM — Monetary CZK payouts, invoiced, admin-controlled.
+ * Uses: partners, influencer_referrals, influencer_commissions, influencer_campaigns.
+ * ⚠️  Intentionally separate from the Player referral system (ReferralSection.tsx).
+ * These two systems MUST NEVER be merged or unified.
+ */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

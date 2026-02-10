@@ -1,3 +1,10 @@
+/**
+ * PLAYER REFERRAL SYSTEM (Admin) — Non-monetary, in-game MioCoin rewards.
+ * Uses: referrals, referral_rewards, referral_blocked_users.
+ * Admin actions: block/unblock referrers, reverse/block individual rewards.
+ * ⚠️  Intentionally separate from the Influencer system (AdminInfluencers.tsx).
+ * These two systems MUST NEVER be merged or unified.
+ */
 import React, { useEffect, useState, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

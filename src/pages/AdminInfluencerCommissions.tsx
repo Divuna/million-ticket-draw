@@ -1,3 +1,8 @@
+/**
+ * INFLUENCER SYSTEM (Admin Commissions) — Monetary CZK payouts, invoiced, admin-controlled.
+ * Read-only overview of influencer_commissions with partner name joins.
+ * ⚠️  Intentionally separate from the Player referral system. MUST NOT be unified.
+ */
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";

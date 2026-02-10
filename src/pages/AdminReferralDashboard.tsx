@@ -1,3 +1,9 @@
+/**
+ * PLAYER REFERRAL SYSTEM (Admin Dashboard) — Analytics for non-monetary MioCoin rewards.
+ * Uses: referral_rewards, referral_blocked_users, referrals.
+ * ⚠️  Intentionally separate from the Influencer system (AdminInfluencerCommissions.tsx).
+ * These two systems MUST NEVER be merged or unified.
+ */
 import React, { useEffect, useState, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
