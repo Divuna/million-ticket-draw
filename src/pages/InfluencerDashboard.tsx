@@ -1,13 +1,3 @@
-/**
- * INFLUENCER DASHBOARD — CZK-based monetary payout system.
- *
- * This dashboard is part of the Influencer Account flow (partners + influencer_* tables).
- * It is INTENTIONALLY SEPARATE from the Player Referral system (referral_codes,
- * referrals, referral_rewards) which uses non-monetary MioCoins.
- *
- * These two referral roles must never be merged or unified.
- * @see src/hooks/useInfluencerData.ts — full architecture documentation
- */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
