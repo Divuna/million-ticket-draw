@@ -44,7 +44,7 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2.5 text-sm">
               {links.info.map((page) => (
                 <li key={page.id}>
-                  <Link to={`/${page.section}/${page.slug}`} className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                  <Link to={`/${page.section}/${page.slug}`} className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
                     {page.title}
                   </Link>
                 </li>
@@ -58,7 +58,7 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2.5 text-sm">
               {links.support.map((page) => (
                 <li key={page.id}>
-                  <Link to={`/${page.section}/${page.slug}`} className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                  <Link to={`/${page.section}/${page.slug}`} className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
                     {page.title}
                   </Link>
                 </li>
@@ -72,7 +72,7 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2.5 text-sm">
               {links.legal.map((page) => (
                 <li key={page.id}>
-                  <Link to={`/${page.section}/${page.slug}`} className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                  <Link to={`/${page.section}/${page.slug}`} className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
                     {page.title}
                   </Link>
                 </li>
@@ -85,12 +85,12 @@ export const Footer: React.FC = () => {
             <h4 className="font-semibold text-base text-foreground">Pro partnery</h4>
             <ul className="space-y-2.5 text-sm">
               <li>
-                <Link to="/partner/login" className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                <Link to="/partner/login" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
                   Přihlášení partnera
                 </Link>
               </li>
               <li>
-                <Link to="/partner/register" className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                <Link to="/partner/register" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
                   Registrace e-shopu
                 </Link>
               </li>
@@ -102,22 +102,22 @@ export const Footer: React.FC = () => {
             <h4 className="font-semibold text-base text-foreground">Pro influencery</h4>
             <ul className="space-y-2.5 text-sm">
               <li>
-                <Link to="/influencer" className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                <Link to="/influencer" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
                   Pro influencery
                 </Link>
               </li>
               <li>
-                <Link to="/influencer/how-to-earn" className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                <Link to="/influencer/how-to-earn" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
                   Jak vydělávat s OneMil
                 </Link>
               </li>
               <li>
-                <Link to="/influencer/register" className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                <Link to="/influencer/register" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
                   Registrace influencera
                 </Link>
               </li>
               <li>
-                <Link to="/partner/login" className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                <Link to="/partner/login" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
                   Přihlášení influencera
                 </Link>
               </li>
@@ -144,7 +144,7 @@ export const Footer: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-center gap-3">
           <div className="text-sm text-muted-foreground">© 2024 iCONIC POINT s.r.o. Všechna práva vyhrazena.</div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <Link to="/kontakt" className="hover:text-primary transition-colors">Kontakt</Link>
+            <Link to="/kontakt" className="hover:text-neon-gold transition-colors">Kontakt</Link>
             <span className="text-border">•</span>
             <span>Česká republika</span>
             <span className="text-border">•</span>

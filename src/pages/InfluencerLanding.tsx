@@ -13,7 +13,7 @@ const InfluencerLanding = () => {
         <div className="container mx-auto px-4 py-16 sm:py-24 relative z-10">
           <Link
             to="/"
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-8"
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-neon-gold transition-colors mb-8"
           >
             <ArrowLeft className="mr-1 h-4 w-4" />
             Zpět na hlavní stránku
