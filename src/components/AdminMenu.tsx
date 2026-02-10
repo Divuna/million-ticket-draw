@@ -19,7 +19,8 @@ import {
   Receipt,
   Link2,
   Megaphone,
-  CalendarDays
+  CalendarDays,
+  Banknote
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount';
@@ -44,7 +45,7 @@ export const AdminMenu: React.FC = () => {
     { label: 'Ref. Dashboard', icon: BarChart3, path: '/admin/referral-dashboard' },
     { label: 'Influenceři', icon: Megaphone, path: '/admin/influencers' },
     { label: 'Kampaně', icon: CalendarDays, path: '/admin/influencer-campaigns' },
-    { label: 'Provize', icon: BarChart3, path: '/admin/influencer-commissions' },
+    { label: 'Výplaty', icon: Banknote, path: '/admin/influencer-commissions' },
     { label: 'Obsah', icon: BookOpen, path: '/admin/content' },
     { label: 'Souhlasy', icon: FileText, path: '/admin/legal-acceptances' },
     { label: 'Notifikace', icon: Bell, path: '/admin/notifications' },
