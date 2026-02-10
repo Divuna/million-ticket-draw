@@ -40,7 +40,7 @@ export const AdminMenu: React.FC = () => {
     { label: 'Bannery', icon: Image, path: '/admin/banners' },
     { label: 'Partneři', icon: Handshake, path: '/admin/partners' },
     { label: 'Faktury', icon: Receipt, path: '/admin/invoices' },
-    { label: 'Referraly', icon: Link2, path: '/admin/referrals' },
+    { label: 'Referral (hráči)', icon: Link2, path: '/admin/referrals' },
     { label: 'Ref. Dashboard', icon: BarChart3, path: '/admin/referral-dashboard' },
     { label: 'Influenceři', icon: Megaphone, path: '/admin/influencers' },
     { label: 'Kampaně', icon: CalendarDays, path: '/admin/influencer-campaigns' },

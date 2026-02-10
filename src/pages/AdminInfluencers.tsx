@@ -368,7 +368,7 @@ const AdminInfluencers = () => {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Správa influencerů</h1>
             <p className="text-sm text-muted-foreground">
-              Přehled a schvalování registrací influencerů
+              Influencer referral (influencer → uživatelé) – přehled, provize, výkon
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={fetchInfluencers} disabled={loading}>

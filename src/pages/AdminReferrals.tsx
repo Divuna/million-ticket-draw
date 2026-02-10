@@ -543,7 +543,7 @@ const AdminReferrals: React.FC = () => {
           <TabsList className="mb-6">
             <TabsTrigger value="overview" className="text-xs sm:text-sm">
               <Users className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />
-              Přehled doporučitelů
+              Referral program – hráči
             </TabsTrigger>
             <TabsTrigger value="audit" className="text-xs sm:text-sm">
               <ClipboardCheck className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />
@@ -556,10 +556,10 @@ const AdminReferrals: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-primary">
                   <Users className="h-5 w-5 text-neon-gold" />
-                  Přehled doporučitelů
+                  Referral program – hráči
                 </CardTitle>
                 <CardDescription>
-                  Správa referral programu – přehled, blokování, stornování odměn
+                  Doporučení mezi uživateli (hráč → hráč) – přehled, blokování, stornování odměn
                 </CardDescription>
               </CardHeader>
               <CardContent>
