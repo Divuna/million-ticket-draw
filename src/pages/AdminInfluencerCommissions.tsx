@@ -28,7 +28,7 @@ import { AlertCircle, CheckCircle, Clock, Info, Loader2, RefreshCw, Banknote, Do
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { toast } from "sonner";
-import { generateAirBankXml, downloadXml, type PaymentRow } from "@/lib/airbank-xml-export";
+import { generateAboFile, downloadAboFile, type AboPaymentRow } from "@/lib/airbank-abo-export";
 
 interface CommissionRow {
   id: string;
@@ -181,7 +181,7 @@ export default function AdminInfluencerCommissions() {
     }
   };
 
-  /* ── XML Export ── */
+  /* ── ABO Export ── */
   const exportRows = (rows: CommissionRow[]) => {
     const missingAccount = rows.filter((r) => !r.payout_account);
     if (missingAccount.length > 0) {
@@ -191,7 +191,7 @@ export default function AdminInfluencerCommissions() {
       return;
     }
 
-    const paymentRows: PaymentRow[] = rows.map((r) => ({
+    const paymentRows: AboPaymentRow[] = rows.map((r) => ({
       id: r.id,
       influencer_partner_id: r.influencer_partner_id,
       period_month: r.period_month,
@@ -200,18 +200,22 @@ export default function AdminInfluencerCommissions() {
       payout_account: r.payout_account,
     }));
 
-    const xml = generateAirBankXml(paymentRows);
-    const period = rows.length === 1 ? rows[0].period_month : "mix";
-    downloadXml(xml, `onemil-vyplaty-${period}-${Date.now()}.xml`);
+    try {
+      const abo = generateAboFile(paymentRows);
+      const period = rows.length === 1 ? rows[0].period_month : "mix";
+      downloadAboFile(abo, `onemil-vyplaty-${period}-${Date.now()}.kpc`);
 
-    // Track exported IDs
-    setExportedIds((prev) => {
-      const next = new Set(prev);
-      rows.forEach((r) => next.add(r.id));
-      return next;
-    });
+      // Track exported IDs
+      setExportedIds((prev) => {
+        const next = new Set(prev);
+        rows.forEach((r) => next.add(r.id));
+        return next;
+      });
 
-    toast.info("Po odeslání v bance potvrďte vyplacení.", { duration: 6000 });
+      toast.info("Po odeslání v bance potvrďte vyplacení.", { duration: 6000 });
+    } catch (err: any) {
+      toast.error(err.message || "Chyba při generování ABO souboru.");
+    }
   };
 
   const handleBulkExportMonth = (month: string) => {
@@ -373,10 +377,10 @@ export default function AdminInfluencerCommissions() {
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <FileDown className="w-5 h-5" />
-            Export XML pro Air Bank
+            Export ABO (CZK) pro Air Bank
           </CardTitle>
           <CardDescription>
-            Hromadný export schválených provizí ve formátu pain.001 (ISO 20022) pro import do Air Bank.
+            Hromadný export schválených provizí ve formátu ABO (.kpc) pro import do Air Bank.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -413,7 +417,7 @@ export default function AdminInfluencerCommissions() {
               className="gap-1.5"
             >
               <Download className="w-3.5 h-3.5" />
-              Export XML (vybrané: {selectedIds.size})
+              Export ABO (vybrané: {selectedIds.size})
             </Button>
             {selectedIds.size > 0 && (
               <span className="text-xs text-muted-foreground">
