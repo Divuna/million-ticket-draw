@@ -101,8 +101,14 @@ export const useInfluencerData = () => {
           ? partner.notes
           : (partner.notes ? JSON.stringify(partner.notes) : '');
 
-        if (partner.status !== 'approved' || !notesStr.toLowerCase().includes('influencer')) {
+        if (!notesStr.toLowerCase().includes('influencer')) {
           setError('not_influencer');
+          setLoading(false);
+          return;
+        }
+
+        if (partner.status !== 'approved') {
+          setError(partner.status === 'pending' ? 'pending_approval' : 'rejected');
           setLoading(false);
           return;
         }

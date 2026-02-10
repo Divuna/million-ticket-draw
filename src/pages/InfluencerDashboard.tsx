@@ -118,6 +118,51 @@ const InfluencerDashboard = () => {
     );
   }
 
+  if (error === 'pending_approval') {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="luxury-card max-w-md w-full text-center p-8 space-y-4">
+          <Clock className="w-12 h-12 mx-auto text-amber-500" />
+          <h2 className="text-xl font-semibold text-[hsl(var(--text-silver))]">Žádost ve schvalování</h2>
+          <p className="text-muted-foreground text-sm">
+            Vaše žádost o influencer účet je ve schvalování.
+          </p>
+          <p className="text-muted-foreground text-sm">
+            O schválení vás budeme informovat e-mailem.
+          </p>
+          <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2 mt-2">
+            <LogOut className="w-4 h-4" />
+            Odhlásit se
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (error === 'rejected') {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="luxury-card max-w-md w-full text-center p-8 space-y-4">
+          <User className="w-12 h-12 mx-auto text-destructive" />
+          <h2 className="text-xl font-semibold text-[hsl(var(--text-silver))]">Žádost zamítnuta</h2>
+          <p className="text-muted-foreground text-sm">
+            Vaše žádost o influencer účet byla zamítnuta.
+          </p>
+          <p className="text-muted-foreground text-sm">
+            Pokud máte dotazy, kontaktujte nás na{' '}
+            <a href="mailto:podpora@onemil.cz" className="text-[hsl(var(--neon-gold))] hover:underline">
+              podpora@onemil.cz
+            </a>.
+          </p>
+          <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2 mt-2">
+            <LogOut className="w-4 h-4" />
+            Odhlásit se
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (error || !data) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
