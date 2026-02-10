@@ -1,6 +1,6 @@
 /**
  * INFLUENCER SYSTEM (Admin Commissions) — Monetary CZK payouts, invoiced, admin-controlled.
- * Read-only overview of influencer_commissions with partner name joins.
+ * Overview of influencer_commissions with partner name joins and status management.
  * ⚠️  Intentionally separate from the Player referral system. MUST NOT be unified.
  */
 import React, { useEffect, useState } from "react";
@@ -13,9 +13,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Clock, Info, RefreshCw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AlertCircle, CheckCircle, Clock, Info, Loader2, RefreshCw, Banknote } from "lucide-react";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface CommissionRow {
   id: string;
@@ -33,6 +44,16 @@ const STATUS_OPTIONS = [
   { value: "approved", label: "Schváleno" },
   { value: "paid", label: "Vyplaceno" },
 ] as const;
+
+const NEXT_STATUS: Record<string, string> = {
+  calculated: "approved",
+  approved: "paid",
+};
+
+const ACTION_LABELS: Record<string, { label: string; icon: React.ElementType }> = {
+  calculated: { label: "Schválit", icon: CheckCircle },
+  approved: { label: "Označit jako vyplaceno", icon: Banknote },
+};
 
 function getStatusBadge(status: string) {
   switch (status) {
@@ -55,6 +76,10 @@ export default function AdminInfluencerCommissions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+
+  // Confirmation dialog for "paid"
+  const [confirmTarget, setConfirmTarget] = useState<CommissionRow | null>(null);
 
   const fetchCommissions = async () => {
     setLoading(true);
@@ -80,7 +105,6 @@ export default function AdminInfluencerCommissions() {
         return;
       }
 
-      // Fetch partner names for all unique partner IDs
       const partnerIds = [...new Set(data.map((c) => c.influencer_partner_id))];
       const { data: partners } = await supabase
         .from("partners")
@@ -110,6 +134,63 @@ export default function AdminInfluencerCommissions() {
     }
   }, [isAdmin, statusFilter]);
 
+  /* ── Status transition ── */
+
+  const handleStatusChange = async (commission: CommissionRow) => {
+    const newStatus = NEXT_STATUS[commission.status];
+    if (!newStatus) return;
+
+    // If transitioning to "paid", require confirmation
+    if (newStatus === "paid") {
+      setConfirmTarget(commission);
+      return;
+    }
+
+    await executeStatusChange(commission, newStatus);
+  };
+
+  const executeStatusChange = async (commission: CommissionRow, newStatus: string) => {
+    setActionLoadingId(commission.id);
+
+    // Optimistic update
+    const previous = [...commissions];
+    const now = new Date().toISOString();
+    setCommissions((prev) =>
+      prev.map((c) =>
+        c.id === commission.id ? { ...c, status: newStatus, updated_at: now } : c
+      )
+    );
+
+    try {
+      const { error } = await supabase
+        .from("influencer_commissions")
+        .update({ status: newStatus, updated_at: now })
+        .eq("id", commission.id);
+
+      if (error) throw error;
+
+      toast.success(
+        newStatus === "approved"
+          ? "Provize schválena"
+          : "Provize označena jako vyplacená"
+      );
+    } catch (err) {
+      console.error("Error updating commission status:", err);
+      setCommissions(previous);
+      toast.error("Nepodařilo se aktualizovat stav provize");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleConfirmPaid = async () => {
+    if (!confirmTarget) return;
+    setConfirmTarget(null);
+    await executeStatusChange(confirmTarget, "paid");
+  };
+
+  /* ── Guards ── */
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -128,6 +209,7 @@ export default function AdminInfluencerCommissions() {
   if (role !== 'admin' && role !== 'superadmin') {
     return <Navigate to="/" replace />;
   }
+
   return (
     <div className="container mx-auto px-4 py-6 pb-24 space-y-6">
       <div>
@@ -208,33 +290,92 @@ export default function AdminInfluencerCommissions() {
                     <TableHead className="text-right">Částka (CZK)</TableHead>
                     <TableHead>Stav</TableHead>
                     <TableHead>Aktualizováno</TableHead>
+                    <TableHead className="text-right">Akce</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {commissions.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.partner_name}</TableCell>
-                      <TableCell>
-                        {format(new Date(c.period_month), "LLLL yyyy", { locale: cs })}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {Number(c.amount_czk).toLocaleString("cs-CZ", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(c.status)}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {format(new Date(c.updated_at), "d. M. yyyy HH:mm", { locale: cs })}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {commissions.map((c) => {
+                    const nextStatus = NEXT_STATUS[c.status];
+                    const actionMeta = ACTION_LABELS[c.status];
+                    const isLoading = actionLoadingId === c.id;
+
+                    return (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium">{c.partner_name}</TableCell>
+                        <TableCell>
+                          {format(new Date(c.period_month), "LLLL yyyy", { locale: cs })}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {Number(c.amount_czk).toLocaleString("cs-CZ", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(c.status)}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {format(new Date(c.updated_at), "d. M. yyyy HH:mm", { locale: cs })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {nextStatus && actionMeta ? (
+                            <Button
+                              variant={nextStatus === "paid" ? "default" : "outline"}
+                              size="sm"
+                              disabled={isLoading}
+                              onClick={() => handleStatusChange(c)}
+                              className="gap-1.5"
+                            >
+                              {isLoading ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <actionMeta.icon className="w-3.5 h-3.5" />
+                              )}
+                              {actionMeta.label}
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Confirmation dialog for marking as paid */}
+      <AlertDialog open={!!confirmTarget} onOpenChange={(open) => !open && setConfirmTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Označit provizi jako vyplacenou?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmTarget && (
+                <>
+                  Potvrzujete výplatu provize{" "}
+                  <span className="font-semibold">
+                    {Number(confirmTarget.amount_czk).toLocaleString("cs-CZ")} Kč
+                  </span>{" "}
+                  pro influencera{" "}
+                  <span className="font-semibold">{confirmTarget.partner_name}</span>{" "}
+                  za období{" "}
+                  <span className="font-semibold">
+                    {format(new Date(confirmTarget.period_month), "LLLL yyyy", { locale: cs })}
+                  </span>
+                  . Tuto akci nelze vrátit zpět.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmPaid}>
+              Potvrdit výplatu
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
