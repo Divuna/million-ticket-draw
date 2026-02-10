@@ -67,6 +67,11 @@ export const useAuthState = () => {
           user_id: data.user.id,
           document_slug: 'gdpr',
           document_version: '1.0'
+        },
+        {
+          user_id: data.user.id,
+          document_slug: 'terms',
+          document_version: '1.0'
         }
       ];
       
