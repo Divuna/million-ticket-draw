@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import '@/components/ContestCard.css';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,16 +60,16 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-[hsl(222_40%_8%)] p-4">
       <div className="w-full max-w-md">
         <img
           src={logo}
           alt="OneMil logo"
           className="h-16 w-auto mx-auto mb-4 object-contain onemil-logo-animated"
         />
-        <Card className="w-full">
+        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[hsl(40_30%_35%/0.5)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
         <CardHeader>
-          <CardTitle>Přihlášení</CardTitle>
+          <CardTitle className="text-heading-gold">Přihlášení</CardTitle>
           <CardDescription>Přihlaste se ke svému účtu OneMil</CardDescription>
         </CardHeader>
 
@@ -104,20 +105,20 @@ const Login: React.FC = () => {
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[hsl(45_80%_45%)] via-[hsl(40_85%_50%)] to-[hsl(35_80%_45%)] text-secondary-foreground shadow-[0_2px_12px_hsl(45_80%_50%/0.25)] hover:shadow-[0_4px_16px_hsl(45_80%_50%/0.35)] hover:brightness-110 transition-all" disabled={loading}>
               {loading ? "Přihlašuji..." : "Přihlásit se"}
             </Button>
 
             <div className="flex flex-col space-y-2 w-full">
-              <Button type="button" variant="outline" className="w-full" onClick={() => handleOAuthSignIn("google")}>
+              <Button type="button" variant="outline" className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]" onClick={() => handleOAuthSignIn("google")}>
                 Přihlásit se přes Google
               </Button>
 
-              <Button type="button" variant="outline" className="w-full" onClick={() => handleOAuthSignIn("apple")}>
+              <Button type="button" variant="outline" className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]" onClick={() => handleOAuthSignIn("apple")}>
                 Přihlásit se přes Apple
               </Button>
 
-              <Button type="button" variant="outline" className="w-full" onClick={() => handleOAuthSignIn("facebook")}>
+              <Button type="button" variant="outline" className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]" onClick={() => handleOAuthSignIn("facebook")}>
                 Přihlásit se přes Facebook
               </Button>
             </div>
