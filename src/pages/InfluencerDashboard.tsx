@@ -5,7 +5,7 @@
  * These two systems MUST NEVER be merged or unified.
  */
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ import {
   Wallet,
   Sparkles,
   Zap,
+  LogOut,
 } from 'lucide-react';
 import InfluencerProfileSection from '@/components/InfluencerProfileSection';
 import InfluencerPromoMaterials from '@/components/InfluencerPromoMaterials';
@@ -47,6 +48,7 @@ import InfluencerCollaborationStatus from '@/components/InfluencerCollaborationS
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 /* ─── Status helpers ─── */
 
@@ -72,6 +74,12 @@ const commissionStatusColor = (status: string) => {
 const InfluencerDashboard = () => {
   const { data, loading, error, refetch } = useInfluencerData();
   const [copied, setCopied] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
 
   const handleCopy = async () => {
     if (!data) return;
@@ -146,11 +154,22 @@ const InfluencerDashboard = () => {
 
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[hsl(var(--neon-gold)/0.4)] bg-[hsl(var(--neon-gold)/0.1)]">
-                <Star className="w-3.5 h-3.5 text-[hsl(var(--neon-gold))]" />
-                <span className="text-xs font-semibold tracking-wide uppercase text-[hsl(var(--neon-gold))]">
-                  Aktivní influencer
-                </span>
+              <div className="flex items-center justify-between">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[hsl(var(--neon-gold)/0.4)] bg-[hsl(var(--neon-gold)/0.1)]">
+                  <Star className="w-3.5 h-3.5 text-[hsl(var(--neon-gold))]" />
+                  <span className="text-xs font-semibold tracking-wide uppercase text-[hsl(var(--neon-gold))]">
+                    Aktivní influencer
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="sm:hidden gap-2 border-[hsl(var(--border)/0.5)] text-[hsl(var(--text-muted-gray))] hover:text-[hsl(var(--text-silver))] hover:border-[hsl(var(--border))]"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Odhlásit se
+                </Button>
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-heading-gold !text-[hsl(var(--heading-gold))]">
                 Vydělávejte s OneMil
@@ -160,12 +179,23 @@ const InfluencerDashboard = () => {
               </p>
             </div>
 
-            {/* Hero earning highlight */}
-            <div className="shrink-0 rounded-xl border border-[hsl(var(--neon-gold)/0.3)] bg-[hsl(var(--neon-gold)/0.08)] px-6 py-4 text-center sm:text-right">
-              <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--neon-gold)/0.7)] mb-1">Tento měsíc</p>
-              <p className="text-3xl font-extrabold tabular-nums text-[hsl(var(--neon-gold))]">
-                {stats.currentMonthCzk.toLocaleString('cs-CZ')} <span className="text-lg">Kč</span>
-              </p>
+            <div className="flex flex-col items-end gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="hidden sm:inline-flex gap-2 border-[hsl(var(--border)/0.5)] text-[hsl(var(--text-muted-gray))] hover:text-[hsl(var(--text-silver))] hover:border-[hsl(var(--border))]"
+              >
+                <LogOut className="w-4 h-4" />
+                Odhlásit se
+              </Button>
+              {/* Hero earning highlight */}
+              <div className="shrink-0 rounded-xl border border-[hsl(var(--neon-gold)/0.3)] bg-[hsl(var(--neon-gold)/0.08)] px-6 py-4 text-center sm:text-right">
+                <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--neon-gold)/0.7)] mb-1">Tento měsíc</p>
+                <p className="text-3xl font-extrabold tabular-nums text-[hsl(var(--neon-gold))]">
+                  {stats.currentMonthCzk.toLocaleString('cs-CZ')} <span className="text-lg">Kč</span>
+                </p>
+              </div>
             </div>
           </div>
         </div>
