@@ -1,3 +1,36 @@
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * PLAYER REFERRAL SYSTEM — Non-monetary (MioCoin) rewards
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * This component powers the **Player Referral** ("Pozvi přátele") feature,
+ * which is an entirely separate system from the Influencer Account flow.
+ *
+ * ┌─────────────────────────────────────────────────────────────────┐
+ * │  PLAYER REFERRAL (this file)                                   │
+ * │  Tables: referral_codes, referrals, referral_rewards,          │
+ * │          referral_attempts, referral_blocked_users              │
+ * │  Currency: MioCoin (non-monetary, in-game only, no cash value) │
+ * │  Identity: auth.users via referral_codes.user_id               │
+ * │  Rewards: 5% commission on invitee top-ups + 15 MC first bonus │
+ * │  Payout: Automatic MC credit (cannot be withdrawn or exchanged)│
+ * └─────────────────────────────────────────────────────────────────┘
+ *
+ * ┌─────────────────────────────────────────────────────────────────┐
+ * │  INFLUENCER ACCOUNT (see useInfluencerData.ts)                 │
+ * │  Tables: partners, influencer_referrals, influencer_commissions│
+ * │          influencer_campaigns, influencer_campaign_partners,    │
+ * │          influencer_campaign_events,                            │
+ * │          influencer_campaign_bonuses_czk                        │
+ * │  Currency: CZK (real money, invoice-based, admin-controlled)   │
+ * └─────────────────────────────────────────────────────────────────┘
+ *
+ * ⚠️  These two systems are INTENTIONALLY SEPARATE and MUST NEVER
+ *     be merged, unified, or cross-linked. They serve fundamentally
+ *     different business purposes with different legal implications.
+ *
+ * @see src/hooks/useInfluencerData.ts — Influencer Account (CZK)
+ */
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
