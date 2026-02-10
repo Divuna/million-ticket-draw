@@ -52,6 +52,10 @@ interface Influencer {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  referral_count: number;
+  total_commissions_czk: number;
+  commissions_paid_czk: number;
+  commissions_pending_czk: number;
 }
 
 const statusLabels: Record<InfluencerStatus, string> = {
@@ -96,7 +100,55 @@ const AdminInfluencers = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setInfluencers((data || []) as Influencer[]);
+
+      const partnerIds = (data || []).map((p) => p.id);
+
+      // Fetch referral counts and commission aggregates in parallel
+      const [referralsRes, commissionsRes] = await Promise.all([
+        partnerIds.length > 0
+          ? supabase
+              .from("influencer_referrals")
+              .select("influencer_partner_id")
+              .in("influencer_partner_id", partnerIds)
+          : Promise.resolve({ data: [] as { influencer_partner_id: string }[], error: null }),
+        partnerIds.length > 0
+          ? supabase
+              .from("influencer_commissions")
+              .select("influencer_partner_id, amount_czk, status")
+              .in("influencer_partner_id", partnerIds)
+          : Promise.resolve({ data: [] as { influencer_partner_id: string; amount_czk: number; status: string }[], error: null }),
+      ]);
+
+      // Build referral count map
+      const referralCountMap = new Map<string, number>();
+      for (const r of referralsRes.data || []) {
+        referralCountMap.set(r.influencer_partner_id, (referralCountMap.get(r.influencer_partner_id) || 0) + 1);
+      }
+
+      // Build commission aggregates map
+      const commTotalMap = new Map<string, number>();
+      const commPaidMap = new Map<string, number>();
+      const commPendingMap = new Map<string, number>();
+      for (const c of commissionsRes.data || []) {
+        const amt = Number(c.amount_czk);
+        commTotalMap.set(c.influencer_partner_id, (commTotalMap.get(c.influencer_partner_id) || 0) + amt);
+        if (c.status === "paid") {
+          commPaidMap.set(c.influencer_partner_id, (commPaidMap.get(c.influencer_partner_id) || 0) + amt);
+        } else {
+          commPendingMap.set(c.influencer_partner_id, (commPendingMap.get(c.influencer_partner_id) || 0) + amt);
+        }
+      }
+
+      const enriched: Influencer[] = (data || []).map((p) => ({
+        ...p,
+        status: p.status as InfluencerStatus,
+        referral_count: referralCountMap.get(p.id) || 0,
+        total_commissions_czk: commTotalMap.get(p.id) || 0,
+        commissions_paid_czk: commPaidMap.get(p.id) || 0,
+        commissions_pending_czk: commPendingMap.get(p.id) || 0,
+      }));
+
+      setInfluencers(enriched);
     } catch (error) {
       console.error("Error fetching influencers:", error);
       toast.error("Nepodařilo se načíst influencery");
@@ -258,6 +310,8 @@ const AdminInfluencers = () => {
                       <TableHead>Jméno</TableHead>
                       <TableHead>E-mail</TableHead>
                       <TableHead>Web / Sociální sítě</TableHead>
+                      <TableHead className="text-right">Referraly</TableHead>
+                      <TableHead className="text-right">Provize CZK</TableHead>
                       <TableHead>Stav</TableHead>
                       <TableHead>Registrace</TableHead>
                       <TableHead className="text-right">Akce</TableHead>
@@ -312,6 +366,12 @@ const AdminInfluencers = () => {
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">
+                            {influencer.referral_count}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">
+                            {influencer.total_commissions_czk.toLocaleString("cs-CZ")} Kč
                           </TableCell>
                           <TableCell>
                             <Badge variant={statusColors[influencer.status as InfluencerStatus] || "secondary"}>
@@ -462,6 +522,29 @@ const AdminInfluencers = () => {
                       Zamítnout
                     </Button>
                   )}
+                </div>
+              </div>
+
+              {/* Performance summary */}
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                <p className="text-xs font-semibold text-foreground">Přehled výkonu</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Celkem referralů</p>
+                    <p className="text-lg font-bold tabular-nums text-foreground">{selectedInfluencer.referral_count}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Celkem provize</p>
+                    <p className="text-lg font-bold tabular-nums text-foreground">{selectedInfluencer.total_commissions_czk.toLocaleString("cs-CZ")} Kč</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Vyplaceno</p>
+                    <p className="text-sm font-semibold tabular-nums text-green-600">{selectedInfluencer.commissions_paid_czk.toLocaleString("cs-CZ")} Kč</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Nevyplaceno</p>
+                    <p className="text-sm font-semibold tabular-nums text-amber-600">{selectedInfluencer.commissions_pending_czk.toLocaleString("cs-CZ")} Kč</p>
+                  </div>
                 </div>
               </div>
 
