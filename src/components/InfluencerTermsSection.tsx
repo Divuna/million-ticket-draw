@@ -85,12 +85,18 @@ const InfluencerTermsSection: React.FC<Props> = ({ partnerId }) => {
     if (!user || !data) return;
     setAccepting(true);
     try {
-      const { error } = await supabase.from('user_legal_acceptances').insert({
-        user_id: user.id,
-        document_slug: 'obchodni-podminky',
-        document_version: data.termsVersion || '1.0',
-      });
-      if (error) throw error;
+      const [legalRes, partnerRes] = await Promise.all([
+        supabase.from('user_legal_acceptances').insert({
+          user_id: user.id,
+          document_slug: 'obchodni-podminky',
+          document_version: data.termsVersion || '1.0',
+        }),
+        supabase.from('partners').update({
+          terms_accepted_at: new Date().toISOString(),
+        }).eq('id', partnerId),
+      ]);
+      if (legalRes.error) throw legalRes.error;
+      if (partnerRes.error) throw partnerRes.error;
       toast.success('Podmínky byly úspěšně přijaty');
       setShowTerms(false);
       await loadData();
