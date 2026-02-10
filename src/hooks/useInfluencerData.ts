@@ -68,6 +68,9 @@ export const useInfluencerData = () => {
   const [data, setData] = useState<InfluencerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refetch = () => setRefreshKey((k) => k + 1);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -243,7 +246,7 @@ export const useInfluencerData = () => {
     };
 
     fetchData();
-  }, []);
+  }, [refreshKey]);
 
-  return { data, loading, error };
+  return { data, loading, error, refetch };
 };

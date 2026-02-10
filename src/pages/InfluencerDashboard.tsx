@@ -70,7 +70,7 @@ const commissionStatusColor = (status: string) => {
 /* ─── Main page ─── */
 
 const InfluencerDashboard = () => {
-  const { data, loading, error } = useInfluencerData();
+  const { data, loading, error, refetch } = useInfluencerData();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -384,7 +384,7 @@ const InfluencerDashboard = () => {
         </div>
 
         {/* ══════ TERMS ══════ */}
-        <InfluencerTermsSection partnerId={data.partnerId} />
+        <InfluencerTermsSection partnerId={data.partnerId} onAccepted={refetch} />
 
         {/* ══════ COLLABORATION STATUS ══════ */}
         <InfluencerCollaborationStatus partnerId={data.partnerId} />
