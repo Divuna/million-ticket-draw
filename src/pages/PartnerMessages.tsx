@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { MessageCircle, Send, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 
 interface Message {
@@ -114,122 +115,112 @@ export default function PartnerMessages() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "#0F172A" }}>
-      <div className="flex flex-col h-[calc(100vh-60px)] max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="px-6 py-5" style={{ borderBottom: "1px solid rgba(148,163,184,0.15)" }}>
-          <div className="flex items-center gap-3">
-            <Link to="/partner/dashboard">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hover:bg-white/5"
-                style={{ color: "#94A3B8" }}
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <div className="flex items-center gap-3 flex-1">
-              <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center"
-                style={{ background: "rgba(59,130,246,0.12)" }}
-              >
-                <MessageCircle className="w-4.5 h-4.5" style={{ color: "#3B82F6" }} />
-              </div>
-              <div>
-                <h1 className="text-base font-semibold" style={{ color: "#F1F5F9" }}>
-                  Zprávy pro podporu
-                </h1>
-                <p className="text-xs" style={{ color: "#64748B" }}>
-                  Komunikace s týmem OneMil
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-5 space-y-3">
-          {loading && messages.length === 0 ? (
-            <p className="mt-10 text-center text-sm" style={{ color: "#64748B" }}>
-              Načítání zpráv…
-            </p>
-          ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center py-12">
-              <div
-                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
-                style={{ background: "rgba(148,163,184,0.08)" }}
-              >
-                <MessageCircle className="w-7 h-7" style={{ color: "#475569" }} />
-              </div>
-              <p className="text-sm font-medium" style={{ color: "#CBD5E1" }}>
-                Zatím žádné zprávy
-              </p>
-              <p className="text-xs mt-1" style={{ color: "#64748B" }}>
-                Napište nám vaši první zprávu
-              </p>
-            </div>
-          ) : (
-            messages.map((msg) => {
-              const isUser = msg.sender === "user";
-              return (
-                <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className="max-w-[75%] rounded-xl px-4 py-3"
-                    style={
-                      isUser
-                        ? { background: "#1E3A5F", color: "#E2E8F0" }
-                        : { background: "#1E293B", color: "#CBD5E1", border: "1px solid rgba(148,163,184,0.1)" }
-                    }
-                  >
-                    <p className="text-[14px] leading-relaxed">{msg.content}</p>
-                    <p
-                      className="text-[11px] mt-1.5 text-right"
-                      style={{ color: isUser ? "rgba(148,163,184,0.6)" : "rgba(100,116,139,0.7)" }}
-                    >
-                      {new Date(msg.created_at).toLocaleString("cs-CZ", {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Input */}
-        <div className="px-6 py-4" style={{ borderTop: "1px solid rgba(148,163,184,0.12)" }}>
-          <div className="flex items-center gap-3">
-            <input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Napište zprávu..."
-              disabled={isSending}
-              className="flex-1 text-sm rounded-lg px-4 py-3 outline-none transition-colors disabled:opacity-50"
-              style={{
-                background: "#1E293B",
-                color: "#E2E8F0",
-                border: "1px solid rgba(148,163,184,0.15)",
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(59,130,246,0.5)")}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(148,163,184,0.15)")}
-            />
-            <button
-              onClick={handleSend}
-              disabled={!newMessage.trim() || isSending}
-              className="rounded-lg px-4 py-3 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ background: "#3B82F6", color: "#FFFFFF" }}
+    <div className="min-h-screen bg-background">
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Back navigation */}
+        <div className="flex items-center gap-3">
+          <Link to="/partner/dashboard">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground"
             >
-              <Send className="w-4 h-4" />
-            </button>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Zprávy pro podporu</h1>
+            <p className="text-sm text-muted-foreground">Komunikace s týmem OneMil</p>
           </div>
         </div>
-      </div>
+
+        {/* Messages Card */}
+        <Card className="border-border/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <MessageCircle className="w-4.5 h-4.5 text-primary" />
+              Konverzace
+            </CardTitle>
+            <CardDescription>Vaše zprávy s administrací</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {/* Messages area */}
+            <div
+              ref={scrollRef}
+              className="h-[calc(100vh-380px)] min-h-[300px] overflow-y-auto px-6 py-5 space-y-3 border-t border-border/40"
+            >
+              {loading && messages.length === 0 ? (
+                <p className="mt-10 text-center text-sm text-muted-foreground">
+                  Načítání zpráv…
+                </p>
+              ) : messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                  <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 bg-muted/50">
+                    <MessageCircle className="w-7 h-7 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground">
+                    Zatím žádné zprávy
+                  </p>
+                  <p className="text-xs mt-1 text-muted-foreground">
+                    Napište nám vaši první zprávu
+                  </p>
+                </div>
+              ) : (
+                messages.map((msg) => {
+                  const isUser = msg.sender === "user";
+                  return (
+                    <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className={`max-w-[75%] rounded-xl px-4 py-3 ${
+                          isUser
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-foreground border border-border/40"
+                        }`}
+                      >
+                        <p className="text-[14px] leading-relaxed">{msg.content}</p>
+                        <p
+                          className={`text-[11px] mt-1.5 text-right ${
+                            isUser ? "text-primary-foreground/60" : "text-muted-foreground"
+                          }`}
+                        >
+                          {new Date(msg.created_at).toLocaleString("cs-CZ", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Input */}
+            <div className="px-6 py-4 border-t border-border/40">
+              <div className="flex items-center gap-3">
+                <input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Napište zprávu..."
+                  disabled={isSending}
+                  className="flex-1 text-sm rounded-lg px-4 py-3 outline-none transition-colors disabled:opacity-50 bg-muted text-foreground border border-border/40 focus:border-primary/50"
+                />
+                <Button
+                  onClick={handleSend}
+                  disabled={!newMessage.trim() || isSending}
+                  size="icon"
+                  className="h-[46px] w-[46px] rounded-lg"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 }
