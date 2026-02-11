@@ -137,10 +137,10 @@ export default function PartnerMessages() {
                 <MessageCircle className="w-4.5 h-4.5" style={{ color: "#3B82F6" }} />
               </div>
               <div>
-                <h1 className="text-lg font-semibold" style={{ color: "#F1F5F9" }}>
+                <h1 className="text-base font-semibold" style={{ color: "#F1F5F9" }}>
                   Zprávy pro podporu
                 </h1>
-                <p className="text-xs" style={{ color: "#94A3B8" }}>
+                <p className="text-xs" style={{ color: "#64748B" }}>
                   Komunikace s týmem OneMil
                 </p>
               </div>
@@ -149,7 +149,7 @@ export default function PartnerMessages() {
         </div>
 
         {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-5 space-y-3">
           {loading && messages.length === 0 ? (
             <p className="mt-10 text-center text-sm" style={{ color: "#64748B" }}>
               Načítání zpráv…
@@ -175,22 +175,12 @@ export default function PartnerMessages() {
               return (
                 <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
                   <div
-                    className="max-w-[75%] px-5 py-3.5"
-                    style={{
-                      borderRadius: "16px",
-                      ...(isUser
-                        ? {
-                            background: "#1F2937",
-                            color: "#E2E8F0",
-                            border: "1px solid rgba(255,255,255,0.05)",
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-                          }
-                        : {
-                            background: "#2563EB",
-                            color: "#FFFFFF",
-                            ...(! msg.read ? { borderLeft: "4px solid #3B82F6" } : {}),
-                          }),
-                    }}
+                    className="max-w-[75%] rounded-xl px-4 py-3"
+                    style={
+                      isUser
+                        ? { background: "#1E3A5F", color: "#E2E8F0" }
+                        : { background: "#1E293B", color: "#CBD5E1", border: "1px solid rgba(148,163,184,0.1)" }
+                    }
                   >
                     <p className="text-[14px] leading-relaxed">{msg.content}</p>
                     <p
