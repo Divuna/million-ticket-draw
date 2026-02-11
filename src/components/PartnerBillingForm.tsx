@@ -91,10 +91,10 @@ const PartnerBillingForm: React.FC<PartnerBillingFormProps> = ({ partnerId, init
   };
 
   return (
-    <Card className="border-border/50">
+    <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Building2 className="w-5 h-5" />
+        <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
+          <Building2 className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
           Fakturační údaje
         </CardTitle>
         <CardDescription>

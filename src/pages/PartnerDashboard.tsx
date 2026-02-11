@@ -579,12 +579,12 @@ const PartnerDashboard = () => {
           </div>
         )}
         {/* Welcome & Account Status Section */}
-        <Card className="border-border/50 bg-gradient-to-br from-card to-muted/20">
+        <Card className="border-[hsl(var(--neon-gold)/0.2)] bg-gradient-to-br from-[hsl(222_40%_10%)] via-[hsl(222_38%_9%)] to-[hsl(43_20%_10%)]">
           <CardHeader className="pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <Rocket className="w-5 h-5 text-primary" />
+                <CardTitle className="text-xl flex items-center gap-2 text-[hsl(var(--text-silver))]">
+                  <Rocket className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
                   Vítejte v partnerském portálu
                 </CardTitle>
                 <CardDescription className="mt-1">
@@ -592,8 +592,8 @@ const PartnerDashboard = () => {
                 </CardDescription>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Status účtu:</span>
+              <div className="flex items-center gap-2">
+                  <span className="text-sm text-[hsl(var(--text-muted-gray))]">Status účtu:</span>
                   {partner.status === 'approved' ? (
                     <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
                       <CheckCircle className="w-3 h-3 mr-1" />
@@ -611,8 +611,8 @@ const PartnerDashboard = () => {
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Integrace API:</span>
+              <div className="flex items-center gap-2">
+                  <span className="text-sm text-[hsl(var(--text-muted-gray))]">Integrace API:</span>
                   {(() => {
                     const testEndpoints = ['partner_api_ping', 'example', 'healthcheck', 'ping', 'test'];
                     const thirtyDaysAgo = subDays(new Date(), 30);
@@ -662,10 +662,10 @@ const PartnerDashboard = () => {
             {/* Primary Actions */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <a href="#api-keys" className="block">
-                <div className="p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors cursor-pointer h-full">
+                <div className="p-4 rounded-lg border border-[hsl(var(--neon-gold)/0.15)] bg-[hsl(var(--muted)/0.2)] hover:border-[hsl(var(--neon-gold)/0.3)] hover:bg-[hsl(var(--muted)/0.3)] transition-colors cursor-pointer h-full">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Key className="w-5 h-5 text-primary" />
+                    <div className="w-10 h-10 bg-[hsl(var(--neon-gold)/0.12)] rounded-lg flex items-center justify-center border border-[hsl(var(--neon-gold)/0.2)]">
+                      <Key className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
                     </div>
                     <span className="font-medium text-foreground">API klíče</span>
                   </div>
@@ -676,10 +676,10 @@ const PartnerDashboard = () => {
               </a>
 
               <button onClick={openApiDocsModal} className="block w-full text-left">
-                <div className="p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors cursor-pointer h-full">
+                <div className="p-4 rounded-lg border border-[hsl(var(--neon-gold)/0.15)] bg-[hsl(var(--muted)/0.2)] hover:border-[hsl(var(--neon-gold)/0.3)] hover:bg-[hsl(var(--muted)/0.3)] transition-colors cursor-pointer h-full">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <BookOpen className="w-5 h-5 text-primary" />
+                    <div className="w-10 h-10 bg-[hsl(var(--neon-gold)/0.12)] rounded-lg flex items-center justify-center border border-[hsl(var(--neon-gold)/0.2)]">
+                      <BookOpen className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
                     </div>
                     <span className="font-medium text-foreground flex items-center gap-1">
                       Dokumentace API
@@ -692,10 +692,10 @@ const PartnerDashboard = () => {
               </button>
 
               <a href="mailto:podpora@onemil.cz" className="block">
-                <div className="p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors cursor-pointer h-full">
+                <div className="p-4 rounded-lg border border-[hsl(var(--neon-gold)/0.15)] bg-[hsl(var(--muted)/0.2)] hover:border-[hsl(var(--neon-gold)/0.3)] hover:bg-[hsl(var(--muted)/0.3)] transition-colors cursor-pointer h-full">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Mail className="w-5 h-5 text-primary" />
+                    <div className="w-10 h-10 bg-[hsl(var(--neon-gold)/0.12)] rounded-lg flex items-center justify-center border border-[hsl(var(--neon-gold)/0.2)]">
+                      <Mail className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
                     </div>
                     <span className="font-medium text-foreground">Kontaktovat podporu</span>
                   </div>
@@ -718,8 +718,8 @@ const PartnerDashboard = () => {
                 <div className="border-t border-border/50 pt-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <ListChecks className="w-5 h-5 text-primary" />
-                      <h3 className="font-semibold text-foreground">Jak začít</h3>
+                      <ListChecks className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
+                      <h3 className="font-semibold text-[hsl(var(--text-silver))]">Jak začít</h3>
                     </div>
                     <Badge variant="outline" className="text-xs">
                       {completedCount}/3 dokončeno
@@ -775,59 +775,59 @@ const PartnerDashboard = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Vydané kódy</CardTitle>
-              <FileText className="w-4 h-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalIssued}</div>
-              <p className="text-xs text-muted-foreground">{stats.totalIssuedCoins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MioCoinů</p>
-            </CardContent>
-          </Card>
+          <div className="luxury-card p-5 hover:border-[hsl(var(--neon-gold)/0.3)] transition-all">
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-[11px] uppercase tracking-wider text-[hsl(var(--text-muted-gray))]">Vydané kódy</span>
+              <FileText className="w-4 h-4 text-[hsl(var(--text-muted-gray))]" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-[hsl(var(--text-silver))]">{stats.totalIssued}</div>
+              <p className="text-xs text-[hsl(var(--text-muted-gray))]">{stats.totalIssuedCoins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MioCoinů</p>
+            </div>
+          </div>
 
-          <Card className="border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Aktivované kódy</CardTitle>
-              <Coins className="w-4 h-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{stats.totalActivated}</div>
-              <p className="text-xs text-muted-foreground">{stats.totalActivatedCoins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MioCoinů</p>
-            </CardContent>
-          </Card>
+          <div className="luxury-card p-5 hover:border-[hsl(var(--neon-gold)/0.3)] transition-all">
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-[11px] uppercase tracking-wider text-[hsl(var(--text-muted-gray))]">Aktivované kódy</span>
+              <Coins className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-[hsl(var(--neon-gold))]">{stats.totalActivated}</div>
+              <p className="text-xs text-[hsl(var(--text-muted-gray))]">{stats.totalActivatedCoins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MioCoinů</p>
+            </div>
+          </div>
 
-          <Card className="border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Konverzní poměr</CardTitle>
-              <TrendingUp className="w-4 h-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-500">
+          <div className="luxury-card p-5 hover:border-[hsl(var(--neon-gold)/0.3)] transition-all">
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-[11px] uppercase tracking-wider text-[hsl(var(--text-muted-gray))]">Konverzní poměr</span>
+              <TrendingUp className="w-4 h-4 text-[hsl(var(--neon-green))]" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-[hsl(var(--neon-green))]">
                 {stats.totalIssued > 0 ? Math.round((stats.totalActivated / stats.totalIssued) * 100) : 0}%
               </div>
-              <p className="text-xs text-muted-foreground">aktivovaných kódů</p>
-            </CardContent>
-          </Card>
+              <p className="text-xs text-[hsl(var(--text-muted-gray))]">aktivovaných kódů</p>
+            </div>
+          </div>
 
-          <Card className="border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Status</CardTitle>
-              <Building2 className="w-4 h-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
+          <div className="luxury-card p-5 hover:border-[hsl(var(--neon-gold)/0.3)] transition-all">
+            <div className="flex items-center justify-between pb-2">
+              <span className="text-[11px] uppercase tracking-wider text-[hsl(var(--text-muted-gray))]">Status</span>
+              <Building2 className="w-4 h-4 text-[hsl(var(--text-muted-gray))]" />
+            </div>
+            <div>
               <Badge variant={partner.status === 'approved' ? 'default' : 'secondary'} className="text-sm">
                 {partner.status === 'approved' ? 'Aktivní' : partner.status === 'pending' ? 'Čeká na schválení' : 'Pozastaveno'}
               </Badge>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         {/* Logo Management Section */}
-        <Card className="border-border/50">
+        <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Image className="w-5 h-5" />
+            <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
+              <Image className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
               Logo partnera
             </CardTitle>
             <CardDescription>
@@ -937,10 +937,10 @@ const PartnerDashboard = () => {
 
         {/* Partner Reward Settings */}
         {isAccountApproved && (
-          <Card className="border-border/50">
+          <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
+                <Settings className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
                 Nastavení konverze MioCoinů
               </CardTitle>
               <CardDescription>
@@ -1027,7 +1027,7 @@ const PartnerDashboard = () => {
               <div className="border-t border-border/50 pt-4">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-medium flex items-center gap-2">
-                    <Coins className="w-4 h-4 text-primary" />
+                    <Coins className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
                     Marketingová investice (simulace)
                   </h4>
                   <div className="flex items-center gap-2">
@@ -1057,9 +1057,9 @@ const PartnerDashboard = () => {
                 </div>
 
                 {/* Primary KPI - Investment percentage */}
-                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 text-center mb-3">
-                  <p className="text-xs text-muted-foreground mb-1">Investice z obratu</p>
-                  <p className="text-3xl font-bold text-primary">{rewardPreview.investmentPercentage} %</p>
+                <div className="p-4 rounded-lg bg-[hsl(var(--neon-gold)/0.08)] border border-[hsl(var(--neon-gold)/0.2)] text-center mb-3">
+                  <p className="text-xs text-[hsl(var(--text-muted-gray))] mb-1">Investice z obratu</p>
+                  <p className="text-3xl font-bold text-[hsl(var(--neon-gold))]">{rewardPreview.investmentPercentage} %</p>
                 </div>
 
                 {/* Single-line breakdown */}
@@ -1095,10 +1095,10 @@ const PartnerDashboard = () => {
         )}
 
         {/* API Keys Section */}
-        <Card id="api-keys" className="border-border/50 scroll-mt-24">
+        <Card id="api-keys" className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors scroll-mt-24">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5" />
+            <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
+              <Key className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
               API klíče
             </CardTitle>
             <CardDescription>
@@ -1187,10 +1187,10 @@ const PartnerDashboard = () => {
 
         {/* API Activity Section */}
         {isAccountApproved && (
-          <Card className="border-border/50">
+          <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
+                <Activity className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
                 API aktivita
               </CardTitle>
               <CardDescription>
@@ -1232,10 +1232,10 @@ const PartnerDashboard = () => {
         )}
 
         {/* Weekly Reports */}
-        <Card className="border-border/50">
+        <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
+            <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
+              <Calendar className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
               Týdenní přehled
             </CardTitle>
             <CardDescription>Aktivita za posledních 4 týdny</CardDescription>
@@ -1259,8 +1259,8 @@ const PartnerDashboard = () => {
                     </TableCell>
                     <TableCell className="text-right">{report.issued_count}</TableCell>
                     <TableCell className="text-right">{report.issued_coins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</TableCell>
-                    <TableCell className="text-right text-primary">{report.activated_count}</TableCell>
-                    <TableCell className="text-right text-primary">{report.activated_coins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</TableCell>
+                    <TableCell className="text-right text-[hsl(var(--neon-gold))]">{report.activated_count}</TableCell>
+                    <TableCell className="text-right text-[hsl(var(--neon-gold))]">{report.activated_coins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</TableCell>
                   </TableRow>
                 ))}
                 {weeklyReports.length === 0 && (

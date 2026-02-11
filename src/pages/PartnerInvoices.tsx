@@ -121,18 +121,18 @@ const PartnerInvoices: React.FC = () => {
     <div className="min-h-screen bg-background pb-8">
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <FileText className="h-6 w-6" />
+          <h1 className="text-2xl font-bold text-[hsl(var(--text-silver))] flex items-center gap-2">
+            <FileText className="h-6 w-6 text-[hsl(var(--neon-gold))]" />
             Moje faktury
           </h1>
-          <Button variant="outline" size="sm" onClick={() => navigate('/partner/dashboard')}>
+          <Button variant="outline" size="sm" onClick={() => navigate('/partner/dashboard')} className="border-[hsl(var(--border)/0.5)] text-[hsl(var(--text-muted-gray))] hover:text-[hsl(var(--text-silver))] hover:border-[hsl(var(--border))]">
             Zpět na dashboard
           </Button>
         </div>
 
-        <Card>
+        <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
           <CardHeader>
-            <CardTitle>Seznam faktur</CardTitle>
+            <CardTitle className="text-[hsl(var(--text-silver))]">Seznam faktur</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
