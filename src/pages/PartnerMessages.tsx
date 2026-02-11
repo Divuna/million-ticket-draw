@@ -1,5 +1,5 @@
 /**
- * Partner Messages — reuses the same messages table.
+ * Partner Messages — B2B SaaS-style messaging UI.
  * Partners can send messages to admin and receive replies.
  */
 import { useEffect, useState, useRef, useCallback } from "react";
@@ -36,7 +36,6 @@ export default function PartnerMessages() {
     scrollToBottom();
   }, [messages]);
 
-  // Get current user
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser();
@@ -115,39 +114,60 @@ export default function PartnerMessages() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen" style={{ background: "#0F172A" }}>
       <div className="flex flex-col h-[calc(100vh-60px)] max-w-3xl mx-auto">
         {/* Header */}
-        <div className="p-6 pb-4">
-          <div className="flex items-center gap-3 mb-2">
+        <div className="px-6 py-5" style={{ borderBottom: "1px solid rgba(148,163,184,0.15)" }}>
+          <div className="flex items-center gap-3">
             <Link to="/partner/dashboard">
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hover:bg-white/5"
+                style={{ color: "#94A3B8" }}
+              >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
             <div className="flex items-center gap-3 flex-1">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <MessageCircle className="w-5 h-5 text-primary" />
+              <div
+                className="w-9 h-9 rounded-lg flex items-center justify-center"
+                style={{ background: "rgba(59,130,246,0.12)" }}
+              >
+                <MessageCircle className="w-4.5 h-4.5" style={{ color: "#3B82F6" }} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-foreground">Zprávy pro podporu</h1>
-                <p className="text-xs text-muted-foreground">Komunikace s týmem OneMil</p>
+                <h1 className="text-base font-semibold" style={{ color: "#F1F5F9" }}>
+                  Zprávy pro podporu
+                </h1>
+                <p className="text-xs" style={{ color: "#64748B" }}>
+                  Komunikace s týmem OneMil
+                </p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 pb-4 space-y-3">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-5 space-y-3">
           {loading && messages.length === 0 ? (
-            <p className="text-muted-foreground mt-10 text-center">Načítání zpráv…</p>
+            <p className="mt-10 text-center text-sm" style={{ color: "#64748B" }}>
+              Načítání zpráv…
+            </p>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center py-12">
-              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-                <MessageCircle className="w-8 h-8 text-muted-foreground" />
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
+                style={{ background: "rgba(148,163,184,0.08)" }}
+              >
+                <MessageCircle className="w-7 h-7" style={{ color: "#475569" }} />
               </div>
-              <p className="text-foreground text-base font-medium">Zatím žádné zprávy</p>
-              <p className="text-muted-foreground text-sm mt-1">Napište nám vaši první zprávu</p>
+              <p className="text-sm font-medium" style={{ color: "#CBD5E1" }}>
+                Zatím žádné zprávy
+              </p>
+              <p className="text-xs mt-1" style={{ color: "#64748B" }}>
+                Napište nám vaši první zprávu
+              </p>
             </div>
           ) : (
             messages.map((msg) => {
@@ -155,14 +175,18 @@ export default function PartnerMessages() {
               return (
                 <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
                   <div
-                    className={`max-w-[75%] rounded-2xl p-4 ${
+                    className="max-w-[75%] rounded-xl px-4 py-3"
+                    style={
                       isUser
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-foreground border border-border"
-                    }`}
+                        ? { background: "#1E3A5F", color: "#E2E8F0" }
+                        : { background: "#1E293B", color: "#CBD5E1", border: "1px solid rgba(148,163,184,0.1)" }
+                    }
                   >
-                    <p className="text-[15px] leading-relaxed">{msg.content}</p>
-                    <p className={`text-xs mt-2 ${isUser ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                    <p className="text-[14px] leading-relaxed">{msg.content}</p>
+                    <p
+                      className="text-[11px] mt-1.5 text-right"
+                      style={{ color: isUser ? "rgba(148,163,184,0.6)" : "rgba(100,116,139,0.7)" }}
+                    >
                       {new Date(msg.created_at).toLocaleString("cs-CZ", {
                         day: "numeric",
                         month: "short",
@@ -178,7 +202,7 @@ export default function PartnerMessages() {
         </div>
 
         {/* Input */}
-        <div className="p-6 pt-4 border-t border-border">
+        <div className="px-6 py-4" style={{ borderTop: "1px solid rgba(148,163,184,0.12)" }}>
           <div className="flex items-center gap-3">
             <input
               value={newMessage}
@@ -186,14 +210,22 @@ export default function PartnerMessages() {
               onKeyDown={handleKeyDown}
               placeholder="Napište zprávu..."
               disabled={isSending}
-              className="flex-1 bg-muted text-foreground p-4 rounded-xl border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground text-[15px] disabled:opacity-50"
+              className="flex-1 text-sm rounded-lg px-4 py-3 outline-none transition-colors disabled:opacity-50"
+              style={{
+                background: "#1E293B",
+                color: "#E2E8F0",
+                border: "1px solid rgba(148,163,184,0.15)",
+              }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(59,130,246,0.5)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(148,163,184,0.15)")}
             />
             <button
               onClick={handleSend}
               disabled={!newMessage.trim() || isSending}
-              className="p-4 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="rounded-lg px-4 py-3 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{ background: "#3B82F6", color: "#FFFFFF" }}
             >
-              <Send className="w-5 h-5" />
+              <Send className="w-4 h-4" />
             </button>
           </div>
         </div>
