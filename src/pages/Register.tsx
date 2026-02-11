@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import '@/components/ContestCard.css';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -123,16 +124,16 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-[hsl(222_40%_8%)] p-4">
       <div className="w-full max-w-md">
         <img
           src={logo}
           alt="OneMil logo"
           className="h-16 w-auto object-contain mx-auto mb-4 onemil-logo-animated"
         />
-        <Card className="w-full">
+        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[hsl(40_30%_35%/0.5)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
         <CardHeader>
-          <CardTitle>Registrace</CardTitle>
+          <CardTitle className="text-heading-gold">Registrace</CardTitle>
           <CardDescription>
             Vytvořte si nový účet OneMil
           </CardDescription>
@@ -255,7 +256,7 @@ const Register: React.FC = () => {
           <CardFooter className="flex flex-col space-y-4">
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full rounded-xl bg-gradient-to-r from-[hsl(45_80%_45%)] via-[hsl(40_85%_50%)] to-[hsl(35_80%_45%)] text-secondary-foreground shadow-[0_2px_12px_hsl(45_80%_50%/0.25)] hover:shadow-[0_4px_16px_hsl(45_80%_50%/0.35)] hover:brightness-110 transition-all" 
               disabled={loading}
             >
               {loading ? 'Registruji...' : 'Zaregistrovat se'}
@@ -265,7 +266,7 @@ const Register: React.FC = () => {
               <Button 
                 type="button"
                 variant="outline" 
-                className="w-full"
+                className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]"
                 onClick={() => handleOAuthSignIn('google')}
               >
                 Registrovat se přes Google
@@ -274,7 +275,7 @@ const Register: React.FC = () => {
               <Button 
                 type="button"
                 variant="outline" 
-                className="w-full"
+                className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]"
                 onClick={() => handleOAuthSignIn('apple')}
               >
                 Registrovat se přes Apple
@@ -283,7 +284,7 @@ const Register: React.FC = () => {
               <Button 
                 type="button"
                 variant="outline" 
-                className="w-full"
+                className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]"
                 onClick={() => handleOAuthSignIn('facebook')}
               >
                 Registrovat se přes Facebook

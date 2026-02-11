@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Share2, UserPlus, Coins, BarChart3, ChevronRight } from 'lucide-react';
+import '@/components/ContestCard.css';
+
+const premiumCard = "voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[2px] border-[hsl(40_30%_35%/0.5)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[hsl(40_40%_45%/0.6)] overflow-hidden";
+const iconBox = "w-12 h-12 rounded-xl bg-[hsl(43_90%_55%/0.1)] border border-[hsl(43_90%_55%/0.2)] flex items-center justify-center shrink-0";
 
 const InfluencerHowToEarn = () => {
   return (
@@ -10,7 +14,7 @@ const InfluencerHowToEarn = () => {
       <div className="container mx-auto px-4 py-10 sm:py-16 max-w-4xl">
         <Link
           to="/influencer"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-8"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-neon-gold transition-colors mb-8"
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
           Zpět na Pro influencery
@@ -26,13 +30,13 @@ const InfluencerHowToEarn = () => {
 
         {/* Steps */}
         <div className="space-y-8 mb-16">
-          <Card className="border-border/40 bg-card/60 overflow-hidden">
+          <Card className={premiumCard}>
             <CardContent className="p-6 sm:p-8 flex gap-5 items-start">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                <Share2 className="w-6 h-6 text-primary" />
+              <div className={iconBox}>
+                <Share2 className="w-6 h-6 text-neon-gold" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-semibold">1. Sdílejte soutěže</h3>
+                <h3 className="text-xl font-semibold text-heading-gold">1. Sdílejte soutěže</h3>
                 <p className="text-muted-foreground">
                   Po schválení vašeho profilu získáte přístup ke sdíleným odkazům a materiálům.
                   Sdílejte soutěže OneMil na svých sociálních sítích a oslovte své sledující.
@@ -41,13 +45,13 @@ const InfluencerHowToEarn = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-border/40 bg-card/60 overflow-hidden">
+          <Card className={premiumCard}>
             <CardContent className="p-6 sm:p-8 flex gap-5 items-start">
-              <div className="w-12 h-12 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center shrink-0">
-                <UserPlus className="w-6 h-6 text-secondary" />
+              <div className={iconBox}>
+                <UserPlus className="w-6 h-6 text-neon-gold" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-semibold">2. Přivádějte uživatele</h3>
+                <h3 className="text-xl font-semibold text-heading-gold">2. Přivádějte uživatele</h3>
                 <p className="text-muted-foreground">
                   Za každého nového uživatele, který se zaregistruje přes váš odkaz,
                   získáte odměnu. Čím více lidí přivedete, tím více vyděláte.
@@ -56,13 +60,13 @@ const InfluencerHowToEarn = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-border/40 bg-card/60 overflow-hidden">
+          <Card className={premiumCard}>
             <CardContent className="p-6 sm:p-8 flex gap-5 items-start">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                <Coins className="w-6 h-6 text-primary" />
+              <div className={iconBox}>
+                <Coins className="w-6 h-6 text-neon-gold" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-semibold">3. Získejte odměny</h3>
+                <h3 className="text-xl font-semibold text-heading-gold">3. Získejte odměny</h3>
                 <p className="text-muted-foreground">
                   Za aktivitu vašich přizvaných uživatelů dostáváte provize.
                   Podrobnosti o výplatách a provizích budou upřesněny po schválení vaší registrace.
@@ -71,13 +75,13 @@ const InfluencerHowToEarn = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-border/40 bg-card/60 overflow-hidden">
+          <Card className={premiumCard}>
             <CardContent className="p-6 sm:p-8 flex gap-5 items-start">
-              <div className="w-12 h-12 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center shrink-0">
-                <BarChart3 className="w-6 h-6 text-secondary" />
+              <div className={iconBox}>
+                <BarChart3 className="w-6 h-6 text-neon-gold" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-semibold">4. Sledujte statistiky</h3>
+                <h3 className="text-xl font-semibold text-heading-gold">4. Sledujte statistiky</h3>
                 <p className="text-muted-foreground">
                   V influencer dashboardu uvidíte přehled vašich přizvaných uživatelů,
                   výdělků a statistik. Dashboard bude dostupný po schválení registrace.
@@ -109,9 +113,9 @@ const InfluencerHowToEarn = () => {
                 a: 'Po schválení získáte přístup k bannerům, odkazům, promo kódům a dalším materiálům pro propagaci.',
               },
             ].map((faq, i) => (
-              <Card key={i} className="border-border/40 bg-card/60">
-                <CardContent className="p-5">
-                  <h4 className="font-semibold mb-2">{faq.q}</h4>
+              <Card key={i} className={premiumCard}>
+                <CardContent className="p-6 sm:p-8">
+                  <h4 className="font-semibold mb-2 text-heading-gold">{faq.q}</h4>
                   <p className="text-muted-foreground text-sm">{faq.a}</p>
                 </CardContent>
               </Card>

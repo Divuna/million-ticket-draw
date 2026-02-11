@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import './ContestCard.css';
 
 interface Voucher {
   id: string;
@@ -142,7 +143,7 @@ export const VoucherCarousel: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4">
         {availableVouchers.map((voucher) => (
           <div key={voucher.id}>
-            <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-background via-background/70 to-muted/30 shadow-md hover:shadow-lg transition-all duration-300">
+            <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[hsl(40_40%_45%)] hover:shadow-[0_0_12px_hsl(40_30%_40%/0.2)] hover:scale-[1.02]">
               {voucher.banner_url && (
                 <img
                   src={voucher.banner_url}
@@ -159,14 +160,14 @@ export const VoucherCarousel: React.FC = () => {
                       <img
                         src={voucher.image_url}
                         alt={voucher.name}
-                        className="w-12 h-12 object-cover rounded-lg border border-border"
+                        className="w-12 h-12 object-cover rounded-lg border border-[hsl(40_30%_35%)]"
                         loading="lazy"
                       />
                     </div>
                   )}
 
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-foreground">{voucher.name}</h3>
+                    <h3 className="text-xl font-semibold text-heading-gold">{voucher.name}</h3>
                     {!isVoucherAvailable(voucher) && (
                       <Badge variant="destructive" className="mt-1">Nedostupný</Badge>
                     )}
@@ -174,7 +175,7 @@ export const VoucherCarousel: React.FC = () => {
                 </div>
 
                 <div className="text-center py-1">
-                  <div className="text-lg font-medium text-primary">
+                  <div className="text-lg font-medium text-heading-gold">
                     Zbývá: {getRemainingCount(voucher)}
                   </div>
                 </div>
@@ -183,7 +184,7 @@ export const VoucherCarousel: React.FC = () => {
                   <Button
                     onClick={() => redeemVoucher(voucher.id)}
                     disabled={!isVoucherAvailable(voucher)}
-                    className="w-full h-11 text-base font-semibold"
+                    className="w-full h-11 text-base font-semibold rounded-xl bg-gradient-to-r from-[hsl(45_80%_45%)] via-[hsl(40_85%_50%)] to-[hsl(35_80%_45%)] text-secondary-foreground shadow-[0_2px_12px_hsl(45_80%_50%/0.25)] hover:shadow-[0_4px_16px_hsl(45_80%_50%/0.35)] hover:brightness-110 transition-all"
                   >
                     POUŽÍT VOUCHER
                   </Button>
