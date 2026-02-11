@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
-import { Star, Building2, User, ArrowLeft, Mail, Phone } from "lucide-react";
 
 interface Message {
   id: string;
@@ -14,19 +12,11 @@ interface Message {
   read: boolean;
 }
 
-interface ContactInfo {
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  role: "user" | "influencer" | "partner";
-}
-
 export default function AdminMessageThread() {
   const { userId } = useParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
-  const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -69,46 +59,8 @@ export default function AdminMessageThread() {
     setLoading(false);
   };
 
-  // Resolve contact identity
-  const loadContactInfo = async () => {
-    if (!userId) return;
-
-    const [userRes, partnerRes] = await Promise.all([
-      supabase
-        .from("users")
-        .select("id, email, name, first_name, last_name, phone")
-        .eq("id", userId)
-        .maybeSingle(),
-      supabase
-        .from("partners")
-        .select("auth_user_id, name, contact_email, contact_phone, notes, status")
-        .eq("auth_user_id", userId)
-        .maybeSingle(),
-    ]);
-
-    const user = userRes.data;
-    const partner = partnerRes.data;
-
-    // Determine role
-    let role: "user" | "influencer" | "partner" = "user";
-    if (partner) {
-      role = partner.notes?.toLowerCase().includes("influencer") ? "influencer" : "partner";
-    }
-
-    // Resolve name: user first/last > user name > partner name
-    const userName = user?.first_name && user?.last_name
-      ? `${user.first_name} ${user.last_name}`
-      : user?.name || null;
-    const name = userName || partner?.name || null;
-    const email = user?.email || partner?.contact_email || null;
-    const phone = user?.phone || partner?.contact_phone || null;
-
-    setContactInfo({ name, email, phone, role });
-  };
-
   useEffect(() => {
     loadMessages();
-    loadContactInfo();
 
     const channel = supabase
       .channel("admin-thread")
@@ -150,88 +102,14 @@ export default function AdminMessageThread() {
     loadMessages();
   };
 
-  const getRoleBadge = () => {
-    if (!contactInfo) return null;
-    switch (contactInfo.role) {
-      case "influencer":
-        return (
-          <Badge className="bg-[hsl(280,50%,45%)] text-white border-[hsl(280,60%,55%,0.3)] text-[10px] uppercase tracking-wider gap-1">
-            <Star className="w-3 h-3" />
-            Influencer
-          </Badge>
-        );
-      case "partner":
-        return (
-          <Badge className="bg-[hsl(200,60%,40%)] text-white border-[hsl(200,70%,50%,0.3)] text-[10px] uppercase tracking-wider gap-1">
-            <Building2 className="w-3 h-3" />
-            Partner
-          </Badge>
-        );
-      default:
-        return (
-          <Badge className="bg-[hsl(220,30%,30%)] text-white border-[hsl(220,30%,40%,0.3)] text-[10px] uppercase tracking-wider gap-1">
-            <User className="w-3 h-3" />
-            Uživatel
-          </Badge>
-        );
-    }
-  };
-
-  const getRoleLabel = () => {
-    if (!contactInfo) return "";
-    switch (contactInfo.role) {
-      case "influencer": return "influencerem";
-      case "partner": return "partnerem";
-      default: return "uživatelem";
-    }
-  };
-
   return (
-    <div className="flex flex-col h-[100vh] bg-[hsl(220,20%,4%)] p-4 pb-24">
-      {/* Conversation header */}
-      <div className="mb-4 rounded-2xl p-4" style={{
-        background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-        border: contactInfo?.role === "influencer"
-          ? '1px solid hsl(280, 60%, 50%, 0.3)'
-          : contactInfo?.role === "partner"
-            ? '1px solid hsl(200, 60%, 45%, 0.3)'
-            : '1px solid hsl(220, 20%, 25%, 0.3)',
-        boxShadow: '0 4px 16px hsl(0, 0%, 0%, 0.3)',
-      }}>
-        <div className="flex items-center gap-3">
-          <Link to="/admin/messages" className="text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground">Konverzace s {getRoleLabel()}</span>
-              {getRoleBadge()}
-            </div>
-            <p className="text-foreground font-semibold text-base mt-1 truncate">
-              {contactInfo?.name || `${userId?.slice(0, 8)}…`}
-            </p>
-            {contactInfo?.email && (
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <Mail className="w-3 h-3 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground truncate">{contactInfo.email}</span>
-              </div>
-            )}
-            {contactInfo?.phone && (
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <Phone className="w-3 h-3 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground truncate">{contactInfo.phone}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
+    <div className="flex flex-col h-[100vh] bg-[#0b0d11] p-4 pb-24">
       {/* MESSAGES */}
       <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto h-full pr-1">
         {loading && messages.length === 0 ? (
-          <p className="text-muted-foreground mt-10 text-center">Načítání zpráv…</p>
+          <p className="text-gray-500 mt-10 text-center">Načítání zpráv…</p>
         ) : messages.length === 0 ? (
-          <p className="text-muted-foreground mt-10 text-center">Zatím žádné zprávy.</p>
+          <p className="text-gray-500 mt-10 text-center">Zatím žádné zprávy.</p>
         ) : (
           messages.map((msg) => {
             const isSystemMessage = msg.content.includes("🎉") || msg.content.includes("zákonný zástupce");
@@ -245,7 +123,7 @@ export default function AdminMessageThread() {
                       ? isSystemMessage
                         ? "bg-amber-500/30 text-amber-100 rounded-br-none border border-amber-500/30"
                         : "bg-blue-600/30 text-blue-100 rounded-br-none"
-                      : "bg-[hsl(220,20%,15%)] text-foreground rounded-bl-none"
+                      : "bg-gray-700/50 text-gray-100 rounded-bl-none"
                   }`}
                 >
                   {isSystemMessage && isAdminMessage && (
@@ -255,7 +133,7 @@ export default function AdminMessageThread() {
                     </div>
                   )}
                   <p className="break-words leading-relaxed">{msg.content}</p>
-                  <p className="text-xs text-muted-foreground mt-1 text-right">{new Date(msg.created_at).toLocaleString()}</p>
+                  <p className="text-xs text-gray-400 mt-1 text-right">{new Date(msg.created_at).toLocaleString()}</p>
                 </div>
               </div>
             );
@@ -268,11 +146,10 @@ export default function AdminMessageThread() {
         <input
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           placeholder="Napište odpověď…"
-          className="flex-1 bg-[hsl(220,25%,10%)] text-foreground p-3 rounded-lg border border-[hsl(220,20%,20%)] focus:border-primary outline-none"
+          className="flex-1 bg-gray-800 text-gray-200 p-3 rounded-lg border border-gray-700 focus:border-blue-500 outline-none"
         />
-        <button onClick={handleSend} className="px-5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground">
+        <button onClick={handleSend} className="px-5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
           Odeslat
         </button>
       </div>
