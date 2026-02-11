@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Star, Building2, User, ArrowLeft, Mail } from "lucide-react";
+import { Star, Building2, User, ArrowLeft, Mail, Phone } from "lucide-react";
 
 interface Message {
   id: string;
@@ -17,6 +17,7 @@ interface Message {
 interface ContactInfo {
   name: string | null;
   email: string | null;
+  phone: string | null;
   role: "user" | "influencer" | "partner";
 }
 
@@ -75,12 +76,12 @@ export default function AdminMessageThread() {
     const [userRes, partnerRes] = await Promise.all([
       supabase
         .from("users")
-        .select("id, email, name, first_name, last_name")
+        .select("id, email, name, first_name, last_name, phone")
         .eq("id", userId)
         .maybeSingle(),
       supabase
         .from("partners")
-        .select("auth_user_id, name, contact_email, notes, status")
+        .select("auth_user_id, name, contact_email, contact_phone, notes, status")
         .eq("auth_user_id", userId)
         .maybeSingle(),
     ]);
@@ -100,8 +101,9 @@ export default function AdminMessageThread() {
       : user?.name || null;
     const name = userName || partner?.name || null;
     const email = user?.email || partner?.contact_email || null;
+    const phone = user?.phone || partner?.contact_phone || null;
 
-    setContactInfo({ name, email, role });
+    setContactInfo({ name, email, phone, role });
   };
 
   useEffect(() => {
@@ -212,6 +214,12 @@ export default function AdminMessageThread() {
               <div className="flex items-center gap-1.5 mt-0.5">
                 <Mail className="w-3 h-3 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground truncate">{contactInfo.email}</span>
+              </div>
+            )}
+            {contactInfo?.phone && (
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <Phone className="w-3 h-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground truncate">{contactInfo.phone}</span>
               </div>
             )}
           </div>
