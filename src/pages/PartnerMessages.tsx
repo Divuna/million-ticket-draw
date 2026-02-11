@@ -129,16 +129,16 @@ export default function PartnerMessages() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-xl font-semibold text-foreground">Zprávy pro podporu</h1>
-            <p className="text-sm text-muted-foreground">Komunikace s týmem OneMil</p>
+            <h1 className="text-xl font-semibold text-[hsl(var(--text-silver))]">Zprávy pro podporu</h1>
+            <p className="text-sm text-[hsl(var(--text-muted-gray))]">Komunikace s týmem OneMil</p>
           </div>
         </div>
 
         {/* Messages Card */}
-        <Card className="border-border/50">
+        <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <MessageCircle className="w-4.5 h-4.5 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-base text-[hsl(var(--text-silver))]">
+              <MessageCircle className="w-4.5 h-4.5 text-[hsl(var(--neon-gold))]" />
               Konverzace
             </CardTitle>
             <CardDescription>Vaše zprávy s administrací</CardDescription>
