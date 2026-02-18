@@ -484,7 +484,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         <div className="space-y-4 py-4">
           {isWinner ? (
             isBonusWin && bonusPrize ? (
-            <div className="text-center space-y-3">
+            <div className="bg-gradient-to-b from-[#0b1220] to-[#0f1b33] border border-yellow-500/30 rounded-2xl shadow-lg px-8 py-10 text-center space-y-3">
                 <div className="text-6xl">🎉</div>
                 <p className="text-lg font-semibold text-green-600">
                   Gratulujeme, vyhrál jsi bonus: {bonusPrize.title || bonusPrize.description}
@@ -524,7 +524,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 )}
               </div>
             ) : isMainPrize ? (
-              <div className="text-center space-y-3">
+              <div className="bg-gradient-to-b from-[#0b1220] to-[#0f1b33] border border-yellow-500/30 rounded-2xl shadow-lg px-8 py-10 text-center space-y-3">
                 <div className="text-6xl">🏆</div>
                 <p className="text-lg font-semibold text-yellow-600">
                   Gratulujeme, vyhrál jsi hlavní cenu!
