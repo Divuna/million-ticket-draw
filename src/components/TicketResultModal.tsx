@@ -462,8 +462,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   // Control visibility via isOpen && result !== null
   return (
     <Dialog open={isOpen && result !== null} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md rounded-2xl border border-yellow-500/40 bg-gradient-to-b from-[#0b1220] via-[#0f1b33] to-[#0a1428] shadow-[0_0_80px_rgba(255,180,0,0.35)]">
-        <div className="border border-yellow-400/20 rounded-xl p-1 shadow-[inset_0_1px_4px_rgba(0,0,0,0.3)]">
+      <DialogContent className="sm:max-w-md rounded-2xl border border-yellow-500/40 bg-gradient-to-b from-[#0b1220] via-[#0f1b33] to-[#0a1428] shadow-[0_0_40px_rgba(255,200,0,0.15)]">
         {isWinner && (
           <Confetti
             width={width}
@@ -545,7 +544,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               <p className="text-lg font-medium">
                 {funnyMessage}
               </p>
-              <div className="rounded-2xl p-5 space-y-2 my-2 border border-yellow-500/30 ring-1 ring-yellow-400/30 bg-[#111c2f] shadow-2xl">
+              <div className="rounded-2xl p-5 space-y-2 border border-yellow-500/30 bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
                 <p className="text-sm text-muted-foreground">
                   Tvůj tiket: <span className="font-semibold">#{result?.ticket_number?.toLocaleString('cs-CZ')}</span>
                 </p>
@@ -672,7 +671,6 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           <Button onClick={onClose} className="w-full">
             Zavřít
           </Button>
-        </div>
         </div>
       </DialogContent>
     </Dialog>
