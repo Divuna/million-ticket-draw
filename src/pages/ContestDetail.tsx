@@ -1,10 +1,11 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { MIOCOIN_IMAGE_URL } from "@/components/MioCoin";
+import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { TicketResultModal } from "@/components/TicketResultModal";
@@ -68,6 +69,7 @@ export default function ContestDetail() {
   const [modalContestId, setModalContestId] = useState<string | null>(null);
   const [selectedBonusPrize, setSelectedBonusPrize] = useState<BonusPrize | null>(null);
   const [galleryMedia, setGalleryMedia] = useState<{ id: string; contest_id: string; type: string; url: string; sort_order: number | null; created_at: string | null }[]>([]);
+  const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
   
   // Fetch the starry background banner used in "Poslední výherci"
   const { banners: placementBanners } = usePlacementBanners(['vzhled_karta_vyher']);
@@ -258,6 +260,15 @@ export default function ContestDetail() {
     modalResult?.bonus_prize_id
   ]);
 
+  const getYouTubeId = useCallback((url: string) => {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+    return match?.[1] ?? null;
+  }, []);
+
+  const getMediaUrl = useCallback((url: string) => {
+    return url.startsWith('http') ? url : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${url}`;
+  }, []);
+
   if (loading || !contest) {
     return (
       <div className="p-6">
@@ -278,6 +289,10 @@ export default function ContestDetail() {
         : "/fallback-car.png");
 
   const isProcessing = processingContestId === contest.id;
+
+  // Gallery: filter out background-type media for the visual gallery
+  const displayGallery = galleryMedia.filter((m) => m.type !== 'background');
+  const activeMedia = displayGallery[activeGalleryIndex] ?? null;
 
   // Background: prefer contest_media with type "background", fallback to main_prize_secondary_image
   const backgroundMedia = galleryMedia.find((m) => m.type === 'background');
@@ -340,7 +355,53 @@ export default function ContestDetail() {
         </div>
       </section>
 
-      {/* 2. INFO BOXES - Side by side on desktop, stacked on mobile */}
+      {/* GALLERY SECTION */}
+      {displayGallery.length > 0 && (
+        <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[hsl(40_50%_45%/0.3)] space-y-3 animate-fade-in">
+          {/* Main display – 16:9 */}
+          <div className="relative aspect-video rounded-xl overflow-hidden bg-black/40">
+            {activeMedia && (
+              activeMedia.type === 'video' ? (
+                <YouTubeEmbed url={activeMedia.url} className="absolute inset-0" />
+              ) : (
+                <img
+                  key={activeMedia.id}
+                  src={getMediaUrl(activeMedia.url)}
+                  alt="Gallery"
+                  className="w-full h-full object-contain animate-fade-in"
+                />
+              )
+            )}
+          </div>
+
+          {/* Thumbnail strip */}
+          {displayGallery.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {displayGallery.map((m, idx) => {
+                const isVideo = m.type === 'video';
+                const thumbUrl = isVideo
+                  ? `https://img.youtube.com/vi/${getYouTubeId(m.url) ?? ''}/mqdefault.jpg`
+                  : getMediaUrl(m.url);
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setActiveGalleryIndex(idx)}
+                    className={`flex-shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                      idx === activeGalleryIndex
+                        ? 'border-[hsl(40_75%_55%)] scale-105 shadow-[0_0_12px_rgba(250,204,21,0.3)]'
+                        : 'border-white/10 opacity-60 hover:opacity-90'
+                    }`}
+                  >
+                    <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Box 1: Stav MioCoinů + akce */}
         <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/80 backdrop-blur rounded-[20px] p-5 border-[2px] border-[hsl(40_50%_45%/0.5)] flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
