@@ -462,7 +462,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   // Control visibility via isOpen && result !== null
   return (
     <Dialog open={isOpen && result !== null} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md border border-[hsl(43_70%_50%/0.2)] bg-[radial-gradient(ellipse_at_top_center,hsl(220_40%_14%),hsl(220_35%_8%))] shadow-[0_8px_40px_-12px_hsl(43_60%_40%/0.15),0_0_80px_-20px_hsl(220_60%_10%/0.5)] backdrop-blur-sm">
+      <DialogContent className="sm:max-w-md rounded-2xl border border-yellow-500/40 bg-gradient-to-b from-[#0b1220] via-[#0f1b33] to-[#0a1428] shadow-[0_0_40px_rgba(255,200,0,0.15)]">
         {isWinner && (
           <Confetti
             width={width}
@@ -544,7 +544,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               <p className="text-lg font-medium">
                 {funnyMessage}
               </p>
-              <div className="rounded-2xl p-4 space-y-2 border border-[hsl(43_70%_50%/0.15)] bg-[linear-gradient(135deg,hsl(220_35%_12%),hsl(220_30%_16%))] shadow-[0_4px_20px_-6px_hsl(220_50%_5%/0.6)]">
+              <div className="rounded-2xl p-5 space-y-2 border border-yellow-500/30 bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
                 <p className="text-sm text-muted-foreground">
                   Tvůj tiket: <span className="font-semibold">#{result?.ticket_number?.toLocaleString('cs-CZ')}</span>
                 </p>
@@ -563,7 +563,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         </div>
 
         {/* Social Sharing Section with Preview */}
-        <div className="border-t border-border/30 pt-4 mt-2">
+        <div className="border-t border-transparent pt-4 mt-2" style={{ borderImage: 'linear-gradient(to right, transparent, rgba(234,179,8,0.4), transparent) 1' }}>
           <p className="text-sm text-muted-foreground text-center mb-3">
             Sdílet výsledek
             {isUploading && <span className="ml-2 text-xs">(nahrávám...)</span>}
