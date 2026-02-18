@@ -152,13 +152,6 @@ const generateTicketCard = async (
     ctx.fillText(`+${bonusAmount.toLocaleString('cs-CZ')} MioCoinů`, canvas.width / 2, 495);
   }
 
-  // Remaining tickets
-  if (remainingTickets !== undefined) {
-    ctx.font = '24px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#888';
-    ctx.fillText(`Zbývá tiketů: ${remainingTickets.toLocaleString('cs-CZ')}`, canvas.width / 2, 545);
-  }
-
   // Footer with URL
   ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
   ctx.fillStyle = '#666';
@@ -503,11 +496,6 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 <p className="text-muted-foreground">
                   Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
                 </p>
-                {result?.remaining_tickets !== undefined && (
-                  <p className="text-sm text-muted-foreground">
-                    Zbývá tiketů: <span className="font-semibold">{result.remaining_tickets.toLocaleString('cs-CZ')}</span>
-                  </p>
-                )}
                 {result?.distance_to_next_bonus && result.distance_to_next_bonus > 0 && (
                   <p className="text-sm text-muted-foreground">
                     Do další bonusové výhry: <span className="font-semibold text-primary">{result.distance_to_next_bonus.toLocaleString('cs-CZ')} tiketů</span>
@@ -559,11 +547,6 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 {result?.distance_to_next_bonus && !isWinner && (
                   <p className="text-sm text-muted-foreground">
                     Do bonusové výhry zbývá: <span className="font-semibold text-primary">{result.distance_to_next_bonus.toLocaleString('cs-CZ')} tiketů</span>
-                  </p>
-                )}
-                {result?.remaining_tickets !== undefined && (
-                  <p className="text-sm text-muted-foreground">
-                    Zbývá tiketů: <span className="font-semibold">{result.remaining_tickets.toLocaleString('cs-CZ')}</span>
                   </p>
                 )}
               </div>
