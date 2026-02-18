@@ -545,16 +545,15 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               <p className="text-lg font-medium">
                 {funnyMessage}
               </p>
-              <div className="rounded-3xl p-7 my-3 border-2 border-yellow-500 bg-[#0f1a2e] shadow-2xl">
-                <p className="text-xs uppercase tracking-widest text-yellow-500/70 text-center mb-2">Tvůj tiket</p>
-                <p className="text-3xl font-bold text-center bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent drop-shadow-[0_1px_2px_rgba(255,200,0,0.3)]">
-                  #{result?.ticket_number?.toLocaleString('cs-CZ')}
+              <div className="rounded-2xl p-5 space-y-2 my-2 border border-yellow-500/30 ring-1 ring-yellow-400/30 bg-[#111c2f] shadow-2xl">
+                <p className="text-sm text-muted-foreground">
+                  Tvůj tiket: <span className="font-semibold">#{result?.ticket_number?.toLocaleString('cs-CZ')}</span>
                 </p>
                 {result?.distance_to_next_bonus && !isWinner && (
-                  <div className="mx-auto max-w-[280px] mt-5 rounded-2xl border border-yellow-500/30 bg-[hsl(220_40%_10%)] px-5 py-4 text-center">
+                  <div className="mx-auto max-w-[280px] rounded-full border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center mt-2">
                     <p className="text-xs text-muted-foreground mb-1">Do bonusové výhry zbývá</p>
                     <p>
-                      <span className="text-3xl font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">{result.distance_to_next_bonus.toLocaleString('cs-CZ')}</span>
+                      <span className="text-2xl font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">{result.distance_to_next_bonus.toLocaleString('cs-CZ')}</span>
                       <span className="text-sm text-muted-foreground ml-1.5">tiketů</span>
                     </p>
                   </div>
