@@ -68,7 +68,7 @@ export default function ContestDetail() {
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
   const [modalContestId, setModalContestId] = useState<string | null>(null);
   const [selectedBonusPrize, setSelectedBonusPrize] = useState<BonusPrize | null>(null);
-  const [issuedTickets, setIssuedTickets] = useState(0);
+  
   
   // Fetch the starry background banner used in "Poslední výherci"
   const { banners: placementBanners } = usePlacementBanners(['vzhled_karta_vyher']);
@@ -204,12 +204,6 @@ export default function ContestDetail() {
 
       setContest(contestData as Contest);
 
-      // Load issued tickets count
-      const { count: ticketCount } = await supabase
-        .from("tickets")
-        .select("*", { count: "exact", head: true })
-        .eq("contest_id", id);
-      setIssuedTickets(ticketCount || 0);
 
       // Load only physical bonus prizes (amount is null or 0)
       const { data: bonusData } = await supabase
@@ -346,7 +340,7 @@ export default function ContestDetail() {
 
       {/* 4. LUXURY CIRCULAR PROGRESS */}
       {(() => {
-        const progress = contest.ticket_count > 0 ? (issuedTickets / contest.ticket_count) * 100 : 0;
+        const progress = 0; // Temporarily hardcoded until scalable contest field is implemented
         const phaseText = progress >= 95 ? "FINÁLE"
           : progress >= 75 ? "FINÁLNÍ VLNA"
           : progress >= 40 ? "NABÍRÁ TEMPO"
