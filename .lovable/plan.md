@@ -1,67 +1,43 @@
 
-# Plán: Přepsání dokumentace API do správného Markdown formátu
 
-## Zjištěný problém
+# Oprava problikávání TicketResultModal
 
-Obsah dokumentace v databázi (`settings.partner_api_documentation`) je psán jako **prostý text**, nikoliv jako Markdown. Renderer v kódu je již správně nastaven pro Markdown, ale nemá co zobrazit, protože:
+## Problem
+Modal po otevření problikne 2-3x, protože se vícekrát spouští useEffect na generování share obrázku. Kazde spusteni resetuje stav obrazku na null, coz zpusobi prazdny stav a bliknuti.
 
-- Nadpisy jsou psané jako `1. K čemu slouží...` místo `## 1. K čemu slouží...`
-- Seznamy nemají odrážky (`-`) ani čísla (`1.`, `2.`)
-- Kódové bloky nejsou obaleny značkami `` ``` ``
+## Pricina
+Druhy `useEffect` (generovani a upload obrazku) ma zavislosti `[isOpen, result, isLoading, bonusPrize, contestId]`. Po otevreni modalu se postupne meni `isLoading` (true -> false) a `bonusPrize` (null -> data), coz spusti effect 2-3x. Kazde spusteni na radcich 233-238 resetuje `previewImageUrl`, `previewBlob` a `publicShareUrl` na null, takze uzivatel vidi prazdny stav (bliknuti).
 
-## Řešení
+Navic objekt `result` je vytvaren inline v `ContestDetail.tsx`, takze jeho reference se meni pri kazdem renderovani.
 
-Aktualizuji hodnotu v tabulce `settings` (klíč `partner_api_documentation`) na správně strukturovaný Markdown text.
+## Reseni
 
-## Změny obsahu
+### 1. Stabilizovat `result` referenci v ContestDetail.tsx
+- Zabalit objekt predavany do `result` prop do `useMemo` v `ContestDetail.tsx`, aby se nemenil pri kazdem renderovani.
 
-### Před (prostý text):
-```text
-1. K čemu slouží OneMil API
+### 2. Pridani ref-based guard v druhem useEffectu
+- Pouzit `useRef` pro sledovani, jestli uz pro dany ticket_number byl obrazek vygenerovan.
+- Pokud uz byl vygenerovan, preskocit dalsi spusteni.
+- Resetovat ref az pri zavreni modalu nebo zmene tiketu.
 
-OneMil API slouží k připsání...
-```
+### 3. Odstranit synchronni resetovani stavu
+- Na radcich 233-238 se stav resetuje pred async volanim. Misto toho se stary obrazek revokuje az po uspesnem vytvoreni noveho, bez mezistavu "null".
 
-### Po (Markdown):
-```text
-## 1. K čemu slouží OneMil API
+## Technicke detaily
 
-OneMil API slouží k připsání...
+**Soubor: `src/pages/ContestDetail.tsx`**
+- Zabalit inline objekt `result` v `TicketResultModal` prop do `useMemo` se zavislostmi na primitivnich hodnotach (`modalResult?.ticket_number`, `modalResult?.won_type`, atd.).
 
-## 2. Jak OneMil funguje v praxi
+**Soubor: `src/components/TicketResultModal.tsx`**
+- Pridat `const generatedForTicketRef = useRef<number | null>(null);`
+- V druhem useEffectu: pokud `generatedForTicketRef.current === result.ticket_number`, preskocit generovani.
+- Po uspesnem vygenerovani nastavit `generatedForTicketRef.current = result.ticket_number`.
+- Resetovat ref na `null` kdyz `isOpen` se zmeni na false.
+- Odstranit radky 233-238 (synchronni reset na null pred generovanim).
 
-1. Zákazník dokončí objednávku v e-shopu
-2. Váš systém zavolá OneMil API
-3. OneMil připíše MioCoiny zákazníkovi
+## Omezeni
+- Zadne zmeny v logice nákupu tiketu
+- Zadne zmeny v typech/rozhranich
+- Zadne nove soubory
+- Jen tyto dva soubory budou upraveny
 
-## 6. Ukázkový request
-
-### Endpoint
-
-`POST /api/partner/issue-miocoins`
-
-### Body požadavku
-
-```json
-{
-  "order_id": "OBJ-123456",
-  "customer_email": "zakaznik@email.cz",
-  "amount": 100
-}
-```
-```
-
-## Co bude změněno
-
-1. **Nadpisy sekcí** (`## 1.`, `## 2.`, ...) - zobrazí se zlatě s čarou pod sebou
-2. **Pod-nadpisy** (`### Endpoint`, `### Body požadavku`) - menší zlaté nadpisy
-3. **Číslované seznamy** (kroky workflow) - zlaté čísla s mezerami
-4. **Kódové bloky** (JSON ukázky) - zvýrazněné v šedém boxu
-5. **Callout bloky** (varování ⚠️) - zůstanou jako speciální boxy
-
-## Technické detaily
-
-- **Tabulka**: `settings`
-- **Klíč**: `partner_api_documentation`
-- **Operace**: UPDATE hodnoty na nový Markdown text
-- **Žádné změny kódu** - renderer je již připraven
