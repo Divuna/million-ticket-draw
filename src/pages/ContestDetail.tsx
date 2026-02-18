@@ -261,7 +261,7 @@ export default function ContestDetail() {
   ]);
 
   const getYouTubeId = useCallback((url: string) => {
-    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([^&\n?#]+)/);
     return match?.[1] ?? null;
   }, []);
 
