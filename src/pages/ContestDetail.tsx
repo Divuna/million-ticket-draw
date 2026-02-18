@@ -295,10 +295,36 @@ export default function ContestDetail() {
   const safeIndex = displayGallery.length > 0 ? Math.min(activeGalleryIndex, displayGallery.length - 1) : 0;
   const activeMedia = displayGallery.length > 0 ? displayGallery[safeIndex] ?? null : null;
 
-  // DEBUG: background rendering temporarily disabled
+  // Background: prefer contest_media with type "background", fallback to main_prize_secondary_image
+  const backgroundMedia = galleryMedia.find((m) => m.type === 'background');
+  const bgImageUrl = backgroundMedia?.url
+    || (contest.main_prize_secondary_image
+      ? (contest.main_prize_secondary_image.startsWith('http')
+        ? contest.main_prize_secondary_image
+        : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${contest.main_prize_secondary_image}`)
+      : null);
 
   return (
     <div className="relative min-h-screen">
+      {/* Cinematic background */}
+      {bgImageUrl && (
+        <div
+          className="fixed inset-0 z-0"
+          style={{
+            backgroundImage: `url(${bgImageUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
+        />
+      )}
+      {/* Dark gradient overlay */}
+      <div
+        className="fixed inset-0 z-0 pointer-events-none"
+        style={{
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0.92) 100%)',
+        }}
+      />
       <div 
         className="relative z-10 p-4 md:p-6 w-full max-w-5xl mx-auto space-y-6 pb-28"
         style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}
