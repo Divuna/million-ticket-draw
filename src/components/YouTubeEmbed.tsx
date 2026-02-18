@@ -9,7 +9,7 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ url, className = "" }) => {
   // Extract video ID from YouTube URL
   const getVideoId = (url: string) => {
     const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([^&\n?#]+)/,
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/)([^&\n?#]+)/,
       /^([a-zA-Z0-9_-]{11})$/ // Direct video ID
     ];
     
@@ -23,14 +23,10 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ url, className = "" }) => {
   const videoId = getVideoId(url);
   
   if (!videoId) {
-    return (
-      <div className="w-full h-64 bg-muted/30 rounded-lg flex items-center justify-center">
-        <p className="text-muted-foreground">Neplatná YouTube URL</p>
-      </div>
-    );
+    return null;
   }
 
-  const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&showinfo=0`;
+  const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1`;
 
   return (
     <div className={`relative w-full ${className}`}>
