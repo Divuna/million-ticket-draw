@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -226,6 +226,27 @@ export default function ContestDetail() {
     load();
   }, [id]);
 
+  const stableResult = useMemo(() => {
+    if (!modalResult) return undefined;
+    return {
+      ticket_number: modalResult.ticket_number,
+      next_bonus_position: modalResult.next_bonus_position ?? 0,
+      distance_to_next_bonus: modalResult.distance_to_next_bonus ?? 0,
+      won_prize: modalResult.won_prize,
+      remaining_tickets: modalResult.remaining_tickets,
+      won_type: modalResult.won_type,
+      bonus_prize_id: modalResult.bonus_prize_id
+    };
+  }, [
+    modalResult?.ticket_number,
+    modalResult?.next_bonus_position,
+    modalResult?.distance_to_next_bonus,
+    modalResult?.won_prize,
+    modalResult?.remaining_tickets,
+    modalResult?.won_type,
+    modalResult?.bonus_prize_id
+  ]);
+
   if (loading || !contest) {
     return (
       <div className="p-6">
@@ -244,9 +265,8 @@ export default function ContestDetail() {
             ? contest.main_image 
             : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${contest.main_image}`)
         : "/fallback-car.png");
-  
-  const isProcessing = processingContestId === contest.id;
 
+  const isProcessing = processingContestId === contest.id;
   return (
     <div 
       className="p-4 md:p-6 w-full max-w-5xl mx-auto space-y-6 pb-28"
@@ -431,15 +451,7 @@ export default function ContestDetail() {
           setModalContestId(null);
         }}
         contestId={modalContestId || ""}
-        result={modalResult ? {
-          ticket_number: modalResult.ticket_number,
-          next_bonus_position: modalResult.next_bonus_position ?? 0,
-          distance_to_next_bonus: modalResult.distance_to_next_bonus ?? 0,
-          won_prize: modalResult.won_prize,
-          remaining_tickets: modalResult.remaining_tickets,
-          won_type: modalResult.won_type,
-          bonus_prize_id: modalResult.bonus_prize_id
-        } : undefined}
+        result={stableResult}
       />
     </div>
   );

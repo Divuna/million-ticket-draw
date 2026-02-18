@@ -188,6 +188,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [publicShareUrl, setPublicShareUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const generatedForTicketRef = useRef<number | null>(null);
 
   // Query bonus_prizes when modal opens
   useEffect(() => {
@@ -223,18 +224,29 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     fetchBonusPrize();
   }, [isOpen, result, contestId]);
 
+  // Reset ref when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      generatedForTicketRef.current = null;
+      // Clean up preview URL when modal closes
+      if (previewImageUrl) {
+        URL.revokeObjectURL(previewImageUrl);
+      }
+      setPreviewImageUrl(null);
+      setPreviewBlob(null);
+      setPublicShareUrl(null);
+    }
+  }, [isOpen]);
+
   // Generate preview image and upload to storage when modal opens
   useEffect(() => {
     if (!isOpen || !result || isLoading) {
       return;
     }
 
-    // Clean up previous preview
-    if (previewImageUrl) {
-      URL.revokeObjectURL(previewImageUrl);
-      setPreviewImageUrl(null);
-      setPreviewBlob(null);
-      setPublicShareUrl(null);
+    // Skip if already generated for this ticket
+    if (generatedForTicketRef.current === result.ticket_number) {
+      return;
     }
 
     const isBonusWinCheck = bonusPrize !== null;
@@ -252,9 +264,18 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           bonusPrize?.amount || null,
           result.remaining_tickets
         );
+        
+        // Revoke old URL before setting new one
+        if (previewImageUrl) {
+          URL.revokeObjectURL(previewImageUrl);
+        }
+        
         const url = URL.createObjectURL(blob);
         setPreviewImageUrl(url);
         setPreviewBlob(blob);
+        
+        // Mark as generated for this ticket
+        generatedForTicketRef.current = result.ticket_number;
 
         // Generate unique ticket ID for sharing
         const ticketShareId = `${contestId}-${result.ticket_number}`;
@@ -303,13 +324,6 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     };
 
     generateAndUpload();
-
-    // Cleanup on unmount
-    return () => {
-      if (previewImageUrl) {
-        URL.revokeObjectURL(previewImageUrl);
-      }
-    };
   }, [isOpen, result, isLoading, bonusPrize, contestId]);
 
   // Memoize random message to prevent re-renders changing it
