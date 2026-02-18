@@ -21,6 +21,7 @@ type Contest = {
   main_image: string | null;
   banner_image: string | null;
   total_miocoin_bonus: number | null;
+  ticket_count: number;
 };
 
 type BonusPrize = {
@@ -67,6 +68,7 @@ export default function ContestDetail() {
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
   const [modalContestId, setModalContestId] = useState<string | null>(null);
   const [selectedBonusPrize, setSelectedBonusPrize] = useState<BonusPrize | null>(null);
+  const [issuedTickets, setIssuedTickets] = useState(0);
   
   // Fetch the starry background banner used in "Poslední výherci"
   const { banners: placementBanners } = usePlacementBanners(['vzhled_karta_vyher']);
@@ -191,7 +193,7 @@ export default function ContestDetail() {
 
       const { data: contestData } = await supabase
         .from("contests")
-        .select("id, title, description, ticket_price, main_prize_secondary_image, main_image, banner_image, total_miocoin_bonus")
+        .select("id, title, description, ticket_price, main_prize_secondary_image, main_image, banner_image, total_miocoin_bonus, ticket_count")
         .eq("id", id)
         .maybeSingle();
 
@@ -201,6 +203,13 @@ export default function ContestDetail() {
       }
 
       setContest(contestData as Contest);
+
+      // Load issued tickets count
+      const { count: ticketCount } = await supabase
+        .from("tickets")
+        .select("*", { count: "exact", head: true })
+        .eq("contest_id", id);
+      setIssuedTickets(ticketCount || 0);
 
       // Load only physical bonus prizes (amount is null or 0)
       const { data: bonusData } = await supabase
@@ -335,29 +344,68 @@ export default function ContestDetail() {
         </section>
       </div>
 
-      {/* 4. CESTA K HLAVNÍ VÝHŘE */}
-      <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[hsl(40_60%_50%/0.2)]">
-        <h2 className="text-white font-semibold text-sm md:text-base mb-4">Cesta k hlavní výhře</h2>
+      {/* 4. LUXURY CIRCULAR PROGRESS */}
+      {(() => {
+        const progress = contest.ticket_count > 0 ? (issuedTickets / contest.ticket_count) * 100 : 0;
+        const phaseText = progress >= 95 ? "FINÁLE"
+          : progress >= 75 ? "FINÁLNÍ VLNA"
+          : progress >= 40 ? "NABÍRÁ TEMPO"
+          : progress >= 10 ? "PRVNÍ VLNA"
+          : "SOUTĚŽ STARTUJE";
         
-        {/* Milestone labels */}
-        <div className="flex justify-between mb-2 px-0.5 overflow-x-auto">
-          {['0', '10k', '50k', '100k', '250k', '500k', '750k', '1M'].map((label) => (
-            <div key={label} className="flex flex-col items-center min-w-[30px]">
-              <span className="text-[10px] md:text-xs text-yellow-400/70 font-medium">{label}</span>
-              <div className="w-px h-1.5 bg-yellow-400/40 mt-0.5" />
+        const radius = 90;
+        const circumference = 2 * Math.PI * radius;
+        const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+        return (
+          <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-6 md:p-8 border-[2px] border-[hsl(40_60%_50%/0.2)] flex flex-col items-center gap-5">
+            {/* SVG Circle */}
+            <div className="relative w-[220px] h-[220px]">
+              <svg viewBox="0 0 200 200" className="w-full h-full -rotate-90">
+                {/* Background track */}
+                <circle
+                  cx="100" cy="100" r={radius}
+                  fill="none"
+                  stroke="hsl(220 25% 15%)"
+                  strokeWidth="10"
+                />
+                {/* Progress arc with gold gradient */}
+                <defs>
+                  <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="hsl(43 90% 55%)" />
+                    <stop offset="100%" stopColor="hsl(35 85% 45%)" />
+                  </linearGradient>
+                </defs>
+                <circle
+                  cx="100" cy="100" r={radius}
+                  fill="none"
+                  stroke="url(#progressGrad)"
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  style={{
+                    filter: 'drop-shadow(0 0 8px hsl(43 90% 55% / 0.5))',
+                    transition: 'stroke-dashoffset 1s ease-out'
+                  }}
+                />
+              </svg>
+              {/* Center text */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
+                <span className="text-[hsl(43_90%_55%)] font-extrabold text-sm md:text-base tracking-widest text-center leading-tight px-4" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+                  {phaseText}
+                </span>
+              </div>
             </div>
-          ))}
-        </div>
-        
-        {/* Progress bar */}
-        <div 
-          className="w-full h-2.5 rounded-full"
-          style={{
-            background: 'linear-gradient(to right, #f6e27a, #d4a017)',
-            boxShadow: '0 0 20px rgba(250, 204, 21, 0.4)'
-          }}
-        />
-      </section>
+
+            {/* Subtitle */}
+            <div className="text-center space-y-1">
+              <p className="text-[hsl(210_20%_98%)] font-semibold text-base">Soutěž se plní</p>
+              <p className="text-[hsl(215_10%_55%)] text-sm">Každý tiket vás přibližuje k hlavní výhře</p>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* 5. BONUSOVÉ VĚCNÉ VÝHRY */}
       <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[hsl(40_50%_45%/0.3)]">
