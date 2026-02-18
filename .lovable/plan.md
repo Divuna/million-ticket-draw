@@ -1,56 +1,44 @@
 
 
-# Fix: Modal content flickering on open
+# Oprava pretrvavajiciho problemu s problikavanim TicketResultModal
 
 ## Problem
-When the modal opens, the user briefly sees the "non-winner" content (funny message + ticket number), then it flashes to "Kontroluji výhru..." loading state, then to the final result. This creates a visible 2-3 frame flicker.
+Modal stale problikava - uzivatel vidi na zlomek sekundy "non-winner" obsah pred spravnym vysledkem.
 
-## Root Cause
-`isLoading` starts as `false` (line 184). The bonus fetch effect sets it to `true`, but only after the first render has already painted. So the first render shows the wrong content branch (non-winner block at line 556), then the second render shows loading (line 550), then the third shows the actual result.
+## Pricina
+Jsou dva `useEffect` hooky, ktere oba reagují na zmenu `isOpen` a oba meni `isLoading`, ale v opacnem smeru:
 
-## Solution
-Change `isLoading` default to `true` so the very first render when the modal opens shows the loading state ("Kontroluji vyhru...") instead of incorrect content. Reset it back to `true` (not `false`) when the modal closes, so the next open also starts with loading.
+1. **Cleanup effect** (radek 229-241): Nastavi `setIsLoading(true)` kdyz `!isOpen`
+2. **Fetch effect** (radek 194-226): Taky se spusti kdyz `!isOpen` a nastavi `setIsLoading(false)` (radek 197)
 
-### File: `src/components/TicketResultModal.tsx`
+React spusti oba effecty ve stejnem renderovacim cyklu. Fetch effect svym `setIsLoading(false)` prepise cleanup effect. Kdyz se modal znovu otevre, `isLoading` je `false` a na prvni render se zobrazi non-winner obsah misto loading stavu.
 
-**Change 1** - Line 184: Initialize `isLoading` to `true`
-```
-- const [isLoading, setIsLoading] = useState(false);
-+ const [isLoading, setIsLoading] = useState(true);
-```
+## Reseni
 
-**Change 2** - Line 228-238 (close cleanup effect): Reset `isLoading` back to `true` when modal closes so next open starts clean
+### Soubor: `src/components/TicketResultModal.tsx`
+
+**Zmena 1** - Radek 195-198: Odebrat `setIsLoading(false)` z early return a NERESIT isLoading pri zavreni modalu ve fetch effectu. To nechame ciste na cleanup effectu.
+
 ```typescript
-useEffect(() => {
-  if (!isOpen) {
-    generatedForTicketRef.current = null;
-    if (previewImageUrl) {
-      URL.revokeObjectURL(previewImageUrl);
-    }
-    setPreviewImageUrl(null);
-    setPreviewBlob(null);
-    setPublicShareUrl(null);
-+   setIsLoading(true);  // Reset so next open starts with loading state
-  }
-}, [isOpen]);
-```
-
-**Change 3** - Line 194-198 (bonus fetch effect early return): When modal is closed or no result, set `isLoading` to false to avoid stale loading state when no data is needed
-```typescript
+// Pred:
 if (!isOpen || !result || !contestId) {
   setBonusPrize(null);
-+ setIsLoading(false);
+  setIsLoading(false);
+  return;
+}
+
+// Po:
+if (!isOpen || !result || !contestId) {
+  setBonusPrize(null);
   return;
 }
 ```
 
-## Result
-The user will see: "Kontroluji vyhru..." (loading) -> final result. Only one visual transition instead of three. No logic, variable, or structure changes.
+Tato zmena zajisti, ze kdyz se modal zavira, `isLoading` zustane na `true` (nastavene cleanup effectem) a nebude prepsan na `false`.
 
-## Constraints
-- No new files
-- No renamed variables
-- No logic changes
-- No canvas changes
-- Only `src/components/TicketResultModal.tsx` modified
+## Souhrn
+- Jedina zmena: odebrani `setIsLoading(false)` na radku 197
+- Zadne nove soubory
+- Zadna zmena logiky, struktury ani stylu
+- Pouze `src/components/TicketResultModal.tsx`
 
