@@ -365,9 +365,9 @@ export default function ContestDetail() {
 
       {/* GALLERY SECTION */}
       {displayGallery.length > 0 && (
-        <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[hsl(40_50%_45%/0.3)] space-y-3 animate-fade-in">
-          {/* Main display – 16:9 */}
-          <div className="relative aspect-video rounded-xl overflow-hidden bg-black/40">
+        <section className="voucher-card-glow max-w-4xl mx-auto bg-[hsl(220_25%_8%)]/60 backdrop-blur rounded-xl p-3 md:p-4 border-[2px] border-[hsl(40_50%_45%/0.3)] space-y-3 animate-fade-in">
+          {/* Main display – 16:9 capped */}
+          <div className="relative aspect-video max-h-[420px] rounded-xl overflow-hidden bg-black/40 mx-auto">
             {activeMedia && (
               activeMedia.type === 'video' ? (
                 <YouTubeEmbed url={activeMedia.url} className="absolute inset-0" />
@@ -384,7 +384,7 @@ export default function ContestDetail() {
 
           {/* Thumbnail strip */}
           {displayGallery.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide justify-center">
               {displayGallery.map((m, idx) => {
                 const isVideo = m.type === 'video';
                 const thumbUrl = isVideo
@@ -395,7 +395,7 @@ export default function ContestDetail() {
                     key={m.id}
                     type="button"
                     onClick={() => setActiveGalleryIndex(idx)}
-                    className={`flex-shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                    className={`flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
                       idx === activeGalleryIndex
                         ? 'border-[hsl(40_75%_55%)] scale-105 shadow-[0_0_12px_rgba(250,204,21,0.3)]'
                         : 'border-white/10 opacity-60 hover:opacity-90'
