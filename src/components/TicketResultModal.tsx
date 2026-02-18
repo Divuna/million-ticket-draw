@@ -500,22 +500,57 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     MioCoin: <span className="font-semibold text-primary">{bonusPrize.amount.toLocaleString('cs-CZ')}</span>
                   </p>
                 )}
-                {/* Premium Ticket Card */}
-                <div
-                  className="mx-auto max-w-[280px] rounded-2xl p-5 relative overflow-hidden"
-                  style={{
-                    background: 'linear-gradient(135deg, hsl(220 30% 10%), hsl(220 25% 14%), hsl(220 30% 10%))',
-                    border: '2px solid transparent',
-                    backgroundClip: 'padding-box',
-                    boxShadow: '0 0 20px hsl(43 90% 55% / 0.15), inset 0 1px 0 hsl(43 90% 55% / 0.1)',
-                  }}
-                >
-                  <div className="absolute inset-0 rounded-2xl" style={{ background: 'linear-gradient(135deg, hsl(43 90% 55% / 0.4), hsl(35 85% 45% / 0.2), hsl(43 90% 55% / 0.4))', padding: '2px', mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)', maskComposite: 'xor', WebkitMaskComposite: 'xor', borderRadius: '1rem', pointerEvents: 'none' }} />
-                  <p className="text-3xl font-extrabold tracking-wide" style={{ color: 'hsl(210 20% 98%)', fontFamily: "'Plus Jakarta Sans', system-ui" }}>
-                    #{result?.ticket_number?.toLocaleString('cs-CZ')}
-                  </p>
-                  <div className="mt-2 inline-flex items-center rounded-full px-3 py-1 text-xs font-bold tracking-wider" style={{ background: 'linear-gradient(135deg, hsl(43 90% 55%), hsl(35 85% 45%))', color: 'hsl(220 45% 8%)' }}>
-                    VÝHERNÍ
+                {/* Premium Ticket Card - Winner */}
+                <div className="relative mx-auto max-w-[300px]">
+                  {/* Radial gold glow behind card */}
+                  <div
+                    className="absolute inset-0 rounded-3xl"
+                    style={{
+                      background: 'radial-gradient(ellipse at 50% 50%, hsl(43 90% 55% / 0.2), transparent 70%)',
+                      animation: 'winnerBreathe 5s ease-in-out infinite',
+                      filter: 'blur(16px)',
+                    }}
+                  />
+                  <div
+                    className="relative rounded-3xl p-6 overflow-hidden"
+                    style={{
+                      background: 'linear-gradient(160deg, hsl(222 40% 8%), hsl(220 35% 12%), hsl(222 38% 9%))',
+                      boxShadow: 'inset 0 2px 4px hsl(0 0% 100% / 0.04), inset 0 -1px 2px hsl(222 50% 3% / 0.5), 0 8px 32px hsl(222 50% 3% / 0.6)',
+                    }}
+                  >
+                    {/* Animated border shimmer */}
+                    <div className="absolute inset-0 rounded-3xl pointer-events-none" style={{
+                      padding: '1.5px',
+                      background: 'linear-gradient(90deg, hsl(43 90% 55% / 0.1), hsl(43 90% 55% / 0.45), hsl(40 70% 50% / 0.5), hsl(43 90% 55% / 0.45), hsl(43 90% 55% / 0.1))',
+                      backgroundSize: '200% 100%',
+                      animation: 'ticketBorderShimmer 6s ease-in-out infinite',
+                      mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                      maskComposite: 'xor',
+                      WebkitMaskComposite: 'xor' as any,
+                      borderRadius: '1.5rem',
+                    }} />
+                    <div className="py-3">
+                      <p className="text-5xl font-extrabold tracking-wider" style={{
+                        background: 'linear-gradient(180deg, hsl(50 95% 85%), hsl(43 80% 55%), hsl(38 70% 42%))',
+                        WebkitBackgroundClip: 'text',
+                        backgroundClip: 'text',
+                        color: 'transparent',
+                        fontFamily: "'Plus Jakarta Sans', system-ui",
+                        filter: 'drop-shadow(0 0 8px hsl(43 80% 55% / 0.3))',
+                      }}>
+                        #{result?.ticket_number?.toLocaleString('cs-CZ')}
+                      </p>
+                    </div>
+                    <div
+                      className="mt-3 inline-flex items-center rounded-full px-4 py-1.5 text-sm font-bold tracking-widest"
+                      style={{
+                        background: 'linear-gradient(135deg, hsl(43 90% 55%), hsl(35 85% 45%))',
+                        color: 'hsl(220 45% 8%)',
+                        animation: 'badgePulse 4.5s ease-in-out infinite',
+                      }}
+                    >
+                      VÝHERNÍ
+                    </div>
                   </div>
                 </div>
                 {result?.distance_to_next_bonus && result.distance_to_next_bonus > 0 && (
@@ -546,20 +581,55 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 <p className="text-lg font-semibold" style={{ color: 'hsl(43 90% 55%)' }}>
                   Gratulujeme, vyhrál jsi hlavní cenu!
                 </p>
-                {/* Premium Ticket Card */}
-                <div
-                  className="mx-auto max-w-[280px] rounded-2xl p-5 relative overflow-hidden"
-                  style={{
-                    background: 'linear-gradient(135deg, hsl(220 30% 10%), hsl(220 25% 14%), hsl(220 30% 10%))',
-                    boxShadow: '0 0 24px hsl(43 90% 55% / 0.25), inset 0 1px 0 hsl(43 90% 55% / 0.15)',
-                  }}
-                >
-                  <div className="absolute inset-0 rounded-2xl" style={{ background: 'linear-gradient(135deg, hsl(43 90% 55% / 0.5), hsl(35 85% 45% / 0.3), hsl(43 90% 55% / 0.5))', padding: '2px', mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)', maskComposite: 'xor', WebkitMaskComposite: 'xor', borderRadius: '1rem', pointerEvents: 'none' }} />
-                  <p className="text-3xl font-extrabold tracking-wide" style={{ color: 'hsl(210 20% 98%)', fontFamily: "'Plus Jakarta Sans', system-ui" }}>
-                    #{result?.ticket_number?.toLocaleString('cs-CZ')}
-                  </p>
-                  <div className="mt-2 inline-flex items-center rounded-full px-3 py-1 text-xs font-bold tracking-wider" style={{ background: 'linear-gradient(135deg, hsl(43 90% 55%), hsl(35 85% 45%))', color: 'hsl(220 45% 8%)' }}>
-                    VÝHERNÍ
+                {/* Premium Ticket Card - Main Prize Winner */}
+                <div className="relative mx-auto max-w-[300px]">
+                  <div
+                    className="absolute inset-0 rounded-3xl"
+                    style={{
+                      background: 'radial-gradient(ellipse at 50% 50%, hsl(43 90% 55% / 0.25), transparent 70%)',
+                      animation: 'winnerBreathe 5s ease-in-out infinite',
+                      filter: 'blur(16px)',
+                    }}
+                  />
+                  <div
+                    className="relative rounded-3xl p-6 overflow-hidden"
+                    style={{
+                      background: 'linear-gradient(160deg, hsl(222 40% 8%), hsl(220 35% 12%), hsl(222 38% 9%))',
+                      boxShadow: 'inset 0 2px 4px hsl(0 0% 100% / 0.04), inset 0 -1px 2px hsl(222 50% 3% / 0.5), 0 8px 32px hsl(222 50% 3% / 0.6)',
+                    }}
+                  >
+                    <div className="absolute inset-0 rounded-3xl pointer-events-none" style={{
+                      padding: '1.5px',
+                      background: 'linear-gradient(90deg, hsl(43 90% 55% / 0.1), hsl(43 90% 55% / 0.5), hsl(40 70% 50% / 0.55), hsl(43 90% 55% / 0.5), hsl(43 90% 55% / 0.1))',
+                      backgroundSize: '200% 100%',
+                      animation: 'ticketBorderShimmer 6s ease-in-out infinite',
+                      mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                      maskComposite: 'xor',
+                      WebkitMaskComposite: 'xor' as any,
+                      borderRadius: '1.5rem',
+                    }} />
+                    <div className="py-3">
+                      <p className="text-5xl font-extrabold tracking-wider" style={{
+                        background: 'linear-gradient(180deg, hsl(50 95% 85%), hsl(43 80% 55%), hsl(38 70% 42%))',
+                        WebkitBackgroundClip: 'text',
+                        backgroundClip: 'text',
+                        color: 'transparent',
+                        fontFamily: "'Plus Jakarta Sans', system-ui",
+                        filter: 'drop-shadow(0 0 8px hsl(43 80% 55% / 0.3))',
+                      }}>
+                        #{result?.ticket_number?.toLocaleString('cs-CZ')}
+                      </p>
+                    </div>
+                    <div
+                      className="mt-3 inline-flex items-center rounded-full px-4 py-1.5 text-sm font-bold tracking-widest"
+                      style={{
+                        background: 'linear-gradient(135deg, hsl(43 90% 55%), hsl(35 85% 45%))',
+                        color: 'hsl(220 45% 8%)',
+                        animation: 'badgePulse 4.5s ease-in-out infinite',
+                      }}
+                    >
+                      VÝHERNÍ
+                    </div>
                   </div>
                 </div>
               </div>
@@ -576,19 +646,41 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 {funnyMessage}
               </p>
               {/* Premium Ticket Card - non-winner */}
-              <div
-                className="mx-auto max-w-[280px] rounded-2xl p-5 relative overflow-hidden"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(220 30% 10%), hsl(220 25% 14%), hsl(220 30% 10%))',
-                  boxShadow: '0 0 16px hsl(220 80% 45% / 0.12), inset 0 1px 0 hsl(215 20% 28% / 0.3)',
-                }}
-              >
-                <div className="absolute inset-0 rounded-2xl" style={{ background: 'linear-gradient(135deg, hsl(43 90% 55% / 0.25), hsl(35 85% 45% / 0.1), hsl(43 90% 55% / 0.25))', padding: '2px', mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)', maskComposite: 'xor', WebkitMaskComposite: 'xor', borderRadius: '1rem', pointerEvents: 'none' }} />
-                <p className="text-3xl font-extrabold tracking-wide" style={{ color: 'hsl(210 20% 98%)', fontFamily: "'Plus Jakarta Sans', system-ui" }}>
-                  #{result?.ticket_number?.toLocaleString('cs-CZ')}
-                </p>
-                <div className="mt-2 inline-flex items-center rounded-full px-3 py-1 text-xs font-bold tracking-wider" style={{ background: 'hsl(220 80% 45% / 0.2)', color: 'hsl(210 80% 65%)', border: '1px solid hsl(220 80% 45% / 0.3)' }}>
-                  AKTIVNÍ
+              <div className="relative mx-auto max-w-[300px]">
+                <div
+                  className="relative rounded-3xl p-6 overflow-hidden"
+                  style={{
+                    background: 'linear-gradient(160deg, hsl(222 40% 8%), hsl(220 35% 12%), hsl(222 38% 9%))',
+                    boxShadow: 'inset 0 2px 4px hsl(0 0% 100% / 0.03), inset 0 -1px 2px hsl(222 50% 3% / 0.4), 0 6px 24px hsl(222 50% 3% / 0.5)',
+                  }}
+                >
+                  <div className="absolute inset-0 rounded-3xl pointer-events-none" style={{
+                    padding: '1px',
+                    background: 'linear-gradient(135deg, hsl(215 20% 28% / 0.5), hsl(220 80% 45% / 0.25), hsl(215 20% 28% / 0.5))',
+                    mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                    maskComposite: 'xor',
+                    WebkitMaskComposite: 'xor' as any,
+                    borderRadius: '1.5rem',
+                  }} />
+                  <div className="py-3">
+                    <p className="text-5xl font-extrabold tracking-wider" style={{
+                      color: 'hsl(210 20% 98%)',
+                      fontFamily: "'Plus Jakarta Sans', system-ui",
+                      filter: 'drop-shadow(0 1px 2px hsl(222 50% 3% / 0.5))',
+                    }}>
+                      #{result?.ticket_number?.toLocaleString('cs-CZ')}
+                    </p>
+                  </div>
+                  <div
+                    className="mt-3 inline-flex items-center rounded-full px-4 py-1.5 text-sm font-bold tracking-widest"
+                    style={{
+                      background: 'linear-gradient(135deg, hsl(220 80% 45% / 0.15), hsl(220 80% 50% / 0.25))',
+                      color: 'hsl(210 80% 65%)',
+                      border: '1px solid hsl(220 80% 45% / 0.3)',
+                    }}
+                  >
+                    AKTIVNÍ
+                  </div>
                 </div>
               </div>
               {result?.distance_to_next_bonus && !isWinner && (
