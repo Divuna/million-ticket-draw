@@ -365,7 +365,7 @@ export default function ContestDetail() {
           <div className="relative aspect-video max-h-[420px] rounded-xl overflow-hidden bg-black/40 mx-auto">
             {activeMedia && (
               activeMedia.type === 'video' ? (
-                <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">Video disabled</div>
+                <YouTubeEmbed url={activeMedia.url} className="absolute inset-0" />
               ) : (
                 <img
                   key={activeMedia.id}
