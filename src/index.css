@@ -876,3 +876,9 @@
 .animate-pulse-slow {
   animation: pulse-slow 3s ease-in-out infinite;
 }
+
+/* Luxury rotating gold arc for circular progress */
+@keyframes luxuryRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

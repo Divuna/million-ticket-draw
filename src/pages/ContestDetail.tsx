@@ -384,6 +384,30 @@ export default function ContestDetail() {
                   }}
                 />
               </svg>
+              {/* Rotating gold arc overlay */}
+              <svg
+                viewBox="0 0 200 200"
+                className="absolute inset-0 w-full h-full"
+                style={{ animation: 'luxuryRotate 11s linear infinite' }}
+              >
+                <defs>
+                  <linearGradient id="arcGlowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="hsl(43 80% 60% / 0)" />
+                    <stop offset="40%" stopColor="hsl(43 80% 60% / 0.35)" />
+                    <stop offset="60%" stopColor="hsl(40 70% 50% / 0.5)" />
+                    <stop offset="100%" stopColor="hsl(43 80% 60% / 0)" />
+                  </linearGradient>
+                </defs>
+                <circle
+                  cx="100" cy="100" r={radius}
+                  fill="none"
+                  stroke="url(#arcGlowGrad)"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeDasharray={`${circumference * 0.18} ${circumference * 0.82}`}
+                  style={{ filter: 'drop-shadow(0 0 4px hsl(43 80% 55% / 0.3))' }}
+                />
+              </svg>
               {/* Center text */}
               <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
                 <span className="text-[hsl(43_90%_55%)] font-extrabold text-sm md:text-base tracking-widest text-center leading-tight px-4" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
