@@ -304,6 +304,48 @@ export type Database = {
         }
         Relationships: []
       }
+      contest_media: {
+        Row: {
+          contest_id: string
+          created_at: string | null
+          id: string
+          sort_order: number | null
+          type: string
+          url: string
+        }
+        Insert: {
+          contest_id: string
+          created_at?: string | null
+          id?: string
+          sort_order?: number | null
+          type: string
+          url: string
+        }
+        Update: {
+          contest_id?: string
+          created_at?: string | null
+          id?: string
+          sort_order?: number | null
+          type?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contest_media_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "admin_contest_status"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "contest_media_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contests: {
         Row: {
           banner_image: string | null

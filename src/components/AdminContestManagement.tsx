@@ -133,6 +133,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   // Store original product image base64 for regeneration
   const [productImageBase64, setProductImageBase64] = useState<string | null>(null);
 
+  // Gallery media state
+  const [galleryMedia, setGalleryMedia] = useState<Array<{ id: string; type: string; url: string; sort_order: number }>>([]);
+  const [newMediaType, setNewMediaType] = useState<string>("image");
+  const [newMediaUrl, setNewMediaUrl] = useState<string>("");
+  const [newMediaSortOrder, setNewMediaSortOrder] = useState<number>(0);
+  const [addingMedia, setAddingMedia] = useState(false);
+  const [loadingMedia, setLoadingMedia] = useState(false);
+
   // MioCoin bonus state
   const [mioCoinBonuses, setMioCoinBonuses] = useState<MioCoinBonus[]>([]);
   const [totalMioCoinsInput, setTotalMioCoinsInput] = useState<number>(1000);
@@ -166,8 +174,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         banner_image_url: "",
         detail_image_url: "",
       });
-      // Load existing bonuses for editing
+      // Load existing bonuses and gallery for editing
       loadExistingBonuses(editingContest.contest_id);
+      loadGalleryMedia(editingContest.contest_id);
     } else {
       setForm({
         title: "",
@@ -185,9 +194,67 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       });
       setMioCoinBonuses([]);
       setPhysicalPrizes([]);
+      setGalleryMedia([]);
     }
     setActiveTab("basic");
   }, [editingContest, open]);
+
+  const loadGalleryMedia = async (contestId: string) => {
+    setLoadingMedia(true);
+    const { data, error } = await supabase
+      .from("contest_media")
+      .select("*")
+      .eq("contest_id", contestId)
+      .order("sort_order", { ascending: true });
+
+    if (error) {
+      console.error("Error loading gallery media:", error);
+    } else {
+      setGalleryMedia(data || []);
+    }
+    setLoadingMedia(false);
+  };
+
+  const handleAddMedia = async () => {
+    const contestId = editingContest?.contest_id;
+    if (!contestId) {
+      toast({ title: "Chyba", description: "Nejdříve uložte soutěž.", variant: "destructive" });
+      return;
+    }
+    if (!newMediaUrl.trim()) {
+      toast({ title: "Chyba", description: "Zadejte URL.", variant: "destructive" });
+      return;
+    }
+
+    setAddingMedia(true);
+    const { error } = await supabase.from("contest_media").insert({
+      contest_id: contestId,
+      type: newMediaType,
+      url: newMediaUrl.trim(),
+      sort_order: newMediaSortOrder,
+    });
+
+    if (error) {
+      toast({ title: "Chyba", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Přidáno", description: "Médium bylo přidáno do galerie." });
+      setNewMediaUrl("");
+      setNewMediaSortOrder(0);
+      await loadGalleryMedia(contestId);
+    }
+    setAddingMedia(false);
+  };
+
+  const handleDeleteMedia = async (mediaId: string) => {
+    const contestId = editingContest?.contest_id;
+    const { error } = await supabase.from("contest_media").delete().eq("id", mediaId);
+    if (error) {
+      toast({ title: "Chyba", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Smazáno", description: "Médium bylo odstraněno z galerie." });
+      if (contestId) await loadGalleryMedia(contestId);
+    }
+  };
 
   const loadExistingBonuses = async (contestId: string) => {
     const { data, error } = await supabase.from("bonus_prizes").select("*").eq("contest_id", contestId);
@@ -1327,6 +1394,83 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 <Input type="file" accept="image/*" onChange={handleFileChange("banner_image_file")} />
                 {form.banner_image_file && (
                   <p className="text-xs text-green-500">Vybrán soubor: {form.banner_image_file.name}</p>
+                )}
+              </div>
+
+              {/* Gallery section */}
+              <div className="border border-dashed border-white/20 rounded-lg p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🎬</span>
+                  <Label className="text-base font-medium">Galerie hlavní výhry</Label>
+                </div>
+
+                {!editingContest ? (
+                  <p className="text-xs text-muted-foreground">Galerii lze spravovat po uložení soutěže.</p>
+                ) : (
+                  <>
+                    <div className="space-y-3">
+                      <div>
+                        <Label>Typ média</Label>
+                        <Select value={newMediaType} onValueChange={setNewMediaType}>
+                          <SelectTrigger className="bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
+                            <SelectItem value="image" className="text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer">Image</SelectItem>
+                            <SelectItem value="video" className="text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer">Video</SelectItem>
+                            <SelectItem value="background" className="text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer">Background</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>URL (YouTube nebo obrázek)</Label>
+                        <Input
+                          value={newMediaUrl}
+                          onChange={(e) => setNewMediaUrl(e.target.value)}
+                          placeholder="https://..."
+                        />
+                      </div>
+                      <div>
+                        <Label>Pořadí (sort_order)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={newMediaSortOrder}
+                          onChange={(e) => setNewMediaSortOrder(Number(e.target.value))}
+                        />
+                      </div>
+                      <Button onClick={handleAddMedia} disabled={addingMedia} className="w-full">
+                        {addingMedia ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                        ➕ Přidat do galerie
+                      </Button>
+                    </div>
+
+                    {loadingMedia ? (
+                      <div className="flex justify-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                      </div>
+                    ) : galleryMedia.length > 0 ? (
+                      <div className="space-y-2 mt-4">
+                        <Label>Položky galerie ({galleryMedia.length})</Label>
+                        {galleryMedia.map((media) => (
+                          <div key={media.id} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-xs shrink-0">{media.type}</Badge>
+                                <span className="text-xs text-muted-foreground shrink-0">#{media.sort_order}</span>
+                              </div>
+                              <span className="text-xs text-muted-foreground truncate mt-1">{media.url}</span>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteMedia(media.id)}>
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-2">Žádná média v galerii.</p>
+                    )}
+                  </>
                 )}
               </div>
             </TabsContent>
