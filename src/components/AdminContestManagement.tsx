@@ -139,6 +139,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   const [newMediaUrl, setNewMediaUrl] = useState<string>("");
   const [newMediaSortOrder, setNewMediaSortOrder] = useState<number>(0);
   const [addingMedia, setAddingMedia] = useState(false);
+  const [newMediaFile, setNewMediaFile] = useState<File | null>(null);
   const [loadingMedia, setLoadingMedia] = useState(false);
 
   // MioCoin bonus state
@@ -221,16 +222,39 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       toast({ title: "Chyba", description: "Nejdříve uložte soutěž.", variant: "destructive" });
       return;
     }
-    if (!newMediaUrl.trim()) {
-      toast({ title: "Chyba", description: "Zadejte URL.", variant: "destructive" });
-      return;
+
+    let finalUrl = newMediaUrl.trim();
+
+    // For image type, upload file if selected
+    if (newMediaType === "image") {
+      if (!newMediaFile) {
+        toast({ title: "Chyba", description: "Vyberte obrázek.", variant: "destructive" });
+        return;
+      }
+      setAddingMedia(true);
+      const filePath = `contests/${contestId}/gallery/${Date.now()}-${newMediaFile.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("contest-images")
+        .upload(filePath, newMediaFile);
+      if (uploadError) {
+        toast({ title: "Chyba uploadu", description: uploadError.message, variant: "destructive" });
+        setAddingMedia(false);
+        return;
+      }
+      const { data: publicUrlData } = supabase.storage.from("contest-images").getPublicUrl(filePath);
+      finalUrl = publicUrlData.publicUrl;
+    } else {
+      if (!finalUrl) {
+        toast({ title: "Chyba", description: "Zadejte URL.", variant: "destructive" });
+        return;
+      }
     }
 
     setAddingMedia(true);
     const { error } = await supabase.from("contest_media").insert({
       contest_id: contestId,
       type: newMediaType,
-      url: newMediaUrl.trim(),
+      url: finalUrl,
       sort_order: newMediaSortOrder,
     });
 
@@ -239,6 +263,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     } else {
       toast({ title: "Přidáno", description: "Médium bylo přidáno do galerie." });
       setNewMediaUrl("");
+      setNewMediaFile(null);
       setNewMediaSortOrder(0);
       await loadGalleryMedia(contestId);
     }
@@ -1422,14 +1447,25 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                           </SelectContent>
                         </Select>
                       </div>
-                      <div>
-                        <Label>URL (YouTube nebo obrázek)</Label>
-                        <Input
-                          value={newMediaUrl}
-                          onChange={(e) => setNewMediaUrl(e.target.value)}
-                          placeholder="https://..."
-                        />
-                      </div>
+                      {newMediaType === "image" ? (
+                        <div>
+                          <Label>Nahrát obrázek</Label>
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => setNewMediaFile(e.target.files?.[0] || null)}
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <Label>URL (YouTube nebo obrázek)</Label>
+                          <Input
+                            value={newMediaUrl}
+                            onChange={(e) => setNewMediaUrl(e.target.value)}
+                            placeholder="https://..."
+                          />
+                        </div>
+                      )}
                       <div>
                         <Label>Pořadí (sort_order)</Label>
                         <Input
