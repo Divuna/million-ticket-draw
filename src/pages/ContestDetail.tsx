@@ -292,8 +292,7 @@ export default function ContestDetail() {
 
   // Gallery: filter out background-type media for the visual gallery
   const displayGallery = galleryMedia.filter((m) => m.type !== 'background');
-  const safeIndex = displayGallery.length > 0 ? Math.min(activeGalleryIndex, displayGallery.length - 1) : 0;
-  const activeMedia = displayGallery.length > 0 ? displayGallery[safeIndex] ?? null : null;
+  const activeMedia = displayGallery[activeGalleryIndex] ?? null;
 
   // Background: prefer contest_media with type "background", fallback to main_prize_secondary_image
   const backgroundMedia = galleryMedia.find((m) => m.type === 'background');
