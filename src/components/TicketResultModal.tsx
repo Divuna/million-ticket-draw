@@ -497,9 +497,13 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                   Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
                 </p>
                 {result?.distance_to_next_bonus && result.distance_to_next_bonus > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    Do další bonusové výhry: <span className="font-semibold text-primary">{result.distance_to_next_bonus.toLocaleString('cs-CZ')} tiketů</span>
-                  </p>
+                  <div className="mx-auto max-w-[280px] rounded-full border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Do další bonusové výhry</p>
+                    <p>
+                      <span className="text-2xl font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">{result.distance_to_next_bonus.toLocaleString('cs-CZ')}</span>
+                      <span className="text-sm text-muted-foreground ml-1.5">tiketů</span>
+                    </p>
+                  </div>
                 )}
                 {isBonusClaimed ? (
                   <Button 
@@ -545,9 +549,13 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                   Tvůj tiket: <span className="font-semibold">#{result?.ticket_number?.toLocaleString('cs-CZ')}</span>
                 </p>
                 {result?.distance_to_next_bonus && !isWinner && (
-                  <p className="text-sm text-muted-foreground">
-                    Do bonusové výhry zbývá: <span className="font-semibold text-primary">{result.distance_to_next_bonus.toLocaleString('cs-CZ')} tiketů</span>
-                  </p>
+                  <div className="mx-auto max-w-[280px] rounded-full border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center mt-2">
+                    <p className="text-xs text-muted-foreground mb-1">Do bonusové výhry zbývá</p>
+                    <p>
+                      <span className="text-2xl font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">{result.distance_to_next_bonus.toLocaleString('cs-CZ')}</span>
+                      <span className="text-sm text-muted-foreground ml-1.5">tiketů</span>
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
