@@ -194,7 +194,6 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   useEffect(() => {
     if (!isOpen || !result || !contestId) {
       setBonusPrize(null);
-      setIsLoading(false);
       return;
     }
 
