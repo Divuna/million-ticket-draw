@@ -876,28 +876,3 @@
 .animate-pulse-slow {
   animation: pulse-slow 3s ease-in-out infinite;
 }
-
-/* Luxury rotating gold arc for circular progress */
-@keyframes luxuryRotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* Ticket card gold border shimmer */
-@keyframes ticketBorderShimmer {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-/* Winner breathing glow */
-@keyframes winnerBreathe {
-  0%, 100% { opacity: 0.15; transform: scale(0.95); }
-  50% { opacity: 0.25; transform: scale(1.02); }
-}
-
-/* Winner badge subtle pulse */
-@keyframes badgePulse {
-  0%, 100% { box-shadow: 0 0 0 0 hsl(43 90% 55% / 0); }
-  50% { box-shadow: 0 0 12px 2px hsl(43 90% 55% / 0.25); }
-}
