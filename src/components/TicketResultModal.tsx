@@ -181,7 +181,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [bonusPrize, setBonusPrize] = useState<BonusPrizeData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isClaiming, setIsClaiming] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
@@ -194,6 +194,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   useEffect(() => {
     if (!isOpen || !result || !contestId) {
       setBonusPrize(null);
+      setIsLoading(false);
       return;
     }
 
@@ -235,6 +236,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       setPreviewImageUrl(null);
       setPreviewBlob(null);
       setPublicShareUrl(null);
+      setIsLoading(true);
     }
   }, [isOpen]);
 
