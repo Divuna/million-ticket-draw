@@ -328,6 +328,14 @@ export default function ContestDetail() {
         className="relative z-10 p-4 md:p-6 w-full max-w-5xl mx-auto space-y-6 pb-28"
         style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}
       >
+      {/* DEBUG: temporary gallery debug */}
+      <div className="bg-red-900/80 text-white text-xs p-3 rounded-lg font-mono">
+        <p>galleryMedia.length = {galleryMedia.length} | displayGallery.length = {displayGallery.length}</p>
+        {galleryMedia.map((m, i) => (
+          <p key={i}>{m.type} | {m.url}</p>
+        ))}
+      </div>
+
       {/* 1. HERO SECTION */}
       <section className="contest-card-glow w-full rounded-[20px] relative overflow-hidden bg-gradient-to-br from-[hsl(220_25%_8%)] to-[hsl(220_20%_12%)] border-[3px] border-[hsl(40_75%_55%)]">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-6 md:p-8">
