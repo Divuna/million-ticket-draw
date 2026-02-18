@@ -67,6 +67,7 @@ export default function ContestDetail() {
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
   const [modalContestId, setModalContestId] = useState<string | null>(null);
   const [selectedBonusPrize, setSelectedBonusPrize] = useState<BonusPrize | null>(null);
+  const [galleryMedia, setGalleryMedia] = useState<{ id: string; contest_id: string; type: string; url: string; sort_order: number | null; created_at: string | null }[]>([]);
   
   // Fetch the starry background banner used in "Poslední výherci"
   const { banners: placementBanners } = usePlacementBanners(['vzhled_karta_vyher']);
@@ -219,6 +220,16 @@ export default function ContestDetail() {
       if (auth?.user) {
         loadUserBalance(auth.user.id);
       }
+
+      // Fetch gallery media
+      const { data: mediaData } = await supabase
+        .from("contest_media")
+        .select("*")
+        .eq("contest_id", id)
+        .order("sort_order", { ascending: true });
+
+      setGalleryMedia(mediaData ?? []);
+      console.log("galleryMedia", mediaData);
 
       setLoading(false);
     };
