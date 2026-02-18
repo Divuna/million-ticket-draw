@@ -71,36 +71,60 @@ export default function ContestDetail() {
   const [galleryMedia, setGalleryMedia] = useState<{ id: string; contest_id: string; type: string; url: string; sort_order: number | null; created_at: string | null }[]>([]);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
   
-  // Fetch the starry background banner used in "Poslední výherci"
   const { banners: placementBanners } = usePlacementBanners(['vzhled_karta_vyher']);
   const starryBackgroundUrl = placementBanners.vzhled_karta_vyher?.image_url || null;
 
   async function loadUserBalance(userId: string) {
-    const { data: wallet } = await supabase.from("wallets").select("balance_coins").eq("user_id", userId).maybeSingle();
+    console.log('[DEBUG ContestDetail] loadUserBalance called with userId:', userId);
+    try {
+      const { data: wallet, error: walletError } = await supabase.from("wallets").select("balance_coins").eq("user_id", userId).maybeSingle();
 
-    if (wallet?.balance_coins != null) {
-      setBalance(wallet.balance_coins);
-      return;
-    }
+      if (walletError) {
+        console.error('[DEBUG ContestDetail] loadUserBalance wallet error:', walletError, JSON.stringify(walletError));
+      }
 
-    const { data: profile } = await supabase.from("profiles").select("miocoin_balance").eq("id", userId).maybeSingle();
+      if (wallet?.balance_coins != null) {
+        console.log('[DEBUG ContestDetail] setBalance (wallet):', wallet.balance_coins);
+        setBalance(wallet.balance_coins);
+        return;
+      }
 
-    if (profile?.miocoin_balance != null) {
-      setBalance(profile.miocoin_balance);
+      const { data: profile, error: profileError } = await supabase.from("profiles").select("miocoin_balance").eq("id", userId).maybeSingle();
+
+      if (profileError) {
+        console.error('[DEBUG ContestDetail] loadUserBalance profile error:', profileError, JSON.stringify(profileError));
+      }
+
+      if (profile?.miocoin_balance != null) {
+        console.log('[DEBUG ContestDetail] setBalance (profile):', profile.miocoin_balance);
+        setBalance(profile.miocoin_balance);
+      }
+    } catch (err) {
+      console.error('[DEBUG ContestDetail] loadUserBalance CAUGHT:', err, JSON.stringify(err));
     }
   }
 
   useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        loadUserBalance(session.user.id);
-      }
-    });
+    console.log('[DEBUG ContestDetail] Auth listener useEffect mounted');
+    try {
+      const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+        console.log('[DEBUG ContestDetail] onAuthStateChange event:', _event, 'user:', session?.user?.id);
+        if (session?.user) {
+          loadUserBalance(session.user.id);
+        }
+      });
 
-    return () => listener.subscription.unsubscribe();
+      return () => {
+        console.log('[DEBUG ContestDetail] Auth listener cleanup');
+        listener.subscription.unsubscribe();
+      };
+    } catch (err) {
+      console.error('[DEBUG ContestDetail] Auth listener useEffect CAUGHT:', err, JSON.stringify(err));
+    }
   }, []);
 
   async function handleUseMiocoins() {
+    console.log('[DEBUG ContestDetail] handleUseMiocoins called, user:', user?.id, 'contest:', contest?.id);
     if (!user) {
       toast.error("Pro nákup tiketu se musíš přihlásit.");
       navigate("/login");
@@ -109,6 +133,7 @@ export default function ContestDetail() {
 
     if (!contest) return;
 
+    console.log('[DEBUG ContestDetail] setProcessingContestId:', contest.id);
     setProcessingContestId(contest.id);
 
     try {
@@ -118,7 +143,7 @@ export default function ContestDetail() {
       });
 
       if (error) {
-        console.error("RPC error:", error);
+        console.error("[DEBUG ContestDetail] RPC error:", error, JSON.stringify(error));
         if (error.message?.includes("closed") || error.message?.includes("uzavřena")) {
           toast.error("Soutěž je již uzavřena.");
         } else if (error.message?.includes("insufficient") || error.message?.includes("nedostatek")) {
@@ -128,6 +153,7 @@ export default function ContestDetail() {
         } else {
           toast.error("Chyba při nákupu tiketu.");
         }
+        console.log('[DEBUG ContestDetail] setProcessingContestId: null (error)');
         setProcessingContestId(null);
         return;
       }
@@ -137,6 +163,7 @@ export default function ContestDetail() {
         
         if (result.success === false || result.error) {
           const errorMsg = result.error || "Chyba při nákupu tiketu.";
+          console.error('[DEBUG ContestDetail] RPC result error:', errorMsg);
           if (errorMsg.includes("closed") || errorMsg.includes("uzavřena")) {
             toast.error("Soutěž je již uzavřena.");
           } else if (errorMsg.includes("insufficient") || errorMsg.includes("nedostatek")) {
@@ -146,13 +173,13 @@ export default function ContestDetail() {
           } else {
             toast.error(errorMsg);
           }
+          console.log('[DEBUG ContestDetail] setProcessingContestId: null (result error)');
           setProcessingContestId(null);
           return;
         }
 
         console.log('🔥 RPC raw response:', JSON.stringify(result, null, 2));
         
-        // Map with nullish coalescing for proper win detection
         const mappedResult: UnlockTicketResult = {
           ticket_number: result.ticket_number,
           ticket_price: result.ticket_price ?? 1,
@@ -164,11 +191,11 @@ export default function ContestDetail() {
           remaining_tickets: result.remaining_tickets ?? 0
         };
         
-        // Success - show modal
+        console.log('[DEBUG ContestDetail] setModalResult:', JSON.stringify(mappedResult));
         setModalResult(mappedResult);
+        console.log('[DEBUG ContestDetail] setModalContestId:', contest.id);
         setModalContestId(contest.id);
 
-        // Reload balance
         await loadUserBalance(user.id);
 
         if (result.won_type === 'main') {
@@ -180,60 +207,89 @@ export default function ContestDetail() {
         }
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
+      console.error("[DEBUG ContestDetail] handleUseMiocoins CAUGHT:", err, JSON.stringify(err));
       toast.error("Neočekávaná chyba při nákupu tiketu.");
     } finally {
+      console.log('[DEBUG ContestDetail] setProcessingContestId: null (finally)');
       setProcessingContestId(null);
     }
   }
 
   useEffect(() => {
     const load = async () => {
+      console.log('[DEBUG ContestDetail] load() called, id:', id);
       if (!id) return;
+      console.log('[DEBUG ContestDetail] setLoading: true');
       setLoading(true);
 
-      const { data: contestData } = await supabase
-        .from("contests")
-        .select("id, title, description, ticket_price, main_prize_secondary_image, main_image, banner_image, total_miocoin_bonus")
-        .eq("id", id)
-        .maybeSingle();
+      try {
+        const { data: contestData, error: contestError } = await supabase
+          .from("contests")
+          .select("id, title, description, ticket_price, main_prize_secondary_image, main_image, banner_image, total_miocoin_bonus")
+          .eq("id", id)
+          .maybeSingle();
 
-      if (!contestData) {
+        if (contestError) {
+          console.error('[DEBUG ContestDetail] contest fetch error:', contestError, JSON.stringify(contestError));
+        }
+
+        if (!contestData) {
+          console.log('[DEBUG ContestDetail] No contest found, setLoading: false');
+          setLoading(false);
+          return;
+        }
+
+        console.log('[DEBUG ContestDetail] setContest:', JSON.stringify(contestData));
+        setContest(contestData as Contest);
+
+        const { data: bonusData, error: bonusError } = await supabase
+          .from("bonus_prizes")
+          .select("*")
+          .eq("contest_id", id)
+          .or("amount.is.null,amount.eq.0");
+
+        if (bonusError) {
+          console.error('[DEBUG ContestDetail] bonus_prizes fetch error:', bonusError, JSON.stringify(bonusError));
+        }
+
+        console.log('[DEBUG ContestDetail] setBonusPrizes:', bonusData?.length, 'items');
+        setBonusPrizes((bonusData ?? []) as BonusPrize[]);
+
+        const { data: wins, error: winsError } = await supabase.from("winners").select("*").eq("contest_id", id);
+
+        if (winsError) {
+          console.error('[DEBUG ContestDetail] winners fetch error:', winsError, JSON.stringify(winsError));
+        }
+
+        console.log('[DEBUG ContestDetail] setMyWins:', wins?.length, 'items');
+        setMyWins((wins ?? []) as Winner[]);
+
+        const { data: auth } = await supabase.auth.getUser();
+        if (auth?.user) {
+          console.log('[DEBUG ContestDetail] Loading balance for auth user:', auth.user.id);
+          loadUserBalance(auth.user.id);
+        }
+
+        const { data: mediaData, error: mediaError } = await supabase
+          .from("contest_media")
+          .select("*")
+          .eq("contest_id", id)
+          .order("sort_order", { ascending: true });
+
+        if (mediaError) {
+          console.error('[DEBUG ContestDetail] contest_media fetch error:', mediaError, JSON.stringify(mediaError));
+        }
+
+        console.log('[DEBUG ContestDetail] setGalleryMedia:', mediaData?.length, 'items');
+        setGalleryMedia(mediaData ?? []);
+        console.log("galleryMedia", mediaData);
+
+        console.log('[DEBUG ContestDetail] setLoading: false');
         setLoading(false);
-        return;
+      } catch (err) {
+        console.error('[DEBUG ContestDetail] load() CAUGHT:', err, JSON.stringify(err));
+        setLoading(false);
       }
-
-      setContest(contestData as Contest);
-
-      // Load only physical bonus prizes (amount is null or 0)
-      const { data: bonusData } = await supabase
-        .from("bonus_prizes")
-        .select("*")
-        .eq("contest_id", id)
-        .or("amount.is.null,amount.eq.0");
-
-      setBonusPrizes((bonusData ?? []) as BonusPrize[]);
-
-      const { data: wins } = await supabase.from("winners").select("*").eq("contest_id", id);
-
-      setMyWins((wins ?? []) as Winner[]);
-
-      const { data: auth } = await supabase.auth.getUser();
-      if (auth?.user) {
-        loadUserBalance(auth.user.id);
-      }
-
-      // Fetch gallery media
-      const { data: mediaData } = await supabase
-        .from("contest_media")
-        .select("*")
-        .eq("contest_id", id)
-        .order("sort_order", { ascending: true });
-
-      setGalleryMedia(mediaData ?? []);
-      console.log("galleryMedia", mediaData);
-
-      setLoading(false);
     };
 
     load();
@@ -277,7 +333,6 @@ export default function ContestDetail() {
     );
   }
 
-  // Hero image: prefer main_prize_secondary_image (AI-generated), fallback to main_image
   const heroImage = contest.main_prize_secondary_image 
     ? (contest.main_prize_secondary_image.startsWith('http') 
         ? contest.main_prize_secondary_image 
@@ -290,11 +345,9 @@ export default function ContestDetail() {
 
   const isProcessing = processingContestId === contest.id;
 
-  // Gallery: filter out background-type media for the visual gallery
   const displayGallery = galleryMedia.filter((m) => m.type !== 'background');
   const activeMedia = displayGallery[activeGalleryIndex] ?? null;
 
-  // Background: prefer contest_media with type "background", fallback to main_prize_secondary_image
   const backgroundMedia = galleryMedia.find((m) => m.type === 'background');
   const bgImageUrl = backgroundMedia?.url
     || (contest.main_prize_secondary_image
@@ -389,7 +442,10 @@ export default function ContestDetail() {
                   <button
                     key={m.id}
                     type="button"
-                    onClick={() => setActiveGalleryIndex(idx)}
+                    onClick={() => {
+                      console.log('[DEBUG ContestDetail] setActiveGalleryIndex:', idx);
+                      setActiveGalleryIndex(idx);
+                    }}
                     className={`flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
                       idx === activeGalleryIndex
                         ? 'border-[hsl(40_75%_55%)] scale-105 shadow-[0_0_12px_rgba(250,204,21,0.3)]'
@@ -509,7 +565,10 @@ export default function ContestDetail() {
                 <button 
                   key={b.id}
                   type="button"
-                  onClick={() => setSelectedBonusPrize({ ...b, image_url: bonusImageUrl })}
+                  onClick={() => {
+                    console.log('[DEBUG ContestDetail] setSelectedBonusPrize:', b.id);
+                    setSelectedBonusPrize({ ...b, image_url: bonusImageUrl });
+                  }}
                   className="p-3 rounded-xl border border-white/5 hover:border-yellow-500/30 transition-colors text-left cursor-pointer relative overflow-hidden"
                   style={{
                     backgroundImage: starryBackgroundUrl ? `url(${starryBackgroundUrl})` : undefined,
@@ -544,7 +603,10 @@ export default function ContestDetail() {
       {/* BONUS PRIZE DETAIL MODAL */}
       <BonusPrizeDetailModal
         isOpen={selectedBonusPrize !== null}
-        onClose={() => setSelectedBonusPrize(null)}
+        onClose={() => {
+          console.log('[DEBUG ContestDetail] setSelectedBonusPrize: null');
+          setSelectedBonusPrize(null);
+        }}
         prize={selectedBonusPrize}
         backgroundImageUrl={starryBackgroundUrl}
       />
@@ -552,6 +614,7 @@ export default function ContestDetail() {
       <TicketResultModal
         isOpen={modalResult !== null}
         onClose={() => {
+          console.log('[DEBUG ContestDetail] setModalResult: null, setModalContestId: null');
           setModalResult(null);
           setModalContestId(null);
         }}
