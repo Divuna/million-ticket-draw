@@ -484,7 +484,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         <div className="space-y-4 py-4">
           {isWinner ? (
             isBonusWin && bonusPrize ? (
-            <div className="text-center space-y-3">
+              <div className="text-center space-y-3">
                 <div className="text-6xl">🎉</div>
                 <p className="text-lg font-semibold text-green-600">
                   Gratulujeme, vyhrál jsi bonus: {bonusPrize.title || bonusPrize.description}
@@ -494,7 +494,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     MioCoin: <span className="font-semibold text-primary">{bonusPrize.amount.toLocaleString('cs-CZ')}</span>
                   </p>
                 )}
-                <p className="text-4xl font-semibold text-center bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-300 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(255,200,0,0.2)]">
+                <p className="text-muted-foreground">
                   Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
                 </p>
                 {result?.distance_to_next_bonus && result.distance_to_next_bonus > 0 && (
@@ -529,7 +529,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 <p className="text-lg font-semibold text-yellow-600">
                   Gratulujeme, vyhrál jsi hlavní cenu!
                 </p>
-                <p className="text-4xl font-semibold text-center bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-300 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(255,200,0,0.2)]">
+                <p className="text-muted-foreground">
                   Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
                 </p>
               </div>
@@ -545,17 +545,16 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               <p className="text-lg font-medium">
                 {funnyMessage}
               </p>
-              <div className="bg-gradient-to-b from-[#0b1220] to-[#0f1b33] border border-yellow-500/30 rounded-2xl shadow-lg px-8 py-10">
+              <div className="rounded-3xl p-7 my-3 border-2 border-yellow-500 bg-[#0f1a2e] shadow-2xl">
                 <p className="text-xs uppercase tracking-widest text-yellow-500/70 text-center mb-2">Tvůj tiket</p>
-                <p className="text-5xl font-semibold text-center bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-300 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(255,200,0,0.2)]">
+                <p className="text-3xl font-bold text-center bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent drop-shadow-[0_1px_2px_rgba(255,200,0,0.3)]">
                   #{result?.ticket_number?.toLocaleString('cs-CZ')}
                 </p>
-                <div className="w-16 h-px bg-gradient-to-r from-transparent via-yellow-500/40 to-transparent mx-auto my-5" />
                 {result?.distance_to_next_bonus && !isWinner && (
-                  <div className="mx-auto max-w-[280px] bg-[#0e172a] border border-yellow-500/20 rounded-full px-6 py-3 text-center">
+                  <div className="mx-auto max-w-[280px] mt-5 rounded-2xl border border-yellow-500/30 bg-[hsl(220_40%_10%)] px-5 py-4 text-center">
                     <p className="text-xs text-muted-foreground mb-1">Do bonusové výhry zbývá</p>
                     <p>
-                      <span className="text-2xl font-semibold text-yellow-400">{result.distance_to_next_bonus.toLocaleString('cs-CZ')}</span>
+                      <span className="text-3xl font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">{result.distance_to_next_bonus.toLocaleString('cs-CZ')}</span>
                       <span className="text-sm text-muted-foreground ml-1.5">tiketů</span>
                     </p>
                   </div>
@@ -582,7 +581,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               <img 
                 src={previewImageUrl} 
                 alt="Náhled sdílení" 
-                className="w-full max-w-[300px] rounded-lg shadow-lg border border-yellow-500/20"
+                className="w-full max-w-[300px] rounded-lg shadow-lg border border-border/30"
               />
             ) : (
               <div className="w-full max-w-[300px] aspect-[1200/630] bg-muted/30 rounded-lg flex items-center justify-center">
@@ -597,7 +596,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             <Button
               variant="outline"
               size="icon"
-              className="h-10 w-10 rounded-full hover:border-yellow-500/40 hover:bg-yellow-500/5 transition"
+              className="h-10 w-10 rounded-full"
               onClick={() => handleShare('facebook')}
               disabled={isGeneratingImage || isUploading || !publicShareUrl}
               title={isUploading ? "Nahrávám obrázek..." : "Sdílet na Facebook"}
@@ -609,7 +608,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             <Button
               variant="outline"
               size="icon"
-              className="h-10 w-10 rounded-full hover:border-yellow-500/40 hover:bg-yellow-500/5 transition"
+              className="h-10 w-10 rounded-full"
               onClick={() => handleShare('instagram')}
               disabled={isGeneratingImage || !previewBlob}
               title="Sdílet na Instagram"
@@ -632,7 +631,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             <Button
               variant="outline"
               size="icon"
-              className="h-10 w-10 rounded-full hover:border-yellow-500/40 hover:bg-yellow-500/5 transition"
+              className="h-10 w-10 rounded-full"
               onClick={() => handleShare('tiktok')}
               disabled={isGeneratingImage || !previewBlob}
               title="Sdílet na TikTok"
@@ -646,7 +645,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             <Button
               variant="outline"
               size="icon"
-              className="h-10 w-10 rounded-full hover:border-yellow-500/40 hover:bg-yellow-500/5 transition"
+              className="h-10 w-10 rounded-full"
               onClick={() => handleShare('x')}
               disabled={isGeneratingImage || isUploading || !publicShareUrl}
               title={isUploading ? "Nahrávám obrázek..." : "Sdílet na X"}
@@ -660,7 +659,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             <Button
               variant="outline"
               size="icon"
-              className="h-10 w-10 rounded-full hover:border-yellow-500/40 hover:bg-yellow-500/5 transition"
+              className="h-10 w-10 rounded-full"
               onClick={handleDownloadCard}
               disabled={isGeneratingImage || !previewBlob}
               title="Stáhnout obrázek"
@@ -671,7 +670,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         </div>
 
         <div className="flex justify-center">
-          <Button variant="outline" onClick={onClose} className="w-full border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10">
+          <Button onClick={onClose} className="w-full">
             Zavřít
           </Button>
         </div>
