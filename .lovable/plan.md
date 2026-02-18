@@ -1,43 +1,56 @@
 
 
-# Oprava problikávání TicketResultModal
+# Fix: Modal content flickering on open
 
 ## Problem
-Modal po otevření problikne 2-3x, protože se vícekrát spouští useEffect na generování share obrázku. Kazde spusteni resetuje stav obrazku na null, coz zpusobi prazdny stav a bliknuti.
+When the modal opens, the user briefly sees the "non-winner" content (funny message + ticket number), then it flashes to "Kontroluji výhru..." loading state, then to the final result. This creates a visible 2-3 frame flicker.
 
-## Pricina
-Druhy `useEffect` (generovani a upload obrazku) ma zavislosti `[isOpen, result, isLoading, bonusPrize, contestId]`. Po otevreni modalu se postupne meni `isLoading` (true -> false) a `bonusPrize` (null -> data), coz spusti effect 2-3x. Kazde spusteni na radcich 233-238 resetuje `previewImageUrl`, `previewBlob` a `publicShareUrl` na null, takze uzivatel vidi prazdny stav (bliknuti).
+## Root Cause
+`isLoading` starts as `false` (line 184). The bonus fetch effect sets it to `true`, but only after the first render has already painted. So the first render shows the wrong content branch (non-winner block at line 556), then the second render shows loading (line 550), then the third shows the actual result.
 
-Navic objekt `result` je vytvaren inline v `ContestDetail.tsx`, takze jeho reference se meni pri kazdem renderovani.
+## Solution
+Change `isLoading` default to `true` so the very first render when the modal opens shows the loading state ("Kontroluji vyhru...") instead of incorrect content. Reset it back to `true` (not `false`) when the modal closes, so the next open also starts with loading.
 
-## Reseni
+### File: `src/components/TicketResultModal.tsx`
 
-### 1. Stabilizovat `result` referenci v ContestDetail.tsx
-- Zabalit objekt predavany do `result` prop do `useMemo` v `ContestDetail.tsx`, aby se nemenil pri kazdem renderovani.
+**Change 1** - Line 184: Initialize `isLoading` to `true`
+```
+- const [isLoading, setIsLoading] = useState(false);
++ const [isLoading, setIsLoading] = useState(true);
+```
 
-### 2. Pridani ref-based guard v druhem useEffectu
-- Pouzit `useRef` pro sledovani, jestli uz pro dany ticket_number byl obrazek vygenerovan.
-- Pokud uz byl vygenerovan, preskocit dalsi spusteni.
-- Resetovat ref az pri zavreni modalu nebo zmene tiketu.
+**Change 2** - Line 228-238 (close cleanup effect): Reset `isLoading` back to `true` when modal closes so next open starts clean
+```typescript
+useEffect(() => {
+  if (!isOpen) {
+    generatedForTicketRef.current = null;
+    if (previewImageUrl) {
+      URL.revokeObjectURL(previewImageUrl);
+    }
+    setPreviewImageUrl(null);
+    setPreviewBlob(null);
+    setPublicShareUrl(null);
++   setIsLoading(true);  // Reset so next open starts with loading state
+  }
+}, [isOpen]);
+```
 
-### 3. Odstranit synchronni resetovani stavu
-- Na radcich 233-238 se stav resetuje pred async volanim. Misto toho se stary obrazek revokuje az po uspesnem vytvoreni noveho, bez mezistavu "null".
+**Change 3** - Line 194-198 (bonus fetch effect early return): When modal is closed or no result, set `isLoading` to false to avoid stale loading state when no data is needed
+```typescript
+if (!isOpen || !result || !contestId) {
+  setBonusPrize(null);
++ setIsLoading(false);
+  return;
+}
+```
 
-## Technicke detaily
+## Result
+The user will see: "Kontroluji vyhru..." (loading) -> final result. Only one visual transition instead of three. No logic, variable, or structure changes.
 
-**Soubor: `src/pages/ContestDetail.tsx`**
-- Zabalit inline objekt `result` v `TicketResultModal` prop do `useMemo` se zavislostmi na primitivnich hodnotach (`modalResult?.ticket_number`, `modalResult?.won_type`, atd.).
-
-**Soubor: `src/components/TicketResultModal.tsx`**
-- Pridat `const generatedForTicketRef = useRef<number | null>(null);`
-- V druhem useEffectu: pokud `generatedForTicketRef.current === result.ticket_number`, preskocit generovani.
-- Po uspesnem vygenerovani nastavit `generatedForTicketRef.current = result.ticket_number`.
-- Resetovat ref na `null` kdyz `isOpen` se zmeni na false.
-- Odstranit radky 233-238 (synchronni reset na null pred generovanim).
-
-## Omezeni
-- Zadne zmeny v logice nákupu tiketu
-- Zadne zmeny v typech/rozhranich
-- Zadne nove soubory
-- Jen tyto dva soubory budou upraveny
+## Constraints
+- No new files
+- No renamed variables
+- No logic changes
+- No canvas changes
+- Only `src/components/TicketResultModal.tsx` modified
 
