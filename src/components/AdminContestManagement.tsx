@@ -253,6 +253,20 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
     setAddingMedia(true);
 
+    // Enforce single background: remove existing backgrounds before inserting new one
+    if (newMediaType === "background") {
+      const existingBgIds = galleryMedia.filter((m) => m.type === "background").map((m) => m.id);
+      if (existingBgIds.length > 0) {
+        // Optimistic: remove old backgrounds from state immediately
+        setGalleryMedia((prev) => prev.filter((m) => m.type !== "background"));
+        // Delete from DB (ignore temp ids)
+        const realIds = existingBgIds.filter((id) => !String(id).startsWith("temp-"));
+        if (realIds.length > 0) {
+          await supabase.from("contest_media").delete().in("id", realIds);
+        }
+      }
+    }
+
     // Optimistic: add placeholder immediately
     const tempId = `temp-${Date.now()}`;
     const optimisticItem = { id: tempId, type: newMediaType, url: finalUrl, sort_order: newMediaSortOrder };
