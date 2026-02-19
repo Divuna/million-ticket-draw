@@ -253,10 +253,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
     setAddingMedia(true);
 
-    // Enforce single background: remove existing backgrounds before inserting new one
+    // Enforce single background: confirm before replacing existing one
     if (newMediaType === "background") {
       const existingBgIds = galleryMedia.filter((m) => m.type === "background").map((m) => m.id);
       if (existingBgIds.length > 0) {
+        const confirmed = window.confirm("Tímto nahradíte stávající pozadí. Pokračovat?");
+        if (!confirmed) {
+          setAddingMedia(false);
+          return;
+        }
         // Optimistic: remove old backgrounds from state immediately
         setGalleryMedia((prev) => prev.filter((m) => m.type !== "background"));
         // Delete from DB (ignore temp ids)
