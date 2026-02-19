@@ -226,8 +226,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
     let finalUrl = newMediaUrl.trim();
 
-    // For image/background type, upload file if selected
-    if (newMediaType === "image" || newMediaType === "background") {
+    // For image type, require file upload
+    if (newMediaType === "image") {
       if (!newMediaFile) {
         toast({ title: "Chyba", description: "Vyberte obrázek.", variant: "destructive" });
         return;
@@ -244,6 +244,27 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       }
       const { data: publicUrlData } = supabase.storage.from("contest-images").getPublicUrl(filePath);
       finalUrl = publicUrlData.publicUrl;
+    } else if (newMediaType === "background") {
+      // Background supports file upload OR YouTube URL
+      if (newMediaFile) {
+        setAddingMedia(true);
+        const filePath = `contests/${contestId}/gallery/${Date.now()}-${newMediaFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from("contest-images")
+          .upload(filePath, newMediaFile);
+        if (uploadError) {
+          toast({ title: "Chyba uploadu", description: uploadError.message, variant: "destructive" });
+          setAddingMedia(false);
+          return;
+        }
+        const { data: publicUrlData } = supabase.storage.from("contest-images").getPublicUrl(filePath);
+        finalUrl = publicUrlData.publicUrl;
+      } else if (finalUrl) {
+        // URL provided (YouTube or image URL) — use directly
+      } else {
+        toast({ title: "Chyba", description: "Nahrajte soubor nebo zadejte YouTube URL.", variant: "destructive" });
+        return;
+      }
     } else {
       if (!finalUrl) {
         toast({ title: "Chyba", description: "Zadejte URL.", variant: "destructive" });
@@ -1555,7 +1576,27 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                           />
                         </div>
                       </div>
-                      {newMediaType === "image" || newMediaType === "background" ? (
+                      {newMediaType === "background" ? (
+                        <div className="space-y-2">
+                          <div>
+                            <Label className="text-xs">Nahrát obrázek (pozadí)</Label>
+                            <Input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => setNewMediaFile(e.target.files?.[0] || null)}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">nebo YouTube URL</Label>
+                            <Input
+                              value={newMediaUrl}
+                              onChange={(e) => setNewMediaUrl(e.target.value)}
+                              placeholder="https://youtube.com/watch?v=..."
+                              className="h-9"
+                            />
+                          </div>
+                        </div>
+                      ) : newMediaType === "image" ? (
                         <div>
                           <Label className="text-xs">Nahrát obrázek</Label>
                           <Input
