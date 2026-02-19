@@ -383,11 +383,14 @@ export default function ContestDetail() {
   const isProcessing = processingContestId === contest.id;
 
   const backgroundMedia = galleryMedia.find((m) => m.type === 'background');
-  const bgYouTubeId = backgroundMedia?.url ? getYouTubeId(backgroundMedia.url) : null;
-  const bgImageUrl = backgroundMedia && !bgYouTubeId
+  const bgUrl = backgroundMedia?.url
     ? (backgroundMedia.url.startsWith('http')
         ? backgroundMedia.url
         : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${backgroundMedia.url}`)
+    : null;
+  const bgIsVideo = bgUrl ? bgUrl.toLowerCase().endsWith('.mp4') : false;
+  const bgImageUrl = backgroundMedia && !bgIsVideo
+    ? bgUrl
     : (!backgroundMedia && contest.main_prize_secondary_image
       ? (contest.main_prize_secondary_image.startsWith('http')
         ? contest.main_prize_secondary_image
@@ -396,21 +399,22 @@ export default function ContestDetail() {
 
   return (
     <div className="relative min-h-screen">
-      {/* Cinematic background - YouTube video */}
-      {bgYouTubeId && (
+      {/* Cinematic background - MP4 video */}
+      {bgIsVideo && bgUrl && (
         <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-          <iframe
-            src={`https://www.youtube.com/embed/${bgYouTubeId}?autoplay=1&mute=1&loop=1&playlist=${bgYouTubeId}&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1&disablekb=1&fs=0&iv_load_policy=3`}
-            title="Background video"
-            className="absolute top-1/2 left-1/2 w-[177.78vh] min-w-full h-[56.25vw] min-h-full -translate-x-1/2 -translate-y-1/2"
-            frameBorder="0"
-            allow="autoplay; encrypted-media"
-            style={{ border: 0 }}
+          <video
+            src={bgUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className="absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto -translate-x-1/2 -translate-y-1/2 object-cover"
           />
         </div>
       )}
       {/* Cinematic background - Image */}
-      {!bgYouTubeId && bgImageUrl && (
+      {!bgIsVideo && bgImageUrl && (
         <div
           className="fixed inset-0 z-0"
           style={{
