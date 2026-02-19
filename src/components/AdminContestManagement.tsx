@@ -226,8 +226,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
     let finalUrl = newMediaUrl.trim();
 
-    // For image type, upload file if selected
-    if (newMediaType === "image") {
+    // For image/background type, upload file if selected
+    if (newMediaType === "image" || newMediaType === "background") {
       if (!newMediaFile) {
         toast({ title: "Chyba", description: "Vyberte obrázek.", variant: "destructive" });
         return;
@@ -1536,7 +1536,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                           />
                         </div>
                       </div>
-                      {newMediaType === "image" ? (
+                      {newMediaType === "image" || newMediaType === "background" ? (
                         <div>
                           <Label className="text-xs">Nahrát obrázek</Label>
                           <Input
