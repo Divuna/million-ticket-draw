@@ -182,3 +182,15 @@
     inset 0 0 25px 0 hsla(40, 80%, 50%, 0.18),
     inset 0 1px 0 0 hsla(40, 80%, 70%, 0.25);
 }
+
+/* Premium gallery fade+slide transition */
+@keyframes galleryFadeSlide {
+  0% {
+    opacity: 0;
+    transform: scale(0.97) translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
