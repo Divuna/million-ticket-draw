@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,40 @@ interface UnlockTicketResult {
   won_type?: 'bonus' | 'main' | null;
   bonus_prize_id?: string | null;
 }
+
+// Memoized thumbnail strip to avoid re-renders on gallery index change
+type GalleryMediaItem = { id: string; type: string; url: string; sort_order: number | null };
+const GalleryThumbnails = memo(({ items, activeIndex, onSelect, getYouTubeId, getMediaUrl }: {
+  items: GalleryMediaItem[];
+  activeIndex: number;
+  onSelect: (idx: number) => void;
+  getYouTubeId: (url: string) => string | null;
+  getMediaUrl: (url: string) => string;
+}) => (
+  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide justify-center">
+    {items.map((m, idx) => {
+      const isVideo = m.type === 'video';
+      const thumbUrl = isVideo
+        ? `https://img.youtube.com/vi/${getYouTubeId(m.url) ?? ''}/mqdefault.jpg`
+        : getMediaUrl(m.url);
+      return (
+        <button
+          key={m.id}
+          type="button"
+          onClick={() => onSelect(idx)}
+          className={`flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
+            idx === activeIndex
+              ? 'border-[hsl(40_75%_55%)] scale-110 shadow-[0_0_14px_rgba(250,204,21,0.35)]'
+              : 'border-white/10 opacity-60 hover:opacity-90 hover:scale-105'
+          }`}
+        >
+          <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
+        </button>
+      );
+    })}
+  </div>
+));
+GalleryThumbnails.displayName = 'GalleryThumbnails';
 
 export default function ContestDetail() {
   const { id } = useParams();
@@ -325,6 +359,9 @@ export default function ContestDetail() {
     return url.startsWith('http') ? url : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${url}`;
   }, []);
 
+  const displayGallery = useMemo(() => galleryMedia.filter((m) => m.type !== 'background'), [galleryMedia]);
+  const activeMedia = useMemo(() => displayGallery[activeGalleryIndex] ?? null, [displayGallery, activeGalleryIndex]);
+
   if (loading || !contest) {
     return (
       <div className="p-6">
@@ -344,9 +381,6 @@ export default function ContestDetail() {
         : "/fallback-car.png");
 
   const isProcessing = processingContestId === contest.id;
-
-  const displayGallery = galleryMedia.filter((m) => m.type !== 'background');
-  const activeMedia = displayGallery[activeGalleryIndex] ?? null;
 
   const backgroundMedia = galleryMedia.find((m) => m.type === 'background');
   const bgImageUrl = backgroundMedia?.url
@@ -414,49 +448,42 @@ export default function ContestDetail() {
       {/* GALLERY SECTION */}
       {displayGallery.length > 0 && (
         <section className="voucher-card-glow max-w-4xl mx-auto bg-[hsl(220_25%_8%)]/60 backdrop-blur rounded-xl p-3 md:p-4 border-[2px] border-[hsl(40_50%_45%/0.3)] space-y-3 animate-fade-in">
-          {/* Main display – 16:9 capped */}
+          {/* Main display – 16:9 capped with premium transitions */}
           <div className="relative aspect-video max-h-[420px] rounded-xl overflow-hidden bg-black/40 mx-auto">
             {activeMedia && (
               activeMedia.type === 'video' ? (
-                <YouTubeEmbed url={activeMedia.url} className="absolute inset-0" />
+                <div
+                  key={`video-${activeMedia.id}`}
+                  className="absolute inset-0"
+                  style={{
+                    animation: 'galleryFadeSlide 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+                  }}
+                >
+                  <YouTubeEmbed url={activeMedia.url} className="absolute inset-0" />
+                </div>
               ) : (
                 <img
-                  key={activeMedia.id}
+                  key={`img-${activeMedia.id}`}
                   src={getMediaUrl(activeMedia.url)}
                   alt="Gallery"
-                  className="w-full h-full object-contain animate-fade-in"
+                  className="w-full h-full object-contain"
+                  style={{
+                    animation: 'galleryFadeSlide 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+                  }}
                 />
               )
             )}
           </div>
 
-          {/* Thumbnail strip */}
+          {/* Memoized thumbnail strip */}
           {displayGallery.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide justify-center">
-              {displayGallery.map((m, idx) => {
-                const isVideo = m.type === 'video';
-                const thumbUrl = isVideo
-                  ? `https://img.youtube.com/vi/${getYouTubeId(m.url) ?? ''}/mqdefault.jpg`
-                  : getMediaUrl(m.url);
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => {
-                      console.log('[DEBUG ContestDetail] setActiveGalleryIndex:', idx);
-                      setActiveGalleryIndex(idx);
-                    }}
-                    className={`flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-                      idx === activeGalleryIndex
-                        ? 'border-[hsl(40_75%_55%)] scale-105 shadow-[0_0_12px_rgba(250,204,21,0.3)]'
-                        : 'border-white/10 opacity-60 hover:opacity-90'
-                    }`}
-                  >
-                    <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
-                  </button>
-                );
-              })}
-            </div>
+            <GalleryThumbnails
+              items={displayGallery}
+              activeIndex={activeGalleryIndex}
+              onSelect={setActiveGalleryIndex}
+              getYouTubeId={getYouTubeId}
+              getMediaUrl={getMediaUrl}
+            />
           )}
         </section>
       )}
