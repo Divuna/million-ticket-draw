@@ -521,22 +521,14 @@ export default function ContestDetail() {
         </section>
 
         {/* Box 2: Bonusové MioCoiny v soutěži */}
-        <section className="voucher-card-glow bg-gradient-to-br from-[hsl(45_60%_50%/0.1)] to-[hsl(45_60%_40%/0.05)] rounded-[20px] p-5 border-[2px] border-[hsl(40_60%_50%/0.3)] flex flex-col items-center justify-center gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <img 
-                  src={MIOCOIN_IMAGE_URL} 
-                  className="w-24 h-24 md:w-28 md:h-28 hover:scale-110 transition-transform cursor-pointer drop-shadow-[0_0_24px_rgba(234,179,8,0.4)]" 
-                  alt="MioCoin" 
-                />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>MioCoiny můžeš vyhrát při nákupu tiketů</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <p className="text-sm text-gray-200 leading-relaxed text-center">
+        <section className="voucher-card-glow bg-gradient-to-br from-[hsl(45_60%_50%/0.1)] to-[hsl(45_60%_40%/0.05)] rounded-[20px] p-5 border-[2px] border-[hsl(40_60%_50%/0.3)] relative overflow-hidden animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <img 
+            src={MIOCOIN_IMAGE_URL} 
+            className="absolute -top-2 -right-2 w-24 h-24 md:w-[120px] md:h-[120px] opacity-30 drop-shadow-[0_0_20px_rgba(234,179,8,0.35)] pointer-events-none select-none" 
+            alt="" 
+            aria-hidden="true"
+          />
+          <p className="text-sm text-gray-200 leading-relaxed relative z-10">
             Do této soutěže jsme navíc přidali{" "}
             <span className="text-yellow-400 font-bold text-lg">{(contest.total_miocoin_bonus ?? 0).toLocaleString("cs-CZ")}</span>{" "}
             MioCoinů jako bonusové výhry, které můžete během soutěže získat.
