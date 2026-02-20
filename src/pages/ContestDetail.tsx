@@ -495,15 +495,15 @@ export default function ContestDetail() {
         {/* Box 1: Stav MioCoinů + akce */}
         <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/80 backdrop-blur rounded-[20px] p-5 border-[2px] border-[hsl(40_50%_45%/0.5)] flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <div className="flex items-center h-full gap-4">
-            <div className="flex-1 flex flex-col justify-center">
-              <p className="text-xs text-gray-400">Tvůj stav MioCoinů</p>
-              <p className="text-3xl md:text-4xl font-extrabold text-white leading-none mt-1">{balance.toLocaleString("cs-CZ", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}</p>
-            </div>
             <img
               src={MIOCOIN_IMAGE_URL}
               className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 drop-shadow-[0_0_16px_rgba(234,179,8,0.3)]"
               alt="MioCoin"
             />
+            <div className="flex-1 flex flex-col justify-center">
+              <p className="text-xs text-gray-400">Tvůj stav MioCoinů</p>
+              <p className="text-4xl md:text-5xl font-extrabold text-white leading-none mt-1">{balance.toLocaleString("cs-CZ", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}</p>
+            </div>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch gap-3 mt-auto">
             <Button
