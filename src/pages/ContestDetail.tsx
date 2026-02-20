@@ -494,12 +494,16 @@ export default function ContestDetail() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Box 1: Stav MioCoinů + akce */}
         <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/80 backdrop-blur rounded-[20px] p-5 border-[2px] border-[hsl(40_50%_45%/0.5)] flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-          <div className="flex items-center gap-3">
-            <img src={MIOCOIN_IMAGE_URL} className="w-7 h-7" alt="MioCoin" />
-            <div>
+          <div className="flex items-center h-full gap-4">
+            <div className="flex-1 flex flex-col justify-center">
               <p className="text-xs text-gray-400">Tvůj stav MioCoinů</p>
-              <p className="text-xl font-bold text-white">{balance.toLocaleString("cs-CZ", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}</p>
+              <p className="text-3xl md:text-4xl font-extrabold text-white leading-none mt-1">{balance.toLocaleString("cs-CZ", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}</p>
             </div>
+            <img
+              src={MIOCOIN_IMAGE_URL}
+              className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 drop-shadow-[0_0_16px_rgba(234,179,8,0.3)]"
+              alt="MioCoin"
+            />
           </div>
           <div className="flex flex-col sm:flex-row items-stretch gap-3 mt-auto">
             <Button
@@ -521,14 +525,21 @@ export default function ContestDetail() {
         </section>
 
         {/* Box 2: Bonusové MioCoiny v soutěži */}
-        <section className="voucher-card-glow bg-gradient-to-br from-[hsl(45_60%_50%/0.1)] to-[hsl(45_60%_40%/0.05)] rounded-[20px] p-5 border-[2px] border-[hsl(40_60%_50%/0.3)] flex flex-col items-center justify-center gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        <section className="voucher-card-glow bg-gradient-to-br from-[hsl(45_60%_50%/0.1)] to-[hsl(45_60%_40%/0.05)] rounded-[20px] p-5 border-[2px] border-[hsl(40_60%_50%/0.3)] flex items-center gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <div className="flex-1 flex flex-col justify-center">
+            <p className="text-sm text-gray-200 leading-relaxed">
+              Do této soutěže jsme navíc přidali{" "}
+              <span className="text-yellow-400 font-bold text-2xl md:text-3xl">{(contest.total_miocoin_bonus ?? 0).toLocaleString("cs-CZ")}</span>{" "}
+              MioCoinů jako bonusové výhry, které můžete během soutěže získat.
+            </p>
+          </div>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <img 
-                  src={MIOCOIN_IMAGE_URL} 
-                  className="w-24 h-24 md:w-28 md:h-28 hover:scale-110 transition-transform cursor-pointer drop-shadow-[0_0_24px_rgba(234,179,8,0.4)]" 
-                  alt="MioCoin" 
+                <img
+                  src={MIOCOIN_IMAGE_URL}
+                  className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 hover:scale-110 transition-transform cursor-pointer drop-shadow-[0_0_24px_rgba(234,179,8,0.4)]"
+                  alt="MioCoin"
                 />
               </TooltipTrigger>
               <TooltipContent>
@@ -536,11 +547,6 @@ export default function ContestDetail() {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <p className="text-sm text-gray-200 leading-relaxed text-center">
-            Do této soutěže jsme navíc přidali{" "}
-            <span className="text-yellow-400 font-bold text-lg">{(contest.total_miocoin_bonus ?? 0).toLocaleString("cs-CZ")}</span>{" "}
-            MioCoinů jako bonusové výhry, které můžete během soutěže získat.
-          </p>
         </section>
       </div>
 
