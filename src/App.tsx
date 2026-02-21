@@ -86,6 +86,7 @@ import NotFound from "@/pages/NotFound";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminMenu } from "@/components/AdminMenu";
 import { useUserRole } from "@/hooks/useUserRole";
+import { GlobalMusicPlayer } from "@/components/GlobalMusicPlayer";
 
 // Partner Header Component (inline to avoid new files)
 interface PartnerHeaderProps {
@@ -444,6 +445,7 @@ function AppContent() {
 
   return (
     <DateOfBirthGuard>
+      <GlobalMusicPlayer />
       <GlobalWinnersRealtimeFeed />
       {/* Main app layout wrapper - applies different UI based on accountType */}
       <div className={isPartnerAccount ? 'partner-layout' : 'customer-layout'}>
