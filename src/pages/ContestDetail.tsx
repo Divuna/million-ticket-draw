@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState, useMemo, useCallback, memo } from "react";
+import { useEffect, useState, useMemo, useCallback, memo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -107,6 +107,61 @@ export default function ContestDetail() {
   
   const { banners: placementBanners } = usePlacementBanners(['vzhled_karta_vyher']);
   const starryBackgroundUrl = placementBanners.vzhled_karta_vyher?.image_url || null;
+
+  // Live activity rotating messages
+  const LIVE_MESSAGES = [
+    'Soutěž je aktivní',
+    'Bonusové výhry mohou padnout kdykoliv',
+    'Každý ticket může rozhodnout',
+    'Hraj a vyhraj',
+    'Šance na výhru s každým tiketem',
+  ];
+  const [liveMessageIndex, setLiveMessageIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLiveMessageIndex((prev) => (prev + 1) % LIVE_MESSAGES.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Realtime winner toast with rate limiting
+  const lastWinnerToastRef = useRef(0);
+
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`winners-live-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'winners',
+          filter: `contest_id=eq.${id}`,
+        },
+        (payload) => {
+          const newRow = payload.new as { type?: string; user_id?: string };
+          // Only show for bonus/main wins by OTHER users
+          if (!newRow.type || !['bonus', 'main'].includes(newRow.type)) return;
+          if (user?.id && newRow.user_id === user.id) return;
+
+          const now = Date.now();
+          if (now - lastWinnerToastRef.current < 90_000) return; // 90s rate limit
+          lastWinnerToastRef.current = now;
+
+          const msg = newRow.type === 'main'
+            ? '🏆 Padla hlavní výhra!'
+            : '🎁 Padla bonusová výhra!';
+          toast(msg, { duration: 5000 });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, user?.id]);
 
   async function loadUserBalance(userId: string) {
     console.log('[DEBUG ContestDetail] loadUserBalance called with userId:', userId);
@@ -504,6 +559,19 @@ export default function ContestDetail() {
               <p className="text-xs text-gray-400">Tvůj stav MioCoinů</p>
               <p className="text-4xl md:text-5xl font-extrabold text-white leading-none mt-1">{balance.toLocaleString("cs-CZ", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}</p>
             </div>
+          </div>
+          {/* Live activity strip */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 w-fit">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+            </span>
+            <span
+              key={liveMessageIndex}
+              className="text-xs text-gray-300 font-medium animate-fade-in"
+            >
+              {LIVE_MESSAGES[liveMessageIndex]}
+            </span>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch gap-3 mt-auto">
             <Button
