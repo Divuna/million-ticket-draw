@@ -278,7 +278,7 @@ function isCustomerBlockedRoute(pathname: string): boolean {
 function GlobalWinnersRealtimeFeed() {
   const { user } = useAuth();
   const currentPublicUserId = user?.id ?? null;
-  const lastWinnerToastRef = React.useRef(0);
+  const lastWinnerToastRef = React.useRef<Record<string, number>>({});
 
   React.useEffect(() => {
     const channel = supabase
@@ -300,8 +300,9 @@ function GlobalWinnersRealtimeFeed() {
 
           const now = Date.now();
           const cooldown = winType === 'miocoin' ? 60_000 : 120_000;
-          if (now - lastWinnerToastRef.current < cooldown) return;
-          lastWinnerToastRef.current = now;
+          const lastForType = lastWinnerToastRef.current[winType] ?? 0;
+          if (now - lastForType < cooldown) return;
+          lastWinnerToastRef.current = { ...lastWinnerToastRef.current, [winType]: now };
 
           const contestId = newRow.contest_id as string | undefined;
           let contestName = '';
@@ -320,7 +321,7 @@ function GlobalWinnersRealtimeFeed() {
             : winType === 'miocoin'
             ? `💰 Padla MioCoin výhra${suffix}!`
             : `🎁 Padla bonusová výhra${suffix}!`;
-          toast(msg, { duration: 5000 });
+          toast(msg, { duration: 10000 });
         }
       )
       .subscribe();
