@@ -152,7 +152,7 @@ export default function ContestDetail() {
           if (user?.id && newRow.user_id === user.id) return;
 
           const now = Date.now();
-          if (now - lastWinnerToastRef.current < 90_000) return; // 90s rate limit
+          if (now - lastWinnerToastRef.current < 120_000) return; // 120s rate limit
           lastWinnerToastRef.current = now;
 
           const msg = newRow.type === 'main'
