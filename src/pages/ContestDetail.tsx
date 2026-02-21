@@ -101,6 +101,7 @@ export default function ContestDetail() {
   const [processingContestId, setProcessingContestId] = useState<string | null>(null);
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
   const [modalContestId, setModalContestId] = useState<string | null>(null);
+  const requestInFlightRef = useRef(false);
   const [selectedBonusPrize, setSelectedBonusPrize] = useState<BonusPrize | null>(null);
   const [galleryMedia, setGalleryMedia] = useState<{ id: string; contest_id: string; type: string; url: string; sort_order: number | null; created_at: string | null }[]>([]);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
@@ -219,6 +220,13 @@ export default function ContestDetail() {
 
   async function handleUseMiocoins() {
     console.log('[DEBUG ContestDetail] handleUseMiocoins called, user:', user?.id, 'contest:', contest?.id);
+
+    // Strict single-request guard
+    if (requestInFlightRef.current) {
+      console.log('[DEBUG ContestDetail] Request already in flight, ignoring click');
+      return;
+    }
+
     if (!user) {
       toast.error("Pro nákup tiketu se musíš přihlásit.");
       navigate("/login");
@@ -227,6 +235,8 @@ export default function ContestDetail() {
 
     if (!contest) return;
 
+    // Lock immediately
+    requestInFlightRef.current = true;
     console.log('[DEBUG ContestDetail] setProcessingContestId:', contest.id);
     setProcessingContestId(contest.id);
 
@@ -284,20 +294,38 @@ export default function ContestDetail() {
           bonus_prize_id: result.bonus_prize_id ?? null,
           remaining_tickets: result.remaining_tickets ?? 0
         };
-        
-        console.log('[DEBUG ContestDetail] setModalResult:', JSON.stringify(mappedResult));
-        setModalResult(mappedResult);
-        console.log('[DEBUG ContestDetail] setModalContestId:', contest.id);
-        setModalContestId(contest.id);
 
-        await loadUserBalance(user.id);
+        // Refresh balance immediately
+        loadUserBalance(user.id);
 
-        if (result.won_type === 'main') {
-          toast.success("Gratulujeme! Vyhrál jsi hlavní cenu!");
-        } else if (result.won_type === 'bonus') {
-          toast.success("Gratulujeme! Vyhrál jsi bonusovou cenu!");
+        const isWin = result.won_type === 'main' || result.won_type === 'bonus';
+
+        if (isWin) {
+          // Show full modal only for wins
+          console.log('[DEBUG ContestDetail] WIN detected, opening modal');
+          setModalResult(mappedResult);
+          setModalContestId(contest.id);
+          if (result.won_type === 'main') {
+            toast.success("Gratulujeme! Vyhrál jsi hlavní cenu!");
+          } else {
+            toast.success("Gratulujeme! Vyhrál jsi bonusovou cenu!");
+          }
         } else {
-          toast.success(`Tiket #${result.ticket_number} zakoupen!`);
+          // Non-win: lightweight inline toast feedback, no modal
+          const distanceInfo = mappedResult.distance_to_next_bonus && mappedResult.distance_to_next_bonus > 0
+            ? ` · Do bonusu: ${mappedResult.distance_to_next_bonus.toLocaleString('cs-CZ')} tiketů`
+            : '';
+          toast(`🎟️ Tiket #${result.ticket_number.toLocaleString('cs-CZ')} zakoupen!${distanceInfo}`, {
+            duration: 4000,
+            style: {
+              background: 'linear-gradient(135deg, hsl(222, 47%, 11%), hsl(222, 40%, 16%))',
+              border: '1px solid hsl(220, 30%, 25%)',
+              borderRadius: '0.75rem',
+              color: 'hsl(210, 20%, 90%)',
+              fontWeight: 500,
+              maxWidth: '380px',
+            },
+          });
         }
       }
     } catch (err) {
@@ -306,6 +334,7 @@ export default function ContestDetail() {
     } finally {
       console.log('[DEBUG ContestDetail] setProcessingContestId: null (finally)');
       setProcessingContestId(null);
+      requestInFlightRef.current = false;
     }
   }
 
@@ -610,7 +639,12 @@ export default function ContestDetail() {
               variant="premium"
               className="flex-1 h-11 font-semibold px-5 rounded-full whitespace-nowrap"
             >
-              {isProcessing ? "Zpracovávám..." : `Uplatnit ${contest.ticket_price} MioCoin`}
+              {isProcessing ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                  Losujeme…
+                </span>
+              ) : `Uplatnit ${contest.ticket_price} MioCoin`}
             </Button>
             <Button
               onClick={() => navigate("/profile")}
