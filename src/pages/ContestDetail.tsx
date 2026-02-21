@@ -108,6 +108,29 @@ export default function ContestDetail() {
   const { banners: placementBanners } = usePlacementBanners(['vzhled_karta_vyher']);
   const starryBackgroundUrl = placementBanners.vzhled_karta_vyher?.image_url || null;
 
+  // Resolve current user's public.users.id (winners.user_id references public.users, not auth.users)
+  const [currentPublicUserId, setCurrentPublicUserId] = useState<string | null>(null);
+  const [realtimeStatus, setRealtimeStatus] = useState<string>('');
+
+  useEffect(() => {
+    if (!user?.id) {
+      setCurrentPublicUserId(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('users')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data?.id) {
+          setCurrentPublicUserId(data.id);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
   // Live activity rotating messages
   const LIVE_MESSAGES = [
     'Soutěž je aktivní',
@@ -147,29 +170,30 @@ export default function ContestDetail() {
         },
         (payload) => {
           const newRow = payload.new as Record<string, unknown>;
-          // Safely parse with fallbacks for varying schema shapes
           const winType = (newRow.type ?? newRow.winner_type ?? newRow.prize_type ?? newRow.win_type) as string | undefined;
+          // winners.user_id references public.users.id, compare against resolved public user id
           const winnerUserId = (newRow.user_id ?? newRow.winner_user_id ?? newRow.profile_id) as string | undefined;
-          // Only show for bonus/main wins by OTHER users
           if (!winType || !['bonus', 'main'].includes(winType)) return;
-          if (user?.id && winnerUserId === user.id) return;
+          if (currentPublicUserId && winnerUserId === currentPublicUserId) return;
 
           const now = Date.now();
-          if (now - lastWinnerToastRef.current < 120_000) return; // 120s rate limit
+          if (now - lastWinnerToastRef.current < 120_000) return;
           lastWinnerToastRef.current = now;
 
-          const msg = newRow.type === 'main'
+          const msg = winType === 'main'
             ? '🏆 Padla hlavní výhra!'
             : '🎁 Padla bonusová výhra!';
           toast(msg, { duration: 5000 });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        setRealtimeStatus(status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [id, user?.id]);
+  }, [id, currentPublicUserId]);
 
   async function loadUserBalance(userId: string) {
     console.log('[DEBUG ContestDetail] loadUserBalance called with userId:', userId);
@@ -593,6 +617,9 @@ export default function ContestDetail() {
                   animation: 'liveShimmer 8s ease-in-out infinite',
                 }}
               />
+            </span>
+            <span className={`text-[10px] ml-2 ${realtimeStatus === 'SUBSCRIBED' ? 'text-green-400/70' : 'text-red-400/70'}`}>
+              {realtimeStatus === 'SUBSCRIBED' ? 'Live: připojeno' : 'Live: nepřipojeno'}
             </span>
           </div>
           <style>{`@keyframes liveShimmer { 0%,100% { background-position: -200% center; } 50% { background-position: 200% center; } }`}</style>
