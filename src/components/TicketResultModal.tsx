@@ -477,7 +477,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   // Control visibility via isOpen && result !== null
   return (
     <Dialog open={isOpen && result !== null} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md rounded-2xl border border-yellow-500/40 bg-gradient-to-b from-[#0b1220] via-[#0f1b33] to-[#0a1428] shadow-[0_0_40px_rgba(255,200,0,0.15)]">
+      <DialogContent className="sm:max-w-md rounded-2xl border border-yellow-500/40 bg-gradient-to-b from-[#0b1220] via-[#0f1b33] to-[#0a1428] shadow-[0_0_40px_rgba(255,200,0,0.15)] data-[state=open]:duration-[280ms] data-[state=closed]:duration-[280ms]">
         {isWinner && (
           <Confetti
             width={width}
