@@ -76,22 +76,29 @@ export const GlobalMusicPlayer: React.FC = () => {
     }
   }, [playing, fadeVolume]);
 
-  // If enabled from localStorage and user interacts anywhere, try to resume
+  // If enabled from localStorage, auto-start on first user interaction
   useEffect(() => {
     if (!enabled || playing) return;
 
     const tryPlay = () => {
       const audio = audioRef.current;
-      if (!audio || playing) return;
+      if (!audio) return;
       audio.volume = 0;
       audio.play().then(() => {
         setPlaying(true);
         fadeVolume(0, TARGET_VOLUME);
       }).catch(() => {});
+      cleanup();
     };
 
-    document.addEventListener('click', tryPlay, { once: true });
-    return () => document.removeEventListener('click', tryPlay);
+    const events = ['pointerdown', 'click', 'keydown'] as const;
+    events.forEach(e => document.addEventListener(e, tryPlay, { once: true }));
+
+    const cleanup = () => {
+      events.forEach(e => document.removeEventListener(e, tryPlay));
+    };
+
+    return cleanup;
   }, [enabled, playing, fadeVolume]);
 
   return (
