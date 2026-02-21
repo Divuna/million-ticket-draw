@@ -146,10 +146,13 @@ export default function ContestDetail() {
           filter: `contest_id=eq.${id}`,
         },
         (payload) => {
-          const newRow = payload.new as { type?: string; user_id?: string };
+          const newRow = payload.new as Record<string, unknown>;
+          // Safely parse with fallbacks for varying schema shapes
+          const winType = (newRow.type ?? newRow.winner_type ?? newRow.prize_type ?? newRow.win_type) as string | undefined;
+          const winnerUserId = (newRow.user_id ?? newRow.winner_user_id ?? newRow.profile_id) as string | undefined;
           // Only show for bonus/main wins by OTHER users
-          if (!newRow.type || !['bonus', 'main'].includes(newRow.type)) return;
-          if (user?.id && newRow.user_id === user.id) return;
+          if (!winType || !['bonus', 'main'].includes(winType)) return;
+          if (user?.id && winnerUserId === user.id) return;
 
           const now = Date.now();
           if (now - lastWinnerToastRef.current < 120_000) return; // 120s rate limit
