@@ -275,6 +275,49 @@ function isCustomerBlockedRoute(pathname: string): boolean {
   );
 }
 
+function GlobalWinnersRealtimeFeed() {
+  const { user } = useAuth();
+  const currentPublicUserId = user?.id ?? null;
+  const lastWinnerToastRef = React.useRef(0);
+
+  React.useEffect(() => {
+    const channel = supabase
+      .channel('global-winners-feed')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'winners',
+        },
+        (payload) => {
+          const newRow = payload.new as Record<string, unknown>;
+          const winType = (newRow.type ?? newRow.winner_type ?? newRow.prize_type ?? newRow.win_type) as string | undefined;
+          const winnerUserId = (newRow.user_id ?? newRow.winner_user_id ?? newRow.profile_id) as string | undefined;
+
+          if (!winType || !['bonus', 'main'].includes(winType)) return;
+          if (currentPublicUserId && winnerUserId === currentPublicUserId) return;
+
+          const now = Date.now();
+          if (now - lastWinnerToastRef.current < 120_000) return;
+          lastWinnerToastRef.current = now;
+
+          const msg = winType === 'main'
+            ? '🏆 Padla hlavní výhra!'
+            : '🎁 Padla bonusová výhra!';
+          toast(msg, { duration: 5000 });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentPublicUserId]);
+
+  return null;
+}
+
 function AppContent() {
   const { user } = useAuth();
   const { isAdmin, isPartnerAccount, isInfluencerAccount, loading: roleLoading } = useUserRole();
@@ -368,6 +411,7 @@ function AppContent() {
 
   return (
     <DateOfBirthGuard>
+      <GlobalWinnersRealtimeFeed />
       {/* Main app layout wrapper - applies different UI based on accountType */}
       <div className={isPartnerAccount ? 'partner-layout' : 'customer-layout'}>
         {/* Partner header - only visible for partner accounts on partner routes */}

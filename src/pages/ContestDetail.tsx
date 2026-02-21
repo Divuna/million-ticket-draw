@@ -108,8 +108,7 @@ export default function ContestDetail() {
   const { banners: placementBanners } = usePlacementBanners(['vzhled_karta_vyher']);
   const starryBackgroundUrl = placementBanners.vzhled_karta_vyher?.image_url || null;
 
-  // public.users.id === auth.uid() (confirmed), so user.id can be used directly
-  const currentPublicUserId = user?.id ?? null;
+  // Realtime status for Live strip (local channel just for status indicator)
   const [realtimeStatus, setRealtimeStatus] = useState<string>('');
   const [lastWinnersEventAt, setLastWinnersEventAt] = useState<number | null>(null);
   const [, forceUpdate] = useState(0);
@@ -136,9 +135,6 @@ export default function ContestDetail() {
     return () => clearInterval(interval);
   }, []);
 
-  // Realtime winner toast with rate limiting
-  const lastWinnerToastRef = useRef(0);
-
   // Tick the "last event ago" display every 5s
   useEffect(() => {
     if (lastWinnersEventAt === null) return;
@@ -146,10 +142,11 @@ export default function ContestDetail() {
     return () => clearInterval(timer);
   }, [lastWinnersEventAt]);
 
+  // Local realtime channel for status indicator + event tracking (no toasts - handled globally)
   useEffect(() => {
     if (!id) return;
     const channel = supabase
-      .channel(`winners-live-${id}`)
+      .channel(`winners-status-${id}`)
       .on(
         'postgres_changes',
         {
@@ -158,25 +155,8 @@ export default function ContestDetail() {
           table: 'winners',
           filter: `contest_id=eq.${id}`,
         },
-        (payload) => {
-          // Track every winners event for verifiability
+        () => {
           setLastWinnersEventAt(Date.now());
-
-          const newRow = payload.new as Record<string, unknown>;
-          const winType = (newRow.type ?? newRow.winner_type ?? newRow.prize_type ?? newRow.win_type) as string | undefined;
-          const winnerUserId = (newRow.user_id ?? newRow.winner_user_id ?? newRow.profile_id) as string | undefined;
-
-          if (!winType || !['bonus', 'main'].includes(winType)) return;
-          if (currentPublicUserId && winnerUserId === currentPublicUserId) return;
-
-          const now = Date.now();
-          if (now - lastWinnerToastRef.current < 120_000) return;
-          lastWinnerToastRef.current = now;
-
-          const msg = winType === 'main'
-            ? '🏆 Padla hlavní výhra!'
-            : '🎁 Padla bonusová výhra!';
-          toast(msg, { duration: 5000 });
         }
       )
       .subscribe((status) => {
@@ -186,7 +166,7 @@ export default function ContestDetail() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [id, currentPublicUserId]);
+  }, [id]);
 
   async function loadUserBalance(userId: string) {
     console.log('[DEBUG ContestDetail] loadUserBalance called with userId:', userId);
