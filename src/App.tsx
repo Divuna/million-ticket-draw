@@ -290,7 +290,7 @@ function GlobalWinnersRealtimeFeed() {
           schema: 'public',
           table: 'winners',
         },
-        (payload) => {
+        async (payload) => {
           const newRow = payload.new as Record<string, unknown>;
           const winType = (newRow.type ?? newRow.winner_type ?? newRow.prize_type ?? newRow.win_type) as string | undefined;
           const winnerUserId = (newRow.user_id ?? newRow.winner_user_id ?? newRow.profile_id) as string | undefined;
@@ -302,9 +302,21 @@ function GlobalWinnersRealtimeFeed() {
           if (now - lastWinnerToastRef.current < 120_000) return;
           lastWinnerToastRef.current = now;
 
+          const contestId = newRow.contest_id as string | undefined;
+          let contestName = '';
+          if (contestId) {
+            const { data } = await supabase
+              .from('contests')
+              .select('name')
+              .eq('id', contestId)
+              .maybeSingle();
+            if (data?.name) contestName = data.name;
+          }
+
+          const suffix = contestName ? ` – ${contestName}` : '';
           const msg = winType === 'main'
-            ? '🏆 Padla hlavní výhra!'
-            : '🎁 Padla bonusová výhra!';
+            ? `🏆 Padla hlavní výhra${suffix}!`
+            : `🎁 Padla bonusová výhra${suffix}!`;
           toast(msg, { duration: 5000 });
         }
       )
