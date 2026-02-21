@@ -90,14 +90,36 @@ export const GlobalMusicPlayer: React.FC = () => {
         setPlaying(true);
         fadeVolume(0, TARGET_VOLUME);
         document.removeEventListener('pointerdown', handler);
-      }).catch(() => {
-        // Keep listener — browser may still block, retry on next interaction
-      });
+      }).catch(() => {});
     };
 
     document.addEventListener('pointerdown', handler);
     return () => document.removeEventListener('pointerdown', handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Pause on visibility hidden, resume on visible
+  useEffect(() => {
+    const onVisChange = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (document.visibilityState === 'hidden') {
+        if (playingRef.current) audio.pause();
+      } else if (document.visibilityState === 'visible') {
+        if (playingRef.current) audio.play().catch(() => {});
+      }
+    };
+    const onPageHide = () => {
+      const audio = audioRef.current;
+      if (audio && playingRef.current) audio.pause();
+    };
+
+    document.addEventListener('visibilitychange', onVisChange);
+    window.addEventListener('pagehide', onPageHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisChange);
+      window.removeEventListener('pagehide', onPageHide);
+    };
   }, []);
 
   return (
