@@ -108,28 +108,11 @@ export default function ContestDetail() {
   const { banners: placementBanners } = usePlacementBanners(['vzhled_karta_vyher']);
   const starryBackgroundUrl = placementBanners.vzhled_karta_vyher?.image_url || null;
 
-  // Resolve current user's public.users.id (winners.user_id references public.users, not auth.users)
-  const [currentPublicUserId, setCurrentPublicUserId] = useState<string | null>(null);
+  // public.users.id === auth.uid() (confirmed), so user.id can be used directly
+  const currentPublicUserId = user?.id ?? null;
   const [realtimeStatus, setRealtimeStatus] = useState<string>('');
-
-  useEffect(() => {
-    if (!user?.id) {
-      setCurrentPublicUserId(null);
-      return;
-    }
-    let cancelled = false;
-    supabase
-      .from('users')
-      .select('id')
-      .eq('id', user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled && data?.id) {
-          setCurrentPublicUserId(data.id);
-        }
-      });
-    return () => { cancelled = true; };
-  }, [user?.id]);
+  const [lastWinnersEventAt, setLastWinnersEventAt] = useState<number | null>(null);
+  const [, forceUpdate] = useState(0);
 
   // Live activity rotating messages
   const LIVE_MESSAGES = [
@@ -156,6 +139,13 @@ export default function ContestDetail() {
   // Realtime winner toast with rate limiting
   const lastWinnerToastRef = useRef(0);
 
+  // Tick the "last event ago" display every 5s
+  useEffect(() => {
+    if (lastWinnersEventAt === null) return;
+    const timer = setInterval(() => forceUpdate((n) => n + 1), 5000);
+    return () => clearInterval(timer);
+  }, [lastWinnersEventAt]);
+
   useEffect(() => {
     if (!id) return;
     const channel = supabase
@@ -169,10 +159,13 @@ export default function ContestDetail() {
           filter: `contest_id=eq.${id}`,
         },
         (payload) => {
+          // Track every winners event for verifiability
+          setLastWinnersEventAt(Date.now());
+
           const newRow = payload.new as Record<string, unknown>;
           const winType = (newRow.type ?? newRow.winner_type ?? newRow.prize_type ?? newRow.win_type) as string | undefined;
-          // winners.user_id references public.users.id, compare against resolved public user id
           const winnerUserId = (newRow.user_id ?? newRow.winner_user_id ?? newRow.profile_id) as string | undefined;
+
           if (!winType || !['bonus', 'main'].includes(winType)) return;
           if (currentPublicUserId && winnerUserId === currentPublicUserId) return;
 
@@ -618,8 +611,15 @@ export default function ContestDetail() {
                 }}
               />
             </span>
-            <span className={`text-[10px] ml-2 ${realtimeStatus === 'SUBSCRIBED' ? 'text-green-400/70' : 'text-red-400/70'}`}>
-              {realtimeStatus === 'SUBSCRIBED' ? 'Live: připojeno' : 'Live: nepřipojeno'}
+            <span className="flex flex-col items-end ml-2">
+              <span className={`text-[10px] leading-tight ${realtimeStatus === 'SUBSCRIBED' ? 'text-green-400/70' : 'text-red-400/70'}`}>
+                {realtimeStatus === 'SUBSCRIBED' ? 'Live: připojeno' : 'Live: nepřipojeno'}
+              </span>
+              {lastWinnersEventAt !== null && (
+                <span className="text-[9px] leading-tight text-gray-400/60">
+                  Poslední live event: před {Math.max(1, Math.round((Date.now() - lastWinnersEventAt) / 1000))}&nbsp;s
+                </span>
+              )}
             </span>
           </div>
           <style>{`@keyframes liveShimmer { 0%,100% { background-position: -200% center; } 50% { background-position: 200% center; } }`}</style>
