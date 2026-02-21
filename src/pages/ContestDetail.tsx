@@ -117,11 +117,16 @@ export default function ContestDetail() {
     'Šance na výhru s každým tiketem',
   ];
   const [liveMessageIndex, setLiveMessageIndex] = useState(0);
+  const [liveVisible, setLiveVisible] = useState(true);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setLiveMessageIndex((prev) => (prev + 1) % LIVE_MESSAGES.length);
-    }, 4000);
+      setLiveVisible(false);
+      setTimeout(() => {
+        setLiveMessageIndex((prev) => (prev + 1) % LIVE_MESSAGES.length);
+        setLiveVisible(true);
+      }, 400);
+    }, 8000);
     return () => clearInterval(interval);
   }, []);
 
@@ -562,17 +567,32 @@ export default function ContestDetail() {
           </div>
           {/* Live activity strip */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 w-fit">
-            <span className="relative flex h-2.5 w-2.5">
+            <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
             </span>
-            <span
-              key={liveMessageIndex}
-              className="text-xs text-gray-300 font-medium animate-fade-in"
-            >
-              {LIVE_MESSAGES[liveMessageIndex]}
+            <span className="relative inline-flex flex-col overflow-hidden">
+              <span
+                className="text-xs text-gray-300 font-medium transition-all duration-[350ms] ease-out"
+                style={{
+                  opacity: liveVisible ? 1 : 0,
+                  transform: liveVisible ? 'translateY(0)' : 'translateY(-14px)',
+                }}
+              >
+                {LIVE_MESSAGES[liveMessageIndex]}
+              </span>
+              {/* Gold shimmer underline */}
+              <span
+                className="h-[1px] w-full mt-0.5"
+                style={{
+                  background: 'linear-gradient(90deg, transparent 0%, hsl(45,80%,55%) 50%, transparent 100%)',
+                  backgroundSize: '200% 100%',
+                  animation: 'liveShimmer 8s ease-in-out infinite',
+                }}
+              />
             </span>
           </div>
+          <style>{`@keyframes liveShimmer { 0%,100% { background-position: -200% center; } 50% { background-position: 200% center; } }`}</style>
           <div className="flex flex-col sm:flex-row items-stretch gap-3 mt-auto">
             <Button
               onClick={handleUseMiocoins}
