@@ -2156,6 +2156,13 @@ export type Database = {
             referencedRelation: "winners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "winner_status_history_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "winners_with_contest"
+            referencedColumns: ["id"]
+          },
         ]
       }
       winners: {
@@ -2390,6 +2397,44 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      winners_with_contest: {
+        Row: {
+          contest_id: string | null
+          contest_name: string | null
+          created_at: string | null
+          delivered: boolean | null
+          id: string | null
+          notes: string | null
+          prize_id: string | null
+          status: string | null
+          type: string | null
+          user_id: string | null
+          user_seen: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winners_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "admin_contest_status"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "winners_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "winners_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
