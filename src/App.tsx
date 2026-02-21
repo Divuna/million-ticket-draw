@@ -295,11 +295,12 @@ function GlobalWinnersRealtimeFeed() {
           const winType = (newRow.type ?? newRow.winner_type ?? newRow.prize_type ?? newRow.win_type) as string | undefined;
           const winnerUserId = (newRow.user_id ?? newRow.winner_user_id ?? newRow.profile_id) as string | undefined;
 
-          if (!winType || !['bonus', 'main'].includes(winType)) return;
+          if (!winType || !['bonus', 'main', 'miocoin'].includes(winType)) return;
           if (currentPublicUserId && winnerUserId === currentPublicUserId) return;
 
           const now = Date.now();
-          if (now - lastWinnerToastRef.current < 120_000) return;
+          const cooldown = winType === 'miocoin' ? 60_000 : 120_000;
+          if (now - lastWinnerToastRef.current < cooldown) return;
           lastWinnerToastRef.current = now;
 
           const contestId = newRow.contest_id as string | undefined;
@@ -316,6 +317,8 @@ function GlobalWinnersRealtimeFeed() {
           const suffix = contestName ? ` – ${contestName}` : '';
           const msg = winType === 'main'
             ? `🏆 Padla hlavní výhra${suffix}!`
+            : winType === 'miocoin'
+            ? `💰 Padla MioCoin výhra${suffix}!`
             : `🎁 Padla bonusová výhra${suffix}!`;
           toast(msg, { duration: 5000 });
         }
