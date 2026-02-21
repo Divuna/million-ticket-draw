@@ -10,6 +10,7 @@ const FADE_STEPS = 15;
 export const GlobalMusicPlayer: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const fadeRef = useRef<number | null>(null);
+  const playingRef = useRef(false);
   const [enabled, setEnabled] = useState(() => {
     try {
       return localStorage.getItem(STORAGE_KEY) === '1';
@@ -18,6 +19,9 @@ export const GlobalMusicPlayer: React.FC = () => {
     }
   });
   const [playing, setPlaying] = useState(false);
+
+  // Keep ref in sync
+  useEffect(() => { playingRef.current = playing; }, [playing]);
 
   // Save preference
   useEffect(() => {
@@ -56,50 +60,45 @@ export const GlobalMusicPlayer: React.FC = () => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (playing) {
-      // Fade out then pause
+    if (playingRef.current) {
       fadeVolume(audio.volume, 0, () => {
         audio.pause();
         setPlaying(false);
         setEnabled(false);
       });
     } else {
-      // Start playing with fade in
       audio.volume = 0;
       audio.play().then(() => {
         setPlaying(true);
         setEnabled(true);
         fadeVolume(0, TARGET_VOLUME);
-      }).catch(() => {
-        // Browser blocked autoplay — user needs to interact again
-      });
+      }).catch(() => {});
     }
-  }, [playing, fadeVolume]);
+  }, [fadeVolume]);
 
-  // If enabled from localStorage, auto-start on first user interaction
+  // Mount-only: if enabled, attach a single pointerdown listener to auto-start
   useEffect(() => {
-    if (!enabled || playing) return;
+    const isEnabled = localStorage.getItem(STORAGE_KEY) === '1';
+    if (!isEnabled) return;
 
-    const tryPlay = () => {
+    const handler = () => {
+      if (playingRef.current) return;
       const audio = audioRef.current;
       if (!audio) return;
       audio.volume = 0;
       audio.play().then(() => {
         setPlaying(true);
         fadeVolume(0, TARGET_VOLUME);
-      }).catch(() => {});
-      cleanup();
+        document.removeEventListener('pointerdown', handler);
+      }).catch(() => {
+        // Keep listener — browser may still block, retry on next interaction
+      });
     };
 
-    const events = ['pointerdown', 'click', 'keydown'] as const;
-    events.forEach(e => document.addEventListener(e, tryPlay, { once: true }));
-
-    const cleanup = () => {
-      events.forEach(e => document.removeEventListener(e, tryPlay));
-    };
-
-    return cleanup;
-  }, [enabled, playing, fadeVolume]);
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
