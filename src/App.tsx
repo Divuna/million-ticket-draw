@@ -315,13 +315,13 @@ function GlobalWinnersRealtimeFeed() {
             if (data?.name) contestName = data.name;
           }
 
-          const suffix = contestName ? ` – ${contestName}` : '';
+          const suffix = contestName ? ` v soutěži ${contestName}` : '';
           const icon = winType === 'main' ? '🏆' : winType === 'miocoin' ? '💰' : '🎁';
           const label = winType === 'main'
-            ? `Padla hlavní výhra${suffix}!`
+            ? `Padla hlavní výhra${suffix}`
             : winType === 'miocoin'
-            ? `Padla MioCoin výhra${suffix}!`
-            : `Padla bonusová výhra${suffix}!`;
+            ? `Padla MioCoin výhra${suffix}`
+            : `Padla bonusová výhra${suffix}`;
 
           toast(label, {
             duration: 10000,
