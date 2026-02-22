@@ -7,7 +7,7 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.send_event_to_sofinity]
-verify_jwt = false
+verify_jwt = true
 
 [functions.sofinity-integration-test]
 verify_jwt = false
@@ -79,7 +79,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-support-email]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-partner-invoice-pdf]
 verify_jwt = false

@@ -31,6 +31,22 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // JWT auth guard
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+
     const { name, email, category, message }: SupportRequest = await req.json();
 
     // Validate required fields

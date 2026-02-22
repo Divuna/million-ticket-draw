@@ -22,9 +22,18 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Internal authorization guard
-  const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
-  if (req.headers.get("x-internal-token") !== internalToken) {
+  // JWT auth guard
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  }
+  const supabaseAuth = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    { global: { headers: { Authorization: authHeader } } }
+  );
+  const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser();
+  if (authError || !authUser) {
     return new Response("Unauthorized", { status: 401, headers: corsHeaders });
   }
 
