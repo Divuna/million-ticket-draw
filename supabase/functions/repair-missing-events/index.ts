@@ -20,6 +20,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Internal authorization guard
+  const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
+  if (req.headers.get("x-internal-token") !== internalToken) {
+    return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  }
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!

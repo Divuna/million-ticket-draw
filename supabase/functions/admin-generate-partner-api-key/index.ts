@@ -10,11 +10,10 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ success: false, error: "Method not allowed" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+  // Internal authorization guard
+  const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
+  if (req.headers.get("x-internal-token") !== internalToken) {
+    return new Response("Unauthorized", { status: 401, headers: corsHeaders });
   }
 
   try {
