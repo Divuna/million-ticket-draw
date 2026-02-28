@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Heart, Trophy } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import './ContestCard.css';
 
 interface Contest {
@@ -77,17 +78,20 @@ export const ContestCard: React.FC<ContestCardProps> = ({
   };
 
   // Determine the best image source with priority
+  const resolveStorageUrl = (fileName: string, bucket: string): string => {
+    if (fileName.startsWith('http')) return fileName;
+    return supabase.storage.from(bucket).getPublicUrl(fileName).data.publicUrl;
+  };
+
   const getBestImageUrl = (): string | null => {
-    if (contest.banner_image?.startsWith('http')) {
-      return contest.banner_image;
+    if (contest.banner_image) {
+      return resolveStorageUrl(contest.banner_image, 'contest-banners');
     }
-    if (contest.main_prize_secondary_image?.startsWith('http')) {
-      return contest.main_prize_secondary_image;
+    if (contest.main_prize_secondary_image) {
+      return resolveStorageUrl(contest.main_prize_secondary_image, 'contest-images');
     }
     if (contest.main_image) {
-      return contest.main_image.startsWith('http')
-        ? contest.main_image
-        : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`;
+      return resolveStorageUrl(contest.main_image, 'contest-images');
     }
     return null;
   };
