@@ -1,44 +1,30 @@
 
 
-# Oprava pretrvavajiciho problemu s problikavanim TicketResultModal
-
 ## Problem
-Modal stale problikava - uzivatel vidi na zlomek sekundy "non-winner" obsah pred spravnym vysledkem.
 
-## Pricina
-Jsou dva `useEffect` hooky, ktere oba reagují na zmenu `isOpen` a oba meni `isLoading`, ale v opacnem smeru:
+The "Připravujeme" section on the homepage shows empty placeholder cards because the `coming_soon_banners` table has Row Level Security (RLS) enabled with only an admin policy. Regular and anonymous users cannot read the data.
 
-1. **Cleanup effect** (radek 229-241): Nastavi `setIsLoading(true)` kdyz `!isOpen`
-2. **Fetch effect** (radek 194-226): Taky se spusti kdyz `!isOpen` a nastavi `setIsLoading(false)` (radek 197)
+The images themselves are stored correctly in the `banner-images` bucket (which is public), and the URLs in the database are valid full public URLs. The issue is purely an RLS policy problem.
 
-React spusti oba effecty ve stejnem renderovacim cyklu. Fetch effect svym `setIsLoading(false)` prepise cleanup effect. Kdyz se modal znovu otevre, `isLoading` je `false` a na prvni render se zobrazi non-winner obsah misto loading stavu.
+## Root Cause
 
-## Reseni
+- Table `coming_soon_banners` has RLS enabled
+- Only policy: `Admins can manage coming soon banners` (ALL for admin/superadmin roles)
+- No SELECT policy exists for anonymous or authenticated users
+- Homepage queries this table as the current user, which gets zero rows back
 
-### Soubor: `src/components/TicketResultModal.tsx`
+## Plan
 
-**Zmena 1** - Radek 195-198: Odebrat `setIsLoading(false)` z early return a NERESIT isLoading pri zavreni modalu ve fetch effectu. To nechame ciste na cleanup effectu.
+**Step 1: Add a public SELECT RLS policy** on `coming_soon_banners` to allow everyone (including anonymous visitors) to read banners.
 
-```typescript
-// Pred:
-if (!isOpen || !result || !contestId) {
-  setBonusPrize(null);
-  setIsLoading(false);
-  return;
-}
-
-// Po:
-if (!isOpen || !result || !contestId) {
-  setBonusPrize(null);
-  return;
-}
+```sql
+CREATE POLICY "Anyone can view coming soon banners"
+  ON public.coming_soon_banners
+  FOR SELECT
+  USING (true);
 ```
 
-Tato zmena zajisti, ze kdyz se modal zavira, `isLoading` zustane na `true` (nastavene cleanup effectem) a nebude prepsan na `false`.
+This is safe because the table only contains public display data (id, image_url, title, created_at) with no sensitive information.
 
-## Souhrn
-- Jedina zmena: odebrani `setIsLoading(false)` na radku 197
-- Zadne nove soubory
-- Zadna zmena logiky, struktury ani stylu
-- Pouze `src/components/TicketResultModal.tsx`
+No code changes needed -- the frontend logic in `Homepage.tsx` and `useComingSoonBanners.ts` is already correct.
 
