@@ -40,17 +40,38 @@ export const DateOfBirthProvider: React.FC<{ children: React.ReactNode }> = ({ c
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('date_of_birth')
+          .select('date_of_birth, updated_at')
           .eq('id', user.id)
           .maybeSingle();
 
         if (error) {
           console.error('Error checking date of birth:', error);
-          setHasDateOfBirth(false);
+          // On error, don't block the user
+          setHasDateOfBirth(true);
         } else {
           const dob = (data as any)?.date_of_birth;
           setDateOfBirth(dob || null);
-          setHasDateOfBirth(!!dob);
+
+          if (dob) {
+            // User already has DOB set
+            setHasDateOfBirth(true);
+          } else {
+            // DOB is null – only enforce on first login (profile never manually updated)
+            const profileUpdatedAt = (data as any)?.updated_at;
+            const userCreatedAt = user.created_at;
+            if (profileUpdatedAt && userCreatedAt) {
+              const diffMs = Math.abs(
+                new Date(profileUpdatedAt).getTime() - new Date(userCreatedAt).getTime()
+              );
+              // If updated_at is within 5 minutes of account creation,
+              // the profile was never touched → first login → require DOB
+              const isFirstLogin = diffMs < 5 * 60 * 1000;
+              setHasDateOfBirth(!isFirstLogin);
+            } else {
+              // No profile row yet → first login
+              setHasDateOfBirth(false);
+            }
+          }
         }
       } catch (error) {
         console.error('Error:', error);
