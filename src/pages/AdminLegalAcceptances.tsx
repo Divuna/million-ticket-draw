@@ -83,7 +83,7 @@ const AdminLegalAcceptances: React.FC = () => {
         isRevoked: acceptance.document_slug === 'marketing' && acceptance.document_version === 'revoked'
       })) as LegalAcceptance[];
     },
-    enabled: role === 'admin' || role === 'superadmin',
+    enabled: isAdmin,
   });
 
   // Apply filters
