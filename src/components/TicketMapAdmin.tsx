@@ -56,6 +56,14 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
         ticketCountMap[contestId] = count ?? 0;
       }
 
+      // 3. Load bonus prize positions per contest
+      const { data: bonusRows, error: bonusError } = await supabase
+        .from('bonus_prizes')
+        .select('contest_id, ticket_position')
+        .in('contest_id', contestIds);
+
+      if (bonusError) console.error('Error fetching bonus prizes:', bonusError);
+
       // Group bonus positions per contest
       const bonusMap: Record<string, number[]> = {};
       (bonusRows || []).forEach(b => {
