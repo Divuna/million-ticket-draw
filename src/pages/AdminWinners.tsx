@@ -62,6 +62,7 @@ interface StatusHistoryEntry {
 
 const AdminWinners: React.FC = () => {
   const { user, session } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const [winners, setWinners] = useState<WinnerData[]>([]);
   const [filteredWinners, setFilteredWinners] = useState<WinnerData[]>([]);
   const [loading, setLoading] = useState(true);
