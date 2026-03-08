@@ -2566,6 +2566,10 @@ export type Database = {
         Args: { p_contest_id: string; p_user_id: string }
         Returns: Json
       }
+      buy_voucher_atomic: {
+        Args: { p_user_id: string; p_voucher_id: string }
+        Returns: Json
+      }
       calculate_influencer_commissions_current_month: {
         Args: never
         Returns: undefined
