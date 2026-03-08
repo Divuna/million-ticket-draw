@@ -1251,12 +1251,12 @@ const Profile: React.FC = () => {
             </div>
             
             {/* Premium corner accents */}
-            <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-yellow-500/15 to-transparent rounded-br-full" />
-            <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-yellow-500/10 to-transparent rounded-tl-full" />
+            <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-yellow-500/15 to-transparent rounded-br-full pointer-events-none" />
+            <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-yellow-500/10 to-transparent rounded-tl-full pointer-events-none" />
             
             {/* Background glow orbs */}
-            <div className="absolute top-1/3 left-1/3 w-28 h-28 bg-yellow-500/8 rounded-full blur-2xl" />
-            <div className="absolute bottom-1/4 right-1/4 w-24 h-24 bg-yellow-600/5 rounded-full blur-xl" />
+            <div className="absolute top-1/3 left-1/3 w-28 h-28 bg-yellow-500/8 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute bottom-1/4 right-1/4 w-24 h-24 bg-yellow-600/5 rounded-full blur-xl pointer-events-none" />
             
             <div className="relative p-8">
               {/* Section Header */}
