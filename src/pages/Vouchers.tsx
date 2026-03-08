@@ -216,7 +216,7 @@ const Vouchers: React.FC = () => {
         .from('wallets')
         .select('balance_coins')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (walletError) throw walletError;
 

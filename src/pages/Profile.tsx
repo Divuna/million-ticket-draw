@@ -308,7 +308,7 @@ const Profile: React.FC = () => {
 
   const fetchUserWallet = async () => {
     try {
-      const { data, error } = await (supabase as any).from('wallets').select('*').eq('user_id', user?.id).maybeSingle();
+      const { data, error } = await supabase.from('wallets').select('*').eq('user_id', user?.id ?? '').maybeSingle();
       if (error) {
         console.error('Error fetching wallet:', error);
         setWallet({
