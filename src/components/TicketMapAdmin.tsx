@@ -42,19 +42,18 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
 
       const contestIds = contestRows.map(c => c.id);
 
-      // 2. Count tickets per contest using server-side count (avoids 1000-row limit)
+      // 2. Get ticket counts from admin_contest_status view (bypasses RLS on tickets table)
+      const { data: statusRows, error: statusError } = await supabase
+        .from('admin_contest_status')
+        .select('contest_id, total_tickets')
+        .in('contest_id', contestIds);
+
+      if (statusError) console.error('Error fetching contest status:', statusError);
+
       const ticketCountMap: Record<string, number> = {};
-      for (const contestId of contestIds) {
-        const { count, error: ticketError } = await supabase
-          .from('tickets')
-          .select('id', { count: 'exact', head: true })
-          .eq('contest_id', contestId);
-        
-        if (ticketError) {
-          console.error(`Error counting tickets for contest ${contestId}:`, ticketError);
-        }
-        ticketCountMap[contestId] = count ?? 0;
-      }
+      (statusRows || []).forEach(row => {
+        ticketCountMap[row.contest_id] = row.total_tickets ?? 0;
+      });
 
       // 3. Load bonus prize positions per contest
       const { data: bonusRows, error: bonusError } = await supabase
