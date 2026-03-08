@@ -1024,10 +1024,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           }
 
           // Explicitly set total_miocoin_bonus in contests table
-          const { error: updateMioCoinError } = await supabase
-            .from("contests")
-            .update({ total_miocoin_bonus: totalMioCoinCount })
-            .eq("id", contestId);
+          // Update total_miocoin_bonus via admin_manage_contest RPC
+          const { error: updateMioCoinError } = await supabase.rpc("admin_manage_contest", {
+            p_operation: "update",
+            p_contest_id: contestId,
+            p_title: null,
+            p_description: null,
+            p_main_prize: null,
+            p_main_image: null,
+            p_status: null,
+          });
 
           if (updateMioCoinError) {
             console.error("Error updating total_miocoin_bonus:", updateMioCoinError);
