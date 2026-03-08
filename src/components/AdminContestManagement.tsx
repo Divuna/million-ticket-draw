@@ -1215,7 +1215,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                     <SelectValue placeholder="Vyber status" />
                   </SelectTrigger>
                   <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
-                    {STATUS_OPTIONS.map((option) => (
+                    {SELECTABLE_STATUS_OPTIONS.map((option) => (
                       <SelectItem
                         key={option.value}
                         value={option.value}
