@@ -48,7 +48,7 @@ const DOCUMENT_OPTIONS = [
 const PAGE_SIZE = 25;
 
 const AdminLegalAcceptances: React.FC = () => {
-  const { role, loading: roleLoading } = useUserRole();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const [documentFilter, setDocumentFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
