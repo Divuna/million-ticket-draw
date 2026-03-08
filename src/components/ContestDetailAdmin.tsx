@@ -60,6 +60,10 @@ const STATUS_OPTIONS = [
   { value: "pending", label: "Čeká na start" },
   { value: "active", label: "Aktivní" },
   { value: "paused", label: "Pozastaveno" },
+];
+
+const STATUS_OPTIONS_WITH_CLOSED = [
+  ...STATUS_OPTIONS,
   { value: "closed", label: "Ukončeno" },
 ];
 
@@ -249,6 +253,15 @@ const ContestDetailAdmin: React.FC = () => {
 
   const handleStatusChange = async (newStatus: string) => {
     if (!contestId) return;
+
+    if (newStatus === "closed") {
+      toast({
+        title: "Akce zamítnuta",
+        description: "Soutěž lze uzavřít pouze automaticky systémem.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setUpdatingStatus(true);
 
