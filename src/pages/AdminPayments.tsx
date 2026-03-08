@@ -70,35 +70,11 @@ const AdminPayments: React.FC = () => {
   };
 
   const updatePaymentStatus = async (paymentId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('payments')
-        .update({ status: newStatus })
-        .eq('id', paymentId);
-
-      if (error) throw error;
-
-      // Log admin action
-      await supabase.rpc('log_admin_action', {
-        action_name: 'payment_status_updated',
-        entity_type: 'payment',
-        entity_id: paymentId,
-        new_data: { status: newStatus }
-      });
-
-      await fetchPayments();
-      toast({
-        title: "Úspěch",
-        description: "Status platby byl aktualizován",
-      });
-    } catch (error) {
-      console.error('Error updating payment status:', error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se aktualizovat status platby",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Akce zamítnuta",
+      description: "Stav platby nelze měnit přímo. Použijte backend workflow (Stripe webhook / refund flow) pro zachování konzistence s peněženkami a tikety.",
+      variant: "destructive",
+    });
   };
 
   const filteredPayments = payments.filter(payment => {

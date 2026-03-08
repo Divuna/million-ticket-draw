@@ -267,6 +267,8 @@ const AdminUsers: React.FC = () => {
                                 <p>Role partnerských účtů nelze měnit</p>
                               </TooltipContent>
                             </Tooltip>
+                          ) : !isSuperAdmin ? (
+                            <Badge variant="outline">{getRoleBadge(user.role)}</Badge>
                           ) : (
                             <Select 
                               value={user.role} 
