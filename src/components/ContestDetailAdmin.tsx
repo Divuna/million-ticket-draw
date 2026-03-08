@@ -15,7 +15,7 @@ import { toast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Navigate } from 'react-router-dom';
+
 
 interface ContestData {
   id: string;
