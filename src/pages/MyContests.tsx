@@ -36,7 +36,7 @@ const MyContests: React.FC = () => {
 
   const fetchMyContests = async () => {
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('tickets')
         .select(`
           contest_id,
