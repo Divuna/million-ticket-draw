@@ -730,12 +730,12 @@ const AdminWinners: React.FC = () => {
     }
   ).length;
 
-  if (!session) {
-    return <Navigate to="/login" replace />;
+  if (roleLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Načítání...</div>;
   }
 
-  if (!isAdmin) {
-    return <Navigate to="/" replace />;
+  if (!session || !isAdmin) {
+    return <Navigate to="/login" replace />;
   }
 
   if (loading) {
