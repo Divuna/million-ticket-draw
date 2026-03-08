@@ -93,6 +93,16 @@ const AdminUsers: React.FC = () => {
   };
 
   const updateUserRole = async (userId: string, newRole: string) => {
+    // Only superadmin can change roles
+    if (!isSuperAdmin) {
+      toast({
+        title: "Přístup zamítnut",
+        description: "Pouze SuperAdmin může měnit role uživatelů.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Check if user is a partner account
     const targetUser = users.find(u => u.id === userId);
     if (targetUser?.isPartnerAccount) {
@@ -105,12 +115,27 @@ const AdminUsers: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase
+      // Update role in user_roles table (source of truth)
+      if (targetUser?.hasUserRole) {
+        // Update existing record
+        const { error } = await supabase
+          .from('user_roles')
+          .update({ role: newRole as any })
+          .eq('user_id', userId);
+        if (error) throw error;
+      } else {
+        // Insert new record
+        const { error } = await supabase
+          .from('user_roles')
+          .insert({ user_id: userId, role: newRole as any });
+        if (error) throw error;
+      }
+
+      // Also keep users.role in sync for backward compatibility
+      await supabase
         .from('users')
         .update({ role: newRole })
         .eq('id', userId);
-
-      if (error) throw error;
 
       // Log admin action
       await supabase.rpc('log_admin_action', {
