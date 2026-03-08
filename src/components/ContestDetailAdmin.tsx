@@ -67,6 +67,7 @@ const ContestDetailAdmin: React.FC = () => {
   console.log('ContestDetailAdmin component is loading');
   const { contestId } = useParams<{ contestId: string }>();
   const { user } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const [contest, setContest] = useState<ContestData | null>(null);
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
