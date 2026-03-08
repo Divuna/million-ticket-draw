@@ -225,10 +225,11 @@ const ContestDetailAdmin: React.FC = () => {
     if (!contestId) return;
 
     try {
-      const { error } = await supabase
-        .from('contests')
-        .update({ description: notes })
-        .eq('id', contestId);
+      const { error } = await supabase.rpc('admin_manage_contest', {
+        p_action: 'update',
+        p_contest_id: contestId,
+        p_data: { description: notes }
+      });
 
       if (error) throw error;
 

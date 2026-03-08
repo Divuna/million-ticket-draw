@@ -23,9 +23,15 @@ interface Thread {
 
 export default function AdminMessages() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
 
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(false);
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (roleLoading) return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" /></div>;
+  if (!isAdmin) return <Navigate to="/" replace />;
 
   const loadThreads = async () => {
     setLoading(true);

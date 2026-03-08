@@ -30,7 +30,7 @@ const OneMilAudit = () => {
   const [auditResults, setAuditResults] = useState<AuditResult | null>(null);
 
   // Redirect if not admin
-  if (!user || (role !== 'admin' && role !== 'superadmin')) {
+  if (!user || !isAdmin) {
     navigate('/login');
     return null;
   }

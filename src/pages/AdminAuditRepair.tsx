@@ -58,7 +58,7 @@ const AdminAuditRepair = () => {
   }
 
   // Redirect if not admin
-  if (!user || (role !== 'admin' && role !== 'superadmin')) {
+  if (!user || !isAdmin) {
     return <Navigate to="/login" replace />;
   }
 

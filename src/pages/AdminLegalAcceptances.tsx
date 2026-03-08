@@ -164,7 +164,7 @@ const AdminLegalAcceptances: React.FC = () => {
     return <div className="flex items-center justify-center min-h-screen">Načítám...</div>;
   }
 
-  if (role !== 'admin' && role !== 'superadmin') {
+  if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
 
