@@ -184,16 +184,8 @@ export default function ContestDetail() {
         return;
       }
 
-      const { data: profile, error: profileError } = await supabase.from("profiles").select("miocoin_balance").eq("id", userId).maybeSingle();
-
-      if (profileError) {
-        console.error('[DEBUG ContestDetail] loadUserBalance profile error:', profileError, JSON.stringify(profileError));
-      }
-
-      if (profile?.miocoin_balance != null) {
-        console.log('[DEBUG ContestDetail] setBalance (profile):', profile.miocoin_balance);
-        setBalance(profile.miocoin_balance);
-      }
+      // profiles table does not have miocoin_balance column; wallet is the only source
+      console.log('[DEBUG ContestDetail] No wallet found for user, balance stays 0');
     } catch (err) {
       console.error('[DEBUG ContestDetail] loadUserBalance CAUGHT:', err, JSON.stringify(err));
     }
