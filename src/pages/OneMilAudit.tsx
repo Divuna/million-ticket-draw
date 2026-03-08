@@ -21,7 +21,7 @@ interface AuditResult {
 
 const OneMilAudit = () => {
   const { user } = useAuth();
-  const { role } = useUserRole();
+  const { isAdmin } = useUserRole();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isTestingConnection, setIsTestingConnection] = useState(false);
