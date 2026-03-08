@@ -244,45 +244,19 @@ const Homepage = () => {
 
 
     try {
-      // Check user's wallet balance
-      const { data: walletData, error: walletError } = await supabase
-        .from('wallets')
-        .select('balance_coins')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('buy_voucher_atomic', {
+        p_user_id: user.id,
+        p_voucher_id: voucherId,
+      });
 
-      if (walletError) throw walletError;
+      if (error) throw error;
 
-      if (!walletData || walletData.balance_coins < 5) {
-        toast.error("Nemáte dostatek MioCoinů. Potřebujete alespoň 5 MioCoinů.");
+      const result = data as { success: boolean; error?: string };
+
+      if (!result.success) {
+        toast.error(result.error || "Nepodařilo se zakoupit voucher");
         return;
       }
-
-      // Purchase voucher: create user_vouchers record and deduct 1 MC
-      const { error: purchaseError } = await supabase
-        .from('user_vouchers')
-        .insert({
-          user_id: user.id,
-          voucher_id: voucherId,
-          redeemed: false
-        });
-
-      if (purchaseError) {
-        // Check if already purchased
-        if (purchaseError.code === '23505') {
-          toast.error("Tento voucher jste již zakoupili");
-          return;
-        }
-        throw purchaseError;
-      }
-
-      // Deduct 5 MioCoins from wallet
-      const { error: updateError } = await supabase
-        .from('wallets')
-        .update({ balance_coins: walletData.balance_coins - 5 })
-        .eq('user_id', user.id);
-
-      if (updateError) throw updateError;
 
       toast.success("Voucher úspěšně zakoupen za 5 MioCoinů!");
     } catch (error) {

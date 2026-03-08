@@ -209,68 +209,21 @@ const Vouchers: React.FC = () => {
     setPurchasingId(voucherId);
 
     try {
-      const price = 5;
+      const { data, error } = await supabase.rpc('buy_voucher_atomic', {
+        p_user_id: user.id,
+        p_voucher_id: voucherId,
+      });
 
-      // Check user's wallet balance
-      const { data: walletData, error: walletError } = await supabase
-        .from('wallets')
-        .select('balance_coins')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      if (error) throw error;
 
-      if (walletError) throw walletError;
+      const result = data as { success: boolean; error?: string };
 
-      if (!walletData || walletData.balance_coins < price) {
-        toast.error(`Nemáte dostatek MioCoinů. Potřebujete alespoň ${price} MioCoinů.`);
+      if (!result.success) {
+        toast.error(result.error || "Nepodařilo se zakoupit voucher");
         return;
       }
 
-      // Check if already purchased
-      const existingPurchased = purchasedVouchers.find(uv => uv.voucher_id === voucherId);
-      if (existingPurchased) {
-        toast.error("Tento voucher jste již zakoupili");
-        return;
-      }
-
-      // Check if already in favorites - update to purchased
-      const existingFavorite = favoriteVouchers.find(uv => uv.voucher_id === voucherId);
-
-      if (existingFavorite) {
-        // Update existing favorite to purchased
-        const { error: updateError } = await supabase
-          .from('user_vouchers')
-          .update({ redeemed: true, updated_at: new Date().toISOString() })
-          .eq('id', existingFavorite.id);
-
-        if (updateError) throw updateError;
-      } else {
-        // Create new purchased record
-        const { error: insertError } = await supabase
-          .from('user_vouchers')
-          .insert({
-            user_id: user.id,
-            voucher_id: voucherId,
-            redeemed: true
-          });
-
-        if (insertError) {
-          if (insertError.code === '23505') {
-            toast.error("Tento voucher jste již zakoupili");
-            return;
-          }
-          throw insertError;
-        }
-      }
-
-      // Deduct MioCoins from wallet
-      const { error: walletUpdateError } = await supabase
-        .from('wallets')
-        .update({ balance_coins: walletData.balance_coins - price })
-        .eq('user_id', user.id);
-
-      if (walletUpdateError) throw walletUpdateError;
-
-      toast.success(`Voucher úspěšně zakoupen za ${price} MioCoinů!`);
+      toast.success(`Voucher úspěšně zakoupen za 5 MioCoinů!`);
       refetchUserVouchers();
       refetchAvailable();
     } catch (error) {
