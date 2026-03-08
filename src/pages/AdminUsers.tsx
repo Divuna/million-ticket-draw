@@ -25,6 +25,7 @@ interface User {
   last_name?: string;
   phone?: string;
   isPartnerAccount?: boolean;
+  hasUserRole?: boolean;
 }
 
 const AdminUsers: React.FC = () => {
