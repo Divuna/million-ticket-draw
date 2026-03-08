@@ -254,6 +254,15 @@ const ContestDetailAdmin: React.FC = () => {
   const handleStatusChange = async (newStatus: string) => {
     if (!contestId) return;
 
+    if (newStatus === "closed") {
+      toast({
+        title: "Akce zamítnuta",
+        description: "Soutěž lze uzavřít pouze automaticky systémem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setUpdatingStatus(true);
 
     try {
