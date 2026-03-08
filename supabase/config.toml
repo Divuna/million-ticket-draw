@@ -86,3 +86,6 @@ verify_jwt = false
 
 [functions.send-partner-invoice-email]
 verify_jwt = false
+
+[functions.stripe-refund]
+verify_jwt = true

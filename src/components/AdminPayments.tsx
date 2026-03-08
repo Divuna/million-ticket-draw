@@ -119,13 +119,48 @@ export const AdminPayments: React.FC = () => {
   };
 
   const handleRefundPayment = async (paymentId: string) => {
-    // This would integrate with Stripe API to process refunds
-    // For now, just show a message
-    toast({
-      title: "Funkce v přípravě",
-      description: "Refundace bude dostupná v budoucí verzi.",
-      variant: "default"
-    });
+    if (!confirm('Opravdu chcete provést refundaci této platby? Tato akce nelze vrátit.')) {
+      return;
+    }
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('Nejste přihlášeni.');
+
+      const response = await fetch(
+        `https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/stripe-refund`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhremhqbGRyb2pqbHJrZXpvcmV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4NDEyMTQsImV4cCI6MjA3MzQxNzIxNH0.O8--xNUY9PFqIBlXDav1x-coeYbZEy8UzAtMDEZhS6U',
+          },
+          body: JSON.stringify({ payment_id: paymentId }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Nepodařilo se provést refundaci.');
+      }
+
+      toast({
+        title: 'Refundace úspěšná',
+        description: 'Platba byla úspěšně refundována.',
+      });
+
+      await fetchPayments();
+    } catch (err: any) {
+      console.error('Refund error:', err);
+      toast({
+        title: 'Chyba',
+        description: err?.message || 'Nepodařilo se provést refundaci.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const getStatusBadge = (status: string) => {
