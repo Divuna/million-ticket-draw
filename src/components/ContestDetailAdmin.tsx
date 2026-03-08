@@ -1,6 +1,6 @@
 console.log('ContestDetailAdmin module loading');
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +14,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
+
 
 interface ContestData {
   id: string;
@@ -65,6 +67,7 @@ const ContestDetailAdmin: React.FC = () => {
   console.log('ContestDetailAdmin component is loading');
   const { contestId } = useParams<{ contestId: string }>();
   const { user } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const [contest, setContest] = useState<ContestData | null>(null);
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
@@ -391,6 +394,14 @@ const ContestDetailAdmin: React.FC = () => {
 
     return statusMap[status] || { label: status, variant: 'outline' };
   };
+
+  if (roleLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Načítání...</div>;
+  }
+
+  if (!user || !isAdmin) {
+    return <Navigate to="/login" replace />;
+  }
 
   if (loading) {
     return (

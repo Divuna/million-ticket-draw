@@ -140,13 +140,14 @@ const Wins: React.FC = () => {
     }
 
     const initPage = async () => {
-      const { data: userData } = await supabase
-        .from('users')
+      // Use user_roles table to check admin status instead of users.role
+      const { data: roleData } = await supabase
+        .from('user_roles')
         .select('role')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .maybeSingle();
 
-      if (userData?.role !== 'admin' && userData?.role !== 'superadmin') {
+      if (roleData?.role !== 'admin' && roleData?.role !== 'superadmin') {
         await supabase.rpc('mark_wins_as_seen');
         refreshUnseenWins();
       }

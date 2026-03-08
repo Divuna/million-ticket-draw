@@ -25,11 +25,12 @@ interface User {
   last_name?: string;
   phone?: string;
   isPartnerAccount?: boolean;
+  hasUserRole?: boolean;
 }
 
 const AdminUsers: React.FC = () => {
   const { user } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, isSuperAdmin, loading: roleLoading } = useUserRole();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,13 +61,25 @@ const AdminUsers: React.FC = () => {
         (partnersData || []).map(p => p.auth_user_id).filter(Boolean)
       );
 
-      // Mark users that are partner accounts
-      const usersWithPartnerFlag = (usersData || []).map(u => ({
+      // Fetch roles from user_roles table (source of truth)
+      const { data: userRolesData } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+
+      const roleMap: Record<string, string> = {};
+      (userRolesData || []).forEach(r => {
+        roleMap[r.user_id] = r.role;
+      });
+
+      // Mark users that are partner accounts and apply roles from user_roles
+      const usersWithFlags = (usersData || []).map(u => ({
         ...u,
-        isPartnerAccount: partnerAuthIds.has(u.id)
+        role: roleMap[u.id] || u.role || 'user',
+        isPartnerAccount: partnerAuthIds.has(u.id),
+        hasUserRole: !!roleMap[u.id],
       }));
 
-      setUsers(usersWithPartnerFlag);
+      setUsers(usersWithFlags);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -80,6 +93,16 @@ const AdminUsers: React.FC = () => {
   };
 
   const updateUserRole = async (userId: string, newRole: string) => {
+    // Only superadmin can change roles
+    if (!isSuperAdmin) {
+      toast({
+        title: "Přístup zamítnut",
+        description: "Pouze SuperAdmin může měnit role uživatelů.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Check if user is a partner account
     const targetUser = users.find(u => u.id === userId);
     if (targetUser?.isPartnerAccount) {
@@ -92,12 +115,27 @@ const AdminUsers: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase
+      // Update role in user_roles table (source of truth)
+      if (targetUser?.hasUserRole) {
+        // Update existing record
+        const { error } = await supabase
+          .from('user_roles')
+          .update({ role: newRole as any })
+          .eq('user_id', userId);
+        if (error) throw error;
+      } else {
+        // Insert new record
+        const { error } = await supabase
+          .from('user_roles')
+          .insert({ user_id: userId, role: newRole as any });
+        if (error) throw error;
+      }
+
+      // Also keep users.role in sync for backward compatibility
+      await supabase
         .from('users')
         .update({ role: newRole })
         .eq('id', userId);
-
-      if (error) throw error;
 
       // Log admin action
       await supabase.rpc('log_admin_action', {
@@ -229,6 +267,8 @@ const AdminUsers: React.FC = () => {
                                 <p>Role partnerských účtů nelze měnit</p>
                               </TooltipContent>
                             </Tooltip>
+                          ) : !isSuperAdmin ? (
+                            <Badge variant="outline">{getRoleBadge(user.role)}</Badge>
                           ) : (
                             <Select 
                               value={user.role} 

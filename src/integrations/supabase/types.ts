@@ -2000,6 +2000,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "user_vouchers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "user_vouchers_voucher_id_fkey"
             columns: ["voucher_id"]
             isOneToOne: false

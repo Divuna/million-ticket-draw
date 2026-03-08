@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,6 +62,7 @@ interface StatusHistoryEntry {
 
 const AdminWinners: React.FC = () => {
   const { user, session } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const [winners, setWinners] = useState<WinnerData[]>([]);
   const [filteredWinners, setFilteredWinners] = useState<WinnerData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,8 +130,7 @@ const AdminWinners: React.FC = () => {
            /^\d+\s*(mio|mc|coin)/i.test(desc);
   };
 
-  // Check admin access
-  const isAdmin = user?.email === 'divispavel2@gmail.com';
+  // Admin access is checked via useUserRole hook
 
   useEffect(() => {
     if (isAdmin) {
@@ -729,12 +730,12 @@ const AdminWinners: React.FC = () => {
     }
   ).length;
 
-  if (!session) {
-    return <Navigate to="/login" replace />;
+  if (roleLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Načítání...</div>;
   }
 
-  if (!isAdmin) {
-    return <Navigate to="/" replace />;
+  if (!session || !isAdmin) {
+    return <Navigate to="/login" replace />;
   }
 
   if (loading) {
