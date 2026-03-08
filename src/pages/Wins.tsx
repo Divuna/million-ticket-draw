@@ -172,7 +172,7 @@ const Wins: React.FC = () => {
         return;
       }
       
-      const dob = (data as any)?.date_of_birth;
+      const dob = data?.date_of_birth;
       if (dob) {
         const birthDate = new Date(dob);
         const today = new Date();

@@ -36,7 +36,7 @@ const MyContests: React.FC = () => {
 
   const fetchMyContests = async () => {
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('tickets')
         .select(`
           contest_id,
@@ -60,8 +60,9 @@ const MyContests: React.FC = () => {
       // Group tickets by contest and count them
       const contestMap = new Map<string, Contest>();
       
-      data?.forEach(ticket => {
-        const contest = ticket.contests;
+      data?.forEach((ticket: any) => {
+        const contest = Array.isArray(ticket.contests) ? ticket.contests[0] : ticket.contests;
+        if (!contest) return;
         const contestId = contest.id;
         
         if (contestMap.has(contestId)) {

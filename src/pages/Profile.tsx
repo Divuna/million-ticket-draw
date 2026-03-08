@@ -374,7 +374,7 @@ const Profile: React.FC = () => {
           address: [data.street, data.city, data.zip, data.country].filter(Boolean).join(', '),
           phone: data.phone || '',
           avatar_url: data.avatar_url || null,
-          date_of_birth: (data as any)?.date_of_birth || null
+          date_of_birth: data.date_of_birth || null
         });
       }
     } catch (error) {
