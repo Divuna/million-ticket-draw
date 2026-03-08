@@ -815,20 +815,34 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         const contestId = editingContest.contest_id;
         
         // Delete existing MioCoin bonuses (only those with amount > 0)
-        await supabase
+        // Delete existing MioCoin bonuses (only those with amount > 0) via RPC
+        // First fetch existing MioCoin bonus IDs to delete them via RPC
+        const { data: existingMcBonuses } = await supabase
           .from("bonus_prizes")
-          .delete()
+          .select("id")
           .eq("contest_id", contestId)
           .gt("amount", 0);
 
-        // Insert new MioCoin bonuses
+        if (existingMcBonuses && existingMcBonuses.length > 0) {
+          for (const bonus of existingMcBonuses) {
+            await supabase.rpc("admin_manage_bonus_prize", {
+              p_prize_id: bonus.id,
+              p_contest_id: contestId,
+              p_status: "deleted",
+              p_operation: "update",
+            });
+          }
+        }
+
+        // Insert new MioCoin bonuses via RPC
         for (const bonus of newBonuses) {
-          await supabase.from("bonus_prizes").insert({
-            contest_id: contestId,
-            ticket_position: bonus.ticket_position,
-            amount: bonus.amount,
-            description: `${bonus.amount} MioCoinů`,
-            status: "pending",
+          await supabase.rpc("admin_manage_bonus_prize", {
+            p_contest_id: contestId,
+            p_ticket_position: bonus.ticket_position,
+            p_amount: bonus.amount,
+            p_description: `${bonus.amount} MioCoinů`,
+            p_status: "pending",
+            p_operation: "create",
           });
         }
 
