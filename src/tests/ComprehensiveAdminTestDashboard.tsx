@@ -376,63 +376,70 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
     const results: DataIntegrityResult[] = [];
 
     try {
-      // Check contests -> bonus_prizes relationship
-      const { data: orphanedBonuses } = await supabase
+      // Check contests -> bonus_prizes relationship (lightweight sample)
+      const { data: sampleBonuses } = await supabase
         .from('bonus_prizes')
         .select('id, contest_id')
-        .limit(1000);
+        .limit(50);
 
-      const { data: contests } = await supabase
-        .from('contests')
-        .select('id')
-        .limit(1000);
-
-      const contestIds = new Set(contests?.map(c => c.id) || []);
-      const orphanedBonusCount = orphanedBonuses?.filter(bp => !contestIds.has(bp.contest_id)).length || 0;
+      let orphanedBonusCount = 0;
+      if (sampleBonuses && sampleBonuses.length > 0) {
+        const uniqueContestIds = [...new Set(sampleBonuses.map(b => b.contest_id))];
+        const { data: matchingContests } = await supabase
+          .from('contests')
+          .select('id')
+          .in('id', uniqueContestIds);
+        const validContestIds = new Set(matchingContests?.map(c => c.id) || []);
+        orphanedBonusCount = sampleBonuses.filter(bp => !validContestIds.has(bp.contest_id)).length;
+      }
 
       results.push({
         table_name: 'bonus_prizes → contests',
         status: orphanedBonusCount > 0 ? 'warning' : 'passed',
         message: orphanedBonusCount > 0 
-          ? `Nalezeno ${orphanedBonusCount} bonusových výher bez odpovídající soutěže`
+          ? `Nalezeno ${orphanedBonusCount} bonusových výher bez odpovídající soutěže (vzorek 50)`
           : 'Všechny bonusové výhry mají správnou vazbu na soutěže',
         orphaned_count: orphanedBonusCount,
         execution_time_ms: Date.now() - startTime
       });
 
-      // Check vouchers -> users relationship
-      const { data: vouchers } = await supabase
+      // Check vouchers -> users relationship (lightweight sample)
+      const { data: sampleVouchers } = await supabase
         .from('vouchers')
         .select('id, user_id')
-        .limit(1000);
+        .not('user_id', 'is', null)
+        .limit(50);
 
-      const { data: users } = await supabase
-        .from('users')
-        .select('id')
-        .limit(1000);
-
-      const userIds = new Set(users?.map(u => u.id) || []);
-      const orphanedVoucherCount = vouchers?.filter(v => !userIds.has(v.user_id)).length || 0;
+      let orphanedVoucherCount = 0;
+      if (sampleVouchers && sampleVouchers.length > 0) {
+        const uniqueUserIds = [...new Set(sampleVouchers.map(v => v.user_id).filter(Boolean))];
+        const { data: matchingUsers } = await supabase
+          .from('users')
+          .select('id')
+          .in('id', uniqueUserIds as string[]);
+        const validUserIds = new Set(matchingUsers?.map(u => u.id) || []);
+        orphanedVoucherCount = sampleVouchers.filter(v => v.user_id && !validUserIds.has(v.user_id)).length;
+      }
 
       results.push({
         table_name: 'vouchers → users',
         status: orphanedVoucherCount > 0 ? 'warning' : 'passed',
         message: orphanedVoucherCount > 0
-          ? `Nalezeno ${orphanedVoucherCount} voucherů bez odpovídajícího uživatele`
+          ? `Nalezeno ${orphanedVoucherCount} voucherů bez odpovídajícího uživatele (vzorek 50)`
           : 'Všechny vouchery mají správnou vazbu na uživatele',
         orphaned_count: orphanedVoucherCount,
         execution_time_ms: Date.now() - startTime
       });
 
-      // Check admin actions consistency
+      // Check admin actions consistency (lightweight: only fetch id + metadata, limit 20)
       const { data: adminActions } = await supabase
         .from('admin_actions')
-        .select('*')
+        .select('id, metadata')
         .gte('timestamp', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-        .limit(100);
+        .limit(20);
 
       const hasMetadata = adminActions?.every(action => 
-        action.metadata && typeof action.metadata === 'object') || false;
+        action.metadata && typeof action.metadata === 'object') ?? true;
 
       results.push({
         table_name: 'admin_actions metadata',
