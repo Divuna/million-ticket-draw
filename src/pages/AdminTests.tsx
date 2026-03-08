@@ -30,7 +30,7 @@ const AdminTests: React.FC = () => {
     );
   }
 
-  if (role !== 'admin' && role !== 'superadmin') {
+  if (!isAdmin) {
     return <Navigate to="/" />;
   }
 
