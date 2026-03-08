@@ -39,12 +39,7 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
       // The RPC function returns JSON data directly
       setContests((data as unknown as ContestData[]) || []);
     } catch (error) {
-      console.error('Error fetching contests:', error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se načíst data soutěží.",
-        variant: "destructive"
-      });
+      console.error('Error fetching ticket map data:', error);
     } finally {
       setLoading(false);
     }
