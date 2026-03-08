@@ -42,26 +42,19 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
 
       const contestIds = contestRows.map(c => c.id);
 
-      // 2. Count tickets per contest
-      const { data: ticketCounts, error: ticketError } = await supabase
-        .from('tickets')
-        .select('contest_id')
-        .in('contest_id', contestIds);
-
-      // 3. Load bonus prize positions per contest
-      const { data: bonusRows, error: bonusError } = await supabase
-        .from('bonus_prizes')
-        .select('contest_id, ticket_position')
-        .in('contest_id', contestIds);
-
-      if (ticketError) console.error('Error fetching tickets:', ticketError);
-      if (bonusError) console.error('Error fetching bonus prizes:', bonusError);
-
-      // Count tickets per contest
+      // 2. Count tickets per contest using server-side count (avoids 1000-row limit)
       const ticketCountMap: Record<string, number> = {};
-      (ticketCounts || []).forEach(t => {
-        ticketCountMap[t.contest_id] = (ticketCountMap[t.contest_id] || 0) + 1;
-      });
+      for (const contestId of contestIds) {
+        const { count, error: ticketError } = await supabase
+          .from('tickets')
+          .select('id', { count: 'exact', head: true })
+          .eq('contest_id', contestId);
+        
+        if (ticketError) {
+          console.error(`Error counting tickets for contest ${contestId}:`, ticketError);
+        }
+        ticketCountMap[contestId] = count ?? 0;
+      }
 
       // Group bonus positions per contest
       const bonusMap: Record<string, number[]> = {};
