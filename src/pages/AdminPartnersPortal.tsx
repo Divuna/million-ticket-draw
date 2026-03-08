@@ -114,6 +114,8 @@ const invoiceStatusColors: Record<InvoiceStatus, 'default' | 'secondary' | 'dest
 
 const AdminPartnersPortal = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [selectedPartner, setSelectedPartner] = useState<PartnerDetail | null>(null);
