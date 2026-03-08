@@ -29,7 +29,7 @@ interface AuditStats {
 
 const AdminAuditRepair = () => {
   const { user } = useAuth();
-  const { role, loading: roleLoading } = useUserRole();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [stats, setStats] = useState<AuditStats>({
     total_repairs: 0,
