@@ -61,13 +61,25 @@ const AdminUsers: React.FC = () => {
         (partnersData || []).map(p => p.auth_user_id).filter(Boolean)
       );
 
-      // Mark users that are partner accounts
-      const usersWithPartnerFlag = (usersData || []).map(u => ({
+      // Fetch roles from user_roles table (source of truth)
+      const { data: userRolesData } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+
+      const roleMap: Record<string, string> = {};
+      (userRolesData || []).forEach(r => {
+        roleMap[r.user_id] = r.role;
+      });
+
+      // Mark users that are partner accounts and apply roles from user_roles
+      const usersWithFlags = (usersData || []).map(u => ({
         ...u,
-        isPartnerAccount: partnerAuthIds.has(u.id)
+        role: roleMap[u.id] || u.role || 'user',
+        isPartnerAccount: partnerAuthIds.has(u.id),
+        hasUserRole: !!roleMap[u.id],
       }));
 
-      setUsers(usersWithPartnerFlag);
+      setUsers(usersWithFlags);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
