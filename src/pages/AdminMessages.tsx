@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Star, Building2, User } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface Thread {
   user_id: string;
@@ -21,9 +23,15 @@ interface Thread {
 
 export default function AdminMessages() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
 
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(false);
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (roleLoading) return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" /></div>;
+  if (!isAdmin) return <Navigate to="/" replace />;
 
   const loadThreads = async () => {
     setLoading(true);

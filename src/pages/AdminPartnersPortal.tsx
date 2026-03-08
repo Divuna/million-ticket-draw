@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -114,6 +116,8 @@ const invoiceStatusColors: Record<InvoiceStatus, 'default' | 'secondary' | 'dest
 
 const AdminPartnersPortal = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [selectedPartner, setSelectedPartner] = useState<PartnerDetail | null>(null);
@@ -559,6 +563,10 @@ const AdminPartnersPortal = () => {
       toast.error('Nepodařilo se vygenerovat PDF');
     }
   };
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (roleLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  if (!isAdmin) return <Navigate to="/" replace />;
 
   if (loading) {
     return (

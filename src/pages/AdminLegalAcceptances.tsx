@@ -48,7 +48,7 @@ const DOCUMENT_OPTIONS = [
 const PAGE_SIZE = 25;
 
 const AdminLegalAcceptances: React.FC = () => {
-  const { role, loading: roleLoading } = useUserRole();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const [documentFilter, setDocumentFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
@@ -83,7 +83,7 @@ const AdminLegalAcceptances: React.FC = () => {
         isRevoked: acceptance.document_slug === 'marketing' && acceptance.document_version === 'revoked'
       })) as LegalAcceptance[];
     },
-    enabled: role === 'admin' || role === 'superadmin',
+    enabled: isAdmin,
   });
 
   // Apply filters
@@ -164,7 +164,7 @@ const AdminLegalAcceptances: React.FC = () => {
     return <div className="flex items-center justify-center min-h-screen">Načítám...</div>;
   }
 
-  if (role !== 'admin' && role !== 'superadmin') {
+  if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
 

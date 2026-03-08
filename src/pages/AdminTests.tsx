@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 const AdminTests: React.FC = () => {
   const { user } = useAuth();
-  const { role, loading } = useUserRole();
+  const { isAdmin, loading } = useUserRole();
 
   if (!user) {
     return <Navigate to="/login" />;
@@ -30,7 +30,7 @@ const AdminTests: React.FC = () => {
     );
   }
 
-  if (role !== 'admin' && role !== 'superadmin') {
+  if (!isAdmin) {
     return <Navigate to="/" />;
   }
 

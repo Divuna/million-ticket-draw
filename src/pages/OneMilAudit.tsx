@@ -21,7 +21,7 @@ interface AuditResult {
 
 const OneMilAudit = () => {
   const { user } = useAuth();
-  const { role } = useUserRole();
+  const { isAdmin } = useUserRole();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isTestingConnection, setIsTestingConnection] = useState(false);
@@ -30,7 +30,7 @@ const OneMilAudit = () => {
   const [auditResults, setAuditResults] = useState<AuditResult | null>(null);
 
   // Redirect if not admin
-  if (!user || (role !== 'admin' && role !== 'superadmin')) {
+  if (!user || !isAdmin) {
     navigate('/login');
     return null;
   }
