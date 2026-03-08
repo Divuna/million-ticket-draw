@@ -94,8 +94,10 @@ const STATUS_OPTIONS = [
   { value: "pending", label: "Čeká na start", color: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" },
   { value: "active", label: "Aktivní", color: "bg-green-500/20 text-green-300 border-green-500/30" },
   { value: "paused", label: "Pozastaveno", color: "bg-orange-500/20 text-orange-300 border-orange-500/30" },
-  { value: "closed", label: "Ukončeno", color: "bg-red-500/20 text-red-300 border-red-500/30" },
+  { value: "closed", label: "Ukončeno", color: "bg-red-500/20 text-red-300 border-red-500/30", disabled: true },
 ];
+
+const SELECTABLE_STATUS_OPTIONS = STATUS_OPTIONS.filter((opt) => opt.value !== "closed");
 
 const getStatusBadgeClass = (status: string) => {
   const option = STATUS_OPTIONS.find((opt) => opt.value === status);
