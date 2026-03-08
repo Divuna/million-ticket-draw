@@ -60,6 +60,10 @@ const STATUS_OPTIONS = [
   { value: "pending", label: "Čeká na start" },
   { value: "active", label: "Aktivní" },
   { value: "paused", label: "Pozastaveno" },
+];
+
+const STATUS_OPTIONS_WITH_CLOSED = [
+  ...STATUS_OPTIONS,
   { value: "closed", label: "Ukončeno" },
 ];
 
