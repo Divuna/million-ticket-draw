@@ -458,12 +458,23 @@ const Profile: React.FC = () => {
     setProfileSaving(true);
     try {
       const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || null;
+      // Parse address into structured fields: "street, city, zip, country"
+      const addressParts = profile.address ? profile.address.split(',').map(s => s.trim()) : [];
+      const street = addressParts[0] || null;
+      const city = addressParts[1] || null;
+      const zip = addressParts[2] || null;
+      const country = addressParts[3] || null;
+
       const { error } = await supabase.from('profiles').upsert({
         id: user?.id!,
         first_name: profile.first_name || null,
         last_name: profile.last_name || null,
         full_name: fullName,
         phone: profile.phone || null,
+        street,
+        city,
+        zip,
+        country,
         updated_at: new Date().toISOString(),
       });
       if (error) {
