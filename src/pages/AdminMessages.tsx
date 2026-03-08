@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Star, Building2, User } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface Thread {
   user_id: string;
