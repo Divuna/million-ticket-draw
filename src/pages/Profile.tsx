@@ -355,27 +355,26 @@ const Profile: React.FC = () => {
 
   const fetchUserProfile = async () => {
     try {
-      const result = await (supabase as any).from('users').select('nickname, first_name, last_name, address, phone').eq('id', user?.id).maybeSingle();
-      const data = (result as any)?.data as any;
-      const error = (result as any)?.error as any;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, full_name, phone, street, city, zip, country, avatar_url, date_of_birth')
+        .eq('id', user?.id ?? '')
+        .maybeSingle();
+
       if (error) {
         console.error('Error fetching profile:', error);
         return;
       }
       
-      const profileResult = await supabase.from('profiles').select('avatar_url, date_of_birth').eq('id', user?.id ?? '').maybeSingle();
-      const avatarUrl = profileResult.data?.avatar_url || null;
-      const dateOfBirth = (profileResult.data as any)?.date_of_birth || null;
-      
       if (data) {
         setProfile({
-          nickname: data.nickname || '',
+          nickname: data.full_name || '',
           first_name: data.first_name || '',
           last_name: data.last_name || '',
-          address: data.address || '',
+          address: [data.street, data.city, data.zip, data.country].filter(Boolean).join(', '),
           phone: data.phone || '',
-          avatar_url: avatarUrl,
-          date_of_birth: dateOfBirth
+          avatar_url: data.avatar_url || null,
+          date_of_birth: (data as any)?.date_of_birth || null
         });
       }
     } catch (error) {
