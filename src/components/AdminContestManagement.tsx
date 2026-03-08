@@ -1767,6 +1767,15 @@ export const AdminContestManagement: React.FC = () => {
   }, []);
 
   const handleStatusChange = async (contestId: string, newStatus: string) => {
+    if (newStatus === "closed") {
+      toast({
+        title: "Akce zamítnuta",
+        description: "Soutěž lze uzavřít pouze automaticky systémem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setUpdatingStatus(contestId);
 
     try {
