@@ -257,22 +257,42 @@ export const AdminPrizeDelivery: React.FC = () => {
   const somePhysicalSelected = physicalPrizes.some(p => selectedPrizeIds.has(p.id));
 
   // Handle bulk status update
-  const handleBulkUpdate = async () => {
+   const handleBulkUpdate = async () => {
     if (selectedPrizeIds.size === 0 || !bulkStatus) return;
 
     setBulkUpdating(true);
     try {
-      const { error } = await supabase
-        .from('bonus_prizes')
-        .update({ status: bulkStatus })
-        .in('id', Array.from(selectedPrizeIds));
+      let successCount = 0;
+      let errorCount = 0;
 
-      if (error) throw error;
+      // Use existing RPC for each prize to ensure server-side admin validation and audit logging
+      for (const prizeId of Array.from(selectedPrizeIds)) {
+        const { error } = await supabase.rpc('update_bonus_prize_delivery_status', {
+          p_prize_id: prizeId,
+          p_status: bulkStatus,
+          p_admin_notes: null
+        });
 
-      toast({
-        title: "Úspěch",
-        description: `Stav ${selectedPrizeIds.size} výher byl hromadně aktualizován.`,
-      });
+        if (error) {
+          console.error('Error updating prize:', prizeId, error);
+          errorCount++;
+        } else {
+          successCount++;
+        }
+      }
+
+      if (errorCount > 0) {
+        toast({
+          title: "Částečný úspěch",
+          description: `Aktualizováno ${successCount} výher, ${errorCount} selhalo.`,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Úspěch",
+          description: `Stav ${successCount} výher byl hromadně aktualizován.`,
+        });
+      }
 
       // Refresh data and clear selection
       if (selectedContestId) {
