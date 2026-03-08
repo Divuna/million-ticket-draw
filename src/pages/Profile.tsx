@@ -1258,12 +1258,12 @@ const Profile: React.FC = () => {
             <div className="absolute top-1/3 left-1/3 w-28 h-28 bg-yellow-500/8 rounded-full blur-2xl pointer-events-none" />
             <div className="absolute bottom-1/4 right-1/4 w-24 h-24 bg-yellow-600/5 rounded-full blur-xl pointer-events-none" />
             
-            <div className="relative p-8">
+            <div className="relative z-10 p-8">
               {/* Section Header */}
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-5">
                   <div className="relative">
-                    <div className="absolute inset-0 bg-yellow-500/25 rounded-xl blur-lg" />
+                    <div className="absolute inset-0 bg-yellow-500/25 rounded-xl blur-lg pointer-events-none" />
                     <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-yellow-500/25 to-yellow-600/15 border border-yellow-500/35 shadow-lg shadow-yellow-500/10">
                       <User className="h-6 w-6 text-yellow-500" />
                     </div>
@@ -1287,8 +1287,9 @@ const Profile: React.FC = () => {
                   <Button 
                     variant="outline" 
                     size="default" 
+                    type="button"
                     onClick={() => setEditMode(true)}
-                    className="vip-button border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 hover:border-yellow-500/50 text-yellow-500 hover:text-yellow-400 transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-yellow-500/10 hover:scale-[1.02]"
+                    className="relative z-20 vip-button border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 hover:border-yellow-500/50 text-yellow-500 hover:text-yellow-400 transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-yellow-500/10 hover:scale-[1.02]"
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
                     Upravit
@@ -1299,7 +1300,7 @@ const Profile: React.FC = () => {
               {editMode ? (
                 <>
                   {/* Edit Mode - Premium Input Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+                  <div className="relative z-20 grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
                     <div className="space-y-2.5">
                       <Label htmlFor="nickname" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
                         <Sparkles className="h-3 w-3" />
@@ -1308,13 +1309,14 @@ const Profile: React.FC = () => {
                       <Input 
                         id="nickname" 
                         type="text" 
+                        readOnly={!editMode}
                         value={profile.nickname} 
                         onChange={e => setProfile(prev => ({
                           ...prev,
                           nickname: e.target.value
                         }))} 
                         placeholder="Zadejte přezdívku"
-                        className="premium-input h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
@@ -1326,13 +1328,14 @@ const Profile: React.FC = () => {
                       <Input 
                         id="phone" 
                         type="text" 
+                        readOnly={!editMode}
                         value={profile.phone} 
                         onChange={e => setProfile(prev => ({
                           ...prev,
                           phone: e.target.value
                         }))} 
                         placeholder="Zadejte telefon"
-                        className="premium-input h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
@@ -1344,13 +1347,14 @@ const Profile: React.FC = () => {
                       <Input 
                         id="first_name" 
                         type="text" 
+                        readOnly={!editMode}
                         value={profile.first_name} 
                         onChange={e => setProfile(prev => ({
                           ...prev,
                           first_name: e.target.value
                         }))} 
                         placeholder="Zadejte křestní jméno"
-                        className="premium-input h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
@@ -1362,13 +1366,14 @@ const Profile: React.FC = () => {
                       <Input 
                         id="last_name" 
                         type="text" 
+                        readOnly={!editMode}
                         value={profile.last_name} 
                         onChange={e => setProfile(prev => ({
                           ...prev,
                           last_name: e.target.value
                         }))} 
                         placeholder="Zadejte příjmení"
-                        className="premium-input h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
@@ -1379,6 +1384,7 @@ const Profile: React.FC = () => {
                       </Label>
                       <Textarea 
                         id="address" 
+                        readOnly={!editMode}
                         value={profile.address} 
                         onChange={e => setProfile(prev => ({
                           ...prev,
@@ -1386,7 +1392,7 @@ const Profile: React.FC = () => {
                         }))} 
                         placeholder="Zadejte doručovací adresu pro výhry" 
                         rows={3}
-                        className="premium-input px-5 py-4 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 resize-none text-lg"
+                        className="premium-input pointer-events-auto px-5 py-4 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 resize-none text-lg"
                       />
                     </div>
                   </div>
