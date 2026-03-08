@@ -173,6 +173,8 @@ export const AdminPayments: React.FC = () => {
         return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Selhalo</Badge>;
       case 'cancelled':
         return <Badge variant="outline"><XCircle className="w-3 h-3 mr-1" />Zrušeno</Badge>;
+      case 'refunded':
+        return <Badge variant="outline" className="border-orange-500 text-orange-500"><RefreshCw className="w-3 h-3 mr-1" />Refundováno</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
