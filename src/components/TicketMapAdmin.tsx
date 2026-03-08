@@ -26,12 +26,60 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
   const fetchContests = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_contests_json');
-      
-      if (error) throw error;
-      
-      // The RPC function returns JSON data directly
-      setContests((data as unknown as ContestData[]) || []);
+
+      // 1. Load contests
+      const { data: contestRows, error: contestError } = await supabase
+        .from('contests')
+        .select('id, title, ticket_count, status')
+        .in('status', ['active', 'finished'])
+        .order('created_at', { ascending: false });
+
+      if (contestError) throw contestError;
+      if (!contestRows || contestRows.length === 0) {
+        setContests([]);
+        return;
+      }
+
+      const contestIds = contestRows.map(c => c.id);
+
+      // 2. Count tickets per contest
+      const { data: ticketCounts, error: ticketError } = await supabase
+        .from('tickets')
+        .select('contest_id')
+        .in('contest_id', contestIds);
+
+      // 3. Load bonus prize positions per contest
+      const { data: bonusRows, error: bonusError } = await supabase
+        .from('bonus_prizes')
+        .select('contest_id, ticket_position')
+        .in('contest_id', contestIds);
+
+      if (ticketError) console.error('Error fetching tickets:', ticketError);
+      if (bonusError) console.error('Error fetching bonus prizes:', bonusError);
+
+      // Count tickets per contest
+      const ticketCountMap: Record<string, number> = {};
+      (ticketCounts || []).forEach(t => {
+        ticketCountMap[t.contest_id] = (ticketCountMap[t.contest_id] || 0) + 1;
+      });
+
+      // Group bonus positions per contest
+      const bonusMap: Record<string, number[]> = {};
+      (bonusRows || []).forEach(b => {
+        if (!bonusMap[b.contest_id]) bonusMap[b.contest_id] = [];
+        bonusMap[b.contest_id].push(b.ticket_position);
+      });
+
+      const mapped: ContestData[] = contestRows.map(c => ({
+        id: c.id,
+        title: c.title,
+        total_tickets: c.ticket_count,
+        tickets_played: ticketCountMap[c.id] || 0,
+        main_prize_ticket: null,
+        bonus_tickets: bonusMap[c.id] || [],
+      }));
+
+      setContests(mapped);
     } catch (error) {
       console.error('Error fetching ticket map data:', error);
     } finally {
