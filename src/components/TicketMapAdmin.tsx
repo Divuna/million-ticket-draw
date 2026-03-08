@@ -9,16 +9,10 @@ import { toast } from '@/hooks/use-toast';
 interface ContestData {
   id: string;
   title: string;
-  description: string;
-  main_prize: string;
-  main_image: string;
-  status: string;
-  tickets_played: number;
   total_tickets: number;
+  tickets_played: number;
   main_prize_ticket: number | null;
   bonus_tickets: number[];
-  created_at: string;
-  ticket_price: number;
 }
 
 interface TicketMapAdminProps {}
