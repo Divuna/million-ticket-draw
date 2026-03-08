@@ -395,6 +395,14 @@ const ContestDetailAdmin: React.FC = () => {
     return statusMap[status] || { label: status, variant: 'outline' };
   };
 
+  if (roleLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Načítání...</div>;
+  }
+
+  if (!user || !isAdmin) {
+    return <Navigate to="/login" replace />;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
