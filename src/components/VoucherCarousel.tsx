@@ -49,43 +49,23 @@ export const VoucherCarousel: React.FC = () => {
   const redeemVoucher = async (voucherId: string) => {
     if (!user) return;
 
-    const voucher = vouchers.find(v => v.id === voucherId);
-    if (!voucher) return;
-
-    // Check if limited voucher is exhausted
-    if (voucher.max_quantity && voucher.redeemed_count >= voucher.max_quantity) {
-      toast.error('Tento voucher již není dostupný');
-      return;
-    }
-
-    // Check if user already redeemed this voucher
-    const { data: existingRedemption } = await supabase
-      .from('user_vouchers')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('voucher_id', voucherId)
-      .eq('redeemed', true)
-      .maybeSingle();
-
-    if (existingRedemption) {
-      toast.error('Tento voucher jste již uplatnili');
-      return;
-    }
-
     try {
-      // Create redemption record - the database trigger will handle redeemed_count update automatically
-      const { error: redemptionError } = await supabase
-        .from('user_vouchers')
-        .insert({
-          user_id: user.id,
-          voucher_id: voucherId,
-          redeemed: true
-        });
+      const { data, error } = await supabase.rpc('buy_voucher_atomic', {
+        p_user_id: user.id,
+        p_voucher_id: voucherId,
+      });
 
-      if (redemptionError) throw redemptionError;
+      if (error) throw error;
+
+      const result = data as { success: boolean; error?: string };
+
+      if (!result.success) {
+        toast.error(result.error || 'Chyba při uplatnění voucheru');
+        return;
+      }
 
       toast.success('Voucher byl úspěšně uplatněn!');
-      fetchVouchers(); // Refresh the list
+      fetchVouchers();
     } catch (error: any) {
       console.error('Error redeeming voucher:', error);
       toast.error('Chyba při uplatnění voucheru');
