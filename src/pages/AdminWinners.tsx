@@ -130,8 +130,7 @@ const AdminWinners: React.FC = () => {
            /^\d+\s*(mio|mc|coin)/i.test(desc);
   };
 
-  // Check admin access
-  const isAdmin = user?.email === 'divispavel2@gmail.com';
+  // Admin access is checked via useUserRole hook
 
   useEffect(() => {
     if (isAdmin) {
