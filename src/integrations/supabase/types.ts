@@ -2548,7 +2548,7 @@ export type Database = {
       }
       check_guardian_notifications_batch: { Args: never; Returns: Json }
       check_partner_api_rate_limit: {
-        Args: { p_limit: number; p_partner_id: string; p_window: unknown }
+        Args: { p_limit: number; p_partner_id: string; p_window: string }
         Returns: boolean
       }
       claim_miocoin_bonus: {
@@ -2862,7 +2862,7 @@ export type Database = {
           p_api_key: string
           p_endpoint: string
           p_limit?: number
-          p_window?: unknown
+          p_window?: string
         }
         Returns: string
       }
