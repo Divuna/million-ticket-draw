@@ -273,12 +273,10 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
       const testData = data as unknown as ComprehensiveTestResult;
       setTestResults(testData);
       
-      // Run additional validations in parallel
-      await Promise.all([
-        runDataIntegrityChecks(),
-        validateSofinityEvents(),
-        validateCzechUI()
-      ]);
+      // Run additional validations sequentially to avoid statement timeout
+      await runDataIntegrityChecks();
+      await validateSofinityEvents();
+      await validateCzechUI();
       
       const executionTime = Date.now() - startTime;
       updatePerformanceMetrics('complete_suite', executionTime);
