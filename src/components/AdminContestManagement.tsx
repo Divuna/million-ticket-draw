@@ -1052,15 +1052,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             imageUrl = fileName;
           }
 
-          // Insert bonus prize record
-          const { error: insertError } = await supabase.from("bonus_prizes").insert({
-            contest_id: contestId,
-            ticket_position: prize.ticket_position,
-            description: prize.description,
-            detailed_description: prize.detailed_description || null,
-            image_url: imageUrl,
-            status: "pending",
-            guardian_required: prize.guardian_required ?? false,
+          // Insert bonus prize record via RPC
+          const { error: insertError } = await supabase.rpc("admin_manage_bonus_prize", {
+            p_contest_id: contestId,
+            p_ticket_position: prize.ticket_position,
+            p_description: prize.description,
+            p_status: "pending",
+            p_operation: "create",
           });
 
           if (insertError) {
