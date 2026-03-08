@@ -458,10 +458,14 @@ const Profile: React.FC = () => {
     setProfileSaving(true);
     try {
       const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || null;
-      const { error } = await supabase.from('profiles').update({
+      const { error } = await supabase.from('profiles').upsert({
+        id: user?.id!,
+        first_name: profile.first_name || null,
+        last_name: profile.last_name || null,
         full_name: fullName,
+        phone: profile.phone || null,
         updated_at: new Date().toISOString(),
-      }).eq('id', user?.id);
+      });
       if (error) {
         throw error;
       }
