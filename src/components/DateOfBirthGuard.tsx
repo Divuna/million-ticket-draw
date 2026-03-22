@@ -15,7 +15,6 @@ const EXEMPT_ROUTES = [
   '/unsubscribe/marketing',
   '/share/ticket',
   '/legal/',
-  '/test-login',
   '/admin',
   '/influencer',
   '/partner',

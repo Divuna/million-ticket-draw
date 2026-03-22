@@ -1,0 +1,209 @@
+/* Win moment — full-screen celebration (TicketResultModal) */
+
+@keyframes win-moment-pulse-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes win-moment-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes win-moment-float-particle {
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-120vh) translateX(20px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes win-moment-scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Premium: elastic bounce into place */
+@keyframes win-moment-prize-bounce {
+  0% {
+    opacity: 0;
+    transform: scale(0.82) translateY(20px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08) translateY(-6px);
+  }
+  72% {
+    transform: scale(0.97) translateY(3px);
+  }
+  88% {
+    transform: scale(1.02) translateY(-1px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* 100–200ms full-screen punch */
+@keyframes win-moment-screen-flash {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.win-moment-screen-flash {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 125;
+  background: radial-gradient(
+    circle at 50% 38%,
+    rgba(255, 252, 235, 0.92) 0%,
+    rgba(255, 210, 120, 0.45) 35%,
+    rgba(255, 160, 60, 0.12) 55%,
+    transparent 72%
+  );
+  animation: win-moment-screen-flash 0.16s ease-out forwards;
+}
+
+.win-moment-glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  animation: win-moment-pulse-glow 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.win-moment-particle {
+  position: absolute;
+  bottom: -8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: win-moment-float-particle linear infinite;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.win-moment-prize-title {
+  animation: win-moment-prize-bounce 0.78s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 0.14s;
+  transform-origin: center center;
+}
+
+.win-moment-win-headline {
+  animation: win-moment-scale-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.06s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .win-moment-screen-flash {
+    animation: none;
+    opacity: 0;
+  }
+
+  .win-moment-prize-title,
+  .win-moment-win-headline {
+    animation: none;
+    animation-delay: 0s;
+    opacity: 1;
+    transform: none;
+  }
+
+  .win-moment-deferred-content {
+    animation: none;
+    opacity: 1;
+    filter: none;
+  }
+}
+
+/* Secondary panel fades in so attention stays on hero + prize */
+@keyframes win-moment-content-reveal {
+  from {
+    opacity: 0.22;
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.win-moment-deferred-content {
+  animation: win-moment-content-reveal 0.48s ease-out 0.2s both;
+}
+
+/* Primary retention CTA — soft pulse glow */
+@keyframes win-moment-cta-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 hsl(43 95% 52% / 0.5),
+      0 0 24px hsl(43 90% 45% / 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 12px hsl(43 95% 52% / 0),
+      0 0 36px hsl(48 100% 55% / 0.45);
+  }
+}
+
+.win-moment-cta-play-again {
+  animation: win-moment-cta-pulse 2.2s ease-in-out infinite;
+  animation-delay: 0.28s;
+  animation-fill-mode: backwards;
+}
+
+.win-moment-cta-hint {
+  letter-spacing: 0.06em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .win-moment-cta-play-again {
+    animation: none;
+    animation-delay: 0s;
+    box-shadow: 0 0 20px hsl(43 90% 45% / 0.25);
+  }
+}
+
+.win-moment-value-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(43 90% 55% / 0.9),
+    hsl(48 100% 75% / 1),
+    hsl(35 95% 58% / 0.95),
+    hsl(43 90% 55% / 0.9)
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: win-moment-shimmer 3s linear infinite;
+}

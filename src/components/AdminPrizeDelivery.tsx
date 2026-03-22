@@ -362,17 +362,26 @@ export const AdminPrizeDelivery: React.FC = () => {
   const fetchDeliverySummary = async () => {
     try {
       const { data, error } = await supabase
-        .rpc('get_prizes_delivery_summary');
+        .from('admin_winner_delivery_stats')
+        .select('*');
 
-      if (error) throw error;
-      setDeliverySummary(data || []);
+      if (error) {
+        console.error(error);
+        setDeliverySummary([]);
+        return [];
+      }
+
+      if (!data || data.length === 0) {
+        setDeliverySummary([]);
+        return [];
+      }
+
+      setDeliverySummary(data);
+      return data;
     } catch (error) {
       console.error('Error fetching delivery summary:', error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se načíst přehled předání výher.",
-        variant: "destructive"
-      });
+      setDeliverySummary([]);
+      return [];
     }
   };
 

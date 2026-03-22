@@ -37,7 +37,6 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { AdminMenu } from "@/components/AdminMenu";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -342,7 +341,6 @@ const AdminInfluencers = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <AdminMenu />
       </div>
     );
   }
@@ -351,7 +349,6 @@ const AdminInfluencers = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <p className="text-muted-foreground">Nemáte oprávnění k zobrazení této stránky.</p>
-        <AdminMenu />
       </div>
     );
   }
@@ -365,8 +362,8 @@ const AdminInfluencers = () => {
   /* ===================== RENDER ===================== */
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="container mx-auto px-4 py-6 space-y-6">
+    <>
+    <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -499,16 +496,20 @@ const AdminInfluencers = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={statusColors[influencer.status as InfluencerStatus] || "secondary"}>
+                            <Badge variant={statusColors[influencer.status as InfluencerStatus] || "pending"}>
                               <StatusIcon className="w-3 h-3 mr-1" />
                               {statusLabels[influencer.status as InfluencerStatus] || influencer.status}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
                             {influencer.payout_ready ? (
-                              <Badge variant="default" className="text-xs">Ano</Badge>
+                              <Badge variant="success" className="text-xs">
+                                Ano
+                              </Badge>
                             ) : (
-                              <Badge variant="secondary" className="text-xs">Ne</Badge>
+                              <Badge variant="outline" className="text-xs">
+                                Ne
+                              </Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-right tabular-nums font-medium">
@@ -628,12 +629,12 @@ const AdminInfluencers = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Badge
-                    variant={statusColors[selectedInfluencer.status as InfluencerStatus] || "secondary"}
+                    variant={statusColors[selectedInfluencer.status as InfluencerStatus] || "pending"}
                     className="text-sm"
                   >
                     {statusLabels[selectedInfluencer.status as InfluencerStatus] || selectedInfluencer.status}
                   </Badge>
-                  <Badge variant={selectedInfluencer.payout_ready ? "default" : "secondary"} className="text-xs">
+                  <Badge variant={selectedInfluencer.payout_ready ? "success" : "outline"} className="text-xs">
                     Payout: {selectedInfluencer.payout_ready ? "Ano" : "Ne"}
                   </Badge>
                 </div>
@@ -880,9 +881,14 @@ const AdminInfluencers = () => {
                                     </TableCell>
                                     <TableCell className="text-center">
                                       {isPaid ? (
-                                        <Badge variant="default" className="text-xs"><CreditCard className="w-3 h-3 mr-1" />Ano</Badge>
+                                        <Badge variant="success" className="text-xs">
+                                          <CreditCard className="w-3 h-3 mr-1" />
+                                          Ano
+                                        </Badge>
                                       ) : (
-                                        <Badge variant="secondary" className="text-xs">Ne</Badge>
+                                        <Badge variant="outline" className="text-xs">
+                                          Ne
+                                        </Badge>
                                       )}
                                     </TableCell>
                                   </TableRow>
@@ -918,7 +924,15 @@ const AdminInfluencers = () => {
                                   </TableCell>
                                   <TableCell>
                                     <Badge
-                                      variant={comm.status === "paid" ? "default" : comm.status === "approved" ? "secondary" : "outline"}
+                                      variant={
+                                        comm.status === "paid"
+                                          ? "info"
+                                          : comm.status === "approved"
+                                            ? "success"
+                                            : comm.status === "calculated"
+                                              ? "warning"
+                                              : "outline"
+                                      }
                                       className="text-xs"
                                     >
                                       {commissionStatusLabels[comm.status] || comm.status}
@@ -965,7 +979,7 @@ const AdminInfluencers = () => {
                                     {format(new Date(camp.starts_at), "d. M. yy", { locale: cs })} – {format(new Date(camp.ends_at), "d. M. yy", { locale: cs })}
                                   </TableCell>
                                   <TableCell className="text-center">
-                                    <Badge variant={camp.active ? "default" : "secondary"} className="text-xs">
+                                    <Badge variant={camp.active ? "success" : "pending"} className="text-xs">
                                       {camp.active ? "Ano" : "Ne"}
                                     </Badge>
                                   </TableCell>
@@ -986,8 +1000,7 @@ const AdminInfluencers = () => {
         </DialogContent>
       </Dialog>
 
-      <AdminMenu />
-    </div>
+    </>
   );
 };
 

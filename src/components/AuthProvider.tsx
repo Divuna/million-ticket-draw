@@ -16,6 +16,13 @@ const PresenceTracker: React.FC<{ children: React.ReactNode }> = ({ children }) 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const auth = useAuthState();
 
+  if (auth.loading) {
+    // Block app render until Supabase session is loaded from storage.
+    // Prevents refresh race condition where app renders "logged out" briefly.
+    // (Do not redirect or sign out here.)
+    return null;
+  }
+
   return (
     <AuthContext.Provider value={auth}>
       <PresenceTracker>

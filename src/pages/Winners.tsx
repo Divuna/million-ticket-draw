@@ -1,5 +1,4 @@
 import { Header } from '@/components/Header';
-import { BottomNavigation } from '@/components/BottomNavigation';
 import { WinnerCard } from '@/components/WinnerCard';
 import { useLatestWinners } from '@/hooks/useLatestWinners';
 import { usePlacementBanners } from '@/hooks/usePlacementBanners';
@@ -57,22 +56,20 @@ const Winners = () => {
                   prizeImageUrl={winner.prize_image_url}
                   cardStyleImageUrl={cardStyleImageUrl}
                   userAvatarUrl={winner.user_avatar_url}
+                  ticketNumber={winner.ticket_number}
                 />
               ))
             ) : (
               <div className="col-span-full text-center py-12 space-y-3">
                 <Trophy className="w-12 h-12 mx-auto text-muted-foreground/50" />
-                <h3 className="text-lg font-bold text-foreground">Zatím žádní výherci</h3>
                 <p className="text-sm text-muted-foreground">
-                  Momentálně nejsou k dispozici žádné výhry
+                  Zatím nebyly vyhlášeny žádné výhry.
                 </p>
               </div>
             )}
           </div>
         </div>
       </div>
-
-      <BottomNavigation />
     </div>
   );
 };

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Header } from '@/components/Header';
-import { BottomNavigation } from '@/components/BottomNavigation';
 import { Separator } from '@/components/ui/separator';
 import { Building2, Mail, Phone, MapPin, FileText, User } from 'lucide-react';
 
@@ -142,8 +141,6 @@ const Kontakt: React.FC = () => {
           </div>
         </article>
       </main>
-
-      <BottomNavigation />
     </div>
   );
 };

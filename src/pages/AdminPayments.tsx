@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,6 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Header } from '@/components/Header';
-import { AdminMenu } from '@/components/AdminMenu';
 import { Search, CreditCard, RefreshCw, AlertTriangle } from 'lucide-react';
 
 interface Payment {
@@ -29,7 +27,7 @@ interface Payment {
 }
 
 const AdminPayments: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,31 +67,71 @@ const AdminPayments: React.FC = () => {
     }
   };
 
-  const updatePaymentStatus = async (paymentId: string, newStatus: string) => {
-    toast({
-      title: "Akce zamítnuta",
-      description: "Stav platby nelze měnit přímo. Použijte backend workflow (Stripe webhook / refund flow) pro zachování konzistence s peněženkami a tikety.",
-      variant: "destructive",
-    });
+  const handleRefundPayment = async (paymentId: string) => {
+    if (!confirm('Opravdu chcete provést refundaci této platby? Tato akce nelze vrátit.')) {
+      return;
+    }
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('Nejste přihlášeni.');
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-refund`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY ?? '',
+          },
+          body: JSON.stringify({ payment_id: paymentId }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Nepodařilo se provést refundaci.');
+      }
+
+      toast({
+        title: 'Refundace úspěšná',
+        description: 'Platba byla úspěšně refundována.',
+      });
+
+      await fetchPayments();
+    } catch (err: unknown) {
+      console.error('Refund error:', err);
+      const message = err instanceof Error ? err.message : 'Nepodařilo se provést refundaci.';
+      toast({
+        title: 'Chyba',
+        description: message,
+        variant: 'destructive',
+      });
+    }
   };
 
   const filteredPayments = payments.filter(payment => {
-    const matchesSearch = payment.users?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const email = typeof payment.users?.email === "string" ? payment.users.email : "";
+    const matchesSearch =
+      email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'všechny' || payment.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'completed':
-        return <Badge variant="default">Dokončeno</Badge>;
-      case 'pending':
-        return <Badge variant="secondary">Čekající</Badge>;
-      case 'failed':
+      case "completed":
+        return <Badge variant="success">Dokončeno</Badge>;
+      case "pending":
+        return <Badge variant="pending">Čekající</Badge>;
+      case "failed":
         return <Badge variant="destructive">Neúspěšné</Badge>;
-      case 'refunded':
-        return <Badge variant="outline">Vráceno</Badge>;
+      case "refunded":
+        return <Badge variant="warning">Vráceno</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -109,14 +147,16 @@ const AdminPayments: React.FC = () => {
     return <div className="flex items-center justify-center min-h-screen">Načítání...</div>;
   }
 
+  if (authLoading) {
+    return null;
+  }
+
   if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <NavigateToLogin />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="container mx-auto px-4 py-6 pb-20">
+    <div className="container mx-auto px-4 py-6 pb-8">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -207,7 +247,7 @@ const AdminPayments: React.FC = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => updatePaymentStatus(payment.id, 'refunded')}
+                              onClick={() => handleRefundPayment(payment.id)}
                             >
                               <AlertTriangle className="h-4 w-4 mr-1" />
                               Vrátit
@@ -229,8 +269,6 @@ const AdminPayments: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-      <AdminMenu />
-    </div>
   );
 };
 

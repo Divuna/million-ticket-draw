@@ -1,9 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Navigate } from 'react-router-dom';
-import { AdminMenu } from '@/components/AdminMenu';
 import {
   Table,
   TableBody,
@@ -124,7 +123,7 @@ const AdminLegalAcceptances: React.FC = () => {
   }, [acceptances, documentFilter, dateFrom, dateTo, emailSearch]);
 
   // Reset to page 1 when filters change
-  useMemo(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [documentFilter, dateFrom, dateTo, emailSearch]);
 
@@ -161,7 +160,9 @@ const AdminLegalAcceptances: React.FC = () => {
   };
 
   if (roleLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Načítám...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[40vh] text-muted-foreground py-12">Načítám…</div>
+    );
   }
 
   if (!isAdmin) {
@@ -169,9 +170,7 @@ const AdminLegalAcceptances: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <AdminMenu />
-      <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Souhlasy uživatelů</CardTitle>
@@ -270,7 +269,7 @@ const AdminLegalAcceptances: React.FC = () => {
                               Odvoláno
                             </Badge>
                           ) : (
-                            <Badge variant="secondary">Aktivní</Badge>
+                            <Badge variant="success">Aktivní</Badge>
                           )}
                         </TableCell>
                         <TableCell>
@@ -338,7 +337,6 @@ const AdminLegalAcceptances: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
   );
 };
 

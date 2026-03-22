@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -9,14 +9,16 @@ import {
 import { useNavigate } from 'react-router-dom';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, supabaseUrl } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Facebook, Download } from 'lucide-react';
+import { Facebook, Download, Share2 } from 'lucide-react';
 import logoOnemil from '@/assets/logo-onemil.png';
-
-const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
+import { cn } from '@/lib/utils';
+import { playWinChime } from '@/lib/playWinChime';
+import { pickRandomAlmostWinMessage, rollAlmostWinEffect } from '@/lib/retentionLocal';
+import './TicketResultModal.css';
 
 // Preload logo image
 const loadLogoImage = (): Promise<HTMLImageElement> => {
@@ -189,6 +191,8 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const [publicShareUrl, setPublicShareUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const generatedForTicketRef = useRef<number | null>(null);
+  const winSoundPlayedForRef = useRef<string | null>(null);
+  const prizeTitleFocusRef = useRef<HTMLHeadingElement>(null);
 
   // Query bonus_prizes when modal opens
   useEffect(() => {
@@ -227,6 +231,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   // Reset ref when modal closes
   useEffect(() => {
     if (!isOpen) {
+      winSoundPlayedForRef.current = null;
       generatedForTicketRef.current = null;
       // Clean up preview URL when modal closes
       if (previewImageUrl) {
@@ -283,37 +288,50 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
         // Convert blob to base64 for upload
         const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64 = reader.result as string;
-          
-          try {
-            // Upload via edge function
-            const response = await fetch(
-              `${SUPABASE_URL}/functions/v1/upload-ticket-share`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  ticketId: ticketShareId,
-                  imageBase64: base64
-                })
-              }
-            );
+        reader.onloadend = () => {
+          // Show share URL immediately; upload is fully background.
+          setPublicShareUrl(
+            `https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/og-ticket-share?id=${encodeURIComponent(
+              ticketShareId
+            )}`
+          );
+          setIsUploading(false);
 
-            if (response.ok) {
-              const data = await response.json();
-              console.log('Image uploaded:', data.publicUrl);
-              setPublicShareUrl(`https://onemil.cz/share/ticket/${ticketShareId}`);
-            } else {
-              console.error('Upload failed:', await response.text());
-            }
-          } catch (uploadErr) {
-            console.error('Upload error:', uploadErr);
-          } finally {
-            setIsUploading(false);
-          }
+          const base64 = reader.result as string;
+
+          // Upload via edge function (non-blocking; no awaits)
+          supabase.auth.getSession().then(({ data: sessionData }) => {
+            const session = sessionData.session;
+
+            fetch(`${supabaseUrl}/functions/v1/upload-ticket-share`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session?.access_token ?? ''}`,
+              },
+              body: JSON.stringify({
+                ticketId: ticketShareId,
+                imageBase64: base64,
+              }),
+            })
+              .then((response) => {
+                if (!response.ok) {
+                  response.text().then((text) => {
+                    console.warn('Upload failed:', text);
+                  });
+                  return;
+                }
+
+                response.json().then((data) => {
+                  console.log('Image uploaded:', data.publicUrl);
+                });
+              })
+              .catch((uploadErr) => {
+                console.warn('Upload error:', uploadErr);
+              });
+          }).catch((err) => {
+            console.warn('Upload error:', err);
+          });
         };
         reader.readAsDataURL(blob);
       } catch (err) {
@@ -378,12 +396,119 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const isWinner = isBonusWin || isMainPrize;
   const isBonusClaimed = bonusPrize?.status === 'won';
 
+  /** Real win only — not “no prize” ticket purchase UI */
+  const shouldCelebrateWin =
+    isWinner && (isMainPrize || !isLoading);
+
+  useEffect(() => {
+    if (!isOpen || !result || isWinner || isLoading) {
+      setLossRetentionNudge(null);
+      return;
+    }
+    if (rollAlmostWinEffect()) {
+      setLossRetentionNudge(pickRandomAlmostWinMessage());
+    } else {
+      setLossRetentionNudge(null);
+    }
+  }, [isOpen, result?.ticket_number, isWinner, isLoading]);
+
+  const particleSpec = useMemo(() => {
+    if (!shouldCelebrateWin) return [];
+    return Array.from({ length: 42 }, (_, i) => ({
+      id: i,
+      left: `${((i * 17 + (i % 7) * 11) % 100)}%`,
+      delay: `${((i * 0.09) % 2.2).toFixed(2)}s`,
+      duration: `${5.5 + (i % 6) * 0.45}s`,
+      color:
+        i % 4 === 0
+          ? 'hsl(43 95% 62%)'
+          : i % 4 === 1
+            ? 'hsl(265 82% 68%)'
+            : i % 4 === 2
+              ? 'hsl(195 90% 62%)'
+              : 'hsl(25 95% 58%)',
+    }));
+  }, [shouldCelebrateWin, result?.ticket_number]);
+
+  useEffect(() => {
+    if (!isOpen || !shouldCelebrateWin || !result) return;
+    const key = `${contestId || 'c'}-${result.ticket_number}`;
+    if (winSoundPlayedForRef.current === key) return;
+    winSoundPlayedForRef.current = key;
+    playWinChime();
+  }, [isOpen, shouldCelebrateWin, contestId, result?.ticket_number]);
+
+  const prizeHeadline = isMainPrize
+    ? (result?.won_prize?.trim() || 'Hlavní výhra')
+    : bonusPrize
+      ? (bonusPrize.title?.trim() || bonusPrize.description || 'Bonusová výhra')
+      : '';
+
+  // Keep keyboard / SR attention on the prize title (beat dialog auto-focus to close button)
+  useLayoutEffect(() => {
+    if (!isOpen || !shouldCelebrateWin) return;
+    let inner = 0;
+    const outer = window.requestAnimationFrame(() => {
+      inner = window.requestAnimationFrame(() => {
+        prizeTitleFocusRef.current?.focus({ preventScroll: true });
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(outer);
+      window.cancelAnimationFrame(inner);
+    };
+  }, [isOpen, shouldCelebrateWin, result?.ticket_number, prizeHeadline]);
+
+  const prizeValueLine =
+    !isMainPrize && bonusPrize?.amount != null && bonusPrize.amount > 0
+      ? `${bonusPrize.amount.toLocaleString('cs-CZ')} MioCoinů`
+      : isMainPrize
+        ? `Tiket #${result?.ticket_number?.toLocaleString('cs-CZ') ?? ''}`
+        : null;
+
   // Dynamic share text based on result
   const getShareText = () => {
     if (isWinner) {
       return `Vyhrál jsem na OneMil 🎉🎟️ Ticket #${result?.ticket_number?.toLocaleString('cs-CZ') ?? ''}. Zkus štěstí taky 👉 onemil.cz`;
     }
     return `Zahrál jsem si na OneMil 🎟️ Ticket #${result?.ticket_number?.toLocaleString('cs-CZ') ?? ''}. Každý ticket tě blíží k výhře 👉 onemil.cz`;
+  };
+
+  /** Text copied by „Sdílet výhru“ — short viral hook + CTA (clipboard only) */
+  const getWinRetentionShareText = () => {
+    if (!isWinner || !result) return '';
+    const ticket = result.ticket_number.toLocaleString('cs-CZ');
+    if (isMainPrize) {
+      const prize = result.won_prize?.trim() || 'hlavní výhru';
+      return `🔥 Vyhrál jsem „${prize}“ na OneMil! Zkus štěstí taky → onemil.cz · tiket #${ticket}`;
+    }
+    if (bonusPrize) {
+      const name = bonusPrize.title?.trim() || bonusPrize.description || 'bonus';
+      const coins =
+        bonusPrize.amount && bonusPrize.amount > 0
+          ? ` +${bonusPrize.amount.toLocaleString('cs-CZ')} MC`
+          : '';
+      return `🎯 Trefa na OneMil: ${name}${coins}! Hraj i ty → onemil.cz · #${ticket}`;
+    }
+    return getShareText();
+  };
+
+  const handleCopyWinShare = async () => {
+    const text = getWinRetentionShareText();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: 'Zkopírováno',
+        description: 'Text výhry je ve schránce — vlož ho kam chceš.',
+      });
+    } catch {
+      toast({
+        title: 'Kopírování se nepovedlo',
+        description: 'Zkopíruj text ručně nebo zkontroluj oprávnění prohlížeče.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleShare = (platform: 'facebook' | 'instagram' | 'tiktok' | 'x') => {
@@ -473,79 +598,277 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     onClose();
   };
 
+  const handlePlayAgain = () => {
+    onClose();
+    if (contestId) {
+      navigate(`/contest/${contestId}`);
+    } else {
+      navigate('/games');
+    }
+  };
+
   // Always render Dialog to prevent mount/unmount flicker in React StrictMode
   // Control visibility via isOpen && result !== null
   return (
     <Dialog open={isOpen && result !== null} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md rounded-2xl border border-yellow-500/40 bg-gradient-to-b from-[#0b1220] via-[#0f1b33] to-[#0a1428] shadow-[0_0_40px_rgba(255,200,0,0.15)] data-[state=open]:duration-[280ms] data-[state=closed]:duration-[280ms]">
-        {isWinner && (
+      <DialogContent
+        onOpenAutoFocus={(e) => {
+          if (shouldCelebrateWin) {
+            e.preventDefault();
+          }
+        }}
+        className={cn(
+          'data-[state=open]:duration-[280ms] data-[state=closed]:duration-[280ms]',
+          shouldCelebrateWin
+            ? '!fixed !inset-0 !left-0 !top-0 z-[100] flex !max-h-none h-[100dvh] !max-w-none w-screen !translate-x-0 !translate-y-0 flex-col overflow-hidden rounded-none border-0 bg-[#050810] p-0 shadow-[0_0_100px_rgba(255,190,60,0.25)] sm:rounded-none'
+            : 'sm:max-w-md rounded-2xl border border-yellow-500/40 bg-gradient-to-b from-[#0b1220] via-[#0f1b33] to-[#0a1428] shadow-[0_0_40px_rgba(255,200,0,0.15)]'
+        )}
+      >
+        {shouldCelebrateWin && result && (
+          <div
+            key={`win-flash-${contestId}-${result.ticket_number}`}
+            className="win-moment-screen-flash"
+            aria-hidden
+          />
+        )}
+
+        {shouldCelebrateWin && (
+          <div className="relative flex min-h-[min(42vh,380px)] shrink-0 flex-col items-center justify-center overflow-hidden px-4 pb-6 pt-10">
+            <div
+              className="win-moment-glow-orb -left-1/4 h-[min(55vw,420px)] w-[min(55vw,420px)] bg-[radial-gradient(circle,hsl(43_90%_55%/0.55)_0%,transparent_70%)]"
+              style={{ top: '8%' }}
+            />
+            <div
+              className="win-moment-glow-orb -right-1/4 h-[min(45vw,340px)] w-[min(45vw,340px)] bg-[radial-gradient(circle,hsl(280_70%_55%/0.4)_0%,transparent_70%)]"
+              style={{ top: '20%', animationDelay: '0.5s' }}
+            />
+            <div
+              className="win-moment-glow-orb left-1/2 h-[min(70vw,520px)] w-[min(70vw,520px)] -translate-x-1/2 bg-[radial-gradient(circle,hsl(200_85%_50%/0.35)_0%,transparent_65%)]"
+              style={{ bottom: '-25%', animationDelay: '1s' }}
+            />
+
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+              {particleSpec.map((p) => (
+                <span
+                  key={p.id}
+                  className="win-moment-particle"
+                  style={{
+                    left: p.left,
+                    color: p.color,
+                    animationDelay: p.delay,
+                    animationDuration: p.duration,
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className="relative z-20 mx-auto max-w-lg px-2 text-center">
+              <p
+                id="win-moment-shout"
+                className="win-moment-win-headline mb-3 text-center text-2xl font-black uppercase tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-yellow-300 to-amber-200 drop-shadow-[0_0_28px_rgba(250,210,80,0.55)] md:text-3xl md:tracking-[0.12em]"
+              >
+                🎉 VYHRÁL JSI!
+              </p>
+              <h2
+                ref={prizeTitleFocusRef}
+                tabIndex={-1}
+                aria-describedby="win-moment-shout"
+                className={cn(
+                  'win-moment-prize-title text-balance text-3xl font-black leading-tight text-white drop-shadow-[0_0_24px_rgba(250,204,21,0.35)] md:text-4xl',
+                  'outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 focus-visible:ring-offset-4 focus-visible:ring-offset-[#050810]'
+                )}
+              >
+                {prizeHeadline}
+              </h2>
+              {prizeValueLine && (
+                <p
+                  className={cn(
+                    'mt-4 text-2xl font-bold md:text-3xl',
+                    !isMainPrize && 'win-moment-value-shimmer',
+                    isMainPrize && 'text-amber-100/90'
+                  )}
+                >
+                  {prizeValueLine}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {shouldCelebrateWin && (
           <Confetti
             width={width}
             height={height}
             recycle={false}
-            numberOfPieces={isMainPrize ? 500 : 150}
-            gravity={isMainPrize ? 0.2 : 0.4}
-            colors={isMainPrize ? ['#FFD700', '#FFA500', '#FF4500', '#DC143C', '#8A2BE2'] : undefined}
+            numberOfPieces={isMainPrize ? 520 : 220}
+            gravity={isMainPrize ? 0.18 : 0.32}
+            colors={
+              isMainPrize
+                ? ['#FFD700', '#FFA500', '#FF4500', '#DC143C', '#8A2BE2', '#FFF8DC']
+                : ['#FDE047', '#A78BFA', '#38BDF8', '#FB923C', '#F472B6']
+            }
+            style={{ zIndex: 120, pointerEvents: 'none' }}
           />
         )}
-        
-        <DialogHeader>
-          <DialogTitle className="text-center text-xl">
-            {isMainPrize ? '' : isWinner ? 'Výhra! 🎉' : 'Výsledek tiketu'}
-          </DialogTitle>
-        </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div
+          className={cn(
+            'flex min-h-0 flex-1 flex-col',
+            shouldCelebrateWin && 'win-moment-deferred-content overflow-y-auto px-5 pb-6 pt-2 sm:px-8'
+          )}
+        >
+          <DialogHeader className={cn(shouldCelebrateWin && 'px-0')}>
+            <DialogTitle
+              className={cn(
+                'text-center text-xl',
+                shouldCelebrateWin && 'sr-only'
+              )}
+            >
+              {shouldCelebrateWin ? 'Výhra' : isWinner ? 'Výhra! 🎉' : 'Výsledek tiketu'}
+            </DialogTitle>
+          </DialogHeader>
+
+        <div className={cn('space-y-4 py-4', shouldCelebrateWin && 'rounded-2xl border border-amber-500/20 bg-[hsl(220_30%_8%/0.85)] px-3 py-5 sm:px-5')}>
           {isWinner ? (
             isBonusWin && bonusPrize ? (
-              <div className="text-center space-y-3">
-                <div className="text-6xl">🎉</div>
-                <p className="text-lg font-semibold text-green-600">
-                  Gratulujeme, vyhrál jsi bonus: {bonusPrize.title || bonusPrize.description}
-                </p>
-                {bonusPrize.amount && bonusPrize.amount > 0 && (
-                  <p className="text-md text-muted-foreground">
-                    MioCoin: <span className="font-semibold text-primary">{bonusPrize.amount.toLocaleString('cs-CZ')}</span>
-                  </p>
+              <div className="text-center space-y-4">
+                {!shouldCelebrateWin ? (
+                  <>
+                    <div className="text-6xl">🎉</div>
+                    <p className="text-lg font-semibold text-green-600">
+                      Gratulujeme, vyhrál jsi bonus: {bonusPrize.title || bonusPrize.description}
+                    </p>
+                    {bonusPrize.amount && bonusPrize.amount > 0 && (
+                      <p className="text-md text-muted-foreground">
+                        MioCoin:{' '}
+                        <span className="font-semibold text-primary">
+                          {bonusPrize.amount.toLocaleString('cs-CZ')}
+                        </span>
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm font-medium text-emerald-400/95">Gratulujeme k výhře!</p>
                 )}
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
                 </p>
                 {result?.distance_to_next_bonus && result.distance_to_next_bonus > 0 && (
                   <div className="mx-auto max-w-[280px] rounded-full border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center">
                     <p className="text-xs text-muted-foreground mb-1">Do další bonusové výhry</p>
                     <p>
-                      <span className="text-2xl font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">{result.distance_to_next_bonus.toLocaleString('cs-CZ')}</span>
+                      <span className="text-2xl font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
+                        {result.distance_to_next_bonus.toLocaleString('cs-CZ')}
+                      </span>
                       <span className="text-sm text-muted-foreground ml-1.5">tiketů</span>
                     </p>
                   </div>
                 )}
-                {isBonusClaimed ? (
-                  <Button 
-                    onClick={handleGoToWins}
-                    className="w-full mt-2"
+                <p className="win-moment-cta-hint -mb-1 text-center text-[11px] font-semibold uppercase text-amber-200/75 sm:text-xs">
+                  Štěstí frčí —{' '}
+                  <span className="text-amber-100">hrát znovu</span> je nejrychlejší cesta k další výhře
+                </p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <Button
+                    type="button"
+                    onClick={handlePlayAgain}
+                    className={cn(
+                      'win-moment-cta-play-again w-full border-0 font-bold shadow-lg',
+                      'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-400 text-black hover:brightness-110'
+                    )}
                   >
-                    Přejít do výher
+                    Hrát znovu
                   </Button>
-                ) : (
-                  <Button 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGoToWins}
+                    className="w-full font-semibold border-amber-500/40"
+                  >
+                    Zobrazit výhru
+                  </Button>
+                </div>
+                <div className="flex justify-center pt-0.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopyWinShare}
+                    className="h-9 gap-1.5 text-amber-200/95 hover:bg-amber-500/10 hover:text-amber-50"
+                  >
+                    <Share2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                    Sdílet výhru
+                  </Button>
+                </div>
+                {!isBonusClaimed && (
+                  <Button
+                    type="button"
                     onClick={handleClaimBonus}
                     disabled={isClaiming || !user}
-                    className="w-full mt-2"
+                    className="w-full mt-1"
                   >
                     {isClaiming ? 'Uplatňuji...' : 'Uplatnit výhru'}
                   </Button>
                 )}
               </div>
             ) : isMainPrize ? (
-              <div className="text-center space-y-3">
-                <div className="text-6xl">🏆</div>
-                <p className="text-lg font-semibold text-yellow-600">
-                  Gratulujeme, vyhrál jsi hlavní cenu!
+              <div className="text-center space-y-4">
+                {!shouldCelebrateWin ? (
+                  <>
+                    <div className="text-6xl">🏆</div>
+                    <p className="text-lg font-semibold text-yellow-600">
+                      Gratulujeme, vyhrál jsi hlavní cenu!
+                    </p>
+                    <p className="text-muted-foreground">
+                      Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium text-amber-200/90">Gratulujeme k výhře!</p>
+                    {!prizeValueLine && (
+                      <p className="text-muted-foreground text-sm">
+                        Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
+                      </p>
+                    )}
+                  </>
+                )}
+                <p className="win-moment-cta-hint -mb-1 text-center text-[11px] font-semibold uppercase text-amber-200/75 sm:text-xs">
+                  Štěstí frčí —{' '}
+                  <span className="text-amber-100">hrát znovu</span> je nejrychlejší cesta k další výhře
                 </p>
-                <p className="text-muted-foreground">
-                  Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
-                </p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <Button
+                    type="button"
+                    onClick={handlePlayAgain}
+                    className={cn(
+                      'win-moment-cta-play-again w-full border-0 font-bold shadow-lg',
+                      'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-400 text-black hover:brightness-110'
+                    )}
+                  >
+                    Hrát znovu
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGoToWins}
+                    className="w-full font-semibold border-amber-500/40"
+                  >
+                    Zobrazit výhru
+                  </Button>
+                </div>
+                <div className="flex justify-center pt-0.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopyWinShare}
+                    className="h-9 gap-1.5 text-amber-200/95 hover:bg-amber-500/10 hover:text-amber-50"
+                  >
+                    <Share2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                    Sdílet výhru
+                  </Button>
+                </div>
               </div>
             ) : null
           ) : isLoading ? (
@@ -559,6 +882,9 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               <p className="text-lg font-medium">
                 {funnyMessage}
               </p>
+              {lossRetentionNudge && (
+                <p className="text-sm font-medium text-amber-200/90">{lossRetentionNudge}</p>
+              )}
               <div className="rounded-2xl p-5 space-y-2 border border-yellow-500/30 bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
                 <p className="text-sm text-muted-foreground">
                   Tvůj tiket: <span className="font-semibold">#{result?.ticket_number?.toLocaleString('cs-CZ')}</span>
@@ -683,9 +1009,10 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         </div>
 
         <div className="flex justify-center">
-          <Button onClick={onClose} className="w-full">
+          <Button type="button" onClick={onClose} variant={shouldCelebrateWin ? 'outline' : 'default'} className="w-full border-white/10">
             Zavřít
           </Button>
+        </div>
         </div>
       </DialogContent>
     </Dialog>

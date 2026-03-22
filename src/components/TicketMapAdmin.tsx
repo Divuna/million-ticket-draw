@@ -2,36 +2,44 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { TicketProgressBar } from '@/components/TicketProgressBar';
+import { RefreshCw } from 'lucide-react';
 
-interface ContestData {
+interface ContestRow {
   id: string;
   title: string;
-  total_tickets: number;
-  tickets_played: number;
-  main_prize_ticket: number | null;
-  bonus_tickets: number[];
+  status: string;
+  /** From contest_progress view */
+  tickets_total: number;
+  tickets_sold: number;
+  tickets_remaining: number;
+  sold_percent: number;
+  /** From contest_revenue view */
+  estimated_revenue: number;
+  /** From contest_activity_last_24h view */
+  tickets_last_24h: number;
+  /** From bonus_prizes (positions only — not individual ticket rows) */
+  bonus_positions: number[];
 }
 
-interface TicketMapAdminProps {}
-
-export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
-  const [contests, setContests] = useState<ContestData[]>([]);
+export const TicketMapAdmin: React.FC = () => {
+  const [contests, setContests] = useState<ContestRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [highlightedMarkers, setHighlightedMarkers] = useState<Set<string>>(new Set());
-  const highlightTimeoutRef = useRef<{ [key: string]: NodeJS.Timeout }>({});
+  const [refreshing, setRefreshing] = useState(false);
+  const highlightRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  const fetchContests = async () => {
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+
     try {
-      setLoading(true);
-
-      // 1. Load contests
+      // 1. Base contest list
       const { data: contestRows, error: contestError } = await supabase
         .from('contests')
-        .select('id, title, ticket_count, status')
-        .in('status', ['active', 'finished'])
+        .select('id, title, status')
+        .in('status', ['active', 'closed', 'pending', 'paused'])
         .order('created_at', { ascending: false });
 
       if (contestError) throw contestError;
@@ -40,113 +48,94 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
         return;
       }
 
-      const contestIds = contestRows.map(c => c.id);
+      const ids = contestRows.map((c) => c.id);
 
-      // 2. Get ticket counts from admin_contest_status view (bypasses RLS on tickets table)
-      const { data: statusRows, error: statusError } = await supabase
-        .from('admin_contest_status')
-        .select('contest_id, total_tickets')
-        .in('contest_id', contestIds);
-
-      if (statusError) console.error('Error fetching contest status:', statusError);
-
-      const ticketCountMap: Record<string, number> = {};
-      (statusRows || []).forEach(row => {
-        ticketCountMap[row.contest_id] = row.total_tickets ?? 0;
-      });
-
-      // 3. Load bonus prize positions per contest
-      const { data: bonusRows, error: bonusError } = await supabase
-        .from('bonus_prizes')
-        .select('contest_id, ticket_position')
-        .in('contest_id', contestIds);
+      // 2. Aggregated progress — NO individual ticket rows
+      const [
+        { data: progressRows },
+        { data: revenueRows },
+        { data: activityRows },
+        { data: bonusRows, error: bonusError },
+      ] = await Promise.all([
+        supabase.from('contest_progress').select('contest_id,tickets_total,tickets_sold,tickets_remaining,sold_percent').in('contest_id', ids),
+        supabase.from('contest_revenue').select('contest_id,estimated_revenue').in('contest_id', ids),
+        supabase.from('contest_activity_last_24h').select('contest_id,tickets_last_24h').in('contest_id', ids),
+        // Bonus positions are few rows compared to 1M tickets — safe to load
+        supabase.from('bonus_prizes').select('contest_id,ticket_position').in('contest_id', ids),
+      ]);
 
       if (bonusError) console.error('Error fetching bonus prizes:', bonusError);
 
-      // Group bonus positions per contest
+      // Index by contest_id for O(1) lookup
+      const progressMap: Record<string, typeof progressRows[0]> = {};
+      (progressRows || []).forEach((r) => { progressMap[r.contest_id] = r; });
+
+      const revenueMap: Record<string, number> = {};
+      (revenueRows || []).forEach((r) => { revenueMap[r.contest_id] = r.estimated_revenue ?? 0; });
+
+      const activityMap: Record<string, number> = {};
+      (activityRows || []).forEach((r) => { activityMap[r.contest_id] = r.tickets_last_24h ?? 0; });
+
       const bonusMap: Record<string, number[]> = {};
-      (bonusRows || []).forEach(b => {
+      (bonusRows || []).forEach((b) => {
         if (!bonusMap[b.contest_id]) bonusMap[b.contest_id] = [];
         bonusMap[b.contest_id].push(b.ticket_position);
       });
 
-      const mapped: ContestData[] = contestRows.map(c => ({
-        id: c.id,
-        title: c.title,
-        total_tickets: c.ticket_count,
-        tickets_played: ticketCountMap[c.id] || 0,
-        main_prize_ticket: null,
-        bonus_tickets: bonusMap[c.id] || [],
-      }));
+      const mapped: ContestRow[] = contestRows.map((c) => {
+        const p = progressMap[c.id];
+        return {
+          id:                c.id,
+          title:             c.title,
+          status:            c.status,
+          tickets_total:     p?.tickets_total     ?? 1_000_000,
+          tickets_sold:      p?.tickets_sold      ?? 0,
+          tickets_remaining: p?.tickets_remaining ?? (p ? p.tickets_total - p.tickets_sold : 1_000_000),
+          sold_percent:      p?.sold_percent      ?? 0,
+          estimated_revenue: revenueMap[c.id]    ?? 0,
+          tickets_last_24h:  activityMap[c.id]   ?? 0,
+          bonus_positions:   bonusMap[c.id]       ?? [],
+        };
+      });
 
       setContests(mapped);
-    } catch (error) {
-      console.error('Error fetching ticket map data:', error);
+    } catch (err) {
+      console.error('Error fetching ticket map data:', err);
+      toast({ title: 'Chyba', description: 'Nepodařilo se načíst data tiketů.', variant: 'destructive' });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchContests();
-    
-    // Setup realtime subscriptions
+    fetchData();
+
+    // Realtime: bonus_prizes changes
     const bonusChannel = supabase
-      .channel('ticket-map-bonus-changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'bonus_prizes'
-      }, (payload) => {
-        console.log('Bonus prize change detected:', payload);
-        
-        // Highlight the affected contest's bonus markers
-        if (payload.new && 'contest_id' in payload.new && 'ticket_position' in payload.new) {
-          highlightMarker(`bonus-${payload.new.contest_id}-${payload.new.ticket_position}`);
-        } else if (payload.old && 'contest_id' in payload.old && 'ticket_position' in payload.old) {
-          highlightMarker(`bonus-${payload.old.contest_id}-${payload.old.ticket_position}`);
-        }
-        
-        // Refresh contest data
-        fetchContests();
-        
-        // Show toast message
-        let message = '';
-        if (payload.eventType === 'INSERT' && payload.new && 'ticket_position' in payload.new) {
-          message = `Nová bonusová cena přidána na pozici #${payload.new.ticket_position}`;
-        } else if (payload.eventType === 'UPDATE' && payload.new && 'ticket_position' in payload.new) {
-          message = `Bonusová cena aktualizována na pozici #${payload.new.ticket_position}`;
-        } else if (payload.eventType === 'DELETE' && payload.old && 'ticket_position' in payload.old) {
-          message = `Bonusová cena odstraněna z pozice #${payload.old.ticket_position}`;
-        }
-        
-        if (message) {
-          toast({
-            title: "Změna bonusové ceny",
-            description: message,
-          });
+      .channel('ticket-map-bonus')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bonus_prizes' }, (payload) => {
+        fetchData(true);
+        const pos =
+          (payload.new && 'ticket_position' in payload.new && payload.new.ticket_position) ||
+          (payload.old && 'ticket_position' in payload.old && payload.old.ticket_position);
+        if (pos) {
+          const msg =
+            payload.eventType === 'INSERT' ? `Bonus přidán na pozici #${pos}` :
+            payload.eventType === 'DELETE' ? `Bonus odstraněn z pozice #${pos}` :
+            `Bonus upraven na pozici #${pos}`;
+          toast({ title: 'Bonusová cena', description: msg });
         }
       })
       .subscribe();
 
+    // Realtime: new ticket sold — refresh progress counts
     const ticketsChannel = supabase
-      .channel('ticket-map-tickets-changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'tickets'
-      }, (payload) => {
-        console.log('Ticket change detected:', payload);
-        
-        // Refresh contest data to update tickets_played count
-        fetchContests();
-        
-        // Show toast for new tickets
-        if (payload.eventType === 'INSERT' && payload.new && 'number' in payload.new) {
-          toast({
-            title: "Nový tiket",
-            description: `Tiket #${payload.new.number} byl zakoupen`,
-          });
+      .channel('ticket-map-tickets')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tickets' }, (payload) => {
+        fetchData(true);
+        if (payload.new && 'number' in payload.new) {
+          toast({ title: 'Nový tiket', description: `Tiket #${payload.new.number} byl zakoupen` });
         }
       })
       .subscribe();
@@ -154,174 +143,72 @@ export const TicketMapAdmin: React.FC<TicketMapAdminProps> = () => {
     return () => {
       supabase.removeChannel(bonusChannel);
       supabase.removeChannel(ticketsChannel);
-      
-      // Clean up highlight timeouts
-      Object.values(highlightTimeoutRef.current).forEach(timeout => {
-        clearTimeout(timeout);
-      });
+      Object.values(highlightRef.current).forEach(clearTimeout);
     };
   }, []);
-
-  const getProgressPercentage = (played: number, total: number) => {
-    return Math.min((played / total) * 100, 100);
-  };
-
-  const getMarkerPosition = (ticketNumber: number, totalTickets: number) => {
-    return (ticketNumber / totalTickets) * 100;
-  };
-
-  const highlightMarker = (markerId: string) => {
-    setHighlightedMarkers(prev => new Set(prev).add(markerId));
-    
-    // Clear existing timeout for this marker
-    if (highlightTimeoutRef.current[markerId]) {
-      clearTimeout(highlightTimeoutRef.current[markerId]);
-    }
-    
-    // Set new timeout to remove highlight after 3 seconds
-    highlightTimeoutRef.current[markerId] = setTimeout(() => {
-      setHighlightedMarkers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(markerId);
-        return newSet;
-      });
-      delete highlightTimeoutRef.current[markerId];
-    }, 3000);
-  };
 
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Mapa tiketů</CardTitle>
-        <CardDescription>
-          Přehled prodaných tiketů a pozic cen pro všechny soutěže
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Mapa tiketů</CardTitle>
+            <CardDescription>
+              Vizualizace průběhu prodeje a pozic cen — data jsou agregovaná, neprochází se individuální tikety
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchData(true)}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
+            Obnovit
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+
+      <CardContent className="space-y-8">
         {loading ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Načítání...
-          </div>
+          <div className="text-center py-10 text-muted-foreground">Načítání…</div>
         ) : contests.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Žádná data k zobrazení
-          </div>
+          <div className="text-center py-10 text-muted-foreground">Žádná soutěž k zobrazení</div>
         ) : (
-          contests.map((contest, index) => (
+          contests.map((contest, idx) => (
             <div key={contest.id} className="space-y-3">
+              {/* Header row */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <h3 className="font-semibold text-base">{contest.title}</h3>
-                <div className="flex items-center gap-3">
-                  <div className="text-sm text-muted-foreground">
-                    {contest.tickets_played.toLocaleString()} / {contest.total_tickets.toLocaleString()} tiketů
-                  </div>
-                  <Link to={`/admin/contest/${contest.id}`}>
-                    <Button variant="outline" size="sm">
-                      Detail soutěže
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-              
-              <div className="relative">
-                {/* Progress bar container */}
-                <div className="relative h-8 bg-secondary rounded-lg overflow-hidden">
-                  {/* Filled progress bar */}
-                  <div 
-                    className="h-full bg-blue-500 transition-all duration-300 ease-out"
-                    style={{ 
-                      width: `${getProgressPercentage(contest.tickets_played, contest.total_tickets)}%` 
-                    }}
-                  />
-                  
-                  {/* Main prize marker */}
-                  {contest.main_prize_ticket && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div
-                            className={`absolute top-0 w-1 h-full bg-yellow-500 cursor-pointer hover:bg-yellow-400 transition-all duration-300 z-10 ${
-                              highlightedMarkers.has(`main-${contest.id}`) ? 'animate-pulse shadow-lg shadow-yellow-400' : ''
-                            }`}
-                            style={{
-                              left: `${getMarkerPosition(contest.main_prize_ticket, contest.total_tickets)}%`,
-                              transform: 'translateX(-50%)'
-                            }}
-                          >
-                            <div className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-yellow-500 rotate-45 border border-yellow-600 ${
-                              highlightedMarkers.has(`main-${contest.id}`) ? 'shadow-lg shadow-yellow-400' : ''
-                            }`} />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Hlavní cena: tiket #{contest.main_prize_ticket}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                  
-                  {/* Bonus tickets markers */}
-                  {contest.bonus_tickets.map((ticketNumber, bonusIndex) => {
-                    const markerId = `bonus-${contest.id}-${ticketNumber}`;
-                    const isHighlighted = highlightedMarkers.has(markerId);
-                    
-                    return (
-                      <TooltipProvider key={bonusIndex}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div
-                              className={`absolute top-0 w-1 h-full bg-orange-500 cursor-pointer hover:bg-orange-400 transition-all duration-300 z-10 ${
-                                isHighlighted ? 'animate-pulse shadow-lg shadow-orange-400' : ''
-                              }`}
-                              style={{
-                                left: `${getMarkerPosition(ticketNumber, contest.total_tickets)}%`,
-                                transform: 'translateX(-50%)'
-                              }}
-                            >
-                              <div className={`absolute -top-1.5 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-orange-500 rounded-full border border-orange-600 ${
-                                isHighlighted ? 'shadow-lg shadow-orange-400' : ''
-                              }`} />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Bonus: tiket #{ticketNumber}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    );
-                  })}
-                </div>
-                
-                {/* Progress percentage label */}
-                <div className="mt-2 text-right">
-                  <span className="text-sm font-medium text-primary">
-                    {getProgressPercentage(contest.tickets_played, contest.total_tickets).toFixed(1)}% prodáno
+                <div>
+                  <h3 className="font-semibold text-base">{contest.title}</h3>
+                  <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                    contest.status === 'active'  ? 'border-green-500/40 text-green-400 bg-green-500/10' :
+                    contest.status === 'closed'  ? 'border-red-500/40   text-red-400   bg-red-500/10'   :
+                    contest.status === 'paused'  ? 'border-orange-500/40 text-orange-400 bg-orange-500/10' :
+                    'border-white/20 text-muted-foreground'
+                  }`}>
+                    {contest.status === 'active' ? 'Aktivní' :
+                     contest.status === 'closed' ? 'Ukončeno' :
+                     contest.status === 'paused' ? 'Pozastaveno' : 'Čeká'}
                   </span>
                 </div>
+                <Link to={`/admin/contest/${contest.id}`}>
+                  <Button variant="outline" size="sm">Detail soutěže</Button>
+                </Link>
               </div>
-              
-              {/* Legend */}
-              <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-2 bg-blue-500 rounded" />
-                  <span>Prodané tikety</span>
-                </div>
-                {contest.main_prize_ticket && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-yellow-500 rotate-45 border border-yellow-600" />
-                    <span>Hlavní cena</span>
-                  </div>
-                )}
-                {contest.bonus_tickets.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full border border-orange-600" />
-                    <span>Bonusové ceny ({contest.bonus_tickets.length})</span>
-                  </div>
-                )}
-              </div>
-              
-              {index < contests.length - 1 && (
-                <div className="border-b border-border mt-6" />
+
+              {/* Progress bar — uses only aggregated data */}
+              <TicketProgressBar
+                ticketsTotal={contest.tickets_total}
+                ticketsSold={contest.tickets_sold}
+                soldPercent={contest.sold_percent}
+                bonusPositions={contest.bonus_positions}
+                ticketsLast24h={contest.tickets_last_24h}
+                estimatedRevenue={contest.estimated_revenue}
+              />
+
+              {idx < contests.length - 1 && (
+                <div className="border-b border-white/5 pt-2" />
               )}
             </div>
           ))

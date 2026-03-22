@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,6 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Header } from '@/components/Header';
-import { AdminMenu } from '@/components/AdminMenu';
 import { Search, FileText, Download, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -28,7 +26,7 @@ interface AuditLog {
 }
 
 const AdminAuditLogs: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,17 +114,19 @@ const AdminAuditLogs: React.FC = () => {
   };
 
   const filteredLogs = auditLogs.filter(log => {
-    const matchesSearch = log.event_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.users?.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const email = typeof log.users?.email === "string" ? log.users.email : "";
+    const matchesSearch =
+      log.event_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesEvent = eventFilter === 'všechny' || log.event_name.includes(eventFilter);
     return matchesSearch && matchesEvent;
   });
 
   const getEventBadge = (event: string) => {
-    if (event.includes('created')) return <Badge variant="default">Vytvořeno</Badge>;
-    if (event.includes('updated')) return <Badge variant="secondary">Aktualizováno</Badge>;
-    if (event.includes('deleted')) return <Badge variant="destructive">Smazáno</Badge>;
-    if (event.includes('login')) return <Badge variant="outline">Přihlášení</Badge>;
+    if (event.includes("created")) return <Badge variant="success">Vytvořeno</Badge>;
+    if (event.includes("updated")) return <Badge variant="info">Aktualizováno</Badge>;
+    if (event.includes("deleted")) return <Badge variant="destructive">Smazáno</Badge>;
+    if (event.includes("login")) return <Badge variant="outline">Přihlášení</Badge>;
     return <Badge variant="outline">{event}</Badge>;
   };
 
@@ -139,14 +139,16 @@ const AdminAuditLogs: React.FC = () => {
     return <div className="flex items-center justify-center min-h-screen">Načítání...</div>;
   }
 
+  if (authLoading) {
+    return null;
+  }
+
   if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <NavigateToLogin />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="container mx-auto px-4 py-6 pb-20">
+    <div className="container mx-auto px-4 py-6 pb-8">
         <Card>
           <CardHeader>
             <div className="flex justify-between items-start">
@@ -262,8 +264,6 @@ const AdminAuditLogs: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-      <AdminMenu />
-    </div>
   );
 };
 

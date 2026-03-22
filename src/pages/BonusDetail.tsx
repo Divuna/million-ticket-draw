@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Navigate, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,8 +8,6 @@ import { ArrowLeft, Gift } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
-import { BottomNavigation } from '@/components/BottomNavigation';
-import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
 
 interface BonusPrize {
@@ -62,32 +61,34 @@ const BonusDetail: React.FC = () => {
 
       if (bonusError) throw bonusError;
 
-      // Fetch winners for these bonus prizes
       const bonusPrizeIds = (bonusData || []).map(prize => prize.id);
-      const { data: winnersData, error: winnersError } = await supabase
-        .from('winners')
-        .select('prize_id, user_id')
-        .in('prize_id', bonusPrizeIds)
-        .eq('type', 'bonus');
+      const uid = session?.user?.id ?? null;
 
-      if (winnersError) throw winnersError;
+      // Only resolve "you won" for the current user (strict RLS: no other users' winner rows)
+      const myWonPrizeIds = new Set<string>();
+      if (uid && bonusPrizeIds.length > 0) {
+        const { data: myBonusWins, error: myWinsError } = await supabase
+          .from('winners')
+          .select('prize_id')
+          .eq('user_id', uid)
+          .eq('contest_id', id as string)
+          .eq('type', 'bonus')
+          .in('prize_id', bonusPrizeIds);
 
-      // Create a map of prize_id to winner_user_id
-      const winnersMap = new Map();
-      (winnersData || []).forEach(winner => {
-        winnersMap.set(winner.prize_id, winner.user_id);
-      });
+        if (myWinsError) throw myWinsError;
+        (myBonusWins || []).forEach((row) => {
+          if (row.prize_id) myWonPrizeIds.add(row.prize_id);
+        });
+      }
 
-      // Process bonus prizes to add winner info
       const processedPrizes = (bonusData || []).map((prize: any) => ({
         ...prize,
-        winner_user_id: winnersMap.get(prize.id) || null
+        winner_user_id: myWonPrizeIds.has(prize.id) ? uid : null,
       }));
 
       // Development logging
       if (import.meta.env.DEV) {
         console.log('🎁 Bonus prizes fetched:', processedPrizes);
-        console.log('🏆 Winners data:', winnersData);
         console.log('👤 Current user ID:', session?.user?.id);
         console.log('🎯 User won prizes:', processedPrizes.filter(p => p.winner_user_id === session?.user?.id));
         
@@ -108,7 +109,7 @@ const BonusDetail: React.FC = () => {
   };
 
   if (!session) {
-    return <Navigate to="/login" replace />;
+    return <NavigateToLogin />;
   }
 
   if (loading) {
@@ -223,8 +224,6 @@ const BonusDetail: React.FC = () => {
 
         </div>
       </div>
-
-      <BottomNavigation />
     </div>
   );
 };

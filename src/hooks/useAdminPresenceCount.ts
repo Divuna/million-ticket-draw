@@ -1,17 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-// Create a separate Supabase client instance for admin presence listener
-// This prevents channel conflicts with the user's presence tracking
-const SUPABASE_URL = "https://xkzhjldrojjlrkezorey.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhremhqbGRyb2pqbHJrZXpvcmV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4NDEyMTQsImV4cCI6MjA3MzQxNzIxNH0.O8--xNUY9PFqIBlXDav1x-coeYbZEy8UzAtMDEZhS6U";
-
-const adminPresenceClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: false, // No need to persist session for this client
-    autoRefreshToken: false,
-  },
-});
+import { supabase } from '@/integrations/supabase/client';
 
 interface OnlineUser {
   userId: string;
@@ -37,7 +25,7 @@ export const useAdminPresenceCount = (): AdminPresenceResult => {
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [presenceStatus, setPresenceStatus] = useState<PresenceStatus>('connecting');
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
-  const channelRef = useRef<ReturnType<typeof adminPresenceClient.channel> | null>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const joinCallbackRef = useRef<((userId: string) => void) | null>(null);
   const initialSyncDoneRef = useRef(false);
 
@@ -46,9 +34,9 @@ export const useAdminPresenceCount = (): AdminPresenceResult => {
   }, []);
 
   useEffect(() => {
-    console.log('[AdminPresence] Creating admin presence channel with separate client');
+    console.log('[AdminPresence] Creating admin presence channel');
     
-    const channel = adminPresenceClient.channel('online_users', {
+    const channel = supabase.channel('online_users', {
       config: {
         presence: {
           key: 'admin_listener',
@@ -136,7 +124,7 @@ export const useAdminPresenceCount = (): AdminPresenceResult => {
 
     return () => {
       console.log('[AdminPresence] Cleaning up admin presence channel');
-      adminPresenceClient.removeChannel(channel);
+      supabase.removeChannel(channel);
       channelRef.current = null;
       initialSyncDoneRef.current = false;
     };

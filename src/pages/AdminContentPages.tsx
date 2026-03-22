@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, FileText, Scale, HelpCircle } from 'lucide-react';
 
@@ -39,7 +38,7 @@ const SECTIONS = [
 ];
 
 const AdminContentPages: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const [contentPages, setContentPages] = useState<ContentPage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -208,14 +207,15 @@ const AdminContentPages: React.FC = () => {
     );
   }
 
+  if (authLoading) {
+    return null;
+  }
+
   if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <NavigateToLogin />;
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <Header />
-
       <main className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -339,7 +339,7 @@ const AdminContentPages: React.FC = () => {
                 <TabsTrigger key={s.value} value={s.value} className="gap-2">
                   <Icon className="h-4 w-4" />
                   {s.label}
-                  <Badge variant="secondary" className="ml-1">
+                  <Badge variant="outline" className="ml-1 tabular-nums">
                     {getPagesBySection(s.value).length}
                   </Badge>
                 </TabsTrigger>
@@ -387,8 +387,8 @@ const AdminContentPages: React.FC = () => {
                             </TableCell>
                             <TableCell>{page.version || '-'}</TableCell>
                             <TableCell>
-                              <Badge variant={page.is_active ? 'default' : 'secondary'}>
-                                {page.is_active ? 'Aktivní' : 'Neaktivní'}
+                              <Badge variant={page.is_active ? "success" : "pending"}>
+                                {page.is_active ? "Aktivní" : "Neaktivní"}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right space-x-1">
@@ -439,7 +439,6 @@ const AdminContentPages: React.FC = () => {
           ))}
         </Tabs>
       </main>
-    </div>
   );
 };
 

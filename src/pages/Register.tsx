@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import '@/components/ContestCard.css';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +9,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-onemil.png';
+import { PENDING_REFERRAL_STORAGE_KEY } from '@/hooks/useApplyPendingReferral';
 
 const Register: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -22,6 +24,18 @@ const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { signUp, signInWithOAuth } = useAuth();
   const navigate = useNavigate();
+
+  // Persist referral code from URL so it can be applied after signup (or after OAuth return)
+  useEffect(() => {
+    const ref = searchParams.get('ref')?.trim();
+    if (ref) {
+      try {
+        sessionStorage.setItem(PENDING_REFERRAL_STORAGE_KEY, ref);
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }, [searchParams]);
 
   const validateAge = (dob: string): boolean => {
     if (!dob) return false;
@@ -97,6 +111,23 @@ const Register: React.FC = () => {
               id: newUser.id,
               date_of_birth: dateOfBirth
             }, { onConflict: 'id' });
+
+          // Apply referral code from URL if present (e.g. /register?ref=CODE)
+          try {
+            const pendingRef = sessionStorage.getItem(PENDING_REFERRAL_STORAGE_KEY);
+            if (pendingRef) {
+              const { data: result } = await supabase.rpc('set_my_referrer_by_code', {
+                p_code: pendingRef,
+                p_source: 'signup',
+              });
+              sessionStorage.removeItem(PENDING_REFERRAL_STORAGE_KEY);
+              if (result === 'accepted') {
+                toast({ title: 'Úspěch', description: 'Referral kód byl aktivován. Děkujeme!' });
+              }
+            }
+          } catch {
+            // non-blocking; user can add code later in Profile
+          }
         }
         navigate('/profile');
       }
@@ -113,7 +144,7 @@ const Register: React.FC = () => {
 
   const handleOAuthSignIn = async (provider: 'google' | 'apple' | 'facebook') => {
     try {
-      await signInWithOAuth(provider);
+      await signInWithOAuth(provider, searchParams.get('redirect'));
     } catch (error) {
       toast({
         title: "Chyba registrace",

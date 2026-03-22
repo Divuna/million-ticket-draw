@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -8,11 +9,13 @@ import { AdminSoundIndicator } from '@/components/AdminSoundIndicator';
 import logo from '@/assets/logo-onemil.png';
 
 export const Header: React.FC = () => {
+  const location = useLocation();
   const { user, signOut } = useAuth();
   const { isAdmin } = useUserRole();
   const { soundEnabled, toggleSound, realtimeConnected, lastRealtimeEvent } = useAdminRealtimeContext();
 
   return (
+    <>
     <header className="sticky top-0 z-50 h-16 md:h-20 bg-background/70 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4">
       <div className="container mx-auto flex items-center justify-between px-4">
         <div className="flex items-center gap-4">
@@ -53,7 +56,7 @@ export const Header: React.FC = () => {
             </>
           ) : (
             <>
-              <Link to="/login">
+              <Link to={buildLoginRedirectUrl(location.pathname + location.search)}>
                 <Button variant="ghost">Přihlásit</Button>
               </Link>
               <Link to="/register">
@@ -64,5 +67,6 @@ export const Header: React.FC = () => {
         </nav>
       </div>
     </header>
+    </>
   );
 };

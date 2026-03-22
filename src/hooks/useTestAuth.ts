@@ -22,7 +22,6 @@ export const useTestAuth = () => {
   
   // Return a default object if context is not available (for safety)
   if (context === undefined) {
-    console.warn('TestAuthProvider not found, returning default test auth state');
     return {
       testUser: null,
       testSignIn: async () => ({ error: { message: 'Test auth not available' } }),

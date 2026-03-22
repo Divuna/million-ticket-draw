@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     };
 
     const oneSignalApiKey = Deno.env.get('ONESIGNAL_REST_API_KEY');
-    const appId = '5e5539e1-fc71-4c4d-9fef-414293d83dbb';
+    const appId = '357be038-dbaf-4551-9a16-96d9897197a3';
 
     // Send push notification if player_id exists
     if (devices?.player_id && oneSignalApiKey) {

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/share/ticket/:id",
+      "destination": "https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/og-ticket-share?id=:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "User-Agent",
+          "value": ".*(facebookexternalhit|Facebot).*"
+        }
+      ]
+    }
+  ]
+}

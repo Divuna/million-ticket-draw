@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfWeek, endOfWeek, subWeeks, addWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -11,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AdminMenu } from '@/components/AdminMenu';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
+import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 
 type InvoiceStatus = 'draft' | 'issued' | 'paid';
@@ -58,7 +60,8 @@ const statusColors: Record<InvoiceStatus, string> = {
 };
 
 const AdminInvoices: React.FC = () => {
-  const { isAdmin } = useUserRole();
+  const { user, loading: authLoading } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,12 +82,14 @@ const AdminInvoices: React.FC = () => {
   const currentWeekEnd = endOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
 
   useEffect(() => {
+    if (!user || !isAdmin) return;
     fetchPartners();
-  }, []);
+  }, [user, isAdmin]);
 
   useEffect(() => {
+    if (!user || !isAdmin) return;
     fetchInvoices();
-  }, [selectedPartner, selectedStatus, weekOffset]);
+  }, [selectedPartner, selectedStatus, weekOffset, user, isAdmin]);
 
   const fetchPartners = async () => {
     const { data } = await supabase
@@ -278,9 +283,25 @@ const AdminInvoices: React.FC = () => {
     return invoice.partner?.company_name || invoice.partner?.name || 'Neznámý partner';
   };
 
+  if (authLoading || roleLoading) {
+    return (
+      <div className="flex flex-1 items-center justify-center min-h-[40vh] py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <NavigateToLogin />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="container mx-auto px-4 py-6">
+    <>
+    <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-foreground">Faktury</h1>
         </div>
@@ -587,9 +608,7 @@ const AdminInvoices: React.FC = () => {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
-
-      <AdminMenu />
-    </div>
+    </>
   );
 };
 

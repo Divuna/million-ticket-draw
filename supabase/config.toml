@@ -89,3 +89,6 @@ verify_jwt = false
 
 [functions.stripe-refund]
 verify_jwt = true
+
+[functions.send-push]
+verify_jwt = false

@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Header } from '@/components/Header';
-import { AdminMenu } from '@/components/AdminMenu';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,7 +21,7 @@ interface IncompleteUser {
 }
 
 const AdminOnboardingIncomplete: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const [users, setUsers] = useState<IncompleteUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -188,14 +186,16 @@ const AdminOnboardingIncomplete: React.FC = () => {
     );
   }
 
+  if (authLoading) {
+    return null;
+  }
+
   if (!user || !isAdmin) {
     return <Navigate to="/" replace />;
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <Header />
-      
+    <>
       <div className="container mx-auto px-4 py-6">
         <Card>
           <CardHeader>
@@ -352,9 +352,7 @@ const AdminOnboardingIncomplete: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <AdminMenu />
-    </div>
+    </>
   );
 };
 

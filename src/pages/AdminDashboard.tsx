@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate, Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,24 +9,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useTestAuth } from '@/hooks/useTestAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ADMIN_DASHBOARD_TAB_SET } from '@/components/admin/adminNavConfig';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AdminMenu } from '@/components/AdminMenu';
 import { TicketMapAdmin } from '@/components/TicketMapAdmin';
 import { AdminBonusOverview } from '@/components/AdminBonusOverview';
-import { AdminPrizeDelivery } from '@/components/AdminPrizeDelivery';
 import { AdminContestManagement } from '@/components/AdminContestManagement';
-import { AdminPayments } from '@/components/AdminPayments';
-import { AdminNotifications } from '@/components/AdminNotifications';
-import { OneSignalDebug } from '@/components/OneSignalDebug';
 import { AdminTestSuite } from '@/tests/AdminTestSuite';
 import { AdminValidationWorkflows } from '@/tests/AdminValidationWorkflows';
+import { ContestControlPanel } from '@/components/admin/ContestControlPanel';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { useAdminRealtimeContext } from '@/components/AdminRealtimeProvider';
-import { TestTube, AlertTriangle, Gift, Bug, Wifi, WifiOff } from 'lucide-react';
+import { AlertTriangle, Gift, Bug, Wifi, WifiOff } from 'lucide-react';
 
 interface Contest {
   id: string;
@@ -82,9 +77,14 @@ interface AIRequest {
 
 const AdminDashboard: React.FC = () => {
   const { user, session } = useAuth();
-  const { isAdmin } = useUserRole();
-  const { testUser, isTestMode, testSignOut } = useTestAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const [searchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab') || 'management';
+  const dashboardTab = ADMIN_DASHBOARD_TAB_SET.has(requestedTab)
+    ? requestedTab
+    : 'management';
+
+  const navigate = useNavigate();
   const [contests, setContests] = useState<Contest[]>([]);
   const [selectedContest, setSelectedContest] = useState<string>('');
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
@@ -128,24 +128,19 @@ const AdminDashboard: React.FC = () => {
   });
 
   useEffect(() => {
-    // Support both regular auth and test auth
-    if (user || (isTestMode && testUser)) {
-      checkAdminRole();
-      fetchContests();
+    if (roleLoading) return;
+    if (!user || !isAdmin) {
+      setLoading(false);
+      return;
     }
-  }, [user, isTestMode, testUser]);
-
-  // Enhanced authentication check to support test mode
-  useEffect(() => {
-    // If in test mode, check admin role based on test user
-    if (isTestMode && testUser) {
-      checkAdminRole();
-      fetchContests();
-    }
-  }, [isTestMode, testUser]);
+    checkAdminRole();
+    fetchContests();
+  }, [user, isAdmin, roleLoading]);
 
   // Realtime subscription for bonus prizes updates on contests table
   useEffect(() => {
+    if (roleLoading || !user || !isAdmin) return;
+
     const channel = supabase
       .channel('contests-bonus-realtime')
       .on('postgres_changes', {
@@ -161,17 +156,18 @@ const AdminDashboard: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user, isAdmin, roleLoading]);
 
   useEffect(() => {
+    if (roleLoading || !user || !isAdmin) return;
     if (selectedContest) {
       fetchBonusPrizes();
     }
-  }, [selectedContest]);
+  }, [selectedContest, user, isAdmin, roleLoading]);
 
   // Realtime subscription for bonus prizes
   useEffect(() => {
-    if (!selectedContest) return;
+    if (!selectedContest || roleLoading || !user || !isAdmin) return;
 
     const channel = supabase
       .channel('bonus-prizes-realtime')
@@ -189,7 +185,7 @@ const AdminDashboard: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedContest]);
+  }, [selectedContest, user, isAdmin, roleLoading]);
 
   const checkAdminRole = async () => {
     try {
@@ -276,7 +272,47 @@ const AdminDashboard: React.FC = () => {
         .order('ticket_position', { ascending: true });
 
       if (error) throw error;
-      setBonusPrizes(data || []);
+
+      const bonusPrizeIds = (data || []).map((prize) => prize.id);
+      let winnerByPrizeId = new Map<string, { status: string | null; delivered: boolean }>();
+
+      if (bonusPrizeIds.length > 0) {
+        const { data: winnersData, error: winnersError } = await supabase
+          .from('winners')
+          .select('prize_id, status, delivered')
+          .eq('contest_id', selectedContest)
+          .eq('type', 'bonus')
+          .in('prize_id', bonusPrizeIds);
+
+        if (winnersError) throw winnersError;
+
+        winnerByPrizeId = new Map(
+          (winnersData || [])
+            .filter((w) => !!w.prize_id)
+            .map((w) => [
+              w.prize_id as string,
+              { status: w.status ?? null, delivered: !!w.delivered },
+            ])
+        );
+      }
+
+      const normalized = (data || []).map((bonus) => {
+        const winner = winnerByPrizeId.get(bonus.id);
+        const derivedStatus = !winner
+          ? 'pending'
+          : winner.delivered || winner.status === 'delivered'
+            ? 'delivered'
+            : winner.status === 'shipped'
+              ? 'shipped'
+              : 'won';
+
+        return {
+          ...bonus,
+          status: derivedStatus,
+        };
+      });
+
+      setBonusPrizes(normalized);
     } catch (error) {
       console.error('Error fetching bonus prizes:', error);
       toast({
@@ -525,8 +561,8 @@ const AdminDashboard: React.FC = () => {
       }
 
       // Fetch EventLogs from Sofinity
-      const sofinityUrl = 'https://xkzhjldrojjlrkezorey.supabase.co';
-      const sofinityKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhremhqbGRyb2pqbHJrZXpvcmV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4NDEyMTQsImV4cCI6MjA3MzQxNzIxNH0.O8--xNUY9PFqIBlXDav1x-coeYbZEy8UzAtMDEZhS6U';
+      const sofinityUrl = import.meta.env.VITE_SUPABASE_URL;
+      const sofinityKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
       const eventLogsResponse = await fetch(`${sofinityUrl}/rest/v1/EventLogs?select=id,event_name,event_id,user_id,contest_id,timestamp&order=timestamp.desc&limit=20`, {
         headers: {
@@ -603,19 +639,25 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Enhanced authentication check for both regular and test mode
-  if (!session && !(isTestMode && testUser)) {
+  if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (roleLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Načítám dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">Načítám dashboard...</p>
-          </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Načítám dashboard...</p>
         </div>
       </div>
     );
@@ -623,47 +665,21 @@ const AdminDashboard: React.FC = () => {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Přístup odepřen</h1>
-            <p className="text-muted-foreground">Pro přístup k admin panelu potřebujete oprávnění administrátora.</p>
-          </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Přístup odepřen</h1>
+          <p className="text-muted-foreground">Pro přístup k admin panelu potřebujete oprávnění administrátora.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      
-      {/* Test Mode Banner */}
-      {isTestMode && testUser && (
-        <Alert className="mx-4 mt-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
-          <TestTube className="h-4 w-4 text-yellow-600" />
-          <AlertDescription className="flex items-center justify-between">
-            <span className="text-yellow-800 dark:text-yellow-200">
-              <strong>🧪 TEST REŽIM AKTIVNÍ</strong> - Přihlášen jako: {testUser.email} 
-              (Toto není produkční přihlášení!)
-            </span>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={testSignOut}
-              className="ml-4 border-yellow-600 text-yellow-700 hover:bg-yellow-100"
-            >
-              Ukončit test
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-      
+    <>
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold">Administrátorský panel</h1>
+            <h1 className="text-3xl font-bold">TEST123</h1>
             <div className="flex items-center gap-2">
               {/* Debug panel toggle */}
               <Button
@@ -690,7 +706,7 @@ const AdminDashboard: React.FC = () => {
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Bug className="h-4 w-4" />
                   Debug: Realtime notifikace
-                  <Badge variant={realtimeConnected ? "default" : "destructive"} className="ml-auto">
+                  <Badge variant={realtimeConnected ? "success" : "destructive"} className="ml-auto">
                     {realtimeConnected ? (
                       <><Wifi className="h-3 w-3 mr-1" /> Připojeno</>
                     ) : (
@@ -726,8 +742,8 @@ const AdminDashboard: React.FC = () => {
                           {event.type === 'payment' && '💰 Top-up'}
                           {event.type === 'ticket' && '🎮 Hra'}
                         </Badge>
-                        <Badge variant={event.source === 'realtime' ? 'default' : 'secondary'}>
-                          {event.source === 'realtime' ? 'realtime' : 'polling'}
+                        <Badge variant={event.source === "realtime" ? "success" : "pending"}>
+                          {event.source === "realtime" ? "realtime" : "polling"}
                         </Badge>
                         <span className="text-muted-foreground">
                           {event.timestamp.toLocaleTimeString('cs-CZ')}
@@ -746,39 +762,15 @@ const AdminDashboard: React.FC = () => {
           )}
           
           
-          <Tabs defaultValue="management" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="management">Správa soutěží</TabsTrigger>
-              <TabsTrigger value="contests">Soutěže</TabsTrigger>
-              <TabsTrigger value="ticketmap">Mapa tiketů</TabsTrigger>
-              <TabsTrigger value="bonus-overview">Přehled bonusů</TabsTrigger>
-              <TabsTrigger value="prize-delivery">Předání výher</TabsTrigger>
-              
-              <TabsTrigger value="payments">Platby</TabsTrigger>
-              <TabsTrigger value="notifications">Notifikace</TabsTrigger>
-              
-              <TabsTrigger value="tests">Test Suite</TabsTrigger>
-              <TabsTrigger value="validations">Validace</TabsTrigger>
-              <TabsTrigger value="logs">Sofinity Logy</TabsTrigger>
-            </TabsList>
+          <div className="space-y-6">
+            {/* Sekce řídí pouze URL ?tab=… a admin nástrojová lišta (žádný Tabs / TabsList) */}
+            {dashboardTab === "tests" && <AdminTestSuite />}
 
-            {/* Test Suite */}
-            <TabsContent value="tests">
-              <AdminTestSuite />
-            </TabsContent>
+            {dashboardTab === "validations" && <AdminValidationWorkflows />}
 
-            {/* Validation Workflows */}
-            <TabsContent value="validations">
-              <AdminValidationWorkflows />
-            </TabsContent>
+            {dashboardTab === "management" && <AdminContestManagement />}
 
-            {/* Contest Management */}
-            <TabsContent value="management">
-              <AdminContestManagement />
-            </TabsContent>
-
-            {/* Contest List */}
-            <TabsContent value="contests">
+            {dashboardTab === "contests" && (
               <Card>
                 <CardHeader>
                   <CardTitle>Seznam soutěží</CardTitle>
@@ -837,7 +829,7 @@ const AdminDashboard: React.FC = () => {
                              <TableCell>
                                {contest.main_image ? (
                                  <img 
-                                   src={contest.main_image.startsWith('http') ? contest.main_image : `https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/contest-images/${contest.main_image}`} 
+                                   src={contest.main_image.startsWith('http') ? contest.main_image : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${contest.main_image}`} 
                                    alt={contest.title}
                                    className="w-12 h-12 object-cover rounded-md"
                                    onError={(e) => {
@@ -902,11 +894,12 @@ const AdminDashboard: React.FC = () => {
                                   }
                                 </span>
                               </TableCell>
-                              <TableCell className="max-w-xs">
+                              <TableCell className="max-w-xs" onClick={(e) => e.stopPropagation()}>
                                 <div 
                                   className="text-xs font-mono bg-muted p-2 rounded cursor-copy hover:bg-muted/80 transition-colors truncate"
                                   title={`Klikněte pro zkopírování: ${contest.first_20_positions || 'No bonuses'}`}
                                   onClick={(e) => {
+                                    e.stopPropagation();
                                     navigator.clipboard.writeText(contest.first_20_positions || 'No bonuses');
                                     toast({
                                       title: "Zkopírováno",
@@ -918,6 +911,15 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                               </TableCell>
                                <TableCell>{new Date(contest.created_at).toLocaleDateString('cs-CZ')}</TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/admin/contest/${contest.id}`)}
+                            >
+                              Otevřít
+                            </Button>
+                          </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -925,40 +927,13 @@ const AdminDashboard: React.FC = () => {
                   )}
                 </CardContent>
               </Card>
-            </TabsContent>
+            )}
 
-            {/* Ticket Map */}
-            <TabsContent value="ticketmap">
-              <TicketMapAdmin />
-            </TabsContent>
+            {dashboardTab === "ticketmap" && <TicketMapAdmin />}
 
-            {/* Bonus Overview */}
-            <TabsContent value="bonus-overview">
-              <AdminBonusOverview />
-            </TabsContent>
+            {dashboardTab === "bonus-overview" && <AdminBonusOverview />}
 
-            {/* Prize Delivery */}
-            <TabsContent value="prize-delivery">
-              <AdminPrizeDelivery />
-            </TabsContent>
-
-
-            {/* Payments */}
-            <TabsContent value="payments">
-              <AdminPayments />
-            </TabsContent>
-
-            {/* Notifications */}
-            <TabsContent value="notifications">
-              <AdminNotifications />
-              <div className="mt-6">
-                <OneSignalDebug />
-              </div>
-            </TabsContent>
-
-
-            {/* Bonus Prizes */}
-            <TabsContent value="prizes">
+            {dashboardTab === "prizes" && (
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
@@ -1073,10 +1048,9 @@ const AdminDashboard: React.FC = () => {
                   </Card>
                 )}
               </div>
-            </TabsContent>
+            )}
 
-            {/* Automatic Bonus Distribution */}
-            <TabsContent value="distribution">
+            {dashboardTab === "distribution" && (
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
@@ -1242,10 +1216,9 @@ const AdminDashboard: React.FC = () => {
                   </Card>
                 )}
               </div>
-            </TabsContent>
+            )}
 
-            {/* Sofinity Logs */}
-            <TabsContent value="logs">
+            {dashboardTab === "logs" && (
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
@@ -1300,7 +1273,7 @@ const AdminDashboard: React.FC = () => {
                               {log.function_id.substring(0, 8)}...
                             </TableCell>
                             <TableCell>
-                              <Badge variant={log.level === 'error' ? 'destructive' : 'default'}>
+                              <Badge variant={log.level === "error" ? "destructive" : "info"}>
                                 {log.level}
                               </Badge>
                             </TableCell>
@@ -1412,12 +1385,13 @@ const AdminDashboard: React.FC = () => {
                   </CardContent>
                 </Card>
               </div>
-            </TabsContent>
-          </Tabs>
+            )}
+
+            {dashboardTab === "contest-control" && <ContestControlPanel />}
+          </div>
         </div>
       </div>
-      <AdminMenu />
-    </div>
+    </>
   );
 };
 

@@ -57,7 +57,7 @@ export const AdminBonusOverview: React.FC = () => {
       for (const contest of contests || []) {
         const { data: bonuses, error: bonusError } = await supabase
           .from('bonus_prizes')
-          .select('ticket_position, status')
+          .select('id, ticket_position')
           .eq('contest_id', contest.id);
 
         if (bonusError) {
@@ -65,8 +65,31 @@ export const AdminBonusOverview: React.FC = () => {
           continue;
         }
 
+        const bonusIds = (bonuses || []).map((b) => b.id);
+        let winnersForContest: { prize_id: string | null }[] = [];
+
+        if (bonusIds.length > 0) {
+          const { data: winnersData, error: winnersError } = await supabase
+            .from('winners')
+            .select('prize_id')
+            .eq('contest_id', contest.id)
+            .eq('type', 'bonus')
+            .in('prize_id', bonusIds);
+
+          if (winnersError) {
+            console.error('Error fetching winners for contest:', contest.id, winnersError);
+          } else {
+            winnersForContest = winnersData || [];
+          }
+        }
+
         const totalBonusCount = bonuses?.length || 0;
-        const assignedBonusCount = bonuses?.filter(b => b.status === 'won').length || 0;
+        const assignedPrizeIds = new Set(
+          winnersForContest
+            .map((w) => w.prize_id)
+            .filter((id): id is string => !!id)
+        );
+        const assignedBonusCount = assignedPrizeIds.size;
         const unassignedBonusCount = totalBonusCount - assignedBonusCount;
         const bonusPositions = bonuses?.map(b => b.ticket_position).sort((a, b) => a - b).join(', ') || null;
 

@@ -1,0 +1,49 @@
+---
+description: OneMil safety rules — schema protection, destructive SQL guard, test-only mode
+alwaysApply: true
+---
+
+# OneMil Safety Rules
+
+## 1. Never modify schema automatically
+
+The following require an explicit instruction from the user before executing:
+
+- `CREATE TABLE`, `ALTER TABLE`, `DROP TABLE`
+- `CREATE TRIGGER`, `DROP TRIGGER`
+- `CREATE OR REPLACE FUNCTION`, `ALTER FUNCTION`
+- Any new migration file applied to the database
+
+Writing a migration file to `supabase/migrations/` is allowed.  
+**Applying** it (via CLI or Management API) requires explicit user approval.
+
+## 2. Never run destructive SQL
+
+Forbidden without a specific, scoped WHERE clause and user confirmation:
+
+- `DROP` (table, column, index, trigger, function)
+- `TRUNCATE`
+- `DELETE` without `WHERE`
+- `UPDATE` without `WHERE`
+
+## 3. Always show SQL before executing
+
+For any SQL that changes data or schema:
+
+1. Print the full SQL first
+2. Explain what it does in plain language
+3. Wait for the user to say "apply" or "run it"
+
+## 4. Test mode — report only, no changes
+
+When the user says "run tests", "verify", or "check":
+
+- Execute read-only SQL (`SELECT`, `EXPLAIN`)
+- Report problems clearly
+- Do **not** create migrations, alter functions, or modify triggers
+
+## 5. Work in small batches
+
+- Do not load the entire repository into context at once
+- Query one table, function, or file group at a time
+- Prefer targeted `pg_proc`, `pg_trigger`, `information_schema` lookups over full schema scans

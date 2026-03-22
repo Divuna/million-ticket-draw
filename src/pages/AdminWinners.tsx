@@ -2,28 +2,25 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Navigate } from 'react-router-dom';
-import { AdminMenu } from '@/components/AdminMenu';
-import { ImageOff, X, ChevronDown, ChevronUp, MapPin, History, Download, Check, Coins, Trophy, Gift } from 'lucide-react';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
+import { ImageOff, X, ChevronDown, ChevronUp, MapPin, History, Download, Check, Coins, Trophy, Gift, ShieldCheck, ShieldOff, Loader2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-
-const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
+import { supabaseUrl } from '@/integrations/supabase/client';
 
 const getStorageUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
-  return `${SUPABASE_URL}/storage/v1/object/public/contest-images/${path}`;
+  return `${supabaseUrl}/storage/v1/object/public/contest-images/${path}`;
 };
 
 interface UserAddress {
@@ -43,6 +40,7 @@ interface WinnerData {
   created_at: string;
   updated_at: string | null;
   user_email: string;
+  user_nickname: string | null;
   user_avatar: string | null;
   contest_title: string;
   prize_description: string;
@@ -58,6 +56,18 @@ interface StatusHistoryEntry {
   changed_by: string | null;
   created_at: string;
   admin_email?: string;
+}
+
+/**
+ * Tracks admin verification state per winner.
+ * Stored in audit_logs (event = 'winner_admin_verified' | 'winner_admin_unverified')
+ * because the winners table has no verified_by_admin column.
+ */
+interface VerificationInfo {
+  verified: boolean;
+  admin_id: string | null;
+  admin_email?: string;
+  verified_at: string | null;
 }
 
 const AdminWinners: React.FC = () => {
@@ -76,6 +86,8 @@ const AdminWinners: React.FC = () => {
   const [exportDateFrom, setExportDateFrom] = useState<string>('');
   const [exportDateTo, setExportDateTo] = useState<string>('');
   const [exportPreviewCount, setExportPreviewCount] = useState<number | null>(null);
+  const [verifications, setVerifications] = useState<Record<string, VerificationInfo>>({});
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
   const historyPopupRef = useRef<HTMLDivElement>(null);
 
   // Close history popup when clicking outside
@@ -97,21 +109,34 @@ const AdminWinners: React.FC = () => {
   const statusOptions = [
     { value: 'all', label: 'Všechny stavy' },
     { value: 'auto_credited', label: 'Automaticky připsáno' },
-    { value: 'čeká na potvrzení', label: 'Čeká na potvrzení' },
+    { value: 'pending', label: 'Čeká' },
     { value: 'připraveno k odeslání', label: 'Připraveno k odeslání' },
-    { value: 'odesláno', label: 'Odesláno' },
-    { value: 'vyplaceno', label: 'Vyplaceno' }
+    { value: 'shipped', label: 'Odesláno' },
+    { value: 'delivered', label: 'Předáno' }
   ];
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Čeká';
+      case 'shipped':
+        return 'Odesláno';
+      case 'delivered':
+        return 'Předáno';
+      default:
+        return status;
+    }
+  };
 
   const getStatusColor = (status: string | null) => {
     switch (status) {
-      case 'čeká na potvrzení':
+      case 'pending':
         return { badge: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', trigger: 'border-yellow-500/50 text-yellow-400' };
       case 'připraveno k odeslání':
         return { badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30', trigger: 'border-blue-500/50 text-blue-400' };
-      case 'odesláno':
+      case 'shipped':
         return { badge: 'bg-purple-500/20 text-purple-400 border-purple-500/30', trigger: 'border-purple-500/50 text-purple-400' };
-      case 'vyplaceno':
+      case 'delivered':
         return { badge: 'bg-green-500/20 text-green-400 border-green-500/30', trigger: 'border-green-500/50 text-green-400' };
       default:
         return { badge: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', trigger: 'border-yellow-500/50 text-yellow-400' };
@@ -207,7 +232,7 @@ const AdminWinners: React.FC = () => {
       const filtered = winners.filter(winner => {
         // Skip auto-credited MioCoin bonuses from physical status filters
         if (isAutoCreditBonus(winner)) return false;
-        return (winner.status || 'čeká na potvrzení') === statusFilter;
+        return (winner.status || 'pending') === statusFilter;
       });
       setFilteredWinners(filtered);
     }
@@ -238,11 +263,126 @@ const AdminWinners: React.FC = () => {
     fetchExportCount();
   }, [exportDateFrom, exportDateTo]);
 
+  /**
+   * Reads all winner_admin_verified / winner_admin_unverified entries from
+   * audit_logs and rebuilds the per-winner verification map.
+   * The latest audit entry for each winner wins.
+   */
+  const loadVerifications = async (winnerIds: string[]) => {
+    if (winnerIds.length === 0) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('id, user_id, event, metadata, created_at')
+        .in('event', ['winner_admin_verified', 'winner_admin_unverified'])
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('audit_logs read error (verification):', error);
+        return;
+      }
+
+      // Only rows whose metadata.winner_id is in our current winner set
+      const winnerSet = new Set(winnerIds);
+      const relevant = (data || []).filter(
+        (row) => winnerSet.has(row.metadata?.winner_id)
+      );
+
+      // Fetch admin emails for involved user_ids
+      const adminIds = [...new Set(relevant.map((r) => r.user_id).filter(Boolean))];
+      let emailMap: Record<string, string> = {};
+      if (adminIds.length > 0) {
+        const { data: admins } = await supabase
+          .from('users')
+          .select('id, email')
+          .in('id', adminIds);
+        emailMap = (admins || []).reduce((acc, a) => {
+          acc[a.id] = a.email;
+          return acc;
+        }, {} as Record<string, string>);
+      }
+
+      // Build map: winner_id → latest state
+      const map: Record<string, VerificationInfo> = {};
+      for (const row of relevant) {
+        const wid = row.metadata?.winner_id as string | undefined;
+        if (!wid || map[wid]) continue; // skip if already set (rows are DESC)
+        map[wid] = {
+          verified:    row.event === 'winner_admin_verified',
+          admin_id:    row.user_id,
+          admin_email: row.user_id ? emailMap[row.user_id] : undefined,
+          verified_at: row.created_at,
+        };
+      }
+
+      setVerifications((prev) => ({ ...prev, ...map }));
+    } catch (err) {
+      console.error('Error loading verifications:', err);
+    }
+  };
+
+  /**
+   * Toggles admin verification for a winner.
+   * Writes a new audit_log row; never mutates the winners table.
+   */
+  const toggleVerification = async (winner: WinnerData) => {
+    if (verifyingId) return;
+    setVerifyingId(winner.id);
+
+    const current = verifications[winner.id];
+    const nowVerified = current?.verified ?? false;
+    const newEvent = nowVerified ? 'winner_admin_unverified' : 'winner_admin_verified';
+
+    try {
+      const { error } = await supabase.from('audit_logs').insert({
+        user_id:  user?.id ?? null,
+        event:    newEvent,
+        metadata: {
+          winner_id:     winner.id,
+          contest_id:    winner.contest_id,
+          ticket_number: winner.ticket_number,
+          prize:         winner.prize_description,
+          action:        nowVerified ? 'unverified by admin' : 'verified by admin',
+        },
+      });
+
+      if (error) throw error;
+
+      // Optimistic update
+      setVerifications((prev) => ({
+        ...prev,
+        [winner.id]: {
+          verified:    !nowVerified,
+          admin_id:    user?.id ?? null,
+          admin_email: user?.email,
+          verified_at: new Date().toISOString(),
+        },
+      }));
+
+      toast({
+        title: nowVerified ? 'Ověření odebráno' : 'Výhra ověřena',
+        description: nowVerified
+          ? `Ověření výhry ${winner.prize_description} bylo zrušeno.`
+          : `Výhra ${winner.prize_description} byla označena jako ověřená adminem.`,
+      });
+    } catch (err: any) {
+      console.error('Error toggling verification:', err);
+      toast({
+        title: 'Chyba',
+        description: err?.message || 'Nepodařilo se uložit ověření.',
+        variant: 'destructive',
+      });
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
   const fetchWinners = async () => {
     try {
       setLoading(true);
       
-      // Fetch winners with user email and contest title
+      // Fetch winners with user email, nickname, contest title, and ticket_id
       const { data, error } = await supabase
         .from('winners')
         .select(`
@@ -250,10 +390,11 @@ const AdminWinners: React.FC = () => {
           user_id,
           contest_id,
           prize_id,
+          ticket_id,
           type,
           status,
           created_at,
-          users!inner(email, first_name, last_name, address, phone),
+          users!inner(email, first_name, last_name, address, phone, nickname),
           contests!inner(title, main_prize, main_prize_secondary_image, main_image)
         `)
         .order('created_at', { ascending: false });
@@ -276,6 +417,21 @@ const AdminWinners: React.FC = () => {
         }, {} as Record<string, string | null>);
       }
 
+      // Fetch ticket numbers for main winners (winners.ticket_id → tickets.number)
+      const mainWinnerTicketIds = (data || [])
+        .filter((w: any) => w.type === 'main' && w.ticket_id)
+        .map((w: any) => w.ticket_id);
+      let ticketNumberMap: Record<string, number> = {};
+      if (mainWinnerTicketIds.length > 0) {
+        const { data: ticketsData } = await supabase
+          .from('tickets')
+          .select('id, number')
+          .in('id', mainWinnerTicketIds);
+        (ticketsData || []).forEach((t: any) => {
+          ticketNumberMap[t.id] = t.number;
+        });
+      }
+
       // Process the data and fetch bonus prize descriptions
       const processedWinners: WinnerData[] = [];
       
@@ -287,8 +443,7 @@ const AdminWinners: React.FC = () => {
         if (winner.type === 'main') {
           prizeDescription = (winner.contests as any)?.main_prize || 'Hlavní cena';
           prizeImage = (winner.contests as any)?.main_prize_secondary_image || (winner.contests as any)?.main_image || null;
-          // For main prizes, no specific ticket number is stored
-          ticketNumber = null;
+          ticketNumber = (winner as any).ticket_id ? ticketNumberMap[(winner as any).ticket_id] ?? null : null;
         } else if (winner.type === 'bonus' && winner.prize_id) {
           const { data: bonusData } = await supabase
             .from('bonus_prizes')
@@ -309,10 +464,11 @@ const AdminWinners: React.FC = () => {
           contest_id: winner.contest_id,
           prize_id: winner.prize_id,
           type: winner.type as 'main' | 'bonus',
-          status: winner.status || 'čeká na potvrzení',
+          status: winner.status || 'pending',
           created_at: winner.created_at,
           updated_at: null,
           user_email: userData?.email || 'Neznámý uživatel',
+          user_nickname: userData?.nickname || null,
           user_avatar: userAvatars[winner.user_id] || null,
           contest_title: (winner.contests as any)?.title || 'Neznámá soutěž',
           prize_description: prizeDescription,
@@ -328,6 +484,9 @@ const AdminWinners: React.FC = () => {
       }
 
       setWinners(processedWinners);
+
+      // Load admin verifications from audit_logs (no schema change needed)
+      await loadVerifications(processedWinners.map((w) => w.id));
     } catch (error) {
       console.error('Error fetching winners:', error);
       toast({
@@ -342,14 +501,14 @@ const AdminWinners: React.FC = () => {
 
   const getStatusMessage = (status: string, prizeName: string): string => {
     switch (status) {
-      case 'čeká na potvrzení':
-        return `Vaše výhra "${prizeName}" čeká na potvrzení.`;
+      case 'pending':
+        return `Vaše výhra "${prizeName}" je ve stavu Čeká.`;
       case 'připraveno k odeslání':
         return `Vaše výhra "${prizeName}" je připravena k odeslání.`;
-      case 'odesláno':
+      case 'shipped':
         return `Vaše výhra "${prizeName}" byla odeslána.`;
-      case 'vyplaceno':
-        return `Vaše výhra "${prizeName}" byla vyplacena.`;
+      case 'delivered':
+        return `Vaše výhra "${prizeName}" byla předána.`;
       default:
         return `Stav vaší výhry "${prizeName}" byl aktualizován na: ${status}.`;
     }
@@ -478,10 +637,10 @@ const AdminWinners: React.FC = () => {
 
   // Helper to derive ui_status for CSV export
   const deriveUiStatusForExport = (winner: WinnerData): string => {
-    // Check if delivered (status vyplaceno means delivered)
-    if (winner.status === 'vyplaceno') return 'doručeno';
-    // Check if notes contain 'odesláno' or status is 'odesláno'
-    if (winner.status === 'odesláno' || winner.status === 'připraveno k odeslání') return 'odesláno';
+    // Check if delivered
+    if (winner.status === 'delivered') return 'doručeno';
+    // Check shipped
+    if (winner.status === 'shipped' || winner.status === 'připraveno k odeslání') return 'odesláno';
     // Default
     return 'čeká';
   };
@@ -529,7 +688,7 @@ const AdminWinners: React.FC = () => {
         throw new Error('Winner not found');
       }
 
-      const oldStatus = winner.status || 'čeká na potvrzení';
+      const oldStatus = winner.status || 'pending';
 
       // First, update the status in the database
       const { error: updateError } = await supabase
@@ -637,7 +796,7 @@ const AdminWinners: React.FC = () => {
       let errorCount = 0;
 
       for (const winner of selectedPhysicalWinners) {
-        const oldStatus = winner.status || 'čeká na potvrzení';
+        const oldStatus = winner.status || 'pending';
 
         // Update status in database
         const { error: updateError } = await supabase
@@ -735,26 +894,21 @@ const AdminWinners: React.FC = () => {
   }
 
   if (!session || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <NavigateToLogin />;
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">Načítám výhry...</p>
-          </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Načítám výhry...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      
+    <>
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
           <Card>
@@ -864,12 +1018,12 @@ const AdminWinners: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => updateBulkWinnerStatus('čeká na potvrzení')}
+                      onClick={() => updateBulkWinnerStatus('shipped')}
                       disabled={selectedPhysicalCount === 0}
                       className="gap-1 border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
                     >
                       <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
-                      Čeká
+                      Odesláno
                     </Button>
                     <Button
                       variant="outline"
@@ -884,22 +1038,22 @@ const AdminWinners: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => updateBulkWinnerStatus('odesláno')}
-                      disabled={selectedPhysicalCount === 0}
-                      className="gap-1 border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-purple-400"></span>
-                      Odesláno
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateBulkWinnerStatus('vyplaceno')}
+                      onClick={() => updateBulkWinnerStatus('delivered')}
                       disabled={selectedPhysicalCount === 0}
                       className="gap-1 border-green-500/50 text-green-400 hover:bg-green-500/10"
                     >
                       <span className="w-2 h-2 rounded-full bg-green-400"></span>
-                      Vyplaceno
+                      Předáno
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateBulkWinnerStatus('delivered')}
+                      disabled={selectedPhysicalCount === 0}
+                      className="gap-1 border-green-500/50 text-green-400 hover:bg-green-500/10"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                      Předáno
                     </Button>
                     <Button
                       variant="ghost"
@@ -930,11 +1084,12 @@ const AdminWinners: React.FC = () => {
                         <TableHead className="w-20">Obrázek</TableHead>
                         <TableHead>Email uživatele</TableHead>
                         <TableHead>Adresa</TableHead>
-                        <TableHead>Název soutěže</TableHead>
-                        <TableHead>Popis ceny</TableHead>
+                        <TableHead>Soutěž / Tiket</TableHead>
+                        <TableHead>Cena</TableHead>
                         <TableHead>Typ</TableHead>
-                        <TableHead>Stav</TableHead>
+                        <TableHead>Stav doručení</TableHead>
                         <TableHead>Historie</TableHead>
+                        <TableHead className="w-32">Ověřeno adminem</TableHead>
                         <TableHead>Akce</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -985,12 +1140,14 @@ const AdminWinners: React.FC = () => {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Avatar className="h-8 w-8">
-                                <AvatarImage src={winner.user_avatar || undefined} alt={winner.user_email} />
+                                <AvatarImage src={winner.user_avatar || undefined} alt={winner.user_nickname ?? winner.user_email} />
                                 <AvatarFallback className="bg-muted text-xs">
-                                  {winner.user_email?.[0]?.toUpperCase() || 'U'}
+                                  {(winner.user_nickname ?? winner.user_email)?.[0]?.toUpperCase() || 'U'}
                                 </AvatarFallback>
                               </Avatar>
-                              <span className="font-medium">{winner.user_email}</span>
+                              <span className="font-medium" title={winner.user_email}>
+                                Výherce: {winner.user_nickname ?? winner.user_email}
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -1028,7 +1185,27 @@ const AdminWinners: React.FC = () => {
                               </CollapsibleContent>
                             </Collapsible>
                           </TableCell>
-                          <TableCell>{winner.contest_title}</TableCell>
+                          {/* Contest + ticket_number + contest_id */}
+                          <TableCell>
+                            <div className="space-y-1 min-w-[160px]">
+                              <div className="font-medium text-sm leading-tight">{winner.contest_title}</div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] px-1.5 py-0 font-mono border-orange-500/30 text-orange-400"
+                                >
+                                  {winner.ticket_number ? `#${winner.ticket_number.toLocaleString('cs-CZ')}` : '—'}
+                                </Badge>
+                                <span
+                                  className="text-[10px] font-mono text-muted-foreground/60"
+                                  title={winner.contest_id}
+                                >
+                                  {winner.contest_id.slice(0, 8)}…
+                                </span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          {/* Prize description */}
                           <TableCell>
                             <div className="space-y-1">
                               {winner.prize_description && winner.prize_description.length > 20 ? (
@@ -1062,10 +1239,6 @@ const AdminWinners: React.FC = () => {
                               ) : (
                                 <span className="text-sm">{winner.prize_description || '—'}</span>
                               )}
-                              {/* Ticket number line */}
-                              <div className="text-xs text-orange-400/80">
-                                Ticket {winner.ticket_number ? `#${winner.ticket_number}` : '—'}
-                              </div>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -1182,6 +1355,62 @@ const AdminWinners: React.FC = () => {
                               )}
                             </div>
                           </TableCell>
+                          {/* ── verified_by_admin (stored in audit_logs) ── */}
+                          <TableCell>
+                            {(() => {
+                              const vInfo = verifications[winner.id];
+                              const isVerified = vInfo?.verified ?? false;
+                              const isLoading = verifyingId === winner.id;
+
+                              return (
+                                <div className="flex flex-col gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={isLoading}
+                                    onClick={() => toggleVerification(winner)}
+                                    className={`h-7 px-2 gap-1.5 text-xs font-medium rounded-md border transition-colors ${
+                                      isVerified
+                                        ? 'border-green-500/40 text-green-400 bg-green-500/10 hover:bg-green-500/20'
+                                        : 'border-white/10 text-muted-foreground hover:bg-white/5'
+                                    }`}
+                                    title={
+                                      isVerified
+                                        ? `Ověřeno: ${vInfo?.admin_email ?? vInfo?.admin_id ?? 'admin'} • ${
+                                            vInfo?.verified_at
+                                              ? new Date(vInfo.verified_at).toLocaleString('cs-CZ')
+                                              : ''
+                                          }`
+                                        : 'Kliknutím ověřit výhru'
+                                    }
+                                  >
+                                    {isLoading ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : isVerified ? (
+                                      <ShieldCheck className="h-3.5 w-3.5" />
+                                    ) : (
+                                      <ShieldOff className="h-3.5 w-3.5" />
+                                    )}
+                                    {isVerified ? 'Ověřeno' : 'Neověřeno'}
+                                  </Button>
+                                  {isVerified && vInfo?.verified_at && (
+                                    <span className="text-[9px] text-muted-foreground/60 leading-tight">
+                                      {new Date(vInfo.verified_at).toLocaleString('cs-CZ', {
+                                        day: '2-digit', month: '2-digit', year: '2-digit',
+                                        hour: '2-digit', minute: '2-digit',
+                                      })}
+                                    </span>
+                                  )}
+                                  {isVerified && vInfo?.admin_email && (
+                                    <span className="text-[9px] text-muted-foreground/60 leading-tight truncate max-w-[110px]">
+                                      {vInfo.admin_email}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </TableCell>
+
                           <TableCell>
                             {isAutoCreditBonus(winner) ? (
                               <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30">
@@ -1189,17 +1418,17 @@ const AdminWinners: React.FC = () => {
                               </Badge>
                             ) : (
                               <Select
-                                value={winner.status || 'čeká na potvrzení'}
+                                value={winner.status || 'pending'}
                                 onValueChange={(value) => updateWinnerStatus(winner.id, value)}
                               >
                                 <SelectTrigger className={`w-48 ${getStatusColor(winner.status).trigger}`}>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="čeká na potvrzení">
+                                  <SelectItem value="pending">
                                     <span className="flex items-center gap-2">
                                       <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
-                                      Čeká na potvrzení
+                                      Čeká
                                     </span>
                                   </SelectItem>
                                   <SelectItem value="připraveno k odeslání">
@@ -1208,16 +1437,16 @@ const AdminWinners: React.FC = () => {
                                       Připraveno k odeslání
                                     </span>
                                   </SelectItem>
-                                  <SelectItem value="odesláno">
+                                  <SelectItem value="shipped">
                                     <span className="flex items-center gap-2">
                                       <span className="w-2 h-2 rounded-full bg-purple-400"></span>
                                       Odesláno
                                     </span>
                                   </SelectItem>
-                                  <SelectItem value="vyplaceno">
+                                  <SelectItem value="delivered">
                                     <span className="flex items-center gap-2">
                                       <span className="w-2 h-2 rounded-full bg-green-400"></span>
-                                      Vyplaceno
+                                      Předáno
                                     </span>
                                   </SelectItem>
                                 </SelectContent>
@@ -1236,7 +1465,6 @@ const AdminWinners: React.FC = () => {
           </Card>
         </div>
       </div>
-      <AdminMenu />
       
       {/* Image Preview Dialog */}
       <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
@@ -1256,7 +1484,7 @@ const AdminWinners: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };
 

@@ -29,14 +29,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if user is admin
-    const { data: adminUser } = await supabaseClient
-      .from('users')
+    // Check if user is admin via user_roles (canonical role source)
+    const { data: roleData } = await supabaseClient
+      .from('user_roles')
       .select('role')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .maybeSingle();
 
-    if (!adminUser || !['admin', 'superadmin'].includes(adminUser.role)) {
+    if (!roleData || !['admin', 'superadmin'].includes(roleData.role)) {
       console.error('❌ User is not admin:', user.id);
       return new Response(
         JSON.stringify({ error: 'Forbidden - Admin access required' }),
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
     console.log(`ℹ️ ${recentlyNotifiedUsers.size} uživatelů již bylo notifikováno v posledních 7 dnech`);
 
     const oneSignalApiKey = Deno.env.get('ONESIGNAL_REST_API_KEY');
-    const appId = '5e5539e1-fc71-4c4d-9fef-414293d83dbb';
+    const appId = '357be038-dbaf-4551-9a16-96d9897197a3';
 
     if (!oneSignalApiKey) {
       console.error('❌ ONESIGNAL_REST_API_KEY not configured');

@@ -1,0 +1,59 @@
+# OneMil Project – Cursor Rules
+
+This project is a production contest platform called OneMil (Million Ticket Draw).
+
+Stack:
+React
+Vite
+Tailwind
+Supabase
+PostgreSQL
+Edge Functions
+
+IMPORTANT RULES
+
+Cursor must NEVER automatically modify the following without explicit confirmation:
+
+- Supabase triggers
+- RLS policies
+- contest engine logic
+- ticket generation logic
+- wallet balance logic
+- database schema
+
+Cursor must always:
+
+1. Read the existing code before suggesting changes.
+2. Respect existing database tables and relations.
+3. Never rename database tables.
+4. Never rename database columns.
+5. Never generate migrations automatically without approval.
+
+Contest Engine Rules:
+
+- Every ticket must be unique within a contest.
+- Each prize can have only one winner.
+- Wallet balances must never be inconsistent.
+- No duplicate winners can exist.
+
+Development workflow:
+
+ChatGPT designs architecture and debugging strategy.
+Cursor reads the repository and executes implementation.
+
+Cursor must always prefer:
+
+- Tailwind styling
+- existing components
+- existing Supabase functions
+- existing API logic
+
+Never introduce new frameworks or libraries without approval.
+
+Testing tools available:
+
+- Playwright
+- Bun
+- Vite
+
+If unsure, Cursor must ASK instead of modifying logic.

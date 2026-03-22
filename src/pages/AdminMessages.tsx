@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
+import { NavigateToLogin } from "@/components/NavigateToLogin";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -29,11 +30,7 @@ export default function AdminMessages() {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(false);
 
-  if (!user) return <Navigate to="/login" replace />;
-  if (roleLoading) return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" /></div>;
-  if (!isAdmin) return <Navigate to="/" replace />;
-
-  const loadThreads = async () => {
+  const loadThreads = useCallback(async () => {
     setLoading(true);
 
     // Fetch messages
@@ -53,15 +50,23 @@ export default function AdminMessages() {
       return;
     }
 
-    // Group by user_id
+    // Group by user_id (skip messages with null user_id)
     const grouped: Record<string, any[]> = {};
     messagesData?.forEach((msg) => {
+      if (msg.user_id == null) return;
       if (!grouped[msg.user_id]) grouped[msg.user_id] = [];
       grouped[msg.user_id].push(msg);
     });
 
     // Get unique user IDs
     const userIds = Object.keys(grouped);
+
+    // Skip DB queries when no messages (empty .in() causes PostgREST error)
+    if (userIds.length === 0) {
+      setThreads([]);
+      setLoading(false);
+      return;
+    }
 
     // Fetch user info and all partners in parallel
     const [usersRes, partnersRes] = await Promise.all([
@@ -82,7 +87,7 @@ export default function AdminMessages() {
         partnerMap[p.auth_user_id] = {
           name: p.name || null,
           email: p.contact_email || null,
-          isInfluencer: !!p.notes?.toLowerCase().includes("influencer"),
+          isInfluencer: !!(typeof p.notes === "string" ? p.notes : "").toLowerCase().includes("influencer"),
         };
       }
     });
@@ -134,23 +139,37 @@ export default function AdminMessages() {
 
     setThreads(result);
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
+    if (!user || !isAdmin || roleLoading) return;
+
     loadThreads();
 
     const channel = supabase
       .channel("admin-message-thread-list")
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => loadThreads())
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => {
+        loadThreads();
+      })
       .subscribe();
 
     return () => {
       channel.unsubscribe();
     };
-  }, []);
+  }, [user, isAdmin, roleLoading, loadThreads]);
+
+  if (!user) return <NavigateToLogin />;
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh] py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+      </div>
+    );
+  }
+  if (!isAdmin) return <Navigate to="/" replace />;
 
   return (
-    <div className="flex flex-col p-6 gap-6 h-full pb-24">
+    <div className="flex flex-col p-6 gap-6">
       <h2 className="text-xl font-bold text-foreground">Zprávy uživatelů</h2>
 
       {loading ? (

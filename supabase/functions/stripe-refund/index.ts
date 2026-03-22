@@ -140,26 +140,17 @@ serve(async (req) => {
       // Stripe refund succeeded but DB update failed — log but don't fail
     }
 
-    // Subtract coins from user's wallet
+    // Atomic wallet deduction (avoids read-then-write race on concurrent refunds)
     const coinsToSubtract = payment.amount
-    const { data: wallet } = await supabaseClient
-      .from('wallets')
-      .select('balance_coins')
-      .eq('user_id', payment.user_id)
-      .maybeSingle()
+    const { data: newBalance, error: walletError } = await supabaseClient.rpc(
+      'deduct_wallet_for_refund',
+      { p_user_id: payment.user_id, p_amount: coinsToSubtract }
+    )
 
-    if (wallet) {
-      const newBalance = Math.max(0, wallet.balance_coins - coinsToSubtract)
-      const { error: walletError } = await supabaseClient
-        .from('wallets')
-        .update({ balance_coins: newBalance })
-        .eq('user_id', payment.user_id)
-
-      if (walletError) {
-        console.error('Error updating wallet:', walletError)
-      } else {
-        console.log(`Wallet updated for user ${payment.user_id}: ${wallet.balance_coins} -> ${newBalance}`)
-      }
+    if (walletError) {
+      console.error('Error deducting wallet:', walletError)
+    } else {
+      console.log(`Wallet updated for user ${payment.user_id}: balance now ${newBalance}`)
     }
 
     // Write audit log

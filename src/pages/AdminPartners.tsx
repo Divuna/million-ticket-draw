@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Navigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, withEdgeInternalToken } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Plus,
@@ -36,9 +37,10 @@ import {
   Save,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { AdminMenu } from "@/components/AdminMenu";
+import { NavigateToLogin } from "@/components/NavigateToLogin";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
+import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 
 /* ===================== TYPES ===================== */
@@ -86,9 +88,9 @@ const statusLabels: Record<PartnerStatus, string> = {
   rejected: "Zamítnuto",
 };
 
-const statusColors: Record<PartnerStatus, "default" | "secondary" | "destructive" | "outline"> = {
-  pending: "secondary",
-  approved: "default",
+const statusColors: Record<PartnerStatus, "pending" | "success" | "destructive" | "outline"> = {
+  pending: "pending",
+  approved: "success",
   suspended: "destructive",
   rejected: "outline",
 };
@@ -100,16 +102,17 @@ const logoStatusLabels: Record<LogoStatus, string> = {
   rejected: "Zamítnuto",
 };
 
-const logoStatusColors: Record<LogoStatus, "default" | "secondary" | "destructive" | "outline"> = {
+const logoStatusColors: Record<LogoStatus, "outline" | "pending" | "success" | "destructive"> = {
   none: "outline",
-  pending: "secondary",
-  approved: "default",
+  pending: "pending",
+  approved: "success",
   rejected: "destructive",
 };
 
 /* ===================== COMPONENT ===================== */
 
 const AdminPartners = () => {
+  const { user, loading: authLoading } = useAuth();
   const { loading: roleLoading, isAdmin } = useUserRole();
 
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -150,10 +153,11 @@ const AdminPartners = () => {
   /* ===================== INIT ===================== */
 
   useEffect(() => {
+    if (!user || !isAdmin) return;
     fetchPartners();
     loadPendingRegistrations();
     loadApiDocumentation();
-  }, []);
+  }, [user, isAdmin]);
 
   /* ===================== API DOCUMENTATION ===================== */
 
@@ -346,9 +350,9 @@ const AdminPartners = () => {
       }
 
       const response = await supabase.functions.invoke("approve-partner-registration", {
-        headers: {
+        headers: withEdgeInternalToken({
           Authorization: `Bearer ${sessionData.session.access_token}`,
-        },
+        }),
         body: {
           auth_user_id: registration.id,
           action: action,
@@ -450,9 +454,9 @@ const AdminPartners = () => {
 
     try {
       const res = await supabase.functions.invoke("rotate-partner-api-key", {
-        headers: {
+        headers: withEdgeInternalToken({
           Authorization: `Bearer ${sessionData.session.access_token}`,
-        },
+        }),
         body: {
           partner_id: selectedPartner.id,
         },
@@ -491,11 +495,26 @@ const AdminPartners = () => {
 
   /* ===================== LOADING ===================== */
 
+  if (authLoading || roleLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <NavigateToLogin />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   if (loading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <AdminMenu />
       </div>
     );
   }
@@ -505,8 +524,8 @@ const AdminPartners = () => {
   /* ===================== RENDER ===================== */
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="container mx-auto px-4 py-8">
+    <>
+    <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
@@ -1124,8 +1143,7 @@ const AdminPartners = () => {
         </DialogContent>
       </Dialog>
 
-      <AdminMenu />
-    </div>
+    </>
   );
 };
 

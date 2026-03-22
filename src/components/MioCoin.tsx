@@ -1,4 +1,5 @@
 import React from "react";
+import { supabaseUrl } from "@/integrations/supabase/client";
 
 type MioCoinSize = "sm" | "md" | "lg";
 
@@ -10,7 +11,7 @@ export interface MioCoinProps {
 }
 
 export const MIOCOIN_IMAGE_URL =
-  "https://xkzhjldrojjlrkezorey.supabase.co/storage/v1/object/public/assets/ChatGPT%20Image%204.%2012.%202025%2018_44_44.png";
+  `${supabaseUrl}/storage/v1/object/public/assets/ChatGPT%20Image%204.%2012.%202025%2018_44_44.png`;
 
 const sizeMap: Record<MioCoinSize, number> = {
   sm: 20,

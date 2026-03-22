@@ -5,7 +5,7 @@
  * These two systems MUST NEVER be merged or unified.
  */
 import React, { useEffect, useState, useMemo } from 'react';
-import { Navigate } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,6 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Header } from '@/components/Header';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import {
@@ -51,13 +50,13 @@ import {
 
 interface ReferralRewardRow {
   id: string;
-  referrer_user_id: string;
-  referred_user_id: string;
+  referrer_user_id: string | null;
+  referred_user_id: string | null;
   paid_amount_mc: number;
   reward_mc: number;
   status: string;
   created_at: string;
-  payment_id: string;
+  payment_id: string | null;
   commission_rate: number;
 }
 
@@ -103,7 +102,7 @@ const DONUT_COLORS = [
 /* ──────────── Page ──────────── */
 
 const AdminReferralDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
 
   const [rewards, setRewards] = useState<ReferralRewardRow[]>([]);
@@ -160,8 +159,13 @@ const AdminReferralDashboard: React.FC = () => {
   const kpis = useMemo(() => {
     const earned = rewards.filter((r) => r.status === 'earned');
     const totalMC = earned.reduce((s, r) => s + Number(r.reward_mc || 0), 0);
-    const referrerSet = new Set(earned.map((r) => r.referrer_user_id));
-    const payingReferred = new Set(earned.map((r) => r.referred_user_id)).size;
+    const referrerSet = new Set<string>();
+    const payingReferredSet = new Set<string>();
+    for (const r of earned) {
+      if (r.referrer_user_id) referrerSet.add(r.referrer_user_id);
+      if (r.referred_user_id) payingReferredSet.add(r.referred_user_id);
+    }
+    const payingReferred = payingReferredSet.size;
     const avgMC = referrerSet.size > 0 ? totalMC / referrerSet.size : 0;
 
     return {
@@ -195,14 +199,16 @@ const AdminReferralDashboard: React.FC = () => {
     const earned = rewards.filter((r) => r.status === 'earned');
     const map = new Map<string, number>();
     for (const r of earned) {
-      map.set(r.referrer_user_id, (map.get(r.referrer_user_id) || 0) + Number(r.reward_mc || 0));
+      const rid = r.referrer_user_id;
+      if (rid == null || rid === '') continue;
+      map.set(rid, (map.get(rid) || 0) + Number(r.reward_mc || 0));
     }
     return Array.from(map.entries())
       .sort(([, a], [, b]) => b - a)
       .slice(0, 10)
       .map(([user_id, total_mc]) => ({
         user_id,
-        label: user_id.slice(0, 8) + '…',
+        label: (user_id || '').slice(0, 8) + ((user_id || '').length > 8 ? '…' : ''),
         total_mc: Math.round(total_mc * 100) / 100,
       }));
   }, [rewards]);
@@ -223,13 +229,14 @@ const AdminReferralDashboard: React.FC = () => {
   /* ──────────── Table: filtered rewards ──────────── */
 
   const filteredRewards = useMemo(() => {
-    if (!searchTerm) return rewards;
+    const list = Array.isArray(rewards) ? rewards : [];
+    if (!searchTerm) return list;
     const q = searchTerm.toLowerCase();
-    return rewards.filter(
+    return list.filter(
       (r) =>
-        r.referrer_user_id.toLowerCase().includes(q) ||
-        r.referred_user_id.toLowerCase().includes(q) ||
-        r.payment_id.toLowerCase().includes(q)
+        (r.referrer_user_id || '').toLowerCase().includes(q) ||
+        (r.referred_user_id || '').toLowerCase().includes(q) ||
+        (r.payment_id || '').toLowerCase().includes(q)
     );
   }, [rewards, searchTerm]);
 
@@ -237,14 +244,30 @@ const AdminReferralDashboard: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'earned':
-        return <Badge className="text-[10px] bg-neon-green/15 text-neon-green border-neon-green/25">Připsáno</Badge>;
-      case 'reversed':
-        return <Badge variant="destructive" className="text-[10px]">Stornováno</Badge>;
-      case 'blocked':
-        return <Badge variant="secondary" className="text-[10px]">Zablokováno</Badge>;
+      case "earned":
+        return (
+          <Badge variant="success" className="text-[10px]">
+            Připsáno
+          </Badge>
+        );
+      case "reversed":
+        return (
+          <Badge variant="destructive" className="text-[10px]">
+            Stornováno
+          </Badge>
+        );
+      case "blocked":
+        return (
+          <Badge variant="warning" className="text-[10px]">
+            Zablokováno
+          </Badge>
+        );
       default:
-        return <Badge variant="outline" className="text-[10px]">{status}</Badge>;
+        return (
+          <Badge variant="outline" className="text-[10px]">
+            {status}
+          </Badge>
+        );
     }
   };
 
@@ -263,16 +286,18 @@ const AdminReferralDashboard: React.FC = () => {
     );
   }
 
+  if (authLoading) {
+    return null;
+  }
+
   if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <NavigateToLogin />;
   }
 
   /* ──────────── Render ──────────── */
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="container mx-auto px-4 py-6 pb-20 space-y-6">
+    <div className="container mx-auto px-4 py-6 pb-8 space-y-6">
         {/* Page title */}
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -550,13 +575,13 @@ const AdminReferralDashboard: React.FC = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredRewards.slice(0, 200).map((r) => (
+                        {(Array.isArray(filteredRewards) ? filteredRewards : []).slice(0, 200).map((r) => (
                           <TableRow key={r.id} className="border-b border-border/30">
-                            <TableCell className="font-mono text-[11px] max-w-[140px] truncate" title={r.referrer_user_id}>
-                              {r.referrer_user_id}
+                            <TableCell className="font-mono text-[11px] max-w-[140px] truncate" title={r.referrer_user_id ?? ''}>
+                              {r.referrer_user_id ?? '—'}
                             </TableCell>
-                            <TableCell className="font-mono text-[11px] max-w-[140px] truncate" title={r.referred_user_id}>
-                              {r.referred_user_id}
+                            <TableCell className="font-mono text-[11px] max-w-[140px] truncate" title={r.referred_user_id ?? ''}>
+                              {r.referred_user_id ?? '—'}
                             </TableCell>
                             <TableCell className="tabular-nums text-xs">
                               {Number(r.paid_amount_mc).toLocaleString('cs-CZ')}
@@ -573,8 +598,10 @@ const AdminReferralDashboard: React.FC = () => {
                                 <span className="text-[10px] text-muted-foreground">Ne</span>
                               )}
                             </TableCell>
-                            <TableCell className="font-mono text-[10px] max-w-[100px] truncate text-muted-foreground" title={r.payment_id}>
-                              {r.payment_id.slice(0, 8)}…
+                            <TableCell className="font-mono text-[10px] max-w-[100px] truncate text-muted-foreground" title={r.payment_id ?? ''}>
+                              {r.payment_id
+                                ? `${(r.payment_id || '').slice(0, 8)}${r.payment_id.length > 8 ? '…' : ''}`
+                                : '—'}
                             </TableCell>
                             <TableCell>{getStatusBadge(r.status)}</TableCell>
                             <TableCell className="tabular-nums text-xs text-muted-foreground whitespace-nowrap">
@@ -596,7 +623,6 @@ const AdminReferralDashboard: React.FC = () => {
           </>
         )}
       </div>
-    </div>
   );
 };
 

@@ -1,13 +1,24 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { buildLoginRedirectUrl } from "@/lib/loginRedirect";
 import { useEffect, useState, useMemo, useCallback, memo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Header } from "@/components/Header";
 import { useAuth } from "@/hooks/useAuth";
 import { MIOCOIN_IMAGE_URL } from "@/components/MioCoin";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { recordLocalTicketPlay } from "@/lib/retentionLocal";
+import {
+  logRpcHttpFailure,
+  logTicketPurchaseException,
+  logTicketPurchaseRejected,
+  logTicketPurchaseSuccess,
+  recordTicketPurchaseAttemptForAbuseCheck,
+} from "@/lib/monitoring";
+import { buildBuyTicketAtomicRpcPayload } from "@/utils/buyTicketAtomicRpcArgs";
 import { TicketResultModal } from "@/components/TicketResultModal";
 import { BonusPrizeDetailModal } from "@/components/BonusPrizeDetailModal";
 import { usePlacementBanners } from "@/hooks/usePlacementBanners";
@@ -17,7 +28,9 @@ type Contest = {
   id: string;
   title: string;
   description: string | null;
+  main_prize: string | null;
   ticket_price: number;
+  status: string;
   main_prize_secondary_image: string | null;
   main_image: string | null;
   banner_image: string | null;
@@ -89,6 +102,7 @@ GalleryThumbnails.displayName = 'GalleryThumbnails';
 export default function ContestDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
   const [contest, setContest] = useState<Contest | null>(null);
@@ -97,6 +111,7 @@ export default function ContestDetail() {
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [myWins, setMyWins] = useState<Winner[]>([]);
   const [balance, setBalance] = useState(0);
+  const [balanceLoaded, setBalanceLoaded] = useState(false);
 
   const [processingContestId, setProcessingContestId] = useState<string | null>(null);
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
@@ -113,6 +128,8 @@ export default function ContestDetail() {
   const [realtimeStatus, setRealtimeStatus] = useState<string>('');
   const [lastWinnersEventAt, setLastWinnersEventAt] = useState<number | null>(null);
   const [, forceUpdate] = useState(0);
+  const [progressTicketsSold, setProgressTicketsSold] = useState(0);
+  const [progressTicketsTotal, setProgressTicketsTotal] = useState(1_000_000);
 
   // Live activity rotating messages
   const LIVE_MESSAGES = [
@@ -169,7 +186,7 @@ export default function ContestDetail() {
     };
   }, [id]);
 
-  async function loadUserBalance(userId: string) {
+  async function loadUserBalance(userId: string): Promise<number> {
     console.log('[DEBUG ContestDetail] loadUserBalance called with userId:', userId);
     try {
       const { data: wallet, error: walletError } = await supabase.from("wallets").select("balance_coins").eq("user_id", userId).maybeSingle();
@@ -178,16 +195,16 @@ export default function ContestDetail() {
         console.error('[DEBUG ContestDetail] loadUserBalance wallet error:', walletError, JSON.stringify(walletError));
       }
 
-      if (wallet?.balance_coins != null) {
-        console.log('[DEBUG ContestDetail] setBalance (wallet):', wallet.balance_coins);
-        setBalance(wallet.balance_coins);
-        return;
-      }
-
-      // profiles table does not have miocoin_balance column; wallet is the only source
-      console.log('[DEBUG ContestDetail] No wallet found for user, balance stays 0');
+      const n = wallet?.balance_coins ?? 0;
+      console.log('[DEBUG ContestDetail] setBalance (wallet):', n);
+      setBalance(n);
+      setBalanceLoaded(true);
+      return n;
     } catch (err) {
       console.error('[DEBUG ContestDetail] loadUserBalance CAUGHT:', err, JSON.stringify(err));
+      setBalance(0);
+      setBalanceLoaded(true);
+      return 0;
     }
   }
 
@@ -198,6 +215,9 @@ export default function ContestDetail() {
         console.log('[DEBUG ContestDetail] onAuthStateChange event:', _event, 'user:', session?.user?.id);
         if (session?.user) {
           loadUserBalance(session.user.id);
+        } else {
+          setBalance(0);
+          setBalanceLoaded(false);
         }
       });
 
@@ -221,11 +241,23 @@ export default function ContestDetail() {
 
     if (!user) {
       toast.error("Pro nákup tiketu se musíš přihlásit.");
-      navigate("/login");
+      navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
 
     if (!contest) return;
+
+    let effectiveBalance: number;
+    if (!balanceLoaded) {
+      effectiveBalance = await loadUserBalance(user.id);
+    } else {
+      effectiveBalance = balance;
+    }
+    if (contest.status === 'active' && effectiveBalance < contest.ticket_price) {
+      const shortage = Math.max(0, Math.ceil(contest.ticket_price - effectiveBalance));
+      toast.error(`Chybí ti ${shortage.toLocaleString('cs-CZ')} MioCoinů`);
+      return;
+    }
 
     // Lock immediately
     requestInFlightRef.current = true;
@@ -233,13 +265,29 @@ export default function ContestDetail() {
     setProcessingContestId(contest.id);
 
     try {
-      const { data, error } = await supabase.rpc('buy_ticket_atomic', {
-        p_contest_id: contest.id,
-        p_user_id: user.id
-      });
+      const built = buildBuyTicketAtomicRpcPayload(contest.id, user.id);
+      if (!built.ok) {
+        toast.error(built.message);
+        requestInFlightRef.current = false;
+        setProcessingContestId(null);
+        return;
+      }
+      const payload = built.payload;
+      console.log("buy_ticket_atomic RPC payload", payload);
+
+      recordTicketPurchaseAttemptForAbuseCheck(user.id);
+      const { data, error } = await supabase.rpc("buy_ticket_atomic", payload);
 
       if (error) {
         console.error("[DEBUG ContestDetail] RPC error:", error, JSON.stringify(error));
+        logRpcHttpFailure({
+          userId: user.id,
+          operation: "buy_ticket_atomic",
+          message: error.message,
+          code: error.code,
+          details: (error as { details?: string }).details,
+          hint: (error as { hint?: string }).hint,
+        });
         if (error.message?.includes("closed") || error.message?.includes("uzavřena")) {
           toast.error("Soutěž je již uzavřena.");
         } else if (error.message?.includes("insufficient") || error.message?.includes("nedostatek")) {
@@ -275,6 +323,12 @@ export default function ContestDetail() {
         }
 
         console.log('🔥 RPC raw response:', JSON.stringify(result, null, 2));
+
+        logTicketPurchaseSuccess({
+          userId: user.id,
+          contestId: contest.id,
+          ticket_number: result.ticket_number,
+        });
         
         const mappedResult: UnlockTicketResult = {
           ticket_number: result.ticket_number,
@@ -287,10 +341,21 @@ export default function ContestDetail() {
           remaining_tickets: result.remaining_tickets ?? 0
         };
 
-        // Refresh balance immediately
+        // Refresh balance and progress immediately
         loadUserBalance(user.id);
+        const { data: prog } = await supabase
+          .from("contest_progress")
+          .select("tickets_sold, tickets_total")
+          .eq("contest_id", contest.id)
+          .maybeSingle();
+        if (prog) {
+          setProgressTicketsSold(prog.tickets_sold ?? 0);
+          setProgressTicketsTotal(prog.tickets_total ?? 1_000_000);
+        }
 
         const isWin = result.won_type === 'main' || result.won_type === 'bonus';
+
+        recordLocalTicketPlay();
 
         if (isWin) {
           // Show full modal only for wins
@@ -322,6 +387,13 @@ export default function ContestDetail() {
       }
     } catch (err) {
       console.error("[DEBUG ContestDetail] handleUseMiocoins CAUGHT:", err, JSON.stringify(err));
+      if (user && contest) {
+        logTicketPurchaseException({
+          userId: user.id,
+          contestId: contest.id,
+          error: err,
+        });
+      }
       toast.error("Neočekávaná chyba při nákupu tiketu.");
     } finally {
       console.log('[DEBUG ContestDetail] setProcessingContestId: null (finally)');
@@ -340,7 +412,7 @@ export default function ContestDetail() {
       try {
         const { data: contestData, error: contestError } = await supabase
           .from("contests")
-          .select("id, title, description, ticket_price, main_prize_secondary_image, main_image, banner_image, total_miocoin_bonus")
+          .select("id, title, description, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, total_miocoin_bonus")
           .eq("id", id)
           .maybeSingle();
 
@@ -370,16 +442,31 @@ export default function ContestDetail() {
         console.log('[DEBUG ContestDetail] setBonusPrizes:', bonusData?.length, 'items');
         setBonusPrizes((bonusData ?? []) as BonusPrize[]);
 
-        const { data: wins, error: winsError } = await supabase.from("winners").select("*").eq("contest_id", id);
+        const { data: auth } = await supabase.auth.getUser();
+        const uid = auth?.user?.id ?? null;
 
-        if (winsError) {
-          console.error('[DEBUG ContestDetail] winners fetch error:', winsError, JSON.stringify(winsError));
+        let nextMyWins: Winner[] = [];
+        if (uid) {
+          const { data: wins, error: winsError } = await supabase
+            .from("winners")
+            .select("id, prize_id")
+            .eq("contest_id", id)
+            .eq("user_id", uid);
+
+          if (winsError) {
+            console.error('[DEBUG ContestDetail] winners fetch error:', winsError, JSON.stringify(winsError));
+          }
+
+          nextMyWins = (wins ?? []).map((w) => ({
+            id: w.id,
+            prize: "",
+            bonus_prize_id: w.prize_id ?? null,
+          }));
         }
 
-        console.log('[DEBUG ContestDetail] setMyWins:', wins?.length, 'items');
-        setMyWins((wins ?? []) as Winner[]);
+        console.log('[DEBUG ContestDetail] setMyWins:', nextMyWins.length, 'items');
+        setMyWins(nextMyWins);
 
-        const { data: auth } = await supabase.auth.getUser();
         if (auth?.user) {
           console.log('[DEBUG ContestDetail] Loading balance for auth user:', auth.user.id);
           loadUserBalance(auth.user.id);
@@ -397,6 +484,14 @@ export default function ContestDetail() {
 
         console.log('[DEBUG ContestDetail] setGalleryMedia:', mediaData?.length, 'items');
         setGalleryMedia(mediaData ?? []);
+
+        const { data: prog } = await supabase
+          .from("contest_progress")
+          .select("tickets_sold, tickets_total")
+          .eq("contest_id", id)
+          .maybeSingle();
+        setProgressTicketsSold(prog?.tickets_sold ?? 0);
+        setProgressTicketsTotal(prog?.tickets_total ?? 1_000_000);
         console.log("galleryMedia", mediaData);
 
         console.log('[DEBUG ContestDetail] setLoading: false');
@@ -408,7 +503,7 @@ export default function ContestDetail() {
     };
 
     load();
-  }, [id]);
+  }, [id, user?.id]);
 
   const stableResult = useMemo(() => {
     if (!modalResult) return undefined;
@@ -443,10 +538,25 @@ export default function ContestDetail() {
   const displayGallery = useMemo(() => galleryMedia.filter((m) => m.type !== 'background'), [galleryMedia]);
   const activeMedia = useMemo(() => displayGallery[activeGalleryIndex] ?? null, [displayGallery, activeGalleryIndex]);
 
-  if (loading || !contest) {
+  if (loading) {
     return (
       <div className="p-6">
         <Skeleton className="w-full h-[400px] rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (!contest) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-16 text-center space-y-6">
+          <h2 className="text-xl font-bold text-foreground">Soutěž nenalezena</h2>
+          <p className="text-muted-foreground">Požadovaná soutěž neexistuje nebo byla odstraněna.</p>
+          <Button onClick={() => navigate("/games")} variant="default">
+            Zpět na soutěže
+          </Button>
+        </div>
       </div>
     );
   }
@@ -462,6 +572,15 @@ export default function ContestDetail() {
         : "/fallback-car.png");
 
   const isProcessing = processingContestId === contest.id;
+
+  const insufficientFunds =
+    Boolean(user) &&
+    contest.status === 'active' &&
+    balanceLoaded &&
+    balance < contest.ticket_price;
+  const shortageCoins = insufficientFunds
+    ? Math.max(0, Math.ceil(contest.ticket_price - balance))
+    : 0;
 
   const backgroundMedia = galleryMedia.find((m) => m.type === 'background');
   const bgImageUrl = backgroundMedia
@@ -510,6 +629,11 @@ export default function ContestDetail() {
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-yellow-400 leading-tight">
               {contest.title}
             </h1>
+            {contest.main_prize && (
+              <p className="text-xl md:text-2xl font-semibold text-gray-200">
+                Hlavní výhra: {contest.main_prize}
+              </p>
+            )}
             {contest.description && (
               <p className="text-gray-300 text-sm md:text-base leading-relaxed whitespace-pre-line max-w-lg">
                 {contest.description}
@@ -624,27 +748,52 @@ export default function ContestDetail() {
             </span>
           </div>
           <style>{`@keyframes liveShimmer { 0%,100% { background-position: -200% center; } 50% { background-position: 200% center; } }`}</style>
+          {insufficientFunds && (
+            <p className="text-xs text-amber-300/95 font-medium">
+              Chybí ti {shortageCoins.toLocaleString('cs-CZ')} MioCoinů
+            </p>
+          )}
           <div className="flex flex-col sm:flex-row items-stretch gap-3 mt-auto">
-            <Button
-              onClick={handleUseMiocoins}
-              disabled={isProcessing}
-              variant="premium"
-              className="flex-1 h-11 font-semibold px-5 rounded-full whitespace-nowrap"
-            >
-              {isProcessing ? (
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                  Losujeme…
-                </span>
-              ) : `Uplatnit ${contest.ticket_price} MioCoin`}
-            </Button>
-            <Button
-              onClick={() => navigate("/profile")}
-              variant="outline"
-              className="flex-1 h-11 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-semibold px-5 rounded-full transition-colors"
-            >
-              Dobít MioCoiny
-            </Button>
+            {insufficientFunds ? (
+              <Button
+                onClick={() =>
+                  navigate('/profile', {
+                    state: { paymentReturnTo: `/contest/${contest.id}` },
+                  })
+                }
+                variant="premium"
+                className="flex-1 h-11 font-semibold px-5 rounded-full whitespace-nowrap"
+              >
+                Dobít MioCoiny
+              </Button>
+            ) : (
+              <>
+                <Button
+                  onClick={handleUseMiocoins}
+                  disabled={isProcessing}
+                  variant="premium"
+                  className="flex-1 h-11 font-semibold px-5 rounded-full whitespace-nowrap"
+                >
+                  {isProcessing ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                      Losujeme…
+                    </span>
+                  ) : `Uplatnit ${contest.ticket_price} MioCoin`}
+                </Button>
+                <Button
+                  onClick={() =>
+                    navigate('/profile', {
+                      state: { paymentReturnTo: `/contest/${contest.id}` },
+                    })
+                  }
+                  variant="outline"
+                  className="flex-1 h-11 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-semibold px-5 rounded-full transition-colors"
+                >
+                  Dobít MioCoiny
+                </Button>
+              </>
+            )}
           </div>
         </section>
 
@@ -677,6 +826,9 @@ export default function ContestDetail() {
       {/* 4. CESTA K HLAVNÍ VÝHŘE */}
       <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[hsl(40_60%_50%/0.2)]">
         <h2 className="text-white font-semibold text-sm md:text-base mb-4">Cesta k hlavní výhře</h2>
+        <p className="text-yellow-400/90 font-medium text-sm md:text-base mb-2">
+          {progressTicketsSold.toLocaleString("cs-CZ")} / {progressTicketsTotal.toLocaleString("cs-CZ")}
+        </p>
         
         {/* Milestone labels */}
         <div className="flex justify-between mb-2 px-0.5 overflow-x-auto">
@@ -689,13 +841,19 @@ export default function ContestDetail() {
         </div>
         
         {/* Progress bar */}
-        <div 
-          className="w-full h-2.5 rounded-full"
-          style={{
-            background: 'linear-gradient(to right, #f6e27a, #d4a017)',
-            boxShadow: '0 0 20px rgba(250, 204, 21, 0.4)'
-          }}
-        />
+        <div
+          className="w-full h-2.5 rounded-full overflow-hidden bg-white/10"
+          style={{ boxShadow: '0 0 20px rgba(250, 204, 21, 0.2)' }}
+        >
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${progressTicketsTotal > 0 ? Math.min(100, (progressTicketsSold / progressTicketsTotal) * 100) : 0}%`,
+              background: 'linear-gradient(to right, #f6e27a, #d4a017)',
+              boxShadow: '0 0 20px rgba(250, 204, 21, 0.4)'
+            }}
+          />
+        </div>
       </section>
 
       {/* 5. BONUSOVÉ VĚCNÉ VÝHRY */}

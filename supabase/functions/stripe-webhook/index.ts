@@ -7,6 +7,51 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const LOG_SOURCE = 'onemil_edge_stripe_webhook'
+
+function omLog(
+  level: 'info' | 'warn' | 'error',
+  event: string,
+  fields: Record<string, unknown> = {},
+): void {
+  const payload = {
+    ts: new Date().toISOString(),
+    source: LOG_SOURCE,
+    v: '1',
+    level,
+    event,
+    ...fields,
+  }
+  const line = JSON.stringify(payload)
+  if (level === 'error') console.error(line)
+  else if (level === 'warn') console.warn(line)
+  else console.log(line)
+}
+
+/** Must match create-stripe-checkout / Homepage / Profile. */
+const CZK_TO_COINS: Record<number, number> = {
+  50: 50,
+  300: 310,
+  500: 525,
+  1200: 1280,
+}
+
+function miocoinsForCzkPrice(priceCzk: number): number {
+  if (!Number.isInteger(priceCzk) || priceCzk < 1) return 0
+  const tier = CZK_TO_COINS[priceCzk]
+  if (tier !== undefined) return tier
+  return priceCzk
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function normalizeUserId(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const s = value.trim().toLowerCase()
+  return UUID_RE.test(s) ? s : null
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -24,7 +69,7 @@ serve(async (req) => {
 
     const signature = req.headers.get('stripe-signature')
     const body = await req.text()
-    
+
     if (!signature) {
       throw new Error('No Stripe signature found')
     }
@@ -34,44 +79,78 @@ serve(async (req) => {
       throw new Error('Webhook secret not configured')
     }
 
-    // Verify webhook signature
     let event: Stripe.Event
     try {
       event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err)
-      console.error('Webhook signature verification failed:', errorMessage)
+      omLog('error', 'webhook_signature_invalid', {
+        action: 'stripe_webhook',
+        message: errorMessage,
+      })
       return new Response(
         JSON.stringify({ error: 'Webhook signature verification failed' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400,
-        }
+        },
       )
     }
 
     console.log('Received webhook event:', event.type)
 
-    // Handle successful payment
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session
-      
-      const userId = session.metadata?.user_id
-      const totalCoins = parseInt(session.metadata?.total_coins || '0')
-      const priceCzk = parseInt(session.metadata?.price_czk || '0')
-      
-      // Fallback for old format (amount field)
-      const legacyAmount = parseInt(session.metadata?.amount || '0')
-      const coinsToCredit = totalCoins > 0 ? totalCoins : legacyAmount
-      
-      if (!userId || coinsToCredit <= 0) {
-        console.error('Missing user_id or coins in session metadata:', session.metadata)
-        throw new Error('Missing user_id or coins in session metadata')
+
+      if (session.payment_status !== 'paid') {
+        omLog('info', 'payment_skipped_not_paid', {
+          action: 'stripe_webhook',
+          stripe_session_id: session.id,
+          payment_status: session.payment_status,
+        })
+        return new Response(JSON.stringify({ received: true, skipped: 'not_paid' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        })
       }
 
-      console.log(`Processing payment for user ${userId}, coins: ${coinsToCredit}, price: ${priceCzk} CZK, session: ${session.id}`)
+      const cur = (session.currency || '').toLowerCase()
+      if (cur !== 'czk') {
+        throw new Error(`Unsupported currency: ${session.currency}`)
+      }
 
-      // Check if payment already processed (idempotency)
+      const amountTotal = session.amount_total
+      if (amountTotal == null || !Number.isInteger(amountTotal) || amountTotal < 100) {
+        throw new Error('Invalid or missing amount_total from Stripe session')
+      }
+      if (amountTotal % 100 !== 0) {
+        throw new Error('amount_total must be a whole CZK amount (multiple of 100 haléřů)')
+      }
+
+      const priceCzk = amountTotal / 100
+      const coinsToCredit = miocoinsForCzkPrice(priceCzk)
+      if (coinsToCredit < 1) {
+        throw new Error('Could not derive MioCoin amount from paid total')
+      }
+
+      const userId = normalizeUserId(session.metadata?.user_id)
+      if (!userId) {
+        omLog('error', 'payment_metadata_invalid_user', {
+          action: 'stripe_webhook',
+          stripe_session_id: session.id,
+        })
+        throw new Error('Missing or invalid user_id in session metadata')
+      }
+
+      omLog('info', 'payment_credit_pending', {
+        user_id: userId,
+        action: 'stripe_checkout_completed',
+        stripe_session_id: session.id,
+        amount_total_haler: amountTotal,
+        price_czk_verified: priceCzk,
+        miocoins_to_credit: coinsToCredit,
+      })
+
       const { data: existingPayment } = await supabaseClient
         .from('payments')
         .select('id')
@@ -85,47 +164,54 @@ serve(async (req) => {
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
-          }
+          },
         )
       }
 
-      // Insert payment record with the coins amount (not the price)
-      // The database trigger will use this amount to update the wallet
-      const { error: paymentError } = await supabaseClient
-        .from('payments')
-        .insert({
-          user_id: userId,
-          amount: coinsToCredit, // This is the number of MioCoins to add
-          method: 'stripe',
-          status: 'completed',
-          stripe_session_id: session.id
-        })
+      const { error: paymentError } = await supabaseClient.from('payments').insert({
+        user_id: userId,
+        amount: coinsToCredit,
+        method: 'stripe',
+        status: 'completed',
+        stripe_session_id: session.id,
+      })
 
       if (paymentError) {
-        console.error('Error inserting payment:', paymentError)
+        omLog('error', 'payment_insert_failed', {
+          user_id: userId,
+          action: 'stripe_webhook',
+          stripe_session_id: session.id,
+          message: paymentError.message,
+          code: paymentError.code,
+        })
         throw new Error('Failed to record payment')
       }
 
-      console.log(`Successfully recorded payment for user ${userId}, ${coinsToCredit} MioCoins will be added by trigger`)
+      omLog('info', 'payment_credited', {
+        user_id: userId,
+        action: 'wallet_credit_from_stripe',
+        stripe_session_id: session.id,
+        miocoins_credited: coinsToCredit,
+        price_czk: priceCzk,
+      })
     }
 
-    return new Response(
-      JSON.stringify({ received: true }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    )
-
+    return new Response(JSON.stringify({ received: true }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
   } catch (error) {
-    console.error('Webhook error:', error)
     const errorMessage = error instanceof Error ? error.message : String(error)
+    omLog('error', 'webhook_handler_error', {
+      action: 'stripe_webhook',
+      message: errorMessage,
+    })
     return new Response(
       JSON.stringify({ error: errorMessage }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
-      }
+      },
     )
   }
 })

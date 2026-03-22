@@ -6,13 +6,12 @@ import { Trophy, Gift, CheckCircle, Clock, Package, Calendar, Share2, Copy, Chec
 import { MIOCOIN_IMAGE_URL } from '@/components/MioCoin';
 import { toast } from '@/hooks/use-toast';
 import Confetti from 'react-confetti';
-
-const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
+import { supabaseUrl } from '@/integrations/supabase/client';
 
 const getStorageUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
-  return `${SUPABASE_URL}/storage/v1/object/public/contest-images/${path}`;
+  return `${supabaseUrl}/storage/v1/object/public/contest-images/${path}`;
 };
 
 interface Win {
@@ -176,18 +175,18 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
   };
 
   const getStatusBadge = () => {
-    if (win.delivered || win.status === 'vyplaceno') {
+    if (win.delivered || win.status === 'delivered') {
       return (
         <Badge className="bg-green-500/20 text-green-400 border border-green-500/30">
-          <CheckCircle className="w-3 h-3 mr-1" /> {win.status === 'vyplaceno' ? 'Vyplaceno' : 'Doručeno'}
+          <CheckCircle className="w-3 h-3 mr-1" /> Předáno
         </Badge>
       );
     }
     switch (win.status) {
-      case 'čeká na potvrzení':
+      case 'pending':
         return (
           <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-            <Clock className="w-3 h-3 mr-1" /> Čeká na potvrzení
+            <Clock className="w-3 h-3 mr-1" /> Čeká
           </Badge>
         );
       case 'připraveno k odeslání':
@@ -196,7 +195,7 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
             <Package className="w-3 h-3 mr-1" /> Připraveno k odeslání
           </Badge>
         );
-      case 'odesláno':
+      case 'shipped':
         return (
           <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30">
             <Package className="w-3 h-3 mr-1" /> Odesláno
@@ -205,7 +204,7 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
       default:
         return (
           <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-            <Clock className="w-3 h-3 mr-1" /> Čeká na potvrzení
+            <Clock className="w-3 h-3 mr-1" /> Čeká
           </Badge>
         );
     }
@@ -309,9 +308,9 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
           {/* Status explanation */}
           <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
             <p className="text-sm text-muted-foreground">
-              {win.delivered || win.status === 'vyplaceno' ? (
-                'Vaše výhra byla úspěšně doručena/vyplacena.'
-              ) : win.status === 'odesláno' ? (
+              {win.delivered || win.status === 'delivered' ? (
+                'Vaše výhra byla úspěšně předána.'
+              ) : win.status === 'shipped' ? (
                 'Vaše výhra byla odeslána a brzy dorazí.'
               ) : win.status === 'připraveno k odeslání' ? (
                 'Vaše výhra je připravena k odeslání.'

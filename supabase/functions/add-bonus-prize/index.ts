@@ -41,14 +41,14 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    // Check if user is admin using admin client
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from('users')
+    // Check if user is admin via user_roles (canonical role source)
+    const { data: roleData, error: roleError } = await supabaseAdmin
+      .from('user_roles')
       .select('role')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .maybeSingle()
 
-    if (userError || !userData || userData.role !== 'admin') {
+    if (roleError || !roleData || !['admin', 'superadmin'].includes(roleData.role)) {
       throw new Error('Admin access required')
     }
 

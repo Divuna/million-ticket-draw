@@ -16,6 +16,7 @@ interface WinnerCardProps {
   prizeImageUrl?: string | null;
   cardStyleImageUrl?: string | null;
   userAvatarUrl?: string | null;
+  ticketNumber?: number | null;
 }
 
 export const WinnerCard = ({ 
@@ -27,7 +28,8 @@ export const WinnerCard = ({
   type,
   prizeImageUrl,
   cardStyleImageUrl,
-  userAvatarUrl
+  userAvatarUrl,
+  ticketNumber
 }: WinnerCardProps) => {
   const initials = (userNickname || userName)
     .split(' ')
@@ -110,28 +112,33 @@ export const WinnerCard = ({
 
             {/* Winner Info */}
             <div className="flex-1 min-w-0 flex flex-col justify-center gap-2">
-              {/* Primary: Winner name - bold, bright, prominent */}
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-foreground/80 flex-shrink-0" />
-                <span className="font-bold text-foreground text-lg tracking-tight leading-tight truncate">
-                  {userNickname || userName}
+              {/* Contest */}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Target className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
+                <span className="text-sm font-medium text-muted-foreground/80 leading-tight truncate">
+                  Soutěž: {contestTitle}
                 </span>
               </div>
-              
-              {/* Secondary: Prize name - gold accent, strong visibility */}
+              {/* Prize */}
               <div className="flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-secondary flex-shrink-0" />
                 <span className="text-base font-semibold text-secondary tracking-wide leading-tight truncate">
-                  {prizeName}
+                  Cena: {prizeName}
                 </span>
               </div>
-
-              {/* Tertiary: Contest + time */}
+              {/* Winning ticket */}
+              {ticketNumber != null && (
+                <div className="flex items-center gap-2 text-sm text-foreground/90">
+                  <span className="text-muted-foreground">Výherní tiket:</span>
+                  <span className="font-semibold">#{ticketNumber.toLocaleString('cs-CZ')}</span>
+                </div>
+              )}
+              {/* Winner + time */}
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                  <Target className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0 animate-pulse" />
-                  <span className="text-sm font-medium text-muted-foreground/80 leading-tight truncate">
-                    {contestTitle}
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <User className="w-4 h-4 text-foreground/80 flex-shrink-0" />
+                  <span className="font-bold text-foreground text-sm tracking-tight leading-tight truncate">
+                    Výherce: {userNickname || userName}
                   </span>
                 </div>
                 <Badge variant="outline" className="text-xs font-medium px-2 py-0.5 text-muted-foreground/70 border-muted-foreground/30 whitespace-nowrap flex-shrink-0">

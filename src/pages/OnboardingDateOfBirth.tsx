@@ -19,13 +19,9 @@ const OnboardingDateOfBirth: React.FC = () => {
 
   // Redirect if user already has date of birth or is not logged in
   useEffect(() => {
-    if (!checkLoading) {
-      if (!user) {
-        navigate('/login');
-      } else if (hasDateOfBirth) {
-        navigate('/');
-      }
-    }
+    if (checkLoading) return;
+    // Do not auto-redirect on mount; session may still be initializing.
+    // (Keep this page stable on refresh; user actions can navigate.)
   }, [checkLoading, user, hasDateOfBirth, navigate]);
 
   const validateAge = (dob: string): boolean => {

@@ -6,7 +6,7 @@
  * These two systems MUST NEVER be merged or unified.
  */
 import React, { useEffect, useState, useCallback } from 'react';
-import { Navigate } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,6 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Header } from '@/components/Header';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -59,7 +58,7 @@ interface ReferralReward {
 /* ──────────────────────── Page ──────────────────────── */
 
 const AdminReferrals: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
 
   const [referrers, setReferrers] = useState<TopReferrer[]>([]);
@@ -115,36 +114,40 @@ const AdminReferrals: React.FC = () => {
       const map = new Map<string, TopReferrer>();
 
       for (const r of referrals || []) {
-        if (!map.has(r.referrer_user_id)) {
-          map.set(r.referrer_user_id, {
-            referrer_user_id: r.referrer_user_id,
+        const rid = r.referrer_user_id;
+        if (rid == null || rid === '') continue;
+        if (!map.has(rid)) {
+          map.set(rid, {
+            referrer_user_id: rid,
             total_earned: 0,
             referral_count: 0,
             active_count: 0,
             inactive_count: 0,
             last_reward_date: null,
-            is_blocked: blockedSet.has(r.referrer_user_id),
+            is_blocked: blockedSet.has(rid),
           });
         }
-        const entry = map.get(r.referrer_user_id)!;
+        const entry = map.get(rid)!;
         entry.referral_count += 1;
         if (r.status === 'active') entry.active_count += 1;
         else entry.inactive_count += 1;
       }
 
       for (const rw of rewards || []) {
-        if (!map.has(rw.referrer_user_id)) {
-          map.set(rw.referrer_user_id, {
-            referrer_user_id: rw.referrer_user_id,
+        const rid = rw.referrer_user_id;
+        if (rid == null || rid === '') continue;
+        if (!map.has(rid)) {
+          map.set(rid, {
+            referrer_user_id: rid,
             total_earned: 0,
             referral_count: 0,
             active_count: 0,
             inactive_count: 0,
             last_reward_date: null,
-            is_blocked: blockedSet.has(rw.referrer_user_id),
+            is_blocked: blockedSet.has(rid),
           });
         }
-        const entry = map.get(rw.referrer_user_id)!;
+        const entry = map.get(rid)!;
         if (rw.status === 'earned') {
           entry.total_earned += Number(rw.reward_mc || 0);
         }
@@ -312,7 +315,7 @@ const AdminReferrals: React.FC = () => {
   /* ──────────── Filtering ──────────── */
 
   const filteredReferrers = referrers.filter((r) =>
-    r.referrer_user_id.toLowerCase().includes(searchTerm.toLowerCase())
+    (r.referrer_user_id || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   /* ──────────── Guards ──────────── */
@@ -321,17 +324,20 @@ const AdminReferrals: React.FC = () => {
     return <div className="flex items-center justify-center min-h-screen">Načítání...</div>;
   }
 
+  if (authLoading) {
+    return null;
+  }
+
   if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <NavigateToLogin />;
   }
 
   /* ──────────── Detail View ──────────── */
 
   if (selectedReferrer) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="container mx-auto px-4 py-6 pb-20">
+      <>
+        <div className="container mx-auto px-4 py-6 pb-8">
           <Button
             variant="ghost"
             onClick={() => setSelectedReferrer(null)}
@@ -529,16 +535,15 @@ const AdminReferrals: React.FC = () => {
           onConfirm={executeAction}
           onCancel={() => setConfirmAction(null)}
         />
-      </div>
+      </>
     );
   }
 
   /* ──────────── Main Table View ──────────── */
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="container mx-auto px-4 py-6 pb-20">
+    <>
+      <div className="container mx-auto px-4 py-6 pb-8">
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="overview" className="text-xs sm:text-sm">
@@ -608,7 +613,8 @@ const AdminReferrals: React.FC = () => {
                             onClick={() => openDetail(r.referrer_user_id)}
                           >
                             <TableCell className="font-mono text-xs max-w-[120px] truncate">
-                              {r.referrer_user_id.slice(0, 8)}…
+                              {(r.referrer_user_id || '').slice(0, 8)}
+                              {(r.referrer_user_id || '').length > 8 ? '…' : ''}
                             </TableCell>
                             <TableCell className="font-bold tabular-nums">
                               {r.total_earned.toLocaleString('cs-CZ')}
@@ -630,7 +636,7 @@ const AdminReferrals: React.FC = () => {
                                   Blokován
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-500">
+                                <Badge variant="success" className="text-[10px]">
                                   Aktivní
                                 </Badge>
                               )}
@@ -693,7 +699,7 @@ const AdminReferrals: React.FC = () => {
         onConfirm={executeAction}
         onCancel={() => setConfirmAction(null)}
       />
-    </div>
+    </>
   );
 };
 

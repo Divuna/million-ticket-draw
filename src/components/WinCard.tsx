@@ -2,13 +2,12 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Gift, CheckCircle, Clock, Package } from 'lucide-react';
 import { MIOCOIN_IMAGE_URL } from '@/components/MioCoin';
-
-const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
+import { supabaseUrl } from '@/integrations/supabase/client';
 
 const getStorageUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
-  return `${SUPABASE_URL}/storage/v1/object/public/contest-images/${path}`;
+  return `${supabaseUrl}/storage/v1/object/public/contest-images/${path}`;
 };
 
 interface Win {
@@ -47,18 +46,18 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', 
   const getStatusBadge = () => {
     const baseClasses = "text-xs font-medium";
     
-    if (win.delivered || win.status === 'vyplaceno') {
+    if (win.delivered || win.status === 'delivered') {
       return (
         <Badge className={`${baseClasses} bg-emerald-500/90 text-white border-0`}>
-          <CheckCircle className="w-3 h-3 mr-1" /> {win.status === 'vyplaceno' ? 'Vyplaceno' : 'Doručeno'}
+          <CheckCircle className="w-3 h-3 mr-1" /> Předáno
         </Badge>
       );
     }
     switch (win.status) {
-      case 'čeká na potvrzení':
+      case 'pending':
         return (
           <Badge className={`${baseClasses} bg-amber-500/90 text-white border-0`}>
-            <Clock className="w-3 h-3 mr-1" /> Čeká na potvrzení
+            <Clock className="w-3 h-3 mr-1" /> Čeká
           </Badge>
         );
       case 'připraveno k odeslání':
@@ -67,7 +66,7 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', 
             <Package className="w-3 h-3 mr-1" /> Připraveno k odeslání
           </Badge>
         );
-      case 'odesláno':
+      case 'shipped':
         return (
           <Badge className={`${baseClasses} bg-purple-500/90 text-white border-0`}>
             <Package className="w-3 h-3 mr-1" /> Odesláno
@@ -76,7 +75,7 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', 
       default:
         return (
           <Badge className={`${baseClasses} bg-amber-500/90 text-white border-0`}>
-            <Clock className="w-3 h-3 mr-1" /> Čeká na potvrzení
+            <Clock className="w-3 h-3 mr-1" /> Čeká
           </Badge>
         );
     }

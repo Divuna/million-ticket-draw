@@ -5,6 +5,7 @@
  */
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { NavigateToLogin } from "@/components/NavigateToLogin";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -88,8 +89,8 @@ const EMPTY_FORM: CampaignForm = {
 // ---------- Component ----------
 
 const AdminInfluencerCampaigns: React.FC = () => {
-  const { user } = useAuth();
-  const { isAdmin } = useUserRole();
+  const { user, loading: authLoading } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
 
   // Campaign list
@@ -298,6 +299,10 @@ const AdminInfluencerCampaigns: React.FC = () => {
 
   // ---------- Guards ----------
 
+  if (authLoading) {
+    return null;
+  }
+
   if (!user || !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -315,8 +320,8 @@ const AdminInfluencerCampaigns: React.FC = () => {
   // ---------- Render ----------
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
+    <>
+    <div className="container mx-auto px-4 py-6 max-w-6xl">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
@@ -602,7 +607,7 @@ const AdminInfluencerCampaigns: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };
 

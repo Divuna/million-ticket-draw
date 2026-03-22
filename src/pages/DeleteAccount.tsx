@@ -2,7 +2,6 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BottomNavigation } from '@/components/BottomNavigation';
 import { Trash2, Mail, Clock, AlertTriangle } from 'lucide-react';
 
 const DeleteAccount: React.FC = () => {
@@ -127,8 +126,6 @@ const DeleteAccount: React.FC = () => {
           </CardContent>
         </Card>
       </main>
-
-      <BottomNavigation />
     </div>
   );
 };

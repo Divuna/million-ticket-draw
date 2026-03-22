@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
@@ -8,12 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, withEdgeInternalToken } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Building2, CheckCircle, XCircle, Eye, Coins, FileText, Calendar, Key, Copy, Check, Receipt, Send, Download, UserPlus, Clock } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { AdminMenu } from '@/components/AdminMenu';
 import { jsPDF } from 'jspdf';
 
 type PartnerStatus = 'pending' | 'approved' | 'suspended' | 'rejected';
@@ -93,11 +93,11 @@ const statusLabels: Record<PartnerStatus, string> = {
   rejected: 'Zamítnuto',
 };
 
-const statusColors: Record<PartnerStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  pending: 'secondary',
-  approved: 'default',
-  suspended: 'destructive',
-  rejected: 'outline',
+const statusColors: Record<PartnerStatus, "pending" | "success" | "destructive" | "outline"> = {
+  pending: "pending",
+  approved: "success",
+  suspended: "destructive",
+  rejected: "outline",
 };
 
 const invoiceStatusLabels: Record<InvoiceStatus, string> = {
@@ -107,11 +107,11 @@ const invoiceStatusLabels: Record<InvoiceStatus, string> = {
   void: 'Stornováno',
 };
 
-const invoiceStatusColors: Record<InvoiceStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  draft: 'secondary',
-  issued: 'default',
-  paid: 'default',
-  void: 'destructive',
+const invoiceStatusColors: Record<InvoiceStatus, "pending" | "info" | "success" | "destructive"> = {
+  draft: "pending",
+  issued: "info",
+  paid: "success",
+  void: "destructive",
 };
 
 const AdminPartnersPortal = () => {
@@ -239,9 +239,9 @@ const AdminPartnersPortal = () => {
       }
 
       const response = await supabase.functions.invoke('approve-partner-registration', {
-        headers: {
+        headers: withEdgeInternalToken({
           Authorization: `Bearer ${sessionData.session.access_token}`,
-        },
+        }),
         body: {
           auth_user_id: registration.id,
           action: action,
@@ -564,7 +564,7 @@ const AdminPartnersPortal = () => {
     }
   };
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <NavigateToLogin />;
   if (roleLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   if (!isAdmin) return <Navigate to="/" replace />;
 
@@ -577,8 +577,8 @@ const AdminPartnersPortal = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="container mx-auto px-4 py-8">
+    <>
+    <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
@@ -1293,8 +1293,7 @@ const AdminPartnersPortal = () => {
         </DialogContent>
       </Dialog>
 
-      <AdminMenu />
-    </div>
+    </>
   );
 };
 

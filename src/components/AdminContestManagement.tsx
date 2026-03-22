@@ -15,6 +15,11 @@ import {
   AlertCircle,
   CheckCircle2,
   Sparkles,
+  Ticket,
+  TrendingUp,
+  Activity,
+  BarChart2,
+  Clock,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
@@ -33,6 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate } from "react-router-dom";
 
 interface ContestData {
   contest_id: string;
@@ -48,6 +54,14 @@ interface ContestData {
   total_miocoin_bonus: number | null;
   created_at: string;
   updated_at: string;
+}
+
+interface ContestViewStats {
+  tickets_remaining: number;
+  sold_percent: number;
+  estimated_revenue: number;
+  tickets_last_24h: number;
+  users_last_24h: number;
 }
 
 interface ContestFormData {
@@ -79,7 +93,6 @@ interface PhysicalPrize {
   image_file?: File | null;
   ai_image_url?: string | null;
   ai_generating?: boolean;
-  guardian_required?: boolean;
 }
 
 interface ContestModalProps {
@@ -158,7 +171,6 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     description: "",
     detailed_description: "",
     image_file: null,
-    guardian_required: undefined,
   });
 
   // Reset form when modal opens or editingContest changes
@@ -366,7 +378,6 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           description: bonus.description || "",
           detailed_description: bonus.detailed_description || "",
           image_url: bonus.image_url,
-          guardian_required: bonus.guardian_required ?? false,
         });
       }
     });
@@ -889,16 +900,6 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       return;
     }
 
-    // Validate guardian_required selection
-    if (newPhysicalPrize.guardian_required === undefined) {
-      toast({
-        title: "Chyba",
-        description: "Vyberte, zda výhra vyžaduje nebo nevyžaduje přítomnost zákonného zástupce.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const usedPositions = new Set([
       ...mioCoinBonuses.map((b) => b.ticket_position),
       ...physicalPrizes.map((p) => p.ticket_position),
@@ -917,7 +918,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     
     // Add prize directly without AI processing
     setPhysicalPrizes((prev) => [...prev, prizeToAdd]);
-    setNewPhysicalPrize({ ticket_position: 1, description: "", detailed_description: "", image_file: null, guardian_required: undefined });
+    setNewPhysicalPrize({ ticket_position: 1, description: "", detailed_description: "", image_file: null });
     toast({ title: "Výhra přidána", description: "Věcná výhra byla přidána." });
   };
 
@@ -1363,35 +1364,6 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   />
                 </div>
 
-                <div className="space-y-3 p-3 bg-muted/30 rounded-lg border border-border/50">
-                  <Label className="text-sm font-medium">Přítomnost zákonného zástupce</Label>
-                  <div className="space-y-2">
-                    <label className="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-muted/50 transition-colors">
-                      <input
-                        type="radio"
-                        name="guardian_required"
-                        checked={newPhysicalPrize.guardian_required === true}
-                        onChange={() => setNewPhysicalPrize((prev) => ({ ...prev, guardian_required: true }))}
-                        className="w-4 h-4 mt-0.5 accent-primary"
-                      />
-                      <span className="text-sm">Výhra vyžaduje přítomnost zákonného zástupce při převzetí (např. auto, motocykl)</span>
-                    </label>
-                    <label className="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-muted/50 transition-colors">
-                      <input
-                        type="radio"
-                        name="guardian_required"
-                        checked={newPhysicalPrize.guardian_required === false}
-                        onChange={() => setNewPhysicalPrize((prev) => ({ ...prev, guardian_required: false }))}
-                        className="w-4 h-4 mt-0.5 accent-primary"
-                      />
-                      <span className="text-sm">Výhra nevyžaduje zvláštní převzetí – mohou převzít uživatelé 15+ bez doprovodu</span>
-                    </label>
-                  </div>
-                  {newPhysicalPrize.guardian_required === undefined && (
-                    <p className="text-xs text-orange-500">Povinné: vyberte jednu z možností</p>
-                  )}
-                </div>
-
                 <Button onClick={addPhysicalPrize} className="w-full">
                   <Plus className="mr-2 h-4 w-4" />
                   Přidat věcnou výhru
@@ -1422,9 +1394,6 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                               <span className="font-medium">{prize.description}</span>
                               <span className="text-muted-foreground ml-2">Pozice #{prize.ticket_position}</span>
                             </div>
-                            <span className={`text-xs ${prize.guardian_required ? 'text-orange-400' : 'text-green-400'}`}>
-                              {prize.guardian_required ? '⚠ Vyžaduje zákonného zástupce' : '✓ Bez doprovodu (15+)'}
-                            </span>
                           </div>
                         </div>
                         <Button
@@ -1708,6 +1677,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
 export const AdminContestManagement: React.FC = () => {
   const [contests, setContests] = useState<ContestData[]>([]);
+  const [statsMap, setStatsMap] = useState<Record<string, ContestViewStats>>({});
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingContest, setEditingContest] = useState<ContestData | null>(null);
@@ -1720,7 +1690,17 @@ export const AdminContestManagement: React.FC = () => {
   const loadContests = async () => {
     setLoading(true);
 
-    const { data, error } = await supabase.rpc("get_contest_management_data", { p_contest_id_filter: null });
+    const [
+      { data, error },
+      { data: progressRows },
+      { data: revenueRows },
+      { data: activityRows },
+    ] = await Promise.all([
+      supabase.rpc("get_contest_management_data", { p_contest_id_filter: null }),
+      supabase.from("contest_progress").select("*"),
+      supabase.from("contest_revenue").select("*"),
+      supabase.from("contest_activity_last_24h").select("*"),
+    ]);
 
     if (error) {
       console.error("Error fetching contests:", error);
@@ -1736,6 +1716,22 @@ export const AdminContestManagement: React.FC = () => {
 
     const contestsData = (data || []) as ContestData[];
 
+    // Build per-contest stats map from analytics views
+    const newStatsMap: Record<string, ContestViewStats> = {};
+    contestsData.forEach((c) => {
+      const progress = (progressRows || []).find((r: any) => r.contest_id === c.contest_id);
+      const revenue  = (revenueRows  || []).find((r: any) => r.contest_id === c.contest_id);
+      const activity = (activityRows || []).find((r: any) => r.contest_id === c.contest_id);
+      newStatsMap[c.contest_id] = {
+        tickets_remaining:  progress?.tickets_remaining  ?? c.ticket_count - c.tickets_sold,
+        sold_percent:       progress?.sold_percent        ?? c.progress_percentage,
+        estimated_revenue:  revenue?.estimated_revenue    ?? 0,
+        tickets_last_24h:   activity?.tickets_last_24h   ?? 0,
+        users_last_24h:     activity?.users_last_24h     ?? 0,
+      };
+    });
+    setStatsMap(newStatsMap);
+
     // Fetch MioCoin counts per contest using count query (bypasses 1000 row limit)
     const contestIds = contestsData.map(c => c.contest_id);
     
@@ -1747,7 +1743,7 @@ export const AdminContestManagement: React.FC = () => {
             .from("bonus_prizes")
             .select("*", { count: "exact", head: true })
             .eq("contest_id", contestId)
-            .eq("title", "MioCoin");
+            .gt("amount", 0);
           mioCoinTotals[contestId] = count || 0;
         })
       );
@@ -1822,7 +1818,7 @@ export const AdminContestManagement: React.FC = () => {
         throw new Error("Nejste přihlášeni.");
       }
 
-      const response = await fetch(`https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/close-contest`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/close-contest`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1914,6 +1910,24 @@ export const AdminContestManagement: React.FC = () => {
     setContestToDelete(null);
   };
 
+  // Aggregate totals across all contests for the summary strip
+  const summaryTotals = contests.reduce(
+    (acc, c) => {
+      const s = statsMap[c.contest_id];
+      return {
+        tickets_sold:       acc.tickets_sold      + c.tickets_sold,
+        tickets_remaining:  acc.tickets_remaining + (s?.tickets_remaining  ?? 0),
+        estimated_revenue:  acc.estimated_revenue + (s?.estimated_revenue  ?? 0),
+        tickets_last_24h:   acc.tickets_last_24h  + (s?.tickets_last_24h  ?? 0),
+        total_tickets:      acc.total_tickets     + c.ticket_count,
+      };
+    },
+    { tickets_sold: 0, tickets_remaining: 0, estimated_revenue: 0, tickets_last_24h: 0, total_tickets: 0 },
+  );
+  const overallSoldPct = summaryTotals.total_tickets > 0
+    ? ((summaryTotals.tickets_sold / summaryTotals.total_tickets) * 100).toFixed(1)
+    : "0.0";
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -1927,6 +1941,61 @@ export const AdminContestManagement: React.FC = () => {
           <Plus className="mr-2 h-4 w-4" /> Nová soutěž
         </Button>
       </div>
+
+      {/* ── Contest statistics panel ── */}
+      {!loading && contests.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-card/40 px-4 py-3">
+            <Ticket className="h-5 w-5 shrink-0 text-primary" />
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground leading-none mb-1">Tikety prodány</p>
+              <p className="text-base font-semibold tabular-nums truncate">
+                {summaryTotals.tickets_sold.toLocaleString("cs-CZ")}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-card/40 px-4 py-3">
+            <BarChart2 className="h-5 w-5 shrink-0 text-orange-400" />
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground leading-none mb-1">Tikety zbývají</p>
+              <p className="text-base font-semibold tabular-nums truncate">
+                {summaryTotals.tickets_remaining.toLocaleString("cs-CZ")}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-card/40 px-4 py-3">
+            <TrendingUp className="h-5 w-5 shrink-0 text-green-400" />
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground leading-none mb-1">Prodáno %</p>
+              <p className="text-base font-semibold tabular-nums">
+                {overallSoldPct}%
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-card/40 px-4 py-3">
+            <Coins className="h-5 w-5 shrink-0 text-yellow-400" />
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground leading-none mb-1">Výnos (MC)</p>
+              <p className="text-base font-semibold tabular-nums truncate">
+                {summaryTotals.estimated_revenue.toLocaleString("cs-CZ")}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-card/40 px-4 py-3">
+            <Clock className="h-5 w-5 shrink-0 text-blue-400" />
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground leading-none mb-1">Tikety za 24h</p>
+              <p className="text-base font-semibold tabular-nums">
+                {summaryTotals.tickets_last_24h.toLocaleString("cs-CZ")}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Card className="bg-card/40 border border-white/10">
         <CardContent className="p-0">
@@ -2000,10 +2069,30 @@ export const AdminContestManagement: React.FC = () => {
                       </TableCell>
 
                       <TableCell className="text-center">
-                        {contest.tickets_sold} / {contest.ticket_count}
+                        <div>{contest.tickets_sold.toLocaleString("cs-CZ")} / {contest.ticket_count.toLocaleString("cs-CZ")}</div>
+                        {statsMap[contest.contest_id] && (
+                          <div className="flex items-center justify-center gap-1.5 mt-1">
+                            <span className="text-[10px] text-muted-foreground">
+                              zbývá {statsMap[contest.contest_id].tickets_remaining.toLocaleString("cs-CZ")}
+                            </span>
+                            {statsMap[contest.contest_id].tickets_last_24h > 0 && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-400">
+                                <Activity className="h-2.5 w-2.5" />
+                                +{statsMap[contest.contest_id].tickets_last_24h.toLocaleString("cs-CZ")} 24h
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </TableCell>
 
-                      <TableCell className="text-center">{contest.progress_percentage}%</TableCell>
+                      <TableCell className="text-center">
+                        <div>{contest.progress_percentage}%</div>
+                        {statsMap[contest.contest_id] && (
+                          <div className="text-[10px] text-yellow-400 mt-1 tabular-nums">
+                            {statsMap[contest.contest_id].estimated_revenue.toLocaleString("cs-CZ")} MC
+                          </div>
+                        )}
+                      </TableCell>
 
                       <TableCell className="text-center">
                         {contest.total_miocoin_bonus?.toLocaleString("cs-CZ") || 0}
@@ -2018,7 +2107,7 @@ export const AdminContestManagement: React.FC = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => (window.location.href = `/admin/contest/${contest.contest_id}`)}
+                            onClick={() => navigate(`/admin/contest/${contest.contest_id}`)}
                           >
                             Otevřít
                           </Button>

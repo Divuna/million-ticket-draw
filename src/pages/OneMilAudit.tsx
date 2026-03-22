@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useNavigate } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { Loader2, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
 interface AuditResult {
@@ -20,20 +21,13 @@ interface AuditResult {
 }
 
 const OneMilAudit = () => {
-  const { user } = useAuth();
-  const { isAdmin } = useUserRole();
+  const { user, loading: authLoading } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [isFixingEvents, setIsFixingEvents] = useState(false);
   const [isRunningAudit, setIsRunningAudit] = useState(false);
   const [auditResults, setAuditResults] = useState<AuditResult | null>(null);
-
-  // Redirect if not admin
-  if (!user || !isAdmin) {
-    navigate('/login');
-    return null;
-  }
 
   const testConnection = async () => {
     setIsTestingConnection(true);
@@ -101,7 +95,7 @@ const OneMilAudit = () => {
 
       const requiredEventTypes = [
         'user_registered',
-        'voucher_purchased', 
+        'voucher_purchased',
         'coin_redeemed',
         'contest_closed',
         'prize_won',
@@ -119,7 +113,7 @@ const OneMilAudit = () => {
       }).length || 0;
 
       const missingTypes = requiredEventTypes.filter(type => !foundEventTypes.includes(type));
-      
+
       const results: AuditResult = {
         total_events: eventStats?.length || 0,
         generated_events: foundEventTypes.length,
@@ -162,6 +156,22 @@ const OneMilAudit = () => {
     }
   };
 
+  if (authLoading || roleLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <NavigateToLogin />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -184,7 +194,7 @@ const OneMilAudit = () => {
             <p className="text-sm text-muted-foreground mb-4">
               Ověří připojení k EventLogs za posledních 24 hodin
             </p>
-            <Button 
+            <Button
               onClick={testConnection}
               disabled={isTestingConnection}
               className="w-full"
@@ -205,7 +215,7 @@ const OneMilAudit = () => {
             <p className="text-sm text-muted-foreground mb-4">
               Vygeneruje chybějící události za posledních 7 dní
             </p>
-            <Button 
+            <Button
               onClick={fixMissingEvents}
               disabled={isFixingEvents}
               variant="outline"
@@ -227,7 +237,7 @@ const OneMilAudit = () => {
             <p className="text-sm text-muted-foreground mb-4">
               Kompletní kontrola událostí a metadata
             </p>
-            <Button 
+            <Button
               onClick={runAudit}
               disabled={isRunningAudit}
               variant="default"
@@ -300,7 +310,7 @@ const OneMilAudit = () => {
             <div className="flex items-center gap-2">
               <span className="font-semibold">Stav integrace:</span>
               {getStatusIcon(auditResults.integration_status)}
-              <Badge 
+              <Badge
                 variant={auditResults.integration_status === 'passed' ? 'default' : 'destructive'}
               >
                 {auditResults.integration_status === 'passed' ? 'Prošel (100%)' : 'Nedokonalý'}

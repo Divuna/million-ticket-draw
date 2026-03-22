@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,8 +11,6 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Header } from '@/components/Header';
-import { AdminMenu } from '@/components/AdminMenu';
 import { Search, Edit, Trash2, UserCheck, UserX, AlertTriangle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -29,7 +28,7 @@ interface User {
 }
 
 const AdminUsers: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, isSuperAdmin, loading: roleLoading } = useUserRole();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,59 +36,77 @@ const AdminUsers: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState<string>('všechny');
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchUsers();
-    }
-  }, [isAdmin]);
+    if (authLoading || roleLoading) return;
+    if (!user || !isAdmin) return;
+    fetchUsers();
+  }, [authLoading, roleLoading, user, isAdmin]);
 
   const fetchUsers = async () => {
     try {
-      // Fetch users
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
+      setLoading(true);
 
-      if (usersError) throw usersError;
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*');
 
-      // Fetch all partner auth_user_ids to detect partner accounts
-      const { data: partnersData } = await supabase
-        .from('partners')
-        .select('auth_user_id');
+      if (profilesError) {
+        console.error('Error fetching users:', profilesError);
+        setUsers([]);
+        return;
+      }
 
-      const partnerAuthIds = new Set(
-        (partnersData || []).map(p => p.auth_user_id).filter(Boolean)
-      );
-
-      // Fetch roles from user_roles table (source of truth)
-      const { data: userRolesData } = await supabase
+      const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
 
-      const roleMap: Record<string, string> = {};
-      (userRolesData || []).forEach(r => {
-        roleMap[r.user_id] = r.role;
+      if (rolesError) {
+        console.error('Error fetching roles:', rolesError);
+        setUsers([]);
+        return;
+      }
+
+      const mappedUsers = (profiles || []).map((p: any) => {
+        const role = roles?.find((r: any) => r.user_id === p.id)?.role || 'user';
+
+        return {
+          id: p.id,
+          name: p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+          first_name: p.first_name,
+          last_name: p.last_name,
+          phone: p.phone,
+          email: '',
+          role,
+          // Keep existing UI working (created_at column)
+          created_at: p.updated_at || new Date(0).toISOString(),
+        };
       });
 
-      // Mark users that are partner accounts and apply roles from user_roles
-      const usersWithFlags = (usersData || []).map(u => ({
-        ...u,
-        role: roleMap[u.id] || u.role || 'user',
-        isPartnerAccount: partnerAuthIds.has(u.id),
-        hasUserRole: !!roleMap[u.id],
-      }));
-
-      setUsers(usersWithFlags);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se načíst uživatele",
-        variant: "destructive",
-      });
+      setUsers(mappedUsers as any);
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRoleChange = async (userId: string, role: string) => {
+    const { error } = await supabase.rpc('set_user_role', {
+      target_user_id: userId,
+      new_role: role
+    });
+
+    if (error) {
+      console.error(error);
+      toast({
+        title: "Nepodařilo se změnit roli",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({ title: "Role byla změněna" });
+    fetchUsers();
   };
 
   const updateUserRole = async (userId: string, newRole: string) => {
@@ -131,12 +148,6 @@ const AdminUsers: React.FC = () => {
         if (error) throw error;
       }
 
-      // Also keep users.role in sync for backward compatibility
-      await supabase
-        .from('users')
-        .update({ role: newRole })
-        .eq('id', userId);
-
       // Log admin action
       await supabase.rpc('log_admin_action', {
         action_name: 'user_role_updated',
@@ -161,8 +172,13 @@ const AdminUsers: React.FC = () => {
   };
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    // Email is not available (we no longer read from auth.users), so search must be name-based.
+    const needle = searchTerm.trim().toLowerCase();
+    const fullName =
+      user.name ||
+      [user.first_name, user.last_name].filter(Boolean).join(' ') ||
+      '';
+    const matchesSearch = needle.length === 0 || fullName.toLowerCase().includes(needle);
     const matchesRole = roleFilter === 'všechny' || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -178,18 +194,27 @@ const AdminUsers: React.FC = () => {
     }
   };
 
-  if (roleLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Načítání...</div>;
+  if (authLoading || roleLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+          <p className="mt-2 text-muted-foreground">Načítání...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (!user || !isAdmin) {
+  if (!user) {
+    return <NavigateToLogin />;
+  }
+
+  if (!isAdmin) {
     return <Navigate to="/login" replace />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="container mx-auto px-4 py-6 pb-20">
+    <div className="container mx-auto px-4 py-6 pb-8">
         <Card className="luxury-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary">
@@ -256,11 +281,9 @@ const AdminUsers: React.FC = () => {
                           {user.isPartnerAccount ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="flex items-center gap-2 text-warning">
-                                  <AlertTriangle className="h-4 w-4" />
-                                  <Badge variant="outline" className="border-warning text-warning">
-                                    Partnerský účet
-                                  </Badge>
+                                <div className="flex items-center gap-2 text-amber-300">
+                                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
+                                  <Badge variant="warning">Partnerský účet</Badge>
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -270,19 +293,14 @@ const AdminUsers: React.FC = () => {
                           ) : !isSuperAdmin ? (
                             <Badge variant="outline">{getRoleBadge(user.role)}</Badge>
                           ) : (
-                            <Select 
-                              value={user.role} 
-                              onValueChange={(newRole) => updateUserRole(user.id, newRole)}
+                            <select
+                              value={user.role}
+                              onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                              className="h-9 w-32 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
                             >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="user">Uživatel</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="superadmin">SuperAdmin</SelectItem>
-                              </SelectContent>
-                            </Select>
+                              <option value="user">Uživatel</option>
+                              <option value="admin">Admin</option>
+                            </select>
                           )}
                         </TableCell>
                       </TableRow>
@@ -300,8 +318,6 @@ const AdminUsers: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-      <AdminMenu />
-    </div>
   );
 };
 

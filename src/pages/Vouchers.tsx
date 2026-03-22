@@ -4,8 +4,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useHomepageVouchers } from '@/hooks/useHomepageVouchers';
 import { useUserVouchers } from '@/hooks/useUserVouchers';
-import { AdminMenu } from '@/components/AdminMenu';
-import { BottomNavigation } from '@/components/BottomNavigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,8 +19,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Gift, Copy, Heart, Ticket, Clock, ShoppingCart, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { toast } from 'sonner';
 
 // Voucher expiration duration in days (from purchase date)
@@ -38,6 +45,7 @@ const Vouchers: React.FC = () => {
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
   const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
+  const [redeemModalVoucher, setRedeemModalVoucher] = useState<{ code: string; name: string } | null>(null);
 
   // Separate user vouchers into favorites (redeemed=false) and purchased (redeemed=true)
   const favoriteVouchers = userVouchers.filter(uv => !uv.redeemed);
@@ -247,7 +255,9 @@ const Vouchers: React.FC = () => {
           <h2 className="text-2xl font-bold mb-4">Přihlaste se</h2>
           <p className="text-muted-foreground mb-4">Pro zobrazení voucherů se musíte přihlásit</p>
           <button 
-            onClick={() => window.location.href = '/login'}
+            onClick={() => {
+              window.location.href = `${window.location.origin}${buildLoginRedirectUrl(window.location.pathname + window.location.search)}`;
+            }}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
           >
             Přihlásit se
@@ -658,17 +668,26 @@ const Vouchers: React.FC = () => {
                             )}
                           </div>
 
-                          {/* Expiration / Copy button */}
+                          {/* Uplatnit voucher / Expiration */}
                           <div className="space-y-1.5">
                             {!expiration.isExpired ? (
-                              <Button
-                                variant="outline"
-                                className="w-full h-10 rounded-xl border-[hsl(40_30%_30%)] bg-transparent hover:bg-[hsl(45_80%_50%/0.1)] hover:border-[hsl(45_80%_50%/0.5)] transition-all duration-200"
-                                onClick={() => handleCopyVoucherCode(userVoucher.code)}
-                              >
-                                <Copy className="w-4 h-4 mr-2" />
-                                Zkopírovat kód
-                              </Button>
+                              <>
+                                <Button
+                                  className="w-full h-11 rounded-xl bg-gradient-to-r from-[hsl(40_70%_42%)] via-[hsl(42_75%_48%)] to-[hsl(38_70%_42%)] text-[hsl(220_40%_8%)] font-bold text-sm shadow-[0_2px_8px_hsl(40_60%_30%/0.3)] border-0"
+                                  onClick={() => setRedeemModalVoucher({ code: userVoucher.code, name: userVoucher.voucher?.name ?? 'Voucher' })}
+                                >
+                                  Uplatnit voucher
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full h-9 rounded-xl border-[hsl(40_30%_30%)] bg-transparent hover:bg-[hsl(45_80%_50%/0.1)] hover:border-[hsl(45_80%_50%/0.5)] transition-all duration-200"
+                                  onClick={() => handleCopyVoucherCode(userVoucher.code)}
+                                >
+                                  <Copy className="w-4 h-4 mr-2" />
+                                  Zkopírovat kód
+                                </Button>
+                              </>
                             ) : (
                               <Badge variant="destructive" className="w-full justify-center py-2 text-sm">
                                 Voucher vypršel
@@ -711,7 +730,6 @@ const Vouchers: React.FC = () => {
         </Tabs>
       </div>
 
-      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
 
       {/* Confirmation dialog for removing favorite */}
       <AlertDialog open={!!removeConfirmId} onOpenChange={(open) => !open && setRemoveConfirmId(null)}>
@@ -730,6 +748,42 @@ const Vouchers: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Redeem voucher modal: show code and instructions */}
+      <Dialog open={!!redeemModalVoucher} onOpenChange={(open) => !open && setRedeemModalVoucher(null)}>
+        <DialogContent className="sm:max-w-md border-[hsl(40_30%_35%)] bg-gradient-to-b from-[hsl(40_20%_12%)] to-[hsl(40_15%_8%)]">
+          <DialogHeader>
+            <DialogTitle className="text-heading-gold">Uplatnit voucher</DialogTitle>
+            <DialogDescription>
+              {redeemModalVoucher?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Při platbě u partnera zadejte nebo vložte tento kód:
+            </p>
+            <div className="rounded-xl bg-[hsl(220_30%_10%)] border border-[hsl(40_30%_30%)] p-4 text-center">
+              <span className="font-mono text-xl font-bold text-[hsl(45_80%_55%)] tracking-wider">
+                {redeemModalVoucher?.code}
+              </span>
+            </div>
+            <Button
+              className="w-full rounded-xl bg-[hsl(40_70%_42%)] text-[hsl(220_40%_8%)] font-bold"
+              onClick={() => {
+                if (redeemModalVoucher?.code) {
+                  handleCopyVoucherCode(redeemModalVoucher.code);
+                }
+              }}
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              Zkopírovat kód
+            </Button>
+          </div>
+          <DialogFooter className="text-xs text-muted-foreground">
+            Kód uplatněte u partnera v pokladně nebo při online nákupu.
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

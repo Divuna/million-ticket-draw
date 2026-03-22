@@ -1,19 +1,62 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import '@/components/ContestCard.css';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/logo-onemil.png";
+
+/** Same-origin path only (open-redirect safe). Lives in this file only. */
+function safeRedirectPath(raw: string | null): string | null {
+  if (raw == null || typeof raw !== "string") return null;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(raw.trim());
+  } catch {
+    return null;
+  }
+  if (!decoded.startsWith("/") || decoded.startsWith("//")) return null;
+  if (/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(decoded)) return null;
+  return decoded;
+}
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithOAuth } = useAuth();
+  const [pendingEmailLoginNav, setPendingEmailLoginNav] = useState(false);
+  const [searchParams] = useSearchParams();
+  const redirectRaw = searchParams.get("redirect");
+  const { signIn, signInWithOAuth, user, loading: authLoading } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!pendingEmailLoginNav) return;
+    if (authLoading || !user) return;
+    if (roleLoading) return;
+
+    const redirectTarget = safeRedirectPath(redirectRaw);
+    if (redirectTarget) {
+      navigate(redirectTarget, { replace: true });
+    } else if (isAdmin) {
+      navigate("/admin", { replace: true });
+    } else {
+      navigate("/profile", { replace: true });
+    }
+    setPendingEmailLoginNav(false);
+  }, [
+    pendingEmailLoginNav,
+    authLoading,
+    user,
+    roleLoading,
+    isAdmin,
+    redirectRaw,
+    navigate,
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,12 +72,7 @@ const Login: React.FC = () => {
           variant: "destructive",
         });
       } else {
-        // Check if user is admin based on email
-        if (email === "divispavel2@gmail.com") {
-          navigate("/admin");
-        } else {
-          navigate("/profile");
-        }
+        setPendingEmailLoginNav(true);
       }
     } catch (error) {
       toast({
@@ -49,7 +87,7 @@ const Login: React.FC = () => {
 
   const handleOAuthSignIn = async (provider: "google" | "apple" | "facebook") => {
     try {
-      await signInWithOAuth(provider);
+      await signInWithOAuth(provider, redirectRaw);
     } catch (error) {
       toast({
         title: "Chyba přihlášení",

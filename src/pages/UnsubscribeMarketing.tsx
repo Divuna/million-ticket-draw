@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,7 +22,7 @@ const UnsubscribeMarketing: React.FC = () => {
         description: "Pro odhlášení z marketingových sdělení musíte být přihlášeni.",
         variant: "destructive"
       });
-      navigate('/login');
+      navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
 
@@ -68,7 +69,7 @@ const UnsubscribeMarketing: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardFooter className="justify-center">
-            <Button onClick={() => navigate('/login')}>
+            <Button onClick={() => navigate(buildLoginRedirectUrl(location.pathname + location.search))}>
               Přihlásit se
             </Button>
           </CardFooter>

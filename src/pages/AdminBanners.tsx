@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +18,6 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Upload, Calendar as CalendarIcon, Image as ImageIcon, Search, Edit, Trash2, Eye, LayoutTemplate } from 'lucide-react';
-import { AdminMenu } from '@/components/AdminMenu';
 import YouTubeEmbed from '@/components/YouTubeEmbed';
 import { useHomepageVideoSimple } from '@/hooks/useHomepageVideoSimple';
 import { format } from 'date-fns';
@@ -46,9 +46,8 @@ interface Banner {
 }
 
 const AdminBanners: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
-  const navigate = useNavigate();
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [createLoading, setCreateLoading] = useState(false);
@@ -81,15 +80,10 @@ const AdminBanners: React.FC = () => {
   });
 
   useEffect(() => {
-    if (!roleLoading && (!user || !isAdmin)) {
-      navigate('/login');
-      return;
-    }
-    if (user && isAdmin) {
-      fetchBanners();
-      fetchComingSoonBanners();
-    }
-  }, [user, isAdmin, roleLoading, navigate]);
+    if (roleLoading || !user || !isAdmin) return;
+    fetchBanners();
+    fetchComingSoonBanners();
+  }, [user, isAdmin, roleLoading]);
 
   // Load existing video URL when component mounts
   useEffect(() => {
@@ -422,7 +416,26 @@ const AdminBanners: React.FC = () => {
     }
   };
 
-  if (roleLoading || loading) {
+  if (roleLoading || authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Načítání...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <NavigateToLogin />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -434,8 +447,8 @@ const AdminBanners: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="container mx-auto px-4 py-8 space-y-6">
+    <>
+    <div className="container mx-auto px-4 py-8 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -1081,8 +1094,7 @@ const AdminBanners: React.FC = () => {
       </Dialog>
 
       {/* Admin Menu */}
-      <AdminMenu />
-    </div>
+    </>
   );
 };
 

@@ -13,23 +13,9 @@ serve(async (req) => {
   }
 
   try {
-    // Create admin client for auth verification
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    )
-
-    // Create user-scoped client for DB writes (auth.uid propagation)
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: {
-            Authorization: req.headers.get('Authorization') ?? ''
-          }
-        }
-      }
     )
 
     // Get user from JWT
@@ -41,14 +27,14 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    // Check if user is admin using admin client
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from('users')
+    // Check if user is admin via user_roles (canonical role source)
+    const { data: roleData, error: roleError } = await supabaseAdmin
+      .from('user_roles')
       .select('role')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .maybeSingle()
 
-    if (userError || !userData || userData.role !== 'admin') {
+    if (roleError || !roleData || !['admin', 'superadmin'].includes(roleData.role)) {
       throw new Error('Admin access required')
     }
 
@@ -73,49 +59,32 @@ serve(async (req) => {
       throw new Error('Contest is already closed')
     }
 
-    // Get the highest ticket number sold using admin client
-    const { data: highestTicket } = await supabaseAdmin
-      .from('tickets')
-      .select('number, user_id')
-      .eq('contest_id', contest_id)
-      .order('number', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (!highestTicket) {
-      throw new Error('No tickets sold for this contest')
-    }
-
-    // The highest ticket number wins the main prize - use user-scoped client for auth.uid() propagation
-    const { error: winnerError } = await supabase
-      .from('winners')
-      .insert({
-        contest_id: contest_id,
-        user_id: highestTicket.user_id,
-        type: 'main',
-        notes: `Main prize won with highest ticket #${highestTicket.number} when contest was manually closed`
-      })
-
-    if (winnerError) {
-      console.error('Error creating winner:', winnerError)
-      // Continue even if winner creation fails
-    }
-
-    // Close the contest using user-scoped client for auth.uid() propagation
-    const { error: closeError } = await supabase
-      .from('contests')
-      .update({ status: 'closed' })
-      .eq('id', contest_id)
+    // Unified logic: use DB close_contest (random draw among sold tickets)
+    const { error: closeError } = await supabaseAdmin.rpc('close_contest', {
+      p_contest_id: contest_id,
+    })
 
     if (closeError) {
-      throw new Error('Failed to close contest')
+      throw new Error(`Failed to close contest: ${closeError.message}`)
     }
 
+    // Fetch the main winner for the response (inserted by close_contest)
+    const { data: mainWinner } = await supabaseAdmin
+      .from('winners')
+      .select('user_id, ticket_id, notes')
+      .eq('contest_id', contest_id)
+      .eq('type', 'main')
+      .maybeSingle()
+
+    const winnerTicket = mainWinner?.ticket_id
+      ? (await supabaseAdmin.from('tickets').select('number').eq('id', mainWinner.ticket_id).maybeSingle()).data?.number ?? null
+      : null
+
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        winner_ticket: highestTicket.number,
-        winner_user: highestTicket.user_id 
+      JSON.stringify({
+        success: true,
+        winner_ticket: winnerTicket ?? null,
+        winner_user: mainWinner?.user_id ?? null,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

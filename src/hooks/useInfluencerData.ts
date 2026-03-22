@@ -154,17 +154,16 @@ export const useInfluencerData = () => {
           campaigns = (campaignData || []) as Campaign[];
         }
 
-        // Check conversion: count UNIQUE paying users
+        // Conversion: paid referrals via DB view (no cross-user payments scan — RLS-safe)
         let payingUsersCount = 0;
         if (referrals.length > 0) {
-          const userIds = referrals.map((r) => r.user_id);
-          const { data: paymentRows } = await supabase
-            .from('payments')
-            .select('user_id')
-            .in('user_id', userIds)
-            .eq('status', 'completed');
-          const uniquePayingUsers = new Set((paymentRows || []).map((p) => p.user_id));
-          payingUsersCount = uniquePayingUsers.size;
+          const { count, error: paidRefError } = await supabase
+            .from('v_influencer_referrals_paid')
+            .select('*', { count: 'exact', head: true })
+            .eq('influencer_partner_id', partnerId);
+          if (!paidRefError && count !== null) {
+            payingUsersCount = count;
+          }
         }
 
         // Calculate stats

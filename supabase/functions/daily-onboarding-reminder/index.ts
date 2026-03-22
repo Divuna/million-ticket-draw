@@ -23,7 +23,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const oneSignalAppId = Deno.env.get("ONESIGNAL_APP_ID");
+    const oneSignalAppId = "357be038-dbaf-4551-9a16-96d9897197a3";
     const oneSignalApiKey = Deno.env.get("ONESIGNAL_REST_API_KEY");
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);

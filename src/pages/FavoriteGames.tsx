@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { ArrowLeft } from 'lucide-react';
@@ -7,10 +7,18 @@ import { ContestCard } from '@/components/ContestCard';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BottomNavigation } from '@/components/BottomNavigation';
 import { supabase } from '@/integrations/supabase/client';
+import { buildBuyTicketAtomicRpcPayload } from '@/utils/buyTicketAtomicRpcArgs';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { recordLocalTicketPlay } from '@/lib/retentionLocal';
+import {
+  logRpcHttpFailure,
+  logTicketPurchaseException,
+  logTicketPurchaseRejected,
+  logTicketPurchaseSuccess,
+  recordTicketPurchaseAttemptForAbuseCheck,
+} from '@/lib/monitoring';
 
 interface Contest {
   id: string;
@@ -39,6 +47,7 @@ interface UnlockTicketResult {
 
 const FavoriteGames = () => {
   const [contests, setContests] = useState<Contest[]>([]);
+  const [progressMap, setProgressMap] = useState<Record<string, { tickets_sold: number; tickets_total: number }>>({});
   const [loading, setLoading] = useState(true);
   const [processingContestId, setProcessingContestId] = useState<string | null>(null);
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
@@ -47,6 +56,25 @@ const FavoriteGames = () => {
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
   const [removingFavoriteId, setRemovingFavoriteId] = useState<string | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number | undefined>(undefined);
+
+  const loadWallet = useCallback(async (): Promise<number> => {
+    if (!user?.id) {
+      setWalletBalance(undefined);
+      return 0;
+    }
+    const { data, error } = await supabase
+      .from('wallets')
+      .select('balance_coins')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (error) {
+      console.error('Error loading wallet:', error);
+    }
+    const n = data?.balance_coins ?? 0;
+    setWalletBalance(n);
+    return n;
+  }, [user?.id]);
 
   const handleRemoveFavorite = async (contestId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -81,12 +109,12 @@ const FavoriteGames = () => {
 
   useEffect(() => {
     if (!user) {
-      navigate('/login');
+      setWalletBalance(undefined);
       return;
     }
-    
     fetchFavoriteContests();
-  }, [user, navigate]);
+    loadWallet();
+  }, [user, loadWallet]);
 
   const fetchFavoriteContests = async () => {
     if (!user) return;
@@ -114,7 +142,28 @@ const FavoriteGames = () => {
           contestData.push(contest);
         }
       });
-      
+
+      if (contestData.length === 0) {
+        setContests([]);
+        setProgressMap({});
+        return;
+      }
+
+      const ids = contestData.map((c) => c.id);
+      const { data: progressRows } = await supabase
+        .from('contest_progress')
+        .select('contest_id, tickets_sold, tickets_total')
+        .in('contest_id', ids);
+
+      const map: Record<string, { tickets_sold: number; tickets_total: number }> = {};
+      (progressRows || []).forEach((r) => {
+        map[r.contest_id] = {
+          tickets_sold: r.tickets_sold ?? 0,
+          tickets_total: r.tickets_total ?? 1_000_000,
+        };
+      });
+
+      setProgressMap(map);
       setContests(contestData);
     } catch (error) {
       console.error('Error fetching favorite contests:', error);
@@ -130,17 +179,44 @@ const FavoriteGames = () => {
       return;
     }
 
+    const contest = contests.find((c) => c.id === contestId);
+    if (!contest) return;
+
+    let effectiveBalance = walletBalance;
+    if (typeof effectiveBalance !== 'number') {
+      effectiveBalance = await loadWallet();
+    }
+    if (effectiveBalance < contest.ticket_price) {
+      const shortage = Math.max(0, Math.ceil(contest.ticket_price - effectiveBalance));
+      toast.error(`Chybí ti ${shortage.toLocaleString('cs-CZ')} MioCoinů`);
+      return;
+    }
+
     setProcessingContestId(contestId);
     
     try {
-      // Call atomic RPC for ticket purchase
-      const { data, error } = await supabase.rpc('buy_ticket_atomic', {
-        p_contest_id: contestId,
-        p_user_id: user.id
-      });
+      const built = buildBuyTicketAtomicRpcPayload(contestId, user.id);
+      if (!built.ok) {
+        toast.error(built.message);
+        setProcessingContestId(null);
+        return;
+      }
+      const payload = built.payload;
+      console.log('buy_ticket_atomic RPC payload', payload);
+
+      recordTicketPurchaseAttemptForAbuseCheck(user.id);
+      const { data, error } = await supabase.rpc('buy_ticket_atomic', payload);
 
       if (error) {
         console.error('RPC error:', error);
+        logRpcHttpFailure({
+          userId: user.id,
+          operation: 'buy_ticket_atomic',
+          message: error.message,
+          code: error.code,
+          details: (error as { details?: string }).details,
+          hint: (error as { hint?: string }).hint,
+        });
         if (error.message?.includes('closed') || error.message?.includes('uzavřena')) {
           toast.error('Tato hra již byla ukončena');
         } else if (error.message?.includes('coins') || error.message?.includes('mincí') || error.message?.includes('balance')) {
@@ -158,11 +234,21 @@ const FavoriteGames = () => {
       
       if (!rpcResult) {
         toast.error('Chyba při koupi tiketu');
+        logTicketPurchaseRejected({
+          userId: user.id,
+          contestId: contestId,
+          errorCode: 'empty_rpc_payload',
+        });
         return;
       }
 
       if (!rpcResult.success) {
         const errorMsg = String(rpcResult.error || 'Chyba při koupi tiketu');
+        logTicketPurchaseRejected({
+          userId: user.id,
+          contestId: contestId,
+          errorCode: errorMsg.slice(0, 200),
+        });
         if (errorMsg.includes('closed') || errorMsg.includes('uzavřena')) {
           toast.error('Tato hra již byla ukončena');
         } else if (errorMsg.includes('coins') || errorMsg.includes('mincí') || errorMsg.includes('balance')) {
@@ -190,9 +276,11 @@ const FavoriteGames = () => {
 
       setModalResult(result);
       setModalContestId(contestId);
-      
+      recordLocalTicketPlay();
+
       fetchFavoriteContests();
-      
+      await loadWallet();
+
       if (result.won_prize) {
         toast.success(`Gratulujeme! Vyhrál jsi ${result.won_prize}!`);
       } else {
@@ -200,6 +288,13 @@ const FavoriteGames = () => {
       }
     } catch (error: any) {
       console.error('Error unlocking ticket:', error);
+      if (user) {
+        logTicketPurchaseException({
+          userId: user.id,
+          contestId: contestId,
+          error,
+        });
+      }
       toast.error('Chyba při koupi tiketu');
     } finally {
       setProcessingContestId(null);
@@ -254,6 +349,9 @@ const FavoriteGames = () => {
               onRemoveFavorite={handleRemoveFavorite}
               onPlay={handleUnlockTicket}
               fromPage="favorites"
+              ticketsSold={progressMap[contest.id]?.tickets_sold ?? 0}
+              ticketsTotal={progressMap[contest.id]?.tickets_total ?? 1_000_000}
+              walletBalance={walletBalance}
             />
           ))}
         </div>
@@ -289,8 +387,6 @@ const FavoriteGames = () => {
           setModalContestId(null);
         }}
       />
-
-      <BottomNavigation />
     </div>
   );
 };

@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Header } from '@/components/Header';
-import { BottomNavigation } from '@/components/BottomNavigation';
 import { useUserRole } from '@/hooks/useUserRole';
-import { AdminMenu } from '@/components/AdminMenu';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Trophy, Filter, ArrowUp, ArrowDown, Gift, Sparkles, Crown } from 'lucide-react';
@@ -42,9 +40,15 @@ interface Win {
 }
 
 // Helper to derive ui_status from win data
-const deriveUiStatus = (delivered: boolean, notes: string | null): UiStatus => {
-  if (delivered) return 'doručeno';
-  if (notes && notes.toLowerCase().includes('odesláno')) return 'odesláno';
+// Uses backend status values first, then falls back to notes markers for older rows.
+const deriveUiStatus = (
+  delivered: boolean,
+  status: string | null,
+  notes: string | null
+): UiStatus => {
+  if (delivered || status === 'delivered') return 'doručeno';
+  if (status === 'shipped') return 'odesláno';
+  if (notes && notes.toLowerCase().includes('shipped')) return 'odesláno';
   return 'čeká';
 };
 
@@ -211,7 +215,7 @@ const Wins: React.FC = () => {
           const newNotes = payload.new.notes as string | null;
           setWins(prev => prev.map(win => 
             win.id === winId 
-              ? { ...win, status: newStatus, delivered: newDelivered, notes: newNotes, ui_status: deriveUiStatus(newDelivered, newNotes) }
+              ? { ...win, status: newStatus, delivered: newDelivered, notes: newNotes, ui_status: deriveUiStatus(newDelivered, newStatus, newNotes) }
               : win
           ));
           
@@ -221,7 +225,15 @@ const Wins: React.FC = () => {
           
           toast({
             title: "Stav výhry aktualizován",
-            description: `Nový stav: ${newStatus || 'Čeká na potvrzení'}`,
+            description: `Nový stav: ${
+              newStatus === 'pending'
+                ? 'Čeká'
+                : newStatus === 'shipped'
+                  ? 'Odesláno'
+                  : newStatus === 'delivered'
+                    ? 'Předáno'
+                    : newStatus || 'Čeká'
+            }`,
           });
           
           setHighlightedWins(prev => new Set(prev).add(winId));
@@ -289,7 +301,7 @@ const Wins: React.FC = () => {
         ...win,
         contest: contestsMap.get(win.contest_id) || null,
         bonus_prize: win.prize_id ? prizesMap.get(win.prize_id) || null : null,
-        ui_status: deriveUiStatus(win.delivered, win.notes)
+        ui_status: deriveUiStatus(win.delivered, win.status ?? null, win.notes)
       }));
 
       setWins(transformedWins);
@@ -307,7 +319,6 @@ const Wins: React.FC = () => {
         <main className="container mx-auto px-4 py-6">
           <p className="text-gray-400 text-center">Pro zobrazení výher se musíte přihlásit.</p>
         </main>
-        {isAdmin ? <AdminMenu /> : <BottomNavigation />}
       </div>
     );
   }
@@ -598,8 +609,6 @@ const Wins: React.FC = () => {
           userAge={userAge}
         />
       </div>
-
-      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
 
       {/* Global animations */}
       <style>{`

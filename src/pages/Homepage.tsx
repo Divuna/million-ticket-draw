@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import { buildLoginRedirectUrl } from "@/lib/loginRedirect";
+import { setPendingPaymentSuccessContext } from "@/lib/paymentSuccessContext";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { BottomNavigation } from "@/components/BottomNavigation";
-import { AdminMenu } from "@/components/AdminMenu";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAuth } from "@/hooks/useAuth";
 import { useHomepageVouchers } from "@/hooks/useHomepageVouchers";
@@ -24,6 +24,7 @@ import { ContestCard } from "@/components/ContestCard";
 import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { toast } from "sonner";
+import { logMonitoringEvent, logStripeCheckoutClientFailure } from "@/lib/monitoring";
 
 interface Contest {
   id: string;
@@ -42,6 +43,7 @@ const Homepage = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
+  const location = useLocation();
   const { vouchers: homepageVouchers, loading: vouchersLoading, getRemainingCount } = useHomepageVouchers();
   
   const { banners: megajackpotBanners, loading: bannersLoading } = useMegajackpotBanners();
@@ -58,6 +60,7 @@ const Homepage = () => {
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
   const megajackpotCarouselRef = useRef<HTMLDivElement>(null);
   const [contests, setContests] = useState<Contest[]>([]);
+  const [progressMap, setProgressMap] = useState<Record<string, { tickets_sold: number; tickets_total: number }>>({});
   const [loading, setLoading] = useState(true);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
@@ -74,7 +77,29 @@ const Homepage = () => {
 
       if (error) throw error;
 
-      setContests(data || []);
+      const contestRows = data || [];
+      if (contestRows.length === 0) {
+        setContests([]);
+        setLoading(false);
+        return;
+      }
+
+      const ids = contestRows.map((c) => c.id);
+      const { data: progressRows } = await supabase
+        .from("contest_progress")
+        .select("contest_id, tickets_sold, tickets_total")
+        .in("contest_id", ids);
+
+      const map: Record<string, { tickets_sold: number; tickets_total: number }> = {};
+      (progressRows || []).forEach((r) => {
+        map[r.contest_id] = {
+          tickets_sold: r.tickets_sold ?? 0,
+          tickets_total: r.tickets_total ?? 1_000_000,
+        };
+      });
+
+      setProgressMap(map);
+      setContests(contestRows);
     } catch (error) {
       console.error("Error fetching contests:", error);
       toast.error("Nepodařilo se načíst soutěže");
@@ -226,7 +251,7 @@ const Homepage = () => {
   const handleContestClick = (contestId: string) => {
     if (!user) {
       toast.error("Pro hraní her se musíte přihlásit");
-      navigate("/login");
+      navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
 
@@ -238,7 +263,7 @@ const Homepage = () => {
   const handleVoucherPurchase = async (voucherId: string) => {
     if (!user) {
       toast.error("Pro koupi voucheru se musíte přihlásit");
-      navigate("/login");
+      navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
 
@@ -270,7 +295,7 @@ const Homepage = () => {
   const handleCoinPurchase = async (priceInCzk: number, totalCoins: number) => {
     if (!user) {
       toast.error("Pro nákup MioCoinů se musíte přihlásit");
-      navigate("/login");
+      navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
 
@@ -293,6 +318,11 @@ const Homepage = () => {
       // Wait for session to be ready
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session?.user?.id) {
+        logMonitoringEvent("warn", "stripe_checkout_no_session", {
+          user_id: user?.id ?? null,
+          action: "create_stripe_checkout",
+          price_czk: cleanPrice,
+        });
         toast.dismiss("topup-loading");
         toast.error("Nepodařilo se ověřit uživatele. Zkuste se znovu přihlásit.");
         setTopUpLoading(false);
@@ -311,6 +341,7 @@ const Homepage = () => {
       if (error) throw error;
       
       if (data?.checkout_url) {
+        setPendingPaymentSuccessContext({ kind: "miocoin" });
         // Redirect to Stripe - page will unload
         window.location.href = data.checkout_url;
         // Don't reset loading state as page is redirecting
@@ -319,6 +350,18 @@ const Homepage = () => {
       }
     } catch (error) {
       console.error("Error creating checkout:", error);
+      if (user) {
+        const phase =
+          error instanceof Error && error.message.includes("platební odkaz")
+            ? "response"
+            : "invoke";
+        logStripeCheckoutClientFailure({
+          userId: user.id,
+          priceInCzk: cleanPrice,
+          error,
+          phase,
+        });
+      }
       toast.dismiss("topup-loading");
       toast.error("Nepodařilo se otevřít platební bránu");
       setTopUpLoading(false);
@@ -702,6 +745,7 @@ const Homepage = () => {
                           prizeImageUrl={winner.prize_image_url}
                           cardStyleImageUrl={placementBanners.vzhled_karta_vyher?.image_url || null}
                           userAvatarUrl={winner.user_avatar_url}
+                          ticketNumber={winner.ticket_number}
                         />
                       ))
                   )}
@@ -895,6 +939,8 @@ const Homepage = () => {
                   onPlay={handleContestClick}
                   fromPage="homepage"
                   className="flex-shrink-0 w-80"
+                  ticketsSold={progressMap[contest.id]?.tickets_sold ?? 0}
+                  ticketsTotal={progressMap[contest.id]?.tickets_total ?? 1_000_000}
                 />
               ))
             )}
@@ -1006,7 +1052,7 @@ const Homepage = () => {
                             onClick={(e) => {
                               e.stopPropagation();
                               if (!user) {
-                                navigate("/login");
+                                navigate(buildLoginRedirectUrl(location.pathname + location.search));
                               } else {
                                 handleVoucherPurchase(voucher.id);
                               }
@@ -1261,8 +1307,6 @@ const Homepage = () => {
         <Footer />
       </div>
 
-      {/* Show admin menu or regular bottom navigation */}
-      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
     </div>
   );
 };

@@ -12,8 +12,8 @@ export const OneSignalDebug: React.FC = () => {
   const { user } = useAuth();
   const { playerId, permissionState } = useOneSignal();
   const [deviceCount, setDeviceCount] = useState<number>(0);
-  const [appId, setAppId] = useState<string>("");
-  const [settingKey, setSettingKey] = useState<string>("");
+  const ONESIGNAL_APP_ID = "357be038-dbaf-4551-9a16-96d9897197a3";
+  const appId = ONESIGNAL_APP_ID;
   const [loading, setLoading] = useState(false);
   const previousPermission = useRef<string>("unknown");
 
@@ -40,25 +40,10 @@ export const OneSignalDebug: React.FC = () => {
   }, [permissionState]);
 
   useEffect(() => {
-    fetchAppId();
-
     if (user?.id) {
       fetchDeviceCount();
     }
   }, [user?.id]);
-
-  const fetchAppId = async () => {
-    const host = window.location.hostname;
-    const isProd = host === "app.onemil.cz";
-    const key = isProd ? "onesignal_app_id" : "onesignal_app_id_dev";
-    setSettingKey(key);
-
-    const { data } = await supabase.from("settings").select("value").eq("key", key).single();
-
-    if (data?.value) {
-      setAppId(data.value);
-    }
-  };
 
   const fetchDeviceCount = async () => {
     if (!user?.id) return;
@@ -128,56 +113,31 @@ export const OneSignalDebug: React.FC = () => {
   };
 
   const handleRequestPermission = async () => {
-    if (!window.__OneSignalInitOnce) {
-      toast({
-        title: "⚠️ OneSignal Guard není připraven",
-        description: "Chybí window.__OneSignalInitOnce",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!appId) {
-      toast({
-        title: "⚠️ App ID není načteno",
-        description: "Počkejte na načtení konfigurace",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      console.log("[OneSignalDebug] Spouštím manual init přes guard s appId:", appId);
-      
-      // Initialize OneSignal once via guard
-      await window.__OneSignalInitOnce({ appId });
-      
-      console.log("[OneSignalDebug] Init dokončen, žádám o permission");
+      console.log("ONESIGNAL APP ID USED:", appId);
 
-      // Now request permission
-      await (window as any).OneSignal?.User?.PushSubscription?.optIn();
+      const OS = (window as any).OneSignal;
+      if (!OS?.Notifications?.requestPermission) {
+        toast({
+          title: "⚠️ OneSignal není inicializován",
+          description: "Zkuste prosím obnovit stránku nebo znovu se přihlásit.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Request permission prompt (init is handled by useOneSignal after login)
+      const permission = await OS.Notifications.requestPermission();
+      console.log("[OneSignalDebug] permission result:", permission);
+
+      if (permission === "granted") {
+        await OS?.User?.PushSubscription?.optIn?.();
+      }
       
       toast({
         title: "✅ Žádost odeslána",
         description: "Povolte prosím push notifikace v dialogu prohlížeče",
       });
-
-      // Check permission after a moment
-      setTimeout(async () => {
-        try {
-          const newPerm = await (window as any).OneSignal?.Notifications?.permission;
-          const mapped = newPerm === true ? "granted" : newPerm === "granted" ? "granted" : "default";
-          
-          if (mapped === "granted") {
-            toast({ 
-              title: "✅ Oprávnění povoleno", 
-              description: "Push notifikace jsou aktivní" 
-            });
-          }
-        } catch (e) {
-          console.warn("[OneSignalDebug] Permission check failed:", e);
-        }
-      }, 1500);
     } catch (error) {
       console.error("[OneSignalDebug] Init error:", error);
       toast({
@@ -270,9 +230,8 @@ export const OneSignalDebug: React.FC = () => {
         <div>
           <p className="text-sm text-muted-foreground mb-1">
             OneSignal App ID
-            {settingKey && <span className="ml-2 text-xs">({settingKey})</span>}
           </p>
-          <code className="text-xs bg-muted px-2 py-1 rounded block overflow-x-auto">{appId || "nenačteno"}</code>
+          <code className="text-xs bg-muted px-2 py-1 rounded block overflow-x-auto">{appId}</code>
         </div>
 
         {/* Device Count */}
@@ -292,7 +251,7 @@ export const OneSignalDebug: React.FC = () => {
         <div className="flex gap-2 pt-2 flex-wrap">
           <Button 
             onClick={handleRequestPermission} 
-            disabled={!appId || permissionState === "granted"} 
+            disabled={permissionState === "granted"} 
             size="sm" 
             variant="default"
           >
@@ -308,7 +267,6 @@ export const OneSignalDebug: React.FC = () => {
           <Button
             onClick={() => {
               fetchDeviceCount();
-              fetchAppId();
             }}
             disabled={!user}
             size="sm"

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Star, Building2, User, ArrowLeft, Mail, Phone } from "lucide-react";
-
+import { NavigateToLogin } from "@/components/NavigateToLogin";
+import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 interface Message {
   id: string;
   user_id: string;
@@ -23,6 +25,8 @@ interface ContactInfo {
 
 export default function AdminMessageThread() {
   const { userId } = useParams();
+  const { user, loading: authLoading } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
@@ -41,7 +45,7 @@ export default function AdminMessageThread() {
   }, [messages]);
 
   const loadMessages = async () => {
-    if (!userId) return;
+    if (!userId || !user || !isAdmin) return;
 
     setLoading(true);
 
@@ -71,7 +75,7 @@ export default function AdminMessageThread() {
 
   // Resolve contact identity
   const loadContactInfo = async () => {
-    if (!userId) return;
+    if (!userId || !user || !isAdmin) return;
 
     const [userRes, partnerRes] = await Promise.all([
       supabase
@@ -86,27 +90,32 @@ export default function AdminMessageThread() {
         .maybeSingle(),
     ]);
 
-    const user = userRes.data;
+    const userRow = userRes.data;
     const partner = partnerRes.data;
 
     // Determine role
     let role: "user" | "influencer" | "partner" = "user";
     if (partner) {
-      role = partner.notes?.toLowerCase().includes("influencer") ? "influencer" : "partner";
+      role =
+        (typeof partner.notes === "string" ? partner.notes : "").toLowerCase().includes("influencer")
+          ? "influencer"
+          : "partner";
     }
 
     // Resolve name: user first/last > user name > partner name
-    const userName = user?.first_name && user?.last_name
-      ? `${user.first_name} ${user.last_name}`
-      : user?.name || null;
+    const userName = userRow?.first_name && userRow?.last_name
+      ? `${userRow.first_name} ${userRow.last_name}`
+      : userRow?.name || null;
     const name = userName || partner?.name || null;
-    const email = user?.email || partner?.contact_email || null;
-    const phone = user?.phone || partner?.contact_phone || null;
+    const email = userRow?.email || partner?.contact_email || null;
+    const phone = userRow?.phone || partner?.contact_phone || null;
 
     setContactInfo({ name, email, phone, role });
   };
 
   useEffect(() => {
+    if (!userId || !user || !isAdmin) return;
+
     loadMessages();
     loadContactInfo();
 
@@ -120,10 +129,10 @@ export default function AdminMessageThread() {
     return () => {
       channel.unsubscribe();
     };
-  }, [userId]);
+  }, [userId, user, isAdmin]);
 
   const handleSend = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !user || !isAdmin) return;
 
     const { error } = await supabase.from("messages").insert({
       user_id: userId,
@@ -186,8 +195,25 @@ export default function AdminMessageThread() {
     }
   };
 
+  if (authLoading || roleLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <NavigateToLogin />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
-    <div className="flex flex-col h-[100vh] bg-[hsl(220,20%,4%)] p-4 pb-24">
+    <div className="flex flex-col flex-1 min-h-0 bg-[hsl(220,20%,4%)] w-full">
+      <div className="flex flex-col flex-1 min-h-0 px-4 pt-4 pb-6 gap-4">
       {/* Conversation header */}
       <div className="mb-4 rounded-2xl p-4" style={{
         background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
@@ -227,7 +253,7 @@ export default function AdminMessageThread() {
       </div>
 
       {/* MESSAGES */}
-      <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto h-full pr-1">
+      <div ref={scrollRef} className="flex flex-col gap-3 overflow-y-auto flex-1 min-h-0 pr-1">
         {loading && messages.length === 0 ? (
           <p className="text-muted-foreground mt-10 text-center">Načítání zpráv…</p>
         ) : messages.length === 0 ? (
@@ -275,6 +301,7 @@ export default function AdminMessageThread() {
         <button onClick={handleSend} className="px-5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground">
           Odeslat
         </button>
+      </div>
       </div>
     </div>
   );

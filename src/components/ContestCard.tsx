@@ -1,5 +1,6 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { Badge } from '@/components/ui/badge';
 import { Heart, Trophy } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
@@ -28,6 +29,10 @@ interface ContestCardProps {
   onPlay: (contestId: string) => void;
   fromPage: 'homepage' | 'games' | 'favorites';
   className?: string;
+  ticketsSold?: number;
+  ticketsTotal?: number;
+  /** When set (e.g. on Games / Favorites), gates purchase CTA vs top-up using this balance */
+  walletBalance?: number;
 }
 
 export const ContestCard: React.FC<ContestCardProps> = ({
@@ -41,11 +46,25 @@ export const ContestCard: React.FC<ContestCardProps> = ({
   onPlay,
   fromPage,
   className = '',
+  ticketsSold = 0,
+  ticketsTotal = 1_000_000,
+  walletBalance,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const isFavorite = favorites?.has(contest.id) ?? false;
   const isProcessing = processingContestId === contest.id;
+
+  const hasWalletHint = typeof walletBalance === 'number';
+  const insufficientFunds =
+    Boolean(user) &&
+    contest.status === 'active' &&
+    hasWalletHint &&
+    walletBalance < contest.ticket_price;
+  const shortageCoins = insufficientFunds
+    ? Math.max(0, Math.ceil(contest.ticket_price - walletBalance))
+    : 0;
 
   const getPlayButtonText = () => {
     if (isProcessing) return 'Zpracování...';
@@ -66,7 +85,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
 
   const handleLoginClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate('/login');
+    navigate(buildLoginRedirectUrl(location.pathname + location.search));
   };
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
@@ -189,10 +208,31 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             {contest.title}
           </h3>
           
+          {/* Progress */}
+          <div className="space-y-0.5">
+            <p className="text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
+              {(ticketsSold ?? 0).toLocaleString("cs-CZ")} / {(ticketsTotal ?? 1_000_000).toLocaleString("cs-CZ")} ticketů
+            </p>
+            <div className="w-full h-1 rounded-full overflow-hidden bg-white/20">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[#f6e27a] to-[#d4a017] transition-all duration-300"
+                style={{
+                  width: `${(ticketsTotal ?? 1_000_000) > 0 ? Math.min(100, ((ticketsSold ?? 0) / (ticketsTotal ?? 1_000_000)) * 100) : 0}%`
+                }}
+              />
+            </div>
+          </div>
+          
           {/* CTA for logged-in users */}
           {user && (
-            <div className="flex items-stretch gap-2">
-              {/* Gold outlined pill CTA */}
+            <div className="flex flex-col gap-1.5">
+              {insufficientFunds && (
+                <p className="text-[11px] md:text-xs text-amber-300/95 drop-shadow-md leading-tight px-0.5">
+                  Chybí ti {shortageCoins.toLocaleString('cs-CZ')} MioCoinů
+                </p>
+              )}
+              <div className="flex items-stretch gap-2">
+              {/* Gold outlined pill CTA — purchase or top-up */}
               <button
                 className="
                   flex-1 flex items-center justify-center gap-2
@@ -209,10 +249,25 @@ export const ContestCard: React.FC<ContestCardProps> = ({
                   transition-all duration-200
                   disabled:opacity-40 disabled:cursor-not-allowed
                 "
-                onClick={handlePlayClick}
-                disabled={contest.status !== 'active' || isProcessing}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (insufficientFunds) {
+                    navigate('/profile', {
+                      state: {
+                        paymentReturnTo: `${location.pathname}${location.search}`,
+                      },
+                    });
+                    return;
+                  }
+                  handlePlayClick(e);
+                }}
+                disabled={contest.status !== 'active' || (!insufficientFunds && isProcessing)}
               >
-                🏆 {getPlayButtonText()}
+                {insufficientFunds ? (
+                  <>Dobít MioCoiny</>
+                ) : (
+                  <>🏆 {getPlayButtonText()}</>
+                )}
               </button>
               {/* Detail button */}
               <button
@@ -232,6 +287,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
               >
                 Detail
               </button>
+              </div>
             </div>
           )}
           

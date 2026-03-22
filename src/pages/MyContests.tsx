@@ -1,87 +1,64 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
-import { Gamepad2, Trophy, Ticket } from 'lucide-react';
-import { BottomNavigation } from '@/components/BottomNavigation';
-import { AdminMenu } from '@/components/AdminMenu';
-import { useUserRole } from '@/hooks/useUserRole';
+import { Gamepad2, Ticket } from 'lucide-react';
 
-interface Contest {
+interface UserTicket {
   id: string;
-  title: string;
-  description: string;
-  main_prize: string;
-  status: string;
-  ticket_count: number;
+  number: number;
   created_at: string;
-  user_tickets: number;
+  contest_id: string;
+  contest_title: string;
 }
 
 const MyContests: React.FC = () => {
   const { user, session } = useAuth();
-  const { isAdmin } = useUserRole();
   const navigate = useNavigate();
-  const [contests, setContests] = useState<Contest[]>([]);
+  const [tickets, setTickets] = useState<UserTicket[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      fetchMyContests();
+      fetchMyTickets();
     }
   }, [user]);
 
-  const fetchMyContests = async () => {
+  const fetchMyTickets = async () => {
     try {
       const { data, error } = await supabase
         .from('tickets')
         .select(`
+          id,
+          number,
+          created_at,
           contest_id,
           contests!inner (
-            id,
-            title,
-            description,
-            main_prize,
-            status,
-            ticket_count,
-            created_at
+            title
           )
         `)
-        .eq('user_id', user?.id);
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching contests:', error);
+        console.error('Error fetching tickets:', error);
         return;
       }
 
-      // Group tickets by contest and count them
-      const contestMap = new Map<string, Contest>();
-      
-      data?.forEach((ticket: any) => {
-        const contest = Array.isArray(ticket.contests) ? ticket.contests[0] : ticket.contests;
-        if (!contest) return;
-        const contestId = contest.id;
-        
-        if (contestMap.has(contestId)) {
-          contestMap.get(contestId)!.user_tickets += 1;
-        } else {
-          contestMap.set(contestId, {
-            id: contest.id,
-            title: contest.title,
-            description: contest.description,
-            main_prize: contest.main_prize,
-            status: contest.status,
-            ticket_count: contest.ticket_count,
-            created_at: contest.created_at,
-            user_tickets: 1
-          });
-        }
+      const userTickets: UserTicket[] = (data ?? []).map((row: any) => {
+        const contest = Array.isArray(row.contests) ? row.contests[0] : row.contests;
+        return {
+          id: row.id,
+          number: row.number,
+          created_at: row.created_at,
+          contest_id: row.contest_id,
+          contest_title: contest?.title ?? '',
+        };
       });
 
-      setContests(Array.from(contestMap.values()));
+      setTickets(userTickets);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -89,34 +66,17 @@ const MyContests: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-500';
-      case 'closed':
-        return 'bg-gray-500';
-      case 'draft':
-        return 'bg-yellow-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'Aktivní';
-      case 'closed':
-        return 'Ukončená';
-      case 'draft':
-        return 'Příprava';
-      default:
-        return status;
-    }
-  };
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleString('cs-CZ', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
   if (!session) {
-    return <Navigate to="/login" replace />;
+    return <NavigateToLogin />;
   }
 
   if (loading) {
@@ -125,7 +85,7 @@ const MyContests: React.FC = () => {
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">Načítám soutěže...</p>
+            <p className="text-muted-foreground">Načítám tickety...</p>
           </div>
         </div>
       </div>
@@ -135,71 +95,41 @@ const MyContests: React.FC = () => {
   return (
     <div className="min-h-screen bg-background dark pb-20">
       <Header />
-      
+
       <div className="container mx-auto px-4 py-8 space-y-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3 mb-8">
             <Gamepad2 className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold text-primary">Moje hry</h1>
           </div>
-          
-          {contests.length === 0 ? (
+
+          {tickets.length === 0 ? (
             <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
               <CardContent className="pt-6">
                 <div className="text-center py-12">
                   <Ticket className="h-16 w-16 text-primary mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-3 text-primary">Žádné soutěže</h3>
-                  <p className="text-muted-foreground">
-                    Nemáte zatím žádné lístky v soutěžích. Přejděte na hlavní stránku a začněte hrát!
-                  </p>
+                  <p className="text-muted-foreground">Zatím nemáš žádné tickety.</p>
                 </div>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {contests.map((contest) => (
-                <Card 
-                  key={contest.id} 
-                  className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm transition-all duration-300 shadow-lg cursor-pointer hover:scale-105 hover:border-primary/40 hover:shadow-primary/20"
-                  onClick={() => navigate(`/contest/${contest.id}`)}
+            <div className="space-y-4">
+              {tickets.map((ticket) => (
+                <Card
+                  key={ticket.id}
+                  className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm transition-all duration-300 shadow-lg cursor-pointer hover:border-primary/40 hover:shadow-primary/20"
+                  onClick={() => navigate(`/contest/${ticket.contest_id}`)}
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-lg line-clamp-2 text-primary">{contest.title}</CardTitle>
-                      <Badge 
-                        variant="secondary" 
-                        className={`${getStatusColor(contest.status)} text-white shrink-0`}
-                      >
-                        {getStatusText(contest.status)}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Trophy className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-semibold text-primary">Hlavní cena:</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2 ml-6">
-                        {contest.main_prize}
-                      </p>
-                    </div>
-                    
-                    <div className="pt-3 border-t border-border/50 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Ticket className="h-4 w-4 text-primary" />
-                          <span className="text-sm text-muted-foreground">Moje lístky:</span>
-                        </div>
-                        <span className="text-sm font-bold text-foreground">{contest.user_tickets}</span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Celkem lístků:</span>
-                        <span className="font-bold text-foreground">{contest.ticket_count?.toLocaleString('cs-CZ')}</span>
-                      </div>
-                    </div>
+                  <CardContent className="pt-6 pb-6">
+                    <p className="text-sm font-semibold text-primary mb-1">
+                      Soutěž: {ticket.contest_title}
+                    </p>
+                    <p className="text-sm text-foreground mb-1">
+                      Tiket: #{ticket.number.toLocaleString('cs-CZ')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Zakoupeno: {formatDate(ticket.created_at)}
+                    </p>
                   </CardContent>
                 </Card>
               ))}
@@ -207,8 +137,6 @@ const MyContests: React.FC = () => {
           )}
         </div>
       </div>
-
-      <BottomNavigation />
     </div>
   );
 };

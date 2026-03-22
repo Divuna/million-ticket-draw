@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
         'Authorization': `Basic ${Deno.env.get('ONESIGNAL_REST_API_KEY')}`
       },
       body: JSON.stringify({
-        app_id: '5e5539e1-fc71-4c4d-9fef-414293d83dbb',
+        app_id: '357be038-dbaf-4551-9a16-96d9897197a3',
         include_player_ids: [devices.player_id],
         headings: { en: 'Test notifikace' },
         contents: { en: 'Gratulujeme! Notifikace fungují správně. 🎉' },

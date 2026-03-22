@@ -3,9 +3,24 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+/** Same-origin path only (open-redirect safe). Mirrors Login.tsx safeRedirectPath. */
+function safeRedirectPath(raw: string | null): string | null {
+  if (raw == null || typeof raw !== 'string') return null;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(raw.trim());
+  } catch {
+    return null;
+  }
+  if (!decoded.startsWith('/') || decoded.startsWith('//')) return null;
+  if (/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(decoded)) return null;
+  return decoded;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  loading: boolean;
   signUp: (email: string, password: string, marketingConsent?: boolean) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -22,9 +37,35 @@ export const useAuth = () => {
   return context;
 };
 
+export const useAuthSession = () => {
+  const [session, setSession] = useState<Session | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const init = async () => {
+      const { data } = await supabase.auth.getSession()
+      setSession(data.session)
+      setLoading(false)
+    }
+
+    init()
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
+    return () => {
+      listener.subscription.unsubscribe()
+    }
+  }, [])
+
+  return { session, loading }
+}
+
 export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -32,6 +73,7 @@ export const useAuthState = () => {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        setLoading(false);
       }
     );
 
@@ -39,13 +81,14 @@ export const useAuthState = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signUp = async (email: string, password: string, marketingConsent: boolean = false) => {
-    const redirectUrl = `${window.location.origin}/`;
+    const redirectUrl = `${import.meta.env.VITE_APP_URL || window.location.origin}/`;
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -119,14 +162,21 @@ export const useAuthState = () => {
     });
   };
 
-  const signInWithOAuth = async (provider: 'google' | 'apple' | 'facebook') => {
-    // OAuth will redirect to origin, then we handle admin check in auth state change
-    const redirectUrl = `${window.location.origin}/`;
-    
+  const signInWithOAuth = async (
+    provider: 'google' | 'apple' | 'facebook',
+    redirectAfterLogin?: string | null
+  ) => {
+    const base = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '');
+    const safe = safeRedirectPath(redirectAfterLogin ?? null);
+    // Return to /login?redirect=… so session + query survive OAuth callback; same validation as email login.
+    const redirectTo = safe
+      ? `${base}/login?redirect=${encodeURIComponent(safe)}`
+      : `${base}/`;
+
     await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: redirectUrl,
+        redirectTo,
         queryParams: provider === 'google' ? { prompt: 'select_account' } : undefined
       }
     });
@@ -135,6 +185,7 @@ export const useAuthState = () => {
   return {
     user,
     session,
+    loading,
     signUp,
     signIn,
     signOut,

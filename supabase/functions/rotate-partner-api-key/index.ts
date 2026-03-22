@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-internal-token",
 };
 
 Deno.serve(async (req) => {
@@ -25,20 +25,31 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create client with user's token to verify admin status
-    const supabaseUser = createClient(
+    // Create service-role client for all privileged operations
+    const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Verify user is admin
-    const { data: userData, error: userError } = await supabaseUser
-      .from("users")
-      .select("id, role")
-      .single();
+    // Verify user identity
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
-    if (userError || !userData || !["admin", "superadmin"].includes(userData.role)) {
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Chybí autorizace" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify user is admin via user_roles (canonical role source)
+    const { data: roleData, error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (roleError || !roleData || !["admin", "superadmin"].includes(roleData.role)) {
       return new Response(
         JSON.stringify({ success: false, error: "Nedostatečná oprávnění" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -53,12 +64,6 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Create service role client for privileged operations
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
 
     // Verify partner exists and is approved
     const { data: partner, error: partnerError } = await supabaseAdmin

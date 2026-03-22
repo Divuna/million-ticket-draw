@@ -8,8 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CheckCircle, Wrench, Zap, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Navigate } from 'react-router-dom';
-import { AdminMenu } from '@/components/AdminMenu';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 
 interface AuditEvent {
   id: string;
@@ -28,7 +27,7 @@ interface AuditStats {
 }
 
 const AdminAuditRepair = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [stats, setStats] = useState<AuditStats>({
@@ -46,20 +45,22 @@ const AdminAuditRepair = () => {
   // Show loading while checking user role
   if (roleLoading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">Načítám...</p>
-          </div>
+      <div className="container mx-auto p-6 flex flex-1 items-center justify-center min-h-[40vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Načítám...</p>
         </div>
       </div>
     );
   }
 
   // Redirect if not admin
+  if (authLoading) {
+    return null;
+  }
+
   if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <NavigateToLogin />;
   }
 
   const setLoadingState = (action: keyof typeof loading, state: boolean) => {
@@ -280,7 +281,7 @@ const AdminAuditRepair = () => {
 
   const getGenerationTypeBadge = (type: 'existing' | 'repaired') => {
     return (
-      <Badge variant={type === 'existing' ? 'default' : 'secondary'}>
+      <Badge variant={type === "existing" ? "outline" : "success"}>
         {type === 'existing' ? 'Existující' : 'Opravené'}
       </Badge>
     );
@@ -436,8 +437,6 @@ const AdminAuditRepair = () => {
         </CardContent>
       </Card>
 
-      {/* Admin Menu */}
-      <AdminMenu />
     </div>
   );
 };

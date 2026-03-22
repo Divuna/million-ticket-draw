@@ -6,6 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "e2e:contest": "node scripts/e2e-contest-test.mjs",
+    "e2e:apply-migration": "node scripts/apply-e2e-migration.mjs",
+    "e2e:full": "node scripts/apply-e2e-migration.mjs && node scripts/e2e-contest-test.mjs",
+    "diagnose:push": "node scripts/diagnose-push.mjs",
+    "e2e:contest-flow": "node scripts/e2e-contest-flow-full.mjs",
+    "test:concurrency": "node scripts/concurrency-test-race-condition.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"

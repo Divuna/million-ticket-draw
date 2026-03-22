@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Header } from '@/components/Header';
-import { AdminMenu } from '@/components/AdminMenu';
 import { BarChart3, Users, CreditCard, Trophy, Gift, Ticket, UserX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,7 +20,7 @@ interface Statistics {
 }
 
 const AdminStatistics: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const [stats, setStats] = useState<Statistics>({
@@ -106,8 +103,12 @@ const AdminStatistics: React.FC = () => {
     return <div className="flex items-center justify-center min-h-screen">Načítání...</div>;
   }
 
+  if (authLoading) {
+    return null;
+  }
+
   if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <NavigateToLogin />;
   }
 
   const statsCards = [
@@ -170,9 +171,7 @@ const AdminStatistics: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="container mx-auto px-4 py-6 pb-20">
+    <div className="container mx-auto px-4 py-6 pb-8">
         <Card className="mb-6 luxury-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary">
@@ -229,7 +228,7 @@ const AdminStatistics: React.FC = () => {
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card className="luxury-card cursor-pointer admin-card-hover" 
-                    onClick={() => window.location.href = '/admin/users'}>
+                    onClick={() => navigate('/admin/users')}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-neon-gold" />
@@ -244,7 +243,7 @@ const AdminStatistics: React.FC = () => {
               </Card>
 
               <Card className="luxury-card cursor-pointer admin-card-hover"
-                    onClick={() => window.location.href = '/admin/payments'}>
+                    onClick={() => navigate('/admin/payments')}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
                     <CreditCard className="h-4 w-4 text-neon-gold" />
@@ -259,7 +258,7 @@ const AdminStatistics: React.FC = () => {
               </Card>
 
               <Card className="luxury-card cursor-pointer admin-card-hover"
-                    onClick={() => window.location.href = '/admin/vouchers'}>
+                    onClick={() => navigate('/admin/vouchers')}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
                     <Gift className="h-4 w-4 text-neon-gold" />
@@ -272,27 +271,10 @@ const AdminStatistics: React.FC = () => {
                   </p>
                 </CardContent>
               </Card>
-
-              <Card className="luxury-card cursor-pointer admin-card-hover"
-                    onClick={() => window.location.href = '/admin/notifications'}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-neon-gold" />
-                    <span className="text-sm font-medium">Notifikace</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">
-                    Odesílejte notifikace uživatelům
-                  </p>
-                </CardContent>
-              </Card>
             </div>
           </CardContent>
         </Card>
       </div>
-      <AdminMenu />
-    </div>
   );
 };
 

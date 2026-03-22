@@ -3,8 +3,6 @@ import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
-import { BottomNavigation } from '@/components/BottomNavigation';
-import { AdminMenu } from '@/components/AdminMenu';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +34,7 @@ interface UserWin {
   created_at: string;
   delivered: boolean;
   status?: string;
+  prize_id?: string | null;
   contest_title?: string;
   description?: string;
 }
@@ -115,7 +114,8 @@ const MyContestDetail: React.FC = () => {
           type,
           created_at,
           delivered,
-          status
+          status,
+          prize_id
         `)
         .eq('user_id', user.id)
         .eq('contest_id', id);
@@ -130,8 +130,8 @@ const MyContestDetail: React.FC = () => {
         if (win.type === 'main') {
           description = contest?.main_prize || 'Hlavní cena';
         } else if (win.type === 'bonus') {
-          // Try to find matching bonus prize
-          const bonusPrize = bonusPrizes.find(bp => bp.status === 'won');
+          // Resolve bonus prize by winner.prize_id instead of bonus_prizes.status
+          const bonusPrize = bonusPrizes.find(bp => bp.id === win.prize_id);
           description = bonusPrize?.description || 'Bonusová cena';
         }
 
@@ -141,6 +141,7 @@ const MyContestDetail: React.FC = () => {
           created_at: win.created_at,
           delivered: win.delivered,
           status: win.status,
+          prize_id: win.prize_id,
           contest_title: contest?.title,
           description
         });
@@ -157,21 +158,21 @@ const MyContestDetail: React.FC = () => {
   const fetchTicketData = async () => {
     try {
       if (!id || !user) return;
-      
-      // Get total tickets count
-      const { count: totalCount } = await supabase
-        .from('tickets')
-        .select('*', { count: 'exact', head: true })
-        .eq('contest_id', id);
 
-      // Get user tickets count
+      // Aggregate sold/total from view (avoids counting all ticket rows under strict RLS)
+      const { data: prog } = await supabase
+        .from('contest_progress')
+        .select('tickets_sold, tickets_total')
+        .eq('contest_id', id)
+        .maybeSingle();
+
       const { count: userCount } = await supabase
         .from('tickets')
         .select('*', { count: 'exact', head: true })
         .eq('contest_id', id)
         .eq('user_id', user.id);
 
-      setTicketCount(totalCount || 0);
+      setTicketCount(prog?.tickets_sold ?? 0);
       setUserTickets(userCount || 0);
     } catch (error) {
       console.error('Error fetching ticket data:', error);
@@ -199,7 +200,7 @@ const MyContestDetail: React.FC = () => {
   };
 
   if (!session) {
-    return <Navigate to="/login" replace />;
+    return <NavigateToLogin />;
   }
 
   if (loadingContest) {
@@ -315,8 +316,6 @@ const MyContestDetail: React.FC = () => {
 
         </div>
       </div>
-
-      <BottomNavigation />
     </div>
   );
 };

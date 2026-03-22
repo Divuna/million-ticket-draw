@@ -1,12 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-
-const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
+import { supabase, supabaseUrl } from "@/integrations/supabase/client";
 
 const getStorageUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
-  return `${SUPABASE_URL}/storage/v1/object/public/contest-images/${path}`;
+  return `${supabaseUrl}/storage/v1/object/public/contest-images/${path}`;
 };
 
 export interface Winner {
@@ -20,6 +18,7 @@ export interface Winner {
   created_at: string;
   type: string;
   user_avatar_url: string | null;
+  ticket_number: number | null;
 }
 
 export const useLatestWinners = (limit: number = 50) => {
@@ -52,6 +51,7 @@ export const useLatestWinners = (limit: number = 50) => {
         prize_image_url: string | null;
         contest_title: string;
         user_avatar_url: string | null;
+        ticket_number: number | null;
       }) => ({
         id: winner.id,
         user_id: winner.user_id,
@@ -63,6 +63,7 @@ export const useLatestWinners = (limit: number = 50) => {
         created_at: winner.created_at,
         type: winner.type,
         user_avatar_url: winner.user_avatar_url,
+        ticket_number: winner.ticket_number ?? null,
       }));
 
       return result;

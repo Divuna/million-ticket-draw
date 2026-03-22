@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Navigate } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +19,6 @@ import { toast } from 'sonner';
 import { Plus, Upload, Calendar as CalendarIcon, Infinity, Hash, Image as ImageIcon, Search, Edit, Trash2, Eye, Gift } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AdminMenu } from '@/components/AdminMenu';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -40,15 +40,94 @@ interface Voucher {
   redeemed_count: number;
   start_date: string | null;
   end_date: string | null;
-  created_at: string;
+  created_at: string | null;
   updated_at: string | null;
   is_public: boolean;
 }
 
+function isValidDate(d: Date): boolean {
+  return d instanceof Date && !Number.isNaN(d.getTime());
+}
+
+/** Never throws; invalid / missing → "-" */
+function safeFormatDate(iso: string | null | undefined, fmt: string, fallback = '-'): string {
+  if (iso == null || iso === '') return fallback;
+  const d = new Date(iso);
+  if (!isValidDate(d)) return fallback;
+  try {
+    return format(d, fmt);
+  } catch {
+    return fallback;
+  }
+}
+
+/** For comparisons in filters; null if missing or invalid */
+function parseBoundaryDate(iso: string | null | undefined): Date | null {
+  if (iso == null || iso === '') return null;
+  const d = new Date(iso);
+  return isValidDate(d) ? d : null;
+}
+
+/** For calendar popovers — never throws */
+function safeFormatPickerDate(d: Date | undefined, fmt: string): string {
+  if (!d || !isValidDate(d)) return 'Vybrat datum';
+  try {
+    return format(d, fmt);
+  } catch {
+    return 'Vybrat datum';
+  }
+}
+
+function parseDateForForm(iso: string | null | undefined): Date | undefined {
+  const d = parseBoundaryDate(iso);
+  return d ?? undefined;
+}
+
+/** Coerce Supabase row so render never throws on null/odd shapes */
+function normalizeVoucherRow(row: Record<string, unknown> | null | undefined): Voucher | null {
+  if (!row || row.id == null) return null;
+  const id = String(row.id);
+  const nameRaw = row.name;
+  const name =
+    typeof nameRaw === 'string' && nameRaw.trim() !== '' ? nameRaw : '(Bez názvu)';
+  const redeemed = Number(row.redeemed_count ?? 0);
+  const redeemed_count = Number.isFinite(redeemed) ? redeemed : 0;
+  const maxQ = row.max_quantity;
+  const maxNum = maxQ == null ? null : Number(maxQ);
+  const max_quantity = maxNum != null && Number.isFinite(maxNum) ? maxNum : null;
+  const createdRaw = row.created_at;
+  const created_at =
+    typeof createdRaw === 'string' && createdRaw !== '' ? createdRaw : null;
+  const updatedRaw = row.updated_at;
+  const updated_at = typeof updatedRaw === 'string' ? updatedRaw : null;
+  const img = row.image_url;
+  const image_url =
+    typeof img === 'string' ? img : img == null ? null : String(img);
+  const ban = row.banner_url;
+  const banner_url =
+    typeof ban === 'string' ? ban : ban == null ? null : String(ban);
+  const sd = row.start_date;
+  const start_date = typeof sd === 'string' ? sd : null;
+  const ed = row.end_date;
+  const end_date = typeof ed === 'string' ? ed : null;
+  return {
+    id,
+    name,
+    image_url,
+    banner_url,
+    max_quantity,
+    redeemed_count,
+    start_date,
+    end_date,
+    created_at,
+    updated_at,
+    is_public: Boolean(row.is_public),
+  };
+}
+
 const AdminVouchers: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
-  const navigate = useNavigate();
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
   const [createLoading, setCreateLoading] = useState(false);
@@ -59,6 +138,8 @@ const AdminVouchers: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
+  const [voucherPurchases, setVoucherPurchases] = useState<{ id: string; user_email: string; voucher_name: string; created_at: string }[]>([]);
+  const [purchasesLoading, setPurchasesLoading] = useState(false);
   
   const [voucherForm, setVoucherForm] = useState<VoucherForm>({
     name: '',
@@ -70,30 +151,88 @@ const AdminVouchers: React.FC = () => {
   });
 
   useEffect(() => {
-    if (!roleLoading && (!user || !isAdmin)) {
-      navigate('/login');
-      return;
-    }
-    if (user && isAdmin) {
-      fetchVouchers();
-    }
-  }, [user, isAdmin, roleLoading, navigate]);
+    if (!user || !isAdmin) return;
+    fetchVouchers();
+  }, [user, isAdmin]);
+
+  useEffect(() => {
+    if (!user || !isAdmin) return;
+    fetchVoucherPurchases();
+  }, [user, isAdmin]);
 
   const fetchVouchers = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('vouchers')
-        .select('id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, created_at, updated_at, is_public')
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setVouchers(data || []);
-    } catch (error: any) {
+      const list = Array.isArray(data) ? data : [];
+      const normalized = list
+        .map((row) => normalizeVoucherRow(row as Record<string, unknown>))
+        .filter((v): v is Voucher => v != null);
+      setVouchers(normalized);
+    } catch (error: unknown) {
       console.error('Error fetching vouchers:', error);
       toast.error('Chyba při načítání voucherů');
+      setVouchers([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchVoucherPurchases = async () => {
+    try {
+      setPurchasesLoading(true);
+      const { data, error } = await supabase
+        .from('user_vouchers')
+        .select(`
+          id,
+          created_at,
+          users!inner(email),
+          vouchers!inner(name)
+        `)
+        .eq('redeemed', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const purchases = (data || []).map((row: Record<string, unknown>) => ({
+        id: String(row?.id ?? ''),
+        user_email:
+          (row?.users as { email?: string } | undefined)?.email ?? 'Neznámý uživatel',
+        voucher_name:
+          (row?.vouchers as { name?: string } | undefined)?.name ?? 'Neznámý voucher',
+        created_at: typeof row?.created_at === 'string' ? row.created_at : '',
+      }));
+      setVoucherPurchases(purchases.filter((p) => p.id !== ''));
+    } catch (error: unknown) {
+      console.error('Error fetching voucher purchases:', error);
+      try {
+        const { data: fallback, error: fbErr } = await supabase
+          .from('user_vouchers')
+          .select('id, created_at')
+          .eq('redeemed', true)
+          .order('created_at', { ascending: false });
+        if (fbErr) throw fbErr;
+        const rows = Array.isArray(fallback) ? fallback : [];
+        setVoucherPurchases(
+          rows.map((r: Record<string, unknown>) => ({
+            id: String(r?.id ?? ''),
+            user_email: '—',
+            voucher_name: '—',
+            created_at: typeof r?.created_at === 'string' ? r.created_at : '',
+          })).filter((p) => p.id !== '')
+        );
+      } catch (e2: unknown) {
+        console.error('Fallback voucher purchases fetch failed:', e2);
+        setVoucherPurchases([]);
+        toast.error('Chyba při načítání nákupů voucherů');
+      }
+    } finally {
+      setPurchasesLoading(false);
     }
   };
 
@@ -172,18 +311,21 @@ const AdminVouchers: React.FC = () => {
   const openEditDialog = (voucher: Voucher) => {
     setEditingVoucher(voucher);
     setVoucherForm({
-      name: voucher.name,
+      name: voucher.name ?? '(Bez názvu)',
       imageFile: null,
       bannerFile: null,
-      maxQuantity: voucher.max_quantity,
-      startDate: voucher.start_date ? new Date(voucher.start_date) : undefined,
-      endDate: voucher.end_date ? new Date(voucher.end_date) : undefined,
+      maxQuantity:
+        voucher.max_quantity != null && Number.isFinite(Number(voucher.max_quantity))
+          ? voucher.max_quantity
+          : null,
+      startDate: parseDateForForm(voucher.start_date),
+      endDate: parseDateForForm(voucher.end_date),
     });
     setShowEditDialog(true);
   };
 
   const handleEditVoucher = async () => {
-    if (!voucherForm.name || !editingVoucher) {
+    if (!voucherForm.name || !editingVoucher?.id) {
       toast.error('Vyplňte všechna povinná pole');
       return;
     }
@@ -213,7 +355,7 @@ const AdminVouchers: React.FC = () => {
           start_date: voucherForm.startDate?.toISOString(),
           end_date: voucherForm.endDate?.toISOString(),
         })
-        .eq('id', editingVoucher.id)
+        .eq('id', String(editingVoucher.id))
         .select()
         .single();
 
@@ -293,22 +435,29 @@ const AdminVouchers: React.FC = () => {
   };
 
   const testVoucherTrigger = async () => {
+    if (!user?.id) {
+      toast.error('Chybí přihlášený uživatel pro test triggeru');
+      return;
+    }
     try {
       setCreateLoading(true);
-      
-      // Test the trigger with a real user
-      const testUserId = '3ed40e96-20b9-4a3a-97a7-f937af688a1a'; // test@opravo.cz
-      
+
       const { data, error } = await supabase.functions.invoke('test-voucher-trigger', {
-        body: { testUserId }
+        body: { testUserId: user.id }
       });
 
       if (error) throw error;
 
       console.log('Trigger test results:', data);
-      
-      if (data.success) {
-        toast.success(`Trigger test completed! Test voucher should NOT trigger: ${data.triggerTest.testVoucherShouldNotTrigger}, Real voucher should trigger: ${data.triggerTest.realVoucherShouldTrigger}`);
+
+      const payload = data && typeof data === 'object' ? (data as Record<string, unknown>) : null;
+      if (payload?.success === true) {
+        const tt = payload.triggerTest as
+          | { testVoucherShouldNotTrigger?: unknown; realVoucherShouldTrigger?: unknown }
+          | undefined;
+        toast.success(
+          `Trigger test completed! Test voucher should NOT trigger: ${String(tt?.testVoucherShouldNotTrigger)}, Real voucher should trigger: ${String(tt?.realVoucherShouldTrigger)}`
+        );
         fetchVouchers();
       } else {
         toast.error('Trigger test failed');
@@ -322,6 +471,10 @@ const AdminVouchers: React.FC = () => {
   };
 
   const handleDeleteVoucher = async (voucherId: string) => {
+    if (!voucherId) {
+      console.error('handleDeleteVoucher: missing id');
+      return;
+    }
     try {
       setDeleteLoading(true);
       
@@ -343,6 +496,10 @@ const AdminVouchers: React.FC = () => {
   };
 
   const handleTogglePublic = async (voucherId: string, currentValue: boolean) => {
+    if (!voucherId) {
+      console.error('handleTogglePublic: missing id');
+      return;
+    }
     try {
       const { error } = await supabase
         .from('vouchers')
@@ -359,37 +516,54 @@ const AdminVouchers: React.FC = () => {
     }
   };
 
-  const filteredVouchers = vouchers.filter(voucher => {
-    const matchesSearch = voucher.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const safeVouchers = Array.isArray(vouchers) ? vouchers : [];
+  const safePurchases = Array.isArray(voucherPurchases) ? voucherPurchases : [];
+
+  const filteredVouchers = safeVouchers.filter((voucher) => {
+    if (!voucher || voucher.id == null) return false;
+    const matchesSearch = (voucher.name ?? '')
+      .toLowerCase()
+      .includes((searchTerm ?? '').toLowerCase());
     if (statusFilter === 'all') return matchesSearch;
-    
+
     const now = new Date();
-    const startDate = voucher.start_date ? new Date(voucher.start_date) : null;
-    const endDate = voucher.end_date ? new Date(voucher.end_date) : null;
-    const remainingQuantity = voucher.max_quantity ? voucher.max_quantity - voucher.redeemed_count : null;
-    
+    const startDate = parseBoundaryDate(voucher.start_date);
+    const endDate = parseBoundaryDate(voucher.end_date);
+    const redeemed = Number(voucher.redeemed_count ?? 0);
+    const safeRedeemed = Number.isFinite(redeemed) ? redeemed : 0;
+    const remainingQuantity =
+      voucher.max_quantity != null && Number.isFinite(voucher.max_quantity)
+        ? voucher.max_quantity - safeRedeemed
+        : null;
+
     let voucherStatus = 'active';
     if (startDate && now < startDate) voucherStatus = 'scheduled';
     else if (endDate && now > endDate) voucherStatus = 'expired';
     else if (remainingQuantity !== null && remainingQuantity <= 0) voucherStatus = 'exhausted';
-    
+
     return matchesSearch && voucherStatus === statusFilter;
   });
 
   const getRemainingText = (voucher: Voucher) => {
-    if (!voucher.max_quantity) return 'Neomezené';
-    const remaining = voucher.max_quantity - voucher.redeemed_count;
-    return `${remaining} / ${voucher.max_quantity}`;
+    const max = voucher.max_quantity;
+    if (max == null || !Number.isFinite(max)) return 'Neomezené';
+    const redeemed = Number(voucher.redeemed_count ?? 0);
+    const remaining = max - (Number.isFinite(redeemed) ? redeemed : 0);
+    return `${remaining} / ${max}`;
   };
 
   const getStatusBadge = (voucher: Voucher) => {
     const now = new Date();
-    const startDate = voucher.start_date ? new Date(voucher.start_date) : null;
-    const endDate = voucher.end_date ? new Date(voucher.end_date) : null;
-    const remainingQuantity = voucher.max_quantity ? voucher.max_quantity - voucher.redeemed_count : null;
+    const startDate = parseBoundaryDate(voucher.start_date);
+    const endDate = parseBoundaryDate(voucher.end_date);
+    const redeemed = Number(voucher.redeemed_count ?? 0);
+    const remainingQuantity =
+      voucher.max_quantity != null && Number.isFinite(voucher.max_quantity)
+        ? voucher.max_quantity - (Number.isFinite(redeemed) ? redeemed : 0)
+        : null;
 
     if (startDate && now < startDate) {
-      return <Badge variant="secondary">Naplánováno</Badge>;
+      return <Badge variant="pending">Naplánováno</Badge>;
     }
     if (endDate && now > endDate) {
       return <Badge variant="destructive">Vypršelo</Badge>;
@@ -397,10 +571,10 @@ const AdminVouchers: React.FC = () => {
     if (remainingQuantity !== null && remainingQuantity <= 0) {
       return <Badge variant="destructive">Vyčerpáno</Badge>;
     }
-    return <Badge variant="default">Aktivní</Badge>;
+    return <Badge variant="success">Aktivní</Badge>;
   };
 
-  if (roleLoading || loading) {
+  if (authLoading || roleLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -411,9 +585,16 @@ const AdminVouchers: React.FC = () => {
     );
   }
 
+  if (!user) {
+    return <NavigateToLogin />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/login" replace />;
+  }
+
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="container mx-auto px-4 py-8 space-y-6">
+    <div className="container mx-auto px-4 py-8 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -555,7 +736,7 @@ const AdminVouchers: React.FC = () => {
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {voucherForm.startDate ? format(voucherForm.startDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                          {safeFormatPickerDate(voucherForm.startDate, 'dd.MM.yyyy')}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -581,7 +762,7 @@ const AdminVouchers: React.FC = () => {
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {voucherForm.endDate ? format(voucherForm.endDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                          {safeFormatPickerDate(voucherForm.endDate, 'dd.MM.yyyy')}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -619,7 +800,7 @@ const AdminVouchers: React.FC = () => {
               <Gift className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{vouchers.length}</div>
+              <div className="text-2xl font-bold">{safeVouchers.length}</div>
             </CardContent>
           </Card>
 
@@ -630,11 +811,16 @@ const AdminVouchers: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {vouchers.filter(v => {
+                {safeVouchers.filter((v) => {
+                  if (!v || v.id == null) return false;
                   const now = new Date();
-                  const startDate = v.start_date ? new Date(v.start_date) : null;
-                  const endDate = v.end_date ? new Date(v.end_date) : null;
-                  const remainingQuantity = v.max_quantity ? v.max_quantity - v.redeemed_count : null;
+                  const startDate = parseBoundaryDate(v.start_date);
+                  const endDate = parseBoundaryDate(v.end_date);
+                  const redeemed = Number(v.redeemed_count ?? 0);
+                  const remainingQuantity =
+                    v.max_quantity != null && Number.isFinite(v.max_quantity)
+                      ? v.max_quantity - (Number.isFinite(redeemed) ? redeemed : 0)
+                      : null;
 
                   if (startDate && now < startDate) return false;
                   if (endDate && now > endDate) return false;
@@ -652,11 +838,53 @@ const AdminVouchers: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {vouchers.reduce((sum, v) => sum + v.redeemed_count, 0)}
+                {safeVouchers.reduce((sum, v) => sum + Number(v?.redeemed_count ?? 0), 0)}
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Voucher Purchases */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5" />
+              Nákupy voucherů
+            </CardTitle>
+            <CardDescription>
+              Seznam jednotlivých nákupů voucherů (user_vouchers, redeemed = true)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {purchasesLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+                <p className="mt-2 text-muted-foreground">Načítám nákupy...</p>
+              </div>
+            ) : safePurchases.length === 0 ? (
+              <p className="text-center py-8 text-muted-foreground">Zatím žádné nákupy voucherů.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Uživatel</TableHead>
+                    <TableHead>Voucher</TableHead>
+                    <TableHead>Uplatněno</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {safePurchases.map((purchase, idx) => (
+                    <TableRow key={purchase.id || `purchase-${idx}`}>
+                      <TableCell className="font-medium">{purchase.user_email ?? '—'}</TableCell>
+                      <TableCell>{purchase.voucher_name ?? '—'}</TableCell>
+                      <TableCell>{safeFormatDate(purchase.created_at, 'd.M.yyyy')}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Main Voucher Table */}
         <Card>
@@ -715,28 +943,28 @@ const AdminVouchers: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredVouchers.map((voucher) => (
-                    <TableRow key={voucher.id}>
+                  {filteredVouchers.map((voucher, rowIndex) => (
+                    <TableRow key={voucher.id || `voucher-row-${rowIndex}`}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           {voucher.image_url && (
                             <img 
                               src={voucher.image_url} 
-                              alt={voucher.name}
+                              alt={voucher.name ?? '(Bez názvu)'}
                               className="w-10 h-10 object-cover rounded"
                             />
                           )}
                           <div>
-                            <div className="font-medium">{voucher.name}</div>
+                            <div className="font-medium">{voucher.name ?? '(Bez názvu)'}</div>
                             <div className="text-sm text-muted-foreground">
-                              Uplatněno: {voucher.redeemed_count}x
+                              Uplatněno: {Number(voucher.redeemed_count ?? 0)}×
                             </div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {voucher.max_quantity ? (
+                          {voucher.max_quantity != null && Number.isFinite(voucher.max_quantity) ? (
                             <Hash className="h-3 w-3" />
                           ) : (
                             <Infinity className="h-3 w-3" />
@@ -751,8 +979,10 @@ const AdminVouchers: React.FC = () => {
                             <TooltipTrigger asChild>
                               <div className="flex items-center">
                                 <Checkbox
-                                  checked={voucher.is_public}
-                                  onCheckedChange={() => handleTogglePublic(voucher.id, voucher.is_public)}
+                                  checked={Boolean(voucher.is_public)}
+                                  onCheckedChange={() =>
+                                    handleTogglePublic(String(voucher.id ?? ''), Boolean(voucher.is_public))
+                                  }
                                 />
                               </div>
                             </TooltipTrigger>
@@ -766,22 +996,25 @@ const AdminVouchers: React.FC = () => {
                         {voucher.start_date && voucher.end_date ? (
                           <div className="flex items-center gap-1">
                             <CalendarIcon className="h-3 w-3" />
-                            {format(new Date(voucher.start_date), 'dd.MM.yy')} - {format(new Date(voucher.end_date), 'dd.MM.yy')}
+                            {safeFormatDate(voucher.start_date, 'dd.MM.yy')} -{' '}
+                            {safeFormatDate(voucher.end_date, 'dd.MM.yy')}
                           </div>
                         ) : voucher.end_date ? (
                           <div className="flex items-center gap-1">
                             <CalendarIcon className="h-3 w-3" />
-                            Do {format(new Date(voucher.end_date), 'dd.MM.yyyy')}
+                            Do {safeFormatDate(voucher.end_date, 'dd.MM.yyyy')}
                           </div>
                         ) : voucher.start_date ? (
                           <div className="flex items-center gap-1">
                             <CalendarIcon className="h-3 w-3" />
-                            Od {format(new Date(voucher.start_date), 'dd.MM.yyyy')}
+                            Od {safeFormatDate(voucher.start_date, 'dd.MM.yyyy')}
                           </div>
-                        ) : '-'}
+                        ) : (
+                          '-'
+                        )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(voucher.created_at), 'dd.MM.yyyy')}
+                        {safeFormatDate(voucher.created_at, 'dd.MM.yyyy')}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -809,13 +1042,13 @@ const AdminVouchers: React.FC = () => {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Smazat voucher</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Opravdu chcete smazat voucher "{voucher.name}"? Tato akce je nevratná.
+                                  {`Opravdu chcete smazat voucher "${voucher.name ?? '(Bez názvu)'}"? Tato akce je nevratná.`}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Zrušit</AlertDialogCancel>
                                 <AlertDialogAction 
-                                  onClick={() => handleDeleteVoucher(voucher.id)}
+                                  onClick={() => handleDeleteVoucher(String(voucher.id ?? ''))}
                                   disabled={deleteLoading}
                                 >
                                   {deleteLoading ? 'Mazání...' : 'Smazat'}
@@ -845,23 +1078,23 @@ const AdminVouchers: React.FC = () => {
                   {selectedVoucher.image_url && (
                     <img 
                       src={selectedVoucher.image_url} 
-                      alt={selectedVoucher.name}
+                      alt={selectedVoucher.name ?? '(Bez názvu)'}
                       className="w-32 h-32 object-cover rounded-lg"
                     />
                   )}
                   {selectedVoucher.banner_url && (
                     <img 
                       src={selectedVoucher.banner_url} 
-                      alt={`${selectedVoucher.name} banner`}
+                      alt={`${selectedVoucher.name ?? '(Bez názvu)'} banner`}
                       className="w-48 h-32 object-cover rounded-lg"
                     />
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><strong>Název:</strong> {selectedVoucher.name}</div>
+                  <div><strong>Název:</strong> {selectedVoucher.name ?? '—'}</div>
                   <div><strong>Stav:</strong> {getStatusBadge(selectedVoucher)}</div>
                   <div><strong>Zbývající:</strong> {getRemainingText(selectedVoucher)}</div>
-                  <div><strong>Uplatněno:</strong> {selectedVoucher.redeemed_count}x</div>
+                  <div><strong>Uplatněno:</strong> {Number(selectedVoucher.redeemed_count ?? 0)}×</div>
                 </div>
               </div>
             </DialogContent>
@@ -976,7 +1209,7 @@ const AdminVouchers: React.FC = () => {
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {voucherForm.startDate ? format(voucherForm.startDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                        {safeFormatPickerDate(voucherForm.startDate, 'dd.MM.yyyy')}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -1002,7 +1235,7 @@ const AdminVouchers: React.FC = () => {
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {voucherForm.endDate ? format(voucherForm.endDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                        {safeFormatPickerDate(voucherForm.endDate, 'dd.MM.yyyy')}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -1042,9 +1275,6 @@ const AdminVouchers: React.FC = () => {
           </DialogContent>
         </Dialog>
       </div>
-
-      <AdminMenu />
-    </div>
   );
 };
 

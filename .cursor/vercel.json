@@ -1,0 +1,16 @@
+{
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "routes": [
+      {
+        "src": "/share/ticket/([^/]+)",
+        "has": [
+          {
+            "type": "header",
+            "key": "user-agent",
+            "value": "(?i).*(facebookexternalhit|Facebot).*"
+          }
+        ],
+        "dest": "https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/og-ticket-share?id=$1"
+      }
+    ]
+  }

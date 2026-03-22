@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,8 +13,6 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Header } from '@/components/Header';
-import { AdminMenu } from '@/components/AdminMenu';
 import { Search, Bell, Plus, Send } from 'lucide-react';
 
 interface Notification {
@@ -33,7 +31,7 @@ interface Notification {
 }
 
 const AdminNotifications: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +101,8 @@ const AdminNotifications: React.FC = () => {
 
       if (error) throw error;
 
+      await dispatchPushViaEdge([userData.id], newNotification.title, newNotification.message);
+
       // Log admin action
       await supabase.rpc('log_admin_action', {
         action_name: 'notification_created',
@@ -156,6 +156,8 @@ const AdminNotifications: React.FC = () => {
 
       if (error) throw error;
 
+      await dispatchPushViaEdge(users.map((u) => u.id), newNotification.title, newNotification.message);
+
       // Log admin action
       await supabase.rpc('log_admin_action', {
         action_name: 'bulk_notification_sent',
@@ -186,23 +188,72 @@ const AdminNotifications: React.FC = () => {
     }
   };
 
+  const dispatchPushViaEdge = async (userIds: string[], title: string, message: string) => {
+    if (userIds.length === 0) return;
+
+    const { data: devices, error: devicesError } = await supabase
+      .from('user_devices')
+      .select('user_id, player_id, updated_at')
+      .in('user_id', userIds)
+      .not('player_id', 'is', null)
+      .neq('player_id', '');
+
+    if (devicesError) {
+      console.error('Error loading user_devices for edge dispatch:', devicesError);
+      return;
+    }
+
+    const latestPlayerByUser = new Map<string, string>();
+    (devices || [])
+      .sort((a, b) => (new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime()))
+      .forEach((d) => {
+        if (!latestPlayerByUser.has(d.user_id) && d.player_id) {
+          latestPlayerByUser.set(d.user_id, d.player_id);
+        }
+      });
+
+    const calls: Promise<unknown>[] = [];
+    for (const userId of userIds) {
+      const player_id = latestPlayerByUser.get(userId) || '';
+      calls.push(
+        supabase.functions.invoke('send-push', {
+          body: {
+            player_id,
+            title: title || '',
+            message: message || '',
+            user_id: userId,
+          },
+        })
+      );
+    }
+
+    const results = await Promise.allSettled(calls);
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    if (failed > 0) {
+      console.warn(`send-push invoke failed for ${failed} rows`);
+    }
+  };
+
   const filteredNotifications = notifications.filter(notification => {
-    const matchesSearch = notification.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         notification.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         notification.users?.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const q = searchTerm.toLowerCase();
+    const msg = typeof notification.message === "string" ? notification.message : "";
+    const title = typeof notification.title === "string" ? notification.title : "";
+    const email = typeof notification.users?.email === "string" ? notification.users.email : "";
+    const matchesSearch =
+      msg.toLowerCase().includes(q) || title.toLowerCase().includes(q) || email.toLowerCase().includes(q);
     const matchesType = typeFilter === 'všechny' || notification.type === typeFilter;
     return matchesSearch && matchesType;
   });
 
   const getTypeBadge = (type: string) => {
     switch (type) {
-      case 'info':
-        return <Badge variant="default">Info</Badge>;
-      case 'warning':
-        return <Badge variant="secondary">Varování</Badge>;
-      case 'success':
-        return <Badge variant="outline">Úspěch</Badge>;
-      case 'error':
+      case "info":
+        return <Badge variant="info">Info</Badge>;
+      case "warning":
+        return <Badge variant="warning">Varování</Badge>;
+      case "success":
+        return <Badge variant="success">Úspěch</Badge>;
+      case "error":
         return <Badge variant="destructive">Chyba</Badge>;
       default:
         return <Badge variant="outline">{type}</Badge>;
@@ -213,14 +264,16 @@ const AdminNotifications: React.FC = () => {
     return <div className="flex items-center justify-center min-h-screen">Načítání...</div>;
   }
 
+  if (authLoading) {
+    return null;
+  }
+
   if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <NavigateToLogin />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="container mx-auto px-4 py-6 pb-20">
+    <div className="container mx-auto px-4 py-6 pb-8">
         <Card>
           <CardHeader>
             <div className="flex justify-between items-start">
@@ -230,7 +283,7 @@ const AdminNotifications: React.FC = () => {
                   Správa notifikací
                 </CardTitle>
                 <CardDescription>
-                  Spravujte notifikace, vytvářejte nové a sledujte jejich doručení
+                  Odeslání push přes Edge Function send-push (záznam v push_log). Správa záznamů v tabulce notifikací.
                 </CardDescription>
               </div>
               <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
@@ -372,8 +425,8 @@ const AdminNotifications: React.FC = () => {
                           {new Date(notification.created_at).toLocaleDateString('cs-CZ')}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={notification.status === 'sent' ? 'default' : 'secondary'}>
-                            {notification.status === 'sent' ? 'Odesláno' : 'Čeká'}
+                          <Badge variant={notification.status === "sent" ? "success" : "pending"}>
+                            {notification.status === "sent" ? "Odesláno" : "Čeká"}
                           </Badge>
                         </TableCell>
                       </TableRow>
@@ -391,8 +444,6 @@ const AdminNotifications: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-      <AdminMenu />
-    </div>
   );
 };
 

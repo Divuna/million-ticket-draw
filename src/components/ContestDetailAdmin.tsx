@@ -1,6 +1,7 @@
 console.log('ContestDetailAdmin module loading');
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate, Navigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,12 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Gift, Trophy, Plus, Loader2, X } from 'lucide-react';
+import { ArrowLeft, Gift, Trophy, Plus, Loader2, X, BarChart2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Header } from '@/components/Header';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { TicketProgressBar } from '@/components/TicketProgressBar';
 
 
 interface ContestData {
@@ -55,6 +56,15 @@ interface NewBonusPrizeForm {
   amount: number;
 }
 
+interface ProgressStats {
+  tickets_total: number;
+  tickets_sold: number;
+  tickets_remaining: number;
+  sold_percent: number;
+  tickets_last_24h: number;
+  estimated_revenue: number;
+}
+
 const STATUS_OPTIONS = [
   { value: "draft", label: "Koncept" },
   { value: "pending", label: "Čeká na start" },
@@ -70,12 +80,14 @@ const STATUS_OPTIONS_WITH_CLOSED = [
 const ContestDetailAdmin: React.FC = () => {
   console.log('ContestDetailAdmin component is loading');
   const { contestId } = useParams<{ contestId: string }>();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const [contest, setContest] = useState<ContestData | null>(null);
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [ticketCount, setTicketCount] = useState(0);
+  const [progressStats, setProgressStats] = useState<ProgressStats | null>(null);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -96,69 +108,107 @@ const ContestDetailAdmin: React.FC = () => {
   });
   const [savingBonus, setSavingBonus] = useState(false);
 
-  useEffect(() => {
-    if (contestId) {
-      fetchContestData();
-      fetchBonusPrizes();
-      fetchTickets();
-      
-      // Setup realtime subscriptions for this specific contest
-      const bonusChannel = supabase
-        .channel(`contest-detail-bonus-${contestId}`)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'bonus_prizes',
-          filter: `contest_id=eq.${contestId}`
-        }, (payload) => {
-          console.log('Contest detail bonus change:', payload);
-          fetchBonusPrizes();
-          
-          let message = '';
-          if (payload.eventType === 'INSERT' && payload.new && 'ticket_position' in payload.new) {
-            message = `Nová bonusová cena přidána na pozici #${payload.new.ticket_position}`;
-          } else if (payload.eventType === 'UPDATE' && payload.new && 'ticket_position' in payload.new) {
-            message = `Bonusová cena aktualizována na pozici #${payload.new.ticket_position}`;
-          } else if (payload.eventType === 'DELETE' && payload.old && 'ticket_position' in payload.old) {
-            message = `Bonusová cena odstraněna z pozice #${payload.old.ticket_position}`;
-          }
-          
-          if (message) {
-            toast({
-              title: "Změna bonusové ceny",
-              description: message,
-            });
-          }
-        })
-        .subscribe();
-
-      const ticketsChannel = supabase
-        .channel(`contest-detail-tickets-${contestId}`)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'tickets',
-          filter: `contest_id=eq.${contestId}`
-        }, (payload) => {
-          console.log('Contest detail ticket change:', payload);
-          fetchTickets();
-          fetchContestData(); // Update contest data to reflect new ticket count
-          
-          if (payload.eventType === 'INSERT' && payload.new && 'number' in payload.new) {
-            toast({
-              title: "Nový tiket",
-              description: `Tiket #${payload.new.number} byl zakoupen`,
-            });
-          }
-        })
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(bonusChannel);
-        supabase.removeChannel(ticketsChannel);
-      };
+  // Fetch aggregated progress — never loads individual ticket rows
+  const fetchProgressStats = useCallback(async () => {
+    if (!contestId) return;
+    try {
+      const [{ data: prog }, { data: rev }, { data: act }] = await Promise.all([
+        supabase
+          .from('contest_progress')
+          .select('tickets_total,tickets_sold,tickets_remaining,sold_percent')
+          .eq('contest_id', contestId)
+          .maybeSingle(),
+        supabase
+          .from('contest_revenue')
+          .select('estimated_revenue')
+          .eq('contest_id', contestId)
+          .maybeSingle(),
+        supabase
+          .from('contest_activity_last_24h')
+          .select('tickets_last_24h')
+          .eq('contest_id', contestId)
+          .maybeSingle(),
+      ]);
+      setProgressStats({
+        tickets_total:     prog?.tickets_total     ?? 1_000_000,
+        tickets_sold:      prog?.tickets_sold      ?? 0,
+        tickets_remaining: prog?.tickets_remaining ?? 1_000_000,
+        sold_percent:      prog?.sold_percent      ?? 0,
+        tickets_last_24h:  act?.tickets_last_24h   ?? 0,
+        estimated_revenue: rev?.estimated_revenue  ?? 0,
+      });
+    } catch (err) {
+      console.error('Error fetching progress stats:', err);
     }
   }, [contestId]);
+
+  useEffect(() => {
+    if (!contestId || authLoading || roleLoading || !user || !isAdmin) {
+      return;
+    }
+
+    fetchContestData();
+    fetchBonusPrizes();
+    fetchProgressStats();
+    fetchTickets(1);
+
+    // Setup realtime subscriptions for this specific contest
+    const bonusChannel = supabase
+      .channel(`contest-detail-bonus-${contestId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'bonus_prizes',
+        filter: `contest_id=eq.${contestId}`
+      }, (payload) => {
+        console.log('Contest detail bonus change:', payload);
+        fetchBonusPrizes();
+
+        let message = '';
+        if (payload.eventType === 'INSERT' && payload.new && 'ticket_position' in payload.new) {
+          message = `Nová bonusová cena přidána na pozici #${payload.new.ticket_position}`;
+        } else if (payload.eventType === 'UPDATE' && payload.new && 'ticket_position' in payload.new) {
+          message = `Bonusová cena aktualizována na pozici #${payload.new.ticket_position}`;
+        } else if (payload.eventType === 'DELETE' && payload.old && 'ticket_position' in payload.old) {
+          message = `Bonusová cena odstraněna z pozice #${payload.old.ticket_position}`;
+        }
+
+        if (message) {
+          toast({
+            title: "Změna bonusové ceny",
+            description: message,
+          });
+        }
+      })
+      .subscribe();
+
+    const ticketsChannel = supabase
+      .channel(`contest-detail-tickets-${contestId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tickets',
+        filter: `contest_id=eq.${contestId}`
+      }, (payload) => {
+        console.log('Contest detail ticket change:', payload);
+        fetchTickets(currentPage);
+        fetchContestData();
+        fetchProgressStats();
+
+        if (payload.eventType === 'INSERT' && payload.new && 'number' in payload.new) {
+          toast({
+            title: "Nový tiket",
+            description: `Tiket #${payload.new.number} byl zakoupen`,
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bonusChannel);
+      supabase.removeChannel(ticketsChannel);
+    };
+  }, [contestId, user, isAdmin, authLoading, roleLoading]);
 
   const fetchContestData = async () => {
     try {
@@ -205,16 +255,34 @@ const ContestDetailAdmin: React.FC = () => {
     }
   };
 
-  const fetchTickets = async () => {
+  /**
+   * Server-side paginated ticket fetch.
+   * Only a single page of rows (≤ 50) is ever loaded to the client.
+   * The total count is obtained via a separate aggregated count query.
+   */
+  const fetchTickets = async (page: number) => {
+    if (!contestId) return;
     try {
-      const { data, error } = await supabase
-        .from('tickets')
-        .select('id, number, user_id, created_at')
-        .eq('contest_id', contestId)
-        .order('number', { ascending: true });
+      const from = (page - 1) * ticketsPerPage;
+      const to = from + ticketsPerPage - 1;
+
+      const [{ count }, { data, error }] = await Promise.all([
+        supabase
+          .from('tickets')
+          .select('*', { count: 'exact', head: true })
+          .eq('contest_id', contestId),
+        supabase
+          .from('tickets')
+          .select('id, number, user_id, created_at')
+          .eq('contest_id', contestId)
+          .order('number', { ascending: true })
+          .range(from, to),
+      ]);
 
       if (error) throw error;
       setTickets(data || []);
+      setTicketCount(count ?? 0);
+      setCurrentPage(page);
     } catch (error) {
       console.error('Error fetching tickets:', error);
       toast({
@@ -230,9 +298,9 @@ const ContestDetailAdmin: React.FC = () => {
 
     try {
       const { error } = await supabase.rpc('admin_manage_contest', {
-        p_action: 'update',
+        p_operation: 'update',
         p_contest_id: contestId,
-        p_data: { description: notes }
+        p_description: notes,
       });
 
       if (error) throw error;
@@ -311,7 +379,7 @@ const ContestDetailAdmin: React.FC = () => {
       }
 
       const response = await fetch(
-        `https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/close-contest`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/close-contest`,
         {
           method: "POST",
           headers: {
@@ -413,43 +481,36 @@ const ContestDetailAdmin: React.FC = () => {
     return <div className="flex items-center justify-center min-h-screen">Načítání...</div>;
   }
 
+  if (authLoading) {
+    return null;
+  }
+
   if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <NavigateToLogin />;
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
-        <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center py-8">Načítání...</div>
-        </div>
+      <div className="container mx-auto px-4 py-8 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg">
+        <div className="text-center py-8">Načítání...</div>
       </div>
     );
   }
 
   if (!contest) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
-        <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center py-8">Soutěž nebyla nalezena.</div>
-        </div>
+      <div className="container mx-auto px-4 py-8 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg">
+        <div className="text-center py-8">Soutěž nebyla nalezena.</div>
       </div>
     );
   }
 
-  const paginatedTickets = tickets.slice(
-    (currentPage - 1) * ticketsPerPage,
-    currentPage * ticketsPerPage
-  );
-
-  const totalPages = Math.ceil(tickets.length / ticketsPerPage);
+  // Server-side pagination: `tickets` already holds exactly the current page
+  const paginatedTickets = tickets;
+  const totalPages = Math.ceil(ticketCount / ticketsPerPage);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
-      <Header />
-      <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg">
         <div className="mb-6">
           <Link to="/admin">
             <Button variant="outline" className="mb-4">
@@ -579,6 +640,33 @@ const ContestDetailAdmin: React.FC = () => {
           </Card>
         </div>
 
+        {/* Ticket Progress Visualisation */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart2 className="w-5 h-5" />
+              Průběh prodeje tiketů
+            </CardTitle>
+            <CardDescription>
+              Agregovaný přehled — tikety 1 → 1 000 000, pozice bonusů, aktivita za posledních 24 h
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {progressStats ? (
+              <TicketProgressBar
+                ticketsTotal={progressStats.tickets_total}
+                ticketsSold={progressStats.tickets_sold}
+                soldPercent={progressStats.sold_percent}
+                bonusPositions={bonusPrizes.map((b) => b.ticket_position)}
+                ticketsLast24h={progressStats.tickets_last_24h}
+                estimatedRevenue={progressStats.estimated_revenue}
+              />
+            ) : (
+              <div className="text-center py-6 text-muted-foreground text-sm">Načítání statistik…</div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Bonus Prizes */}
         <Card className="mb-6">
           <CardHeader>
@@ -698,16 +786,16 @@ const ContestDetailAdmin: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Tickets List */}
+        {/* Tickets List — server-side paginated, never loads all rows */}
         <Card>
           <CardHeader>
-            <CardTitle>Seznam tiketů ({tickets.length})</CardTitle>
+            <CardTitle>Seznam tiketů ({ticketCount.toLocaleString('cs-CZ')})</CardTitle>
             <CardDescription>
-              Všechny prodané tikety pro tuto soutěž
+              Prodané tikety — stránkování na serveru, zobrazuje se {ticketsPerPage} záznamů najednou
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {tickets.length === 0 ? (
+            {ticketCount === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 Žádné tikety nebyly zatím prodány.
               </div>
@@ -734,13 +822,13 @@ const ContestDetailAdmin: React.FC = () => {
                   </TableBody>
                 </Table>
 
-                {/* Pagination */}
+                {/* Server-side pagination controls */}
                 {totalPages > 1 && (
                   <div className="flex justify-center items-center gap-2 mt-4">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      onClick={() => fetchTickets(Math.max(1, currentPage - 1))}
                       disabled={currentPage === 1}
                     >
                       Předchozí
@@ -751,7 +839,7 @@ const ContestDetailAdmin: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      onClick={() => fetchTickets(Math.min(totalPages, currentPage + 1))}
                       disabled={currentPage === totalPages}
                     >
                       Další
@@ -762,7 +850,6 @@ const ContestDetailAdmin: React.FC = () => {
             )}
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 };

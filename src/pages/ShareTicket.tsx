@@ -1,31 +1,36 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Facebook } from 'lucide-react';
 import logoOnemil from '@/assets/logo-onemil.png';
-
-const SUPABASE_URL = 'https://xkzhjldrojjlrkezorey.supabase.co';
+import { supabaseUrl } from '@/integrations/supabase/client';
 
 const ShareTicket: React.FC = () => {
   const { ticketId } = useParams<{ ticketId: string }>();
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  const publicTicketImageUrl = useMemo(() => {
+    if (!ticketId) return null;
+    return `${supabaseUrl}/storage/v1/object/public/ticket-shares/${ticketId}.png`;
+  }, [ticketId]);
+
+  const [imageUrl, setImageUrl] = useState<string | null>(publicTicketImageUrl);
   const [isLoading, setIsLoading] = useState(true);
 
   // Extract ticket number from ticketId (format: contestId-ticketNumber)
   const ticketNumber = ticketId?.split('-').pop() || ticketId || '';
+  const ogImage = `https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/og-ticket-share?id=${encodeURIComponent(
+    ticketId
+  )}`;
+  const pageUrl = `https://onemil.cz/share/ticket/${ticketId}`;
   
-  // Construct image URL from storage
+  // Keep UI loading state, but compute image URL synchronously for OG crawlers.
   useEffect(() => {
-    if (ticketId) {
-      // Look for the most recent image matching this ticketId pattern
-      const storageUrl = `${SUPABASE_URL}/storage/v1/object/public/ticket-shares/ticket-${ticketId}.png`;
-      setImageUrl(storageUrl);
-      setIsLoading(false);
-    }
-  }, [ticketId]);
+    setImageUrl(publicTicketImageUrl);
+    setIsLoading(false);
+  }, [publicTicketImageUrl]);
 
-  const shareUrl = `https://onemil.cz/share/ticket/${ticketId}`;
+  const shareUrl = ogImage;
   const ogTitle = 'Zkusil jsem štěstí na OneMil!';
   const ogDescription = `Ticket #${ticketNumber} – zkus to taky na onemil.cz`;
 
@@ -53,20 +58,20 @@ const ShareTicket: React.FC = () => {
         <meta name="description" content={ogDescription} />
         
         {/* Open Graph / Facebook */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={shareUrl} />
-        <meta property="og:title" content={ogTitle} />
+        <meta property="og:title" content="Zkusil jsem štěstí na OneMil!" />
         <meta property="og:description" content={ogDescription} />
-        {imageUrl && <meta property="og:image" content={imageUrl} />}
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={pageUrl} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content={shareUrl} />
+        <meta name="twitter:image" content={ogImage} />
+        <meta name="twitter:url" content={pageUrl} />
         <meta name="twitter:title" content={ogTitle} />
         <meta name="twitter:description" content={ogDescription} />
-        {imageUrl && <meta name="twitter:image" content={imageUrl} />}
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex flex-col items-center justify-center p-4">

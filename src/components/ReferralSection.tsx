@@ -475,7 +475,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               Historie odměn
             </h3>
-            {rewards.length > 3 && (
+            {(rewards ?? []).length > 3 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -490,7 +490,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
             )}
           </div>
 
-          {rewards.length === 0 ? (
+          {(rewards ?? []).length === 0 ? (
             <p className="text-sm text-muted-foreground italic">Zatím žádné odměny z doporučení</p>
           ) : (
             <div
@@ -498,7 +498,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
                 historyExpanded ? 'max-h-64 overflow-y-auto' : 'max-h-none overflow-hidden'
               }`}
             >
-              {(historyExpanded ? rewards : rewards.slice(0, 3)).map((reward) => {
+              {(historyExpanded ? (rewards ?? []) : (rewards ?? []).slice(0, 3)).map((reward) => {
                 const statusInfo = getStatusLabel(reward.status);
                 return (
                   <div

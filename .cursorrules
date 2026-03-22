@@ -1,0 +1,72 @@
+# OneMil – project rules (centralized)
+
+Before making changes, read: .cursor/SYSTEM_MAP.md and .cursor/PROJECT_CONTEXT.md when relevant.
+
+## Database
+
+- Always inspect the Supabase schema (e.g. via MCP or migrations) before writing or suggesting SQL.
+- Never rename existing tables or columns.
+- Do not break RLS policies.
+- Do not run `supabase db push` / migration up / db reset automatically.
+- All SQL is applied manually in Supabase SQL Editor unless the user explicitly approves execution.
+
+## Core logic (do not change without explicit instruction)
+
+- Flow: voucher → mioCoin → ticket → winner.
+- Event pipeline: event_logs → event_queue → Sofinity.
+- Push pipeline: notifications → push_log → OneSignal.
+- Ticket engine: buy_ticket_atomic and related contest/ticket logic.
+
+## Process
+
+- Explain changes before implementing.
+- Work step by step.
+- For security-sensitive or contest logic, show SQL/code first and do not execute DB changes automatically.
+
+## Autonomous overnight mode
+
+Cursor may work autonomously for:
+- repository analysis
+- schema inspection
+- source code inspection
+- report generation
+- migration generation
+- performance analysis
+- test generation
+- safe read-only verification
+- build / lint / local tests
+
+### Safe actions — run without asking
+- read files
+- inspect repository structure
+- run build / lint / tests
+- inspect Supabase schema
+- run read-only SQL
+- generate reports
+- generate migration files
+- generate test files
+- inspect functions, triggers, indexes, constraints
+- run git status / diff / log
+
+### Dangerous actions — require user approval
+- apply production migrations
+- run SQL that changes production data
+- delete rows
+- drop tables
+- drop columns
+- truncate tables
+- modify RLS
+- rename tables
+- rename columns
+- remove files
+- execute destructive scripts
+- change wallet economic rules
+- change contest economic rules
+
+### Work rules
+- Work continuously without asking for confirmation for safe actions.
+- Stop only when a dangerous action is required.
+- Always finish with a structured report.
+- Write SQL changes as migration files into `supabase/migrations`.
+- Do not apply migrations automatically.
+- Do not modify unrelated code.

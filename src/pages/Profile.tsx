@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,8 +18,8 @@ import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Cam
 import ReferralSection from '@/components/ReferralSection';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link } from 'react-router-dom';
-import { BottomNavigation } from '@/components/BottomNavigation';
-import { AdminMenu } from '@/components/AdminMenu';
+import { setPendingPaymentSuccessContext, isSafeInternalPath } from '@/lib/paymentSuccessContext';
+import { logStripeCheckoutClientFailure } from '@/lib/monitoring';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { Switch } from '@/components/ui/switch';
@@ -172,6 +173,7 @@ const Profile: React.FC = () => {
   const { isAdmin } = useUserRole();
   const { soundEnabled, messageSoundEnabled, winSoundEnabled, toggleSound, toggleMessageSound, toggleWinSound } = useNotificationSettings();
   const navigate = useNavigate();
+  const location = useLocation();
   const [wallet, setWallet] = useState<UserWallet | null>(null);
   const [profile, setProfile] = useState<UserProfile>({
     nickname: '',
@@ -611,6 +613,12 @@ const Profile: React.FC = () => {
       }
 
       if (data.checkout_url) {
+        const stateReturn = (location.state as { paymentReturnTo?: string } | null)?.paymentReturnTo;
+        setPendingPaymentSuccessContext({
+          kind: 'miocoin',
+          returnTo:
+            stateReturn && isSafeInternalPath(stateReturn) ? stateReturn : null,
+        });
         if (preOpenedWindow && !preOpenedWindow.closed) {
           preOpenedWindow.location.href = data.checkout_url;
         } else {
@@ -629,6 +637,19 @@ const Profile: React.FC = () => {
       setCustomAmount('');
     } catch (error) {
       console.error('Error creating checkout session:', error);
+      if (user) {
+        const phase =
+          error instanceof Error &&
+          (error.message.includes('No checkout') || error.message.includes('checkout URL'))
+            ? 'response'
+            : 'invoke';
+        logStripeCheckoutClientFailure({
+          userId: user.id,
+          priceInCzk,
+          error,
+          phase,
+        });
+      }
       if (preOpenedWindow && !preOpenedWindow.closed) {
         preOpenedWindow.close();
       }
@@ -653,7 +674,7 @@ const Profile: React.FC = () => {
   };
 
   if (!session) {
-    return <Navigate to="/login" replace />;
+    return <NavigateToLogin />;
   }
 
   if (loading) {
@@ -668,7 +689,6 @@ const Profile: React.FC = () => {
             </div>
           </div>
         </div>
-        {isAdmin ? <AdminMenu /> : <BottomNavigation />}
       </div>
     );
   }
@@ -1903,8 +1923,6 @@ const Profile: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {isAdmin ? <AdminMenu /> : <BottomNavigation />}
     </div>
   );
 };

@@ -5,6 +5,7 @@
  */
 import React, { useEffect, useState, useMemo } from "react";
 import { Navigate } from "react-router-dom";
+import { NavigateToLogin } from "@/components/NavigateToLogin";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -61,11 +62,11 @@ const ACTION_LABELS: Record<string, { label: string; icon: React.ElementType }> 
 function getStatusBadge(status: string) {
   switch (status) {
     case "calculated":
-      return <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">Vypočteno</Badge>;
+      return <Badge variant="warning">Vypočteno</Badge>;
     case "approved":
-      return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Schváleno</Badge>;
+      return <Badge variant="success">Schváleno</Badge>;
     case "paid":
-      return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">Vyplaceno</Badge>;
+      return <Badge variant="info">Vyplaceno</Badge>;
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
@@ -332,7 +333,7 @@ export default function AdminInfluencerCommissions() {
   };
 
   /* ── Guards ── */
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <NavigateToLogin />;
 
   if (roleLoading) {
     return (
@@ -351,7 +352,7 @@ export default function AdminInfluencerCommissions() {
   const allApprovedSelected = approvedInTable.length > 0 && approvedInTable.every((c) => selectedIds.has(c.id));
 
   return (
-    <div className="container mx-auto px-4 py-6 pb-24 space-y-6">
+    <div className="container mx-auto px-4 py-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Výplaty influencerů</h1>
         <p className="text-muted-foreground text-sm mt-1">
