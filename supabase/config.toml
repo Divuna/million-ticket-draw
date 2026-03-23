@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.send_event_to_sofinity]
 verify_jwt = true
 
+[functions.process_event_queue_worker]
+verify_jwt = false
+
 [functions.sofinity-integration-test]
 verify_jwt = false
 
@@ -91,4 +94,7 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.send-push]
+verify_jwt = false
+
+[functions.sofinity-chat-callback]
 verify_jwt = false
