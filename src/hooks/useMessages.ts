@@ -6,7 +6,7 @@ export interface ConversationMessage {
   id: string;
   user_id: string;
   content: string;
-  sender: "user" | "admin";
+  sender: "user" | "admin" | "ai";
   read: boolean;
   created_at: string;
 }
@@ -38,28 +38,30 @@ export const useMessages = () => {
   };
 
   // 🟦 SEND MESSAGE (USER)
-  const sendMessageToAdmin = async (content: string) => {
-    if (!user) return false;
+  const sendMessageToAdmin = async (content: string): Promise<ConversationMessage | null> => {
+    if (!user) return null;
 
     try {
-      const { error } = await supabase.from("messages").insert({
-        user_id: user.id,
-        sender: "user",
-        content: content.trim(),
-        read: false,
-      });
+      const { data, error } = await supabase
+        .from("messages")
+        .insert({
+          user_id: user.id,
+          sender: "user",
+          content: content.trim(),
+          read: false,
+        })
+        .select("*")
+        .single();
 
       if (error) throw error;
-
-      await getUserMessages();
-      return true;
+      return data as ConversationMessage;
     } catch (err) {
       toast({
         title: "Chyba",
         description: "Nepodařilo se odeslat zprávu",
         variant: "destructive",
       });
-      return false;
+      return null;
     }
   };
 

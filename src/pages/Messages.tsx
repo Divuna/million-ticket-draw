@@ -22,7 +22,7 @@ interface FlyingMessage {
 interface Message {
   id: string;
   user_id: string;
-  sender: "user" | "admin";
+  sender: "user" | "admin" | "ai";
   content: string;
   read: boolean;
   created_at: string;
@@ -39,6 +39,8 @@ export default function MessagesPage() {
   const [sparkles, setSparkles] = useState<Sparkle[]>([]);
   const [flyingMessage, setFlyingMessage] = useState<FlyingMessage | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [isAwaitingReply, setIsAwaitingReply] = useState(false);
+  const [lastUserMessageAt, setLastUserMessageAt] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -60,7 +62,7 @@ export default function MessagesPage() {
       .from("messages")
       .update({ read: true })
       .eq("user_id", user.id)
-      .eq("sender", "admin")
+      .in("sender", ["admin", "ai"])
       .eq("read", false);
   };
 
@@ -104,6 +106,19 @@ export default function MessagesPage() {
     };
   }, [user]);
 
+  useEffect(() => {
+    if (!lastUserMessageAt) return;
+
+    const hasReply = messages.some((msg) => {
+      const isReplySender = msg.sender === "ai" || msg.sender === "admin";
+      return isReplySender && new Date(msg.created_at).getTime() >= new Date(lastUserMessageAt).getTime();
+    });
+
+    if (hasReply) {
+      setIsAwaitingReply(false);
+    }
+  }, [messages, lastUserMessageAt]);
+
   // Create sparkle effect
   const createSparkles = useCallback(() => {
     const newSparkles: Sparkle[] = [];
@@ -135,13 +150,31 @@ export default function MessagesPage() {
     // Wait for animation
     await new Promise(resolve => setTimeout(resolve, 600));
 
-    setLoading(true);
-    const ok = await sendMessageToAdmin(messageContent);
+    const optimisticId = `optimistic-${Date.now()}`;
+    const optimisticCreatedAt = new Date().toISOString();
+    const optimisticMessage: Message = {
+      id: optimisticId,
+      user_id: user?.id || "",
+      sender: "user",
+      content: messageContent,
+      read: false,
+      created_at: optimisticCreatedAt,
+    };
 
-    if (ok) {
+    setMessages((prev) => [...prev, optimisticMessage]);
+    setLastUserMessageAt(optimisticCreatedAt);
+    setIsAwaitingReply(true);
+
+    setLoading(true);
+    const inserted = await sendMessageToAdmin(messageContent);
+
+    if (inserted) {
+      setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId));
       await refetch();
       toast({ title: "Odesláno" });
     } else {
+      setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId));
+      setIsAwaitingReply(false);
       toast({ title: "Chyba", description: "Odeslání selhalo", variant: "destructive" });
     }
 
@@ -277,6 +310,12 @@ export default function MessagesPage() {
           {messages.map((msg, index) => {
             const isSystemMessage = msg.content.includes("🎉") || msg.content.includes("zákonný zástupce");
             const isUserMessage = msg.sender === "user";
+            const senderLabel =
+              msg.sender === "ai"
+                ? "AI asistent"
+                : msg.sender === "admin"
+                  ? "Podpora"
+                  : null;
             
             return (
               <div
@@ -337,6 +376,12 @@ export default function MessagesPage() {
                       </span>
                     </div>
                   )}
+
+                  {!isSystemMessage && senderLabel && (
+                    <p className="relative z-10 text-xs font-semibold text-gray-400 mb-1">
+                      {senderLabel}
+                    </p>
+                  )}
                   
                   <p 
                     className={`relative z-10 text-[15px] leading-relaxed ${
@@ -362,6 +407,22 @@ export default function MessagesPage() {
               </div>
             );
           })}
+
+          {isAwaitingReply && (
+            <div className="flex justify-start">
+              <div
+                className="max-w-[75%] relative overflow-hidden rounded-2xl p-4 transition-all duration-300"
+                style={{
+                  background: "linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 15%) 100%)",
+                  border: "1px solid hsl(220, 20%, 25%, 0.5)",
+                  boxShadow: "0 4px 16px hsl(0, 0%, 0%, 0.3)",
+                }}
+              >
+                <p className="relative z-10 text-xs font-semibold text-gray-400 mb-1">AI asistent</p>
+                <p className="relative z-10 text-[15px] leading-relaxed text-gray-100">AI píše…</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Premium Input Bar */}
