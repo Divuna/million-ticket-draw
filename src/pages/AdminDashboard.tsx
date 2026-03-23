@@ -679,7 +679,7 @@ const AdminDashboard: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold">TEST123</h1>
+            <h1 className="text-3xl font-bold">OneMil</h1>
             <div className="flex items-center gap-2">
               {/* Debug panel toggle */}
               <Button

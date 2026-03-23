@@ -150,7 +150,7 @@ BEGIN
       AND timestamp >= NOW() - INTERVAL '7 days'
     ) THEN
       INSERT INTO event_logs (event_name, user_id, metadata)
-      VALUES ('voucher_purchased', v_test_user_id, jsonb_build_object('test_event', true, 'value', 100, 'code', 'TEST123'));
+      VALUES ('voucher_purchased', v_test_user_id, jsonb_build_object('test_event', true, 'value', 100, 'code', 'ONEMIL_TEST'));
     END IF;
 
     -- coin_redeemed
