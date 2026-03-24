@@ -264,7 +264,7 @@ const Index = () => {
       logTicketPurchaseSuccess({
         userId: user.id,
         contestId: contestId,
-        ticket_number: rpcResult.ticket_number,
+        ticketNumber: rpcResult.ticket_number,
       });
       
       const result: UnlockTicketResult = {
