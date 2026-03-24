@@ -54,6 +54,8 @@ export const useMessages = () => {
         .single();
 
       if (error) throw error;
+
+      // AI reply: DB trigger invokes Edge Function ai-chat (OpenAI); no event_queue / Sofinity.
       return data as ConversationMessage;
     } catch (err) {
       toast({

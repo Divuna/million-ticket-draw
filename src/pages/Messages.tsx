@@ -4,6 +4,10 @@ import { useMessages } from "@/hooks/useMessages";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  AI_ASSISTANT_BOB_LABEL,
+  AI_ASSISTANT_TYPING_SUBLINE,
+} from "@/constants/messagesUi";
 import { MessageCircle, Send, Sparkles } from "lucide-react";
 
 interface Sparkle {
@@ -30,7 +34,7 @@ interface Message {
 
 export default function MessagesPage() {
   const { user } = useAuth();
-  const { sendMessageToAdmin, refetch } = useMessages();
+  const { sendMessageToAdmin } = useMessages();
   const { refresh: refreshUnreadCount } = useUnreadMessagesCount();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -55,8 +59,7 @@ export default function MessagesPage() {
     scrollToBottom();
   }, [messages]);
 
-  // Mark admin messages as read
-  const markAdminMessagesAsRead = async () => {
+  const markAdminMessagesAsRead = useCallback(async () => {
     if (!user) return;
     await supabase
       .from("messages")
@@ -64,47 +67,46 @@ export default function MessagesPage() {
       .eq("user_id", user.id)
       .in("sender", ["admin", "ai"])
       .eq("read", false);
-  };
+  }, [user]);
 
-  // LOAD MESSAGES
+  const loadMessages = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true });
+    setMessages(data || []);
+    setLoading(false);
+  }, [user]);
+
   useEffect(() => {
-    const loadMessages = async () => {
-      if (!user) return;
-      setLoading(true);
-
-      const { data } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: true });
-
-      setMessages(data || []);
-      setLoading(false);
-    };
+    if (!user) return;
 
     const initMessages = async () => {
       await loadMessages();
-      // Mark admin messages as read only on initial page load
       await markAdminMessagesAsRead();
-      // Immediately refresh the unread badge
       refreshUnreadCount();
     };
 
-    initMessages();
+    void initMessages();
 
     const channel = supabase
       .channel("messages-user-thread")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "messages", filter: `user_id=eq.${user?.id}` },
-        () => loadMessages(),
+        { event: "*", schema: "public", table: "messages", filter: `user_id=eq.${user.id}` },
+        () => {
+          void loadMessages();
+        },
       )
       .subscribe();
 
     return () => {
       channel.unsubscribe();
     };
-  }, [user]);
+  }, [user, loadMessages, markAdminMessagesAsRead, refreshUnreadCount]);
 
   useEffect(() => {
     if (!lastUserMessageAt) return;
@@ -170,7 +172,7 @@ export default function MessagesPage() {
 
     if (inserted) {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId));
-      await refetch();
+      await loadMessages();
       toast({ title: "Odesláno" });
     } else {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId));
@@ -312,7 +314,7 @@ export default function MessagesPage() {
             const isUserMessage = msg.sender === "user";
             const senderLabel =
               msg.sender === "ai"
-                ? "AI asistent"
+                ? AI_ASSISTANT_BOB_LABEL
                 : msg.sender === "admin"
                   ? "Podpora"
                   : null;
@@ -418,8 +420,10 @@ export default function MessagesPage() {
                   boxShadow: "0 4px 16px hsl(0, 0%, 0%, 0.3)",
                 }}
               >
-                <p className="relative z-10 text-xs font-semibold text-gray-400 mb-1">AI asistent</p>
-                <p className="relative z-10 text-[15px] leading-relaxed text-gray-100">AI píše…</p>
+                <p className="relative z-10 text-xs font-semibold text-gray-400 mb-1">{AI_ASSISTANT_BOB_LABEL}</p>
+                <p className="relative z-10 text-[15px] leading-relaxed text-gray-100">
+                  {AI_ASSISTANT_TYPING_SUBLINE}
+                </p>
               </div>
             </div>
           )}

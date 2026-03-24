@@ -1,18 +1,18 @@
 /**
- * E2E AI Chat Integration Test (OneMil <-> Sofinity)
+ * E2E AI Chat Integration Test (OneMil)
  *
  * Verifies:
- * 1) public.messages(sender='user') -> event_queue(event_name='user_message')
- * 2) sofinity-chat-callback inserts sender='ai' (fallback=false) and sender='admin' (fallback=true)
- * 3) Callback idempotency (no duplicate messages on repeated callback_id)
- * 4) Loop prevention (ai/admin messages are NOT re-enqueued into event_queue)
- * 5) Queue integrity for created user_message event
+ * 1) public.messages(sender='user') does NOT enqueue event_queue (Sofinity chat path removed)
+ * 2) After migration + deployed ai-chat + OPENAI_API_KEY: poll for new messages(sender='ai') after user insert
+ * 3) sofinity-chat-callback still inserts sender='ai' (fallback=false) and sender='admin' (fallback=true)
+ * 4) Callback idempotency (no duplicate messages on repeated callback_id)
+ * 5) Loop prevention: ai/admin callback messages are NOT re-enqueued into event_queue
  *
  * Usage:
- *   SUPABASE_SERVICE_ROLE_KEY=... node scripts/e2e-ai-chat-integration.mjs
+ *   SUPABASE_SERVICE_ROLE_KEY=... INTERNAL_FUNCTION_TOKEN=... node scripts/e2e-ai-chat-integration.mjs
  * Optional:
  *   SUPABASE_URL=https://xkzhjldrojjlrkezorey.supabase.co
- *   INTERNAL_FUNCTION_TOKEN=...
+ *   SKIP_AI_CHAT_POLL=1   — skip step 2 (OpenAI round-trip) if Edge/migration not ready
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -24,6 +24,11 @@ const SB_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const INTERNAL_TOKEN = process.env.INTERNAL_FUNCTION_TOKEN || "";
 const CALLBACK_URL = `${SB_URL}/functions/v1/sofinity-chat-callback`;
+const SKIP_AI_POLL = process.env.SKIP_AI_CHAT_POLL === "1" || process.env.SKIP_AI_CHAT_POLL === "true";
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 if (!SB_URL) {
   console.error("\nERROR: SUPABASE_URL required.");
@@ -118,8 +123,8 @@ async function main() {
   state.testUserId = await getTestUserId();
   pass(`Resolved test_user_id=${state.testUserId}`);
 
-  // 1) Simulate user message insert
-  const userContent = `${state.runId}: E2E_TEST_MESSAGE user -> queue`;
+  // 1) User message insert — must NOT create Sofinity user_message queue row
+  const userContent = `${state.runId}: E2E_TEST_MESSAGE user -> ai-chat (no event_queue)`;
   const { data: userMsg, error: userMsgErr } = await admin
     .from("messages")
     .insert({
@@ -143,40 +148,60 @@ async function main() {
   const expectedSourceRequestId = `message:${userMsg.id}`;
   const { data: qRow, error: qErr } = await admin
     .from("event_queue")
-    .select("id, event_name, user_id, metadata, source_request_id, status, retry_count, processed_at")
+    .select("id, event_name, source_request_id")
     .eq("source_request_id", expectedSourceRequestId)
     .maybeSingle();
 
   if (qErr) throw new Error(`Queue lookup failed: ${qErr.message}`);
-  assert(!!qRow, "event_queue row created for user message", "Missing event_queue row for user message");
+  assert(
+    !qRow,
+    "No event_queue row for user chat (Sofinity enqueue removed)",
+    "Unexpected event_queue row for user message — migration may not be applied",
+    qRow ? JSON.stringify(qRow) : "",
+  );
 
-  if (qRow?.id) state.createdQueueIds.push(qRow.id);
+  // 2) OpenAI path: DB trigger -> pg_net -> ai-chat (async). Poll for assistant row.
+  if (SKIP_AI_POLL) {
+    pass("SKIP_AI_CHAT_POLL set — skipping OpenAI reply poll");
+  } else {
+    let aiFromChat = null;
+    const maxAttempts = 40;
+    const delayMs = 2000;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const { data: rows, error: pollErr } = await admin
+        .from("messages")
+        .select("id, sender, content, created_at")
+        .eq("user_id", state.testUserId)
+        .eq("sender", "ai")
+        .gt("created_at", userMsg.created_at)
+        .order("created_at", { ascending: false })
+        .limit(1);
 
-  if (qRow) {
-    assert(qRow.event_name === "user_message", "event_name=user_message", "event_name is not user_message", JSON.stringify(qRow));
-    assert(qRow.user_id === userMsg.user_id, "queue user_id matches message user_id", "queue user_id mismatch");
-    assert(qRow.source_request_id === expectedSourceRequestId, "source_request_id is correct", "source_request_id mismatch");
+      if (pollErr) throw new Error(`AI poll failed: ${pollErr.message}`);
+      if (rows?.length) {
+        aiFromChat = rows[0];
+        break;
+      }
+      await sleep(delayMs);
+    }
 
-    const md = qRow.metadata || {};
-    assert(md.message_id === userMsg.id, "metadata.message_id matches", "metadata.message_id mismatch");
-    assert(md.user_id === userMsg.user_id, "metadata.user_id matches", "metadata.user_id mismatch");
-    assert(md.content === userMsg.content, "metadata.content matches", "metadata.content mismatch");
-    assert(md.topic === userMsg.topic, "metadata.topic matches", "metadata.topic mismatch");
-    assert(md.event === userMsg.event, "metadata.event matches", "metadata.event mismatch");
-    assert(md.private === userMsg.private, "metadata.private matches", "metadata.private mismatch");
-    assert(!!md.created_at, "metadata.created_at present", "metadata.created_at missing");
-
-    const allowedStatuses = new Set(["pending", "processing", "failed", "completed", "dead"]);
-    assert(allowedStatuses.has(qRow.status), "queue status is valid", "queue status invalid", `status=${qRow.status}`);
-    assert(
-      typeof qRow.retry_count === "number" && qRow.retry_count >= 0,
-      "queue retry_count is valid",
-      "queue retry_count invalid",
-      `retry_count=${qRow.retry_count}`,
-    );
+    if (aiFromChat?.id) {
+      state.createdMessageIds.push(aiFromChat.id);
+      pass(`OpenAI/chat path: assistant message id=${aiFromChat.id}`);
+      assert(
+        typeof aiFromChat.content === "string" && aiFromChat.content.length > 0,
+        "Assistant message has non-empty content",
+        "Assistant message content missing",
+      );
+    } else {
+      fail(
+        "OpenAI/chat path: no assistant message after poll",
+        `Waited ${maxAttempts * (delayMs / 1000)}s. Deploy ai-chat, set OPENAI_API_KEY + INTERNAL_FUNCTION_TOKEN, run migration, and DB app.settings.internal_function_token. Or set SKIP_AI_CHAT_POLL=1.`,
+      );
+    }
   }
 
-  // 2a) Callback fallback=false => sender=ai
+  // 3a) Callback fallback=false => sender=ai
   const aiCallbackId = `${state.runId}_CB_AI`;
   const aiPayload = {
     callback_id: aiCallbackId,
@@ -201,13 +226,13 @@ async function main() {
     .maybeSingle();
 
   if (aiMsgErr) throw new Error(`AI message verification failed: ${aiMsgErr.message}`);
-  assert(!!aiMsg?.id, "AI message inserted", "AI message missing");
+  assert(!!aiMsg?.id, "AI message inserted (callback)", "AI message missing (callback)");
   if (aiMsg?.id) state.createdMessageIds.push(aiMsg.id);
   if (aiMsg) {
     assert(aiMsg.payload?.sofinity_fallback === false, "AI payload fallback=false", "AI payload fallback flag incorrect");
   }
 
-  // 2b) Callback fallback=true => sender=admin
+  // 3b) Callback fallback=true => sender=admin
   const adminCallbackId = `${state.runId}_CB_ADMIN`;
   const adminPayload = {
     callback_id: adminCallbackId,
@@ -238,7 +263,7 @@ async function main() {
     assert(adminMsg.payload?.sofinity_fallback === true, "Admin payload fallback=true", "Admin payload fallback flag incorrect");
   }
 
-  // 3a) Idempotency - repeat AI callback must not create duplicate
+  // 4a) Idempotency - repeat AI callback must not create duplicate
   const { count: aiBeforeCount, error: aiBeforeErr } = await admin
     .from("messages")
     .select("id", { count: "exact", head: true })
@@ -265,7 +290,7 @@ async function main() {
     `before=${aiBeforeCount}, after=${aiAfterCount}`,
   );
 
-  // 3b) Loop prevention - AI/admin messages should not enqueue back into event_queue
+  // 4b) Loop prevention - AI/admin callback messages should not enqueue into event_queue
   const aiSourceRequestId = aiMsg?.id ? `message:${aiMsg.id}` : null;
   const adminSourceRequestId = adminMsg?.id ? `message:${adminMsg.id}` : null;
 
@@ -275,7 +300,7 @@ async function main() {
       .select("id", { count: "exact", head: true })
       .eq("source_request_id", aiSourceRequestId);
     if (error) throw new Error(`Loop check for AI message failed: ${error.message}`);
-    assert(count === 0, "AI message not re-enqueued", "AI message was re-enqueued", `source_request_id=${aiSourceRequestId}, count=${count}`);
+    assert(count === 0, "AI callback message not re-enqueued", "AI callback message was re-enqueued", `source_request_id=${aiSourceRequestId}, count=${count}`);
   }
 
   if (adminSourceRequestId) {

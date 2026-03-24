@@ -91,16 +91,21 @@ export default function PartnerMessages() {
     if (!newMessage.trim() || isSending || !user) return;
     setIsSending(true);
 
-    const { error } = await supabase.from("messages").insert({
-      user_id: user.id,
-      sender: "user",
-      content: newMessage.trim(),
-      read: false,
-    });
+    const { data: insertedMessage, error } = await supabase
+      .from("messages")
+      .insert({
+        user_id: user.id,
+        sender: "user",
+        content: newMessage.trim(),
+        read: false,
+      })
+      .select("id,user_id,content")
+      .single();
 
     if (error) {
       toast({ title: "Chyba", description: "Nepodařilo se odeslat zprávu", variant: "destructive" });
     } else {
+      // AI reply: DB trigger invokes Edge Function ai-chat; no event_queue / Sofinity.
       setNewMessage("");
       await loadMessages();
     }

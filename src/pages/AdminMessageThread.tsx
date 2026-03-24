@@ -7,10 +7,12 @@ import { Star, Building2, User, ArrowLeft, Mail, Phone } from "lucide-react";
 import { NavigateToLogin } from "@/components/NavigateToLogin";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { AI_ASSISTANT_BOB_LABEL } from "@/constants/messagesUi";
+
 interface Message {
   id: string;
   user_id: string;
-  sender: "user" | "admin";
+  sender: "user" | "admin" | "ai";
   content: string;
   created_at: string;
   read: boolean;
@@ -262,7 +264,8 @@ export default function AdminMessageThread() {
           messages.map((msg) => {
             const isSystemMessage = msg.content.includes("🎉") || msg.content.includes("zákonný zástupce");
             const isAdminMessage = msg.sender === "admin";
-            
+            const isAiMessage = msg.sender === "ai";
+
             return (
               <div key={msg.id} className={`flex w-full ${isAdminMessage ? "justify-end" : "justify-start"}`}>
                 <div
@@ -279,6 +282,9 @@ export default function AdminMessageThread() {
                       <span>🤖</span>
                       <span>Systémová zpráva</span>
                     </div>
+                  )}
+                  {isAiMessage && (
+                    <p className="text-xs font-medium text-muted-foreground mb-1">{AI_ASSISTANT_BOB_LABEL}</p>
                   )}
                   <p className="break-words leading-relaxed">{msg.content}</p>
                   <p className="text-xs text-muted-foreground mt-1 text-right">{new Date(msg.created_at).toLocaleString()}</p>

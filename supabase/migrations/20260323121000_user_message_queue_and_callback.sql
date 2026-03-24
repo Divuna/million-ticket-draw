@@ -7,6 +7,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_source_request_id text;
+  v_message_content text;
 BEGIN
   -- Loop prevention: only user-originated chat messages are forwarded.
   IF NEW.sender <> 'user' THEN
@@ -14,6 +15,14 @@ BEGIN
   END IF;
 
   v_source_request_id := 'message:' || NEW.id::text;
+  v_message_content := btrim(
+    regexp_replace(
+      regexp_replace(COALESCE(NEW.content, ''), '```[\\s\\S]*?```', ' ', 'g'),
+      '\\s+',
+      ' ',
+      'g'
+    )
+  );
 
   -- Duplicate prevention for repeated trigger executions/replays.
   IF EXISTS (
@@ -41,11 +50,7 @@ BEGIN
     jsonb_build_object(
       'message_id', NEW.id,
       'user_id', NEW.user_id,
-      'content', NEW.content,
-      'topic', NEW.topic,
-      'event', NEW.event,
-      'private', NEW.private,
-      'created_at', NEW.created_at
+      'message_content', v_message_content
     ),
     'onemil',
     'pending',

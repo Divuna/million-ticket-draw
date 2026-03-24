@@ -8,9 +8,20 @@ const corsHeaders = {
 };
 
 type CallbackBody = {
-  callback_id: string;
-  user_id: string;
-  content: string;
+  event_name?: string;
+  payload?: {
+    correlation_id?: string;
+    user_id?: string;
+    content?: string;
+    reason?: "low_confidence" | "error";
+  } | null;
+  callback_id?: string;
+  user_id?: string;
+  content?: string;
+  /** Legacy Sofinity worker field — treated as content when content is missing */
+  response?: string;
+  /** Legacy alias — treated as callback_id when callback_id is missing */
+  message_id?: string;
   fallback?: boolean;
   topic?: string | null;
   event?: string | null;
@@ -18,6 +29,8 @@ type CallbackBody = {
   created_at?: string | null;
   metadata?: Record<string, unknown> | null;
 };
+
+const MESSAGE_TABLE = "messages";
 
 function jsonResponse(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
@@ -51,10 +64,12 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
     .join("");
 }
 
-function isValidIsoDate(value: string | undefined | null): boolean {
-  if (!value) return false;
-  const date = new Date(value);
-  return Number.isFinite(date.getTime());
+function logWarning(message: string, context?: Record<string, unknown>) {
+  console.warn(`[sofinity-chat-callback] ${message}`, context ?? {});
+}
+
+function logError(message: string, context?: Record<string, unknown>) {
+  console.error(`[sofinity-chat-callback] ${message}`, context ?? {});
 }
 
 serve(async (req) => {
@@ -112,36 +127,261 @@ serve(async (req) => {
       return jsonResponse({ success: false, error: "Invalid JSON body" }, 400);
     }
 
-    if (!body.callback_id || typeof body.callback_id !== "string") {
-      return jsonResponse({ success: false, error: "Missing callback_id" }, 400);
-    }
-
-    if (!body.user_id || typeof body.user_id !== "string") {
-      return jsonResponse({ success: false, error: "Missing user_id" }, 400);
-    }
-
-    if (!body.content || typeof body.content !== "string") {
-      return jsonResponse({ success: false, error: "Missing content" }, 400);
-    }
-
-    const fallback = body.fallback === true;
-    const sender = fallback ? "admin" : "ai";
-    const createdAt =
-      isValidIsoDate(body.created_at) ? body.created_at! : new Date().toISOString();
-
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
+    // ai_response: insert AI reply (minimal contract)
+    if (body.event_name === "ai_response") {
+      if (!body.payload || typeof body.payload !== "object") {
+        return jsonResponse({ success: false, error: "Missing payload" }, 400);
+      }
+      const { correlation_id, content, user_id } = body.payload;
+      if (
+        typeof correlation_id !== "string" ||
+        correlation_id.length === 0 ||
+        typeof user_id !== "string" ||
+        user_id.length === 0 ||
+        typeof content !== "string" ||
+        content.length === 0
+      ) {
+        logWarning("Missing or invalid ai_response payload fields", { correlation_id, user_id, hasContent: !!content });
+        return jsonResponse({ success: false, error: "Missing correlation_id, user_id, or content" }, 400);
+      }
+
+      const { error: insertAiError } = await supabase.from(MESSAGE_TABLE).insert({
+        user_id,
+        sender: "ai",
+        content,
+        read: false,
+      });
+
+      if (insertAiError) {
+        logError("ai_response insert failed", { error: insertAiError.message, correlation_id, user_id });
+        return jsonResponse({ success: false, error: insertAiError.message }, 500);
+      }
+
+      console.log("[sofinity-chat-callback] ai_response insert success", { correlation_id, user_id });
+      return jsonResponse({ success: true, event_name: "ai_response", correlation_id }, 200);
+    }
+
+    // ai_fallback + legacy queue completion path
+    if (body.event_name === "ai_fallback") {
+      const correlation_id =
+        body.payload && typeof body.payload.correlation_id === "string" && body.payload.correlation_id.length > 0
+          ? body.payload.correlation_id
+          : null;
+      const user_id =
+        body.payload && typeof body.payload.user_id === "string" && body.payload.user_id.length > 0
+          ? body.payload.user_id
+          : null;
+      const content =
+        body.payload && typeof body.payload.content === "string" && body.payload.content.length > 0
+          ? body.payload.content
+          : null;
+      const fallbackReason =
+        body.payload &&
+        (body.payload.reason === "low_confidence" || body.payload.reason === "error")
+          ? body.payload.reason
+          : null;
+
+      if (!correlation_id) {
+        logWarning("Missing payload.correlation_id", { event_name: body.event_name });
+        return jsonResponse({ success: false, error: "Missing payload.correlation_id" }, 400);
+      }
+      if (!user_id) {
+        logWarning("Missing payload.user_id", { event_name: body.event_name, correlation_id });
+        return jsonResponse({ success: false, error: "Missing payload.user_id" }, 400);
+      }
+      if (!content) {
+        logWarning("Missing payload.content", { event_name: body.event_name, correlation_id, user_id });
+        return jsonResponse({ success: false, error: "Missing payload.content" }, 400);
+      }
+
+      const { data: existing, error: existingError } = await supabase
+        .from(MESSAGE_TABLE)
+        .select("id")
+        .eq("user_id", user_id)
+        .eq("payload->>sofinity_correlation_id", correlation_id)
+        .eq("payload->>source_event", body.event_name)
+        .maybeSingle();
+
+      if (existingError) {
+        logError("Failed to check existing message", {
+          event_name: body.event_name,
+          correlation_id,
+          user_id,
+          error: existingError.message,
+        });
+        return jsonResponse({ success: false, error: existingError.message }, 500);
+      }
+
+      let insertedMessageId: string | null = null;
+      if (!existing?.id) {
+        const sender = body.event_name === "ai_fallback" ? "admin" : "ai";
+        const { data: inserted, error: insertError } = await supabase
+          .from(MESSAGE_TABLE)
+          .insert({
+            user_id,
+            sender,
+            content,
+            private: true,
+            event: "sofinity_ai_result",
+            payload: {
+              sofinity_correlation_id: correlation_id,
+              original_message_id: correlation_id,
+              source_event: body.event_name,
+              requires_manual_reply: body.event_name === "ai_fallback",
+              ...(fallbackReason ? { reason: fallbackReason } : {}),
+            },
+          })
+          .select("id")
+          .single();
+
+        // Important for retry flow: non-200 so Sofinity can retry.
+        if (insertError) {
+          logError("Failed to insert callback message", {
+            event_name: body.event_name,
+            correlation_id,
+            user_id,
+            sender,
+            error: insertError.message,
+          });
+          return jsonResponse({ success: false, error: insertError.message }, 500);
+        }
+        insertedMessageId = inserted.id;
+      } else {
+        insertedMessageId = existing.id;
+      }
+
+      const processedAt = new Date().toISOString();
+      const { error: queueError } = await supabase
+        .from("event_queue")
+        .update({
+          status: "completed",
+          processed_at: processedAt,
+        })
+        .or(`source_request_id.eq.message:${correlation_id},metadata->>message_id.eq.${correlation_id}`);
+
+      if (queueError) {
+        logError("Failed to mark event_queue completed", {
+          event_name: body.event_name,
+          correlation_id,
+          error: queueError.message,
+        });
+        return jsonResponse({ success: false, error: queueError.message }, 500);
+      }
+
+      // For ai_fallback, notify all admins using existing notifications pipeline.
+      if (body.event_name === "ai_fallback") {
+        const { data: adminRoles, error: rolesError } = await supabase
+          .from("user_roles")
+          .select("user_id, role")
+          .in("role", ["admin", "superadmin"]);
+
+        if (rolesError) {
+          logError("Failed to load admin roles for fallback notification", {
+            correlation_id,
+            error: rolesError.message,
+          });
+          return jsonResponse({ success: false, error: rolesError.message }, 500);
+        }
+
+        const adminUserIds = Array.from(new Set((adminRoles ?? []).map((r) => r.user_id).filter(Boolean)));
+        if (adminUserIds.length > 0) {
+          const notificationRows = adminUserIds.map((adminUserId) => ({
+            user_id: adminUserId,
+            type: "info",
+            title: "AI chat fallback requires manual reply",
+            message: `User ${user_id} requires manual reply (${fallbackReason ?? "error"}).`,
+            status: "queued",
+          }));
+
+          const { error: notifError } = await supabase
+            .from("notifications")
+            .insert(notificationRows);
+
+          if (notifError) {
+            logError("Failed to create fallback notifications", {
+              correlation_id,
+              admins_count: adminUserIds.length,
+              error: notifError.message,
+            });
+            return jsonResponse({ success: false, error: notifError.message }, 500);
+          }
+        }
+      }
+
+      return jsonResponse(
+        {
+          success: true,
+          event_name: body.event_name,
+          idempotent: Boolean(existing?.id),
+          message_id: insertedMessageId,
+          correlation_id,
+          ...(fallbackReason ? { reason: fallbackReason } : {}),
+        },
+        200,
+      );
+    }
+
+    const { fallback, metadata } = body;
+
+    // Canonical contract: callback_id, user_id, content
+    // Legacy Sofinity worker: message_id, response (+ optional user_id in metadata)
+    const callback_id =
+      typeof body.callback_id === "string" && body.callback_id.length > 0
+        ? body.callback_id
+        : typeof body.message_id === "string" && body.message_id.length > 0
+          ? body.message_id
+          : null;
+
+    const content =
+      typeof body.content === "string" && body.content.length > 0
+        ? body.content
+        : typeof body.response === "string" && body.response.length > 0
+          ? body.response
+          : null;
+
+    const meta = metadata ?? {};
+    const user_id =
+      typeof body.user_id === "string" && body.user_id.length > 0
+        ? body.user_id
+        : typeof meta.user_id === "string" && meta.user_id.length > 0
+          ? meta.user_id
+          : null;
+
+    if (!callback_id) {
+      logWarning("Missing callback_id/message_id for legacy payload");
+      return jsonResponse({ success: false, error: "Missing callback_id (or message_id)" }, 400);
+    }
+
+    if (!user_id) {
+      logWarning("Missing user_id for legacy payload", { callback_id });
+      return jsonResponse({ success: false, error: "Missing user_id" }, 400);
+    }
+
+    if (!content) {
+      logWarning("Missing content/response for legacy payload", { callback_id, user_id });
+      return jsonResponse({ success: false, error: "Missing content (or response)" }, 400);
+    }
+
+    // Routing: ONLY fallback flag (never confidence / heuristics)
+    const sender = fallback === true ? "admin" : "ai";
+
     const { data: existing, error: existingError } = await supabase
-      .from("messages")
+      .from(MESSAGE_TABLE)
       .select("id")
-      .eq("user_id", body.user_id)
-      .eq("sender", sender)
-      .eq("payload->>sofinity_callback_id", body.callback_id)
+      .eq("user_id", user_id)
+      .eq("payload->>sofinity_callback_id", callback_id)
       .maybeSingle();
 
     if (existingError) {
+      logError("Legacy existing message lookup failed", {
+        callback_id,
+        user_id,
+        error: existingError.message,
+      });
       return jsonResponse({ success: false, error: existingError.message }, 500);
     }
 
@@ -150,28 +390,30 @@ serve(async (req) => {
     }
 
     const payload = {
-      ...(body.metadata ?? {}),
-      sofinity_callback_id: body.callback_id,
-      sofinity_fallback: fallback,
-      sofinity_received_at: new Date().toISOString(),
+      sofinity_callback_id: callback_id,
+      ...(metadata ?? {}),
     };
 
     const { data: inserted, error: insertError } = await supabase
-      .from("messages")
+      .from(MESSAGE_TABLE)
       .insert({
-        user_id: body.user_id,
+        user_id,
         sender,
-        content: body.content,
-        topic: body.topic ?? null,
-        event: body.event ?? "sofinity_callback",
-        private: typeof body.private === "boolean" ? body.private : true,
-        created_at: createdAt,
+        content,
+        private: true,
+        event: "sofinity_ai_result",
         payload,
       })
       .select("id")
       .single();
 
     if (insertError) {
+      logError("Legacy callback insert failed", {
+        callback_id,
+        user_id,
+        sender,
+        error: insertError.message,
+      });
       return jsonResponse({ success: false, error: insertError.message }, 500);
     }
 
