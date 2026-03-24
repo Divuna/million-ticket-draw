@@ -24,7 +24,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, marketingConsent?: boolean) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
-  signInWithOAuth: (provider: 'google' | 'apple' | 'facebook') => Promise<void>;
+  signInWithOAuth: (provider: 'google' | 'apple' | 'facebook', redirectAfterLogin?: string | null) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

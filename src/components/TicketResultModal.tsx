@@ -193,6 +193,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const generatedForTicketRef = useRef<number | null>(null);
   const winSoundPlayedForRef = useRef<string | null>(null);
   const prizeTitleFocusRef = useRef<HTMLHeadingElement>(null);
+  const [lossRetentionNudge, setLossRetentionNudge] = useState<string | null>(null);
 
   // Query bonus_prizes when modal opens
   useEffect(() => {

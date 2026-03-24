@@ -327,7 +327,7 @@ export default function ContestDetail() {
         logTicketPurchaseSuccess({
           userId: user.id,
           contestId: contest.id,
-          ticket_number: result.ticket_number,
+          ticketNumber: result.ticket_number,
         });
         
         const mappedResult: UnlockTicketResult = {
