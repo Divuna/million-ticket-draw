@@ -267,7 +267,7 @@ export default function ContestDetail() {
     try {
       const built = buildBuyTicketAtomicRpcPayload(contest.id, user.id);
       if (!built.ok) {
-        toast.error(built.message);
+        toast.error((built as { ok: false; message: string }).message);
         requestInFlightRef.current = false;
         setProcessingContestId(null);
         return;
@@ -327,7 +327,7 @@ export default function ContestDetail() {
         logTicketPurchaseSuccess({
           userId: user.id,
           contestId: contest.id,
-          ticket_number: result.ticket_number,
+          ticketNumber: result.ticket_number,
         });
         
         const mappedResult: UnlockTicketResult = {

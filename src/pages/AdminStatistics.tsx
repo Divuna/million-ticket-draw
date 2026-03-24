@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { BarChart3, Users, CreditCard, Trophy, Gift, Ticket, UserX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 
 interface Statistics {
   totalUsers: number;

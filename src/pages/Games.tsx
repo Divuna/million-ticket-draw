@@ -204,7 +204,7 @@ const Index = () => {
     try {
       const built = buildBuyTicketAtomicRpcPayload(contestId, user.id);
       if (!built.ok) {
-        toast.error(built.message);
+        toast.error((built as { ok: false; message: string }).message);
         setProcessingContestId(null);
         return;
       }
@@ -264,7 +264,7 @@ const Index = () => {
       logTicketPurchaseSuccess({
         userId: user.id,
         contestId: contestId,
-        ticket_number: rpcResult.ticket_number,
+        ticketNumber: rpcResult.ticket_number,
       });
       
       const result: UnlockTicketResult = {

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Trophy, Gift, Ticket, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 
 interface Contest {
   id: string;

@@ -1676,6 +1676,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 };
 
 export const AdminContestManagement: React.FC = () => {
+  const navigate = useNavigate();
   const [contests, setContests] = useState<ContestData[]>([]);
   const [statsMap, setStatsMap] = useState<Record<string, ContestViewStats>>({});
   const [loading, setLoading] = useState(true);

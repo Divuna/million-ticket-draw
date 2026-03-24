@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { Gamepad2, Ticket } from 'lucide-react';
+import { NavigateToLogin } from '@/components/NavigateToLogin';
 
 interface UserTicket {
   id: string;
