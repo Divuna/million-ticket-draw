@@ -204,7 +204,7 @@ const Index = () => {
     try {
       const built = buildBuyTicketAtomicRpcPayload(contestId, user.id);
       if (!built.ok) {
-        toast.error(built.message);
+        toast.error((built as { ok: false; message: string }).message);
         setProcessingContestId(null);
         return;
       }
