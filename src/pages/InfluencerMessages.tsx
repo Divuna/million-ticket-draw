@@ -14,7 +14,7 @@ import { AI_ASSISTANT_BOB_LABEL } from "@/constants/messagesUi";
 interface Message {
   id: string;
   user_id: string;
-  sender: "user" | "admin";
+  sender: "user" | "admin" | "ai";
   content: string;
   read: boolean;
   created_at: string;
