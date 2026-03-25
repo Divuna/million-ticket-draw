@@ -265,6 +265,7 @@ export default function AdminMessageThread() {
             const isSystemMessage = msg.content.includes("🎉") || msg.content.includes("zákonný zástupce");
             const isAdminMessage = msg.sender === "admin";
             const isAiMessage = msg.sender === "ai";
+            const isUserMessage = msg.sender === "user";
 
             return (
                 <div key={msg.id} className={`flex w-full ${isAdminMessage ? "justify-end" : "justify-start"}`}>
@@ -272,16 +273,22 @@ export default function AdminMessageThread() {
                   className={`relative max-w-[75%] px-4 py-2 rounded-2xl shadow-sm transition-all ${
                     isAiMessage
                       ? "text-white rounded-bl-none"
-                      : isAdminMessage
-                        ? isSystemMessage
-                          ? "bg-amber-500/30 text-amber-100 rounded-br-none border border-amber-500/30"
-                          : "bg-blue-600/30 text-blue-100 rounded-br-none"
-                        : "bg-[hsl(220,20%,15%)] text-foreground rounded-bl-none"
+                      : isUserMessage
+                        ? "text-white rounded-bl-none"
+                        : isAdminMessage
+                          ? isSystemMessage
+                            ? "bg-amber-500/30 text-amber-100 rounded-br-none border border-amber-500/30"
+                            : "bg-blue-600/30 text-blue-100 rounded-br-none"
+                          : "bg-[hsl(220,20%,15%)] text-foreground rounded-bl-none"
                   }`}
                   style={isAiMessage ? {
                     background: 'linear-gradient(135deg, #5B3DF5 0%, #7A5CFF 100%)',
                     border: '1px solid rgba(122, 92, 255, 0.8)',
                     boxShadow: '0 6px 30px rgba(122, 92, 255, 0.6)',
+                  } : isUserMessage ? {
+                    background: 'linear-gradient(135deg, #1FAF6D 0%, #169B5C 100%)',
+                    border: '1px solid rgba(34, 197, 94, 0.6)',
+                    boxShadow: '0 6px 25px rgba(34, 197, 94, 0.35)',
                   } : undefined}
                 >
                   {isSystemMessage && isAdminMessage && (
@@ -291,10 +298,15 @@ export default function AdminMessageThread() {
                     </div>
                   )}
                   {isAiMessage && (
-                    <p className="text-xs font-medium text-muted-foreground mb-1">{AI_ASSISTANT_BOB_LABEL}</p>
+                    <p className="text-xs font-medium text-white/70 mb-1">{AI_ASSISTANT_BOB_LABEL}</p>
+                  )}
+                  {isUserMessage && (
+                    <p className="text-xs font-medium text-white/70 mb-1">
+                      {contactInfo?.name || contactInfo?.email || "Uživatel"}
+                    </p>
                   )}
                   <p className="break-words leading-relaxed">{msg.content}</p>
-                  <p className="text-xs text-muted-foreground mt-1 text-right">{new Date(msg.created_at).toLocaleString()}</p>
+                  <p className={`text-xs mt-1 text-right ${isUserMessage || isAiMessage ? "text-white/50" : "text-muted-foreground"}`}>{new Date(msg.created_at).toLocaleString()}</p>
                 </div>
               </div>
             );

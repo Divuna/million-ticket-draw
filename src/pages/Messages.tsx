@@ -45,9 +45,26 @@ export default function MessagesPage() {
   const [isSending, setIsSending] = useState(false);
   const [isAwaitingReply, setIsAwaitingReply] = useState(false);
   const [lastUserMessageAt, setLastUserMessageAt] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>("Uživatel");
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchName = async () => {
+      const { data: profile } = await supabase
+        .from("users")
+        .select("name, first_name, last_name, email")
+        .eq("id", user.id)
+        .maybeSingle();
+      const fullName = profile?.first_name && profile?.last_name
+        ? `${profile.first_name} ${profile.last_name}`
+        : profile?.name || profile?.email || user.email || "Uživatel";
+      setUserName(fullName);
+    };
+    fetchName();
+  }, [user]);
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
@@ -334,9 +351,9 @@ export default function MessagesPage() {
                   style={
                     isUserMessage
                       ? {
-                          background: 'linear-gradient(135deg, hsl(45, 80%, 40%) 0%, hsl(35, 85%, 35%) 100%)',
-                          boxShadow: '0 4px 20px hsl(45, 80%, 40%, 0.25)',
-                          border: '1px solid hsl(45, 70%, 50%, 0.3)',
+                          background: 'linear-gradient(135deg, #1FAF6D 0%, #169B5C 100%)',
+                          border: '1px solid rgba(34, 197, 94, 0.6)',
+                          boxShadow: '0 6px 25px rgba(34, 197, 94, 0.35)',
                         }
                       : isSystemMessage
                         ? {
@@ -356,7 +373,7 @@ export default function MessagesPage() {
                     <div 
                       className="absolute inset-0 opacity-20"
                       style={{
-                        background: 'linear-gradient(90deg, transparent 0%, hsl(45, 93%, 70%) 50%, transparent 100%)',
+                        background: 'linear-gradient(90deg, transparent 0%, rgba(34, 197, 94, 0.5) 50%, transparent 100%)',
                         backgroundSize: '200% 100%',
                         animation: 'shimmer 3s ease-in-out infinite',
                       }}
@@ -384,10 +401,16 @@ export default function MessagesPage() {
                       {senderLabel}
                     </p>
                   )}
+
+                  {isUserMessage && (
+                    <p className="relative z-10 text-xs font-semibold text-white/70 mb-1">
+                      {userName}
+                    </p>
+                  )}
                   
                   <p 
                     className={`relative z-10 text-[15px] leading-relaxed ${
-                      isUserMessage ? "text-black font-medium" : "text-gray-100"
+                      isUserMessage ? "text-white font-medium" : "text-gray-100"
                     }`}
                   >
                     {msg.content}
@@ -395,7 +418,7 @@ export default function MessagesPage() {
                   
                   <p 
                     className={`relative z-10 text-xs mt-2 ${
-                      isUserMessage ? "text-black/60" : "text-gray-500"
+                      isUserMessage ? "text-white/50" : "text-gray-500"
                     }`}
                   >
                     {new Date(msg.created_at).toLocaleString("cs-CZ", {
