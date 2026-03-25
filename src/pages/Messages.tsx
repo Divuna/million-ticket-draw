@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import type { CSSProperties } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
@@ -328,14 +329,44 @@ export default function MessagesPage() {
 
           {messages.map((msg, index) => {
             const isSystemMessage = msg.content.includes("🎉") || msg.content.includes("zákonný zástupce");
-            const isUserMessage = msg.sender === "user";
+            const senderNormalized = (msg.sender || "").toLowerCase().trim();
+            const isUserMessage = senderNormalized === "user";
+            const isAiMessage = senderNormalized === "ai";
+            const isAdminMessage = senderNormalized === "admin";
             const senderLabel =
               msg.sender === "ai"
                 ? AI_ASSISTANT_BOB_LABEL
                 : msg.sender === "admin"
                   ? "Podpora"
                   : null;
-            
+
+            const bubbleStyle: CSSProperties =
+              isUserMessage
+                ? {
+                    background: "linear-gradient(135deg, #1FAF6D 0%, #169B5C 100%)",
+                    border: "1px solid rgba(34, 197, 94, 0.6)",
+                    boxShadow: "0 6px 25px rgba(34, 197, 94, 0.35)",
+                  }
+                : isAiMessage
+                  ? {
+                      background:
+                        "linear-gradient(135deg, hsl(260, 60%, 18%) 0%, hsl(280, 65%, 14%) 100%)",
+                      border: "1px solid hsl(270, 70%, 60%, 0.7)",
+                      boxShadow: "0 6px 24px hsl(270, 80%, 20%, 0.6)",
+                      filter: "brightness(1.1)",
+                    }
+                  : isSystemMessage
+                    ? {
+                        background: "linear-gradient(135deg, hsl(35, 50%, 15%) 0%, hsl(30, 45%, 12%) 100%)",
+                        border: "1px solid hsl(35, 60%, 40%, 0.3)",
+                        boxShadow: "0 4px 16px hsl(0, 0%, 0%, 0.3)",
+                      }
+                    : {
+                        background: "linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 15%) 100%)",
+                        border: "1px solid hsl(220, 20%, 25%, 0.5)",
+                        boxShadow: "0 4px 16px hsl(0, 0%, 0%, 0.3)",
+                      };
+
             return (
               <div
                 key={msg.id}
@@ -343,30 +374,12 @@ export default function MessagesPage() {
                 style={{
                   animation: `fade-in 0.3s ease-out`,
                   animationDelay: `${index * 0.05}s`,
-                  animationFillMode: 'both',
+                  animationFillMode: "both",
                 }}
               >
                 <div
-                  className={`max-w-[75%] relative overflow-hidden rounded-2xl p-4 transition-all duration-300 hover:scale-[1.01]`}
-                  style={
-                    isUserMessage
-                      ? {
-                          background: 'linear-gradient(135deg, #1FAF6D 0%, #169B5C 100%)',
-                          border: '1px solid rgba(34, 197, 94, 0.6)',
-                          boxShadow: '0 6px 25px rgba(34, 197, 94, 0.35)',
-                        }
-                      : isSystemMessage
-                        ? {
-                            background: 'linear-gradient(135deg, hsl(35, 50%, 15%) 0%, hsl(30, 45%, 12%) 100%)',
-                            border: '1px solid hsl(35, 60%, 40%, 0.3)',
-                            boxShadow: '0 4px 16px hsl(0, 0%, 0%, 0.3)',
-                          }
-                        : {
-                            background: 'linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 15%) 100%)',
-                            border: '1px solid hsl(220, 20%, 25%, 0.5)',
-                            boxShadow: '0 4px 16px hsl(0, 0%, 0%, 0.3)',
-                          }
-                  }
+                  className="max-w-[75%] relative overflow-hidden rounded-2xl p-4 transition-all duration-300 hover:scale-[1.01]"
+                  style={bubbleStyle}
                 >
                   {/* Message shimmer for user messages */}
                   {isUserMessage && (
@@ -438,9 +451,11 @@ export default function MessagesPage() {
               <div
                 className="max-w-[75%] relative overflow-hidden rounded-2xl p-4 transition-all duration-300"
                 style={{
-                  background: "linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 15%) 100%)",
-                  border: "1px solid hsl(220, 20%, 25%, 0.5)",
-                  boxShadow: "0 4px 16px hsl(0, 0%, 0%, 0.3)",
+                  background:
+                    "linear-gradient(135deg, hsl(260, 60%, 18%) 0%, hsl(280, 65%, 14%) 100%)",
+                  border: "1px solid hsl(270, 70%, 60%, 0.7)",
+                  boxShadow: "0 6px 24px hsl(270, 80%, 20%, 0.6)",
+                  filter: "brightness(1.1)",
                 }}
               >
                 <p className="relative z-10 text-xs font-semibold text-gray-400 mb-1">{AI_ASSISTANT_BOB_LABEL}</p>
