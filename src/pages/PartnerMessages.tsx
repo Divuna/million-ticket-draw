@@ -26,6 +26,7 @@ export default function PartnerMessages() {
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [userName, setUserName] = useState<string>("Uživatel");
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const scrollToBottom = () => {
@@ -41,7 +42,19 @@ export default function PartnerMessages() {
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser();
-      setUser(data?.user ? { id: data.user.id } : null);
+      if (data?.user) {
+        setUser({ id: data.user.id });
+        // Fetch user name
+        const { data: profile } = await supabase
+          .from("users")
+          .select("name, first_name, last_name, email")
+          .eq("id", data.user.id)
+          .maybeSingle();
+        const fullName = profile?.first_name && profile?.last_name
+          ? `${profile.first_name} ${profile.last_name}`
+          : profile?.name || profile?.email || data.user.email || "Uživatel";
+        setUserName(fullName);
+      }
     };
     getUser();
   }, []);
@@ -179,9 +192,9 @@ export default function PartnerMessages() {
                     <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
                       <div
                         className={`max-w-[75%] rounded-xl px-4 py-3 ${
-                          isUser
-                            ? "bg-primary text-primary-foreground"
-                            : isAi
+                          isAi
+                            ? "text-white"
+                            : isUser
                               ? "text-white"
                               : "bg-muted text-foreground border border-border/40"
                         }`}
@@ -189,15 +202,22 @@ export default function PartnerMessages() {
                           background: 'linear-gradient(135deg, #5B3DF5 0%, #7A5CFF 100%)',
                           border: '1px solid rgba(122, 92, 255, 0.8)',
                           boxShadow: '0 6px 30px rgba(122, 92, 255, 0.6)',
+                        } : isUser ? {
+                          background: 'linear-gradient(135deg, #1FAF6D 0%, #169B5C 100%)',
+                          border: '1px solid rgba(34, 197, 94, 0.6)',
+                          boxShadow: '0 6px 25px rgba(34, 197, 94, 0.35)',
                         } : undefined}
                       >
                         {isAi && (
                           <p className="text-[11px] font-medium text-white/70 mb-1">{AI_ASSISTANT_BOB_LABEL}</p>
                         )}
+                        {isUser && (
+                          <p className="text-[11px] font-medium text-white/70 mb-1">{userName}</p>
+                        )}
                         <p className="text-[14px] leading-relaxed">{msg.content}</p>
                         <p
                           className={`text-[11px] mt-1.5 text-right ${
-                            isUser ? "text-primary-foreground/60" : isAi ? "text-white/50" : "text-muted-foreground"
+                            isUser || isAi ? "text-white/50" : "text-muted-foreground"
                           }`}
                         >
                           {new Date(msg.created_at).toLocaleString("cs-CZ", {

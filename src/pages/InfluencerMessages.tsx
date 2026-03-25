@@ -26,7 +26,24 @@ export default function InfluencerMessages() {
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [userName, setUserName] = useState<string>("Uživatel");
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchName = async () => {
+      const { data: profile } = await supabase
+        .from("users")
+        .select("name, first_name, last_name, email")
+        .eq("id", user.id)
+        .maybeSingle();
+      const fullName = profile?.first_name && profile?.last_name
+        ? `${profile.first_name} ${profile.last_name}`
+        : profile?.name || profile?.email || user.email || "Uživatel";
+      setUserName(fullName);
+    };
+    fetchName();
+  }, [user]);
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
@@ -189,9 +206,9 @@ export default function InfluencerMessages() {
                         style={
                           isUser
                             ? {
-                                background: 'linear-gradient(135deg, hsl(45, 80%, 40%) 0%, hsl(35, 85%, 35%) 100%)',
-                                boxShadow: '0 4px 20px hsl(45, 80%, 40%, 0.25)',
-                                border: '1px solid hsl(45, 70%, 50%, 0.3)',
+                                background: 'linear-gradient(135deg, #1FAF6D 0%, #169B5C 100%)',
+                                border: '1px solid rgba(34, 197, 94, 0.6)',
+                                boxShadow: '0 6px 25px rgba(34, 197, 94, 0.35)',
                               }
                             : isAi
                               ? {
@@ -209,10 +226,13 @@ export default function InfluencerMessages() {
                     {isAi && (
                       <p className="text-xs font-medium text-white/70 mb-1">{AI_ASSISTANT_BOB_LABEL}</p>
                     )}
-                    <p className={`text-[15px] leading-relaxed ${isUser ? "text-black font-medium" : "text-white"}`}>
+                    {isUser && (
+                      <p className="text-xs font-medium text-white/70 mb-1">{userName}</p>
+                    )}
+                    <p className={`text-[15px] leading-relaxed text-white ${isUser ? "font-medium" : ""}`}>
                       {msg.content}
                     </p>
-                    <p className={`text-xs mt-2 ${isUser ? "text-black/60" : "text-white/50"}`}>
+                    <p className="text-xs mt-2 text-white/50">
                       {new Date(msg.created_at).toLocaleString("cs-CZ", {
                         day: "numeric",
                         month: "short",
