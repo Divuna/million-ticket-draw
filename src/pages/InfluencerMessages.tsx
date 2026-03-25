@@ -204,7 +204,8 @@ export default function InfluencerMessages() {
                                   border: '1px solid hsl(220, 20%, 25%, 0.5)',
                                   boxShadow: '0 4px 16px hsl(0, 0%, 0%, 0.3)',
                                 }
-                  >
+                        }
+                      >
                     {isAi && (
                       <p className="text-xs font-medium text-white/70 mb-1">{AI_ASSISTANT_BOB_LABEL}</p>
                     )}
