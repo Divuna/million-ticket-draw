@@ -9,6 +9,7 @@ import { MessageCircle, Send, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Link } from "react-router-dom";
+import { AI_ASSISTANT_BOB_LABEL } from "@/constants/messagesUi";
 
 interface Message {
   id: string;
@@ -173,19 +174,30 @@ export default function PartnerMessages() {
               ) : (
                 messages.map((msg) => {
                   const isUser = msg.sender === "user";
+                  const isAi = msg.sender === "ai";
                   return (
                     <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
                       <div
                         className={`max-w-[75%] rounded-xl px-4 py-3 ${
                           isUser
                             ? "bg-primary text-primary-foreground"
-                            : "bg-muted text-foreground border border-border/40"
+                            : isAi
+                              ? "text-white"
+                              : "bg-muted text-foreground border border-border/40"
                         }`}
+                        style={isAi ? {
+                          background: 'linear-gradient(135deg, #5B3DF5 0%, #7A5CFF 100%)',
+                          border: '1px solid rgba(122, 92, 255, 0.8)',
+                          boxShadow: '0 6px 30px rgba(122, 92, 255, 0.6)',
+                        } : undefined}
                       >
+                        {isAi && (
+                          <p className="text-[11px] font-medium text-white/70 mb-1">{AI_ASSISTANT_BOB_LABEL}</p>
+                        )}
                         <p className="text-[14px] leading-relaxed">{msg.content}</p>
                         <p
                           className={`text-[11px] mt-1.5 text-right ${
-                            isUser ? "text-primary-foreground/60" : "text-muted-foreground"
+                            isUser ? "text-primary-foreground/60" : isAi ? "text-white/50" : "text-muted-foreground"
                           }`}
                         >
                           {new Date(msg.created_at).toLocaleString("cs-CZ", {

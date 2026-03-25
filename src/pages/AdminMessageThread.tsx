@@ -267,15 +267,22 @@ export default function AdminMessageThread() {
             const isAiMessage = msg.sender === "ai";
 
             return (
-              <div key={msg.id} className={`flex w-full ${isAdminMessage ? "justify-end" : "justify-start"}`}>
+                <div key={msg.id} className={`flex w-full ${isAdminMessage ? "justify-end" : "justify-start"}`}>
                 <div
                   className={`relative max-w-[75%] px-4 py-2 rounded-2xl shadow-sm transition-all ${
-                    isAdminMessage
-                      ? isSystemMessage
-                        ? "bg-amber-500/30 text-amber-100 rounded-br-none border border-amber-500/30"
-                        : "bg-blue-600/30 text-blue-100 rounded-br-none"
-                      : "bg-[hsl(220,20%,15%)] text-foreground rounded-bl-none"
+                    isAiMessage
+                      ? "text-white rounded-bl-none"
+                      : isAdminMessage
+                        ? isSystemMessage
+                          ? "bg-amber-500/30 text-amber-100 rounded-br-none border border-amber-500/30"
+                          : "bg-blue-600/30 text-blue-100 rounded-br-none"
+                        : "bg-[hsl(220,20%,15%)] text-foreground rounded-bl-none"
                   }`}
+                  style={isAiMessage ? {
+                    background: 'linear-gradient(135deg, #5B3DF5 0%, #7A5CFF 100%)',
+                    border: '1px solid rgba(122, 92, 255, 0.8)',
+                    boxShadow: '0 6px 30px rgba(122, 92, 255, 0.6)',
+                  } : undefined}
                 >
                   {isSystemMessage && isAdminMessage && (
                     <div className="flex items-center gap-1.5 text-amber-400 text-xs font-medium mb-1">
