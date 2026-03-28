@@ -32,6 +32,7 @@ interface Message {
 
 export default function PartnerMessages() {
   const [user, setUser] = useState<{ id: string } | null>(null);
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");

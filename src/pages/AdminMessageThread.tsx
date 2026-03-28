@@ -315,7 +315,7 @@ export default function AdminMessageThread() {
                       {contactInfo?.name || contactInfo?.email || "Uživatel"}
                     </p>
                   )}
-                  <p className="break-words leading-relaxed">{msg.content}</p>
+                  {(() => { const parsed = parseMessageContent(msg.content); return (<><p className="break-words leading-relaxed">{parsed.text}</p>{parsed.cta && (<button onClick={(e) => { e.stopPropagation(); if (parsed.cta!.action.startsWith("http")) { window.open(parsed.cta!.action, "_blank", "noopener"); } else { navigate(parsed.cta!.action); } }} className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-[1.03]" style={{ background: 'linear-gradient(135deg, hsl(45,80%,45%) 0%, hsl(35,90%,38%) 100%)', color: 'hsl(220,20%,8%)', boxShadow: '0 4px 12px hsl(45,80%,40%,0.3)', border: '1px solid hsl(45,70%,50%,0.4)' }}>{parsed.cta!.label}</button>)}</>); })()}
                   <p className={`text-xs mt-1 text-right ${isUserMessage || isAiMessage ? "text-white/50" : "text-muted-foreground"}`}>{new Date(msg.created_at).toLocaleString()}</p>
                 </div>
               </div>
