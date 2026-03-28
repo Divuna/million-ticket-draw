@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, Link, Navigate } from "react-router-dom";
+import { useParams, Link, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,16 @@ import { NavigateToLogin } from "@/components/NavigateToLogin";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { AI_ASSISTANT_BOB_LABEL } from "@/constants/messagesUi";
+
+function parseMessageContent(content: string): { text: string; cta?: { label: string; action: string } } {
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed && typeof parsed === "object" && typeof parsed.text === "string") {
+      return { text: parsed.text, cta: parsed.cta && typeof parsed.cta.label === "string" && typeof parsed.cta.action === "string" ? parsed.cta : undefined };
+    }
+  } catch { /* not JSON */ }
+  return { text: content };
+}
 
 interface Message {
   id: string;
