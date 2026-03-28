@@ -1,9 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import type { CSSProperties } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { toast } from "@/hooks/use-toast";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AI_ASSISTANT_BOB_LABEL,
@@ -31,6 +33,136 @@ interface Message {
   content: string;
   read: boolean;
   created_at: string;
+}
+
+/** Most recent rows for the thread (older history not loaded). */
+const MESSAGES_PAGE_LIMIT = 50;
+
+function sortMessagesAsc(a: Message, b: Message): number {
+  return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+}
+
+function trimMessagesToPageLimit(rows: Message[]): Message[] {
+  if (rows.length <= MESSAGES_PAGE_LIMIT) return rows;
+  return [...rows].sort(sortMessagesAsc).slice(-MESSAGES_PAGE_LIMIT);
+}
+
+/** Incremental thread sync — no full refetch (Bob/admin replies arrive as INSERT). */
+function mergeMessagesFromRealtime(
+  prev: Message[],
+  payload: RealtimePostgresChangesPayload<Message>,
+): Message[] {
+  if (payload.eventType === "INSERT" && payload.new) {
+    const row = payload.new as Message;
+    let next = [...prev];
+    if (row.sender === "user") {
+      for (let i = next.length - 1; i >= 0; i--) {
+        const m = next[i];
+        if (
+          m.id.startsWith("optimistic-") &&
+          m.sender === "user" &&
+          m.content === row.content
+        ) {
+          next.splice(i, 1);
+          break;
+        }
+      }
+    }
+    if (next.some((m) => m.id === row.id)) return next;
+    next = [...next, row].sort(sortMessagesAsc);
+    return trimMessagesToPageLimit(next);
+  }
+  if (payload.eventType === "UPDATE" && payload.new) {
+    const row = payload.new as Message;
+    return prev.map((m) => (m.id === row.id ? row : m));
+  }
+  if (payload.eventType === "DELETE" && payload.old) {
+    const id = String((payload.old as { id: string }).id);
+    return prev.filter((m) => m.id !== id);
+  }
+  return prev;
+}
+
+/** In-app paths that may appear in message text and should render as router links. */
+const MESSAGE_DEEP_LINK_PATHS =
+  /\/(?:wallet|customer-inbox|wins|vouchers|games|my-contests|profile)/g;
+
+type MessageDeepLinkRoute =
+  | "/wallet"
+  | "/customer-inbox"
+  | "/wins"
+  | "/vouchers"
+  | "/games"
+  | "/my-contests"
+  | "/profile";
+
+function renderMessageWithDeepLinks(content: string) {
+  const nodes = [];
+  const linkRegex = new RegExp(MESSAGE_DEEP_LINK_PATHS.source, "g");
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = linkRegex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(<span key={`text-${key++}`}>{content.slice(lastIndex, match.index)}</span>);
+    }
+
+    const route = match[0] as MessageDeepLinkRoute;
+    nodes.push(
+      <Link
+        key={`link-${key++}`}
+        to={route}
+        style={{ color: "inherit", textDecoration: "inherit" }}
+      >
+        {route}
+      </Link>,
+    );
+
+    lastIndex = match.index + route.length;
+  }
+
+  if (lastIndex < content.length) {
+    nodes.push(<span key={`text-${key++}`}>{content.slice(lastIndex)}</span>);
+  }
+
+  return nodes.length > 0 ? nodes : content;
+}
+
+type BobChatCta = { label: string; action: string };
+
+/** Relative in-app path only (blocks protocol-relative //… URLs). */
+function isBobCtaActionAllowed(action: string): boolean {
+  return action.startsWith("/") && !action.startsWith("//");
+}
+
+/** Parses optional Bob JSON payload stored in `messages.content`; plain strings pass through. */
+function parseBobMessageContent(content: string): { text: string; cta?: BobChatCta } {
+  const trimmed = content.trim();
+  if (!trimmed.startsWith("{")) {
+    return { text: content };
+  }
+  try {
+    const o = JSON.parse(trimmed) as Record<string, unknown>;
+    if (!o || typeof o !== "object" || typeof o.text !== "string") {
+      return { text: content };
+    }
+    const text = o.text;
+    if (!o.cta || typeof o.cta !== "object") {
+      return { text };
+    }
+    const c = o.cta as Record<string, unknown>;
+    if (typeof c.label !== "string" || typeof c.action !== "string") {
+      return { text };
+    }
+    const action = c.action.trim();
+    if (!isBobCtaActionAllowed(action)) {
+      return { text };
+    }
+    return { text, cta: { label: c.label.trim(), action } };
+  } catch {
+    return { text: content };
+  }
 }
 
 export default function MessagesPage() {
@@ -88,14 +220,16 @@ export default function MessagesPage() {
   }, [user]);
 
   const loadMessages = useCallback(async () => {
+    console.log("loadMessages called", new Date().toISOString());
     if (!user) return;
     setLoading(true);
     const { data } = await supabase
       .from("messages")
       .select("*")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: true });
-    setMessages(data || []);
+      .order("created_at", { ascending: false })
+      .limit(MESSAGES_PAGE_LIMIT);
+    setMessages(data ? [...data].reverse() : []);
     setLoading(false);
   }, [user]);
 
@@ -110,19 +244,20 @@ export default function MessagesPage() {
 
     void initMessages();
 
-    const channel = supabase
-      .channel("messages-user-thread")
+    const postgresChannel = supabase
+      .channel(`messages-thread-pg:${user.id}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "messages", filter: `user_id=eq.${user.id}` },
-        () => {
-          void loadMessages();
+        (payload) => {
+          console.log("realtime event", payload.eventType, payload.new);
+          setMessages((prev) => mergeMessagesFromRealtime(prev, payload));
         },
       )
       .subscribe();
 
     return () => {
-      channel.unsubscribe();
+      postgresChannel.unsubscribe();
     };
   }, [user, loadMessages, markAdminMessagesAsRead, refreshUnreadCount]);
 
@@ -157,18 +292,10 @@ export default function MessagesPage() {
 
   // SEND with animation
   const handleSend = async () => {
+    console.log("handleSend called");
     if (!newMessage.trim() || isSending) return;
 
     const messageContent = newMessage.trim();
-    setIsSending(true);
-    
-    // Start flying animation
-    setFlyingMessage({ id: Date.now(), content: messageContent });
-    createSparkles();
-    setNewMessage("");
-
-    // Wait for animation
-    await new Promise(resolve => setTimeout(resolve, 600));
 
     const optimisticId = `optimistic-${Date.now()}`;
     const optimisticCreatedAt = new Date().toISOString();
@@ -181,24 +308,37 @@ export default function MessagesPage() {
       created_at: optimisticCreatedAt,
     };
 
-    setMessages((prev) => [...prev, optimisticMessage]);
+    // Optimistic row before any await (animation + network).
+    setMessages((prev) => trimMessagesToPageLimit([...prev, optimisticMessage]));
     setLastUserMessageAt(optimisticCreatedAt);
     setIsAwaitingReply(true);
 
-    setLoading(true);
+    setIsSending(true);
+    setFlyingMessage({ id: Date.now(), content: messageContent });
+    createSparkles();
+    setNewMessage("");
+
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
     const inserted = await sendMessageToAdmin(messageContent);
 
     if (inserted) {
-      setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId));
-      await loadMessages();
+      setMessages((prev) => {
+        const withoutOpt = prev.filter((m) => m.id !== optimisticId);
+        if (withoutOpt.some((m) => m.id === inserted.id)) {
+          return trimMessagesToPageLimit(withoutOpt);
+        }
+        return trimMessagesToPageLimit(
+          [...withoutOpt, inserted as Message].sort(sortMessagesAsc),
+        );
+      });
+      setLastUserMessageAt(inserted.created_at);
       toast({ title: "Odesláno" });
     } else {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId));
       setIsAwaitingReply(false);
       toast({ title: "Chyba", description: "Odeslání selhalo", variant: "destructive" });
     }
-
-    setLoading(false);
     setFlyingMessage(null);
     setIsSending(false);
   };
@@ -328,11 +468,13 @@ export default function MessagesPage() {
           )}
 
           {messages.map((msg, index) => {
-            const isSystemMessage = msg.content.includes("🎉") || msg.content.includes("zákonný zástupce");
             const senderNormalized = (msg.sender || "").toLowerCase().trim();
             const isUserMessage = senderNormalized === "user";
             const isAiMessage = senderNormalized === "ai";
-            const isAdminMessage = senderNormalized === "admin";
+            const bobPayload = isAiMessage ? parseBobMessageContent(msg.content) : null;
+            const bodyText = bobPayload?.text ?? msg.content;
+            const isSystemMessage =
+              bodyText.includes("🎉") || bodyText.includes("zákonný zástupce");
             const senderLabel =
               msg.sender === "ai"
                 ? AI_ASSISTANT_BOB_LABEL
@@ -343,9 +485,9 @@ export default function MessagesPage() {
             const bubbleStyle: CSSProperties =
               isUserMessage
                 ? {
-                    background: "linear-gradient(135deg, #1FAF6D 0%, #169B5C 100%)",
-                    border: "1px solid rgba(34, 197, 94, 0.6)",
-                    boxShadow: "0 6px 25px rgba(34, 197, 94, 0.35)",
+                    background: "linear-gradient(135deg, hsl(45, 80%, 40%) 0%, hsl(35, 85%, 35%) 100%)",
+                    boxShadow: "0 4px 20px hsl(45, 80%, 40%, 0.25)",
+                    border: "1px solid hsl(45, 70%, 50%, 0.3)",
                   }
                 : isAiMessage
                   ? {
@@ -426,8 +568,24 @@ export default function MessagesPage() {
                       isUserMessage ? "text-white font-medium" : "text-gray-100"
                     }`}
                   >
-                    {msg.content}
+                    {renderMessageWithDeepLinks(bodyText)}
                   </p>
+
+                  {bobPayload?.cta && (
+                    <Link
+                      to={bobPayload.cta.action}
+                      className="relative z-10 mt-3 inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, hsl(45, 75%, 48%) 0%, hsl(35, 85%, 40%) 100%)",
+                        color: "hsl(220, 25%, 8%)",
+                        boxShadow: "0 4px 14px hsl(45, 80%, 35%, 0.35)",
+                        border: "1px solid hsl(45, 70%, 55%, 0.5)",
+                      }}
+                    >
+                      {bobPayload.cta.label}
+                    </Link>
+                  )}
                   
                   <p 
                     className={`relative z-10 text-xs mt-2 ${
