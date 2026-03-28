@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import type { CSSProperties } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
@@ -10,6 +11,23 @@ import {
   AI_ASSISTANT_TYPING_SUBLINE,
 } from "@/constants/messagesUi";
 import { MessageCircle, Send, Sparkles } from "lucide-react";
+
+function parseMessageContent(content: string): { text: string; cta?: { label: string; action: string } } {
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed && typeof parsed === "object" && typeof parsed.text === "string") {
+      return {
+        text: parsed.text,
+        cta: parsed.cta && typeof parsed.cta.label === "string" && typeof parsed.cta.action === "string"
+          ? parsed.cta
+          : undefined,
+      };
+    }
+  } catch {
+    // not JSON, return raw
+  }
+  return { text: content };
+}
 
 interface Sparkle {
   id: number;
