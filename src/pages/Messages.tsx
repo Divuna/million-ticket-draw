@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import type { CSSProperties } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
@@ -10,6 +11,23 @@ import {
   AI_ASSISTANT_TYPING_SUBLINE,
 } from "@/constants/messagesUi";
 import { MessageCircle, Send, Sparkles } from "lucide-react";
+
+function parseMessageContent(content: string): { text: string; cta?: { label: string; action: string } } {
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed && typeof parsed === "object" && typeof parsed.text === "string") {
+      return {
+        text: parsed.text,
+        cta: parsed.cta && typeof parsed.cta.label === "string" && typeof parsed.cta.action === "string"
+          ? parsed.cta
+          : undefined,
+      };
+    }
+  } catch {
+    // not JSON, return raw
+  }
+  return { text: content };
+}
 
 interface Sparkle {
   id: number;
@@ -35,6 +53,7 @@ interface Message {
 
 export default function MessagesPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { sendMessageToAdmin } = useMessages();
   const { refresh: refreshUnreadCount } = useUnreadMessagesCount();
 
@@ -328,7 +347,10 @@ export default function MessagesPage() {
           )}
 
           {messages.map((msg, index) => {
-            const isSystemMessage = msg.content.includes("🎉") || msg.content.includes("zákonný zástupce");
+            const parsed = parseMessageContent(msg.content);
+            const displayText = parsed.text;
+            const cta = parsed.cta;
+            const isSystemMessage = displayText.includes("🎉") || displayText.includes("zákonný zástupce");
             const senderNormalized = (msg.sender || "").toLowerCase().trim();
             const isUserMessage = senderNormalized === "user";
             const isAiMessage = senderNormalized === "ai";
@@ -426,8 +448,30 @@ export default function MessagesPage() {
                       isUserMessage ? "text-white font-medium" : "text-gray-100"
                     }`}
                   >
-                    {msg.content}
+                    {displayText}
                   </p>
+
+                  {cta && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (cta.action.startsWith("http")) {
+                          window.open(cta.action, "_blank", "noopener");
+                        } else {
+                          navigate(cta.action);
+                        }
+                      }}
+                      className="relative z-10 mt-3 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
+                      style={{
+                        background: 'linear-gradient(135deg, hsl(45, 80%, 45%) 0%, hsl(35, 90%, 38%) 100%)',
+                        color: 'hsl(220, 20%, 8%)',
+                        boxShadow: '0 4px 12px hsl(45, 80%, 40%, 0.3)',
+                        border: '1px solid hsl(45, 70%, 50%, 0.4)',
+                      }}
+                    >
+                      {cta.label}
+                    </button>
+                  )}
                   
                   <p 
                     className={`relative z-10 text-xs mt-2 ${

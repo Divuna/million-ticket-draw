@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, Link, Navigate } from "react-router-dom";
+import { useParams, Link, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,16 @@ import { NavigateToLogin } from "@/components/NavigateToLogin";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { AI_ASSISTANT_BOB_LABEL } from "@/constants/messagesUi";
+
+function parseMessageContent(content: string): { text: string; cta?: { label: string; action: string } } {
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed && typeof parsed === "object" && typeof parsed.text === "string") {
+      return { text: parsed.text, cta: parsed.cta && typeof parsed.cta.label === "string" && typeof parsed.cta.action === "string" ? parsed.cta : undefined };
+    }
+  } catch { /* not JSON */ }
+  return { text: content };
+}
 
 interface Message {
   id: string;
@@ -27,6 +37,7 @@ interface ContactInfo {
 
 export default function AdminMessageThread() {
   const { userId } = useParams();
+  const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -305,7 +316,7 @@ export default function AdminMessageThread() {
                       {contactInfo?.name || contactInfo?.email || "Uživatel"}
                     </p>
                   )}
-                  <p className="break-words leading-relaxed">{msg.content}</p>
+                  {(() => { const parsed = parseMessageContent(msg.content); return (<><p className="break-words leading-relaxed">{parsed.text}</p>{parsed.cta && (<button onClick={(e) => { e.stopPropagation(); if (parsed.cta!.action.startsWith("http")) { window.open(parsed.cta!.action, "_blank", "noopener"); } else { navigate(parsed.cta!.action); } }} className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-[1.03]" style={{ background: 'linear-gradient(135deg, hsl(45,80%,45%) 0%, hsl(35,90%,38%) 100%)', color: 'hsl(220,20%,8%)', boxShadow: '0 4px 12px hsl(45,80%,40%,0.3)', border: '1px solid hsl(45,70%,50%,0.4)' }}>{parsed.cta!.label}</button>)}</>); })()}
                   <p className={`text-xs mt-1 text-right ${isUserMessage || isAiMessage ? "text-white/50" : "text-muted-foreground"}`}>{new Date(msg.created_at).toLocaleString()}</p>
                 </div>
               </div>
