@@ -53,6 +53,7 @@ interface Message {
 
 export default function MessagesPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { sendMessageToAdmin } = useMessages();
   const { refresh: refreshUnreadCount } = useUnreadMessagesCount();
 
