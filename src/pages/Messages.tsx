@@ -471,7 +471,7 @@ export default function MessagesPage() {
                     >
                       {cta.label}
                     </button>
-                  )
+                  )}
                   
                   <p 
                     className={`relative z-10 text-xs mt-2 ${
