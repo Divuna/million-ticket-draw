@@ -37,6 +37,7 @@ interface ContactInfo {
 
 export default function AdminMessageThread() {
   const { userId } = useParams();
+  const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const [messages, setMessages] = useState<Message[]>([]);
