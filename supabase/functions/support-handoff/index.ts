@@ -50,6 +50,10 @@ serve(async (req) => {
     originalText = ""
   }
 
+  if (!originalText || originalText.length < 3) {
+    return json(400, { error: "Invalid message" })
+  }
+
   const nowIso = new Date().toISOString()
   const msg = originalText || "Uživatel chce kontaktovat podporu."
   const adminContent = `SUPPORT REQUEST

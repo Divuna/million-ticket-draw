@@ -768,6 +768,24 @@ function isSupportRelatedQuestion(userText: string): boolean {
   )
 }
 
+function isSupportIntentForCta(userText: string, assistantText?: string): boolean {
+  const q = foldCs(userText)
+  const a = typeof assistantText === "string" ? foldCs(assistantText) : ""
+  const hasExplicitPhrases =
+    q.includes("predam podpor") ||
+    q.includes("kontaktovat podporu") ||
+    q.includes("predat to podpor") ||
+    q.includes("napis podpore") ||
+    q.includes("chci podporu") ||
+    a.includes("predam podpor") ||
+    a.includes("kontaktovat podporu")
+
+  const explicitlyAsksForHelp =
+    q.includes("pomoc") || q.includes("pomoz") || q.includes("help")
+
+  return hasExplicitPhrases || explicitlyAsksForHelp
+}
+
 function isExplicitSupportHandoffRequest(userText: string): boolean {
   const f = foldCs(userText)
   return (
@@ -863,7 +881,10 @@ function enforceRequiredSectionCta(
   payload: BobAssistantPayload,
 ): BobAssistantPayload {
   if (isBobSupportOrWhatsAppReplyText(payload.text)) return payload
-  if (payload.cta?.action === "/messages") return payload
+  if (payload.cta?.action === "/messages") {
+    if (isSupportIntentForCta(userQuestion, payload.text)) return payload
+    return { text: payload.text, cta: { label: BOB_CTA_BY_ACTION["/games"], action: "/games" } }
+  }
   const req = requiredBobCtaActionFromUserQuestion(userQuestion)
   if (!req) return payload
   return {
@@ -876,7 +897,11 @@ function normalizeBobPayloadBeforeFinalize(
   userQuestion: string,
   payload: BobAssistantPayload,
 ): BobAssistantPayload {
-  return enforceRequiredSectionCta(userQuestion, stripCtaIfSupportOrWhatsApp(payload))
+  const stripped = stripCtaIfSupportOrWhatsApp(payload)
+  if (stripped.cta?.action === "/messages" && !isSupportIntentForCta(userQuestion, stripped.text)) {
+    return enforceRequiredSectionCta(userQuestion, { ...stripped, cta: { label: BOB_CTA_BY_ACTION["/games"], action: "/games" } })
+  }
+  return enforceRequiredSectionCta(userQuestion, stripped)
 }
 
 async function finalizeBobPayloadNormalized(
@@ -1291,7 +1316,7 @@ serve(async (req) => {
           ? await rephraseKnowledgeForBob(openaiKey, extendedKb, userContent)
           : null
         const reply = rephrased ?? extendedKb
-        const supportRelated = isSupportRelatedQuestion(userContent)
+        const supportRelated = isSupportIntentForCta(userContent, reply)
         const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
 
         const payload: BobAssistantPayload =
@@ -1331,7 +1356,7 @@ serve(async (req) => {
           ? await rephraseKnowledgeForBob(openaiKey, predefined, userContent)
           : null
         const reply = rephrased ?? predefined
-        const supportRelated = isSupportRelatedQuestion(userContent)
+        const supportRelated = isSupportIntentForCta(userContent, reply)
         const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
 
         const payload: BobAssistantPayload =
@@ -1641,13 +1666,17 @@ serve(async (req) => {
       return await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
     }
 
-    const supportRelated = isSupportRelatedQuestion(userContent)
+    const supportRelated = isSupportIntentForCta(userContent, bobPayload.text)
     const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
     if (supportRelated && !explicitHandoff && isBobSupportOrWhatsAppReplyText(bobPayload.text)) {
       bobPayload = {
         text: addOptionalSupportCta(""),
         cta: { label: "Kontaktovat podporu", action: "/messages" },
       }
+    }
+
+    if (bobPayload.cta?.action === "/messages" && !isSupportIntentForCta(userContent, bobPayload.text)) {
+      bobPayload = { ...bobPayload, cta: { label: "Soutěže", action: "/games" } }
     }
 
     if (explicitHandoff) {

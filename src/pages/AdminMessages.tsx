@@ -23,6 +23,24 @@ interface Thread {
   role: "user" | "influencer" | "partner";
 }
 
+function safePlainTextFromMessageContent(content: unknown): string {
+  if (typeof content !== "string") return "";
+  const t = content.trim();
+  if (!t) return "";
+  // If content is a JSON wrapper (ai rows), extract `text` instead of inspecting raw JSON.
+  if (t.startsWith("{") && t.endsWith("}")) {
+    try {
+      const parsed = JSON.parse(t) as { text?: unknown };
+      if (parsed && typeof parsed === "object" && typeof parsed.text === "string") {
+        return parsed.text.trim();
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return t;
+}
+
 export default function AdminMessages() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -112,9 +130,11 @@ export default function AdminMessages() {
     const result: Thread[] = userIds.map((uid) => {
       const userMessages = grouped[uid];
       const hasUnread = userMessages.some((msg) => msg.sender === "user" && !msg.read);
-      const hasSupportRequest = userMessages.some(
-        (msg) => msg.sender === "admin" && typeof msg.content === "string" && msg.content.startsWith("SUPPORT REQUEST"),
-      );
+      const hasSupportRequest = userMessages.some((msg) => {
+        if (msg.sender !== "admin") return false;
+        const plain = safePlainTextFromMessageContent(msg.content);
+        return plain.startsWith("SUPPORT REQUEST");
+      });
       const userInfo = userMap[uid] || { email: null, name: null };
       const partner = partnerMap[uid];
       const isInfluencer = partner?.isInfluencer ?? false;
@@ -189,7 +209,7 @@ export default function AdminMessages() {
             const isSpecialRead = isSpecial && !thread.has_unread;
             const isUserUnread = !isSpecial && thread.has_unread;
             const isSupportRequest = thread.has_support_request;
-            const showUnreadIndicator = thread.has_unread || isSupportRequest;
+            const showUnreadIndicator = thread.has_unread;
 
             return (
               <div

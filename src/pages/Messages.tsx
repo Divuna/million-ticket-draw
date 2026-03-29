@@ -263,11 +263,27 @@ type MessageThreadItemProps = {
   userName: string;
   /** Tail AI row actively streaming (hide CTA + typing-style text reveal). */
   tailAiStreamActive: boolean;
-  onSupportCtaClick: () => void;
+  supportHandoffInFlightRef: React.MutableRefObject<boolean>;
+  loadMessages: () => Promise<void>;
+  supportHandoffMessage: string;
+  isUserClick: boolean;
+  setIsUserClick: React.Dispatch<React.SetStateAction<boolean>>;
+  isUserClickRef: React.MutableRefObject<boolean>;
 };
 
 const MessageThreadItem = memo(
-  function MessageThreadItem({ msg, index, userName, tailAiStreamActive, onSupportCtaClick }: MessageThreadItemProps) {
+  function MessageThreadItem({
+    msg,
+    index,
+    userName,
+    tailAiStreamActive,
+    supportHandoffInFlightRef,
+    loadMessages,
+    supportHandoffMessage,
+    isUserClick,
+    setIsUserClick,
+    isUserClickRef,
+  }: MessageThreadItemProps) {
   const navigate = useNavigate();
   const parsed = parseMessageContent(msg.content);
   const displayText = parsed.text;
@@ -398,9 +414,26 @@ const MessageThreadItem = memo(
                 window.open(cta.action, "_blank", "noopener");
               } else {
                 if (cta.action === "/messages") {
-                  console.log("SUPPORT HANDOFF TRIGGERED");
-                  await onSupportCtaClick();
+                  setIsUserClick(true);
+                  isUserClickRef.current = true;
+
+                  if (cta.action === "/messages" && isUserClickRef.current === true) {
+                    console.log("SUPPORT HANDOFF TRIGGERED BY USER");
+                  console.log("SENDING TO SUPPORT:", lastUserMessage);
+                  if (supportHandoffInFlightRef.current) return;
+                  supportHandoffInFlightRef.current = true;
+                  try {
+                    await supabase.functions.invoke("support-handoff", {
+                      body: { message: supportHandoffMessage },
+                    });
+                    setIsUserClick(false);
+                    isUserClickRef.current = false;
+                    await loadMessages();
+                  } finally {
+                    supportHandoffInFlightRef.current = false;
+                  }
                   return;
+                  }
                 }
                 navigate(cta.action);
               }
@@ -463,7 +496,12 @@ type MessagesThreadListProps = {
   userName: string;
   streamingAiMessageId: string | null;
   showTypingIndicator: boolean;
-  onSupportCtaClick: () => void;
+  supportHandoffInFlightRef: React.MutableRefObject<boolean>;
+  loadMessages: () => Promise<void>;
+  supportHandoffMessage: string;
+  isUserClick: boolean;
+  setIsUserClick: React.Dispatch<React.SetStateAction<boolean>>;
+  isUserClickRef: React.MutableRefObject<boolean>;
 };
 
 const MessagesThreadList = memo(function MessagesThreadList({
@@ -471,7 +509,12 @@ const MessagesThreadList = memo(function MessagesThreadList({
   userName,
   streamingAiMessageId,
   showTypingIndicator,
-  onSupportCtaClick,
+  supportHandoffInFlightRef,
+  loadMessages,
+  supportHandoffMessage,
+  isUserClick,
+  setIsUserClick,
+  isUserClickRef,
 }: MessagesThreadListProps) {
   const visible = useMemo(
     () => filterMessagesForDisplay(messages, showTypingIndicator),
@@ -486,7 +529,12 @@ const MessagesThreadList = memo(function MessagesThreadList({
           index={index}
           userName={userName}
           tailAiStreamActive={streamingAiMessageId !== null && streamingAiMessageId === msg.id}
-          onSupportCtaClick={onSupportCtaClick}
+          supportHandoffInFlightRef={supportHandoffInFlightRef}
+          loadMessages={loadMessages}
+          supportHandoffMessage={supportHandoffMessage}
+          isUserClick={isUserClick}
+          setIsUserClick={setIsUserClick}
+          isUserClickRef={isUserClickRef}
         />
       ))}
     </>
@@ -519,6 +567,8 @@ export default function MessagesPage() {
   const messagesRef = useRef<Message[]>([]);
   const streamSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const supportHandoffInFlightRef = useRef(false);
+  const [isUserClick, setIsUserClick] = useState(false);
+  const isUserClickRef = useRef(false);
   const prevTailAiStreamRef = useRef<{ id: string; content: string } | null>(null);
   const skipTailAiStreamDebounceRef = useRef(true);
   const hasMoreOlderRef = useRef(false);
@@ -784,15 +834,30 @@ export default function MessagesPage() {
     };
 
     const channel = supabase
-      .channel(`messages-thread-pg:${uid}`)
+      .channel("messages")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "messages", filter: `user_id=eq.${uid}` },
         (payload) => {
-          pending.push(payload as RealtimePostgresChangesPayload<Message>);
-          if (rafId == null) {
-            rafId = requestAnimationFrame(flush);
+          const p = payload as RealtimePostgresChangesPayload<Message>;
+          // INSERT should appear immediately (Bob reply + admin messages) — do not wait for RAF batching.
+          if (p.eventType === "INSERT") {
+            if (p.new && (p.new as Message).user_id === uid) {
+              setMessages((prev) => {
+                const beforeLen = prev.length;
+                const next = mergeMessagesFromRealtime(prev, p);
+                return capAfterTailGrowth(beforeLen, next);
+              });
+              const sender = (p.new as Message).sender;
+              if (sender === "ai" || sender === "admin") {
+                setIsAwaitingReply(false);
+              }
+            }
+            return;
           }
+
+          pending.push(p);
+          if (rafId == null) rafId = requestAnimationFrame(flush);
         },
       )
       .subscribe();
@@ -822,26 +887,15 @@ export default function MessagesPage() {
 
   const showTypingIndicator = isAwaitingReply && !hasRenderableAiOrAdminReply;
 
-  const handleSupportCtaClick = useCallback(async () => {
-    if (supportHandoffInFlightRef.current) return;
-    supportHandoffInFlightRef.current = true;
-    try {
-      const lastUser = [...messagesRef.current].reverse().find((m) => m.sender === "user");
-      const message = typeof lastUser?.content === "string" ? lastUser.content : "";
-      await supabase.functions.invoke("support-handoff", {
-        body: { message },
-      });
-      await loadMessages();
-    } catch {
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se předat dotaz podpoře",
-        variant: "destructive",
-      });
-    } finally {
-      supportHandoffInFlightRef.current = false;
-    }
-  }, [loadMessages]);
+  const lastUserMessage = useMemo(() => {
+    return (
+      messages
+        .filter((m) => m.sender === "user")
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0] ?? null
+    );
+  }, [messages]);
+
+  const supportHandoffMessage = lastUserMessage?.content ?? "";
 
   useEffect(() => {
     if (hasRenderableAiOrAdminReply) {
@@ -1136,7 +1190,12 @@ export default function MessagesPage() {
             userName={userName}
             streamingAiMessageId={streamingAiMessageId}
             showTypingIndicator={showTypingIndicator}
-            onSupportCtaClick={handleSupportCtaClick}
+            supportHandoffInFlightRef={supportHandoffInFlightRef}
+            loadMessages={loadMessages}
+            supportHandoffMessage={supportHandoffMessage}
+            isUserClick={isUserClick}
+            setIsUserClick={setIsUserClick}
+            isUserClickRef={isUserClickRef}
           />
 
           {showTypingIndicator && (
