@@ -17,6 +17,7 @@ interface Thread {
   last_message: string;
   last_date: string;
   has_unread: boolean;
+  has_support_request: boolean;
   is_influencer: boolean;
   is_partner: boolean;
   role: "user" | "influencer" | "partner";
@@ -111,6 +112,9 @@ export default function AdminMessages() {
     const result: Thread[] = userIds.map((uid) => {
       const userMessages = grouped[uid];
       const hasUnread = userMessages.some((msg) => msg.sender === "user" && !msg.read);
+      const hasSupportRequest = userMessages.some(
+        (msg) => msg.sender === "admin" && typeof msg.content === "string" && msg.content.startsWith("SUPPORT REQUEST"),
+      );
       const userInfo = userMap[uid] || { email: null, name: null };
       const partner = partnerMap[uid];
       const isInfluencer = partner?.isInfluencer ?? false;
@@ -123,6 +127,7 @@ export default function AdminMessages() {
         last_message: userMessages[0]?.content || "",
         last_date: userMessages[0]?.created_at || "",
         has_unread: hasUnread,
+        has_support_request: hasSupportRequest,
         is_influencer: isInfluencer,
         is_partner: isPartner,
         role: isInfluencer ? "influencer" as const : isPartner ? "partner" as const : "user" as const,
@@ -183,6 +188,8 @@ export default function AdminMessages() {
             const isSpecialUnread = isSpecial && thread.has_unread;
             const isSpecialRead = isSpecial && !thread.has_unread;
             const isUserUnread = !isSpecial && thread.has_unread;
+            const isSupportRequest = thread.has_support_request;
+            const showUnreadIndicator = thread.has_unread || isSupportRequest;
 
             return (
               <div
@@ -192,7 +199,9 @@ export default function AdminMessages() {
                   relative rounded-2xl cursor-pointer 
                   transition-all duration-200 ease-in-out
                   hover:scale-[1.02] hover:shadow-xl
-                  ${thread.is_influencer && isSpecialUnread
+                  ${isSupportRequest
+                    ? "p-[2px] bg-gradient-to-br from-destructive/70 to-destructive/20 shadow-md shadow-destructive/20"
+                    : thread.is_influencer && isSpecialUnread
                     ? "p-[2px] bg-gradient-to-br from-[hsl(280,70%,55%)] to-[hsl(300,60%,45%)] shadow-lg shadow-[hsl(280,60%,50%,0.3)]"
                     : thread.is_partner && isSpecialUnread
                       ? "p-[2px] bg-gradient-to-br from-[hsl(200,70%,50%)] to-[hsl(210,60%,40%)] shadow-lg shadow-[hsl(200,60%,50%,0.3)]"
@@ -208,7 +217,9 @@ export default function AdminMessages() {
               >
                 <div className={`
                   rounded-[14px] p-4 h-full
-                  ${thread.is_influencer && isSpecialUnread
+                  ${isSupportRequest
+                    ? "bg-destructive/10"
+                    : thread.is_influencer && isSpecialUnread
                     ? "bg-[hsl(280,40%,12%)]"
                     : thread.is_partner && isSpecialUnread
                       ? "bg-[hsl(200,35%,12%)]"
@@ -222,9 +233,11 @@ export default function AdminMessages() {
                   }
                 `}>
                   {/* Unread dot */}
-                  {thread.has_unread && (
+                  {showUnreadIndicator && (
                     <div className={`absolute top-3 right-3 w-3 h-3 rounded-full animate-pulse ring-2 ${
-                      thread.is_influencer
+                      isSupportRequest
+                        ? "bg-destructive ring-destructive/40"
+                        : thread.is_influencer
                         ? "bg-[hsl(280,70%,60%)] ring-[hsl(280,70%,60%,0.4)]"
                         : thread.is_partner
                           ? "bg-[hsl(200,70%,55%)] ring-[hsl(200,70%,55%,0.4)]"
@@ -246,6 +259,13 @@ export default function AdminMessages() {
                       <Badge className="bg-[hsl(200,60%,40%)] text-white border-[hsl(200,70%,50%,0.3)] text-[10px] uppercase tracking-wider gap-1">
                         <Building2 className="w-3 h-3" />
                         Partner
+                      </Badge>
+                    </div>
+                  )}
+                  {isSupportRequest && (
+                    <div className="mb-2">
+                      <Badge className="bg-destructive text-white border-destructive/40 text-[10px] uppercase tracking-wider">
+                        Support
                       </Badge>
                     </div>
                   )}
