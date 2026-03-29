@@ -398,6 +398,7 @@ const MessageThreadItem = memo(
                 window.open(cta.action, "_blank", "noopener");
               } else {
                 if (cta.action === "/messages") {
+                  console.log("SUPPORT HANDOFF TRIGGERED");
                   await onSupportCtaClick();
                   return;
                 }
