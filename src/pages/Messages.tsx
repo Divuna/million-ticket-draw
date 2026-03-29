@@ -263,10 +263,11 @@ type MessageThreadItemProps = {
   userName: string;
   /** Tail AI row actively streaming (hide CTA + typing-style text reveal). */
   tailAiStreamActive: boolean;
+  onSupportCtaClick: () => void;
 };
 
 const MessageThreadItem = memo(
-  function MessageThreadItem({ msg, index, userName, tailAiStreamActive }: MessageThreadItemProps) {
+  function MessageThreadItem({ msg, index, userName, tailAiStreamActive, onSupportCtaClick }: MessageThreadItemProps) {
   const navigate = useNavigate();
   const parsed = parseMessageContent(msg.content);
   const displayText = parsed.text;
@@ -389,11 +390,17 @@ const MessageThreadItem = memo(
         {cta && !(isAiMessage && tailAiStreamActive) && (
           <button
             type="button"
-            onClick={(e) => {
+            onClick={async (e) => {
+              console.log("CTA CLICK", cta);
+              e.preventDefault();
               e.stopPropagation();
               if (cta.action.startsWith("http")) {
                 window.open(cta.action, "_blank", "noopener");
               } else {
+                if (cta.action === "/messages") {
+                  await onSupportCtaClick();
+                  return;
+                }
                 navigate(cta.action);
               }
             }}
@@ -403,6 +410,9 @@ const MessageThreadItem = memo(
               color: "hsl(220, 20%, 8%)",
               boxShadow: "0 4px 12px hsl(45, 80%, 40%, 0.3)",
               border: "1px solid hsl(45, 70%, 50%, 0.4)",
+              pointerEvents: "auto",
+              position: "relative",
+              zIndex: 50,
             }}
           >
             {cta.label}
@@ -452,6 +462,7 @@ type MessagesThreadListProps = {
   userName: string;
   streamingAiMessageId: string | null;
   showTypingIndicator: boolean;
+  onSupportCtaClick: () => void;
 };
 
 const MessagesThreadList = memo(function MessagesThreadList({
@@ -459,6 +470,7 @@ const MessagesThreadList = memo(function MessagesThreadList({
   userName,
   streamingAiMessageId,
   showTypingIndicator,
+  onSupportCtaClick,
 }: MessagesThreadListProps) {
   const visible = useMemo(
     () => filterMessagesForDisplay(messages, showTypingIndicator),
@@ -473,6 +485,7 @@ const MessagesThreadList = memo(function MessagesThreadList({
           index={index}
           userName={userName}
           tailAiStreamActive={streamingAiMessageId !== null && streamingAiMessageId === msg.id}
+          onSupportCtaClick={onSupportCtaClick}
         />
       ))}
     </>
@@ -504,6 +517,7 @@ export default function MessagesPage() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const messagesRef = useRef<Message[]>([]);
   const streamSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const supportHandoffInFlightRef = useRef(false);
   const prevTailAiStreamRef = useRef<{ id: string; content: string } | null>(null);
   const skipTailAiStreamDebounceRef = useRef(true);
   const hasMoreOlderRef = useRef(false);
@@ -807,6 +821,27 @@ export default function MessagesPage() {
 
   const showTypingIndicator = isAwaitingReply && !hasRenderableAiOrAdminReply;
 
+  const handleSupportCtaClick = useCallback(async () => {
+    if (supportHandoffInFlightRef.current) return;
+    supportHandoffInFlightRef.current = true;
+    try {
+      const lastUser = [...messagesRef.current].reverse().find((m) => m.sender === "user");
+      const message = typeof lastUser?.content === "string" ? lastUser.content : "";
+      await supabase.functions.invoke("support-handoff", {
+        body: { message },
+      });
+      await loadMessages();
+    } catch {
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se předat dotaz podpoře",
+        variant: "destructive",
+      });
+    } finally {
+      supportHandoffInFlightRef.current = false;
+    }
+  }, [loadMessages]);
+
   useEffect(() => {
     if (hasRenderableAiOrAdminReply) {
       setIsAwaitingReply(false);
@@ -1100,6 +1135,7 @@ export default function MessagesPage() {
             userName={userName}
             streamingAiMessageId={streamingAiMessageId}
             showTypingIndicator={showTypingIndicator}
+            onSupportCtaClick={handleSupportCtaClick}
           />
 
           {showTypingIndicator && (

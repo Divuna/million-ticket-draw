@@ -88,6 +88,10 @@ function formatCsNumber(n: number): string {
 function getExtendedKnowledgeReply(text: string): string | null {
   const t = text.toLowerCase()
 
+  if (isGeneralRecommendationQuestion(text)) {
+    return null
+  }
+
   if (
     (t.includes("kolik mám") || t.includes("kolik mam")) &&
     (t.includes("miocoin") || t.includes("coin"))
@@ -140,7 +144,7 @@ function getExtendedKnowledgeReply(text: string): string | null {
     return AI_KNOWLEDGE.referral.privacy
   }
 
-  if (t.includes("doporuč") || t.includes("doporuc") || t.includes("pozvi") || t.includes("referral")) {
+  if (t.includes("pozvi") || t.includes("referral")) {
     return `${AI_KNOWLEDGE.referral.info}\n\n${AI_KNOWLEDGE.referral.stats}`
   }
 
@@ -591,6 +595,7 @@ const BOB_CTA_BY_ACTION = {
   "/wallet": "Peněženka",
   "/wins": "Výhry",
   "/vouchers": "Vouchery",
+  "/messages": "Kontaktovat podporu",
   "/profile": "Profil",
 } as const
 
@@ -602,6 +607,63 @@ function stripAssistantCodeFence(raw: string): string {
   const s = raw.trim()
   const m = /^```(?:json)?\s*\n?([\s\S]*?)\n?```$/im.exec(s)
   if (m) return m[1].trim()
+  return s
+}
+
+function keepOnlyLastValidJsonObject(raw: string): string {
+  const s = stripAssistantCodeFence(raw).trim()
+  if (!s) return s
+
+  // Extract all top-level {...} blocks and keep the LAST valid JSON.
+  const blocks: string[] = []
+  let start: number | null = null
+  let depth = 0
+  let inStr = false
+  let esc = false
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i]
+    if (inStr) {
+      if (esc) {
+        esc = false
+      } else if (ch === "\\") {
+        esc = true
+      } else if (ch === '"') {
+        inStr = false
+      }
+      continue
+    }
+
+    if (ch === '"') {
+      inStr = true
+      continue
+    }
+    if (ch === "{") {
+      if (depth === 0) start = i
+      depth++
+      continue
+    }
+    if (ch === "}") {
+      if (depth > 0) depth--
+      if (depth === 0 && start !== null) {
+        blocks.push(s.slice(start, i + 1))
+        start = null
+      }
+    }
+  }
+
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    const cand = blocks[i].trim()
+    try {
+      const o = JSON.parse(cand) as Record<string, unknown>
+      if (!o || typeof o !== "object") continue
+      return cand
+    } catch {
+      // keep searching
+    }
+  }
+
+  // No JSON object found — return trimmed raw so downstream can fallback.
   return s
 }
 
@@ -681,6 +743,59 @@ function userDataIntentFromUserText(userText: string): UserDataIntent {
   return null
 }
 
+function isGeneralRecommendationQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (
+    f.includes("doporuc") ||
+    f.includes("co mam delat") ||
+    f.includes("jak pokracovat")
+  )
+}
+
+function isSupportRelatedQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (
+    f.includes("podpora") ||
+    f.includes("kontakt") ||
+    f.includes("reklamac") ||
+    f.includes("vratit") ||
+    f.includes("refund") ||
+    f.includes("problem") ||
+    f.includes("nefunguje") ||
+    f.includes("nejde") ||
+    f.includes("chci mluvit") ||
+    f.includes("lidsk")
+  )
+}
+
+function isExplicitSupportHandoffRequest(userText: string): boolean {
+  const f = foldCs(userText)
+  return (
+    f.includes("predat podpor") ||
+    f.includes("kontaktovat podpor") ||
+    f.includes("napis podpore") ||
+    f.includes("chci podporu")
+  )
+}
+
+function isWinProblem(userText: string): boolean {
+  const f = foldCs(userText)
+  return (
+    f.includes("neprisla") ||
+    f.includes("nedorazila") ||
+    f.includes("kde je") ||
+    f.includes("neobdrzel") ||
+    f.includes("problem")
+  )
+}
+
+function addOptionalSupportCta(text: string): string {
+  const t = text.trim()
+  if (!t) return 'Můžu to předat podpoře.'
+  if (t.includes("Můžu to předat podpoře.")) return t
+  return `${t}\nMůžu to předat podpoře.`
+}
+
 /**
  * Questions about *this user's* balances, wins, or account state must go to GPT with USER DATA,
  * not static KB/predefined text or the short wallet/winners template replies.
@@ -728,6 +843,7 @@ function requiredBobCtaActionFromUserQuestion(userQuestion: string): BobCtaActio
     "/my-contests": 4,
     "/games": 5,
     "/customer-inbox": 6,
+    "/messages": 7,
   }
   const hits: Array<{ action: BobCtaAction; idx: number }> = []
   for (const { action, re } of rules) {
@@ -747,6 +863,7 @@ function enforceRequiredSectionCta(
   payload: BobAssistantPayload,
 ): BobAssistantPayload {
   if (isBobSupportOrWhatsAppReplyText(payload.text)) return payload
+  if (payload.cta?.action === "/messages") return payload
   const req = requiredBobCtaActionFromUserQuestion(userQuestion)
   if (!req) return payload
   return {
@@ -972,9 +1089,48 @@ serve(async (req) => {
 
     const userTextLower = userContent.toLowerCase()
     const userDataIntent = userDataIntentFromUserText(userContent)
-    const routeUserDataToGpt = shouldRouteUserDataQuestionToGpt(userContent) || userDataIntent !== null
+    const isGeneralReco = isGeneralRecommendationQuestion(userContent)
+    const routeUserDataToGpt =
+      shouldRouteUserDataQuestionToGpt(userContent) || userDataIntent !== null || isGeneralReco
     if (routeUserDataToGpt) {
       console.log("[ai-chat] user-specific data question → GPT (skip quick handlers, KB, predefined)")
+    }
+
+    // General recommendation questions must use USER DATA (wallet balance) and must bypass KB/referral/generic replies.
+    if (isGeneralReco) {
+      const { data: walletRow, error: wErr } = await supabase
+        .from("wallets")
+        .select("balance_coins")
+        .eq("user_id", userMsg.user_id)
+        .maybeSingle()
+
+      if (wErr) {
+        console.error("[ai-chat] wallets lookup failed", wErr)
+      } else if (walletRow && typeof walletRow.balance_coins === "number" && Number.isFinite(walletRow.balance_coins)) {
+        const bal = Math.max(0, walletRow.balance_coins)
+        const reply =
+          bal > 0
+            ? `Máte ${formatCsNumber(bal)} MioCoinů. Doporučuji vybrat si soutěž a koupit tiket v sekci Soutěže.`
+            : "Na účtu teď nemáte žádné MioCoiny. Doporučuji si je nejdřív dobít v Peněžence a pak se zapojit do soutěže."
+
+        const finalReply = await finalizeBobPayloadNormalized(
+          supabase,
+          userMsg.user_id,
+          messageId,
+          userContent,
+          bobPayloadFromRawAssistantString(reply),
+        )
+
+        const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+        if (!ins.ok) {
+          return new Response(JSON.stringify({ error: ins.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          })
+        }
+        return jsonSuccess(ins.id)
+      }
+      // If wallet missing/unavailable, fall through to GPT with USER DATA (KB still skipped via routeUserDataToGpt).
     }
 
     // 1) Dynamic user-data handlers (Supabase → quick reply). Skipped when routing to GPT with USER DATA.
@@ -1027,6 +1183,28 @@ serve(async (req) => {
 
     // If user asks about winning (vyhr*), ALWAYS use winners table (no GPT fallback).
     if (userDataIntent === "wins") {
+      if (isWinProblem(userContent)) {
+        const reply =
+          "Výhra se odesílá zpravidla do týdne, pokud není uvedeno jinak. Pokud vám výhra nedorazila, můžu to předat podpoře."
+
+        const finalReply = await finalizeBobPayloadNormalized(
+          supabase,
+          userMsg.user_id,
+          messageId,
+          userContent,
+          { text: reply, cta: { label: "Kontaktovat podporu", action: "/messages" } },
+        )
+
+        const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+        if (!ins.ok) {
+          return new Response(JSON.stringify({ error: ins.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          })
+        }
+        return jsonSuccess(ins.id)
+      }
+
       console.log("DB handler: winners")
       const { count, error: winErr } = await supabase
         .from("winners")
@@ -1069,7 +1247,11 @@ serve(async (req) => {
       return jsonSuccess(ins.id)
     }
 
-    if (!routeUserDataToGpt && userTextLower.includes("kolik mám") && userTextLower.includes("tiket")) {
+    if (
+      userTextLower.includes("tiket") ||
+      userTextLower.includes("lístek") ||
+      userTextLower.includes("list")
+    ) {
       const { count, error: tErr } = await supabase
         .from("tickets")
         .select("id", { count: "exact", head: true })
@@ -1109,13 +1291,23 @@ serve(async (req) => {
           ? await rephraseKnowledgeForBob(openaiKey, extendedKb, userContent)
           : null
         const reply = rephrased ?? extendedKb
+        const supportRelated = isSupportRelatedQuestion(userContent)
+        const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
+
+        const payload: BobAssistantPayload =
+          supportRelated && !explicitHandoff
+            ? {
+                text: addOptionalSupportCta(reply),
+                cta: { label: "Kontaktovat podporu", action: "/messages" },
+              }
+            : bobPayloadFromRawAssistantString(reply)
 
         const finalReply = await finalizeBobPayloadNormalized(
           supabase,
           userMsg.user_id,
           messageId,
           userContent,
-          bobPayloadFromRawAssistantString(reply),
+          payload,
         )
 
         const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
@@ -1139,13 +1331,23 @@ serve(async (req) => {
           ? await rephraseKnowledgeForBob(openaiKey, predefined, userContent)
           : null
         const reply = rephrased ?? predefined
+        const supportRelated = isSupportRelatedQuestion(userContent)
+        const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
+
+        const payload: BobAssistantPayload =
+          supportRelated && !explicitHandoff
+            ? {
+                text: addOptionalSupportCta(reply),
+                cta: { label: "Kontaktovat podporu", action: "/messages" },
+              }
+            : bobPayloadFromRawAssistantString(reply)
 
         const finalReply = await finalizeBobPayloadNormalized(
           supabase,
           userMsg.user_id,
           messageId,
           userContent,
-          bobPayloadFromRawAssistantString(reply),
+          payload,
         )
 
         const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
@@ -1429,7 +1631,7 @@ serve(async (req) => {
     await flushChain
     await flushStreamingPartial()
 
-    const rawTrimmed = rawAssistant.trim()
+    const rawTrimmed = keepOnlyLastValidJsonObject(rawAssistant)
     let bobPayload = bobPayloadFromRawAssistantString(rawTrimmed)
     bobPayload = {
       ...bobPayload,
@@ -1437,6 +1639,19 @@ serve(async (req) => {
     }
     if (!bobPayload.text.trim()) {
       return await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
+    }
+
+    const supportRelated = isSupportRelatedQuestion(userContent)
+    const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
+    if (supportRelated && !explicitHandoff && isBobSupportOrWhatsAppReplyText(bobPayload.text)) {
+      bobPayload = {
+        text: addOptionalSupportCta(""),
+        cta: { label: "Kontaktovat podporu", action: "/messages" },
+      }
+    }
+
+    if (explicitHandoff) {
+      bobPayload = { text: BOB_SUPPORT_HANDOFF_PHRASE }
     }
 
     if (shouldFallbackToAdmin(bobPayload.text)) {
