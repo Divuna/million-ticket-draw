@@ -3,7 +3,7 @@ import { Volume2, VolumeX, Wifi, WifiOff, Users, Gamepad2, CreditCard, Banknote,
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { useAdminPresenceCount } from '@/hooks/useAdminPresenceCount';
+import { useAdminOnlineIndicator } from '@/hooks/useAdminOnlineIndicator';
 import { useNavigate } from 'react-router-dom';
 import {
   Popover,
@@ -42,7 +42,7 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
   const navigate = useNavigate();
   const [isPulsing, setIsPulsing] = useState(false);
   const [stats, setStats] = useState<AdminStats>({ gamesToday: 0, paymentsToday: 0, revenueToday: 0 });
-  const { onlineCount, onlineUsers, presenceStatus, lastSyncAt } = useAdminPresenceCount();
+  const { onlineCount, onlineUsers, statusLabel, lastUpdatedAt } = useAdminOnlineIndicator();
   const [onlineUserDetails, setOnlineUserDetails] = useState<OnlineUserInfo[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -80,7 +80,7 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
           .in('id', userIds);
 
         if (error) {
-          console.error('[AdminPresence] Error fetching user details:', error);
+          console.error('Error fetching user details:', error);
           return;
         }
 
@@ -100,7 +100,7 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
 
         setOnlineUserDetails(details);
       } catch (error) {
-        console.error('[AdminPresence] Error:', error);
+        console.error('Error:', error);
       } finally {
         setIsLoadingUsers(false);
       }
@@ -109,7 +109,7 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
     fetchUserDetails();
   }, [onlineUsers]);
 
-  // Fetch admin stats (excluding online count which is now live via Presence)
+  // Fetch admin stats (online count is not tracked here)
   useEffect(() => {
     const fetchStats = async () => {
       const now = new Date();
@@ -199,7 +199,7 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
 
       {/* Admin stats indicators */}
       <div className="hidden md:flex items-center gap-2">
-        {/* Online teď - LIVE via Supabase Presence with dropdown */}
+        {/* Online teď */}
         <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
           <PopoverTrigger asChild>
             <button
@@ -221,7 +221,7 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
               <p className="text-xs text-muted-foreground">Klikni pro zobrazení detailu</p>
               {/* Debug info */}
               <div className="mt-1 text-[10px] text-muted-foreground/60 font-mono">
-                Status: {presenceStatus} | Sync: {lastSyncAt ? lastSyncAt.toLocaleTimeString('cs-CZ') : '-'}
+                Status: {statusLabel} | Sync: {lastUpdatedAt ? lastUpdatedAt.toLocaleTimeString('cs-CZ') : '-'}
               </div>
             </div>
             <div className="max-h-64 overflow-y-auto">

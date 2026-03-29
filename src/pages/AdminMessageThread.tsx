@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, Link, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { capChatMessagesState, CHAT_MESSAGES_STATE_CAP } from "@/lib/chatMessagesStateCap";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Star, Building2, User, ArrowLeft, Mail, Phone } from "lucide-react";
@@ -66,7 +67,8 @@ export default function AdminMessageThread() {
       .from("messages")
       .select("*")
       .eq("user_id", userId)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false })
+      .limit(CHAT_MESSAGES_STATE_CAP);
 
     if (error) {
       console.error(error);
@@ -74,11 +76,12 @@ export default function AdminMessageThread() {
       return;
     }
 
+    const chronological = data ? [...data].reverse() : [];
     // Filter out automatic winner messages in admin view
-    const filtered = (data || []).filter(
+    const filtered = chronological.filter(
       (msg) => !msg.content.includes("Gratulujeme k výhře")
     );
-    setMessages(filtered);
+    setMessages(capChatMessagesState(filtered));
 
     // Mark all user messages as read
     await supabase.from("messages").update({ read: true }).eq("user_id", userId).eq("sender", "user").eq("read", false);

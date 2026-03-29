@@ -5,6 +5,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { capChatMessagesState, CHAT_MESSAGES_STATE_CAP } from "@/lib/chatMessagesStateCap";
 import { toast } from "@/hooks/use-toast";
 import { MessageCircle, Send, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,9 @@ interface Message {
   read: boolean;
   created_at: string;
 }
+
+/** Initial fetch + realtime refetch: last N rows only (no full history). */
+const MESSAGES_PAGE_LIMIT = 20;
 
 export default function InfluencerMessages() {
   const { user } = useAuth();
@@ -73,8 +77,9 @@ export default function InfluencerMessages() {
       .from("messages")
       .select("*")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: true });
-    setMessages(data || []);
+      .order("created_at", { ascending: false })
+      .limit(CHAT_MESSAGES_STATE_CAP);
+    setMessages(capChatMessagesState(data ? [...data].reverse() : []));
     setLoading(false);
   }, [user]);
 

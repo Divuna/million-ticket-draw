@@ -88,6 +88,13 @@ function formatCsNumber(n: number): string {
 function getExtendedKnowledgeReply(text: string): string | null {
   const t = text.toLowerCase()
 
+  if (
+    (t.includes("kolik mám") || t.includes("kolik mam")) &&
+    (t.includes("miocoin") || t.includes("coin"))
+  ) {
+    return null
+  }
+
   // Pricing intent must be high-priority to avoid returning the MioCoin definition.
   const pricingForced =
     t.includes("miocoin") &&
@@ -353,6 +360,113 @@ async function insertAiReply(
   return { ok: true, id: data.id }
 }
 
+/** Debounced DB writes while OpenAI streams (same `messages.content` shape as final: text + default CTA). */
+const STREAM_DB_FLUSH_MS = 90
+const OPENAI_STREAM_TIMEOUT_MS = 75_000
+
+/**
+ * Read `text` string value from a partial JSON buffer (Bob must emit `{"text":"…"}` per system prompt).
+ * Used for streaming without `response_format: json_object` so token deltas arrive progressively.
+ */
+function extractPartialTextFromStreamJsonObject(s: string): string {
+  const m = /"text"\s*:\s*"/m.exec(s)
+  if (!m || m.index === undefined) return ""
+  let i = m.index + m[0].length
+  let out = ""
+  while (i < s.length) {
+    const c = s[i]
+    if (c === "\\") {
+      if (i + 1 >= s.length) break
+      const n = s[i + 1]
+      if (n === "n") {
+        out += "\n"
+        i += 2
+        continue
+      }
+      if (n === "r") {
+        out += "\r"
+        i += 2
+        continue
+      }
+      if (n === "t") {
+        out += "\t"
+        i += 2
+        continue
+      }
+      if (n === '"' || n === "\\" || n === "/") {
+        out += n
+        i += 2
+        continue
+      }
+      if (n === "u" && i + 5 < s.length) {
+        const hex = s.slice(i + 2, i + 6)
+        const code = parseInt(hex, 16)
+        if (!Number.isNaN(code)) {
+          out += String.fromCharCode(code)
+          i += 6
+          continue
+        }
+      }
+      out += n
+      i += 2
+      continue
+    }
+    if (c === '"') break
+    out += c
+    i++
+  }
+  return out
+}
+
+/** Empty-text AI row + default CTA; content updated as the model streams. */
+async function insertStreamingAiPlaceholder(
+  supabase: ServiceSupabase,
+  userId: string,
+): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+  const rowContent = serializeAiMessageContentForDb("", DEFAULT_AI_MESSAGE_CTA_FALLBACK)
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({
+      user_id: userId,
+      sender: "ai",
+      content: rowContent,
+      read: false,
+    })
+    .select("id")
+    .single()
+
+  if (error) {
+    console.error("[ai-chat] streaming placeholder insert failed", error)
+    return { ok: false, message: error.message }
+  }
+  return { ok: true, id: data.id }
+}
+
+async function updateAiMessageContentById(
+  supabase: ServiceSupabase,
+  messageId: string,
+  content: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const { error } = await supabase.from("messages").update({ content }).eq("id", messageId)
+  if (error) {
+    console.error("[ai-chat] streaming content update failed", error)
+    return { ok: false, message: error.message }
+  }
+  return { ok: true }
+}
+
+async function deleteMessageById(
+  supabase: ServiceSupabase,
+  messageId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const { error } = await supabase.from("messages").delete().eq("id", messageId)
+  if (error) {
+    console.error("[ai-chat] delete message failed", error)
+    return { ok: false, message: error.message }
+  }
+  return { ok: true }
+}
+
 /** SYSTEM (rules) — context sandwich, first layer. Answers must be Czech. */
 const BOB_SYSTEM_BASE = `You are Bob, AI assistant for OneMil.
 You speak Czech.
@@ -362,13 +476,26 @@ ONLY suggest the next step if it makes sense for the user's question and situati
 Do NOT push actions aggressively in general chat.
 Keep responses natural and human.
 NEVER ask vague follow-up questions (e.g. "upřesni dotaz", "co přesně myslíš?") when the user's intent is already clear from their message.
-If the user asks a general question like "Co mám dělat?" or "Jak pokračovat?", ALWAYS use the available user data from context (Balance, Last activity, Contests JSON) and give one or two concrete next steps in the app flow — do NOT answer with generic clarification questions only.
-For such general questions, base suggestions on wallet.balance_coins when Balance is present in context (e.g. low balance → Peněženka; enough for play → Soutěže); if the topic is wins or vouchers, point to Výhry or Vouchery instead of defaulting to contests. If Balance is missing from context, still give concrete OneMil steps without asking the user to "upřesnit". Never write internal paths (/games, /my-contests, /wins, /vouchers, /wallet, /profile, /customer-inbox, …) inside "text" — use visible Czech UI names (Peněženka, Soutěže, Výhry, Vouchery, Profil, …).
+If the user asks a general question like "Co mám dělat?" or "Jak pokračovat?", ALWAYS use the available user data from context (USER DATA mioCoins/wins, Last activity, Contests JSON) and give one or two concrete next steps in the app flow — do NOT answer with generic clarification questions only.
+For such general questions, base suggestions on USER DATA mioCoins when it is not "unavailable" (e.g. low balance → Peněženka; enough for play → Soutěže); use USER DATA wins when the topic is výhry; if the topic is vouchers, point to Vouchery. If mioCoins is unavailable, still give concrete OneMil steps without asking the user to "upřesnit". Never write internal paths (/games, /my-contests, /wins, /vouchers, /wallet, /profile, /customer-inbox, …) inside "text" — use visible Czech UI names (Peněženka, Soutěže, Výhry, Vouchery, Profil, …).
 For support-related questions (complaints, account problems, legal, refunds, "chci mluvit s někým", urgent help): answer helpfully and NEVER add an extra action suggestion or in-app navigation CTA in the same message.
 If you trigger human support fallback, return ONLY the support handoff sentence (and the app may add WhatsApp); do NOT add any other line, CTA, or internal path after that.
-NEVER suggest recharge if user has enough MioCoins (use Balance from context; if balance is enough for typical contest ticket_price from contests data, do not suggest top-up).
-Use real user data from the separate context message; never invent balances or activity.
-If balance is not provided in context, do not mention the user's coin balance.
+NEVER suggest recharge if user has enough MioCoins (use USER DATA mioCoins as the numeric truth; if it is enough for typical contest ticket_price from contests data, do not suggest top-up).
+A separate system message starts with USER DATA (mioCoins, wins, vouchers, etc.). Those fields are loaded from the database for this user — authoritative source of truth, not optional hints.
+
+STRICT USER-DATA-FIRST RULE: If USER DATA contains a value that is not "unavailable" and the user's intent clearly matches one of the mappings below, you MUST answer using that value immediately in the FIRST sentence of "text". Generic definitions, marketing blurbs, or contest rules alone are FORBIDDEN as the only answer when a matching USER DATA value exists. Never contradict USER DATA with guesses or chat history.
+
+INTENT → USER DATA (hard priority over general knowledge; use these exact fields):
+- Balance / MioCoins / peněženka / zůstatek mincí / kolik mám (mince) → user.miocoin_balance = USER DATA line "mioCoins".
+- Počet výher / moje výhry / kolik výher / wins → user.wins_count = USER DATA line "wins".
+- Vouchery na účtu / slevové vouchery (zůstatek) / wallet vouchers → user.vouchers = USER DATA line "vouchers" (not the same as explaining what a voucher product is in general).
+
+STRUCTURE of "text" when a mapping applies and the value is available:
+- First sentence: direct factual answer quoting the USER DATA (numbers exactly as given).
+- Second sentence (optional): one short follow-up or encouragement — may point to the app; never replace the first sentence with only a CTA or generic tip.
+The JSON "cta" field is separate (mandatory CTA rules below still apply); do not skip the first-sentence factual answer because a cta exists.
+
+If mioCoins / wins / vouchers in USER DATA is "unavailable", say you cannot see that figure; do not invent numbers.
 Put the conversational part in "text" using natural Czech and visible screen names — never put raw paths or external URLs inside "text" (exception: support handoff flow may include WhatsApp as appended by the app, not invented by you).
 
 JSON a CTA (povinné pravidlo pro každou odpověď, kromě handoffu na podporu níže):
@@ -398,24 +525,52 @@ If you are not sure or the user needs human support, put exactly this in "text" 
 function buildBobContextSystemMessage(params: {
   displayName: string
   balanceCoins: number | null
+  winsCount: number | null
+  winsLoadFailed: boolean
+  vouchersBalance: number | null
   lastActivity: string
   contestsJson: string
 }): string {
   const nameLine = params.displayName.trim() || "uživatel"
+
+  const mioCoinsLine =
+    params.balanceCoins !== null && Number.isFinite(params.balanceCoins)
+      ? String(params.balanceCoins)
+      : "unavailable"
+
+  const winsLine =
+    !params.winsLoadFailed && params.winsCount !== null && Number.isFinite(params.winsCount)
+      ? String(Math.max(0, Math.trunc(params.winsCount)))
+      : "unavailable"
+
+  const vouchersLine =
+    params.vouchersBalance !== null && Number.isFinite(params.vouchersBalance)
+      ? String(params.vouchersBalance)
+      : "unavailable"
+
   const lines: string[] = [
-    "User info:",
-    `- Name: ${nameLine}`,
+    "AKTUÁLNÍ DATA UŽIVATELE – POVINNÉ POUŽITÍ:",
+    "Pokud se uživatel ptá na cokoliv co je níže uvedeno,",
+    "MUSÍŠ odpovědět přesnou hodnotou z těchto dat.",
+    "Nikdy neodpovídej obecně pokud data existují.",
+    "",
+    "USER DATA (database snapshot for this user — authoritative source of truth, not optional hints):",
+    `- mioCoins (user.miocoin_balance / wallet): ${mioCoinsLine}`,
+    `- wins (user.wins_count / winners): ${winsLine}`,
+    `- vouchers (user.vouchers / wallet balance_vouchers): ${vouchersLine}`,
+    "",
+    "Intent mapping: balance questions → mioCoins; výhry / wins count → wins; voucher balance on account → vouchers. If the user asks about their own data and the matching field is not \"unavailable\", Bob MUST answer with that value first (see BOB_SYSTEM_BASE).",
+    "",
+    "Additional context (general knowledge only after USER DATA; never overrides USER DATA for the user's own numbers):",
+    `- Display name: ${nameLine}`,
+    `- Last activity (timestamp of latest message in this thread): ${params.lastActivity}`,
+    "",
+    "Project:",
+    "OneMil is a platform where users collect MioCoins and use them to enter contests.",
+    "",
+    "Contests (from DB, JSON):",
+    params.contestsJson,
   ]
-  if (params.balanceCoins !== null && Number.isFinite(params.balanceCoins)) {
-    lines.push(`- Balance: ${formatCsNumber(params.balanceCoins)} MioCoins`)
-  }
-  lines.push(`- Last activity: ${params.lastActivity}`)
-  lines.push("")
-  lines.push("Project:")
-  lines.push("OneMil is a platform where users collect MioCoins and use them to enter contests.")
-  lines.push("")
-  lines.push("Contests (from DB, JSON):")
-  lines.push(params.contestsJson)
   return lines.join("\n")
 }
 
@@ -491,6 +646,57 @@ function stripCtaIfSupportOrWhatsApp(payload: BobAssistantPayload): BobAssistant
 /** Lowercase + strip diacritics for robust Czech keyword matching. */
 function foldCs(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "")
+}
+
+type UserDataIntent = "balance" | "wins" | "vouchers" | null
+
+function userDataIntentFromUserText(userText: string): UserDataIntent {
+  const f = foldCs(userText)
+  const isBalance =
+    f.includes("zustatek") ||
+    f.includes("zustatku") ||
+    f.includes("penezen") ||
+    f.includes("stav uctu") ||
+    f.includes("muj stav") ||
+    f.includes("kolik mam") ||
+    f.includes("kolik mi zbyv") ||
+    f.includes("miocoin") ||
+    f.includes("mio coin") ||
+    f.includes("minc") ||
+    f.includes("coin")
+  if (isBalance) return "balance"
+
+  const isWins = f.includes("vyhr") || f.includes("moje vyhr")
+  if (isWins) return "wins"
+
+  const isVouchers =
+    f.includes("voucher") ||
+    f.includes("vouchery") ||
+    f.includes("kredit") ||
+    f.includes("dobit") ||
+    f.includes("dobij") ||
+    f.includes("platb")
+  if (isVouchers) return "vouchers"
+
+  return null
+}
+
+/**
+ * Questions about *this user's* balances, wins, or account state must go to GPT with USER DATA,
+ * not static KB/predefined text or the short wallet/winners template replies.
+ */
+function shouldRouteUserDataQuestionToGpt(userText: string): boolean {
+  const f = foldCs(userText)
+  if (f.includes("moje vyhr")) return true
+  if (f.includes("muj stav")) return true
+  if (f.includes("kolik mam")) return true
+  if (f.includes("mam miocoin") || f.includes("mam mio coin") || f.includes("mam minc")) return true
+  if (f.includes("kolik mi zbyv")) return true
+  if (f.includes("jaky je muj") && f.includes("zust")) return true
+  if ((f.includes("muj") || f.includes("moje")) && (f.includes("miocoin") || f.includes("mio coin") || f.includes("minc"))) {
+    return true
+  }
+  return false
 }
 
 /**
@@ -764,12 +970,23 @@ serve(async (req) => {
     // Intent debug (temporary)
     console.log("INTENT MATCH:", userContent.toLowerCase())
 
-    // 1) Dynamic user-data handlers (Supabase → quick reply). No DB changes.
     const userTextLower = userContent.toLowerCase()
+    const userDataIntent = userDataIntentFromUserText(userContent)
+    const routeUserDataToGpt = shouldRouteUserDataQuestionToGpt(userContent) || userDataIntent !== null
+    if (routeUserDataToGpt) {
+      console.log("[ai-chat] user-specific data question → GPT (skip quick handlers, KB, predefined)")
+    }
 
+    // 1) Dynamic user-data handlers (Supabase → quick reply). Skipped when routing to GPT with USER DATA.
     if (
-      userTextLower.includes("kolik mám") &&
-      (userTextLower.includes("coin") || userTextLower.includes("miocoin"))
+      (userTextLower.includes("kolik mám") || userTextLower.includes("kolik mam")) &&
+      (userTextLower.includes("coin") ||
+        userTextLower.includes("miocoin") ||
+        userTextLower.includes("miocoinu") ||
+        userTextLower.includes("coinů") ||
+        userTextLower.includes("coinu") ||
+        userTextLower.includes("zůstatek") ||
+        userTextLower.includes("zustatek"))
     ) {
       const { data: walletRow, error: wErr } = await supabase
         .from("wallets")
@@ -809,7 +1026,7 @@ serve(async (req) => {
     }
 
     // If user asks about winning (vyhr*), ALWAYS use winners table (no GPT fallback).
-    if (userTextLower.includes("vyhr")) {
+    if (userDataIntent === "wins") {
       console.log("DB handler: winners")
       const { count, error: winErr } = await supabase
         .from("winners")
@@ -852,7 +1069,7 @@ serve(async (req) => {
       return jsonSuccess(ins.id)
     }
 
-    if (userTextLower.includes("kolik mám") && userTextLower.includes("tiket")) {
+    if (!routeUserDataToGpt && userTextLower.includes("kolik mám") && userTextLower.includes("tiket")) {
       const { count, error: tErr } = await supabase
         .from("tickets")
         .select("id", { count: "exact", head: true })
@@ -883,70 +1100,73 @@ serve(async (req) => {
       // fall through
     }
 
-    // 2) Knowledge-base: match approved text, then rephrase via OpenAI (facts = source only). Raw KB on API failure.
-    const extendedKb = getExtendedKnowledgeReply(userContent.trim())
-    if (extendedKb) {
-      console.log("KB handler: extended → rephrase")
-      const rephrased = shouldRephraseKnowledge(extendedKb)
-        ? await rephraseKnowledgeForBob(openaiKey, extendedKb, userContent)
-        : null
-      const reply = rephrased ?? extendedKb
+    // 2) Knowledge-base: general informational only — skipped for user-specific data questions (GPT + USER DATA).
+    if (!routeUserDataToGpt) {
+      const extendedKb = getExtendedKnowledgeReply(userContent.trim())
+      if (extendedKb) {
+        console.log("KB handler: extended → rephrase")
+        const rephrased = shouldRephraseKnowledge(extendedKb)
+          ? await rephraseKnowledgeForBob(openaiKey, extendedKb, userContent)
+          : null
+        const reply = rephrased ?? extendedKb
 
-      const finalReply = await finalizeBobPayloadNormalized(
-        supabase,
-        userMsg.user_id,
-        messageId,
-        userContent,
-        bobPayloadFromRawAssistantString(reply),
-      )
+        const finalReply = await finalizeBobPayloadNormalized(
+          supabase,
+          userMsg.user_id,
+          messageId,
+          userContent,
+          bobPayloadFromRawAssistantString(reply),
+        )
 
-      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
-      if (!ins.ok) {
-        return new Response(JSON.stringify({ error: ins.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
+        const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+        if (!ins.ok) {
+          return new Response(JSON.stringify({ error: ins.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          })
+        }
+        return jsonSuccess(ins.id)
       }
-      return jsonSuccess(ins.id)
+
+      const predefined = getPredefinedReply(userContent.trim())
+      if (predefined) {
+        if (userTextLower.includes("funguje")) {
+          console.log("KB handler: funguje → rephrase")
+        } else {
+          console.log("KB handler: predefined → rephrase")
+        }
+        const rephrased = shouldRephraseKnowledge(predefined)
+          ? await rephraseKnowledgeForBob(openaiKey, predefined, userContent)
+          : null
+        const reply = rephrased ?? predefined
+
+        const finalReply = await finalizeBobPayloadNormalized(
+          supabase,
+          userMsg.user_id,
+          messageId,
+          userContent,
+          bobPayloadFromRawAssistantString(reply),
+        )
+
+        const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+        if (!ins.ok) {
+          return new Response(JSON.stringify({ error: ins.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          })
+        }
+        return jsonSuccess(ins.id)
+      }
     }
 
-    const predefined = getPredefinedReply(userContent.trim())
-    if (predefined) {
-      if (userTextLower.includes("funguje")) {
-        console.log("KB handler: funguje → rephrase")
-      } else {
-        console.log("KB handler: predefined → rephrase")
-      }
-      const rephrased = shouldRephraseKnowledge(predefined)
-        ? await rephraseKnowledgeForBob(openaiKey, predefined, userContent)
-        : null
-      const reply = rephrased ?? predefined
-
-      const finalReply = await finalizeBobPayloadNormalized(
-        supabase,
-        userMsg.user_id,
-        messageId,
-        userContent,
-        bobPayloadFromRawAssistantString(reply),
-      )
-
-      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
-      if (!ins.ok) {
-        return new Response(JSON.stringify({ error: ins.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
-      }
-      return jsonSuccess(ins.id)
-    }
-
-    // 3) GPT fallback — one SELECT for the triggering row already done above; here 4 parallel reads (contests, wallet, recent messages, profile), then OpenAI (non-streaming JSON).
-    console.log("GPT fallback")
+    // 3) GPT — parallel reads (contests, wallet, messages, profile, winners count), then OpenAI stream (USER DATA in system context).
+    console.log(routeUserDataToGpt ? "GPT (user-specific, USER DATA context)" : "GPT fallback")
     const [
       { data: contests, error: contestsErr },
       { data: walletRaw, error: walletErr },
       { data: recent },
       { data: profileRow, error: profileErr },
+      { count: winsCountRaw, error: winsErr },
     ] = await Promise.all([
       supabase
         .from("contests")
@@ -969,6 +1189,10 @@ serve(async (req) => {
         .select("full_name")
         .eq("id", userMsg.user_id)
         .maybeSingle(),
+      supabase
+        .from("winners")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userMsg.user_id),
     ])
 
     if (contestsErr) {
@@ -979,6 +1203,9 @@ serve(async (req) => {
     }
     if (profileErr) {
       console.error("[ai-chat] profiles load failed", profileErr)
+    }
+    if (winsErr) {
+      console.error("[ai-chat] winners count load failed", winsErr)
     }
 
     const contestsJson = JSON.stringify(contests ?? [])
@@ -1005,9 +1232,23 @@ serve(async (req) => {
     const lastActivity =
       recent?.[0] && typeof recent[0].created_at === "string" ? recent[0].created_at : "unknown"
 
+    const winsLoadFailed = Boolean(winsErr)
+    const winsCountForContext =
+      !winsLoadFailed && typeof winsCountRaw === "number" && Number.isFinite(winsCountRaw)
+        ? winsCountRaw
+        : null
+
+    const vouchersForContext =
+      safeWallet && typeof safeWallet.balance_vouchers === "number" && Number.isFinite(safeWallet.balance_vouchers)
+        ? safeWallet.balance_vouchers
+        : null
+
     const systemContext = buildBobContextSystemMessage({
       displayName,
       balanceCoins: balanceCoinsForContext,
+      winsCount: winsCountForContext,
+      winsLoadFailed,
+      vouchersBalance: vouchersForContext,
       lastActivity,
       contestsJson,
     })
@@ -1018,9 +1259,47 @@ serve(async (req) => {
       content: typeof m.content === "string" ? m.content : "",
     }))
 
+    const ph = await insertStreamingAiPlaceholder(supabase, userMsg.user_id)
+    if (!ph.ok) {
+      return new Response(JSON.stringify({ error: ph.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
+    const streamingRowId = ph.id
+
+    const applyFallbackToPlaceholder = async (fallbackReply: string): Promise<Response> => {
+      const finalFallbackReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        bobPayloadFromRawAssistantString(fallbackReply),
+      )
+      const up = await updateAiMessageContentById(supabase, streamingRowId, finalFallbackReply)
+      if (!up.ok) {
+        return new Response(JSON.stringify({ error: up.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(streamingRowId)
+    }
+
     const model = Deno.env.get("AI_CHAT_MODEL") ?? "gpt-4o-mini"
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS)
+    /** Must cover full SSE body read — do not clear when `fetch` resolves (headers only for stream). */
+    let streamTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      controller.abort()
+    }, OPENAI_STREAM_TIMEOUT_MS)
+
+    const clearStreamTimer = () => {
+      if (streamTimer !== null) {
+        clearTimeout(streamTimer)
+        streamTimer = null
+      }
+    }
+
     let openaiRes: Response | null = null
     try {
       openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -1032,75 +1311,139 @@ serve(async (req) => {
         body: JSON.stringify({
           model,
           messages: [
-            { role: "system", content: BOB_SYSTEM_BASE },
-            { role: "system", content: systemContext },
+            { role: "system", content: BOB_SYSTEM_BASE + "\n\n" + systemContext },
             ...history,
           ],
           max_tokens: 320,
           temperature: 0.2,
-          response_format: { type: "json_object" },
+          // No `response_format: json_object` — it can prevent true token streaming; Bob still outputs JSON per system prompt.
+          stream: true,
         }),
         signal: controller.signal,
       })
     } catch (e) {
       console.error("[ai-chat] OpenAI fetch failed", e)
-    } finally {
-      clearTimeout(timer)
+      clearStreamTimer()
     }
 
     if (!openaiRes || !openaiRes.ok) {
+      clearStreamTimer()
       if (openaiRes && !openaiRes.ok) {
         const errText = await openaiRes.text()
         console.error("[ai-chat] OpenAI error", openaiRes.status, errText)
       }
-      const fallbackReply = OPENAI_FAILURE_FALLBACK_TEXT
-      const finalFallbackReply = await finalizeBobPayloadNormalized(
-        supabase,
-        userMsg.user_id,
-        messageId,
-        userContent,
-        bobPayloadFromRawAssistantString(fallbackReply),
-      )
-      const ins = await insertAiReply(supabase, userMsg.user_id, finalFallbackReply)
-      if (!ins.ok) {
-        return new Response(JSON.stringify({ error: ins.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
-      }
-      return jsonSuccess(ins.id)
+      return await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
     }
 
-    const openaiData = (await openaiRes.json()) as {
-      choices?: Array<{ message?: { content?: string | null } }>
-    }
-    const rawContent = openaiData?.choices?.[0]?.message?.content
-    const rawAssistant = typeof rawContent === "string" ? rawContent.trim() : ""
-    let payload = bobPayloadFromRawAssistantString(rawAssistant)
-    payload = {
-      ...payload,
-      text: appendWhatsAppIfSupportHandoff(payload.text),
-    }
-    if (!payload.text.trim()) {
-      const fallbackReply = OPENAI_FAILURE_FALLBACK_TEXT
-      const finalFallbackReply = await finalizeBobPayloadNormalized(
-        supabase,
-        userMsg.user_id,
-        messageId,
-        userContent,
-        bobPayloadFromRawAssistantString(fallbackReply),
-      )
-      const ins = await insertAiReply(supabase, userMsg.user_id, finalFallbackReply)
-      if (!ins.ok) {
-        return new Response(JSON.stringify({ error: ins.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
-      }
-      return jsonSuccess(ins.id)
+    const bodyReader = openaiRes.body?.getReader()
+    if (!bodyReader) {
+      clearStreamTimer()
+      return await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
     }
 
-    if (shouldFallbackToAdmin(payload.text)) {
+    const decoder = new TextDecoder()
+    let sseCarry = ""
+    let rawAssistant = ""
+    let debounceT: ReturnType<typeof setTimeout> | null = null
+    let flushChain: Promise<void> = Promise.resolve()
+
+    const flushStreamingPartial = async () => {
+      const partialText = extractPartialTextFromStreamJsonObject(rawAssistant)
+      const rowContent = serializeAiMessageContentForDb(partialText, DEFAULT_AI_MESSAGE_CTA_FALLBACK)
+      const up = await updateAiMessageContentById(supabase, streamingRowId, rowContent)
+      if (!up.ok) {
+        console.error("[ai-chat] streaming partial update failed", up.message)
+      }
+    }
+
+    const scheduleStreamingPartialFlush = () => {
+      if (debounceT !== null) clearTimeout(debounceT)
+      debounceT = setTimeout(() => {
+        debounceT = null
+        flushChain = flushChain
+          .then(() => flushStreamingPartial())
+          .catch((err) => console.error("[ai-chat] streaming flush chain", err))
+      }, STREAM_DB_FLUSH_MS)
+    }
+
+    let streamChunkIndex = 0
+    try {
+      while (true) {
+        const { done, value } = await bodyReader.read()
+        if (done) break
+        sseCarry += decoder.decode(value, { stream: true })
+        const lines = sseCarry.split(/\r?\n/)
+        sseCarry = lines.pop() ?? ""
+        for (const line of lines) {
+          const t = line.trim()
+          if (!t.startsWith("data:")) continue
+          const sseData = t.slice(5).trim()
+          if (sseData === "[DONE]") {
+            streamChunkIndex++
+            console.log("[ai-chat] stream chunk", { n: streamChunkIndex, kind: "[DONE]" })
+            continue
+          }
+          try {
+            const chunk = JSON.parse(sseData) as {
+              choices?: Array<{
+                delta?: { content?: string | null; role?: string | null }
+                finish_reason?: string | null
+              }>
+            }
+            streamChunkIndex++
+            const choice0 = chunk?.choices?.[0]
+            const delta = choice0?.delta?.content
+            const deltaLen = typeof delta === "string" ? delta.length : 0
+            console.log("[ai-chat] stream chunk", {
+              n: streamChunkIndex,
+              deltaLen,
+              deltaPreview: typeof delta === "string" && delta.length > 0 ? delta.slice(0, 120) : null,
+              finish_reason: choice0?.finish_reason ?? null,
+              roleDelta: choice0?.delta?.role ?? null,
+              rawAssistantLen: rawAssistant.length + deltaLen,
+            })
+            if (typeof delta === "string" && delta.length > 0) {
+              rawAssistant += delta
+              scheduleStreamingPartialFlush()
+            }
+          } catch (parseErr) {
+            console.warn("[ai-chat] stream chunk JSON parse failed", {
+              preview: sseData.slice(0, 200),
+              err: parseErr instanceof Error ? parseErr.message : String(parseErr),
+            })
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[ai-chat] OpenAI stream read failed", e)
+      clearStreamTimer()
+      return await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
+    } finally {
+      clearStreamTimer()
+    }
+
+    if (debounceT !== null) {
+      clearTimeout(debounceT)
+      debounceT = null
+    }
+    await flushChain
+    await flushStreamingPartial()
+
+    const rawTrimmed = rawAssistant.trim()
+    let bobPayload = bobPayloadFromRawAssistantString(rawTrimmed)
+    bobPayload = {
+      ...bobPayload,
+      text: appendWhatsAppIfSupportHandoff(bobPayload.text),
+    }
+    if (!bobPayload.text.trim()) {
+      return await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
+    }
+
+    if (shouldFallbackToAdmin(bobPayload.text)) {
+      const del = await deleteMessageById(supabase, streamingRowId)
+      if (!del.ok) {
+        console.error("[ai-chat] failed to remove streaming placeholder for admin handoff", del.message)
+      }
       const handoff = await insertAdminHandoff(supabase, userMsg.user_id)
       if (!handoff.ok) {
         return new Response(JSON.stringify({ error: handoff.message }), {
@@ -1116,17 +1459,17 @@ serve(async (req) => {
       userMsg.user_id,
       messageId,
       userContent,
-      payload,
+      bobPayload,
     )
 
-    const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
-    if (!ins.ok) {
-      return new Response(JSON.stringify({ error: ins.message }), {
+    const finUp = await updateAiMessageContentById(supabase, streamingRowId, finalReply)
+    if (!finUp.ok) {
+      return new Response(JSON.stringify({ error: finUp.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
-    return jsonSuccess(ins.id)
+    return jsonSuccess(streamingRowId)
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     console.error("[ai-chat]", msg)

@@ -103,6 +103,16 @@ const fetchCount = async () => {
   }
 };
 
+/** Coalesce bursty postgres_changes (e.g. bulk mark-read) into one count query after idle. */
+let _fetchCountDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+const scheduleFetchCountDebounced = () => {
+  if (_fetchCountDebounceTimer != null) clearTimeout(_fetchCountDebounceTimer);
+  _fetchCountDebounceTimer = setTimeout(() => {
+    _fetchCountDebounceTimer = null;
+    fetchCount();
+  }, 120);
+};
+
 const handleRealtimeMessage = (payload: any) => {
   const { eventType, new: newRecord } = payload;
 
@@ -124,7 +134,7 @@ const handleRealtimeMessage = (payload: any) => {
     }
   }
 
-  fetchCount();
+  scheduleFetchCountDebounced();
 };
 
 const startUnreadCountStore = () => {
