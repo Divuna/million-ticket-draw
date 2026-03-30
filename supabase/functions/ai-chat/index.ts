@@ -3,15 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 console.log("AI-CHAT VERSION: TIMING_V1")
 console.log("AI CHAT: support NOT triggered automatically")
+console.log("AI: no auto support")
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-internal-token",
 }
-
-/** Exact handoff text for human support (fallback + oversized input). */
-const ADMIN_FALLBACK_CONTENT = "Bob si není jistý 🤖 Přeposílám to podpoře 👍"
 
 const MAX_USER_MESSAGE_CHARS = 500
 const BOB_GREETING_PAUSE_MS = 45 * 60 * 1000
@@ -23,7 +21,7 @@ const OPENAI_FAILURE_FALLBACK_TEXT = "Teď se mi nepodařilo odpovědět. Zkus t
 const BOB_WHATSAPP_FALLBACK_URL =
   "https://wa.me/420XXXXXXXXX?text=Potřebuju%20pomoc%20s%20OneMil"
 
-const BOB_SUPPORT_HANDOFF_PHRASE = "Tohle radši předám podpoře."
+// Support is handled ONLY via CTA click → support-handoff. ai-chat must never claim it forwarded anything.
 
 function bobSupportCtaPayload(text: string): BobAssistantPayload {
   // Must contain "Kontaktovat podporu" in text so the server-side CTA gate keeps /messages.
@@ -104,10 +102,8 @@ function getExtendedKnowledgeReply(text: string): string | null {
     return null
   }
 
-  if (
-    (t.includes("kolik mám") || t.includes("kolik mam")) &&
-    (t.includes("miocoin") || t.includes("coin"))
-  ) {
+  // Never return KB replies for user-specific data questions (balance, wins, vouchers).
+  if (userDataIntentFromUserText(text) !== null) {
     return null
   }
 
@@ -316,12 +312,11 @@ function buildSanitizedAiMessagePayload(
 }
 
 /**
- * Sole serialization path for AI `messages.content`. Default CTA unless `isBobSupportOrWhatsAppReplyText` (support handoff → keep cta null, no button).
+ * Sole serialization path for AI `messages.content`. Default CTA unless a CTA is explicitly provided.
  */
 function serializeAiMessageContentForDb(responseText: unknown, cta: unknown): string {
   const payload = buildSanitizedAiMessagePayload(responseText, cta)
   if (
-    !isBobSupportOrWhatsAppReplyText(payload.text) &&
     (!payload.cta || payload.cta === null)
   ) {
     payload.cta = { ...DEFAULT_AI_MESSAGE_CTA_FALLBACK }
@@ -512,9 +507,9 @@ STRUCTURE of "text" when a mapping applies and the value is available:
 The JSON "cta" field is separate (mandatory CTA rules below still apply); do not skip the first-sentence factual answer because a cta exists.
 
 If mioCoins / wins / vouchers in USER DATA is "unavailable", say you cannot see that figure; do not invent numbers.
-Put the conversational part in "text" using natural Czech and visible screen names — never put raw paths or external URLs inside "text" (exception: support handoff flow may include WhatsApp as appended by the app, not invented by you).
+Put the conversational part in "text" using natural Czech and visible screen names — never put raw paths or external URLs inside "text".
 
-JSON a CTA (povinné pravidlo pro každou odpověď, kromě handoffu na podporu níže):
+JSON a CTA (povinné pravidlo pro každou odpověď):
 Každá odpověď musí být validní JSON objekt s polem text a cta.
 Pole cta musí mít label (česky) a action podle tohoto pravidla:
 
@@ -529,14 +524,11 @@ Pole cta musí mít label (česky) a action podle tohoto pravidla:
 PRAVIDLA:
 - vždy interní route začínající /
 - nikdy cta: null (vždy objekt s label + action)
-- nikdy externí URL v cta ani v text (výjimka: support handoff — pouze věta předaná podpoře, bez vlastních odkazů)
+- nikdy externí URL v cta ani v text
 - label musí být česky a výstižně popisovat akci
 
-Výjimka — handoff na lidskou podporu: vrať POUZE {"text":"...přesná handoff věta..."} bez pole cta (žádné tlačítko v téže zprávě).
 OUTPUT FORMAT: jeden platný JSON objekt (žádný markdown, žádné trojité zpětné apostrofy v odpovědi).
-If you are not sure or the user needs human support, put exactly this in "text" only (no cta):
-"${BOB_SUPPORT_HANDOFF_PHRASE.trim()}"
-(and the app may append a WhatsApp link; do not invent phone numbers).`
+If you are not sure or the user needs human support, keep the response short and include the support CTA (/messages).`
 
 const BOB_SUPPORT_MODE_SYSTEM = `SUPPORT MODE (hard rules):
 - The user is in a support/help situation.
@@ -595,15 +587,6 @@ function buildBobContextSystemMessage(params: {
     params.contestsJson,
   ]
   return lines.join("\n")
-}
-
-function appendWhatsAppIfSupportHandoff(reply: string): string {
-  const t = reply.trim()
-  if (!t) return t
-  const marker = BOB_SUPPORT_HANDOFF_PHRASE.replace(/\.$/, "").toLowerCase()
-  if (!t.toLowerCase().includes(marker)) return reply
-  if (t.includes("wa.me")) return reply
-  return `${t}\n${BOB_WHATSAPP_FALLBACK_URL}`
 }
 
 /** Allowed in-app CTA targets; label is canonical per action (normalized server-side). Matches customer routes in App.tsx. */
@@ -711,18 +694,7 @@ function bobPayloadFromRawAssistantString(raw: string): BobAssistantPayload {
   }
 }
 
-function isBobSupportOrWhatsAppReplyText(text: string): boolean {
-  const t = text.toLowerCase()
-  const marker = BOB_SUPPORT_HANDOFF_PHRASE.replace(/\.$/, "").toLowerCase()
-  return t.includes(marker) || t.includes("wa.me")
-}
-
-function stripCtaIfSupportOrWhatsApp(payload: BobAssistantPayload): BobAssistantPayload {
-  if (isBobSupportOrWhatsAppReplyText(payload.text)) {
-    return { text: payload.text }
-  }
-  return payload
-}
+// NOTE: Support is never "handed off" automatically from ai-chat; we only provide CTA to /messages.
 
 /** Lowercase + strip diacritics for robust Czech keyword matching. */
 function foldCs(s: string): string {
@@ -931,10 +903,8 @@ function isWinProblem(userText: string): boolean {
 }
 
 function addOptionalSupportCta(text: string): string {
-  const t = text.trim()
-  if (!t) return 'Můžu to předat podpoře.'
-  if (t.includes("Můžu to předat podpoře.")) return t
-  return `${t}\nMůžu to předat podpoře.`
+  // Keep message neutral; do not claim we forwarded anything.
+  return text.trim()
 }
 
 /**
@@ -1004,7 +974,6 @@ function enforceRequiredSectionCta(
   payload: BobAssistantPayload,
   history: SupportIntentHistoryMessage[],
 ): BobAssistantPayload {
-  if (isBobSupportOrWhatsAppReplyText(payload.text)) return payload
   if (payload.cta?.action === "/messages") {
     const ok = isSupportIntentForCta(userQuestion, payload.text, history)
     console.log("[ai-chat] support CTA gate (enforceRequiredSectionCta)", {
@@ -1028,7 +997,7 @@ function normalizeBobPayloadBeforeFinalize(
   payload: BobAssistantPayload,
   history: SupportIntentHistoryMessage[],
 ): BobAssistantPayload {
-  const stripped = stripCtaIfSupportOrWhatsApp(payload)
+  const stripped = payload
   if (stripped.cta?.action === "/messages" && !isSupportIntentForCta(userQuestion, stripped.text, history)) {
     console.log("[ai-chat] support CTA stripped → fallback /games (normalize)", {
       userPreview: previewForLog(userQuestion),
@@ -1168,7 +1137,11 @@ serve(async (req) => {
   }
 
   try {
-    const body = (await req.json()) as { message_id?: string }
+    const body = (await req.json()) as { message_id?: string; ctaClicked?: unknown }
+    if ((body as any)?.ctaClicked === true) {
+      // ai-chat must never trigger support-handoff; CTA click should call support-handoff directly.
+      console.log("BLOCKED SUPPORT CALL")
+    }
     const messageId = body?.message_id
     if (typeof messageId !== "string" || messageId.length === 0) {
       return new Response(JSON.stringify({ error: "message_id required" }), {
@@ -1215,14 +1188,13 @@ serve(async (req) => {
         message_id: messageId,
         length: userContent.length,
       })
-      const reply =
-        "Tuhle zprávu se mi nepodařilo zpracovat automaticky. Můžu to předat podpoře."
+      const reply = "Tuhle zprávu se mi nepodařilo zpracovat automaticky."
       const finalReply = await finalizeBobPayloadNormalized(
         supabase,
         userMsg.user_id,
         messageId,
         userContent,
-        bobSupportCtaPayload(reply),
+        { text: reply, cta: { label: "Kontaktovat podporu", action: "/messages" } },
         [],
       )
       const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
@@ -1285,17 +1257,8 @@ serve(async (req) => {
       // If wallet missing/unavailable, fall through to GPT with USER DATA (KB still skipped via routeUserDataToGpt).
     }
 
-    // 1) Dynamic user-data handlers (Supabase → quick reply). Skipped when routing to GPT with USER DATA.
-    if (
-      (userTextLower.includes("kolik mám") || userTextLower.includes("kolik mam")) &&
-      (userTextLower.includes("coin") ||
-        userTextLower.includes("miocoin") ||
-        userTextLower.includes("miocoinu") ||
-        userTextLower.includes("coinů") ||
-        userTextLower.includes("coinu") ||
-        userTextLower.includes("zůstatek") ||
-        userTextLower.includes("zustatek"))
-    ) {
+    // 1) Dynamic user-data handlers (Supabase → quick reply). Fires for all balance-intent queries.
+    if (userDataIntent === "balance") {
       const { data: walletRow, error: wErr } = await supabase
         .from("wallets")
         .select("balance_coins")
@@ -1338,7 +1301,7 @@ serve(async (req) => {
     if (userDataIntent === "wins") {
       if (isWinProblem(userContent)) {
         const reply =
-          "Výhra se odesílá zpravidla do týdne, pokud není uvedeno jinak. Pokud vám výhra nedorazila, můžu to předat podpoře."
+          "Výhra se odesílá zpravidla do týdne, pokud není uvedeno jinak. Pokud vám výhra nedorazila, klikněte na Kontaktovat podporu."
 
         const finalReply = await finalizeBobPayloadNormalized(
           supabase,
@@ -1368,7 +1331,7 @@ serve(async (req) => {
       if (winErr) {
         console.error("[ai-chat] winners lookup failed", winErr)
         const reply =
-          "Teď se mi nepodařilo načíst výhry z databáze. Můžu to předat podpoře."
+          "Teď se mi nepodařilo načíst výhry z databáze. Zkuste to prosím znovu."
         const finalReply = await finalizeBobPayloadNormalized(
           supabase,
           userMsg.user_id,
@@ -1659,10 +1622,21 @@ serve(async (req) => {
         })
 
         const chronological = (recent ?? []).slice().reverse()
-        const history = chronological.map((m) => ({
-          role: m.sender === "user" ? ("user" as const) : ("assistant" as const),
-          content: typeof m.content === "string" ? m.content : "",
-        }))
+        const history = chronological.map((m) => {
+          let content = typeof m.content === "string" ? m.content : ""
+          // AI messages are stored as JSON {"text":"…","cta":{…}}. Strip the wrapper so
+          // OpenAI receives only the natural-language text, not raw JSON with pricing data.
+          if (m.sender !== "user" && content.startsWith("{")) {
+            try {
+              const parsed = JSON.parse(content) as { text?: unknown }
+              if (parsed && typeof parsed.text === "string") content = parsed.text
+            } catch { /* keep raw content */ }
+          }
+          return {
+            role: m.sender === "user" ? ("user" as const) : ("assistant" as const),
+            content,
+          }
+        })
 
         const ph = await insertStreamingAiPlaceholder(supabase, userMsg.user_id)
         if (!ph.ok) {
@@ -1854,10 +1828,6 @@ serve(async (req) => {
 
         const rawTrimmed = keepOnlyLastValidJsonObject(rawAssistant)
         let bobPayload = bobPayloadFromRawAssistantString(rawTrimmed)
-        bobPayload = {
-          ...bobPayload,
-          text: appendWhatsAppIfSupportHandoff(bobPayload.text),
-        }
         if (!bobPayload.text.trim()) {
           gptResult = await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
           break
@@ -1872,11 +1842,9 @@ serve(async (req) => {
           supportRelated,
           explicitHandoff,
         })
-        if (supportRelated && !explicitHandoff && isBobSupportOrWhatsAppReplyText(bobPayload.text)) {
-          bobPayload = {
-            text: addOptionalSupportCta(""),
-            cta: { label: "Kontaktovat podporu", action: "/messages" },
-          }
+        // If support intent is detected, we only add the support CTA (no "forwarded" wording).
+        if (supportRelated && !explicitHandoff) {
+          bobPayload = { ...bobPayload, cta: { label: "Kontaktovat podporu", action: "/messages" } }
         }
 
         if (
@@ -1891,7 +1859,7 @@ serve(async (req) => {
         }
 
         if (explicitHandoff) {
-          bobPayload = { text: BOB_SUPPORT_HANDOFF_PHRASE }
+          bobPayload = { ...bobPayload, cta: { label: "Kontaktovat podporu", action: "/messages" } }
         }
 
         if (shouldFallbackToAdmin(bobPayload.text)) {
@@ -1900,7 +1868,7 @@ serve(async (req) => {
             userMsg.user_id,
             messageId,
             userContent,
-            bobSupportCtaPayload("Teď si nejsem jistý. Můžu to předat podpoře."),
+            { text: "Teď si nejsem jistý.", cta: { label: "Kontaktovat podporu", action: "/messages" } },
             supportIntentHistory,
           )
           const up = await updateAiMessageContentById(supabase, streamingRowId, finalFallbackReply)

@@ -519,6 +519,8 @@ export default function MessagesPage() {
       .limit(CHAT_PAGE_SIZE);
     const rows = data ? [...data].reverse() : [];
     console.log("MESSAGES RAW", rows);
+    // Keep ref in sync immediately (polling logic relies on this).
+    messagesRef.current = rows;
     // Force state update with a fresh array reference (guarantee rerender).
     setMessages([...rows]);
     console.log("MESSAGES IN STATE", rows);
@@ -687,25 +689,6 @@ export default function MessagesPage() {
     const messageContent = newMessage.trim();
     sendInFlightRef.current = true;
 
-    // Repeat refetch after send — do not rely on realtime.
-    for (const t of postSendRefetchTimersRef.current) clearTimeout(t);
-    postSendRefetchTimersRef.current = [];
-    const schedule = (ms: number) => {
-      const id = setTimeout(() => {
-        void loadMessages();
-      }, ms);
-      postSendRefetchTimersRef.current.push(id);
-    };
-    schedule(1500);
-    schedule(3000);
-    schedule(5000);
-
-    // Safety fallback: stop waiting after 5s even if AI never arrives.
-    const stopWaitId = setTimeout(() => {
-      setIsAwaitingReply(false);
-    }, 5200);
-    postSendRefetchTimersRef.current.push(stopWaitId);
-
     const optimisticId = `${OPTIMISTIC_MESSAGE_ID_PREFIX}${Date.now()}`;
     const optimisticCreatedAt = new Date().toISOString();
     const optimisticMessage: Message = {
@@ -722,6 +705,33 @@ export default function MessagesPage() {
       setLastUserMessageAt(optimisticCreatedAt);
       setIsAwaitingReply(true);
     });
+
+    // Poll for AI reply (up to 10s) — ensures late AI responses still appear.
+    for (const t of postSendRefetchTimersRef.current) clearTimeout(t);
+    postSendRefetchTimersRef.current = [];
+    let attempts = 0;
+    const poll = async () => {
+      await loadMessages();
+
+      const optimisticTs = new Date(optimisticCreatedAt).getTime();
+      const hasAiAfterSend = messagesRef.current.some((m) => {
+        if (m.sender !== "ai") return false;
+        const ts = new Date(m.created_at).getTime();
+        return Number.isFinite(ts) && ts >= optimisticTs;
+      });
+
+      if (!hasAiAfterSend && attempts < 10) {
+        attempts += 1;
+        const id = setTimeout(() => {
+          void poll();
+        }, 1000);
+        postSendRefetchTimersRef.current.push(id);
+        return;
+      }
+
+      setIsAwaitingReply(false);
+    };
+    void poll();
 
     setFlyingMessage({ id: Date.now(), content: messageContent });
     createSparkles();

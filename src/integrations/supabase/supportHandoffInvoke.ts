@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client"
  */
 export async function invokeSupportHandoff(body: { message: string }): Promise<void> {
   console.log("SUPPORT TRIGGERED BY CTA")
+  const payload = { ...body, ctaClicked: true }
   const localUrl = (import.meta.env.VITE_LOCAL_SUPPORT_HANDOFF_URL as string | undefined)?.trim() ?? ""
 
   if (localUrl) {
@@ -25,7 +26,7 @@ export async function invokeSupportHandoff(body: { message: string }): Promise<v
         apikey: anon ?? "",
         Authorization: bearer ? `Bearer ${bearer}` : "",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
     })
     if (!res.ok) {
       let msg = res.statusText
@@ -40,6 +41,6 @@ export async function invokeSupportHandoff(body: { message: string }): Promise<v
     return
   }
 
-  const { error } = await supabase.functions.invoke("support-handoff", { body })
+  const { error } = await supabase.functions.invoke("support-handoff", { body: payload })
   if (error) throw error
 }

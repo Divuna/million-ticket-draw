@@ -28,6 +28,24 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders })
   if (req.method !== "POST") return json(405, { error: "Method not allowed" })
 
+  const origin = req.headers.get("origin")
+
+  // ONLY allow manual CTA calls
+  let body: any = null
+  try {
+    body = (await req.json()) as any
+  } catch {
+    body = null
+  }
+
+  if (!body || body.ctaClicked !== true) {
+    console.log("BLOCKED AUTO SUPPORT TRIGGER", { origin })
+    return new Response(
+      JSON.stringify({ error: "Blocked automatic support trigger" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    )
+  }
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? ""
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? ""
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -48,7 +66,6 @@ serve(async (req) => {
 
   let originalText = ""
   try {
-    const body = (await req.json()) as { originalText?: unknown; message?: unknown }
     if (typeof body.message === "string") {
       originalText = body.message.trim()
     } else {
