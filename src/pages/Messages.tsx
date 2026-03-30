@@ -364,7 +364,7 @@ export default function MessagesPage() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const messagesRef = useRef<Message[]>([]);
   const supportHandoffInFlightRef = useRef(false);
-  const postSendRefetchTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  
   const hasMoreOlderRef = useRef(false);
   const loadingOlderRef = useRef(false);
   const currentUserIdRef = useRef<string | undefined>(undefined);
@@ -609,46 +609,12 @@ export default function MessagesPage() {
     void (async () => {
       console.log("CALLING loadMessages");
       await loadMessages();
-      // Let the loaded thread paint once before bulk mark-read UPDATEs hit realtime.
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => resolve());
       });
       await markAdminMessagesAsRead();
       refreshUnreadCount();
     })();
-
-    // Realtime subscription — immediately merge new rows (especially AI replies) into state.
-    const channel = supabase
-      .channel(`user-messages-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          const newMsg = payload.new as Message;
-          if (!newMsg?.id) return;
-          setMessages((prev) => {
-            // Skip if already present (optimistic or duplicate)
-            if (prev.some((m) => m.id === newMsg.id)) return prev;
-            // Replace optimistic user message with real row if content matches
-            const withoutOptimistic = newMsg.sender === "user"
-              ? prev.filter((m) => !(m.id.startsWith(OPTIMISTIC_MESSAGE_ID_PREFIX) && m.content === newMsg.content))
-              : prev;
-            return capAfterTailGrowth(withoutOptimistic.length, [...withoutOptimistic, newMsg]);
-          });
-          // If AI reply arrived, stop typing indicator immediately
-          if (newMsg.sender === "ai") {
-            setIsAwaitingReply(false);
-            // Cancel any running poll timers — no longer needed
-            for (const t of postSendRefetchTimersRef.current) clearTimeout(t);
-            postSendRefetchTimersRef.current = [];
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
   }, [user?.id, loadMessages, markAdminMessagesAsRead, refreshUnreadCount]);
 
   const showTypingIndicator = isAwaitingReply;
@@ -662,13 +628,6 @@ export default function MessagesPage() {
   }, [messages]);
 
   const supportHandoffMessage = lastUserMessage?.content ?? "";
-  useEffect(
-    () => () => {
-      for (const t of postSendRefetchTimersRef.current) clearTimeout(t);
-      postSendRefetchTimersRef.current = [];
-    },
-    [],
-  );
 
   // Create sparkle effect
   const createSparkles = useCallback(() => {
@@ -686,7 +645,7 @@ export default function MessagesPage() {
     setTimeout(() => setSparkles([]), 1000);
   }, []);
 
-  /** Send pipeline (button / Enter). No loadMessages here — inserts merge via postgres_changes only (+ optimistic). */
+  /** Send pipeline (button / Enter). After insert, fetch once to pick up the AI reply created by DB trigger. */
   const handleSend = async () => {
     if (!newMessage.trim() || sendInFlightRef.current) return;
 
@@ -710,33 +669,6 @@ export default function MessagesPage() {
       setIsAwaitingReply(true);
     });
 
-    // Poll for AI reply (up to 10s) — ensures late AI responses still appear.
-    for (const t of postSendRefetchTimersRef.current) clearTimeout(t);
-    postSendRefetchTimersRef.current = [];
-    let attempts = 0;
-    const poll = async () => {
-      await loadMessages();
-
-      const optimisticTs = new Date(optimisticCreatedAt).getTime();
-      const hasAiAfterSend = messagesRef.current.some((m) => {
-        if (m.sender !== "ai") return false;
-        const ts = new Date(m.created_at).getTime();
-        return Number.isFinite(ts) && ts >= optimisticTs;
-      });
-
-      if (!hasAiAfterSend && attempts < 10) {
-        attempts += 1;
-        const id = setTimeout(() => {
-          void poll();
-        }, 1000);
-        postSendRefetchTimersRef.current.push(id);
-        return;
-      }
-
-      setIsAwaitingReply(false);
-    };
-    void poll();
-
     setFlyingMessage({ id: Date.now(), content: messageContent });
     createSparkles();
     setNewMessage("");
@@ -747,16 +679,16 @@ export default function MessagesPage() {
       if (inserted) {
         setLastUserMessageAt(inserted.created_at);
         toast({ title: "Odesláno" });
+        // Single fetch to pick up both the real user row and the AI reply created by DB trigger.
+        await loadMessages();
       } else {
-        for (const t of postSendRefetchTimersRef.current) clearTimeout(t);
-        postSendRefetchTimersRef.current = [];
         setMessages((prev) =>
           capAfterTailGrowth(prev.length, prev.filter((msg) => msg.id !== optimisticId)),
         );
-        setIsAwaitingReply(false);
         toast({ title: "Chyba", description: "Odeslání selhalo", variant: "destructive" });
       }
     } finally {
+      setIsAwaitingReply(false);
       sendInFlightRef.current = false;
       setFlyingMessage(null);
     }
