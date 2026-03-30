@@ -99,8 +99,6 @@ type MessageThreadItemProps = {
   userName: string;
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
-  supportContextActive: boolean;
-  setSupportContextActive: React.Dispatch<React.SetStateAction<boolean>>;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
   loadMessages: () => Promise<void>;
   supportHandoffMessage: string;
@@ -113,8 +111,6 @@ const MessageThreadItem = memo(
     userName,
     supportSent,
     setSupportSent,
-    supportContextActive,
-    setSupportContextActive,
     supportHandoffInFlightRef,
     loadMessages,
     supportHandoffMessage,
@@ -231,11 +227,7 @@ const MessageThreadItem = memo(
         </p>
 
         {(() => {
-          const effectiveCta =
-            cta ??
-            (supportContextActive && !supportSent && isAiMessage
-              ? { label: "Kontaktovat podporu", action: "/messages" }
-              : undefined);
+          const effectiveCta = cta;
 
           if (!effectiveCta) return null;
 
@@ -258,7 +250,6 @@ const MessageThreadItem = memo(
                     console.log("SUPPORT SHOULD ONLY TRIGGER HERE");
                     await invokeSupportHandoff({ message: supportHandoffMessage });
                     setSupportSent(true);
-                    setSupportContextActive(false);
                     await loadMessages();
                   } finally {
                     supportHandoffInFlightRef.current = false;
@@ -308,11 +299,8 @@ const MessageThreadItem = memo(
 type MessagesThreadListProps = {
   messages: Message[];
   userName: string;
-  showTypingIndicator: boolean;
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
-  supportContextActive: boolean;
-  setSupportContextActive: React.Dispatch<React.SetStateAction<boolean>>;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
   loadMessages: () => Promise<void>;
   supportHandoffMessage: string;
@@ -321,11 +309,8 @@ type MessagesThreadListProps = {
 const MessagesThreadList = memo(function MessagesThreadList({
   messages,
   userName,
-  showTypingIndicator,
   supportSent,
   setSupportSent,
-  supportContextActive,
-  setSupportContextActive,
   supportHandoffInFlightRef,
   loadMessages,
   supportHandoffMessage,
@@ -342,8 +327,6 @@ const MessagesThreadList = memo(function MessagesThreadList({
             userName={userName}
             supportSent={supportSent}
             setSupportSent={setSupportSent}
-            supportContextActive={supportContextActive}
-            setSupportContextActive={setSupportContextActive}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
             loadMessages={loadMessages}
             supportHandoffMessage={supportHandoffMessage}
@@ -365,7 +348,6 @@ export default function MessagesPage() {
   const [hasMoreOlder, setHasMoreOlder] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [supportSent, setSupportSent] = useState(false);
-  const [supportContextActive, setSupportContextActive] = useState(false);
   const [sparkles, setSparkles] = useState<Sparkle[]>([]);
   const [flyingMessage, setFlyingMessage] = useState<FlyingMessage | null>(null);
   const sendInFlightRef = useRef(false);
@@ -525,17 +507,6 @@ export default function MessagesPage() {
     setMessages([...rows]);
     console.log("MESSAGES IN STATE", rows);
 
-    // Preserve support context once detected for this page lifetime.
-    if (!supportSent && !supportContextActive) {
-      const detected = rows.some((m) => {
-        if (typeof m?.content !== "string") return false;
-        if (m.sender === "admin" && m.content.includes("SUPPORT REQUEST")) return true;
-        const parsedRow = parseMessageContent(m.content);
-        return parsedRow.cta?.action === "/messages";
-      });
-      if (detected) setSupportContextActive(true);
-    }
-
     const more = (data?.length ?? 0) === CHAT_PAGE_SIZE;
     setHasMoreOlder(more);
     hasMoreOlderRef.current = more;
@@ -546,7 +517,7 @@ export default function MessagesPage() {
       console.log("AI RESPONSE RECEIVED");
       setIsAwaitingReply(false);
     }
-  }, [user?.id, supportSent, supportContextActive]);
+  }, [user?.id, supportSent]);
 
   const loadOlderMessages = useCallback(async () => {
     const uid = user?.id;
@@ -906,11 +877,8 @@ export default function MessagesPage() {
           <MessagesThreadList
             messages={messages}
             userName={userName}
-            showTypingIndicator={showTypingIndicator}
             supportSent={supportSent}
             setSupportSent={setSupportSent}
-            supportContextActive={supportContextActive}
-            setSupportContextActive={setSupportContextActive}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
             loadMessages={loadMessages}
             supportHandoffMessage={supportHandoffMessage}

@@ -489,8 +489,8 @@ Keep responses natural and human.
 NEVER ask vague follow-up questions (e.g. "upřesni dotaz", "co přesně myslíš?") when the user's intent is already clear from their message.
 If the user asks a general question like "Co mám dělat?" or "Jak pokračovat?", ALWAYS use the available user data from context (USER DATA mioCoins/wins, Last activity, Contests JSON) and give one or two concrete next steps in the app flow — do NOT answer with generic clarification questions only.
 For such general questions, base suggestions on USER DATA mioCoins when it is not "unavailable" (e.g. low balance → Peněženka; enough for play → Soutěže); use USER DATA wins when the topic is výhry; if the topic is vouchers, point to Vouchery. If mioCoins is unavailable, still give concrete OneMil steps without asking the user to "upřesnit". Never write internal paths (/games, /my-contests, /wins, /vouchers, /wallet, /profile, /customer-inbox, …) inside "text" — use visible Czech UI names (Peněženka, Soutěže, Výhry, Vouchery, Profil, …).
-For support-related questions (complaints, account problems, legal, refunds, "chci mluvit s někým", urgent help): answer helpfully and NEVER add an extra action suggestion or in-app navigation CTA in the same message.
-If you trigger human support fallback, return ONLY the support handoff sentence (and the app may add WhatsApp); do NOT add any other line, CTA, or internal path after that.
+For support-related questions (complaints, account problems, legal, refunds): answer helpfully first with the best matching in-app CTA (/wallet, /wins, /vouchers, /games, …). Do NOT offer "Kontaktovat podporu" (/messages) unless you truly cannot answer or the user clearly needs a human.
+If you need to offer human support, say so briefly in Czech in "text" and set cta to action "/messages" with label "Kontaktovat podporu". Do not claim the message was already forwarded.
 NEVER suggest recharge if user has enough MioCoins (use USER DATA mioCoins as the numeric truth; if it is enough for typical contest ticket_price from contests data, do not suggest top-up).
 A separate system message starts with USER DATA (mioCoins, wins, vouchers, etc.). Those fields are loaded from the database for this user — authoritative source of truth, not optional hints.
 
@@ -528,7 +528,7 @@ PRAVIDLA:
 - label musí být česky a výstižně popisovat akci
 
 OUTPUT FORMAT: jeden platný JSON objekt (žádný markdown, žádné trojité zpětné apostrofy v odpovědi).
-If you are not sure or the user needs human support, keep the response short and include the support CTA (/messages).`
+Action "/messages" (Kontaktovat podporu) smíš použít jen když opravdu nevíš, nemáš potřebné informace, nebo uživatel potřebuje osobní zásah člověka. Jinak vždy preferuj konkrétní sekci aplikace (/games, /wallet, …).`
 
 const BOB_SUPPORT_MODE_SYSTEM = `SUPPORT MODE (hard rules):
 - The user is in a support/help situation.
@@ -761,7 +761,8 @@ function isSupportRelatedQuestion(userText: string): boolean {
 
 type SupportIntentHistoryMessage = { sender: string; content: string; created_at: string }
 
-function isSupportIntentForCta(
+/** Broader context for SUPPORT MODE tone (empathy, no upsell). Does NOT control whether /messages CTA is shown. */
+function isSupportToneContext(
   userText: string,
   assistantText: string | undefined,
   // NOTE: wired for future context-aware support intent; logic still uses only current message.
@@ -891,6 +892,56 @@ function isExplicitSupportHandoffRequest(userText: string): boolean {
   )
 }
 
+/** True when assistant text clearly offers human support / admits limits (server-side CTA gate for /messages). */
+function assistantSignalsHumanSupportOffer(assistantText: string | undefined): boolean {
+  if (!assistantText || typeof assistantText !== "string") return false
+  const f = foldCs(assistantText)
+  if (!f) return false
+  if (f.includes("nevim")) return true
+  if (f.includes("nejsem si jist")) return true
+  if (f.includes("ted si nejsem")) return true
+  if (f.includes("nepodarilo se mi")) return true
+  if (f.includes("nemuzu ti to vyresit")) return true
+  if (f.includes("nemuzu ti pomoct")) return true
+  if (f.includes("nemam potrebn") && f.includes("informac")) return true
+  if (f.includes("kontaktovat podpor")) return true
+  if (f.includes("klikni") && f.includes("podpor")) return true
+  if (f.includes("kliknete") && f.includes("podpor")) return true
+  if (f.includes("osobni pomoc")) return true
+  if (f.includes("osobni podpor")) return true
+  if (f.includes("lidskou podpor")) return true
+  if (f.includes("lidska podpora")) return true
+  if (f.includes("spojit") && f.includes("podpor")) return true
+  if (f.includes("predat") && f.includes("podpor")) return true
+  if (f.includes("napis podpore")) return true
+  if (f.includes("napiš podpore")) return true
+  if (f.includes("napiste podpore")) return true
+  return false
+}
+
+/** Hard-coded replies where we always allow the support CTA (technical limits). */
+function isForcedSupportOfferReply(text: string): boolean {
+  const t = text.trim()
+  return (
+    t.startsWith("Tuhle zprávu se mi nepodařilo zpracovat") ||
+    t.startsWith("Teď se mi nepodařilo načíst výhry") ||
+    t.startsWith("Teď se mi nepodařilo odpovědět") ||
+    t.startsWith("Teď si nejsem jistý")
+  )
+}
+
+/** When Bob may show "Kontaktovat podporu" — explicit user ask, assistant offers human help, or forced template. */
+function allowBobSupportCta(
+  userText: string,
+  assistantText: string | undefined,
+  _history: SupportIntentHistoryMessage[],
+): boolean {
+  if (isExplicitSupportHandoffRequest(userText)) return true
+  if (assistantSignalsHumanSupportOffer(assistantText)) return true
+  if (assistantText && isForcedSupportOfferReply(assistantText)) return true
+  return false
+}
+
 function isWinProblem(userText: string): boolean {
   const f = foldCs(userText)
   return (
@@ -975,7 +1026,7 @@ function enforceRequiredSectionCta(
   history: SupportIntentHistoryMessage[],
 ): BobAssistantPayload {
   if (payload.cta?.action === "/messages") {
-    const ok = isSupportIntentForCta(userQuestion, payload.text, history)
+    const ok = allowBobSupportCta(userQuestion, payload.text, history)
     console.log("[ai-chat] support CTA gate (enforceRequiredSectionCta)", {
       userPreview: previewForLog(userQuestion),
       assistantPreview: previewForLog(payload.text),
@@ -998,7 +1049,7 @@ function normalizeBobPayloadBeforeFinalize(
   history: SupportIntentHistoryMessage[],
 ): BobAssistantPayload {
   const stripped = payload
-  if (stripped.cta?.action === "/messages" && !isSupportIntentForCta(userQuestion, stripped.text, history)) {
+  if (stripped.cta?.action === "/messages" && !allowBobSupportCta(userQuestion, stripped.text, history)) {
     console.log("[ai-chat] support CTA stripped → fallback /games (normalize)", {
       userPreview: previewForLog(userQuestion),
       assistantPreview: previewForLog(stripped.text),
@@ -1042,7 +1093,8 @@ async function finalizeBobPayload(
 function shouldFallbackToAdmin(reply: string): boolean {
   const t = reply.trim()
   if (t.length === 0) return true
-  return t.toLowerCase().includes("nevím")
+  const f = foldCs(t)
+  return f.includes("nevim") || f.includes("nejsem si jist")
 }
 
 function jsonSuccess(replyMessageId: string) {
@@ -1420,17 +1472,17 @@ serve(async (req) => {
           ? await rephraseKnowledgeForBob(openaiKey, extendedKb, userContent)
           : null
         const reply = rephrased ?? extendedKb
-        const supportRelated = isSupportIntentForCta(userContent, reply, [])
         const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
-        console.log("[ai-chat] support intent check (KB extended)", {
+        const signalOffer = assistantSignalsHumanSupportOffer(reply) || isForcedSupportOfferReply(reply)
+        console.log("[ai-chat] support CTA check (KB extended)", {
           userPreview: previewForLog(userContent),
           assistantPreview: previewForLog(reply),
-          supportRelated,
           explicitHandoff,
+          signalOffer,
         })
 
         const payload: BobAssistantPayload =
-          supportRelated && !explicitHandoff
+          explicitHandoff || signalOffer
             ? {
                 text: addOptionalSupportCta(reply),
                 cta: { label: "Kontaktovat podporu", action: "/messages" },
@@ -1467,17 +1519,17 @@ serve(async (req) => {
           ? await rephraseKnowledgeForBob(openaiKey, predefined, userContent)
           : null
         const reply = rephrased ?? predefined
-        const supportRelated = isSupportIntentForCta(userContent, reply, [])
         const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
-        console.log("[ai-chat] support intent check (KB predefined)", {
+        const signalOffer = assistantSignalsHumanSupportOffer(reply) || isForcedSupportOfferReply(reply)
+        console.log("[ai-chat] support CTA check (KB predefined)", {
           userPreview: previewForLog(userContent),
           assistantPreview: previewForLog(reply),
-          supportRelated,
           explicitHandoff,
+          signalOffer,
         })
 
         const payload: BobAssistantPayload =
-          supportRelated && !explicitHandoff
+          explicitHandoff || signalOffer
             ? {
                 text: addOptionalSupportCta(reply),
                 cta: { label: "Kontaktovat podporu", action: "/messages" },
@@ -1532,7 +1584,7 @@ serve(async (req) => {
         }))
 
         // Separate support vs sales modes: if support intent is active, constrain GPT to support-only.
-        supportMode = isSupportIntentForCta(userContent, undefined, supportIntentHistory)
+        supportMode = isSupportToneContext(userContent, undefined, supportIntentHistory)
 
         const tDbParallelStart = nowMs()
         const [
@@ -1648,14 +1700,18 @@ serve(async (req) => {
         }
         const streamingRowId = ph.id
 
-        const applyFallbackToPlaceholder = async (fallbackReply: string): Promise<Response> => {
+        const applyFallbackToPlaceholder = async (
+          fallbackReply: string,
+          payloadOverride?: BobAssistantPayload,
+        ): Promise<Response> => {
           const tPostStart = nowMs()
+          const basePayload = payloadOverride ?? bobPayloadFromRawAssistantString(fallbackReply)
           const finalFallbackReply = await finalizeBobPayloadNormalized(
             supabase,
             userMsg.user_id,
             messageId,
             userContent,
-            bobPayloadFromRawAssistantString(fallbackReply),
+            basePayload,
             supportIntentHistory,
           )
           timing.postprocess_ms = (timing.postprocess_ms ?? 0) + (nowMs() - tPostStart)
@@ -1724,14 +1780,20 @@ serve(async (req) => {
             const errText = await openaiRes.text()
             console.error("[ai-chat] OpenAI error", openaiRes.status, errText)
           }
-          gptResult = await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
+          gptResult = await applyFallbackToPlaceholder(
+            OPENAI_FAILURE_FALLBACK_TEXT,
+            bobSupportCtaPayload(OPENAI_FAILURE_FALLBACK_TEXT),
+          )
           break
         }
 
         const bodyReader = openaiRes.body?.getReader()
         if (!bodyReader) {
           clearStreamTimer()
-          gptResult = await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
+          gptResult = await applyFallbackToPlaceholder(
+            OPENAI_FAILURE_FALLBACK_TEXT,
+            bobSupportCtaPayload(OPENAI_FAILURE_FALLBACK_TEXT),
+          )
           break
         }
 
@@ -1812,7 +1874,10 @@ serve(async (req) => {
         } catch (e) {
           console.error("[ai-chat] OpenAI stream read failed", e)
           clearStreamTimer()
-          gptResult = await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
+          gptResult = await applyFallbackToPlaceholder(
+            OPENAI_FAILURE_FALLBACK_TEXT,
+            bobSupportCtaPayload(OPENAI_FAILURE_FALLBACK_TEXT),
+          )
           break
         } finally {
           clearStreamTimer()
@@ -1829,36 +1894,28 @@ serve(async (req) => {
         const rawTrimmed = keepOnlyLastValidJsonObject(rawAssistant)
         let bobPayload = bobPayloadFromRawAssistantString(rawTrimmed)
         if (!bobPayload.text.trim()) {
-          gptResult = await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
+          gptResult = await applyFallbackToPlaceholder(
+            OPENAI_FAILURE_FALLBACK_TEXT,
+            bobSupportCtaPayload(OPENAI_FAILURE_FALLBACK_TEXT),
+          )
           break
         }
 
-        const supportRelated = isSupportIntentForCta(userContent, bobPayload.text, supportIntentHistory)
-        const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
-        console.log("[ai-chat] support intent check (GPT final)", {
+        const allowSupport = allowBobSupportCta(userContent, bobPayload.text, supportIntentHistory)
+        console.log("[ai-chat] support CTA check (GPT final)", {
           userPreview: previewForLog(userContent),
           assistantPreview: previewForLog(bobPayload.text),
           bobCta: bobPayload.cta ?? null,
-          supportRelated,
-          explicitHandoff,
+          allowSupport,
         })
-        // If support intent is detected, we only add the support CTA (no "forwarded" wording).
-        if (supportRelated && !explicitHandoff) {
-          bobPayload = { ...bobPayload, cta: { label: "Kontaktovat podporu", action: "/messages" } }
-        }
 
-        if (
-          bobPayload.cta?.action === "/messages" &&
-          !isSupportIntentForCta(userContent, bobPayload.text, supportIntentHistory)
-        ) {
+        if (bobPayload.cta?.action === "/messages" && !allowSupport) {
           console.log("[ai-chat] support CTA removed → /games (GPT final)", {
             userPreview: previewForLog(userContent),
             assistantPreview: previewForLog(bobPayload.text),
           })
           bobPayload = { ...bobPayload, cta: { label: "Soutěže", action: "/games" } }
-        }
-
-        if (explicitHandoff) {
+        } else if (allowSupport) {
           bobPayload = { ...bobPayload, cta: { label: "Kontaktovat podporu", action: "/messages" } }
         }
 
