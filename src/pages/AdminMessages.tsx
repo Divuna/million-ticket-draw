@@ -132,7 +132,8 @@ export default function AdminMessages() {
       }
     });
 
-    const result: Thread[] = userIds.map((uid) => {
+    const result: Thread[] = userIds
+      .map((uid) => {
       const userMessages = grouped[uid];
       const hasUnread = userMessages.some((msg) => msg.sender === "user" && !msg.read);
       const senderNorm = (s: unknown): Thread["last_sender"] => {
@@ -153,6 +154,12 @@ export default function AdminMessages() {
           .filter((m) => isSupportRequestMarker(m))
           .map((m) => m.created_at)
           .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+
+      // Admin inbox should show ONLY real support tickets.
+      // If there is no SUPPORT REQUEST marker, hide the thread entirely.
+      if (!supportRequestAtLatest) {
+        return null;
+      }
 
       // Latest real admin reply (exclude SUPPORT REQUEST markers; ignore AI entirely).
       const lastRealAdminAt =
@@ -196,9 +203,10 @@ export default function AdminMessages() {
         is_partner: isPartner,
         role: isInfluencer ? "influencer" as const : isPartner ? "partner" as const : "user" as const,
       };
-    });
+    })
+      .filter((t): t is Thread => Boolean(t));
 
-    // Base sort (non-support): influencer/partner+unread → unread → influencer/partner+read → read, then by date
+    // Base sort: keep existing heuristics, then by date
     const baseSorted = [...result].sort((a, b) => {
       const aScore = (a.has_unread ? 2 : 0) + (a.is_influencer || a.is_partner ? 1 : 0);
       const bScore = (b.has_unread ? 2 : 0) + (b.is_influencer || b.is_partner ? 1 : 0);
@@ -206,19 +214,18 @@ export default function AdminMessages() {
       return new Date(b.last_date).getTime() - new Date(a.last_date).getTime();
     });
 
-    // Final ordering:
-    // - support_active → top, oldest support request first (ASC)
-    // - others → keep baseSorted order (no jumping)
-    const supportActive = baseSorted
+    // In this view we show ONLY support threads, but keep the same ordering rule:
+    // active support first (oldest request first), then the rest.
+    const activeSupport = baseSorted
       .filter((t) => t.support_active)
       .sort((a, b) => {
         const at = a.support_active_at ?? a.last_date;
         const bt = b.support_active_at ?? b.last_date;
         return new Date(at).getTime() - new Date(bt).getTime();
       });
-    const rest = baseSorted.filter((t) => !t.support_active);
+    const inactiveSupport = baseSorted.filter((t) => !t.support_active);
 
-    setThreads([...supportActive, ...rest]);
+    setThreads([...activeSupport, ...inactiveSupport]);
     setLoading(false);
   }, []);
 
@@ -350,6 +357,14 @@ export default function AdminMessages() {
                       </Badge>
                     </div>
                   )}
+
+                  <p
+                    className={`text-[11px] font-medium mb-2 ${
+                      thread.last_sender === "user" ? "text-[hsl(35,90%,70%)]" : "text-muted-foreground/70"
+                    }`}
+                  >
+                    {thread.last_sender === "user" ? "Čeká na odpověď" : "Vyřešeno"}
+                  </p>
                   
                   {/* Sender */}
                   <p className={`font-semibold text-sm truncate ${isSpecial ? "pr-2" : "pr-6"} ${
