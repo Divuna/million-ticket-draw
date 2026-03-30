@@ -54,12 +54,6 @@ export default function AdminMessages() {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const filteredThreads = threads.filter((t) => {
-    // Strict visibility: only threads that contain a SUPPORT REQUEST marker.
-    // NOTE: `threads` are built from the grouped message list; this is a second-layer safety net.
-    return typeof t.last_message === "string" ? t.last_message.includes("SUPPORT REQUEST") : false;
-  });
-
   const loadThreads = useCallback(async () => {
     setLoading(true);
 
@@ -271,7 +265,7 @@ export default function AdminMessages() {
         <p className="text-muted-foreground">Zatím žádné zprávy.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredThreads.map((thread) => {
+          {threads.map((thread) => {
             const isSpecial = thread.is_influencer || thread.is_partner;
             const isSpecialUnread = isSpecial && thread.has_unread;
             const isSpecialRead = isSpecial && !thread.has_unread;
