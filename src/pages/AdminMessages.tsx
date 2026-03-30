@@ -1,4 +1,5 @@
 "use client";
+// rebuild
 
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
@@ -134,27 +135,48 @@ export default function AdminMessages() {
     const result: Thread[] = userIds.map((uid) => {
       const userMessages = grouped[uid];
       const hasUnread = userMessages.some((msg) => msg.sender === "user" && !msg.read);
+      const senderNorm = (s: unknown): Thread["last_sender"] => {
+        const v = typeof s === "string" ? s.toLowerCase().trim() : "";
+        if (v === "user" || v === "admin" || v === "ai") return v;
+        return null;
+      };
+
+      const isSupportRequestMarker = (msg: any): boolean => {
+        if (senderNorm(msg?.sender) !== "admin") return false;
+        const plain = safePlainTextFromMessageContent(msg?.content);
+        return plain.startsWith("SUPPORT REQUEST");
+      };
+
+      // Determine latest SUPPORT REQUEST marker (admin-only marker message).
       const supportRequestAtLatest =
         userMessages
-          .filter((msg) => {
-            if (msg.sender !== "admin") return false;
-            const plain = safePlainTextFromMessageContent(msg.content);
-            return plain.startsWith("SUPPORT REQUEST");
-          })
+          .filter((m) => isSupportRequestMarker(m))
           .map((m) => m.created_at)
           .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
 
-      const adminRepliedAfterSupport =
+      // Latest real admin reply (exclude SUPPORT REQUEST markers; ignore AI entirely).
+      const lastRealAdminAt =
+        userMessages
+          .filter((m) => senderNorm(m?.sender) === "admin" && !isSupportRequestMarker(m))
+          .map((m) => m.created_at)
+          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+
+      // Latest user message (ignore AI entirely).
+      const lastUserAt =
+        userMessages
+          .filter((m) => senderNorm(m?.sender) === "user")
+          .map((m) => m.created_at)
+          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+
+      // Support is active ONLY if:
+      // - SUPPORT REQUEST exists
+      // - last REAL admin message is BEFORE last user message
+      const supportActive =
         supportRequestAtLatest != null &&
-        userMessages.some((msg) => {
-          if (msg.sender !== "admin") return false;
-          if (msg.content && safePlainTextFromMessageContent(msg.content).startsWith("SUPPORT REQUEST")) return false;
-          return new Date(msg.created_at).getTime() > new Date(supportRequestAtLatest).getTime();
-        });
+        lastUserAt != null &&
+        (lastRealAdminAt == null || new Date(lastRealAdminAt).getTime() < new Date(lastUserAt).getTime());
 
-      const supportActive = supportRequestAtLatest != null && !adminRepliedAfterSupport;
-
-      const lastSender = (userMessages[0]?.sender ?? null) as Thread["last_sender"];
+      const lastSender = senderNorm(userMessages[0]?.sender);
       const userInfo = userMap[uid] || { email: null, name: null };
       const partner = partnerMap[uid];
       const isInfluencer = partner?.isInfluencer ?? false;
