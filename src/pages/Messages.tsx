@@ -616,6 +616,39 @@ export default function MessagesPage() {
       await markAdminMessagesAsRead();
       refreshUnreadCount();
     })();
+
+    // Realtime subscription — immediately merge new rows (especially AI replies) into state.
+    const channel = supabase
+      .channel(`user-messages-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const newMsg = payload.new as Message;
+          if (!newMsg?.id) return;
+          setMessages((prev) => {
+            // Skip if already present (optimistic or duplicate)
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            // Replace optimistic user message with real row if content matches
+            const withoutOptimistic = newMsg.sender === "user"
+              ? prev.filter((m) => !(m.id.startsWith(OPTIMISTIC_MESSAGE_ID_PREFIX) && m.content === newMsg.content))
+              : prev;
+            return capAfterTailGrowth(withoutOptimistic.length, [...withoutOptimistic, newMsg]);
+          });
+          // If AI reply arrived, stop typing indicator immediately
+          if (newMsg.sender === "ai") {
+            setIsAwaitingReply(false);
+            // Cancel any running poll timers — no longer needed
+            for (const t of postSendRefetchTimersRef.current) clearTimeout(t);
+            postSendRefetchTimersRef.current = [];
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
   }, [user?.id, loadMessages, markAdminMessagesAsRead, refreshUnreadCount]);
 
   const showTypingIndicator = isAwaitingReply;
