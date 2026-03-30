@@ -80,13 +80,22 @@ const fetchCount = async () => {
     const isAdmin = role?.role === "admin" || role?.role === "superadmin";
     _isCurrentUserAdmin = isAdmin;
 
+    if (isAdmin) {
+      const { data: rpcCount, error: rpcError } = await supabase.rpc("admin_unread_support_user_messages_count");
+      if (!rpcError && typeof rpcCount === "number") {
+        setUnreadCount(rpcCount);
+        return;
+      }
+      console.warn("[unread] admin_unread_support_user_messages_count RPC failed, using legacy count", rpcError);
+    }
+
     let query = supabase
       .from("messages")
       .select("*", { count: "exact", head: true })
       .eq("read", false);
 
     if (isAdmin) {
-      // ADMIN → UNREAD OD UŽIVATELŮ
+      // ADMIN → legacy fallback: unread user rows (apply migration for accurate support-only count)
       query = query.eq("sender", "user");
     } else {
       // USER → UNREAD OD ADMINA (systémové zprávy nyní mají sender='admin')

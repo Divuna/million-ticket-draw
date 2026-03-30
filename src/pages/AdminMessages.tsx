@@ -160,27 +160,20 @@ export default function AdminMessages() {
         return null;
       }
 
-      // Latest real admin reply (exclude SUPPORT REQUEST markers; ignore AI entirely).
-      const lastRealAdminAt =
+      // Latest real admin reply AFTER the latest SUPPORT REQUEST (exclude marker rows).
+      // If any exists, this ticket round is "handled" — Bob-only follow-ups must not reopen admin inbox.
+      const rMs = new Date(supportRequestAtLatest).getTime();
+      const adminReplyAfterLatestRequest =
         userMessages
-          .filter((m) => senderNorm(m?.sender) === "admin" && !isSupportRequestMarker(m))
+          .filter((m) => {
+            if (senderNorm(m?.sender) !== "admin") return false;
+            if (isSupportRequestMarker(m)) return false;
+            return new Date(m.created_at).getTime() > rMs;
+          })
           .map((m) => m.created_at)
           .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
 
-      // Latest user message (ignore AI entirely).
-      const lastUserAt =
-        userMessages
-          .filter((m) => senderNorm(m?.sender) === "user")
-          .map((m) => m.created_at)
-          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
-
-      // Support is active ONLY if:
-      // - SUPPORT REQUEST exists
-      // - last REAL admin message is BEFORE last user message
-      const supportActive =
-        supportRequestAtLatest != null &&
-        lastUserAt != null &&
-        (lastRealAdminAt == null || new Date(lastRealAdminAt).getTime() < new Date(lastUserAt).getTime());
+      const supportActive = adminReplyAfterLatestRequest == null;
 
       const lastSender = senderNorm(userMessages[0]?.sender);
       const userInfo = userMap[uid] || { email: null, name: null };
@@ -213,8 +206,8 @@ export default function AdminMessages() {
       return new Date(b.last_date).getTime() - new Date(a.last_date).getTime();
     });
 
-    // In this view we show ONLY support threads, but keep the same ordering rule:
-    // active support first (oldest request first), then the rest.
+    // Only *open* support tickets (no admin reply yet after latest SUPPORT REQUEST).
+    // Resolved / Bob-only chats stay out of this list until the next handoff.
     const activeSupport = baseSorted
       .filter((t) => t.support_active)
       .sort((a, b) => {
@@ -222,9 +215,8 @@ export default function AdminMessages() {
         const bt = b.support_active_at ?? b.last_date;
         return new Date(at).getTime() - new Date(bt).getTime();
       });
-    const inactiveSupport = baseSorted.filter((t) => !t.support_active);
 
-    setThreads([...activeSupport, ...inactiveSupport]);
+    setThreads(activeSupport);
     setLoading(false);
   }, []);
 
@@ -262,7 +254,7 @@ export default function AdminMessages() {
       {loading ? (
         <p className="text-muted-foreground">Načítání…</p>
       ) : threads.length === 0 ? (
-        <p className="text-muted-foreground">Zatím žádné zprávy.</p>
+        <p className="text-muted-foreground">Žádné otevřené požadavky na podporu.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {threads.map((thread) => {
