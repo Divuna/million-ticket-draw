@@ -113,24 +113,48 @@ const scheduleFetchCountDebounced = () => {
   }, 120);
 };
 
+const extractPlainTextContent = (content: unknown): string => {
+  if (typeof content !== "string") return "";
+  const t = content.trim();
+  if (!t) return "";
+  if (t.startsWith("{") && t.endsWith("}")) {
+    try {
+      const parsed = JSON.parse(t) as { text?: unknown };
+      if (parsed && typeof parsed === "object" && typeof parsed.text === "string") {
+        return parsed.text.trim();
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return t;
+};
+
+const isSupportSoundTriggerMessage = (record: any): boolean => {
+  const sender = record?.sender;
+  if (sender !== "admin") return false;
+  const plain = extractPlainTextContent(record?.content);
+  return plain.includes("SUPPORT REQUEST");
+};
+
 const handleRealtimeMessage = (payload: any) => {
   const { eventType, new: newRecord } = payload;
 
   // Only play sound on INSERT
   if (eventType === "INSERT" && newRecord) {
-    const sender = newRecord.sender;
     const messageUserId = newRecord.user_id;
 
-    // User receives sound for admin messages addressed to them
-    if (!_isCurrentUserAdmin && _currentUserId === messageUserId) {
-      if (sender === "admin") {
+    // Play sound ONLY for support requests (admin marker messages).
+    if (isSupportSoundTriggerMessage(newRecord)) {
+      // User receives sound only for their own support request marker.
+      if (!_isCurrentUserAdmin && _currentUserId === messageUserId) {
         playNotificationSound();
       }
-    }
 
-    // Admin receives sound for user messages
-    if (_isCurrentUserAdmin && sender === "user") {
-      playNotificationSound();
+      // Admin receives sound for any support request marker.
+      if (_isCurrentUserAdmin) {
+        playNotificationSound();
+      }
     }
   }
 

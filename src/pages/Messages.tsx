@@ -96,6 +96,8 @@ type MessageThreadItemProps = {
   userName: string;
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
+  supportContextActive: boolean;
+  setSupportContextActive: React.Dispatch<React.SetStateAction<boolean>>;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
   loadMessages: () => Promise<void>;
   supportHandoffMessage: string;
@@ -108,6 +110,8 @@ const MessageThreadItem = memo(
     userName,
     supportSent,
     setSupportSent,
+    supportContextActive,
+    setSupportContextActive,
     supportHandoffInFlightRef,
     loadMessages,
     supportHandoffMessage,
@@ -223,31 +227,41 @@ const MessageThreadItem = memo(
           {displayText}
         </p>
 
-        {cta && (
+        {(() => {
+          const effectiveCta =
+            cta ??
+            (supportContextActive && !supportSent && isAiMessage
+              ? { label: "Kontaktovat podporu", action: "/messages" }
+              : undefined);
+
+          if (!effectiveCta) return null;
+
+          return (
           <button
             type="button"
             onClick={async (e) => {
               console.log("CTA CLICK");
-              console.log("CTA CLICK payload", cta);
+              console.log("CTA CLICK payload", effectiveCta);
               e.preventDefault();
               e.stopPropagation();
-              if (cta.action.startsWith("http")) {
-                window.open(cta.action, "_blank", "noopener");
+              if (effectiveCta.action.startsWith("http")) {
+                window.open(effectiveCta.action, "_blank", "noopener");
               } else {
-                if (cta.action === "/messages") {
+                if (effectiveCta.action === "/messages") {
                   if (supportSent) return;
                   if (supportHandoffInFlightRef.current) return;
                   supportHandoffInFlightRef.current = true;
                   try {
                     await invokeSupportHandoff({ message: supportHandoffMessage });
                     setSupportSent(true);
+                    setSupportContextActive(false);
                     await loadMessages();
                   } finally {
                     supportHandoffInFlightRef.current = false;
                   }
                   return;
                 }
-                navigate(cta.action);
+                navigate(effectiveCta.action);
               }
             }}
             className="relative z-10 mt-3 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
@@ -261,9 +275,10 @@ const MessageThreadItem = memo(
               zIndex: 50,
             }}
           >
-            {cta.action === "/messages" && supportSent ? "Předáno podpoře" : cta.label}
+            {effectiveCta.action === "/messages" && supportSent ? "Předáno podpoře" : effectiveCta.label}
           </button>
-        )}
+          );
+        })()}
 
         <p
           className={`relative z-10 text-xs mt-2 ${
@@ -292,6 +307,8 @@ type MessagesThreadListProps = {
   showTypingIndicator: boolean;
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
+  supportContextActive: boolean;
+  setSupportContextActive: React.Dispatch<React.SetStateAction<boolean>>;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
   loadMessages: () => Promise<void>;
   supportHandoffMessage: string;
@@ -303,6 +320,8 @@ const MessagesThreadList = memo(function MessagesThreadList({
   showTypingIndicator,
   supportSent,
   setSupportSent,
+  supportContextActive,
+  setSupportContextActive,
   supportHandoffInFlightRef,
   loadMessages,
   supportHandoffMessage,
@@ -319,6 +338,8 @@ const MessagesThreadList = memo(function MessagesThreadList({
             userName={userName}
             supportSent={supportSent}
             setSupportSent={setSupportSent}
+            supportContextActive={supportContextActive}
+            setSupportContextActive={setSupportContextActive}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
             loadMessages={loadMessages}
             supportHandoffMessage={supportHandoffMessage}
@@ -340,6 +361,7 @@ export default function MessagesPage() {
   const [hasMoreOlder, setHasMoreOlder] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [supportSent, setSupportSent] = useState(false);
+  const [supportContextActive, setSupportContextActive] = useState(false);
   const [sparkles, setSparkles] = useState<Sparkle[]>([]);
   const [flyingMessage, setFlyingMessage] = useState<FlyingMessage | null>(null);
   const sendInFlightRef = useRef(false);
@@ -496,6 +518,18 @@ export default function MessagesPage() {
     // Force state update with a fresh array reference (guarantee rerender).
     setMessages([...rows]);
     console.log("MESSAGES IN STATE", rows);
+
+    // Preserve support context once detected for this page lifetime.
+    if (!supportSent && !supportContextActive) {
+      const detected = rows.some((m) => {
+        if (typeof m?.content !== "string") return false;
+        if (m.sender === "admin" && m.content.includes("SUPPORT REQUEST")) return true;
+        const parsedRow = parseMessageContent(m.content);
+        return parsedRow.cta?.action === "/messages";
+      });
+      if (detected) setSupportContextActive(true);
+    }
+
     const more = (data?.length ?? 0) === CHAT_PAGE_SIZE;
     setHasMoreOlder(more);
     hasMoreOlderRef.current = more;
@@ -506,7 +540,7 @@ export default function MessagesPage() {
       console.log("AI RESPONSE RECEIVED");
       setIsAwaitingReply(false);
     }
-  }, [user?.id]);
+  }, [user?.id, supportSent, supportContextActive]);
 
   const loadOlderMessages = useCallback(async () => {
     const uid = user?.id;
@@ -861,6 +895,8 @@ export default function MessagesPage() {
             showTypingIndicator={showTypingIndicator}
             supportSent={supportSent}
             setSupportSent={setSupportSent}
+            supportContextActive={supportContextActive}
+            setSupportContextActive={setSupportContextActive}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
             loadMessages={loadMessages}
             supportHandoffMessage={supportHandoffMessage}
