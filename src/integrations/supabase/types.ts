@@ -3283,7 +3283,6 @@ export type Database = {
         }
         Returns: Json
       }
-      admin_unread_support_user_messages_count: { Args: never; Returns: number }
       admin_manage_payment: {
         Args: {
           p_new_status: string
