@@ -930,13 +930,12 @@ function isForcedSupportOfferReply(text: string): boolean {
   )
 }
 
-/** When Bob may show "Kontaktovat podporu" — explicit user ask, assistant offers human help, or forced template. */
+/** When Bob may show "Kontaktovat podporu" — only when Bob offers human help or on forced technical fallback. */
 function allowBobSupportCta(
   userText: string,
   assistantText: string | undefined,
   _history: SupportIntentHistoryMessage[],
 ): boolean {
-  if (isExplicitSupportHandoffRequest(userText)) return true
   if (assistantSignalsHumanSupportOffer(assistantText)) return true
   if (assistantText && isForcedSupportOfferReply(assistantText)) return true
   return false
@@ -1472,17 +1471,15 @@ serve(async (req) => {
           ? await rephraseKnowledgeForBob(openaiKey, extendedKb, userContent)
           : null
         const reply = rephrased ?? extendedKb
-        const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
         const signalOffer = assistantSignalsHumanSupportOffer(reply) || isForcedSupportOfferReply(reply)
         console.log("[ai-chat] support CTA check (KB extended)", {
           userPreview: previewForLog(userContent),
           assistantPreview: previewForLog(reply),
-          explicitHandoff,
           signalOffer,
         })
 
         const payload: BobAssistantPayload =
-          explicitHandoff || signalOffer
+          signalOffer
             ? {
                 text: addOptionalSupportCta(reply),
                 cta: { label: "Kontaktovat podporu", action: "/messages" },
@@ -1519,17 +1516,15 @@ serve(async (req) => {
           ? await rephraseKnowledgeForBob(openaiKey, predefined, userContent)
           : null
         const reply = rephrased ?? predefined
-        const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
         const signalOffer = assistantSignalsHumanSupportOffer(reply) || isForcedSupportOfferReply(reply)
         console.log("[ai-chat] support CTA check (KB predefined)", {
           userPreview: previewForLog(userContent),
           assistantPreview: previewForLog(reply),
-          explicitHandoff,
           signalOffer,
         })
 
         const payload: BobAssistantPayload =
-          explicitHandoff || signalOffer
+          signalOffer
             ? {
                 text: addOptionalSupportCta(reply),
                 cta: { label: "Kontaktovat podporu", action: "/messages" },
