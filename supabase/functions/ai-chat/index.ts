@@ -1086,7 +1086,7 @@ async function insertAdminHandoff(
     .from("messages")
     .insert({
       user_id: userId,
-      sender: "admin",
+      sender: "ai",
       content: ADMIN_FALLBACK_CONTENT,
       read: false,
     })
