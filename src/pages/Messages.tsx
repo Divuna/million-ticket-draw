@@ -662,13 +662,6 @@ export default function MessagesPage() {
   }, [messages]);
 
   const supportHandoffMessage = lastUserMessage?.content ?? "";
-  useEffect(
-    () => () => {
-      for (const t of postSendRefetchTimersRef.current) clearTimeout(t);
-      postSendRefetchTimersRef.current = [];
-    },
-    [],
-  );
 
   // Create sparkle effect
   const createSparkles = useCallback(() => {
