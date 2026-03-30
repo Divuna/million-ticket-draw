@@ -1,5 +1,6 @@
 // FORCE SAVE
 // production fix
+console.log("PRODUCTION VERSION V2")
 import { useEffect, useState, useRef, useCallback, useMemo, memo } from "react";
 import type { CSSProperties } from "react";
 import { flushSync } from "react-dom";
@@ -254,6 +255,7 @@ const MessageThreadItem = memo(
                   if (supportHandoffInFlightRef.current) return;
                   supportHandoffInFlightRef.current = true;
                   try {
+                    console.log("SUPPORT SHOULD ONLY TRIGGER HERE");
                     await invokeSupportHandoff({ message: supportHandoffMessage });
                     setSupportSent(true);
                     setSupportContextActive(false);

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 console.log("AI-CHAT VERSION: TIMING_V1")
+console.log("AI CHAT: support NOT triggered automatically")
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1073,31 +1074,6 @@ function shouldFallbackToAdmin(reply: string): boolean {
   const t = reply.trim()
   if (t.length === 0) return true
   return t.toLowerCase().includes("nevím")
-}
-
-/**
- * Admin handoff row: plain `content` (not Bob JSON). AI rows must use `insertAiReply` → always `serializeAiMessageContentForDb`.
- */
-async function insertAdminHandoff(
-  supabase: ServiceSupabase,
-  userId: string,
-): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
-  const { data, error } = await supabase
-    .from("messages")
-    .insert({
-      user_id: userId,
-      sender: "ai",
-      content: ADMIN_FALLBACK_CONTENT,
-      read: false,
-    })
-    .select("id")
-    .single()
-
-  if (error) {
-    console.error("[ai-chat] admin handoff insert failed", error)
-    return { ok: false, message: error.message }
-  }
-  return { ok: true, id: data.id }
 }
 
 function jsonSuccess(replyMessageId: string) {
