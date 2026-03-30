@@ -11,6 +11,9 @@ import { Star, Building2, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 
+/** Must match support-handoff: single admin row created on CTA click. */
+const SUPPORT_REQUEST_MARKER = "SUPPORT REQUEST";
+
 interface Thread {
   user_id: string;
   user_email: string | null;
@@ -19,9 +22,9 @@ interface Thread {
   last_date: string;
   last_sender: "user" | "admin" | "ai" | null;
   has_unread: boolean;
-  /** Support is active only if there is a SUPPORT REQUEST with no admin reply after it. */
+  /** Open ticket: last row is admin + content exactly SUPPORT REQUEST, no later non-marker admin reply. */
   support_active: boolean;
-  /** Timestamp of the active support request (used for ordering). */
+  /** Time of that exact SUPPORT REQUEST row (ordering). */
   support_active_at: string | null;
   is_influencer: boolean;
   is_partner: boolean;
@@ -142,38 +145,34 @@ export default function AdminMessages() {
         return null;
       };
 
-      // Strict support-thread filter: include ONLY threads that contain a raw marker row.
-      const isSupportRequestMarker = (msg: any): boolean => {
-        return typeof msg?.content === "string" && msg.content.startsWith("SUPPORT REQUEST");
-      };
+      const isExactSupportRequestRow = (msg: { sender?: unknown; content?: unknown }): boolean =>
+        senderNorm(msg?.sender) === "admin" &&
+        typeof msg?.content === "string" &&
+        msg.content === SUPPORT_REQUEST_MARKER;
 
-      // Determine latest SUPPORT REQUEST marker (admin-only marker message).
-      const supportRequestAtLatest =
-        userMessages
-          .filter((m) => isSupportRequestMarker(m))
-          .map((m) => m.created_at)
-          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+      const isAdminNonMarkerReply = (msg: { sender?: unknown; content?: unknown }): boolean =>
+        senderNorm(msg?.sender) === "admin" &&
+        typeof msg?.content === "string" &&
+        msg.content !== SUPPORT_REQUEST_MARKER;
 
-      // Admin inbox should show ONLY real support tickets.
-      // If there is no SUPPORT REQUEST marker, hide the thread entirely.
-      if (!supportRequestAtLatest) {
+      const markerRows = userMessages.filter(isExactSupportRequestRow);
+      if (markerRows.length === 0) {
         return null;
       }
 
-      // Latest real admin reply AFTER the latest SUPPORT REQUEST (exclude marker rows).
-      // If any exists, this ticket round is "handled" — Bob-only follow-ups must not reopen admin inbox.
-      const rMs = new Date(supportRequestAtLatest).getTime();
-      const adminReplyAfterLatestRequest =
-        userMessages
-          .filter((m) => {
-            if (senderNorm(m?.sender) !== "admin") return false;
-            if (isSupportRequestMarker(m)) return false;
-            return new Date(m.created_at).getTime() > rMs;
-          })
-          .map((m) => m.created_at)
-          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+      const lastMarkerAt = markerRows.reduce((latest, m) => {
+        const t = new Date(m.created_at).getTime();
+        return t > new Date(latest).getTime() ? m.created_at : latest;
+      }, markerRows[0].created_at);
 
-      const supportActive = adminReplyAfterLatestRequest == null;
+      const lastMarkerMs = new Date(lastMarkerAt).getTime();
+
+      const hasLaterNonMarkerAdmin = userMessages.some((m) => {
+        if (!isAdminNonMarkerReply(m)) return false;
+        return new Date(m.created_at).getTime() > lastMarkerMs;
+      });
+
+      const supportActive = !hasLaterNonMarkerAdmin;
 
       const lastSender = senderNorm(userMessages[0]?.sender);
       const userInfo = userMap[uid] || { email: null, name: null };
@@ -190,7 +189,7 @@ export default function AdminMessages() {
         last_sender: lastSender,
         has_unread: hasUnread,
         support_active: supportActive,
-        support_active_at: supportActive ? supportRequestAtLatest : null,
+        support_active_at: supportActive ? lastMarkerAt : null,
         is_influencer: isInfluencer,
         is_partner: isPartner,
         role: isInfluencer ? "influencer" as const : isPartner ? "partner" as const : "user" as const,
@@ -206,8 +205,7 @@ export default function AdminMessages() {
       return new Date(b.last_date).getTime() - new Date(a.last_date).getTime();
     });
 
-    // Only *open* support tickets (no admin reply yet after latest SUPPORT REQUEST).
-    // Resolved / Bob-only chats stay out of this list until the next handoff.
+    // Only open tickets: exact SUPPORT REQUEST row with no later admin non-marker message.
     const activeSupport = baseSorted
       .filter((t) => t.support_active)
       .sort((a, b) => {

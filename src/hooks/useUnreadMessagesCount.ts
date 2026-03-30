@@ -142,8 +142,8 @@ const extractPlainTextContent = (content: unknown): string => {
 const isSupportSoundTriggerMessage = (record: any): boolean => {
   const sender = record?.sender;
   if (sender !== "admin") return false;
-  const plain = extractPlainTextContent(record?.content);
-  return plain.includes("SUPPORT REQUEST");
+  const raw = typeof record?.content === "string" ? record.content : "";
+  return raw === "SUPPORT REQUEST";
 };
 
 const handleRealtimeMessage = (payload: any) => {

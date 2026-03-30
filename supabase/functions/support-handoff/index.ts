@@ -9,6 +9,9 @@ const corsHeaders = {
 const CONFIRMATION_TEXT =
   "Váš dotaz jsem předal podpoře. Ta vás bude co nejdříve kontaktovat a pomůže vám s řešením."
 
+/** Single exact marker row — AdminMessages + RPC match on this only (no multiline / includes). */
+const SUPPORT_REQUEST_ROW_CONTENT = "SUPPORT REQUEST"
+
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
@@ -81,14 +84,11 @@ serve(async (req) => {
     return json(400, { error: "Invalid message" })
   }
 
-  const nowIso = new Date().toISOString()
-  const msg = cleanText
-  const adminContent = `SUPPORT REQUEST
-User: ${user.id}
-Time: ${nowIso}
-
-User message:
-"${msg}"`
+  console.log("support-handoff context", {
+    user_id: user.id,
+    time: new Date().toISOString(),
+    message_preview: cleanText.slice(0, 200),
+  })
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -109,7 +109,7 @@ User message:
     typeof last[0]?.content === "string" &&
     last[0].content.includes(CONFIRMATION_TEXT) &&
     last[1]?.sender === "admin" &&
-    last[1]?.content === adminContent
+    last[1]?.content === SUPPORT_REQUEST_ROW_CONTENT
 
   if (already) {
     return json(200, { success: true, deduped: true })
@@ -118,7 +118,7 @@ User message:
   const { error: adminErr } = await adminClient.from("messages").insert({
     user_id: user.id,
     sender: "admin",
-    content: adminContent,
+    content: SUPPORT_REQUEST_ROW_CONTENT,
     read: false,
   })
   if (adminErr) return json(500, { error: adminErr.message })
