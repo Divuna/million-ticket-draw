@@ -55,6 +55,9 @@ const setUnreadCount = (next: number) => {
   emit();
 };
 
+/** Exact DB marker from support-handoff (must match AdminMessages + RPC migrations). */
+const SUPPORT_REQUEST_MARKER = "SUPPORT REQUEST";
+
 const fetchCount = async () => {
   try {
     const {
@@ -81,28 +84,24 @@ const fetchCount = async () => {
     _isCurrentUserAdmin = isAdmin;
 
     if (isAdmin) {
-      const { data: rpcCount, error: rpcError } = await supabase.rpc("admin_unread_support_user_messages_count");
-      if (!rpcError && typeof rpcCount === "number") {
-        setUnreadCount(rpcCount);
-        return;
-      }
-      console.warn("[unread] admin_unread_support_user_messages_count RPC failed, using legacy count", rpcError);
+      const { count, error } = await supabase
+        .from("messages")
+        .select("*", { count: "exact", head: true })
+        .eq("read", false)
+        .eq("sender", "admin")
+        .eq("content", SUPPORT_REQUEST_MARKER);
+      if (error) throw error;
+      setUnreadCount(count ?? 0);
+      return;
     }
 
-    let query = supabase
+    const { count, error } = await supabase
       .from("messages")
       .select("*", { count: "exact", head: true })
-      .eq("read", false);
+      .eq("read", false)
+      .eq("sender", "admin")
+      .eq("user_id", user.id);
 
-    if (isAdmin) {
-      // ADMIN → legacy fallback: unread user rows (apply migration for accurate support-only count)
-      query = query.eq("sender", "user");
-    } else {
-      // USER → UNREAD OD ADMINA (systémové zprávy nyní mají sender='admin')
-      query = query.eq("sender", "admin").eq("user_id", user.id);
-    }
-
-    const { count, error } = await query;
     if (error) throw error;
 
     setUnreadCount(count || 0);
@@ -122,28 +121,11 @@ const scheduleFetchCountDebounced = () => {
   }, 120);
 };
 
-const extractPlainTextContent = (content: unknown): string => {
-  if (typeof content !== "string") return "";
-  const t = content.trim();
-  if (!t) return "";
-  if (t.startsWith("{") && t.endsWith("}")) {
-    try {
-      const parsed = JSON.parse(t) as { text?: unknown };
-      if (parsed && typeof parsed === "object" && typeof parsed.text === "string") {
-        return parsed.text.trim();
-      }
-    } catch {
-      // ignore
-    }
-  }
-  return t;
-};
-
 const isSupportSoundTriggerMessage = (record: any): boolean => {
   const sender = record?.sender;
   if (sender !== "admin") return false;
   const raw = typeof record?.content === "string" ? record.content : "";
-  return raw === "SUPPORT REQUEST";
+  return raw === SUPPORT_REQUEST_MARKER;
 };
 
 const handleRealtimeMessage = (payload: any) => {
