@@ -1,5 +1,22 @@
 # OneMil – project rules (centralized)
 
+Before doing any task, always read:
+- onemil_state.md
+- onemil_history.md
+
+Treat onemil_state.md as the single source of truth for:
+- current system state
+- known bugs
+- next steps
+
+Completely ignore state.md (do not use it).
+
+When the user provides updated content for onemil_state.md and/or onemil_history.md:
+- replace the entire file
+- do not merge
+- do not summarize
+- do not modify formatting
+
 Before making changes, read: .cursor/SYSTEM_MAP.md and .cursor/PROJECT_CONTEXT.md when relevant.
 
 ## Database

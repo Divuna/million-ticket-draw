@@ -50,12 +50,14 @@ serve(async (req) => {
     originalText = ""
   }
 
-  if (!originalText || originalText.length < 3) {
+  const cleanText = typeof originalText === "string" ? originalText.trim() : ""
+
+  if (!cleanText || cleanText.length < 3) {
     return json(400, { error: "Invalid message" })
   }
 
   const nowIso = new Date().toISOString()
-  const msg = originalText || "Uživatel chce kontaktovat podporu."
+  const msg = cleanText
   const adminContent = `SUPPORT REQUEST
 User: ${user.id}
 Time: ${nowIso}

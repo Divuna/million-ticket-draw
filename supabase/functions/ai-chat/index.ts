@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
+console.log("AI-CHAT VERSION: TIMING_V1")
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -21,6 +23,15 @@ const BOB_WHATSAPP_FALLBACK_URL =
   "https://wa.me/420XXXXXXXXX?text=Potřebuju%20pomoc%20s%20OneMil"
 
 const BOB_SUPPORT_HANDOFF_PHRASE = "Tohle radši předám podpoře."
+
+function bobSupportCtaPayload(text: string): BobAssistantPayload {
+  // Must contain "Kontaktovat podporu" in text so the server-side CTA gate keeps /messages.
+  const t = text.trim()
+  const withHint = t.includes("Kontaktovat podporu")
+    ? t
+    : `${t}\nKlikni na „Kontaktovat podporu“.`
+  return { text: withHint, cta: { label: "Kontaktovat podporu", action: "/messages" } }
+}
 
 const AI_KNOWLEDGE = {
   base: {
@@ -526,6 +537,13 @@ If you are not sure or the user needs human support, put exactly this in "text" 
 "${BOB_SUPPORT_HANDOFF_PHRASE.trim()}"
 (and the app may append a WhatsApp link; do not invent phone numbers).`
 
+const BOB_SUPPORT_MODE_SYSTEM = `SUPPORT MODE (hard rules):
+- The user is in a support/help situation.
+- DO NOT use sales language, upsell, "dobij si", "kup si", "vyzkoušej soutěže", or any persuasive marketing.
+- DO NOT recommend purchases or top-ups.
+- Focus ONLY on resolving the issue: clear steps, reassurance, and if needed, route to human support handoff rules.
+- Tone: calm, empathetic, non-pushy, short.`
+
 function buildBobContextSystemMessage(params: {
   displayName: string
   balanceCoins: number | null
@@ -768,7 +786,14 @@ function isSupportRelatedQuestion(userText: string): boolean {
   )
 }
 
-function isSupportIntentForCta(userText: string, assistantText?: string): boolean {
+type SupportIntentHistoryMessage = { sender: string; content: string; created_at: string }
+
+function isSupportIntentForCta(
+  userText: string,
+  assistantText: string | undefined,
+  // NOTE: wired for future context-aware support intent; logic still uses only current message.
+  _history: SupportIntentHistoryMessage[],
+): boolean {
   const q = foldCs(userText)
   const a = typeof assistantText === "string" ? foldCs(assistantText) : ""
   const hasExplicitPhrases =
@@ -783,7 +808,104 @@ function isSupportIntentForCta(userText: string, assistantText?: string): boolea
   const explicitlyAsksForHelp =
     q.includes("pomoc") || q.includes("pomoz") || q.includes("help")
 
-  return hasExplicitPhrases || explicitlyAsksForHelp
+  const current = hasExplicitPhrases || explicitlyAsksForHelp
+  if (current) return true
+
+  const isVagueProblemFollowupPhrase = (f: string): boolean => {
+    // Natural Czech follow-ups that usually mean "something didn't arrive / still not fixed"
+    // and should keep the support CTA visible.
+    return (
+      f.includes("porad nic") ||
+      f.includes("furt nic") ||
+      f.includes("stale nic") ||
+      f.includes("nedoslo") ||
+      f.includes("neprislo") ||
+      f.includes("neprisla") ||
+      f.includes("nedorazilo") ||
+      f.includes("nedorazila") ||
+      f.includes("co s tim") ||
+      f.includes("jak to resit") ||
+      f.includes("jak to vyresit")
+    )
+  }
+
+  // Persistent support intent (simple keyword match) — consult recent history only if
+  // the current message is NOT already support intent by the strict rules above.
+  // History is expected to be "most recent first" (as loaded for GPT); decay: check only last 3.
+  const history = _history ?? []
+  const take = Math.min(3, history.length)
+  const recent = history.slice(0, take)
+
+  const isSupportKeywordHit = (raw: string): boolean => {
+    const f = foldCs(raw)
+    if (!f) return false
+
+    // Reuse existing broad support signals + common win/delivery problem phrases.
+    if (isSupportRelatedQuestion(f)) return true
+    if (isWinProblem(f)) return true
+    if (isVagueProblemFollowupPhrase(f)) return true
+
+    // Also accept explicit CTA/support mentions in prior context.
+    if (f.includes("kontaktovat podporu")) return true
+    if (f.includes("predam podpor")) return true
+    if (f.includes("predat to podpor")) return true
+    if (f.includes("napis podpore")) return true
+    if (f.includes("chci podporu")) return true
+    if (f.includes("support")) return true
+
+    return false
+  }
+
+  // 1) Improve detection for natural follow-ups in the CURRENT message (no history required).
+  if (isVagueProblemFollowupPhrase(q)) return true
+
+  // 2) Frustration tone: short negative follow-up after an issue.
+  // Only triggers if recent context already looked support-related.
+  const isShortFrustration = (f: string): boolean => {
+    const t = f.trim()
+    if (!t) return false
+    if (t.length > 18) return false
+    return (
+      t === "nic" ||
+      t === "ne" ||
+      t === "nevim" ||
+      t.includes("nic") ||
+      t.includes("nejde") ||
+      t.includes("nefunguje") ||
+      t.includes("stve") ||
+      t.includes("zase") ||
+      t.includes("fakt ne")
+    )
+  }
+
+  if (isShortFrustration(q)) {
+    for (const m of recent) {
+      if (isSupportKeywordHit(m.content)) return true
+    }
+  }
+
+  for (const m of recent) {
+    if (isSupportKeywordHit(m.content)) return true
+  }
+
+  return false
+}
+
+function previewForLog(s: string, max = 120): string {
+  const t = (s ?? "").toString().replace(/\s+/g, " ").trim()
+  if (t.length <= max) return t
+  return t.slice(0, max) + "…"
+}
+
+function nowMs(): number {
+  // Edge runtime supports performance.now(); fall back to Date.now() if needed.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (typeof performance !== "undefined" && typeof performance.now === "function") return performance.now()
+  } catch {
+    // ignore
+  }
+  return Date.now()
 }
 
 function isExplicitSupportHandoffRequest(userText: string): boolean {
@@ -879,10 +1001,17 @@ function requiredBobCtaActionFromUserQuestion(userQuestion: string): BobCtaActio
 function enforceRequiredSectionCta(
   userQuestion: string,
   payload: BobAssistantPayload,
+  history: SupportIntentHistoryMessage[],
 ): BobAssistantPayload {
   if (isBobSupportOrWhatsAppReplyText(payload.text)) return payload
   if (payload.cta?.action === "/messages") {
-    if (isSupportIntentForCta(userQuestion, payload.text)) return payload
+    const ok = isSupportIntentForCta(userQuestion, payload.text, history)
+    console.log("[ai-chat] support CTA gate (enforceRequiredSectionCta)", {
+      userPreview: previewForLog(userQuestion),
+      assistantPreview: previewForLog(payload.text),
+      ok,
+    })
+    if (ok) return payload
     return { text: payload.text, cta: { label: BOB_CTA_BY_ACTION["/games"], action: "/games" } }
   }
   const req = requiredBobCtaActionFromUserQuestion(userQuestion)
@@ -896,12 +1025,22 @@ function enforceRequiredSectionCta(
 function normalizeBobPayloadBeforeFinalize(
   userQuestion: string,
   payload: BobAssistantPayload,
+  history: SupportIntentHistoryMessage[],
 ): BobAssistantPayload {
   const stripped = stripCtaIfSupportOrWhatsApp(payload)
-  if (stripped.cta?.action === "/messages" && !isSupportIntentForCta(userQuestion, stripped.text)) {
-    return enforceRequiredSectionCta(userQuestion, { ...stripped, cta: { label: BOB_CTA_BY_ACTION["/games"], action: "/games" } })
+  if (stripped.cta?.action === "/messages" && !isSupportIntentForCta(userQuestion, stripped.text, history)) {
+    console.log("[ai-chat] support CTA stripped → fallback /games (normalize)", {
+      userPreview: previewForLog(userQuestion),
+      assistantPreview: previewForLog(stripped.text),
+      originalCta: payload.cta ?? null,
+    })
+    return enforceRequiredSectionCta(
+      userQuestion,
+      { ...stripped, cta: { label: BOB_CTA_BY_ACTION["/games"], action: "/games" } },
+      history,
+    )
   }
-  return enforceRequiredSectionCta(userQuestion, stripped)
+  return enforceRequiredSectionCta(userQuestion, stripped, history)
 }
 
 async function finalizeBobPayloadNormalized(
@@ -910,12 +1049,13 @@ async function finalizeBobPayloadNormalized(
   currentMessageId: string,
   userQuestion: string,
   payload: BobAssistantPayload,
+  history: SupportIntentHistoryMessage[],
 ): Promise<string> {
   return finalizeBobPayload(
     supabase,
     userId,
     currentMessageId,
-    normalizeBobPayloadBeforeFinalize(userQuestion, payload),
+    normalizeBobPayloadBeforeFinalize(userQuestion, payload, history),
   )
 }
 
@@ -1099,14 +1239,24 @@ serve(async (req) => {
         message_id: messageId,
         length: userContent.length,
       })
-      const handoff = await insertAdminHandoff(supabase, userMsg.user_id)
-      if (!handoff.ok) {
-        return new Response(JSON.stringify({ error: handoff.message }), {
+      const reply =
+        "Tuhle zprávu se mi nepodařilo zpracovat automaticky. Můžu to předat podpoře."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        bobSupportCtaPayload(reply),
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         })
       }
-      return jsonSuccess(handoff.id)
+      return jsonSuccess(ins.id)
     }
 
     // Intent debug (temporary)
@@ -1144,6 +1294,7 @@ serve(async (req) => {
           messageId,
           userContent,
           bobPayloadFromRawAssistantString(reply),
+          [],
         )
 
         const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
@@ -1189,6 +1340,7 @@ serve(async (req) => {
             messageId,
             userContent,
             bobPayloadFromRawAssistantString(reply),
+            [],
           )
 
           const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
@@ -1218,6 +1370,7 @@ serve(async (req) => {
           messageId,
           userContent,
           { text: reply, cta: { label: "Kontaktovat podporu", action: "/messages" } },
+          [],
         )
 
         const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
@@ -1238,14 +1391,24 @@ serve(async (req) => {
 
       if (winErr) {
         console.error("[ai-chat] winners lookup failed", winErr)
-        const handoff = await insertAdminHandoff(supabase, userMsg.user_id)
-        if (!handoff.ok) {
-          return new Response(JSON.stringify({ error: handoff.message }), {
+        const reply =
+          "Teď se mi nepodařilo načíst výhry z databáze. Můžu to předat podpoře."
+        const finalReply = await finalizeBobPayloadNormalized(
+          supabase,
+          userMsg.user_id,
+          messageId,
+          userContent,
+          bobSupportCtaPayload(reply),
+          [],
+        )
+        const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+        if (!ins.ok) {
+          return new Response(JSON.stringify({ error: ins.message }), {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           })
         }
-        return jsonSuccess(handoff.id)
+        return jsonSuccess(ins.id)
       }
 
       const safeCount = typeof count === "number" ? count : 0
@@ -1260,6 +1423,7 @@ serve(async (req) => {
         messageId,
         userContent,
         bobPayloadFromRawAssistantString(reply),
+        [],
       )
 
       const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
@@ -1293,6 +1457,7 @@ serve(async (req) => {
           messageId,
           userContent,
           bobPayloadFromRawAssistantString(reply),
+          [],
         )
 
         const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
@@ -1316,8 +1481,14 @@ serve(async (req) => {
           ? await rephraseKnowledgeForBob(openaiKey, extendedKb, userContent)
           : null
         const reply = rephrased ?? extendedKb
-        const supportRelated = isSupportIntentForCta(userContent, reply)
+        const supportRelated = isSupportIntentForCta(userContent, reply, [])
         const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
+        console.log("[ai-chat] support intent check (KB extended)", {
+          userPreview: previewForLog(userContent),
+          assistantPreview: previewForLog(reply),
+          supportRelated,
+          explicitHandoff,
+        })
 
         const payload: BobAssistantPayload =
           supportRelated && !explicitHandoff
@@ -1333,6 +1504,7 @@ serve(async (req) => {
           messageId,
           userContent,
           payload,
+          [],
         )
 
         const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
@@ -1356,8 +1528,14 @@ serve(async (req) => {
           ? await rephraseKnowledgeForBob(openaiKey, predefined, userContent)
           : null
         const reply = rephrased ?? predefined
-        const supportRelated = isSupportIntentForCta(userContent, reply)
+        const supportRelated = isSupportIntentForCta(userContent, reply, [])
         const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
+        console.log("[ai-chat] support intent check (KB predefined)", {
+          userPreview: previewForLog(userContent),
+          assistantPreview: previewForLog(reply),
+          supportRelated,
+          explicitHandoff,
+        })
 
         const payload: BobAssistantPayload =
           supportRelated && !explicitHandoff
@@ -1373,6 +1551,7 @@ serve(async (req) => {
           messageId,
           userContent,
           payload,
+          [],
         )
 
         const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
@@ -1388,332 +1567,421 @@ serve(async (req) => {
 
     // 3) GPT — parallel reads (contests, wallet, messages, profile, winners count), then OpenAI stream (USER DATA in system context).
     console.log(routeUserDataToGpt ? "GPT (user-specific, USER DATA context)" : "GPT fallback")
-    const [
-      { data: contests, error: contestsErr },
-      { data: walletRaw, error: walletErr },
-      { data: recent },
-      { data: profileRow, error: profileErr },
-      { count: winsCountRaw, error: winsErr },
-    ] = await Promise.all([
-      supabase
-        .from("contests")
-        .select("name, status, ticket_price")
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("wallets")
-        .select("balance_coins, balance_vouchers, bonus_balance_coins")
-        .eq("user_id", userMsg.user_id)
-        .maybeSingle(),
-      supabase
-        .from("messages")
-        .select("sender, content, created_at")
-        .eq("user_id", userMsg.user_id)
-        .order("created_at", { ascending: false })
-        .limit(OPENAI_CHAT_HISTORY_LIMIT),
-      supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", userMsg.user_id)
-        .maybeSingle(),
-      supabase
-        .from("winners")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userMsg.user_id),
-    ])
 
-    if (contestsErr) {
-      console.error("[ai-chat] contests load failed", contestsErr)
-    }
-    if (walletErr) {
-      console.error("[ai-chat] wallet load failed", walletErr)
-    }
-    if (profileErr) {
-      console.error("[ai-chat] profiles load failed", profileErr)
-    }
-    if (winsErr) {
-      console.error("[ai-chat] winners count load failed", winsErr)
-    }
+    // Timing must cover the entire GPT branch.
+    const tGptPathStart = nowMs()
+    const timing: Record<string, number> = {}
+    const timingMeta = { message_id: messageId, user_id: userMsg.user_id }
+    let supportMode = false
+    let gptResult: Response | null = null
 
-    const contestsJson = JSON.stringify(contests ?? [])
-
-    const safeWallet =
-      walletRaw && !walletErr
-        ? {
-            balance_coins: walletRaw?.balance_coins ?? null,
-            balance_vouchers: walletRaw?.balance_vouchers ?? null,
-            bonus_balance_coins: walletRaw?.bonus_balance_coins ?? null,
-          }
-        : null
-
-    const balanceCoinsForContext =
-      typeof safeWallet?.balance_coins === "number" && Number.isFinite(safeWallet.balance_coins)
-        ? safeWallet.balance_coins
-        : null
-
-    const displayName =
-      typeof profileRow?.full_name === "string" && profileRow.full_name.trim().length > 0
-        ? profileRow.full_name.trim()
-        : "uživatel"
-
-    const lastActivity =
-      recent?.[0] && typeof recent[0].created_at === "string" ? recent[0].created_at : "unknown"
-
-    const winsLoadFailed = Boolean(winsErr)
-    const winsCountForContext =
-      !winsLoadFailed && typeof winsCountRaw === "number" && Number.isFinite(winsCountRaw)
-        ? winsCountRaw
-        : null
-
-    const vouchersForContext =
-      safeWallet && typeof safeWallet.balance_vouchers === "number" && Number.isFinite(safeWallet.balance_vouchers)
-        ? safeWallet.balance_vouchers
-        : null
-
-    const systemContext = buildBobContextSystemMessage({
-      displayName,
-      balanceCoins: balanceCoinsForContext,
-      winsCount: winsCountForContext,
-      winsLoadFailed,
-      vouchersBalance: vouchersForContext,
-      lastActivity,
-      contestsJson,
-    })
-
-    const chronological = (recent ?? []).slice().reverse()
-    const history = chronological.map((m) => ({
-      role: m.sender === "user" ? ("user" as const) : ("assistant" as const),
-      content: typeof m.content === "string" ? m.content : "",
-    }))
-
-    const ph = await insertStreamingAiPlaceholder(supabase, userMsg.user_id)
-    if (!ph.ok) {
-      return new Response(JSON.stringify({ error: ph.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
-    }
-    const streamingRowId = ph.id
-
-    const applyFallbackToPlaceholder = async (fallbackReply: string): Promise<Response> => {
-      const finalFallbackReply = await finalizeBobPayloadNormalized(
-        supabase,
-        userMsg.user_id,
-        messageId,
-        userContent,
-        bobPayloadFromRawAssistantString(fallbackReply),
-      )
-      const up = await updateAiMessageContentById(supabase, streamingRowId, finalFallbackReply)
-      if (!up.ok) {
-        return new Response(JSON.stringify({ error: up.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
-      }
-      return jsonSuccess(streamingRowId)
-    }
-
-    const model = Deno.env.get("AI_CHAT_MODEL") ?? "gpt-4o-mini"
-    const controller = new AbortController()
-    /** Must cover full SSE body read — do not clear when `fetch` resolves (headers only for stream). */
-    let streamTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-      controller.abort()
-    }, OPENAI_STREAM_TIMEOUT_MS)
-
-    const clearStreamTimer = () => {
-      if (streamTimer !== null) {
-        clearTimeout(streamTimer)
-        streamTimer = null
-      }
-    }
-
-    let openaiRes: Response | null = null
-    try {
-      openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${openaiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: BOB_SYSTEM_BASE + "\n\n" + systemContext },
-            ...history,
-          ],
-          max_tokens: 320,
-          temperature: 0.2,
-          // No `response_format: json_object` — it can prevent true token streaming; Bob still outputs JSON per system prompt.
-          stream: true,
-        }),
-        signal: controller.signal,
-      })
-    } catch (e) {
-      console.error("[ai-chat] OpenAI fetch failed", e)
-      clearStreamTimer()
-    }
-
-    if (!openaiRes || !openaiRes.ok) {
-      clearStreamTimer()
-      if (openaiRes && !openaiRes.ok) {
-        const errText = await openaiRes.text()
-        console.error("[ai-chat] OpenAI error", openaiRes.status, errText)
-      }
-      return await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
-    }
-
-    const bodyReader = openaiRes.body?.getReader()
-    if (!bodyReader) {
-      clearStreamTimer()
-      return await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
-    }
-
-    const decoder = new TextDecoder()
-    let sseCarry = ""
-    let rawAssistant = ""
-    let debounceT: ReturnType<typeof setTimeout> | null = null
-    let flushChain: Promise<void> = Promise.resolve()
-
-    const flushStreamingPartial = async () => {
-      const partialText = extractPartialTextFromStreamJsonObject(rawAssistant)
-      const rowContent = serializeAiMessageContentForDb(partialText, DEFAULT_AI_MESSAGE_CTA_FALLBACK)
-      const up = await updateAiMessageContentById(supabase, streamingRowId, rowContent)
-      if (!up.ok) {
-        console.error("[ai-chat] streaming partial update failed", up.message)
-      }
-    }
-
-    const scheduleStreamingPartialFlush = () => {
-      if (debounceT !== null) clearTimeout(debounceT)
-      debounceT = setTimeout(() => {
-        debounceT = null
-        flushChain = flushChain
-          .then(() => flushStreamingPartial())
-          .catch((err) => console.error("[ai-chat] streaming flush chain", err))
-      }, STREAM_DB_FLUSH_MS)
-    }
-
-    let streamChunkIndex = 0
     try {
       while (true) {
-        const { done, value } = await bodyReader.read()
-        if (done) break
-        sseCarry += decoder.decode(value, { stream: true })
-        const lines = sseCarry.split(/\r?\n/)
-        sseCarry = lines.pop() ?? ""
-        for (const line of lines) {
-          const t = line.trim()
-          if (!t.startsWith("data:")) continue
-          const sseData = t.slice(5).trim()
-          if (sseData === "[DONE]") {
-            streamChunkIndex++
-            console.log("[ai-chat] stream chunk", { n: streamChunkIndex, kind: "[DONE]" })
-            continue
+        const tDbHistoryStart = nowMs()
+        const { data: recent } = await supabase
+          .from("messages")
+          .select("sender, content, created_at")
+          .eq("user_id", userMsg.user_id)
+          .order("created_at", { ascending: false })
+          .limit(OPENAI_CHAT_HISTORY_LIMIT)
+        timing.db_history_ms = nowMs() - tDbHistoryStart
+
+        const supportIntentHistory: SupportIntentHistoryMessage[] = (recent ?? []).map((m) => ({
+          sender: typeof m.sender === "string" ? m.sender : "",
+          content: typeof m.content === "string" ? m.content : "",
+          created_at: typeof m.created_at === "string" ? m.created_at : "",
+        }))
+
+        // Separate support vs sales modes: if support intent is active, constrain GPT to support-only.
+        supportMode = isSupportIntentForCta(userContent, undefined, supportIntentHistory)
+
+        const tDbParallelStart = nowMs()
+        const [
+          { data: contests, error: contestsErr },
+          { data: walletRaw, error: walletErr },
+          { data: profileRow, error: profileErr },
+          { count: winsCountRaw, error: winsErr },
+        ] = await Promise.all([
+          supabase
+            .from("contests")
+            .select("name, status, ticket_price")
+            .order("created_at", { ascending: false })
+            .limit(50),
+          supabase
+            .from("wallets")
+            .select("balance_coins, balance_vouchers, bonus_balance_coins")
+            .eq("user_id", userMsg.user_id)
+            .maybeSingle(),
+          supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", userMsg.user_id)
+            .maybeSingle(),
+          supabase
+            .from("winners")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", userMsg.user_id),
+        ])
+        timing.db_parallel_ms = nowMs() - tDbParallelStart
+
+        if (contestsErr) {
+          console.error("[ai-chat] contests load failed", contestsErr)
+        }
+        if (walletErr) {
+          console.error("[ai-chat] wallet load failed", walletErr)
+        }
+        if (profileErr) {
+          console.error("[ai-chat] profiles load failed", profileErr)
+        }
+        if (winsErr) {
+          console.error("[ai-chat] winners count load failed", winsErr)
+        }
+
+        const contestsJson = JSON.stringify(contests ?? [])
+
+        const safeWallet =
+          walletRaw && !walletErr
+            ? {
+                balance_coins: walletRaw?.balance_coins ?? null,
+                balance_vouchers: walletRaw?.balance_vouchers ?? null,
+                bonus_balance_coins: walletRaw?.bonus_balance_coins ?? null,
+              }
+            : null
+
+        const balanceCoinsForContext =
+          typeof safeWallet?.balance_coins === "number" && Number.isFinite(safeWallet.balance_coins)
+            ? safeWallet.balance_coins
+            : null
+
+        const displayName =
+          typeof profileRow?.full_name === "string" && profileRow.full_name.trim().length > 0
+            ? profileRow.full_name.trim()
+            : "uživatel"
+
+        const lastActivity =
+          recent?.[0] && typeof recent[0].created_at === "string" ? recent[0].created_at : "unknown"
+
+        const winsLoadFailed = Boolean(winsErr)
+        const winsCountForContext =
+          !winsLoadFailed && typeof winsCountRaw === "number" && Number.isFinite(winsCountRaw)
+            ? winsCountRaw
+            : null
+
+        const vouchersForContext =
+          safeWallet && typeof safeWallet.balance_vouchers === "number" && Number.isFinite(safeWallet.balance_vouchers)
+            ? safeWallet.balance_vouchers
+            : null
+
+        const systemContext = buildBobContextSystemMessage({
+          displayName,
+          balanceCoins: balanceCoinsForContext,
+          winsCount: winsCountForContext,
+          winsLoadFailed,
+          vouchersBalance: vouchersForContext,
+          lastActivity,
+          contestsJson,
+        })
+
+        const chronological = (recent ?? []).slice().reverse()
+        const history = chronological.map((m) => ({
+          role: m.sender === "user" ? ("user" as const) : ("assistant" as const),
+          content: typeof m.content === "string" ? m.content : "",
+        }))
+
+        const ph = await insertStreamingAiPlaceholder(supabase, userMsg.user_id)
+        if (!ph.ok) {
+          gptResult = new Response(JSON.stringify({ error: ph.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          })
+          break
+        }
+        const streamingRowId = ph.id
+
+        const applyFallbackToPlaceholder = async (fallbackReply: string): Promise<Response> => {
+          const tPostStart = nowMs()
+          const finalFallbackReply = await finalizeBobPayloadNormalized(
+            supabase,
+            userMsg.user_id,
+            messageId,
+            userContent,
+            bobPayloadFromRawAssistantString(fallbackReply),
+            supportIntentHistory,
+          )
+          timing.postprocess_ms = (timing.postprocess_ms ?? 0) + (nowMs() - tPostStart)
+          const up = await updateAiMessageContentById(supabase, streamingRowId, finalFallbackReply)
+          if (!up.ok) {
+            return new Response(JSON.stringify({ error: up.message }), {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            })
           }
-          try {
-            const chunk = JSON.parse(sseData) as {
-              choices?: Array<{
-                delta?: { content?: string | null; role?: string | null }
-                finish_reason?: string | null
-              }>
-            }
-            streamChunkIndex++
-            const choice0 = chunk?.choices?.[0]
-            const delta = choice0?.delta?.content
-            const deltaLen = typeof delta === "string" ? delta.length : 0
-            console.log("[ai-chat] stream chunk", {
-              n: streamChunkIndex,
-              deltaLen,
-              deltaPreview: typeof delta === "string" && delta.length > 0 ? delta.slice(0, 120) : null,
-              finish_reason: choice0?.finish_reason ?? null,
-              roleDelta: choice0?.delta?.role ?? null,
-              rawAssistantLen: rawAssistant.length + deltaLen,
-            })
-            if (typeof delta === "string" && delta.length > 0) {
-              rawAssistant += delta
-              scheduleStreamingPartialFlush()
-            }
-          } catch (parseErr) {
-            console.warn("[ai-chat] stream chunk JSON parse failed", {
-              preview: sseData.slice(0, 200),
-              err: parseErr instanceof Error ? parseErr.message : String(parseErr),
-            })
+          return jsonSuccess(streamingRowId)
+        }
+
+        const model = Deno.env.get("AI_CHAT_MODEL") ?? "gpt-4o-mini"
+        const controller = new AbortController()
+        /** Must cover full SSE body read — do not clear when `fetch` resolves (headers only for stream). */
+        let streamTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+          controller.abort()
+        }, OPENAI_STREAM_TIMEOUT_MS)
+
+        const clearStreamTimer = () => {
+          if (streamTimer !== null) {
+            clearTimeout(streamTimer)
+            streamTimer = null
           }
         }
-      }
-    } catch (e) {
-      console.error("[ai-chat] OpenAI stream read failed", e)
-      clearStreamTimer()
-      return await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
-    } finally {
-      clearStreamTimer()
-    }
 
-    if (debounceT !== null) {
-      clearTimeout(debounceT)
-      debounceT = null
-    }
-    await flushChain
-    await flushStreamingPartial()
+        let openaiRes: Response | null = null
+        const tOpenAiFetchStart = nowMs()
+        try {
+          openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${openaiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    BOB_SYSTEM_BASE +
+                    (supportMode ? "\n\n" + BOB_SUPPORT_MODE_SYSTEM : "") +
+                    "\n\n" +
+                    systemContext,
+                },
+                ...history,
+              ],
+              max_tokens: 320,
+              temperature: 0.2,
+              // No `response_format: json_object` — it can prevent true token streaming; Bob still outputs JSON per system prompt.
+              stream: true,
+            }),
+            signal: controller.signal,
+          })
+        } catch (e) {
+          console.error("[ai-chat] OpenAI fetch failed", e)
+          clearStreamTimer()
+        }
+        timing.openai_fetch_headers_ms = nowMs() - tOpenAiFetchStart
 
-    const rawTrimmed = keepOnlyLastValidJsonObject(rawAssistant)
-    let bobPayload = bobPayloadFromRawAssistantString(rawTrimmed)
-    bobPayload = {
-      ...bobPayload,
-      text: appendWhatsAppIfSupportHandoff(bobPayload.text),
-    }
-    if (!bobPayload.text.trim()) {
-      return await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
-    }
+        if (!openaiRes || !openaiRes.ok) {
+          clearStreamTimer()
+          if (openaiRes && !openaiRes.ok) {
+            const errText = await openaiRes.text()
+            console.error("[ai-chat] OpenAI error", openaiRes.status, errText)
+          }
+          gptResult = await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
+          break
+        }
 
-    const supportRelated = isSupportIntentForCta(userContent, bobPayload.text)
-    const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
-    if (supportRelated && !explicitHandoff && isBobSupportOrWhatsAppReplyText(bobPayload.text)) {
-      bobPayload = {
-        text: addOptionalSupportCta(""),
-        cta: { label: "Kontaktovat podporu", action: "/messages" },
-      }
-    }
+        const bodyReader = openaiRes.body?.getReader()
+        if (!bodyReader) {
+          clearStreamTimer()
+          gptResult = await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
+          break
+        }
 
-    if (bobPayload.cta?.action === "/messages" && !isSupportIntentForCta(userContent, bobPayload.text)) {
-      bobPayload = { ...bobPayload, cta: { label: "Soutěže", action: "/games" } }
-    }
+        const decoder = new TextDecoder()
+        let sseCarry = ""
+        let rawAssistant = ""
+        let debounceT: ReturnType<typeof setTimeout> | null = null
+        let flushChain: Promise<void> = Promise.resolve()
 
-    if (explicitHandoff) {
-      bobPayload = { text: BOB_SUPPORT_HANDOFF_PHRASE }
-    }
+        const tOpenAiStreamStart = nowMs()
+        const flushStreamingPartial = async () => {
+          const partialText = extractPartialTextFromStreamJsonObject(rawAssistant)
+          const rowContent = serializeAiMessageContentForDb(partialText, DEFAULT_AI_MESSAGE_CTA_FALLBACK)
+          const up = await updateAiMessageContentById(supabase, streamingRowId, rowContent)
+          if (!up.ok) {
+            console.error("[ai-chat] streaming partial update failed", up.message)
+          }
+        }
 
-    if (shouldFallbackToAdmin(bobPayload.text)) {
-      const del = await deleteMessageById(supabase, streamingRowId)
-      if (!del.ok) {
-        console.error("[ai-chat] failed to remove streaming placeholder for admin handoff", del.message)
-      }
-      const handoff = await insertAdminHandoff(supabase, userMsg.user_id)
-      if (!handoff.ok) {
-        return new Response(JSON.stringify({ error: handoff.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        const scheduleStreamingPartialFlush = () => {
+          if (debounceT !== null) clearTimeout(debounceT)
+          debounceT = setTimeout(() => {
+            debounceT = null
+            flushChain = flushChain
+              .then(() => flushStreamingPartial())
+              .catch((err) => console.error("[ai-chat] streaming flush chain", err))
+          }, STREAM_DB_FLUSH_MS)
+        }
+
+        let streamChunkIndex = 0
+        try {
+          while (true) {
+            const { done, value } = await bodyReader.read()
+            if (done) break
+            sseCarry += decoder.decode(value, { stream: true })
+            const lines = sseCarry.split(/\r?\n/)
+            sseCarry = lines.pop() ?? ""
+            for (const line of lines) {
+              const t = line.trim()
+              if (!t.startsWith("data:")) continue
+              const sseData = t.slice(5).trim()
+              if (sseData === "[DONE]") {
+                streamChunkIndex++
+                console.log("[ai-chat] stream chunk", { n: streamChunkIndex, kind: "[DONE]" })
+                continue
+              }
+              try {
+                const chunk = JSON.parse(sseData) as {
+                  choices?: Array<{
+                    delta?: { content?: string | null; role?: string | null }
+                    finish_reason?: string | null
+                  }>
+                }
+                streamChunkIndex++
+                const choice0 = chunk?.choices?.[0]
+                const delta = choice0?.delta?.content
+                const deltaLen = typeof delta === "string" ? delta.length : 0
+                console.log("[ai-chat] stream chunk", {
+                  n: streamChunkIndex,
+                  deltaLen,
+                  deltaPreview: typeof delta === "string" && delta.length > 0 ? delta.slice(0, 120) : null,
+                  finish_reason: choice0?.finish_reason ?? null,
+                  roleDelta: choice0?.delta?.role ?? null,
+                  rawAssistantLen: rawAssistant.length + deltaLen,
+                })
+                if (typeof delta === "string" && delta.length > 0) {
+                  rawAssistant += delta
+                  scheduleStreamingPartialFlush()
+                }
+              } catch (parseErr) {
+                console.warn("[ai-chat] stream chunk JSON parse failed", {
+                  preview: sseData.slice(0, 200),
+                  err: parseErr instanceof Error ? parseErr.message : String(parseErr),
+                })
+              }
+            }
+          }
+        } catch (e) {
+          console.error("[ai-chat] OpenAI stream read failed", e)
+          clearStreamTimer()
+          gptResult = await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
+          break
+        } finally {
+          clearStreamTimer()
+        }
+        timing.openai_stream_ms = nowMs() - tOpenAiStreamStart
+
+        if (debounceT !== null) {
+          clearTimeout(debounceT)
+          debounceT = null
+        }
+        await flushChain
+        await flushStreamingPartial()
+
+        const rawTrimmed = keepOnlyLastValidJsonObject(rawAssistant)
+        let bobPayload = bobPayloadFromRawAssistantString(rawTrimmed)
+        bobPayload = {
+          ...bobPayload,
+          text: appendWhatsAppIfSupportHandoff(bobPayload.text),
+        }
+        if (!bobPayload.text.trim()) {
+          gptResult = await applyFallbackToPlaceholder(OPENAI_FAILURE_FALLBACK_TEXT)
+          break
+        }
+
+        const supportRelated = isSupportIntentForCta(userContent, bobPayload.text, supportIntentHistory)
+        const explicitHandoff = isExplicitSupportHandoffRequest(userContent)
+        console.log("[ai-chat] support intent check (GPT final)", {
+          userPreview: previewForLog(userContent),
+          assistantPreview: previewForLog(bobPayload.text),
+          bobCta: bobPayload.cta ?? null,
+          supportRelated,
+          explicitHandoff,
         })
+        if (supportRelated && !explicitHandoff && isBobSupportOrWhatsAppReplyText(bobPayload.text)) {
+          bobPayload = {
+            text: addOptionalSupportCta(""),
+            cta: { label: "Kontaktovat podporu", action: "/messages" },
+          }
+        }
+
+        if (
+          bobPayload.cta?.action === "/messages" &&
+          !isSupportIntentForCta(userContent, bobPayload.text, supportIntentHistory)
+        ) {
+          console.log("[ai-chat] support CTA removed → /games (GPT final)", {
+            userPreview: previewForLog(userContent),
+            assistantPreview: previewForLog(bobPayload.text),
+          })
+          bobPayload = { ...bobPayload, cta: { label: "Soutěže", action: "/games" } }
+        }
+
+        if (explicitHandoff) {
+          bobPayload = { text: BOB_SUPPORT_HANDOFF_PHRASE }
+        }
+
+        if (shouldFallbackToAdmin(bobPayload.text)) {
+          const finalFallbackReply = await finalizeBobPayloadNormalized(
+            supabase,
+            userMsg.user_id,
+            messageId,
+            userContent,
+            bobSupportCtaPayload("Teď si nejsem jistý. Můžu to předat podpoře."),
+            supportIntentHistory,
+          )
+          const up = await updateAiMessageContentById(supabase, streamingRowId, finalFallbackReply)
+          if (!up.ok) {
+            gptResult = new Response(JSON.stringify({ error: up.message }), {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            })
+            break
+          }
+          gptResult = jsonSuccess(streamingRowId)
+          break
+        }
+
+        const tPostStart = nowMs()
+        const finalReply = await finalizeBobPayloadNormalized(
+          supabase,
+          userMsg.user_id,
+          messageId,
+          userContent,
+          bobPayload,
+          supportIntentHistory,
+        )
+        timing.postprocess_ms = (timing.postprocess_ms ?? 0) + (nowMs() - tPostStart)
+
+        const finUp = await updateAiMessageContentById(supabase, streamingRowId, finalReply)
+        if (!finUp.ok) {
+          gptResult = new Response(JSON.stringify({ error: finUp.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          })
+          break
+        }
+
+        gptResult = jsonSuccess(streamingRowId)
+        break
       }
-      return jsonSuccess(handoff.id)
+    } finally {
+      // Timing log must always print for GPT path, even on early returns/fallbacks.
+      try {
+        timing.total_gpt_path_ms = nowMs() - tGptPathStart
+        console.log("[ai-chat] timing", {
+          ...timingMeta,
+          supportMode,
+          ...timing,
+        })
+      } catch (_e) {
+        // Never break chat on logging failures.
+      }
     }
 
-    const finalReply = await finalizeBobPayloadNormalized(
-      supabase,
-      userMsg.user_id,
-      messageId,
-      userContent,
-      bobPayload,
-    )
-
-    const finUp = await updateAiMessageContentById(supabase, streamingRowId, finalReply)
-    if (!finUp.ok) {
-      return new Response(JSON.stringify({ error: finUp.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
-    }
-    return jsonSuccess(streamingRowId)
+    // Return after finally (guarantee timing log always ran).
+    if (gptResult) return gptResult
+    return new Response(JSON.stringify({ error: "GPT branch ended without result" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     console.error("[ai-chat]", msg)

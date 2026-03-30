@@ -2,12 +2,12 @@ import { useEffect, useState, useRef, useCallback, useMemo, memo } from "react";
 import type { CSSProperties } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeSupportHandoff } from "@/integrations/supabase/supportHandoffInvoke";
 import { capAfterTailGrowth, CHAT_PAGE_SIZE } from "@/lib/chatMessagesStateCap";
 import {
   AI_ASSISTANT_BOB_LABEL,
@@ -30,82 +30,6 @@ function parseMessageContent(content: string): { text: string; cta?: { label: st
     // not JSON, return raw
   }
   return { text: content };
-}
-
-type AiTypingRevealTextProps = {
-  targetText: string;
-  /** True while the tail AI row is receiving server chunks (`streamingAiMessageId`). */
-  enabled: boolean;
-  className: string;
-};
-
-/** How many characters to reveal this tick (prefix of `target` after `visible`). */
-function nextTypingRevealStep(visible: string, target: string): number {
-  if (!target.startsWith(visible)) return 0;
-  const rest = target.slice(visible.length);
-  const behind = rest.length;
-  if (behind === 0) return 0;
-  if (behind > 260) {
-    const m = /^(\S+\s*)/.exec(rest);
-    return m ? m[0].length : Math.min(6, behind);
-  }
-  if (behind > 120) {
-    const m = /^(\S+\s*)/.exec(rest);
-    if (m && m[0].length <= 36) return m[0].length;
-    return Math.min(3, behind);
-  }
-  if (behind > 45) return 2;
-  return 1;
-}
-
-function typingTickDelayMs(behind: number): number {
-  if (behind > 220) return 14;
-  if (behind > 100) return 20;
-  if (behind > 40) return 26;
-  return 32;
-}
-
-/**
- * Frontend-only typing: advances toward `targetText` on a timer so large realtime payloads
- * still appear progressively (words when far behind, chars when close). Final text matches server when `enabled` flips false.
- */
-function AiTypingRevealText({ targetText, enabled, className }: AiTypingRevealTextProps) {
-  const [visible, setVisible] = useState(() => (enabled ? "" : targetText));
-
-  useEffect(() => {
-    if (!enabled) {
-      setVisible(targetText);
-      return;
-    }
-    setVisible((v) => {
-      if (targetText.length < v.length) return targetText;
-      if (!targetText.startsWith(v)) return targetText;
-      return v;
-    });
-  }, [enabled, targetText]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    if (visible.length >= targetText.length) return;
-    if (!targetText.startsWith(visible)) return;
-
-    const behind = targetText.length - visible.length;
-    const delayMs = typingTickDelayMs(behind);
-
-    const id = window.setTimeout(() => {
-      setVisible((v) => {
-        if (v.length >= targetText.length) return v;
-        if (!targetText.startsWith(v)) return targetText;
-        const step = nextTypingRevealStep(v, targetText);
-        if (step <= 0) return targetText;
-        return targetText.slice(0, v.length + step);
-      });
-    }, delayMs);
-
-    return () => clearTimeout(id);
-  }, [enabled, targetText, visible]);
-
-  return <p className={className}>{visible}</p>;
 }
 
 /** Stable background particles — avoid Math.random() on every parent re-render (typing) → forced reflow. */
@@ -152,10 +76,6 @@ interface Message {
 
 const OPTIMISTIC_MESSAGE_ID_PREFIX = "optimistic-";
 
-function sortMessagesAsc(a: Message, b: Message): number {
-  return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-}
-
 /** True bottom only: tolerate subpixel / fractional layout so we do not miss "pinned" state. */
 const CHAT_AT_BOTTOM_EPSILON_PX = 3;
 
@@ -170,105 +90,15 @@ function chatIsPinnedToBottomStrict(el: HTMLDivElement): boolean {
   return chatScrollDistanceFromBottom(el) <= CHAT_AT_BOTTOM_EPSILON_PX;
 }
 
-/** True when thread UI would look the same — ignores `read` so bulk mark-read does not re-render. */
-function messageRowDisplayUnchanged(a: Message, b: Message): boolean {
-  return (
-    a.id === b.id &&
-    a.user_id === b.user_id &&
-    a.sender === b.sender &&
-    a.content === b.content &&
-    a.created_at === b.created_at
-  );
-}
-
-/** In a single realtime batch, keep only the last UPDATE per row id (earlier ones are redundant). */
-function squashEarlierDuplicateUpdates(
-  batch: RealtimePostgresChangesPayload<Message>[],
-): RealtimePostgresChangesPayload<Message>[] {
-  const lastIndexById = new Map<string, number>();
-  for (let i = 0; i < batch.length; i++) {
-    const p = batch[i];
-    if (p.eventType === "UPDATE" && p.new) {
-      lastIndexById.set(String((p.new as Message).id), i);
-    }
-  }
-  return batch.filter((p, i) => {
-    if (p.eventType !== "UPDATE" || !p.new) return true;
-    const id = String((p.new as Message).id);
-    return lastIndexById.get(id) === i;
-  });
-}
-
-function mergeMessagesFromRealtime(
-  prev: Message[],
-  payload: RealtimePostgresChangesPayload<Message>,
-): Message[] {
-  let next: Message[];
-
-  if (payload.eventType === "INSERT" && payload.new) {
-    const row = payload.new as Message;
-    if (prev.some((m) => m.id === row.id)) {
-      next = prev;
-    } else if (row.sender === "user") {
-      let replaced = false;
-      next = prev;
-      for (let i = prev.length - 1; i >= 0; i--) {
-        const m = prev[i];
-        if (
-          m.id.startsWith(OPTIMISTIC_MESSAGE_ID_PREFIX) &&
-          m.sender === "user" &&
-          m.content === row.content
-        ) {
-          const nextRows = [...prev];
-          nextRows[i] = row;
-          next = nextRows.sort(sortMessagesAsc);
-          replaced = true;
-          break;
-        }
-      }
-      if (!replaced) {
-        next = [...prev, row].sort(sortMessagesAsc);
-      }
-    } else {
-      next = [...prev, row].sort(sortMessagesAsc);
-    }
-  } else if (payload.eventType === "UPDATE" && payload.new) {
-    const row = payload.new as Message;
-    const idx = prev.findIndex((m) => m.id === row.id);
-    if (idx === -1) {
-      // Not in the visible window — ignore (e.g. mark-read on older rows)
-      next = prev;
-    } else if (messageRowDisplayUnchanged(prev[idx], row)) {
-      next = prev;
-    } else {
-      next = prev.map((m) => (m.id === row.id ? row : m));
-    }
-  } else if (payload.eventType === "DELETE" && payload.old) {
-    const id = String((payload.old as { id: string }).id);
-    if (!prev.some((m) => m.id === id)) {
-      next = prev;
-    } else {
-      next = prev.filter((m) => m.id !== id);
-    }
-  } else {
-    next = prev;
-  }
-
-  return next;
-}
-
 type MessageThreadItemProps = {
   msg: Message;
   index: number;
   userName: string;
-  /** Tail AI row actively streaming (hide CTA + typing-style text reveal). */
-  tailAiStreamActive: boolean;
+  supportSent: boolean;
+  setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
   loadMessages: () => Promise<void>;
   supportHandoffMessage: string;
-  isUserClick: boolean;
-  setIsUserClick: React.Dispatch<React.SetStateAction<boolean>>;
-  isUserClickRef: React.MutableRefObject<boolean>;
 };
 
 const MessageThreadItem = memo(
@@ -276,13 +106,11 @@ const MessageThreadItem = memo(
     msg,
     index,
     userName,
-    tailAiStreamActive,
+    supportSent,
+    setSupportSent,
     supportHandoffInFlightRef,
     loadMessages,
     supportHandoffMessage,
-    isUserClick,
-    setIsUserClick,
-    isUserClickRef,
   }: MessageThreadItemProps) {
   const navigate = useNavigate();
   const parsed = parseMessageContent(msg.content);
@@ -354,7 +182,7 @@ const MessageThreadItem = memo(
       >
         {isUserMessage && (
           <div
-            className="absolute inset-0 opacity-20"
+            className="absolute inset-0 opacity-20 pointer-events-none"
             style={{
               background: "linear-gradient(90deg, transparent 0%, rgba(34, 197, 94, 0.5) 50%, transparent 100%)",
               backgroundSize: "200% 100%",
@@ -387,53 +215,37 @@ const MessageThreadItem = memo(
           <p className="relative z-10 text-xs font-semibold text-white/70 mb-1">{userName}</p>
         )}
 
-        {isAiMessage && !isSystemMessage ? (
-          <AiTypingRevealText
-            targetText={displayText}
-            enabled={tailAiStreamActive}
-            className={`relative z-10 text-[15px] leading-relaxed whitespace-pre-wrap break-words text-gray-100`}
-          />
-        ) : (
-          <p
-            className={`relative z-10 text-[15px] leading-relaxed whitespace-pre-wrap break-words ${
-              isUserMessage ? "text-white font-medium" : "text-gray-100"
-            }`}
-          >
-            {displayText}
-          </p>
-        )}
+        <p
+          className={`relative z-10 text-[15px] leading-relaxed whitespace-pre-wrap break-words ${
+            isUserMessage ? "text-white font-medium" : "text-gray-100"
+          }`}
+        >
+          {displayText}
+        </p>
 
-        {cta && !(isAiMessage && tailAiStreamActive) && (
+        {cta && (
           <button
             type="button"
             onClick={async (e) => {
-              console.log("CTA CLICK", cta);
+              console.log("CTA CLICK");
+              console.log("CTA CLICK payload", cta);
               e.preventDefault();
               e.stopPropagation();
               if (cta.action.startsWith("http")) {
                 window.open(cta.action, "_blank", "noopener");
               } else {
                 if (cta.action === "/messages") {
-                  setIsUserClick(true);
-                  isUserClickRef.current = true;
-
-                  if (cta.action === "/messages" && isUserClickRef.current === true) {
-                    console.log("SUPPORT HANDOFF TRIGGERED BY USER");
-                  console.log("SENDING TO SUPPORT:", lastUserMessage);
+                  if (supportSent) return;
                   if (supportHandoffInFlightRef.current) return;
                   supportHandoffInFlightRef.current = true;
                   try {
-                    await supabase.functions.invoke("support-handoff", {
-                      body: { message: supportHandoffMessage },
-                    });
-                    setIsUserClick(false);
-                    isUserClickRef.current = false;
+                    await invokeSupportHandoff({ message: supportHandoffMessage });
+                    setSupportSent(true);
                     await loadMessages();
                   } finally {
                     supportHandoffInFlightRef.current = false;
                   }
                   return;
-                  }
                 }
                 navigate(cta.action);
               }
@@ -449,7 +261,7 @@ const MessageThreadItem = memo(
               zIndex: 50,
             }}
           >
-            {cta.label}
+            {cta.action === "/messages" && supportSent ? "Předáno podpoře" : cta.label}
           </button>
         )}
 
@@ -471,77 +283,54 @@ const MessageThreadItem = memo(
     prev.msg.content === next.msg.content &&
     prev.userName === next.userName &&
     prev.index === next.index &&
-    prev.tailAiStreamActive === next.tailAiStreamActive,
+    true,
 );
-
-/** Hide empty tail AI placeholder while typing line is shown (same insert, first chunk not yet). */
-function filterMessagesForDisplay(
-  rows: Message[],
-  showTypingIndicator: boolean,
-): Message[] {
-  if (rows.length === 0) return rows;
-  const last = rows[rows.length - 1]!;
-  if (
-    showTypingIndicator &&
-    last.sender === "ai" &&
-    !parseMessageContent(last.content).text.trim()
-  ) {
-    return rows.filter((m) => m.id !== last.id);
-  }
-  return rows;
-}
 
 type MessagesThreadListProps = {
   messages: Message[];
   userName: string;
-  streamingAiMessageId: string | null;
   showTypingIndicator: boolean;
+  supportSent: boolean;
+  setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
   loadMessages: () => Promise<void>;
   supportHandoffMessage: string;
-  isUserClick: boolean;
-  setIsUserClick: React.Dispatch<React.SetStateAction<boolean>>;
-  isUserClickRef: React.MutableRefObject<boolean>;
 };
 
 const MessagesThreadList = memo(function MessagesThreadList({
   messages,
   userName,
-  streamingAiMessageId,
   showTypingIndicator,
+  supportSent,
+  setSupportSent,
   supportHandoffInFlightRef,
   loadMessages,
   supportHandoffMessage,
-  isUserClick,
-  setIsUserClick,
-  isUserClickRef,
 }: MessagesThreadListProps) {
-  const visible = useMemo(
-    () => filterMessagesForDisplay(messages, showTypingIndicator),
-    [messages, showTypingIndicator],
-  );
   return (
     <>
-      {visible.map((msg, index) => (
-        <MessageThreadItem
-          key={msg.id}
-          msg={msg}
-          index={index}
-          userName={userName}
-          tailAiStreamActive={streamingAiMessageId !== null && streamingAiMessageId === msg.id}
-          supportHandoffInFlightRef={supportHandoffInFlightRef}
-          loadMessages={loadMessages}
-          supportHandoffMessage={supportHandoffMessage}
-          isUserClick={isUserClick}
-          setIsUserClick={setIsUserClick}
-          isUserClickRef={isUserClickRef}
-        />
-      ))}
+      {messages.map((msg, index) => {
+        console.log("RENDER MESSAGE", msg.sender, msg.content);
+        return (
+          <MessageThreadItem
+            key={msg.id}
+            msg={msg}
+            index={index}
+            userName={userName}
+            supportSent={supportSent}
+            setSupportSent={setSupportSent}
+            supportHandoffInFlightRef={supportHandoffInFlightRef}
+            loadMessages={loadMessages}
+            supportHandoffMessage={supportHandoffMessage}
+          />
+        );
+      })}
     </>
   );
 });
 
 export default function MessagesPage() {
+  console.log("MESSAGES PAGE MOUNTED");
   const { user } = useAuth();
   const { sendMessageToAdmin } = useMessages();
   const { refresh: refreshUnreadCount } = useUnreadMessagesCount();
@@ -550,6 +339,7 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(false);
   const [hasMoreOlder, setHasMoreOlder] = useState(false);
   const [newMessage, setNewMessage] = useState("");
+  const [supportSent, setSupportSent] = useState(false);
   const [sparkles, setSparkles] = useState<Sparkle[]>([]);
   const [flyingMessage, setFlyingMessage] = useState<FlyingMessage | null>(null);
   const sendInFlightRef = useRef(false);
@@ -565,12 +355,8 @@ export default function MessagesPage() {
   const pinnedToBottomRef = useRef(true);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const messagesRef = useRef<Message[]>([]);
-  const streamSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const supportHandoffInFlightRef = useRef(false);
-  const [isUserClick, setIsUserClick] = useState(false);
-  const isUserClickRef = useRef(false);
-  const prevTailAiStreamRef = useRef<{ id: string; content: string } | null>(null);
-  const skipTailAiStreamDebounceRef = useRef(true);
+  const postSendRefetchTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
   const hasMoreOlderRef = useRef(false);
   const loadingOlderRef = useRef(false);
   const currentUserIdRef = useRef<string | undefined>(undefined);
@@ -631,7 +417,6 @@ export default function MessagesPage() {
     setShowNewMessagesBelow(false);
     setAwayFromBottom(false);
     pinnedToBottomRef.current = true;
-    skipTailAiStreamDebounceRef.current = true;
   }, [user?.id]);
 
   useEffect(() => {
@@ -694,6 +479,7 @@ export default function MessagesPage() {
 
   /** One-time / user-change fetch only — never call after send; new rows come from realtime + optimistic UI. */
   const loadMessages = useCallback(async () => {
+    console.log("loadMessages START");
     const uid = user?.id;
     if (!uid) return;
     setLoading(true);
@@ -706,11 +492,20 @@ export default function MessagesPage() {
       .order("created_at", { ascending: false })
       .limit(CHAT_PAGE_SIZE);
     const rows = data ? [...data].reverse() : [];
-    setMessages(rows);
+    console.log("MESSAGES RAW", rows);
+    // Force state update with a fresh array reference (guarantee rerender).
+    setMessages([...rows]);
+    console.log("MESSAGES IN STATE", rows);
     const more = (data?.length ?? 0) === CHAT_PAGE_SIZE;
     setHasMoreOlder(more);
     hasMoreOlderRef.current = more;
     setLoading(false);
+    // Stop waiting only when we can see an AI reply at the tail.
+    const last = rows[rows.length - 1];
+    if (last?.sender === "ai") {
+      console.log("AI RESPONSE RECEIVED");
+      setIsAwaitingReply(false);
+    }
   }, [user?.id]);
 
   const loadOlderMessages = useCallback(async () => {
@@ -801,6 +596,7 @@ export default function MessagesPage() {
     if (!user?.id) return;
 
     void (async () => {
+      console.log("CALLING loadMessages");
       await loadMessages();
       // Let the loaded thread paint once before bulk mark-read UPDATEs hit realtime.
       await new Promise<void>((resolve) => {
@@ -811,81 +607,7 @@ export default function MessagesPage() {
     })();
   }, [user?.id, loadMessages, markAdminMessagesAsRead, refreshUnreadCount]);
 
-  useEffect(() => {
-    const uid = user?.id;
-    if (!uid) return;
-
-    const pending: RealtimePostgresChangesPayload<Message>[] = [];
-    let rafId: number | null = null;
-
-    const flush = () => {
-      rafId = null;
-      if (pending.length === 0) return;
-      const raw = pending.splice(0, pending.length);
-      const batch = squashEarlierDuplicateUpdates(raw);
-      setMessages((prev) => {
-        const beforeLen = prev.length;
-        let next = prev;
-        for (const payload of batch) {
-          next = mergeMessagesFromRealtime(next, payload);
-        }
-        return capAfterTailGrowth(beforeLen, next);
-      });
-    };
-
-    const channel = supabase
-      .channel("messages")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "messages", filter: `user_id=eq.${uid}` },
-        (payload) => {
-          const p = payload as RealtimePostgresChangesPayload<Message>;
-          // INSERT should appear immediately (Bob reply + admin messages) — do not wait for RAF batching.
-          if (p.eventType === "INSERT") {
-            if (p.new && (p.new as Message).user_id === uid) {
-              setMessages((prev) => {
-                const beforeLen = prev.length;
-                const next = mergeMessagesFromRealtime(prev, p);
-                return capAfterTailGrowth(beforeLen, next);
-              });
-              const sender = (p.new as Message).sender;
-              if (sender === "ai" || sender === "admin") {
-                setIsAwaitingReply(false);
-              }
-            }
-            return;
-          }
-
-          pending.push(p);
-          if (rafId == null) rafId = requestAnimationFrame(flush);
-        },
-      )
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-      if (rafId != null) cancelAnimationFrame(rafId);
-      pending.length = 0;
-    };
-  }, [user?.id]);
-
-  const lastUserMessageTs = useMemo(
-    () => (lastUserMessageAt ? new Date(lastUserMessageAt).getTime() : 0),
-    [lastUserMessageAt],
-  );
-
-  const hasRenderableAiOrAdminReply = useMemo(() => {
-    return messages.some((msg) => {
-      if (new Date(msg.created_at).getTime() < lastUserMessageTs) return false;
-      if (msg.sender === "admin") return true;
-      if (msg.sender === "ai") {
-        return parseMessageContent(msg.content).text.trim().length > 0;
-      }
-      return false;
-    });
-  }, [messages, lastUserMessageTs]);
-
-  const showTypingIndicator = isAwaitingReply && !hasRenderableAiOrAdminReply;
+  const showTypingIndicator = isAwaitingReply;
 
   const lastUserMessage = useMemo(() => {
     return (
@@ -896,83 +618,10 @@ export default function MessagesPage() {
   }, [messages]);
 
   const supportHandoffMessage = lastUserMessage?.content ?? "";
-
-  useEffect(() => {
-    if (hasRenderableAiOrAdminReply) {
-      setIsAwaitingReply(false);
-    }
-  }, [hasRenderableAiOrAdminReply]);
-
-  /** After last realtime burst, treat tail AI row as finalized → show CTA. */
-  const AI_STREAM_SETTLE_MS = 700;
-  const [streamingAiMessageId, setStreamingAiMessageId] = useState<string | null>(null);
-
-  const tailStreamSignature = useMemo(() => {
-    const last = messages[messages.length - 1];
-    if (!last) return "";
-    return `${last.sender}:${last.id}:${last.content}`;
-  }, [messages]);
-
-  useEffect(() => {
-    const clearTimer = () => {
-      if (streamSettleTimerRef.current) {
-        clearTimeout(streamSettleTimerRef.current);
-        streamSettleTimerRef.current = null;
-      }
-    };
-
-    const rows = messagesRef.current;
-    if (rows.length === 0) {
-      clearTimer();
-      prevTailAiStreamRef.current = null;
-      skipTailAiStreamDebounceRef.current = true;
-      setStreamingAiMessageId(null);
-      return;
-    }
-
-    const last = rows[rows.length - 1]!;
-
-    if (skipTailAiStreamDebounceRef.current) {
-      skipTailAiStreamDebounceRef.current = false;
-      clearTimer();
-      if (last.sender === "ai") {
-        prevTailAiStreamRef.current = { id: last.id, content: last.content };
-      } else {
-        prevTailAiStreamRef.current = null;
-      }
-      setStreamingAiMessageId(null);
-      return;
-    }
-
-    if (last.sender !== "ai") {
-      clearTimer();
-      prevTailAiStreamRef.current = null;
-      setStreamingAiMessageId(null);
-      return;
-    }
-
-    const prev = prevTailAiStreamRef.current;
-    const contentChanged = !prev || prev.id !== last.id || prev.content !== last.content;
-    prevTailAiStreamRef.current = { id: last.id, content: last.content };
-
-    if (!contentChanged) {
-      return;
-    }
-
-    clearTimer();
-    setStreamingAiMessageId(last.id);
-    streamSettleTimerRef.current = setTimeout(() => {
-      streamSettleTimerRef.current = null;
-      setStreamingAiMessageId(null);
-    }, AI_STREAM_SETTLE_MS);
-  }, [tailStreamSignature]);
-
   useEffect(
     () => () => {
-      if (streamSettleTimerRef.current) {
-        clearTimeout(streamSettleTimerRef.current);
-        streamSettleTimerRef.current = null;
-      }
+      for (const t of postSendRefetchTimersRef.current) clearTimeout(t);
+      postSendRefetchTimersRef.current = [];
     },
     [],
   );
@@ -999,6 +648,25 @@ export default function MessagesPage() {
 
     const messageContent = newMessage.trim();
     sendInFlightRef.current = true;
+
+    // Repeat refetch after send — do not rely on realtime.
+    for (const t of postSendRefetchTimersRef.current) clearTimeout(t);
+    postSendRefetchTimersRef.current = [];
+    const schedule = (ms: number) => {
+      const id = setTimeout(() => {
+        void loadMessages();
+      }, ms);
+      postSendRefetchTimersRef.current.push(id);
+    };
+    schedule(1500);
+    schedule(3000);
+    schedule(5000);
+
+    // Safety fallback: stop waiting after 5s even if AI never arrives.
+    const stopWaitId = setTimeout(() => {
+      setIsAwaitingReply(false);
+    }, 5200);
+    postSendRefetchTimersRef.current.push(stopWaitId);
 
     const optimisticId = `${OPTIMISTIC_MESSAGE_ID_PREFIX}${Date.now()}`;
     const optimisticCreatedAt = new Date().toISOString();
@@ -1028,6 +696,8 @@ export default function MessagesPage() {
         setLastUserMessageAt(inserted.created_at);
         toast({ title: "Odesláno" });
       } else {
+        for (const t of postSendRefetchTimersRef.current) clearTimeout(t);
+        postSendRefetchTimersRef.current = [];
         setMessages((prev) =>
           capAfterTailGrowth(prev.length, prev.filter((msg) => msg.id !== optimisticId)),
         );
@@ -1188,14 +858,12 @@ export default function MessagesPage() {
           <MessagesThreadList
             messages={messages}
             userName={userName}
-            streamingAiMessageId={streamingAiMessageId}
             showTypingIndicator={showTypingIndicator}
+            supportSent={supportSent}
+            setSupportSent={setSupportSent}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
             loadMessages={loadMessages}
             supportHandoffMessage={supportHandoffMessage}
-            isUserClick={isUserClick}
-            setIsUserClick={setIsUserClick}
-            isUserClickRef={isUserClickRef}
           />
 
           {showTypingIndicator && (

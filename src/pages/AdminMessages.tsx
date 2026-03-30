@@ -130,11 +130,13 @@ export default function AdminMessages() {
     const result: Thread[] = userIds.map((uid) => {
       const userMessages = grouped[uid];
       const hasUnread = userMessages.some((msg) => msg.sender === "user" && !msg.read);
-      const hasSupportRequest = userMessages.some((msg) => {
+      const supportTriggered = userMessages.some((msg) => {
         if (msg.sender !== "admin") return false;
         const plain = safePlainTextFromMessageContent(msg.content);
         return plain.startsWith("SUPPORT REQUEST");
       });
+      const lastSender = userMessages[0]?.sender as string | undefined;
+      const hasSupportRequest = supportTriggered && lastSender === "user";
       const userInfo = userMap[uid] || { email: null, name: null };
       const partner = partnerMap[uid];
       const isInfluencer = partner?.isInfluencer ?? false;

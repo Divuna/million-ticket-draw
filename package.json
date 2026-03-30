@@ -14,7 +14,10 @@
     "test:concurrency": "node scripts/concurrency-test-race-condition.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "functions:serve": "supabase functions serve",
+    "deploy:ai": "supabase functions deploy ai-chat --project-ref xkzhjldrojjlrkezorey",
+    "auto-deploy:ai": "node scripts/auto-deploy-on-save.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -91,6 +94,7 @@
     "globals": "^15.15.0",
     "lovable-tagger": "^1.1.9",
     "postcss": "^8.5.6",
+    "supabase": "^2.49.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
