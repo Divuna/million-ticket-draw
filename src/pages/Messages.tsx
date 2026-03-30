@@ -364,7 +364,7 @@ export default function MessagesPage() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const messagesRef = useRef<Message[]>([]);
   const supportHandoffInFlightRef = useRef(false);
-  const postSendRefetchTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  
   const hasMoreOlderRef = useRef(false);
   const loadingOlderRef = useRef(false);
   const currentUserIdRef = useRef<string | undefined>(undefined);
