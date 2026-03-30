@@ -49,10 +49,7 @@ export const useAdminMessages = () => {
           unread_count: 0,
         };
       }
-
-      if (msg.sender === "user" && !msg.read) {
-        convMap[msg.user_id].unread_count++;
-      }
+      // Unread totals: use useUnreadMessagesCount / support marker logic only — do not count here.
     });
 
     setConversations(Object.values(convMap));

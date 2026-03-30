@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPPORT_REQUEST_MARKER } from "@/constants/supportRequestMarker";
 
 // --- Notification sound ---
 const NOTIFICATION_SOUND_URL = "/sounds/notification.mp3";
@@ -32,9 +33,10 @@ const playNotificationSound = () => {
 };
 
 /**
- * Single-source-of-truth store for unread messages count.
- * Fixes cases where multiple hook instances would each keep their own state,
- * causing menus to not re-render even though some other instance updated.
+ * Single source of truth for message-related badge counts in the shell:
+ * - Admin: unread rows where sender=admin AND content is exactly SUPPORT_REQUEST_MARKER (see constants/supportRequestMarker.ts).
+ * - Non-admin: unread admin→user messages for the current user.
+ * Do not duplicate this logic elsewhere; refresh via `refresh()` after local reads.
  */
 let _unreadCount = 0;
 let _started = false;
@@ -54,9 +56,6 @@ const setUnreadCount = (next: number) => {
   _unreadCount = safe;
   emit();
 };
-
-/** Exact DB marker from support-handoff (must match AdminMessages + RPC migrations). */
-const SUPPORT_REQUEST_MARKER = "SUPPORT REQUEST";
 
 const fetchCount = async () => {
   try {

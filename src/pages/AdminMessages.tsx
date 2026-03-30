@@ -10,9 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Star, Building2, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
-
-/** Must match support-handoff: single admin row created on CTA click. */
-const SUPPORT_REQUEST_MARKER = "SUPPORT REQUEST";
+import { SUPPORT_REQUEST_MARKER } from "@/constants/supportRequestMarker";
 
 interface Thread {
   user_id: string;
@@ -138,12 +136,19 @@ export default function AdminMessages() {
     const result: Thread[] = userIds
       .map((uid) => {
       const userMessages = grouped[uid];
-      const hasUnread = userMessages.some((msg) => msg.sender === "user" && !msg.read);
       const senderNorm = (s: unknown): Thread["last_sender"] => {
         const v = typeof s === "string" ? s.toLowerCase().trim() : "";
         if (v === "user" || v === "admin" || v === "ai") return v;
         return null;
       };
+      // Per-thread “unread” dot: same criterion as global admin badge (useUnreadMessagesCount) — unread marker row only.
+      const hasUnread = userMessages.some(
+        (msg) =>
+          senderNorm(msg?.sender) === "admin" &&
+          typeof msg?.content === "string" &&
+          msg.content === SUPPORT_REQUEST_MARKER &&
+          msg.read === false,
+      );
 
       const isExactSupportRequestRow = (msg: { sender?: unknown; content?: unknown }): boolean =>
         senderNorm(msg?.sender) === "admin" &&
