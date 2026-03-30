@@ -686,7 +686,7 @@ export default function MessagesPage() {
     setTimeout(() => setSparkles([]), 1000);
   }, []);
 
-  /** Send pipeline (button / Enter). No loadMessages here — inserts merge via postgres_changes only (+ optimistic). */
+  /** Send pipeline (button / Enter). After insert, fetch once to pick up the AI reply created by DB trigger. */
   const handleSend = async () => {
     if (!newMessage.trim() || sendInFlightRef.current) return;
 
@@ -710,33 +710,6 @@ export default function MessagesPage() {
       setIsAwaitingReply(true);
     });
 
-    // Poll for AI reply (up to 10s) — ensures late AI responses still appear.
-    for (const t of postSendRefetchTimersRef.current) clearTimeout(t);
-    postSendRefetchTimersRef.current = [];
-    let attempts = 0;
-    const poll = async () => {
-      await loadMessages();
-
-      const optimisticTs = new Date(optimisticCreatedAt).getTime();
-      const hasAiAfterSend = messagesRef.current.some((m) => {
-        if (m.sender !== "ai") return false;
-        const ts = new Date(m.created_at).getTime();
-        return Number.isFinite(ts) && ts >= optimisticTs;
-      });
-
-      if (!hasAiAfterSend && attempts < 10) {
-        attempts += 1;
-        const id = setTimeout(() => {
-          void poll();
-        }, 1000);
-        postSendRefetchTimersRef.current.push(id);
-        return;
-      }
-
-      setIsAwaitingReply(false);
-    };
-    void poll();
-
     setFlyingMessage({ id: Date.now(), content: messageContent });
     createSparkles();
     setNewMessage("");
@@ -747,16 +720,16 @@ export default function MessagesPage() {
       if (inserted) {
         setLastUserMessageAt(inserted.created_at);
         toast({ title: "Odesláno" });
+        // Single fetch to pick up both the real user row and the AI reply created by DB trigger.
+        await loadMessages();
       } else {
-        for (const t of postSendRefetchTimersRef.current) clearTimeout(t);
-        postSendRefetchTimersRef.current = [];
         setMessages((prev) =>
           capAfterTailGrowth(prev.length, prev.filter((msg) => msg.id !== optimisticId)),
         );
-        setIsAwaitingReply(false);
         toast({ title: "Chyba", description: "Odeslání selhalo", variant: "destructive" });
       }
     } finally {
+      setIsAwaitingReply(false);
       sendInFlightRef.current = false;
       setFlyingMessage(null);
     }
