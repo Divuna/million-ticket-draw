@@ -18,9 +18,10 @@ interface Thread {
   last_date: string;
   last_sender: "user" | "admin" | "ai" | null;
   has_unread: boolean;
-  has_support_request: boolean; // support request exists anywhere in history
-  support_waiting: boolean; // waiting for support now (last sender is user)
-  oldest_support_request_at: string | null; // for ordering support_waiting (ASC)
+  /** Support is active only if there is a SUPPORT REQUEST with no admin reply after it. */
+  support_active: boolean;
+  /** Timestamp of the active support request (used for ordering). */
+  support_active_at: string | null;
   is_influencer: boolean;
   is_partner: boolean;
   role: "user" | "influencer" | "partner";
@@ -133,19 +134,27 @@ export default function AdminMessages() {
     const result: Thread[] = userIds.map((uid) => {
       const userMessages = grouped[uid];
       const hasUnread = userMessages.some((msg) => msg.sender === "user" && !msg.read);
-      const supportRequestMessages = userMessages.filter((msg) => {
-        if (msg.sender !== "admin") return false;
-        const plain = safePlainTextFromMessageContent(msg.content);
-        return plain.startsWith("SUPPORT REQUEST");
-      });
-      const hasSupportRequest = supportRequestMessages.length > 0;
-      const oldestSupportRequestAt =
-        supportRequestMessages
+      const supportRequestAtLatest =
+        userMessages
+          .filter((msg) => {
+            if (msg.sender !== "admin") return false;
+            const plain = safePlainTextFromMessageContent(msg.content);
+            return plain.startsWith("SUPPORT REQUEST");
+          })
           .map((m) => m.created_at)
-          .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0] ?? null;
+          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+
+      const adminRepliedAfterSupport =
+        supportRequestAtLatest != null &&
+        userMessages.some((msg) => {
+          if (msg.sender !== "admin") return false;
+          if (msg.content && safePlainTextFromMessageContent(msg.content).startsWith("SUPPORT REQUEST")) return false;
+          return new Date(msg.created_at).getTime() > new Date(supportRequestAtLatest).getTime();
+        });
+
+      const supportActive = supportRequestAtLatest != null && !adminRepliedAfterSupport;
 
       const lastSender = (userMessages[0]?.sender ?? null) as Thread["last_sender"];
-      const supportWaiting = hasSupportRequest && lastSender === "user";
       const userInfo = userMap[uid] || { email: null, name: null };
       const partner = partnerMap[uid];
       const isInfluencer = partner?.isInfluencer ?? false;
@@ -159,9 +168,8 @@ export default function AdminMessages() {
         last_date: userMessages[0]?.created_at || "",
         last_sender: lastSender,
         has_unread: hasUnread,
-        has_support_request: hasSupportRequest,
-        support_waiting: supportWaiting,
-        oldest_support_request_at: oldestSupportRequestAt,
+        support_active: supportActive,
+        support_active_at: supportActive ? supportRequestAtLatest : null,
         is_influencer: isInfluencer,
         is_partner: isPartner,
         role: isInfluencer ? "influencer" as const : isPartner ? "partner" as const : "user" as const,
@@ -177,18 +185,18 @@ export default function AdminMessages() {
     });
 
     // Final ordering:
-    // - support_waiting → top, oldest support request first (ASC)
+    // - support_active → top, oldest support request first (ASC)
     // - others → keep baseSorted order (no jumping)
-    const supportWaiting = baseSorted
-      .filter((t) => t.support_waiting)
+    const supportActive = baseSorted
+      .filter((t) => t.support_active)
       .sort((a, b) => {
-        const at = a.oldest_support_request_at ?? a.last_date;
-        const bt = b.oldest_support_request_at ?? b.last_date;
+        const at = a.support_active_at ?? a.last_date;
+        const bt = b.support_active_at ?? b.last_date;
         return new Date(at).getTime() - new Date(bt).getTime();
       });
-    const rest = baseSorted.filter((t) => !t.support_waiting);
+    const rest = baseSorted.filter((t) => !t.support_active);
 
-    setThreads([...supportWaiting, ...rest]);
+    setThreads([...supportActive, ...rest]);
     setLoading(false);
   }, []);
 
@@ -234,8 +242,8 @@ export default function AdminMessages() {
             const isSpecialUnread = isSpecial && thread.has_unread;
             const isSpecialRead = isSpecial && !thread.has_unread;
             const isUserUnread = !isSpecial && thread.has_unread;
-            const isSupportWaiting = thread.support_waiting;
-            const isActiveChat = thread.last_sender === "user" && !thread.has_support_request;
+            const isSupportRed = thread.support_active && thread.last_sender === "user";
+            const isActiveChatOrange = !isSupportRed && thread.last_sender === "user";
             const showUnreadIndicator = thread.has_unread;
 
             return (
@@ -246,9 +254,9 @@ export default function AdminMessages() {
                   relative rounded-2xl cursor-pointer 
                   transition-all duration-200 ease-in-out
                   hover:scale-[1.02] hover:shadow-xl
-                  ${isSupportWaiting
+                  ${isSupportRed
                     ? "p-[2px] bg-gradient-to-br from-destructive/70 to-destructive/20 shadow-md shadow-destructive/20"
-                    : isActiveChat
+                    : isActiveChatOrange
                     ? "p-[2px] bg-gradient-to-br from-[hsl(35,90%,55%,0.55)] to-[hsl(30,85%,45%,0.18)] shadow-md shadow-[hsl(35,90%,45%,0.12)]"
                     : thread.is_influencer && isSpecialUnread
                     ? "p-[2px] bg-gradient-to-br from-[hsl(280,70%,55%)] to-[hsl(300,60%,45%)] shadow-lg shadow-[hsl(280,60%,50%,0.3)]"
@@ -266,9 +274,9 @@ export default function AdminMessages() {
               >
                 <div className={`
                   rounded-[14px] p-4 h-full
-                  ${isSupportWaiting
+                  ${isSupportRed
                     ? "bg-destructive/10"
-                    : isActiveChat
+                    : isActiveChatOrange
                     ? "bg-[hsl(35,70%,12%)]"
                     : thread.is_influencer && isSpecialUnread
                     ? "bg-[hsl(280,40%,12%)]"
@@ -286,7 +294,7 @@ export default function AdminMessages() {
                   {/* Unread dot */}
                   {showUnreadIndicator && (
                     <div className={`absolute top-3 right-3 w-3 h-3 rounded-full animate-pulse ring-2 ${
-                      isSupportWaiting
+                      isSupportRed
                         ? "bg-destructive ring-destructive/40"
                         : thread.is_influencer
                         ? "bg-[hsl(280,70%,60%)] ring-[hsl(280,70%,60%,0.4)]"
@@ -313,7 +321,7 @@ export default function AdminMessages() {
                       </Badge>
                     </div>
                   )}
-                  {isSupportWaiting && (
+                  {isSupportRed && (
                     <div className="mb-2">
                       <Badge className="bg-destructive text-white border-destructive/40 text-[10px] uppercase tracking-wider">
                         Support
