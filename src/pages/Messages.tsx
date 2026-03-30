@@ -645,7 +645,7 @@ export default function MessagesPage() {
     setTimeout(() => setSparkles([]), 1000);
   }, []);
 
-  /** Send pipeline (button / Enter). After insert, fetch once to pick up the AI reply created by DB trigger. */
+  /** Send pipeline (button / Enter). After insert, directly fetch new messages and append AI reply. */
   const handleSend = async () => {
     if (!newMessage.trim() || sendInFlightRef.current) return;
 
@@ -679,8 +679,36 @@ export default function MessagesPage() {
       if (inserted) {
         setLastUserMessageAt(inserted.created_at);
         toast({ title: "Odesláno" });
-        // Single fetch to pick up both the real user row and the AI reply created by DB trigger.
-        await loadMessages();
+
+        // Replace optimistic message with the real DB row immediately
+        setMessages((prev) => {
+          const without = prev.filter((m) => m.id !== optimisticId);
+          if (without.some((m) => m.id === inserted.id)) return without;
+          return capAfterTailGrowth(without.length, [...without, inserted as Message]);
+        });
+
+        // Directly fetch AI reply (created by DB trigger) — don't wait for loadMessages
+        const { data: newRows } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("user_id", inserted.user_id)
+          .gt("created_at", inserted.created_at)
+          .order("created_at", { ascending: true })
+          .limit(5);
+
+        if (newRows && newRows.length > 0) {
+          setMessages((prev) => {
+            const existingIds = new Set(prev.map((m) => m.id));
+            const fresh = (newRows as Message[]).filter((m) => !existingIds.has(m.id));
+            return fresh.length > 0 ? capAfterTailGrowth(prev.length, [...prev, ...fresh]) : prev;
+          });
+          setIsAwaitingReply(false);
+        }
+
+        // Deferred background sync — fallback to catch anything missed
+        setTimeout(() => {
+          loadMessages();
+        }, 3000);
       } else {
         setMessages((prev) =>
           capAfterTailGrowth(prev.length, prev.filter((msg) => msg.id !== optimisticId)),
