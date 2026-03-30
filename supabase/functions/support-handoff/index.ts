@@ -17,6 +17,14 @@ function json(status: number, body: unknown) {
 }
 
 serve(async (req) => {
+  const rawBody = await req.clone().text()
+  console.log("SUPPORT HANDOFF CALLED", {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries()),
+    body: rawBody,
+  })
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders })
   if (req.method !== "POST") return json(405, { error: "Method not allowed" })
 

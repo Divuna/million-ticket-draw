@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client"
  * Edge Functions gateway instead of production. Omit the variable in production builds.
  */
 export async function invokeSupportHandoff(body: { message: string }): Promise<void> {
+  console.log("SUPPORT TRIGGERED BY CTA")
   const localUrl = (import.meta.env.VITE_LOCAL_SUPPORT_HANDOFF_URL as string | undefined)?.trim() ?? ""
 
   if (localUrl) {
