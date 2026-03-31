@@ -408,6 +408,7 @@ export default function MessagesPage() {
         { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${uid}` },
         (payload) => {
           const newMessage = payload.new as unknown as Message;
+          if (newMessage.sender === "ai") return;
 
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMessage.id)) return prev;
