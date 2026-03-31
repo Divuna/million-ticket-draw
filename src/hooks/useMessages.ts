@@ -55,9 +55,9 @@ export const useMessages = () => {
 
       const { data: aiData, error: invokeErr } = await supabase.functions.invoke("ai-chat", {
         body: { message_id: userMessage.id },
-        headers: {
+        headers: withEdgeInternalToken({
           Authorization: `Bearer ${session.access_token}`
-        }
+        })
       })
 
       if (invokeErr) throw invokeErr;
