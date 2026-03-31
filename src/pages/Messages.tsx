@@ -75,6 +75,7 @@ interface Message {
   content: string;
   read: boolean;
   created_at: string;
+  isOptimistic?: boolean;
 }
 
 const OPTIMISTIC_MESSAGE_ID_PREFIX = "optimistic-";
@@ -112,6 +113,7 @@ type MessageThreadItemProps = {
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
   appendSupportRequestMessage: () => void;
+  appendSupportCtaAiMessage: () => void;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
   supportHandoffMessage: string;
 };
@@ -124,6 +126,7 @@ function MessageThreadItem({
   supportSent,
   setSupportSent,
   appendSupportRequestMessage,
+  appendSupportCtaAiMessage,
   supportHandoffInFlightRef,
   supportHandoffMessage,
 }: MessageThreadItemProps) {
@@ -263,24 +266,7 @@ function MessageThreadItem({
                     await invokeSupportHandoff({ message: supportHandoffMessage });
                     setSupportSent(true);
                     appendSupportRequestMessage();
-
-                    const aiMessage: Message = {
-                      id: "optimistic-ai-" + Date.now(),
-                      user_id: currentUserId || "",
-                      sender: "ai",
-                      content: JSON.stringify({
-                        text: "Váš dotaz jsem předal podpoře. Ta vás bude co nejdříve kontaktovat a pomůže vám s řešením.",
-                        cta: null
-                      }),
-                      read: false,
-                      created_at: new Date().toISOString()
-                    }
-
-                    setMessages(prev => {
-                      const merged = sortMessagesByCreatedAtAsc([...prev, aiMessage])
-                      messagesRef.current = merged
-                      return merged
-                    })
+                    appendSupportCtaAiMessage();
                   } finally {
                     supportHandoffInFlightRef.current = false;
                   }
@@ -324,6 +310,7 @@ type MessagesThreadListProps = {
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
   appendSupportRequestMessage: () => void;
+  appendSupportCtaAiMessage: () => void;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
   supportHandoffMessage: string;
 };
@@ -335,6 +322,7 @@ function MessagesThreadList({
   supportSent,
   setSupportSent,
   appendSupportRequestMessage,
+  appendSupportCtaAiMessage,
   supportHandoffInFlightRef,
   supportHandoffMessage,
 }: MessagesThreadListProps) {
@@ -352,6 +340,7 @@ function MessagesThreadList({
             supportSent={supportSent}
             setSupportSent={setSupportSent}
             appendSupportRequestMessage={appendSupportRequestMessage}
+            appendSupportCtaAiMessage={appendSupportCtaAiMessage}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
             supportHandoffMessage={supportHandoffMessage}
           />
@@ -551,13 +540,23 @@ export default function MessagesPage() {
     const rows = sortMessagesByCreatedAtAsc(data ? [...data] : []);
     console.log("MESSAGES RAW", rows);
     setMessages((prev) => {
-      const existingIds = new Set(prev.map((m) => m.id));
       const merged = [...prev];
 
       rows.forEach((row) => {
-        if (!existingIds.has(row.id)) {
-          merged.push(row);
+        const existingIndex = merged.findIndex(
+          (m) => m.sender === row.sender && m.content === row.content,
+        );
+
+        if (existingIndex >= 0) {
+          const existing = merged[existingIndex];
+          if (existing?.isOptimistic) {
+            // Replace optimistic placeholder with DB version.
+            merged[existingIndex] = row as unknown as Message;
+          }
+          return;
         }
+
+        merged.push(row as unknown as Message);
       });
 
       const sorted = sortMessagesByCreatedAtAsc(merged);
@@ -736,6 +735,27 @@ export default function MessagesPage() {
     };
     setMessages((prev) => {
       const merged = sortMessagesByCreatedAtAsc([...prev, supportMessage]);
+      messagesRef.current = merged;
+      return merged;
+    });
+  }, [user?.id]);
+
+  const appendSupportCtaAiMessage = useCallback(() => {
+    const aiMessage: Message = {
+      id: "optimistic-ai-" + Date.now(),
+      user_id: user?.id || "",
+      sender: "ai",
+      content: JSON.stringify({
+        text: "Váš dotaz jsem předal podpoře. Ta vás bude co nejdříve kontaktovat a pomůže vám s řešením.",
+        cta: null,
+      }),
+      read: false,
+      created_at: new Date().toISOString(),
+      isOptimistic: true,
+    };
+
+    setMessages((prev) => {
+      const merged = sortMessagesByCreatedAtAsc([...prev, aiMessage]);
       messagesRef.current = merged;
       return merged;
     });
@@ -998,6 +1018,7 @@ export default function MessagesPage() {
             supportSent={supportSent}
             setSupportSent={setSupportSent}
             appendSupportRequestMessage={appendSupportRequestMessage}
+            appendSupportCtaAiMessage={appendSupportCtaAiMessage}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
             supportHandoffMessage={supportHandoffMessage}
           />
