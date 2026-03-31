@@ -1,7 +1,7 @@
 // FORCE SAVE
 // production fix
 console.log("PRODUCTION VERSION V2")
-import { useEffect, useState, useRef, useCallback, useMemo, memo } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import type { CSSProperties } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
@@ -115,17 +115,16 @@ type MessageThreadItemProps = {
   supportHandoffMessage: string;
 };
 
-const MessageThreadItem = memo(
-  function MessageThreadItem({
-    msg,
-    index,
-    userName,
-    supportSent,
-    setSupportSent,
-    appendSupportRequestMessage,
-    supportHandoffInFlightRef,
-    supportHandoffMessage,
-  }: MessageThreadItemProps) {
+function MessageThreadItem({
+  msg,
+  index,
+  userName,
+  supportSent,
+  setSupportSent,
+  appendSupportRequestMessage,
+  supportHandoffInFlightRef,
+  supportHandoffMessage,
+}: MessageThreadItemProps) {
   const navigate = useNavigate();
   const parsed = parseMessageContent(msg.content);
   const displayText = parsed.text;
@@ -296,16 +295,7 @@ const MessageThreadItem = memo(
       </div>
     </div>
   );
-},
-  (prev, next) =>
-    prev.msg.id === next.msg.id &&
-    prev.msg.sender === next.msg.sender &&
-    prev.msg.created_at === next.msg.created_at &&
-    prev.msg.content === next.msg.content &&
-    prev.userName === next.userName &&
-    prev.index === next.index &&
-    true,
-);
+}
 
 type MessagesThreadListProps = {
   messages: Message[];
@@ -317,7 +307,7 @@ type MessagesThreadListProps = {
   supportHandoffMessage: string;
 };
 
-const MessagesThreadList = memo(function MessagesThreadList({
+function MessagesThreadList({
   messages,
   userName,
   supportSent,
@@ -346,7 +336,7 @@ const MessagesThreadList = memo(function MessagesThreadList({
       })}
     </>
   );
-});
+}
 
 export default function MessagesPage() {
   useEffect(() => { console.log("MESSAGES PAGE MOUNTED"); return () => console.log("MESSAGES PAGE UNMOUNTED"); }, []);
