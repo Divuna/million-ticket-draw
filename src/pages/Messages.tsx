@@ -16,6 +16,7 @@ import {
   AI_ASSISTANT_BOB_LABEL,
   AI_ASSISTANT_TYPING_SUBLINE,
 } from "@/constants/messagesUi";
+import { SUPPORT_REQUEST_MARKER } from "@/constants/supportRequestMarker";
 import { MessageCircle, Send, Sparkles } from "lucide-react";
 
 function parseMessageContent(content: string): { text: string; cta?: { label: string; action: string } } {
@@ -71,7 +72,7 @@ interface FlyingMessage {
 interface Message {
   id: string;
   user_id: string;
-  sender: "user" | "admin" | "ai";
+  sender: "user" | "admin" | "ai" | "support";
   content: string;
   read: boolean;
   created_at: string;
@@ -89,6 +90,39 @@ function sortMessagesByCreatedAtAsc<T extends { created_at: string; id: string }
     if (at !== bt) return at - bt;
     return a.id.localeCompare(b.id);
   });
+}
+
+/** Human support reply — excludes marker, end-of-chat, and automated winner rows. */
+function isHumanAdminMessage(m: Message): boolean {
+  if (m.sender !== "admin" && m.sender !== "support") return false;
+  if (m.content === SUPPORT_REQUEST_MARKER) return false;
+  if (m.content === SUPPORT_CHAT_ENDED_MESSAGE) return false;
+  if (m.content.includes("Gratulujeme k výhře")) return false;
+  if (m.content.includes("zákonný zástupce")) return false;
+  return true;
+}
+
+/**
+ * Exactly one mode at a time:
+ * - "ai": Bob may respond (including after support CTA until a human admin writes).
+ * - "admin": only user + human admin; Bob off until admin ends chat.
+ */
+function computeChatMode(messages: Message[]): "ai" | "admin" {
+  const sorted = sortMessagesByCreatedAtAsc([...messages]);
+  let mode: "ai" | "admin" = "ai";
+  for (const m of sorted) {
+    if (
+      (m.sender === "admin" || m.sender === "support") &&
+      m.content === SUPPORT_CHAT_ENDED_MESSAGE
+    ) {
+      mode = "ai";
+      continue;
+    }
+    if (isHumanAdminMessage(m)) {
+      mode = "admin";
+    }
+  }
+  return mode;
 }
 
 /** True bottom only: tolerate subpixel / fractional layout so we do not miss "pinned" state. */
@@ -109,10 +143,8 @@ type MessageThreadItemProps = {
   msg: Message;
   index: number;
   userName: string;
-  currentUserId: string | undefined;
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
-  onSupportCtaActivated: () => void;
   appendSupportRequestMessage: () => void;
   appendSupportCtaAiMessage: () => void;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
@@ -123,10 +155,8 @@ function MessageThreadItem({
   msg,
   index,
   userName,
-  currentUserId,
   supportSent,
   setSupportSent,
-  onSupportCtaActivated,
   appendSupportRequestMessage,
   appendSupportCtaAiMessage,
   supportHandoffInFlightRef,
@@ -143,7 +173,7 @@ function MessageThreadItem({
   const senderLabel =
     msg.sender === "ai"
       ? AI_ASSISTANT_BOB_LABEL
-      : msg.sender === "admin"
+      : msg.sender === "admin" || msg.sender === "support"
         ? "Podpora"
         : null;
 
@@ -263,7 +293,6 @@ function MessageThreadItem({
                   if (supportSent) return;
                   if (supportHandoffInFlightRef.current) return;
                   supportHandoffInFlightRef.current = true;
-                  onSupportCtaActivated(); // block Bob immediately, before await
                   try {
                     console.log("SUPPORT SHOULD ONLY TRIGGER HERE");
                     await invokeSupportHandoff({ message: supportHandoffMessage });
@@ -309,10 +338,8 @@ function MessageThreadItem({
 type MessagesThreadListProps = {
   messages: Message[];
   userName: string;
-  currentUserId: string | undefined;
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
-  onSupportCtaActivated: () => void;
   appendSupportRequestMessage: () => void;
   appendSupportCtaAiMessage: () => void;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
@@ -322,10 +349,8 @@ type MessagesThreadListProps = {
 function MessagesThreadList({
   messages,
   userName,
-  currentUserId,
   supportSent,
   setSupportSent,
-  onSupportCtaActivated,
   appendSupportRequestMessage,
   appendSupportCtaAiMessage,
   supportHandoffInFlightRef,
@@ -337,14 +362,12 @@ function MessagesThreadList({
         console.log("RENDER MESSAGE", msg.sender, msg.content);
         return (
           <MessageThreadItem
-            key={msg.id + msg.content}
+            key={msg.id}
             msg={msg}
             index={index}
             userName={userName}
-            currentUserId={currentUserId}
             supportSent={supportSent}
             setSupportSent={setSupportSent}
-            onSupportCtaActivated={onSupportCtaActivated}
             appendSupportRequestMessage={appendSupportRequestMessage}
             appendSupportCtaAiMessage={appendSupportCtaAiMessage}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
@@ -367,9 +390,6 @@ export default function MessagesPage() {
   const [hasMoreOlder, setHasMoreOlder] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [supportSent, setSupportSent] = useState(false);
-  const [supportMode, setSupportMode] = useState(false);
-  const supportModeRef = useRef(false);
-  useEffect(() => { supportModeRef.current = supportMode; }, [supportMode]);
   const [sparkles, setSparkles] = useState<Sparkle[]>([]);
   const [flyingMessage, setFlyingMessage] = useState<FlyingMessage | null>(null);
   const sendInFlightRef = useRef(false);
@@ -385,7 +405,6 @@ export default function MessagesPage() {
   const pinnedToBottomRef = useRef(true);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const messagesRef = useRef<Message[]>([]);
-  const supportModeActivatedAtRef = useRef<string | null>(null);
   const supportHandoffInFlightRef = useRef(false);
   
   const hasMoreOlderRef = useRef(false);
@@ -408,7 +427,10 @@ export default function MessagesPage() {
         { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${uid}` },
         (payload) => {
           const newMessage = payload.new as unknown as Message;
-          if (newMessage.sender === 'ai') return;
+          // AI rows: only from sendMessageToAdmin (API) — never merge from realtime.
+          if (newMessage.sender === "ai") return;
+          const raw = typeof newMessage.content === "string" ? newMessage.content.trim() : "";
+          if (!raw) return;
 
           setMessages((prev) => {
             const exists = prev.some((m) => m.id === newMessage.id);
@@ -716,13 +738,6 @@ export default function MessagesPage() {
     })();
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fallback poll when support mode activates — catches admin messages realtime may have missed.
-  useEffect(() => {
-    if (!supportMode) return;
-    const t = setTimeout(() => void loadMessagesRef.current(), 3000);
-    return () => clearTimeout(t);
-  }, [supportMode]);
-
   const showTypingIndicator = isAwaitingReply;
 
   const lastUserMessage = useMemo(() => {
@@ -735,57 +750,13 @@ export default function MessagesPage() {
 
   const supportHandoffMessage = lastUserMessage?.content ?? "";
 
-  const supportMeta = useMemo(() => {
-    const lastEndAtMs = messages.reduce((latest, m) => {
-      if (m.sender !== "admin") return latest;
-      if (m.content !== SUPPORT_CHAT_ENDED_MESSAGE) return latest;
-      const t = new Date(m.created_at).getTime();
-      return t > latest ? t : latest;
-    }, -1);
-
-    const supportActive = messages.some((m) => {
-      const sender = (m.sender as unknown as string) || "";
-      if (sender !== "admin" && sender !== "support") return false;
-      if (sender === "admin" && m.content === SUPPORT_CHAT_ENDED_MESSAGE) return false;
-      return new Date(m.created_at).getTime() > lastEndAtMs;
-    });
-
-    // Block AI whenever an admin/support message exists (excluding the end-of-support marker),
-    // scoped to messages AFTER the last support-end marker.
-    const hasAdmin = messages.some((m) => {
-      const sender = (m.sender as unknown as string) || "";
-      if (sender !== "admin" && sender !== "support") return false;
-      if (m.content === "SUPPORT REQUEST") return false;
-      if (m.content === SUPPORT_CHAT_ENDED_MESSAGE) return false;
-      return new Date(m.created_at).getTime() > lastEndAtMs;
-    });
-
-    return { supportActive, hasAdmin };
-  }, [messages]);
-
-  useEffect(() => {
-    if (!supportModeActivatedAtRef.current) return;
-    const activatedAtMs = new Date(supportModeActivatedAtRef.current).getTime();
-
-    const latestEndAtMs = messages.reduce((latest, m) => {
-      if (m.sender !== "admin") return latest;
-      if (m.content !== SUPPORT_CHAT_ENDED_MESSAGE) return latest;
-      const t = new Date(m.created_at).getTime();
-      return t > latest ? t : latest;
-    }, -1);
-
-    if (latestEndAtMs > activatedAtMs) {
-      setSupportMode(false);
-    }
-  }, [messages]);
-
   const appendSupportRequestMessage = useCallback(() => {
     const now = new Date().toISOString();
     const supportMessage: Message = {
       id: `${OPTIMISTIC_MESSAGE_ID_PREFIX}support-${Date.now()}`,
       user_id: user?.id || "",
       sender: "admin",
-      content: "SUPPORT REQUEST",
+      content: SUPPORT_REQUEST_MARKER,
       read: false,
       created_at: now,
     };
@@ -816,12 +787,6 @@ export default function MessagesPage() {
       return merged;
     });
   }, [user?.id]);
-
-  const onSupportCtaActivated = useCallback(() => {
-    setSupportMode(true);
-    supportModeRef.current = true; // sync immediately — don't wait for useEffect
-    supportModeActivatedAtRef.current = new Date().toISOString();
-  }, []);
 
   // Create sparkle effect
   const createSparkles = useCallback(() => {
@@ -874,56 +839,30 @@ export default function MessagesPage() {
 
     try {
       console.log("SEND START");
-      const currentMessages = messagesRef.current;
-      const lastEndAtMs = currentMessages.reduce((latest, m) => {
-        if (m.sender !== 'admin') return latest;
-        if (m.content !== 'Chat s podporou byl ukončen. Nyní můžete opět využívat Boba.') return latest;
-        const t = new Date(m.created_at).getTime();
-        return t > latest ? t : latest;
-      }, -1);
-      const hasRealAdminReply = currentMessages.some((m) => {
-        const sender = (m.sender as unknown as string) || '';
-        if (sender !== 'admin' && sender !== 'support') return false;
-        if (m.content === 'SUPPORT REQUEST') return false;
-        if (m.content === 'Chat s podporou byl ukončen. Nyní můžete opět využívat Boba.') return false;
-        return new Date(m.created_at).getTime() > lastEndAtMs;
-      });
-      const result = await sendMessageToAdmin(messageContent, { supportActive: supportModeRef.current || hasRealAdminReply });
+      const chatMode = computeChatMode(messagesRef.current);
+      const result = await sendMessageToAdmin(messageContent, { supportActive: chatMode === "admin" });
       console.log("RESULT", result);
 
       if (result) {
         const { userMessage, aiMessage } = result;
         console.log("AI MESSAGE", aiMessage);
-        // Replace optimistic row with real user message, then append AI reply immediately (no DB reload).
         setLastUserMessageAt(userMessage.created_at);
         console.log("SETTING STATE");
         setMessages((prev) => {
           const replacedUser = prev.map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
-          const merged = sortMessagesByCreatedAtAsc(replacedUser);
+          let next: Message[] = replacedUser;
+          if (aiMessage) {
+            const ai = aiMessage as Message;
+            const text = parseMessageContent(ai.content).text?.trim();
+            if (text) {
+              next = [...replacedUser.filter((m) => m.id !== ai.id), ai];
+            }
+          }
+          const merged = sortMessagesByCreatedAtAsc(next);
           messagesRef.current = merged;
           return merged;
         });
-        if (aiMessage) {
-          setTimeout(() => {
-            setMessages((prev) => {
-              const withAi = [...prev.filter((m) => m.id !== (aiMessage as Message).id), aiMessage as Message];
-              const merged = sortMessagesByCreatedAtAsc(withAi);
-              messagesRef.current = merged;
-              return merged;
-            });
-            setTimeout(() => {
-              if (scrollRef.current) {
-                scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-              }
-            }, 50);
-          }, 0);
-        } else {
-          setTimeout(() => {
-            if (scrollRef.current) {
-              scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-            }
-          }, 50);
-        }
+        requestAnimationFrame(() => queuePinToBottom());
         console.log("STATE SET DONE");
         setIsAwaitingReply(false);
         toast({ title: "Odesláno" });
@@ -1090,10 +1029,8 @@ export default function MessagesPage() {
           <MessagesThreadList
             messages={messages}
             userName={userName}
-            currentUserId={user?.id}
             supportSent={supportSent}
             setSupportSent={setSupportSent}
-            onSupportCtaActivated={onSupportCtaActivated}
             appendSupportRequestMessage={appendSupportRequestMessage}
             appendSupportCtaAiMessage={appendSupportCtaAiMessage}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
