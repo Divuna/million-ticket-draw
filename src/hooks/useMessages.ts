@@ -47,11 +47,28 @@ export const useMessages = () => {
       if (!userMessage) throw new Error("user message insert returned no row");
       console.log("[useMessages] userMessage inserted", userMessage.id);
 
-      // Step 2: invoke ai-chat — blocks until the edge function has written the AI reply to DB
-      // withEdgeInternalToken adds x-internal-token header required by the edge function.
+      // Step 2: ensure a fresh session token before invoking ai-chat.
+      // The Supabase client auto-refreshes in the background, but mid-session the stored
+      // token can be stale. Explicitly refresh if the session is missing or expired so the
+      // edge function always receives a valid Authorization header.
+      let { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.warn("[useMessages] session missing — attempting refresh");
+        const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+        if (refreshErr || !refreshed.session) {
+          console.error("[useMessages] session refresh failed", refreshErr);
+          throw new Error("Session expired — please log in again.");
+        }
+        sessionData = refreshed;
+      }
+      console.log("[useMessages] session token expires_at", sessionData.session.expires_at);
+
+      // Invoke ai-chat with a guaranteed-fresh token.
       const { data: aiData, error: invokeErr } = await supabase.functions.invoke("ai-chat", {
         body: { message_id: userMessage.id },
-        headers: withEdgeInternalToken({}),
+        headers: withEdgeInternalToken({
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        }),
       });
 
       if (invokeErr) throw invokeErr;
