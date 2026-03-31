@@ -112,6 +112,7 @@ type MessageThreadItemProps = {
   currentUserId: string | undefined;
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
+  onSupportCtaActivated: () => void;
   appendSupportRequestMessage: () => void;
   appendSupportCtaAiMessage: () => void;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
@@ -125,6 +126,7 @@ function MessageThreadItem({
   currentUserId,
   supportSent,
   setSupportSent,
+  onSupportCtaActivated,
   appendSupportRequestMessage,
   appendSupportCtaAiMessage,
   supportHandoffInFlightRef,
@@ -265,6 +267,7 @@ function MessageThreadItem({
                     console.log("SUPPORT SHOULD ONLY TRIGGER HERE");
                     await invokeSupportHandoff({ message: supportHandoffMessage });
                     setSupportSent(true);
+                    onSupportCtaActivated();
                     appendSupportRequestMessage();
                     appendSupportCtaAiMessage();
                   } finally {
@@ -309,6 +312,7 @@ type MessagesThreadListProps = {
   currentUserId: string | undefined;
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
+  onSupportCtaActivated: () => void;
   appendSupportRequestMessage: () => void;
   appendSupportCtaAiMessage: () => void;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
@@ -321,6 +325,7 @@ function MessagesThreadList({
   currentUserId,
   supportSent,
   setSupportSent,
+  onSupportCtaActivated,
   appendSupportRequestMessage,
   appendSupportCtaAiMessage,
   supportHandoffInFlightRef,
@@ -339,6 +344,7 @@ function MessagesThreadList({
             currentUserId={currentUserId}
             supportSent={supportSent}
             setSupportSent={setSupportSent}
+            onSupportCtaActivated={onSupportCtaActivated}
             appendSupportRequestMessage={appendSupportRequestMessage}
             appendSupportCtaAiMessage={appendSupportCtaAiMessage}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
@@ -361,6 +367,7 @@ export default function MessagesPage() {
   const [hasMoreOlder, setHasMoreOlder] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [supportSent, setSupportSent] = useState(false);
+  const [supportMode, setSupportMode] = useState(false);
   const [sparkles, setSparkles] = useState<Sparkle[]>([]);
   const [flyingMessage, setFlyingMessage] = useState<FlyingMessage | null>(null);
   const sendInFlightRef = useRef(false);
@@ -376,6 +383,7 @@ export default function MessagesPage() {
   const pinnedToBottomRef = useRef(true);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const messagesRef = useRef<Message[]>([]);
+  const supportModeActivatedAtRef = useRef<string | null>(null);
   const supportHandoffInFlightRef = useRef(false);
   
   const hasMoreOlderRef = useRef(false);
@@ -723,6 +731,22 @@ export default function MessagesPage() {
     return { supportActive, hasAdmin };
   }, [messages]);
 
+  useEffect(() => {
+    if (!supportModeActivatedAtRef.current) return;
+    const activatedAtMs = new Date(supportModeActivatedAtRef.current).getTime();
+
+    const latestEndAtMs = messages.reduce((latest, m) => {
+      if (m.sender !== "admin") return latest;
+      if (m.content !== SUPPORT_CHAT_ENDED_MESSAGE) return latest;
+      const t = new Date(m.created_at).getTime();
+      return t > latest ? t : latest;
+    }, -1);
+
+    if (latestEndAtMs > activatedAtMs) {
+      setSupportMode(false);
+    }
+  }, [messages]);
+
   const appendSupportRequestMessage = useCallback(() => {
     const now = new Date().toISOString();
     const supportMessage: Message = {
@@ -760,6 +784,11 @@ export default function MessagesPage() {
       return merged;
     });
   }, [user?.id]);
+
+  const onSupportCtaActivated = useCallback(() => {
+    setSupportMode(true);
+    supportModeActivatedAtRef.current = new Date().toISOString();
+  }, []);
 
   // Create sparkle effect
   const createSparkles = useCallback(() => {
@@ -812,7 +841,7 @@ export default function MessagesPage() {
 
     try {
       console.log("SEND START");
-      const result = await sendMessageToAdmin(messageContent, { supportActive: supportMeta.hasAdmin || supportMeta.supportActive });
+      const result = await sendMessageToAdmin(messageContent, { supportActive: supportMode || supportMeta.hasAdmin });
       console.log("RESULT", result);
 
       if (result) {
@@ -1017,6 +1046,7 @@ export default function MessagesPage() {
             currentUserId={user?.id}
             supportSent={supportSent}
             setSupportSent={setSupportSent}
+            onSupportCtaActivated={onSupportCtaActivated}
             appendSupportRequestMessage={appendSupportRequestMessage}
             appendSupportCtaAiMessage={appendSupportCtaAiMessage}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
