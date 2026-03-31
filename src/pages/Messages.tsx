@@ -263,11 +263,11 @@ function MessageThreadItem({
                   if (supportSent) return;
                   if (supportHandoffInFlightRef.current) return;
                   supportHandoffInFlightRef.current = true;
+                  onSupportCtaActivated(); // block Bob immediately, before await
                   try {
                     console.log("SUPPORT SHOULD ONLY TRIGGER HERE");
                     await invokeSupportHandoff({ message: supportHandoffMessage });
                     setSupportSent(true);
-                    onSupportCtaActivated();
                     appendSupportRequestMessage();
                     appendSupportCtaAiMessage();
                   } finally {
@@ -716,6 +716,13 @@ export default function MessagesPage() {
     })();
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fallback poll when support mode activates — catches admin messages realtime may have missed.
+  useEffect(() => {
+    if (!supportMode) return;
+    const t = setTimeout(() => void loadMessagesRef.current(), 3000);
+    return () => clearTimeout(t);
+  }, [supportMode]);
+
   const showTypingIndicator = isAwaitingReply;
 
   const lastUserMessage = useMemo(() => {
@@ -799,7 +806,7 @@ export default function MessagesPage() {
         cta: null,
       }),
       read: false,
-      created_at: new Date().toISOString(),
+      created_at: new Date(Date.now() + 100).toISOString(), // 100ms after support request so it sorts below it
       isOptimistic: true,
     };
 
@@ -812,6 +819,7 @@ export default function MessagesPage() {
 
   const onSupportCtaActivated = useCallback(() => {
     setSupportMode(true);
+    supportModeRef.current = true; // sync immediately — don't wait for useEffect
     supportModeActivatedAtRef.current = new Date().toISOString();
   }, []);
 
