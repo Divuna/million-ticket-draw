@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { supabase, supabaseUrl, withEdgeInternalToken } from "@/integrations/supabase/client";
+import { supabase, withEdgeInternalToken } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 export interface ConversationMessage {
@@ -47,28 +47,24 @@ export const useMessages = () => {
       if (!userMessage) throw new Error("user message insert returned no row");
       console.log("[useMessages] userMessage inserted", userMessage.id);
 
-      // Step 2: force-refresh the session so we hold a guaranteed-fresh access_token.
-      // supabase.functions.invoke injects its own Authorization header from internal
-      // client state and can override an explicitly passed header — use raw fetch instead
-      // to have full control over every header sent to the edge function.
-      const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
-      if (refreshErr || !refreshed.session) {
-        console.error("[useMessages] session refresh failed", refreshErr);
-        throw new Error("Session expired — please log in again.");
-      }
-      console.log("[useMessages] session refreshed, expires_at", refreshed.session.expires_at);
+      // Step 2: invoke ai-chat via raw fetch with explicit apikey + Authorization headers.
+      // getSession() returns the cached session (no network call) — sufficient since the
+      // Supabase client auto-refreshes tokens in the background.
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log("[useMessages] session access_token present:", !!session?.access_token);
 
-      const fnHeaders = withEdgeInternalToken({
-        "Authorization": `Bearer ${refreshed.session.access_token}`,
-        "Content-Type": "application/json",
-        "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-      });
-
-      const invokeRes = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
-        method: "POST",
-        headers: fnHeaders,
-        body: JSON.stringify({ message_id: userMessage.id }),
-      });
+      const invokeRes = await fetch(
+        "https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/ai-chat",
+        {
+          method: "POST",
+          headers: withEdgeInternalToken({
+            "Content-Type": "application/json",
+            "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+            "Authorization": `Bearer ${session?.access_token}`,
+          }),
+          body: JSON.stringify({ message_id: userMessage.id }),
+        },
+      );
 
       if (!invokeRes.ok) {
         const errBody = await invokeRes.text().catch(() => "");
