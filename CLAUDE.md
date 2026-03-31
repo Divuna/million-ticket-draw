@@ -65,3 +65,9 @@ Do not execute these without explicit user instruction:
 - Event pipeline: `event_logs` → `event_queue` → Sofinity
 - Push pipeline: `notifications` → `push_log` → OneSignal
 - Voucher → MioCoin → ticket economic flow
+
+## Deployment rule
+After every file change, always run:
+git add -A && git commit -m "fix: <short description of change>" && git push
+
+Never leave changes without pushing to GitHub.
