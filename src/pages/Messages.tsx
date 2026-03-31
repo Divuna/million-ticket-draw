@@ -837,8 +837,8 @@ export default function MessagesPage() {
 
     flushSync(() => {
       setMessages((prev) => {
-        const capped = capAfterTailGrowth(prev.length, [...prev, optimisticMessage]);
-        const sorted = sortMessagesByCreatedAtAsc(capped);
+        const withOptimistic = [...prev, optimisticMessage];
+        const sorted = sortMessagesByCreatedAtAsc(withOptimistic);
         messagesRef.current = sorted;
         return sorted;
       });
