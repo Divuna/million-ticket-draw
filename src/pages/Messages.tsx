@@ -408,7 +408,31 @@ export default function MessagesPage() {
         { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${uid}` },
         (payload) => {
           const newMessage = payload.new as unknown as Message;
-          if (newMessage.sender === 'ai') return;
+          if (newMessage.sender === 'ai') {
+            // Only allow through AI messages that match the support confirmation text
+            const parsed = (() => { try { return JSON.parse(newMessage.content); } catch { return null; } })();
+            const isSupport = parsed?.text?.includes('předal podpoře');
+            if (!isSupport) return;
+            // Replace local optimistic support AI message with real DB version
+            setMessages((prev) => {
+              const localIdx = prev.findIndex(
+                (m) => m.sender === 'ai' && m.id.startsWith('optimistic-ai-') &&
+                (() => { try { return JSON.parse(m.content)?.text?.includes('předal podpoře'); } catch { return false; } })()
+              );
+              if (localIdx >= 0) {
+                const next = [...prev];
+                next[localIdx] = newMessage;
+                messagesRef.current = next;
+                return next;
+              }
+              const exists = prev.some((m) => m.id === newMessage.id);
+              if (exists) return prev;
+              const merged = sortMessagesByCreatedAtAsc([...prev, newMessage]);
+              messagesRef.current = merged;
+              return merged;
+            });
+            return;
+          }
 
           setMessages((prev) => {
             const exists = prev.some((m) => m.id === newMessage.id);
