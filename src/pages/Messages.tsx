@@ -322,7 +322,7 @@ function MessagesThreadList({
         console.log("RENDER MESSAGE", msg.sender, msg.content);
         return (
           <MessageThreadItem
-            key={msg.id}
+            key={msg.id + msg.content}
             msg={msg}
             index={index}
             userName={userName}
@@ -451,15 +451,12 @@ export default function MessagesPage() {
       return;
     }
 
-    if (pinnedToBottomRef.current) {
-      setShowNewMessagesBelow(false);
-      queuePinToBottom();
-      return;
-    }
-
-    const el = scrollRef.current;
-    const dist = el ? chatScrollDistanceFromBottom(el) : Infinity;
-    setShowNewMessagesBelow(dist > CHAT_NEW_MESSAGES_INDICATOR_MIN_OFFSET_PX);
+    setShowNewMessagesBelow(false);
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    });
   }, [messages, queuePinToBottom]);
 
   const handleJumpToLatestMessages = useCallback(() => {
@@ -502,18 +499,19 @@ export default function MessagesPage() {
       .limit(CHAT_PAGE_SIZE);
     const rows = sortMessagesByCreatedAtAsc(data ? [...data] : []);
     console.log("MESSAGES RAW", rows);
-    // Merge DB rows with any local-only messages (e.g. AI replies appended by handleSend
-    // that are not yet returned by this query due to timing).  A plain overwrite would
-    // wipe those messages if this callback races against handleSend.
-    setMessages((current) => {
-      const dbIds = new Set(rows.map((r) => r.id));
-      const localOnly = current.filter(
-        (m) => !dbIds.has(m.id) && !m.id.startsWith(OPTIMISTIC_MESSAGE_ID_PREFIX)
-      );
-      const merged = localOnly.length > 0 ? sortMessagesByCreatedAtAsc([...rows, ...localOnly]) : rows;
-      // Keep ref in sync so loadOlderMessages cursor is always fresh.
-      messagesRef.current = merged;
-      return merged;
+    setMessages((prev) => {
+      const existingIds = new Set(prev.map((m) => m.id));
+      const merged = [...prev];
+
+      rows.forEach((row) => {
+        if (!existingIds.has(row.id)) {
+          merged.push(row);
+        }
+      });
+
+      const sorted = sortMessagesByCreatedAtAsc(merged);
+      messagesRef.current = sorted;
+      return sorted;
     });
     console.log("MESSAGES IN STATE", rows);
 
@@ -743,19 +741,31 @@ export default function MessagesPage() {
         console.log("SETTING STATE");
         setMessages((prev) => {
           const replacedUser = prev.map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
-
-          // ALWAYS append aiMessage to state immediately when present.
-          const withAi = aiMessage
-            ? [...replacedUser.filter((m) => m.id !== (aiMessage as Message).id), aiMessage as Message]
-            : replacedUser;
-
-          const merged = sortMessagesByCreatedAtAsc(withAi);
+          const merged = sortMessagesByCreatedAtAsc(replacedUser);
           messagesRef.current = merged;
           return merged;
         });
-        requestAnimationFrame(() => {
-          queuePinToBottom();
-        });
+        if (aiMessage) {
+          setTimeout(() => {
+            setMessages((prev) => {
+              const withAi = [...prev.filter((m) => m.id !== (aiMessage as Message).id), aiMessage as Message];
+              const merged = sortMessagesByCreatedAtAsc(withAi);
+              messagesRef.current = merged;
+              return merged;
+            });
+            setTimeout(() => {
+              if (scrollRef.current) {
+                scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+              }
+            }, 50);
+          }, 0);
+        } else {
+          setTimeout(() => {
+            if (scrollRef.current) {
+              scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            }
+          }, 50);
+        }
         console.log("STATE SET DONE");
         setIsAwaitingReply(false);
         toast({ title: "Odesláno" });
@@ -890,7 +900,7 @@ export default function MessagesPage() {
         </div>
 
         {/* Messages Container — relative wrapper keeps flex footprint; button overlays scroll area */}
-        <div className="relative flex-1 min-h-0 overflow-hidden">
+        <div className="relative flex-1 min-h-0">
           <div
             ref={scrollRef}
             onScroll={handleMessagesScroll}
