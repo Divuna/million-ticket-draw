@@ -79,6 +79,15 @@ interface Message {
 
 const OPTIMISTIC_MESSAGE_ID_PREFIX = "optimistic-";
 
+function sortMessagesByCreatedAtAsc<T extends { created_at: string; id: string }>(messages: T[]): T[] {
+  return [...messages].sort((a, b) => {
+    const at = new Date(a.created_at).getTime();
+    const bt = new Date(b.created_at).getTime();
+    if (at !== bt) return at - bt;
+    return a.id.localeCompare(b.id);
+  });
+}
+
 /** True bottom only: tolerate subpixel / fractional layout so we do not miss "pinned" state. */
 const CHAT_AT_BOTTOM_EPSILON_PX = 3;
 
@@ -493,7 +502,7 @@ export default function MessagesPage() {
       .eq("user_id", uid)
       .order("created_at", { ascending: false })
       .limit(CHAT_PAGE_SIZE);
-    const rows = data ? [...data].reverse() : [];
+    const rows = sortMessagesByCreatedAtAsc(data ? [...data] : []);
     console.log("MESSAGES RAW", rows);
     // Merge DB rows with any local-only messages (e.g. AI replies appended by handleSend
     // that are not yet returned by this query due to timing).  A plain overwrite would
@@ -503,13 +512,7 @@ export default function MessagesPage() {
       const localOnly = current.filter(
         (m) => !dbIds.has(m.id) && !m.id.startsWith(OPTIMISTIC_MESSAGE_ID_PREFIX)
       );
-      const merged =
-        localOnly.length > 0
-          ? [...rows, ...localOnly].sort(
-              (a, b) =>
-                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-            )
-          : [...rows];
+      const merged = localOnly.length > 0 ? sortMessagesByCreatedAtAsc([...rows, ...localOnly]) : rows;
       // Keep ref in sync so loadOlderMessages cursor is always fresh.
       messagesRef.current = merged;
       return merged;
@@ -569,8 +572,10 @@ export default function MessagesPage() {
       if (current.length === 0) return current;
       if (current[0]?.created_at !== cursor) return current;
       const prevIds = new Set(current.map((m) => m.id));
-      const blockAsc = [...page].reverse().filter((m) => !prevIds.has(m.id));
-      return [...blockAsc, ...current];
+      const blockAsc = sortMessagesByCreatedAtAsc(page).filter((m) => !prevIds.has(m.id));
+      const merged = sortMessagesByCreatedAtAsc([...blockAsc, ...current]);
+      messagesRef.current = merged;
+      return merged;
     });
 
     requestAnimationFrame(() => {
@@ -680,7 +685,12 @@ export default function MessagesPage() {
     };
 
     flushSync(() => {
-      setMessages((prev) => capAfterTailGrowth(prev.length, [...prev, optimisticMessage]));
+      setMessages((prev) => {
+        const capped = capAfterTailGrowth(prev.length, [...prev, optimisticMessage]);
+        const sorted = sortMessagesByCreatedAtAsc(capped);
+        messagesRef.current = sorted;
+        return sorted;
+      });
       setLastUserMessageAt(optimisticCreatedAt);
       setIsAwaitingReply(true);
     });
@@ -702,14 +712,19 @@ export default function MessagesPage() {
         console.log("SETTING STATE");
         setMessages((prev) => {
           const updated = prev.map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
-          return [...updated, aiMessage as Message];
+          const withoutDupAi = updated.filter((m) => m.id !== (aiMessage as Message).id);
+          const merged = sortMessagesByCreatedAtAsc([...withoutDupAi, aiMessage as Message]);
+          messagesRef.current = merged;
+          return merged;
         });
         console.log("STATE SET DONE");
         setIsAwaitingReply(false);
         toast({ title: "Odesláno" });
       } else {
         setMessages((prev) =>
-          capAfterTailGrowth(prev.length, prev.filter((msg) => msg.id !== optimisticId)),
+          sortMessagesByCreatedAtAsc(
+            capAfterTailGrowth(prev.length, prev.filter((msg) => msg.id !== optimisticId)),
+          ),
         );
         setIsAwaitingReply(false);
         toast({ title: "Chyba", description: "Odeslání selhalo", variant: "destructive" });
