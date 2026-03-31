@@ -826,8 +826,47 @@ export default function MessagesPage() {
 
     try {
       console.log("SEND START");
-      const chatMode = computeChatMode(messagesRef.current);
-      const result = await sendMessageToAdmin(messageContent, { supportActive: chatMode === "admin" });
+      const mode = computeChatMode(messagesRef.current);
+      if (mode === "admin") {
+        const result = await sendMessageToAdmin(messageContent, { supportActive: true });
+        console.log("RESULT", result);
+
+        if (result) {
+          const { userMessage, aiMessage } = result;
+          console.log("AI MESSAGE", aiMessage);
+          setLastUserMessageAt(userMessage.created_at);
+          console.log("SETTING STATE");
+          setMessages((prev) => {
+            const replacedUser = prev.map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
+            let next: Message[] = replacedUser;
+            if (aiMessage) {
+              const ai = aiMessage as Message;
+              const text = parseMessageContent(ai.content).text?.trim();
+              if (text) {
+                next = [...replacedUser.filter((m) => m.id !== ai.id), ai];
+              }
+            }
+            const merged = sortMessagesByCreatedAtAsc(next);
+            messagesRef.current = merged;
+            return merged;
+          });
+          requestAnimationFrame(() => queuePinToBottom());
+          console.log("STATE SET DONE");
+          setIsAwaitingReply(false);
+          toast({ title: "Odesláno" });
+        } else {
+          setMessages((prev) =>
+            sortMessagesByCreatedAtAsc(
+              capAfterTailGrowth(prev.length, prev.filter((msg) => msg.id !== optimisticId)),
+            ),
+          );
+          setIsAwaitingReply(false);
+          toast({ title: "Chyba", description: "Odeslání selhalo", variant: "destructive" });
+        }
+        return;
+      }
+
+      const result = await sendMessageToAdmin(messageContent, { supportActive: false });
       console.log("RESULT", result);
 
       if (result) {
