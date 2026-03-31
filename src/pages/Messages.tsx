@@ -402,7 +402,7 @@ export default function MessagesPage() {
     if (!uid) return;
 
     const channel = supabase
-      .channel("messages")
+      .channel(`messages-${uid}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${uid}` },
@@ -437,6 +437,19 @@ export default function MessagesPage() {
           setMessages((prev) => {
             const exists = prev.some((m) => m.id === newMessage.id);
             if (exists) return prev;
+            // Replace optimistic version (same sender+content but different id) instead of adding duplicate
+            const optimisticIdx = prev.findIndex(
+              (m) =>
+                m.id.startsWith(OPTIMISTIC_MESSAGE_ID_PREFIX) &&
+                m.sender === newMessage.sender &&
+                m.content === newMessage.content,
+            );
+            if (optimisticIdx >= 0) {
+              const next = [...prev];
+              next[optimisticIdx] = newMessage;
+              messagesRef.current = next;
+              return next;
+            }
             const merged = sortMessagesByCreatedAtAsc([...prev, newMessage]);
             messagesRef.current = merged;
             return merged;
@@ -891,7 +904,7 @@ export default function MessagesPage() {
         if (m.content === 'Chat s podporou byl ukončen. Nyní můžete opět využívat Boba.') return false;
         return new Date(m.created_at).getTime() > lastEndAtMs;
       });
-      const result = await sendMessageToAdmin(messageContent, { supportActive: hasRealAdminReply });
+      const result = await sendMessageToAdmin(messageContent, { supportActive: supportModeRef.current || hasRealAdminReply });
       console.log("RESULT", result);
 
       if (result) {
