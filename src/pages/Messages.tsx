@@ -753,6 +753,9 @@ export default function MessagesPage() {
           messagesRef.current = merged;
           return merged;
         });
+        requestAnimationFrame(() => {
+          queuePinToBottom();
+        });
         console.log("STATE SET DONE");
         setIsAwaitingReply(false);
         toast({ title: "Odesláno" });
