@@ -368,6 +368,8 @@ export default function MessagesPage() {
   const [newMessage, setNewMessage] = useState("");
   const [supportSent, setSupportSent] = useState(false);
   const [supportMode, setSupportMode] = useState(false);
+  const supportModeRef = useRef(false);
+  useEffect(() => { supportModeRef.current = supportMode; }, [supportMode]);
   const [sparkles, setSparkles] = useState<Sparkle[]>([]);
   const [flyingMessage, setFlyingMessage] = useState<FlyingMessage | null>(null);
   const sendInFlightRef = useRef(false);
@@ -841,7 +843,7 @@ export default function MessagesPage() {
 
     try {
       console.log("SEND START");
-      const result = await sendMessageToAdmin(messageContent, { supportActive: supportMode || supportMeta.hasAdmin });
+      const result = await sendMessageToAdmin(messageContent, { supportActive: supportModeRef.current || supportMeta.hasAdmin });
       console.log("RESULT", result);
 
       if (result) {
