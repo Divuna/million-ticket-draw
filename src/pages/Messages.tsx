@@ -877,7 +877,7 @@ export default function MessagesPage() {
 
     try {
       console.log("SEND START");
-      const result = await sendMessageToAdmin(messageContent, { supportActive: supportModeRef.current || supportMeta.hasAdmin });
+      const result = await sendMessageToAdmin(messageContent, { supportActive: supportMeta.hasAdmin });
       console.log("RESULT", result);
 
       if (result) {
