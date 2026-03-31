@@ -72,7 +72,7 @@ interface FlyingMessage {
 interface Message {
   id: string;
   user_id: string;
-  sender: "user" | "admin" | "ai" | "support";
+  sender: "user" | "admin" | "ai" | "support" | "system";
   content: string;
   read: boolean;
   created_at: string;
@@ -146,7 +146,7 @@ type MessageThreadItemProps = {
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
   appendSupportRequestMessage: () => void;
-  appendSupportCtaAiMessage: () => void;
+  appendSupportSystemConfirmation: () => void;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
   supportHandoffMessage: string;
 };
@@ -158,7 +158,7 @@ function MessageThreadItem({
   supportSent,
   setSupportSent,
   appendSupportRequestMessage,
-  appendSupportCtaAiMessage,
+  appendSupportSystemConfirmation,
   supportHandoffInFlightRef,
   supportHandoffMessage,
 }: MessageThreadItemProps) {
@@ -170,6 +170,7 @@ function MessageThreadItem({
   const senderNormalized = (msg.sender || "").toLowerCase().trim();
   const isUserMessage = senderNormalized === "user";
   const isAiMessage = senderNormalized === "ai";
+  const isSystemSender = msg.sender === "system";
   const senderLabel =
     msg.sender === "ai"
       ? AI_ASSISTANT_BOB_LABEL
@@ -190,7 +191,7 @@ function MessageThreadItem({
           boxShadow: "0 6px 24px hsl(270, 80%, 20%, 0.6)",
           filter: "brightness(1.1)",
         }
-      : isSystemMessage
+      : isSystemSender || isSystemMessage
         ? {
             background: "linear-gradient(135deg, hsl(35, 50%, 15%) 0%, hsl(30, 45%, 12%) 100%)",
             border: "1px solid hsl(35, 60%, 40%, 0.3)",
@@ -241,7 +242,7 @@ function MessageThreadItem({
           />
         )}
 
-        {isSystemMessage && !isUserMessage && (
+        {(isSystemSender || (isSystemMessage && !isUserMessage)) && (
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="w-4 h-4 text-[hsl(35,70%,55%)]" />
             <span
@@ -257,7 +258,7 @@ function MessageThreadItem({
           </div>
         )}
 
-        {!isSystemMessage && senderLabel && (
+        {!isSystemSender && !isSystemMessage && senderLabel && (
           <p className="relative z-10 text-xs font-semibold text-gray-400 mb-1">{senderLabel}</p>
         )}
 
@@ -298,7 +299,7 @@ function MessageThreadItem({
                     await invokeSupportHandoff({ message: supportHandoffMessage });
                     setSupportSent(true);
                     appendSupportRequestMessage();
-                    appendSupportCtaAiMessage();
+                    appendSupportSystemConfirmation();
                   } finally {
                     supportHandoffInFlightRef.current = false;
                   }
@@ -341,7 +342,7 @@ type MessagesThreadListProps = {
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
   appendSupportRequestMessage: () => void;
-  appendSupportCtaAiMessage: () => void;
+  appendSupportSystemConfirmation: () => void;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
   supportHandoffMessage: string;
 };
@@ -352,7 +353,7 @@ function MessagesThreadList({
   supportSent,
   setSupportSent,
   appendSupportRequestMessage,
-  appendSupportCtaAiMessage,
+  appendSupportSystemConfirmation,
   supportHandoffInFlightRef,
   supportHandoffMessage,
 }: MessagesThreadListProps) {
@@ -369,7 +370,7 @@ function MessagesThreadList({
             supportSent={supportSent}
             setSupportSent={setSupportSent}
             appendSupportRequestMessage={appendSupportRequestMessage}
-            appendSupportCtaAiMessage={appendSupportCtaAiMessage}
+            appendSupportSystemConfirmation={appendSupportSystemConfirmation}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
             supportHandoffMessage={supportHandoffMessage}
           />
@@ -767,22 +768,22 @@ export default function MessagesPage() {
     });
   }, [user?.id]);
 
-  const appendSupportCtaAiMessage = useCallback(() => {
-    const aiMessage: Message = {
-      id: "optimistic-ai-" + Date.now(),
+  const appendSupportSystemConfirmation = useCallback(() => {
+    const systemMessage: Message = {
+      id: `${OPTIMISTIC_MESSAGE_ID_PREFIX}support-confirm-${Date.now()}`,
       user_id: user?.id || "",
-      sender: "ai",
+      sender: "system",
       content: JSON.stringify({
         text: "Váš dotaz jsem předal podpoře. Ta vás bude co nejdříve kontaktovat a pomůže vám s řešením.",
         cta: null,
       }),
       read: false,
-      created_at: new Date(Date.now() + 100).toISOString(), // 100ms after support request so it sorts below it
+      created_at: new Date(Date.now() + 100).toISOString(),
       isOptimistic: true,
     };
 
     setMessages((prev) => {
-      const merged = sortMessagesByCreatedAtAsc([...prev, aiMessage]);
+      const merged = sortMessagesByCreatedAtAsc([...prev, systemMessage]);
       messagesRef.current = merged;
       return merged;
     });
@@ -1032,7 +1033,7 @@ export default function MessagesPage() {
             supportSent={supportSent}
             setSupportSent={setSupportSent}
             appendSupportRequestMessage={appendSupportRequestMessage}
-            appendSupportCtaAiMessage={appendSupportCtaAiMessage}
+            appendSupportSystemConfirmation={appendSupportSystemConfirmation}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
             supportHandoffMessage={supportHandoffMessage}
           />
