@@ -748,18 +748,18 @@ export default function MessagesPage() {
       if (result) {
         const { userMessage, aiMessage } = result;
         console.log("AI MESSAGE", aiMessage);
-        // Replace optimistic row with real user message, append AI reply — one atomic update.
+        // Replace optimistic row with real user message, then append AI reply immediately (no DB reload).
         setLastUserMessageAt(userMessage.created_at);
         console.log("SETTING STATE");
         setMessages((prev) => {
-          const updated = prev.map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
-          if (!aiMessage) {
-            const mergedNoAi = sortMessagesByCreatedAtAsc(updated);
-            messagesRef.current = mergedNoAi;
-            return mergedNoAi;
-          }
-          const withoutDupAi = updated.filter((m) => m.id !== (aiMessage as Message).id);
-          const merged = sortMessagesByCreatedAtAsc([...withoutDupAi, aiMessage as Message]);
+          const replacedUser = prev.map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
+
+          // ALWAYS append aiMessage to state immediately when present.
+          const withAi = aiMessage
+            ? [...replacedUser.filter((m) => m.id !== (aiMessage as Message).id), aiMessage as Message]
+            : replacedUser;
+
+          const merged = sortMessagesByCreatedAtAsc(withAi);
           messagesRef.current = merged;
           return merged;
         });
