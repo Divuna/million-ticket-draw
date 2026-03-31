@@ -408,6 +408,7 @@ export default function MessagesPage() {
         { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${uid}` },
         (payload) => {
           const newMessage = payload.new as unknown as Message;
+          if (newMessage.sender === 'ai') return;
 
           setMessages((prev) => {
             const exists = prev.some((m) => m.id === newMessage.id);
@@ -555,15 +556,22 @@ export default function MessagesPage() {
 
       rows.forEach((row) => {
         const existingIndex = merged.findIndex(
-          (m) => m.sender === row.sender && m.content === row.content,
+          (m) => m.id === row.id
         );
 
         if (existingIndex >= 0) {
-          const existing = merged[existingIndex];
-          if (existing?.isOptimistic) {
-            // Replace optimistic placeholder with DB version.
-            merged[existingIndex] = row as unknown as Message;
-          }
+          // Already have exact DB row — skip
+          return;
+        }
+
+        // Check for local copy with same sender+content (optimistic or locally inserted)
+        const localIndex = merged.findIndex(
+          (m) => m.sender === row.sender && m.content === row.content && m.id !== row.id
+        );
+
+        if (localIndex >= 0) {
+          // Replace local copy with real DB row
+          merged[localIndex] = row as unknown as Message;
           return;
         }
 
