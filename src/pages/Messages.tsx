@@ -108,6 +108,7 @@ type MessageThreadItemProps = {
   userName: string;
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
+  appendSupportRequestMessage: () => void;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
   supportHandoffMessage: string;
 };
@@ -119,6 +120,7 @@ const MessageThreadItem = memo(
     userName,
     supportSent,
     setSupportSent,
+    appendSupportRequestMessage,
     supportHandoffInFlightRef,
     supportHandoffMessage,
   }: MessageThreadItemProps) {
@@ -257,6 +259,7 @@ const MessageThreadItem = memo(
                     console.log("SUPPORT SHOULD ONLY TRIGGER HERE");
                     await invokeSupportHandoff({ message: supportHandoffMessage });
                     setSupportSent(true);
+                    appendSupportRequestMessage();
                   } finally {
                     supportHandoffInFlightRef.current = false;
                   }
@@ -307,6 +310,7 @@ type MessagesThreadListProps = {
   userName: string;
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
+  appendSupportRequestMessage: () => void;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
   supportHandoffMessage: string;
 };
@@ -316,6 +320,7 @@ const MessagesThreadList = memo(function MessagesThreadList({
   userName,
   supportSent,
   setSupportSent,
+  appendSupportRequestMessage,
   supportHandoffInFlightRef,
   supportHandoffMessage,
 }: MessagesThreadListProps) {
@@ -331,6 +336,7 @@ const MessagesThreadList = memo(function MessagesThreadList({
             userName={userName}
             supportSent={supportSent}
             setSupportSent={setSupportSent}
+            appendSupportRequestMessage={appendSupportRequestMessage}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
             supportHandoffMessage={supportHandoffMessage}
           />
@@ -650,6 +656,23 @@ export default function MessagesPage() {
 
   const supportHandoffMessage = lastUserMessage?.content ?? "";
 
+  const appendSupportRequestMessage = useCallback(() => {
+    const now = new Date().toISOString();
+    const supportMessage: Message = {
+      id: `${OPTIMISTIC_MESSAGE_ID_PREFIX}support-${Date.now()}`,
+      user_id: user?.id || "",
+      sender: "admin",
+      content: "SUPPORT REQUEST",
+      read: false,
+      created_at: now,
+    };
+    setMessages((prev) => {
+      const merged = sortMessagesByCreatedAtAsc([...prev, supportMessage]);
+      messagesRef.current = merged;
+      return merged;
+    });
+  }, [user?.id]);
+
   // Create sparkle effect
   const createSparkles = useCallback(() => {
     const newSparkles: Sparkle[] = [];
@@ -885,6 +908,7 @@ export default function MessagesPage() {
             userName={userName}
             supportSent={supportSent}
             setSupportSent={setSupportSent}
+            appendSupportRequestMessage={appendSupportRequestMessage}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
             supportHandoffMessage={supportHandoffMessage}
           />
