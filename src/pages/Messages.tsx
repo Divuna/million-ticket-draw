@@ -78,6 +78,8 @@ interface Message {
 }
 
 const OPTIMISTIC_MESSAGE_ID_PREFIX = "optimistic-";
+const SUPPORT_CHAT_ENDED_MESSAGE =
+  "Chat s podporou byl ukončen. Nyní můžete opět využívat Boba.";
 
 function sortMessagesByCreatedAtAsc<T extends { created_at: string; id: string }>(messages: T[]): T[] {
   return [...messages].sort((a, b) => {
@@ -657,7 +659,19 @@ export default function MessagesPage() {
   const supportHandoffMessage = lastUserMessage?.content ?? "";
 
   const supportActive = useMemo(() => {
-    return messages.some((m) => m.sender === "admin" || (m.sender as unknown as string) === "support");
+    const lastEndAtMs = messages.reduce((latest, m) => {
+      if (m.sender !== "admin") return latest;
+      if (m.content !== SUPPORT_CHAT_ENDED_MESSAGE) return latest;
+      const t = new Date(m.created_at).getTime();
+      return t > latest ? t : latest;
+    }, -1);
+
+    return messages.some((m) => {
+      const sender = (m.sender as unknown as string) || "";
+      if (sender !== "admin" && sender !== "support") return false;
+      if (sender === "admin" && m.content === SUPPORT_CHAT_ENDED_MESSAGE) return false;
+      return new Date(m.created_at).getTime() > lastEndAtMs;
+    });
   }, [messages]);
 
   const appendSupportRequestMessage = useCallback(() => {

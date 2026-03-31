@@ -29,6 +29,9 @@ interface Message {
   read: boolean;
 }
 
+const SUPPORT_CHAT_ENDED_MESSAGE =
+  "Chat s podporou byl ukončen. Nyní můžete opět využívat Boba.";
+
 interface ContactInfo {
   name: string | null;
   email: string | null;
@@ -172,6 +175,46 @@ export default function AdminMessageThread() {
     }
 
     setNewMessage("");
+    loadMessages();
+  };
+
+  const handleEndSupportChat = async () => {
+    if (!userId || !user || !isAdmin) return;
+
+    const nowIso = new Date().toISOString();
+    const optimistic: Message = {
+      id: `optimistic-support-end-${Date.now()}`,
+      user_id: userId,
+      sender: "admin",
+      content: SUPPORT_CHAT_ENDED_MESSAGE,
+      read: false,
+      created_at: nowIso,
+    };
+
+    setMessages((prev) => capChatMessagesState([...prev, optimistic]));
+
+    const { error } = await supabase.from("messages").insert({
+      user_id: userId,
+      sender: "admin",
+      content: SUPPORT_CHAT_ENDED_MESSAGE,
+      read: false,
+      topic: "support",
+      extension: "onemil",
+      payload: {},
+      event: "support_end",
+      private: false,
+    });
+
+    if (error) {
+      toast({
+        title: "Chyba",
+        description: "Chat nelze ukončit",
+        variant: "destructive",
+      });
+      loadMessages();
+      return;
+    }
+
     loadMessages();
   };
 
@@ -337,6 +380,13 @@ export default function AdminMessageThread() {
           placeholder="Napište odpověď…"
           className="flex-1 bg-[hsl(220,25%,10%)] text-foreground p-3 rounded-lg border border-[hsl(220,20%,20%)] focus:border-primary outline-none"
         />
+        <button
+          type="button"
+          onClick={handleEndSupportChat}
+          className="px-5 rounded-lg bg-[hsl(220,25%,14%)] hover:bg-[hsl(220,25%,18%)] text-foreground border border-[hsl(45,70%,50%,0.25)]"
+        >
+          Ukončit chat
+        </button>
         <button onClick={handleSend} className="px-5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground">
           Odeslat
         </button>
