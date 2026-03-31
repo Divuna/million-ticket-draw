@@ -877,7 +877,21 @@ export default function MessagesPage() {
 
     try {
       console.log("SEND START");
-      const result = await sendMessageToAdmin(messageContent, { supportActive: supportMeta.hasAdmin });
+      const currentMessages = messagesRef.current;
+      const lastEndAtMs = currentMessages.reduce((latest, m) => {
+        if (m.sender !== 'admin') return latest;
+        if (m.content !== 'Chat s podporou byl ukončen. Nyní můžete opět využívat Boba.') return latest;
+        const t = new Date(m.created_at).getTime();
+        return t > latest ? t : latest;
+      }, -1);
+      const hasRealAdminReply = currentMessages.some((m) => {
+        const sender = (m.sender as unknown as string) || '';
+        if (sender !== 'admin' && sender !== 'support') return false;
+        if (m.content === 'SUPPORT REQUEST') return false;
+        if (m.content === 'Chat s podporou byl ukončen. Nyní můžete opět využívat Boba.') return false;
+        return new Date(m.created_at).getTime() > lastEndAtMs;
+      });
+      const result = await sendMessageToAdmin(messageContent, { supportActive: hasRealAdminReply });
       console.log("RESULT", result);
 
       if (result) {
