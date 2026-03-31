@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, withEdgeInternalToken } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 export interface ConversationMessage {
@@ -40,13 +40,18 @@ export const useMessages = () => {
         .select("*")
         .single();
 
-      if (insertErr) throw insertErr;
+      if (insertErr) {
+        console.error("[useMessages] insert failed — code:", insertErr.code, "message:", insertErr.message, "details:", insertErr.details);
+        throw insertErr;
+      }
       if (!userMessage) throw new Error("user message insert returned no row");
       console.log("[useMessages] userMessage inserted", userMessage.id);
 
       // Step 2: invoke ai-chat — blocks until the edge function has written the AI reply to DB
+      // withEdgeInternalToken adds x-internal-token header required by the edge function.
       const { data: aiData, error: invokeErr } = await supabase.functions.invoke("ai-chat", {
         body: { message_id: userMessage.id },
+        headers: withEdgeInternalToken({}),
       });
 
       if (invokeErr) throw invokeErr;

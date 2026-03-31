@@ -55,8 +55,7 @@ const AI_KNOWLEDGE = {
     rule: "Každá soutěž má pevný počet tiketů a hlavní výhra padá na poslední tiket.",
   },
   support: {
-    email: "podpora@onemil.cz",
-    fallback: "Můžu tě přepojit na podporu nebo napiš na podpora@onemil.cz.",
+    fallback: "Rádi ti pomůžeme. Pro kontakt s podporou klikni na tlačítko níže.",
   },
   pricing: {
     customer_text:
@@ -183,7 +182,7 @@ function getPredefinedReply(userText: string): string | null {
   if (text.includes("miocoin") || text.includes("coin")) return AI_KNOWLEDGE.miocoin.definition
   if (text.includes("voucher")) return AI_KNOWLEDGE.vouchers.definition
   if (text.includes("vyhr")) return AI_KNOWLEDGE.contests.rule
-  if (text.includes("podpora") || text.includes("kontakt")) return AI_KNOWLEDGE.support.email
+  // Support/contact queries are handled by a dedicated pre-KB handler; never return email here.
 
   return null
 }
@@ -1460,6 +1459,28 @@ serve(async (req) => {
         return jsonSuccess(ins.id)
       }
       // fall through
+    }
+
+    // Support / contact queries → always return CTA /messages; never suggest an email address.
+    if (userTextLower.includes("podpora") || userTextLower.includes("kontakt")) {
+      console.log("[ai-chat] support/contact query → CTA /messages")
+      const supportText = "Rádi ti pomůžeme. Klikni na tlačítko níže pro kontakt s naší podporou."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        bobSupportCtaPayload(supportText),
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
     }
 
     // 2) Knowledge-base: general informational only — skipped for user-specific data questions (GPT + USER DATA).
