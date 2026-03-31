@@ -427,31 +427,17 @@ export default function MessagesPage() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${uid}` },
         (payload) => {
-          const newMessage = payload.new as unknown as Message;
-          // AI rows: only from sendMessageToAdmin (API) — never merge from realtime.
-          if (newMessage.sender === "ai") return;
-          const raw = typeof newMessage.content === "string" ? newMessage.content.trim() : "";
-          if (!raw) return;
+          const newMessage = payload.new as Message;
 
           setMessages((prev) => {
             const exists = prev.some((m) => m.id === newMessage.id);
             if (exists) return prev;
-            // Replace optimistic version (same sender+content but different id) instead of adding duplicate
-            const optimisticIdx = prev.findIndex(
-              (m) =>
-                m.id.startsWith(OPTIMISTIC_MESSAGE_ID_PREFIX) &&
-                m.sender === newMessage.sender &&
-                m.content === newMessage.content,
-            );
-            if (optimisticIdx >= 0) {
-              const next = [...prev];
-              next[optimisticIdx] = newMessage;
-              messagesRef.current = next;
-              return next;
-            }
-            const merged = sortMessagesByCreatedAtAsc([...prev, newMessage]);
-            messagesRef.current = merged;
-            return merged;
+
+            if (newMessage.sender === "ai") return prev;
+
+            if (!newMessage.content || newMessage.content.trim() === "") return prev;
+
+            return [...prev, newMessage];
           });
         },
       )
