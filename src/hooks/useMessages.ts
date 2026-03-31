@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { supabase, withEdgeInternalToken } from "@/integrations/supabase/client";
+import { supabase, supabaseUrl, withEdgeInternalToken } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 export interface ConversationMessage {
@@ -47,8 +47,10 @@ export const useMessages = () => {
       if (!userMessage) throw new Error("user message insert returned no row");
       console.log("[useMessages] userMessage inserted", userMessage.id);
 
-      // Step 2: always force-refresh the session before invoking ai-chat so the edge
-      // function receives a guaranteed-fresh access_token (avoids 401 on expired tokens).
+      // Step 2: force-refresh the session so we hold a guaranteed-fresh access_token.
+      // supabase.functions.invoke injects its own Authorization header from internal
+      // client state and can override an explicitly passed header — use raw fetch instead
+      // to have full control over every header sent to the edge function.
       const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
       if (refreshErr || !refreshed.session) {
         console.error("[useMessages] session refresh failed", refreshErr);
@@ -56,14 +58,25 @@ export const useMessages = () => {
       }
       console.log("[useMessages] session refreshed, expires_at", refreshed.session.expires_at);
 
-      const { data: aiData, error: invokeErr } = await supabase.functions.invoke("ai-chat", {
-        body: { message_id: userMessage.id },
-        headers: withEdgeInternalToken({
-          Authorization: `Bearer ${refreshed.session.access_token}`,
-        }),
+      const fnHeaders = withEdgeInternalToken({
+        "Authorization": `Bearer ${refreshed.session.access_token}`,
+        "Content-Type": "application/json",
+        "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY as string,
       });
 
-      if (invokeErr) throw invokeErr;
+      const invokeRes = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
+        method: "POST",
+        headers: fnHeaders,
+        body: JSON.stringify({ message_id: userMessage.id }),
+      });
+
+      if (!invokeRes.ok) {
+        const errBody = await invokeRes.text().catch(() => "");
+        console.error("[useMessages] ai-chat HTTP error", invokeRes.status, errBody);
+        throw new Error(`ai-chat returned HTTP ${invokeRes.status}: ${errBody}`);
+      }
+
+      const aiData: unknown = await invokeRes.json();
 
       const replyMessageId =
         aiData && typeof aiData === "object"
