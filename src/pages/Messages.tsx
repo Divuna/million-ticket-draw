@@ -735,7 +735,8 @@ export default function MessagesPage() {
     const hasAdmin = messages.some((m) => {
       const sender = (m.sender as unknown as string) || "";
       if (sender !== "admin" && sender !== "support") return false;
-      if (sender === "admin" && m.content === SUPPORT_CHAT_ENDED_MESSAGE) return false;
+      if (m.content === "SUPPORT REQUEST") return false;
+      if (m.content === SUPPORT_CHAT_ENDED_MESSAGE) return false;
       return new Date(m.created_at).getTime() > lastEndAtMs;
     });
 
