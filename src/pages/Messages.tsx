@@ -656,6 +656,10 @@ export default function MessagesPage() {
 
   const supportHandoffMessage = lastUserMessage?.content ?? "";
 
+  const supportActive = useMemo(() => {
+    return messages.some((m) => m.sender === "admin" || (m.sender as unknown as string) === "support");
+  }, [messages]);
+
   const appendSupportRequestMessage = useCallback(() => {
     const now = new Date().toISOString();
     const supportMessage: Message = {
@@ -724,7 +728,7 @@ export default function MessagesPage() {
 
     try {
       console.log("SEND START");
-      const result = await sendMessageToAdmin(messageContent);
+      const result = await sendMessageToAdmin(messageContent, { supportActive });
       console.log("RESULT", result);
 
       if (result) {
@@ -735,6 +739,11 @@ export default function MessagesPage() {
         console.log("SETTING STATE");
         setMessages((prev) => {
           const updated = prev.map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
+          if (!aiMessage) {
+            const mergedNoAi = sortMessagesByCreatedAtAsc(updated);
+            messagesRef.current = mergedNoAi;
+            return mergedNoAi;
+          }
           const withoutDupAi = updated.filter((m) => m.id !== (aiMessage as Message).id);
           const merged = sortMessagesByCreatedAtAsc([...withoutDupAi, aiMessage as Message]);
           messagesRef.current = merged;

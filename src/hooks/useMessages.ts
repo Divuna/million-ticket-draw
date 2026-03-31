@@ -13,7 +13,7 @@ export interface ConversationMessage {
 
 export interface SendMessageResult {
   userMessage: ConversationMessage;
-  aiMessage: ConversationMessage;
+  aiMessage: ConversationMessage | null;
 }
 
 /**
@@ -25,7 +25,10 @@ export interface SendMessageResult {
  * 4. Return { userMessage, aiMessage } so caller can update UI state directly
  */
 export const useMessages = () => {
-  const sendMessageToAdmin = useCallback(async (content: string): Promise<SendMessageResult | null> => {
+  const sendMessageToAdmin = useCallback(async (
+    content: string,
+    options?: { supportActive?: boolean },
+  ): Promise<SendMessageResult | null> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       console.error("[useMessages] no authenticated user");
@@ -46,6 +49,13 @@ export const useMessages = () => {
       }
       if (!userMessage) throw new Error("user message insert returned no row");
       console.log("[useMessages] userMessage inserted", userMessage.id);
+
+      if (options?.supportActive) {
+        return {
+          userMessage: userMessage as ConversationMessage,
+          aiMessage: null,
+        };
+      }
 
       const { data: { session } } = await supabase.auth.getSession()
 
