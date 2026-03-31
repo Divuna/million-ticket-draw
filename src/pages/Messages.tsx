@@ -374,6 +374,34 @@ export default function MessagesPage() {
   messagesRef.current = messages;
   currentUserIdRef.current = user?.id;
 
+  // Realtime: merge new messages instantly (admin replies, ai replies, etc).
+  useEffect(() => {
+    const uid = user?.id;
+    if (!uid) return;
+
+    const channel = supabase
+      .channel("messages")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${uid}` },
+        (payload) => {
+          const newMessage = payload.new as unknown as Message;
+
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMessage.id)) return prev;
+            const merged = sortMessagesByCreatedAtAsc([...prev, newMessage]);
+            messagesRef.current = merged;
+            return merged;
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [user?.id]);
+
   useEffect(() => {
     if (!user) return;
     const fetchName = async () => {
@@ -646,7 +674,7 @@ export default function MessagesPage() {
 
   const supportHandoffMessage = lastUserMessage?.content ?? "";
 
-  const supportActive = useMemo(() => {
+  const supportMeta = useMemo(() => {
     const lastEndAtMs = messages.reduce((latest, m) => {
       if (m.sender !== "admin") return latest;
       if (m.content !== SUPPORT_CHAT_ENDED_MESSAGE) return latest;
@@ -654,12 +682,23 @@ export default function MessagesPage() {
       return t > latest ? t : latest;
     }, -1);
 
-    return messages.some((m) => {
+    const supportActive = messages.some((m) => {
       const sender = (m.sender as unknown as string) || "";
       if (sender !== "admin" && sender !== "support") return false;
       if (sender === "admin" && m.content === SUPPORT_CHAT_ENDED_MESSAGE) return false;
       return new Date(m.created_at).getTime() > lastEndAtMs;
     });
+
+    // Block AI whenever an admin/support message exists (excluding the end-of-support marker),
+    // scoped to messages AFTER the last support-end marker.
+    const hasAdmin = messages.some((m) => {
+      const sender = (m.sender as unknown as string) || "";
+      if (sender !== "admin" && sender !== "support") return false;
+      if (sender === "admin" && m.content === SUPPORT_CHAT_ENDED_MESSAGE) return false;
+      return new Date(m.created_at).getTime() > lastEndAtMs;
+    });
+
+    return { supportActive, hasAdmin };
   }, [messages]);
 
   const appendSupportRequestMessage = useCallback(() => {
@@ -730,7 +769,7 @@ export default function MessagesPage() {
 
     try {
       console.log("SEND START");
-      const result = await sendMessageToAdmin(messageContent, { supportActive });
+      const result = await sendMessageToAdmin(messageContent, { supportActive: supportMeta.hasAdmin || supportMeta.supportActive });
       console.log("RESULT", result);
 
       if (result) {
