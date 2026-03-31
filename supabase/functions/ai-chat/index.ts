@@ -1164,14 +1164,6 @@ serve(async (req) => {
   const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN") ?? ""
   const openaiKey = Deno.env.get("OPENAI_API_KEY") ?? ""
 
-  const providedInternal = req.headers.get("x-internal-token") ?? ""
-  if (internalToken && providedInternal !== internalToken) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    })
-  }
-
   if (!supabaseUrl || !serviceRoleKey) {
     return new Response(JSON.stringify({ error: "Missing Supabase configuration" }), {
       status: 500,
