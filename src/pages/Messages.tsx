@@ -277,7 +277,9 @@ function MessageThreadItem({
                     }
 
                     setMessages(prev => {
-                      return sortMessagesByCreatedAtAsc([...prev, aiMessage])
+                      const merged = sortMessagesByCreatedAtAsc([...prev, aiMessage])
+                      messagesRef.current = merged
+                      return merged
                     })
                   } finally {
                     supportHandoffInFlightRef.current = false;
