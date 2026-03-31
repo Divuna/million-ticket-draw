@@ -11,44 +11,78 @@ export interface ConversationMessage {
   created_at: string;
 }
 
+export interface SendMessageResult {
+  userMessage: ConversationMessage;
+  aiMessage: ConversationMessage;
+}
+
 /**
- * User chat send only. Does not subscribe or load the thread — Messages.tsx owns that
- * (limit + single realtime channel). Previously this hook refetched ALL messages on mount
- * and on every INSERT, which duplicated work and slowed heavy threads.
+ * Send flow:
+ * 1. Insert user message → get userMessage row with real DB id
+ * 2. Invoke ai-chat edge function (synchronous — waits for full AI response)
+ *    Edge function writes AI reply to DB before returning { reply_message_id }
+ * 3. Fetch the single AI row by reply_message_id (always present at this point)
+ * 4. Return { userMessage, aiMessage } so caller can update UI state directly
  */
 export const useMessages = () => {
-  const sendMessageToAdmin = useCallback(async (content: string): Promise<ConversationMessage | null> => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return null;
+  const sendMessageToAdmin = useCallback(async (content: string): Promise<SendMessageResult | null> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error("[useMessages] no authenticated user");
+      return null;
+    }
 
     try {
-      const { data, error } = await supabase
+      // Step 1: insert user message
+      const { data: userMessage, error: insertErr } = await supabase
         .from("messages")
-        .insert({
-          user_id: user.id,
-          sender: "user",
-          content: content.trim(),
-          read: false,
-        })
+        .insert({ user_id: user.id, sender: "user", content: content.trim(), read: false })
         .select("*")
         .single();
 
-      if (error) throw error;
+      if (insertErr) throw insertErr;
+      if (!userMessage) throw new Error("user message insert returned no row");
+      console.log("[useMessages] userMessage inserted", userMessage.id);
 
-      return data as ConversationMessage;
-    } catch {
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se odeslat zprávu",
-        variant: "destructive",
+      // Step 2: invoke ai-chat — blocks until the edge function has written the AI reply to DB
+      const { data: aiData, error: invokeErr } = await supabase.functions.invoke("ai-chat", {
+        body: { message_id: userMessage.id },
       });
+
+      if (invokeErr) throw invokeErr;
+
+      const replyMessageId =
+        aiData && typeof aiData === "object"
+          ? (aiData as Record<string, unknown>).reply_message_id
+          : null;
+
+      console.log("[useMessages] reply_message_id", replyMessageId);
+
+      if (typeof replyMessageId !== "string" || !replyMessageId) {
+        throw new Error(`ai-chat returned no reply_message_id — got: ${JSON.stringify(aiData)}`);
+      }
+
+      // Step 3: fetch the settled AI row (it exists in DB by the time invoke() returned)
+      const { data: aiMessage, error: fetchErr } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("id", replyMessageId)
+        .single();
+
+      if (fetchErr) throw fetchErr;
+      if (!aiMessage) throw new Error(`AI message row ${replyMessageId} not found`);
+      console.log("[useMessages] aiMessage fetched", aiMessage.id, aiMessage.content?.slice(0, 80));
+
+      return {
+        userMessage: userMessage as ConversationMessage,
+        aiMessage: aiMessage as ConversationMessage,
+      };
+    } catch (err) {
+      console.error("[useMessages] sendMessageToAdmin failed", err);
+      toast({ title: "Chyba", description: "Nepodařilo se odeslat zprávu", variant: "destructive" });
       return null;
     }
   }, []);
 
-  return {
-    sendMessageToAdmin,
-  };
+  return { sendMessageToAdmin };
 };

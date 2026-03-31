@@ -100,7 +100,6 @@ type MessageThreadItemProps = {
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
-  loadMessages: () => Promise<void>;
   supportHandoffMessage: string;
 };
 
@@ -112,7 +111,6 @@ const MessageThreadItem = memo(
     supportSent,
     setSupportSent,
     supportHandoffInFlightRef,
-    loadMessages,
     supportHandoffMessage,
   }: MessageThreadItemProps) {
   const navigate = useNavigate();
@@ -250,7 +248,6 @@ const MessageThreadItem = memo(
                     console.log("SUPPORT SHOULD ONLY TRIGGER HERE");
                     await invokeSupportHandoff({ message: supportHandoffMessage });
                     setSupportSent(true);
-                    await loadMessages();
                   } finally {
                     supportHandoffInFlightRef.current = false;
                   }
@@ -302,7 +299,6 @@ type MessagesThreadListProps = {
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
-  loadMessages: () => Promise<void>;
   supportHandoffMessage: string;
 };
 
@@ -312,7 +308,6 @@ const MessagesThreadList = memo(function MessagesThreadList({
   supportSent,
   setSupportSent,
   supportHandoffInFlightRef,
-  loadMessages,
   supportHandoffMessage,
 }: MessagesThreadListProps) {
   return (
@@ -328,7 +323,6 @@ const MessagesThreadList = memo(function MessagesThreadList({
             supportSent={supportSent}
             setSupportSent={setSupportSent}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
-            loadMessages={loadMessages}
             supportHandoffMessage={supportHandoffMessage}
           />
         );
@@ -338,7 +332,7 @@ const MessagesThreadList = memo(function MessagesThreadList({
 });
 
 export default function MessagesPage() {
-  console.log("MESSAGES PAGE MOUNTED");
+  useEffect(() => { console.log("MESSAGES PAGE MOUNTED"); return () => console.log("MESSAGES PAGE UNMOUNTED"); }, []);
   const { user } = useAuth();
   const { sendMessageToAdmin } = useMessages();
   const { refresh: refreshUnreadCount } = useUnreadMessagesCount();
@@ -501,10 +495,25 @@ export default function MessagesPage() {
       .limit(CHAT_PAGE_SIZE);
     const rows = data ? [...data].reverse() : [];
     console.log("MESSAGES RAW", rows);
-    // Keep ref in sync immediately (polling logic relies on this).
-    messagesRef.current = rows;
-    // Force state update with a fresh array reference (guarantee rerender).
-    setMessages([...rows]);
+    // Merge DB rows with any local-only messages (e.g. AI replies appended by handleSend
+    // that are not yet returned by this query due to timing).  A plain overwrite would
+    // wipe those messages if this callback races against handleSend.
+    setMessages((current) => {
+      const dbIds = new Set(rows.map((r) => r.id));
+      const localOnly = current.filter(
+        (m) => !dbIds.has(m.id) && !m.id.startsWith(OPTIMISTIC_MESSAGE_ID_PREFIX)
+      );
+      const merged =
+        localOnly.length > 0
+          ? [...rows, ...localOnly].sort(
+              (a, b) =>
+                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            )
+          : [...rows];
+      // Keep ref in sync so loadOlderMessages cursor is always fresh.
+      messagesRef.current = merged;
+      return merged;
+    });
     console.log("MESSAGES IN STATE", rows);
 
     const more = (data?.length ?? 0) === CHAT_PAGE_SIZE;
@@ -517,7 +526,7 @@ export default function MessagesPage() {
       console.log("AI RESPONSE RECEIVED");
       setIsAwaitingReply(false);
     }
-  }, [user?.id, supportSent]);
+  }, [user?.id]);
 
   const loadOlderMessages = useCallback(async () => {
     const uid = user?.id;
@@ -603,19 +612,26 @@ export default function MessagesPage() {
     void loadOlderMessages();
   }, [loadOlderMessages]);
 
+  // Stable refs so the effect body always calls the latest version
+  // without those functions appearing in the dependency array.
+  const loadMessagesRef = useRef(loadMessages);
+  const markAdminMessagesAsReadRef = useRef(markAdminMessagesAsRead);
+  const refreshUnreadCountRef = useRef(refreshUnreadCount);
+  loadMessagesRef.current = loadMessages;
+  markAdminMessagesAsReadRef.current = markAdminMessagesAsRead;
+  refreshUnreadCountRef.current = refreshUnreadCount;
+
+  // Runs ONLY when the authenticated user changes — never after send or state updates.
   useEffect(() => {
     if (!user?.id) return;
-
     void (async () => {
       console.log("CALLING loadMessages");
-      await loadMessages();
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => resolve());
-      });
-      await markAdminMessagesAsRead();
-      refreshUnreadCount();
+      await loadMessagesRef.current();
+      await new Promise<void>((resolve) => { requestAnimationFrame(() => resolve()); });
+      await markAdminMessagesAsReadRef.current();
+      refreshUnreadCountRef.current();
     })();
-  }, [user?.id, loadMessages, markAdminMessagesAsRead, refreshUnreadCount]);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showTypingIndicator = isAwaitingReply;
 
@@ -645,7 +661,7 @@ export default function MessagesPage() {
     setTimeout(() => setSparkles([]), 1000);
   }, []);
 
-  /** Send pipeline (button / Enter). After insert, fetch once to pick up the AI reply created by DB trigger. */
+  /** Send pipeline (button / Enter). AI reply comes back in the same await — no DB poll needed. */
   const handleSend = async () => {
     if (!newMessage.trim() || sendInFlightRef.current) return;
 
@@ -674,21 +690,31 @@ export default function MessagesPage() {
     setNewMessage("");
 
     try {
-      const inserted = await sendMessageToAdmin(messageContent);
+      console.log("SEND START");
+      const result = await sendMessageToAdmin(messageContent);
+      console.log("RESULT", result);
 
-      if (inserted) {
-        setLastUserMessageAt(inserted.created_at);
+      if (result) {
+        const { userMessage, aiMessage } = result;
+        console.log("AI MESSAGE", aiMessage);
+        // Replace optimistic row with real user message, append AI reply — one atomic update.
+        setLastUserMessageAt(userMessage.created_at);
+        console.log("SETTING STATE");
+        setMessages((prev) => {
+          const updated = prev.map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
+          return [...updated, aiMessage as Message];
+        });
+        console.log("STATE SET DONE");
+        setIsAwaitingReply(false);
         toast({ title: "Odesláno" });
-        // Single fetch to pick up both the real user row and the AI reply created by DB trigger.
-        await loadMessages();
       } else {
         setMessages((prev) =>
           capAfterTailGrowth(prev.length, prev.filter((msg) => msg.id !== optimisticId)),
         );
+        setIsAwaitingReply(false);
         toast({ title: "Chyba", description: "Odeslání selhalo", variant: "destructive" });
       }
     } finally {
-      setIsAwaitingReply(false);
       sendInFlightRef.current = false;
       setFlyingMessage(null);
     }
@@ -845,7 +871,6 @@ export default function MessagesPage() {
             supportSent={supportSent}
             setSupportSent={setSupportSent}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
-            loadMessages={loadMessages}
             supportHandoffMessage={supportHandoffMessage}
           />
 
