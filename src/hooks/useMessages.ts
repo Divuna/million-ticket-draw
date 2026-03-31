@@ -47,32 +47,20 @@ export const useMessages = () => {
       if (!userMessage) throw new Error("user message insert returned no row");
       console.log("[useMessages] userMessage inserted", userMessage.id);
 
-      // Step 2: invoke ai-chat via raw fetch with explicit apikey + Authorization headers.
-      // getSession() returns the cached session (no network call) — sufficient since the
-      // Supabase client auto-refreshes tokens in the background.
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log("[useMessages] session access_token present:", !!session?.access_token);
+      const { data: { session } } = await supabase.auth.getSession()
 
-      const invokeRes = await fetch(
-        "https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/ai-chat",
-        {
-          method: "POST",
-          headers: withEdgeInternalToken({
-            "Content-Type": "application/json",
-            "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-            "Authorization": `Bearer ${session?.access_token}`,
-          }),
-          body: JSON.stringify({ message_id: userMessage.id }),
-        },
-      );
-
-      if (!invokeRes.ok) {
-        const errBody = await invokeRes.text().catch(() => "");
-        console.error("[useMessages] ai-chat HTTP error", invokeRes.status, errBody);
-        throw new Error(`ai-chat returned HTTP ${invokeRes.status}: ${errBody}`);
+      if (!session?.access_token) {
+        throw new Error("No auth session")
       }
 
-      const aiData: unknown = await invokeRes.json();
+      const { data: aiData, error: invokeErr } = await supabase.functions.invoke("ai-chat", {
+        body: { message_id: userMessage.id },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      })
+
+      if (invokeErr) throw invokeErr;
 
       const replyMessageId =
         aiData && typeof aiData === "object"
