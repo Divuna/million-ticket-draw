@@ -108,6 +108,7 @@ type MessageThreadItemProps = {
   msg: Message;
   index: number;
   userName: string;
+  currentUserId: string | undefined;
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
   appendSupportRequestMessage: () => void;
@@ -119,6 +120,7 @@ function MessageThreadItem({
   msg,
   index,
   userName,
+  currentUserId,
   supportSent,
   setSupportSent,
   appendSupportRequestMessage,
@@ -261,6 +263,22 @@ function MessageThreadItem({
                     await invokeSupportHandoff({ message: supportHandoffMessage });
                     setSupportSent(true);
                     appendSupportRequestMessage();
+
+                    const aiMessage: Message = {
+                      id: "optimistic-ai-" + Date.now(),
+                      user_id: currentUserId || "",
+                      sender: "ai",
+                      content: JSON.stringify({
+                        text: "Váš dotaz jsem předal podpoře. Ta vás bude co nejdříve kontaktovat a pomůže vám s řešením.",
+                        cta: null
+                      }),
+                      read: false,
+                      created_at: new Date().toISOString()
+                    }
+
+                    setMessages(prev => {
+                      return sortMessagesByCreatedAtAsc([...prev, aiMessage])
+                    })
                   } finally {
                     supportHandoffInFlightRef.current = false;
                   }
@@ -300,6 +318,7 @@ function MessageThreadItem({
 type MessagesThreadListProps = {
   messages: Message[];
   userName: string;
+  currentUserId: string | undefined;
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
   appendSupportRequestMessage: () => void;
@@ -310,6 +329,7 @@ type MessagesThreadListProps = {
 function MessagesThreadList({
   messages,
   userName,
+  currentUserId,
   supportSent,
   setSupportSent,
   appendSupportRequestMessage,
@@ -326,6 +346,7 @@ function MessagesThreadList({
             msg={msg}
             index={index}
             userName={userName}
+            currentUserId={currentUserId}
             supportSent={supportSent}
             setSupportSent={setSupportSent}
             appendSupportRequestMessage={appendSupportRequestMessage}
@@ -971,6 +992,7 @@ export default function MessagesPage() {
           <MessagesThreadList
             messages={messages}
             userName={userName}
+            currentUserId={user?.id}
             supportSent={supportSent}
             setSupportSent={setSupportSent}
             appendSupportRequestMessage={appendSupportRequestMessage}
