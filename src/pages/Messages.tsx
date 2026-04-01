@@ -92,16 +92,6 @@ function sortMessagesByCreatedAtAsc<T extends { created_at: string; id: string }
   });
 }
 
-/** Human support reply — excludes marker, end-of-chat, and automated winner rows. */
-function isHumanAdminMessage(m: Message): boolean {
-  if (m.sender !== "admin" && m.sender !== "support") return false;
-  if (m.content === SUPPORT_REQUEST_MARKER) return false;
-  if (m.content === SUPPORT_CHAT_ENDED_MESSAGE) return false;
-  if (m.content.includes("Gratulujeme k výhře")) return false;
-  if (m.content.includes("zákonný zástupce")) return false;
-  return true;
-}
-
 /**
  * Exactly one mode at a time:
  * - "ai": Bob may respond (including after support CTA until a human admin writes).
@@ -109,20 +99,30 @@ function isHumanAdminMessage(m: Message): boolean {
  */
 function computeChatMode(messages: Message[]): "ai" | "admin" {
   const sorted = sortMessagesByCreatedAtAsc([...messages]);
-  let mode: "ai" | "admin" = "ai";
-  for (const m of sorted) {
+  let lastSupportEndIdx = -1;
+  for (let i = 0; i < sorted.length; i++) {
+    const m = sorted[i];
     if (
       (m.sender === "admin" || m.sender === "support") &&
       m.content === SUPPORT_CHAT_ENDED_MESSAGE
     ) {
-      mode = "ai";
-      continue;
-    }
-    if (isHumanAdminMessage(m)) {
-      mode = "admin";
+      lastSupportEndIdx = i;
     }
   }
-  return mode;
+  const messagesAfterLastEnd =
+    lastSupportEndIdx < 0 ? sorted : sorted.slice(lastSupportEndIdx + 1);
+
+  const hasAdminMessage = messagesAfterLastEnd.some(
+    (m) =>
+      (m.sender === "admin" || m.sender === "support") &&
+      m.content &&
+      m.content.trim() !== "" &&
+      m.content !== SUPPORT_REQUEST_MARKER &&
+      m.content !== SUPPORT_CHAT_ENDED_MESSAGE
+  );
+
+  if (hasAdminMessage) return "admin";
+  return "ai";
 }
 
 /** True bottom only: tolerate subpixel / fractional layout so we do not miss "pinned" state. */
