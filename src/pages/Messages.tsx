@@ -429,9 +429,24 @@ export default function MessagesPage() {
         (payload) => {
           const newMessage = payload.new as Message;
 
+          // Immediately switch mode ref when a real admin message arrives — before re-render
+          if (
+            (newMessage.sender === "admin" || newMessage.sender === "support") &&
+            newMessage.content?.trim() &&
+            newMessage.content !== SUPPORT_REQUEST_MARKER &&
+            newMessage.content !== SUPPORT_CHAT_ENDED_MESSAGE
+          ) {
+            chatModeRef.current = "admin";
+          }
+
           setMessages((prev) => {
             const exists = prev.some((m) => m.id === newMessage.id);
             if (exists) return prev;
+
+            // Always append admin/support messages — do not filter out
+            if (newMessage.sender === "admin" || newMessage.sender === "support") {
+              return [...prev, newMessage];
+            }
 
             if (!newMessage.content || newMessage.content.trim() === "") return prev;
 
@@ -883,7 +898,8 @@ export default function MessagesPage() {
             .filter((m) => m.id !== userMessage.id)
             .map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
           let next: Message[] = replacedUser;
-          if (aiMessage) {
+          // Only inject AI message if still in AI mode — admin may have written mid-await
+          if (aiMessage && chatModeRef.current === "ai") {
             const ai = aiMessage as Message;
             next = [...replacedUser.filter((m) => m.id !== ai.id), ai];
           }
