@@ -363,16 +363,15 @@ function AppContent() {
   const isPartnerRoute = location.pathname.startsWith('/partner');
   const isInfluencerRoute = location.pathname.startsWith('/influencer');
 
-  if (authLoading) {
-    return null;
-  }
-  
-  // Fetch partner data for header (only when partner account and NOT influencer)
+  // All hooks MUST be called unconditionally (React rules of hooks).
   const partnerData = usePartnerData(isPartnerAccount && !isInfluencerAccount ? user?.id : undefined);
-
   useOneSignal();
   useApplyPendingReferral(user?.id);
   useRetentionTriggers(user?.id);
+
+  if (authLoading) {
+    return null;
+  }
 
   // Hard-block: Redirect accounts away from unauthorized routes
   React.useEffect(() => {

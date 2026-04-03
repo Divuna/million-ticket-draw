@@ -1,8 +1,58 @@
 // src/hooks/useOneSignal.ts
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
+const ONESIGNAL_APP_ID = "357be038-dbaf-4551-9a16-96d9897197a3";
+
+/**
+ * Saves the OneSignal player ID to the user_devices table.
+ * Requires an active authenticated session.
+ */
+async function savePlayerIdToDb(playerId: string) {
+  const trimmed = typeof playerId === "string" ? playerId.trim() : "";
+  if (!trimmed) return;
+
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+  if (sessionError || !session?.user?.id) {
+    console.error("[useOneSignal] Cannot save user_devices — not authenticated:", sessionError?.message ?? "no session");
+    return;
+  }
+
+  const { error } = await supabase.from("user_devices").upsert(
+    {
+      user_id: session.user.id,
+      player_id: trimmed,
+      device_type: "web",
+    },
+    { onConflict: "user_id,player_id" },
+  );
+
+  if (error) {
+    console.error("[useOneSignal] user_devices upsert failed:", error.message);
+    return;
+  }
+
+  console.log("[useOneSignal] Stored in DB (user_devices):", { user_id: session.user.id, player_id: trimmed });
+}
+
+/**
+ * Hook that lazily connects to OneSignal when a user is logged in.
+ *
+ * IMPORTANT: This hook no longer auto-requests notification permission or
+ * clears browser state on mount. Those actions are intentionally deferred
+ * to explicit user interaction (e.g. via OneSignalDebug panel or a
+ * "Enable notifications" button).
+ *
+ * What this hook DOES on mount (for logged-in users):
+ *  1. Pushes a deferred callback onto window.OneSignalDeferred
+ *  2. Reads the existing PushSubscription id (if already granted)
+ *  3. Saves it to user_devices
+ *  4. Listens for future subscription changes
+ */
 export function useOneSignal() {
   const { user } = useAuth();
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -12,88 +62,10 @@ export function useOneSignal() {
   const initDoneRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
 
-  const ONESIGNAL_APP_ID = "357be038-dbaf-4551-9a16-96d9897197a3";
-
-  const savePlayerIdToDb = async (playerId: string) => {
-    const trimmed = typeof playerId === "string" ? playerId.trim() : "";
-    if (!trimmed) return;
-
-    // Fresh session so JWT is attached to the request (RLS: auth.uid() = user_id)
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-    if (sessionError || !session?.user?.id) {
-      console.error("[useOneSignal] Cannot save user_devices — not authenticated:", sessionError?.message ?? "no session");
-      return;
-    }
-
-    console.log("SAVING TO DB:", trimmed);
-
-    const { error } = await supabase.from("user_devices").upsert(
-      {
-        user_id: session.user.id,
-        player_id: trimmed,
-        device_type: "web",
-      },
-      {
-        onConflict: "user_id,player_id",
-      },
-    );
-
-    if (error) {
-      console.error("[useOneSignal] user_devices upsert failed:", error.message, error);
-      return;
-    }
-
-    console.log("[useOneSignal] Stored in DB (user_devices):", { user_id: session.user.id, player_id: trimmed });
-  };
-
-  const clearOneSignalBrowserState = async () => {
-    try {
-      // Unregister OneSignal SWs
-      if ("serviceWorker" in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(
-          regs
-            .filter((r) => /onesignal|OneSignalSDK/i.test(r.active?.scriptURL || ""))
-            .map((r) => r.unregister())
-        );
-      }
-    } catch {}
-
-    try {
-      // Clear OneSignal caches
-      const keys = await caches.keys();
-      await Promise.all(
-        keys
-          .filter((k) => k.toLowerCase().includes("onesignal") || k.toLowerCase().includes("os_"))
-          .map((k) => caches.delete(k))
-      );
-    } catch {}
-
-    try {
-      // Clear OneSignal localStorage keys
-      Object.keys(localStorage).forEach((k) => {
-        if (k.toLowerCase().includes("onesignal") || k.toLowerCase().startsWith("os_")) {
-          localStorage.removeItem(k);
-        }
-      });
-      // Clear OneSignal sessionStorage keys (if SDK stored any)
-      Object.keys(sessionStorage).forEach((k) => {
-        if (k.toLowerCase().includes("onesignal") || k.toLowerCase().startsWith("os_")) {
-          sessionStorage.removeItem(k);
-        }
-      });
-      indexedDB?.deleteDatabase("OneSignalSDKStore");
-      indexedDB?.deleteDatabase("OneSignalIndexedDB");
-    } catch {}
-  };
-
   useEffect(() => {
     if (!user?.id) return;
 
-    // Ensure init runs for the current user session
+    // Re-init when user changes
     if (lastUserIdRef.current !== user.id) {
       lastUserIdRef.current = user.id;
       initDoneRef.current = false;
@@ -104,133 +76,175 @@ export function useOneSignal() {
 
     let cancelled = false;
 
-    (async () => {
-      // Required deferred init flow (no blocking wrapper)
-      (window as any).OneSignalDeferred = (window as any).OneSignalDeferred || [];
-      (window as any).OneSignalDeferred.push(async function (OneSignal: any) {
-        if (cancelled) return;
+    (window as any).OneSignalDeferred = (window as any).OneSignalDeferred || [];
+    (window as any).OneSignalDeferred.push(async function (OneSignal: any) {
+      if (cancelled) return;
 
-        try {
-          setIsInitialized(true);
-
-          // Clear stale OneSignal state before init to avoid appId mismatch.
-          await clearOneSignalBrowserState();
-
-          const appId = ONESIGNAL_APP_ID;
-          console.log("ONESIGNAL APP ID USED:", appId);
-
-          // Ensure we only init once per browser/session for this exact app id.
-          const alreadyInitedAppId = (window as any).__ONESIGNAL_LAST_INIT_APP_ID__ as string | null;
-          if ((window as any).__ONESIGNAL_INITED__ && alreadyInitedAppId === appId) {
-            // Skip re-init (still proceed to permission & player id read).
-          } else {
-            try {
-              await OneSignal.init({
-                appId: ONESIGNAL_APP_ID,
-                // Needed for local dev on http://localhost (treat localhost as a secure origin).
-                allowLocalhostAsSecureOrigin: true,
-                // Ensure the worker is loaded from the app root (served from /public in Vite).
-                serviceWorkerPath: "/OneSignalSDKWorker.js",
-              });
-            } catch (e: any) {
-              const msg = String(e?.message || e);
-              // If the browser has stale OneSignal state (wrong previous app), clear and retry once.
-              const lower = msg.toLowerCase();
-              if (lower.includes("appid") && lower.includes("existing apps")) {
-                await clearOneSignalBrowserState();
-                await OneSignal.init({
-                  appId: ONESIGNAL_APP_ID,
-                  allowLocalhostAsSecureOrigin: true,
-                  serviceWorkerPath: "/OneSignalSDKWorker.js",
-                });
-              } else {
-                throw e;
-              }
+      try {
+        // Only init SDK if not already initialised for this appId.
+        const alreadyInitedAppId = (window as any).__ONESIGNAL_LAST_INIT_APP_ID__ as string | null;
+        if (!((window as any).__ONESIGNAL_INITED__ && alreadyInitedAppId === ONESIGNAL_APP_ID)) {
+          try {
+            await OneSignal.init({
+              appId: ONESIGNAL_APP_ID,
+              allowLocalhostAsSecureOrigin: true,
+              serviceWorkerPath: "/OneSignalSDKWorker.js",
+              // Do NOT auto-prompt — let user trigger permission explicitly.
+              autoResubscribe: false,
+            });
+          } catch (e: any) {
+            // Tolerate "already initialised" errors gracefully.
+            const msg = String(e?.message || e).toLowerCase();
+            if (!msg.includes("already") && !msg.includes("initialized")) {
+              throw e;
             }
-            (window as any).__ONESIGNAL_INITED__ = true;
-            (window as any).__ONESIGNAL_LAST_INIT_APP_ID__ = appId;
           }
+          (window as any).__ONESIGNAL_INITED__ = true;
+          (window as any).__ONESIGNAL_LAST_INIT_APP_ID__ = ONESIGNAL_APP_ID;
+        }
 
-          // Always attempt save once — do not rely only on subscription events (id may appear late)
-          setTimeout(async () => {
-            if (cancelled) return;
-            const playerId = (window as any).OneSignal?.User?.PushSubscription?.id;
+        setIsInitialized(true);
 
-            console.log("FORCED PLAYER ID:", playerId);
-
-            if (typeof playerId === "string" && playerId) {
-              if (!cancelled) setPlayerId(playerId);
-              await savePlayerIdToDb(playerId);
-            }
-          }, 2000);
-
-          const permission = await OneSignal.Notifications.requestPermission();
-          console.log("[useOneSignal] OneSignal permission:", permission);
-
-          const fetchAndSavePlayerId = async () => {
-            let pid: string | null = null;
-            if (typeof OneSignal.getUserId === "function") {
-              pid = await OneSignal.getUserId();
-            }
-            if (!pid) {
-              pid = OneSignal.User?.PushSubscription?.id ?? null;
-            }
-            if (typeof pid === "string" && pid) {
-              console.log("PLAYER ID:", pid);
-              if (!cancelled) setPlayerId(pid);
-              await savePlayerIdToDb(pid);
-              return pid;
-            }
-            return null;
-          };
-
-          if (permission === "granted") {
-            let pid = await fetchAndSavePlayerId();
-            if (!pid) {
-              for (const delayMs of [500, 1500, 3000]) {
-                if (cancelled) break;
-                await new Promise((r) => setTimeout(r, delayMs));
-                pid = await fetchAndSavePlayerId();
-                if (pid) break;
-              }
-            }
+        // Detect current permission state without requesting it.
+        try {
+          const perm = OneSignal.Notifications?.permission;
+          if (perm === true || perm === "granted") {
             setPermissionState("granted");
-          } else if (permission === "denied") {
+          } else if (perm === false || perm === "denied") {
             setPermissionState("denied");
           } else {
             setPermissionState("default");
           }
-
-          // subscriptionChange: when user subscribes, get player_id and save (if API exists)
-          if (typeof OneSignal.on === "function") {
-            OneSignal.on("subscriptionChange", async (isSubscribed: boolean) => {
-              if (isSubscribed && !cancelled) {
-                await fetchAndSavePlayerId();
-              }
-            });
-          }
-          // PushSubscription change (v16): when subscription id becomes available
-          OneSignal.User?.PushSubscription?.addEventListener?.("change", async (event: any) => {
-            const nextPid = event?.current?.id;
-            if (typeof nextPid === "string" && nextPid && !cancelled) {
-              console.log("PLAYER ID:", nextPid);
-              setPlayerId(nextPid);
-              await savePlayerIdToDb(nextPid);
-            }
-          });
-        } catch (e) {
-          console.error("[useOneSignal] OneSignal init/permission flow failed:", e);
+        } catch {
           setPermissionState("unknown");
         }
-      });
-    })();
+
+        // Read existing player id (if permission was already granted before).
+        const readPlayerId = async () => {
+          let pid: string | null = null;
+          if (typeof OneSignal.getUserId === "function") {
+            pid = await OneSignal.getUserId();
+          }
+          if (!pid) {
+            pid = OneSignal.User?.PushSubscription?.id ?? null;
+          }
+          if (typeof pid === "string" && pid) {
+            if (!cancelled) setPlayerId(pid);
+            await savePlayerIdToDb(pid);
+            return pid;
+          }
+          return null;
+        };
+
+        // Attempt to read player id now (may already exist).
+        await readPlayerId();
+
+        // Also try after a short delay — id can appear asynchronously.
+        setTimeout(async () => {
+          if (cancelled) return;
+          await readPlayerId();
+        }, 2000);
+
+        // Listen for future subscription changes.
+        OneSignal.User?.PushSubscription?.addEventListener?.("change", async (event: any) => {
+          const nextPid = event?.current?.id;
+          if (typeof nextPid === "string" && nextPid && !cancelled) {
+            setPlayerId(nextPid);
+            await savePlayerIdToDb(nextPid);
+          }
+        });
+
+        if (typeof OneSignal.on === "function") {
+          OneSignal.on("subscriptionChange", async (isSubscribed: boolean) => {
+            if (isSubscribed && !cancelled) {
+              await readPlayerId();
+            }
+          });
+        }
+      } catch (e) {
+        console.error("[useOneSignal] OneSignal init flow failed:", e);
+        setPermissionState("unknown");
+      }
+    });
 
     return () => {
       cancelled = true;
     };
   }, [user?.id]);
 
-  return { playerId, isInitialized, permissionState };
+  /**
+   * Call this from a UI button to explicitly request notification permission.
+   * Returns the permission result.
+   */
+  const requestPermission = useCallback(async (): Promise<string | null> => {
+    const OS = (window as any).OneSignal;
+    if (!OS?.Notifications?.requestPermission) {
+      console.warn("[useOneSignal] OneSignal not initialised yet");
+      return null;
+    }
+    const permission = await OS.Notifications.requestPermission();
+    if (permission === "granted") {
+      setPermissionState("granted");
+      await OS?.User?.PushSubscription?.optIn?.();
+      // Read and save player id after permission grant
+      let pid = OS.User?.PushSubscription?.id ?? null;
+      if (!pid && typeof OS.getUserId === "function") {
+        pid = await OS.getUserId();
+      }
+      if (typeof pid === "string" && pid) {
+        setPlayerId(pid);
+        await savePlayerIdToDb(pid);
+      }
+    } else if (permission === "denied") {
+      setPermissionState("denied");
+    } else {
+      setPermissionState("default");
+    }
+    return permission;
+  }, []);
+
+  return { playerId, isInitialized, permissionState, requestPermission };
+}
+
+/**
+ * Clears all OneSignal browser state (service workers, caches, storage).
+ * Intended to be called ONLY from a debug/reset UI, NOT on every mount.
+ */
+export async function clearOneSignalBrowserState() {
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(
+        regs
+          .filter((r) => /onesignal|OneSignalSDK/i.test(r.active?.scriptURL || ""))
+          .map((r) => r.unregister()),
+      );
+    }
+  } catch {}
+
+  try {
+    const keys = await caches.keys();
+    await Promise.all(
+      keys
+        .filter((k) => k.toLowerCase().includes("onesignal") || k.toLowerCase().includes("os_"))
+        .map((k) => caches.delete(k)),
+    );
+  } catch {}
+
+  try {
+    Object.keys(localStorage).forEach((k) => {
+      if (k.toLowerCase().includes("onesignal") || k.toLowerCase().startsWith("os_")) {
+        localStorage.removeItem(k);
+      }
+    });
+    Object.keys(sessionStorage).forEach((k) => {
+      if (k.toLowerCase().includes("onesignal") || k.toLowerCase().startsWith("os_")) {
+        sessionStorage.removeItem(k);
+      }
+    });
+    indexedDB?.deleteDatabase("OneSignalSDKStore");
+    indexedDB?.deleteDatabase("OneSignalIndexedDB");
+  } catch {}
 }
 
 declare global {
