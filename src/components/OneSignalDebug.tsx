@@ -139,37 +139,12 @@ export const OneSignalDebug: React.FC = () => {
 
   const handleResetOneSignal = async () => {
     try {
-      console.log("🔄 Resetuji OneSignal...");
-
-      // 1. OptOut
+      // OptOut first
       try {
         await window.OneSignal?.User?.PushSubscription?.optOut?.();
-      } catch (e) {}
+      } catch {}
 
-      // 2. Unregister SW
-      try {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(
-          regs.filter((r) => /OneSignalSDK/.test(r.active?.scriptURL || "")).map((r) => r.unregister()),
-        );
-      } catch (e) {}
-
-      // 3. Clear cache
-      try {
-        const keys = await caches.keys();
-        await Promise.all(keys.filter((k) => k.toLowerCase().includes("onesignal")).map((k) => caches.delete(k)));
-      } catch (e) {}
-
-      // 4. Clear storage
-      try {
-        Object.keys(localStorage).forEach((k) => {
-          if (k.toLowerCase().includes("onesignal") || k.toLowerCase().startsWith("os_")) {
-            localStorage.removeItem(k);
-          }
-        });
-        indexedDB?.deleteDatabase("OneSignalSDKStore");
-        indexedDB?.deleteDatabase("OneSignalIndexedDB");
-      } catch (e) {}
+      await clearOneSignalBrowserState();
 
       toast({
         title: "✅ OneSignal resetován",
