@@ -10,12 +10,10 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: true,
     port: 8080,
-    hmr: isLovableSandbox
-      ? {
-          protocol: "wss",
-          clientPort: 443,
-        }
-      : undefined,
+    // Stabilize Lovable preview: the proxy can drop the Vite HMR websocket,
+    // which causes the client to enter a reload loop. Disable HMR only in
+    // the sandbox so the page stays mounted; local dev keeps normal HMR.
+    hmr: isLovableSandbox ? false : undefined,
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
