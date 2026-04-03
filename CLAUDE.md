@@ -92,3 +92,19 @@ Technical:
 - Must appear immediately
 - Realtime is fallback
 - No duplicates
+
+---
+
+## Git workflow rule
+
+After ANY code change that is confirmed working:
+1. git add .
+2. git commit -m "<short clear message>"
+3. git push
+
+Rules:
+- NEVER push broken code
+- ALWAYS test before push
+- NEVER skip push after confirmed fix
+
+---
