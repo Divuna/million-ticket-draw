@@ -429,14 +429,16 @@ export default function MessagesPage() {
         (payload) => {
           const newMessage = payload.new as Message;
 
-          // Immediately switch mode ref when a real admin message arrives — before re-render
-          if (
-            (newMessage.sender === "admin" || newMessage.sender === "support") &&
-            newMessage.content?.trim() &&
-            newMessage.content !== SUPPORT_REQUEST_MARKER &&
-            newMessage.content !== SUPPORT_CHAT_ENDED_MESSAGE
-          ) {
-            chatModeRef.current = "admin";
+          // Immediately sync mode ref before React re-renders — prevents stale reads in handleSend
+          if (newMessage.sender === "admin" || newMessage.sender === "support") {
+            if (newMessage.content === SUPPORT_CHAT_ENDED_MESSAGE) {
+              chatModeRef.current = "ai";
+            } else if (
+              newMessage.content?.trim() &&
+              newMessage.content !== SUPPORT_REQUEST_MARKER
+            ) {
+              chatModeRef.current = "admin";
+            }
           }
 
           setMessages((prev) => {
@@ -805,8 +807,9 @@ export default function MessagesPage() {
   }, []);
 
   const chatMode = useMemo(() => computeChatMode(messages), [messages]);
-  const chatModeRef = useRef(chatMode);
-  chatModeRef.current = chatMode;
+  const chatModeRef = useRef<'ai' | 'admin'>('ai');
+  // Sync ref after commit — never override during render (would clobber immediate realtime sets)
+  useEffect(() => { chatModeRef.current = chatMode; }, [chatMode]);
 
   /** Send pipeline (button / Enter). AI reply comes back in the same await — no DB poll needed. */
   const handleSend = async () => {
