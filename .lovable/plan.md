@@ -1,35 +1,61 @@
 
+Do I know what the issue is? Yes. At this point it no longer looks like a Vite port/security-header problem. The stronger suspects are:
 
-## Diagnosis: Preview is blank due to lost HMR connection
+1. `tsconfig.node.tsbuildinfo` and `tsconfig.app.tsbuildinfo` are generated cache files sitting in the repo root, while `.gitignore` does not ignore `*.tsbuildinfo`. Those files can be rewritten by typecheck/build tooling and trigger repeated preview restarts.
+2. `src/hooks/useOneSignal.ts` is mounted globally from `src/App.tsx` and does heavy startup work for logged-in users: unregistering OneSignal service workers, clearing caches/storage, and automatically calling `OneSignal.Notifications.requestPermission()`. That is risky inside the Lovable preview iframe and can make the app briefly load and then become unstable.
 
-### What happened
-The previous change to `vite.config.ts` caused the Vite dev server to restart. The client (preview iframe) lost its WebSocket connection and is stuck in "Polling for restart..." mode. 
+What I checked
+- `vite.config.ts` is now aligned with Lovable (`port: 8080`, `wss`, `clientPort: 443`).
+- I did not find blocking security headers in `vercel.json`; `middleware.ts` does not affect `/`.
+- Console logs show only React Router warnings plus repeated `[Admin Realtime] Not admin, skipping subscriptions`, which suggests remount/restart churn rather than one clean fatal crash.
+- `.gitignore` currently does not ignore `*.tsbuildinfo`.
+- `useOneSignal` contains aggressive browser-reset logic and an automatic permission request on app load.
 
-### Evidence
-- **Dev server is running fine** — Vite started successfully on port 8080 at 14:12:29
-- **TypeScript compiles** — zero errors
-- **Vite build succeeds** — full production build completes in 16s
-- **Console log**: `[vite] server connection lost. Polling for restart...`
-- **Network**: Vite ping requests return 204 (healthy)
-- The `vite.config.ts` has `port: 5173` but the sandbox runs on `--port 8080` (overridden by CLI flag). This is harmless but could confuse HMR reconnection.
+Plan
+1. Stop generated-file restart churn
+   - add `*.tsbuildinfo` to `.gitignore`
+   - remove `tsconfig.node.tsbuildinfo` and `tsconfig.app.tsbuildinfo` from tracked/project edits
+   - treat them as disposable local artifacts only
 
-### Fix Plan
+2. Stabilize startup side effects
+   - remove automatic notification permission requests from normal app mount
+   - stop clearing OneSignal service workers/caches/storage on every startup
+   - keep reset logic only behind an explicit debug/reset action
 
-**Step 1: Fix the port in vite.config.ts**
-Change `port: 5173` to `port: 8080` to match the actual sandbox port. This eliminates any mismatch that could interfere with HMR reconnection.
+3. Harden the app shell
+   - clean up `src/App.tsx` so app-level hooks stay unconditional and predictable
+   - reduce repeated parallel `useUserRole()` fetches across the shell where possible
 
-```typescript
-server: {
-  host: true,
-  port: 8080,  // was 5173
-  hmr: isLovableSandbox
-    ? { protocol: "wss", clientPort: 443 }
-    : undefined,
-},
+4. Verify after the fix
+   - homepage stays open when logged out
+   - homepage stays open when logged in
+   - refresh does not restart the preview loop
+   - if the issue remains only when logged in, the remaining suspect is the OneSignal path
+
+Files to update
+- `.gitignore`
+- `src/App.tsx`
+- `src/hooks/useOneSignal.ts`
+
+Technical detail
+```text
+Most likely current loop
+
+tool/typecheck rewrites *.tsbuildinfo
+-> Lovable detects project file changes
+-> preview/dev process restarts
+-> iframe reloads again
+
+and/or for signed-in users
+
+AppContent mounts
+-> useOneSignal runs globally
+-> clears SW/cache/storage + requests permission
+-> preview becomes unstable
+-> page loads briefly, then falls again
 ```
 
-This single change should trigger a server restart and restore the preview connection.
-
-### Why it should work
-The sandbox runs `vite --port 8080`, which overrides the config. But having them match avoids any edge cases where the HMR client gets confused about which port to reconnect to. After this change, the server restarts cleanly and the preview iframe should reconnect.
-
+Expected result
+- preview stops endlessly loading/falling
+- editor becomes usable again
+- notifications remain possible, but only after explicit user action
