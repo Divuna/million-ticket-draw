@@ -450,6 +450,9 @@ export default function MessagesPage() {
               return [...prev, newMessage];
             }
 
+            // Block stale in-flight AI messages from appearing in admin mode
+            if (newMessage.sender === "ai" && chatModeRef.current === "admin") return prev;
+
             if (!newMessage.content || newMessage.content.trim() === "") return prev;
 
             return [...prev, newMessage];
@@ -620,6 +623,9 @@ export default function MessagesPage() {
       return sorted;
     });
     console.log("MESSAGES IN STATE", rows);
+
+    // Set mode ref immediately from loaded rows — before useEffect([chatMode]) runs
+    chatModeRef.current = computeChatMode(rows as Message[]);
 
     const more = (data?.length ?? 0) === CHAT_PAGE_SIZE;
     setHasMoreOlder(more);
