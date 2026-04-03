@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useOneSignal } from "@/hooks/useOneSignal";
+import { useOneSignal, clearOneSignalBrowserState } from "@/hooks/useOneSignal";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { RefreshCw, Bell, Database } from "lucide-react";
@@ -10,7 +10,7 @@ import { toast } from "@/components/ui/use-toast";
 
 export const OneSignalDebug: React.FC = () => {
   const { user } = useAuth();
-  const { playerId, permissionState } = useOneSignal();
+  const { playerId, permissionState, requestPermission } = useOneSignal();
   const [deviceCount, setDeviceCount] = useState<number>(0);
   const ONESIGNAL_APP_ID = "357be038-dbaf-4551-9a16-96d9897197a3";
   const appId = ONESIGNAL_APP_ID;
@@ -114,34 +114,23 @@ export const OneSignalDebug: React.FC = () => {
 
   const handleRequestPermission = async () => {
     try {
-      console.log("ONESIGNAL APP ID USED:", appId);
-
-      const OS = (window as any).OneSignal;
-      if (!OS?.Notifications?.requestPermission) {
+      const result = await requestPermission();
+      if (result) {
+        toast({
+          title: "✅ Žádost odeslána",
+          description: `Výsledek: ${result}`,
+        });
+      } else {
         toast({
           title: "⚠️ OneSignal není inicializován",
           description: "Zkuste prosím obnovit stránku nebo znovu se přihlásit.",
           variant: "destructive",
         });
-        return;
       }
-
-      // Request permission prompt (init is handled by useOneSignal after login)
-      const permission = await OS.Notifications.requestPermission();
-      console.log("[OneSignalDebug] permission result:", permission);
-
-      if (permission === "granted") {
-        await OS?.User?.PushSubscription?.optIn?.();
-      }
-      
-      toast({
-        title: "✅ Žádost odeslána",
-        description: "Povolte prosím push notifikace v dialogu prohlížeče",
-      });
     } catch (error) {
-      console.error("[OneSignalDebug] Init error:", error);
+      console.error("[OneSignalDebug] Permission error:", error);
       toast({
-        title: "❌ Chyba inicializace",
+        title: "❌ Chyba",
         description: String(error),
         variant: "destructive",
       });
@@ -150,37 +139,12 @@ export const OneSignalDebug: React.FC = () => {
 
   const handleResetOneSignal = async () => {
     try {
-      console.log("🔄 Resetuji OneSignal...");
-
-      // 1. OptOut
+      // OptOut first
       try {
         await window.OneSignal?.User?.PushSubscription?.optOut?.();
-      } catch (e) {}
+      } catch {}
 
-      // 2. Unregister SW
-      try {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(
-          regs.filter((r) => /OneSignalSDK/.test(r.active?.scriptURL || "")).map((r) => r.unregister()),
-        );
-      } catch (e) {}
-
-      // 3. Clear cache
-      try {
-        const keys = await caches.keys();
-        await Promise.all(keys.filter((k) => k.toLowerCase().includes("onesignal")).map((k) => caches.delete(k)));
-      } catch (e) {}
-
-      // 4. Clear storage
-      try {
-        Object.keys(localStorage).forEach((k) => {
-          if (k.toLowerCase().includes("onesignal") || k.toLowerCase().startsWith("os_")) {
-            localStorage.removeItem(k);
-          }
-        });
-        indexedDB?.deleteDatabase("OneSignalSDKStore");
-        indexedDB?.deleteDatabase("OneSignalIndexedDB");
-      } catch (e) {}
+      await clearOneSignalBrowserState();
 
       toast({
         title: "✅ OneSignal resetován",
