@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useOneSignal } from "@/hooks/useOneSignal";
+import { useOneSignal, clearOneSignalBrowserState } from "@/hooks/useOneSignal";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { RefreshCw, Bell, Database } from "lucide-react";
