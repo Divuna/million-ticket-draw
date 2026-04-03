@@ -433,8 +433,6 @@ export default function MessagesPage() {
             const exists = prev.some((m) => m.id === newMessage.id);
             if (exists) return prev;
 
-            if (newMessage.sender === "ai") return prev;
-
             if (!newMessage.content || newMessage.content.trim() === "") return prev;
 
             return [...prev, newMessage];
@@ -462,7 +460,7 @@ export default function MessagesPage() {
       setUserName(fullName);
     };
     fetchName();
-  }, [user]);
+  }, [user?.id]);
 
   const pinToBottomInstant = useCallback(() => {
     const el = scrollRef.current;
@@ -841,7 +839,9 @@ export default function MessagesPage() {
           setLastUserMessageAt(userMessage.created_at);
           console.log("SETTING STATE");
           setMessages((prev) => {
-            const replacedUser = prev.map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
+            const replacedUser = prev
+              .filter((m) => m.id !== userMessage.id)
+              .map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
             let next: Message[] = replacedUser;
             if (aiMessage) {
               const ai = aiMessage as Message;
@@ -879,14 +879,13 @@ export default function MessagesPage() {
         setLastUserMessageAt(userMessage.created_at);
         console.log("SETTING STATE");
         setMessages((prev) => {
-          const replacedUser = prev.map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
+          const replacedUser = prev
+            .filter((m) => m.id !== userMessage.id)
+            .map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
           let next: Message[] = replacedUser;
           if (aiMessage) {
             const ai = aiMessage as Message;
-            const text = parseMessageContent(ai.content).text?.trim();
-            if (text) {
-              next = [...replacedUser.filter((m) => m.id !== ai.id), ai];
-            }
+            next = [...replacedUser.filter((m) => m.id !== ai.id), ai];
           }
           const merged = sortMessagesByCreatedAtAsc(next);
           messagesRef.current = merged;

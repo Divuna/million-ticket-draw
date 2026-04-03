@@ -71,3 +71,24 @@ After every file change, always run:
 git add -A && git commit -m "fix: <short description of change>" && git push
 
 Never leave changes without pushing to GitHub.
+
+## Chat system rules
+
+Modes:
+- AI mode (Bob active)
+- ADMIN mode (Bob off after first admin message)
+
+Flow:
+- AI responds to user messages
+- User can request support
+- AI continues until admin sends first message
+- First admin message switches to ADMIN mode
+- AI must stop immediately
+- Admin handles chat
+- When support ends, switch back to AI mode
+
+Technical:
+- AI messages come from ai-chat via reply_message_id
+- Must appear immediately
+- Realtime is fallback
+- No duplicates

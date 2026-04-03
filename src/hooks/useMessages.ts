@@ -80,7 +80,8 @@ export const useMessages = () => {
       console.log("[useMessages] reply_message_id", replyMessageId);
 
       if (typeof replyMessageId !== "string" || !replyMessageId) {
-        throw new Error(`ai-chat returned no reply_message_id — got: ${JSON.stringify(aiData)}`);
+        console.warn("[useMessages] ai-chat returned no reply_message_id — got:", JSON.stringify(aiData));
+        return { userMessage: userMessage as ConversationMessage, aiMessage: null };
       }
 
       // Step 3: fetch the settled AI row (it exists in DB by the time invoke() returned)
