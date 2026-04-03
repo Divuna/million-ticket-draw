@@ -9,7 +9,7 @@ const isLovableSandbox = Boolean(process.env.LOVABLE_SANDBOX || process.env.LOVA
 export default defineConfig(({ mode }) => ({
   server: {
     host: true,
-    port: 5173,
+    port: 8080,
     hmr: isLovableSandbox
       ? {
           protocol: "wss",
