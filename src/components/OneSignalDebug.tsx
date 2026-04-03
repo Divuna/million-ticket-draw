@@ -114,34 +114,23 @@ export const OneSignalDebug: React.FC = () => {
 
   const handleRequestPermission = async () => {
     try {
-      console.log("ONESIGNAL APP ID USED:", appId);
-
-      const OS = (window as any).OneSignal;
-      if (!OS?.Notifications?.requestPermission) {
+      const result = await requestPermission();
+      if (result) {
+        toast({
+          title: "✅ Žádost odeslána",
+          description: `Výsledek: ${result}`,
+        });
+      } else {
         toast({
           title: "⚠️ OneSignal není inicializován",
           description: "Zkuste prosím obnovit stránku nebo znovu se přihlásit.",
           variant: "destructive",
         });
-        return;
       }
-
-      // Request permission prompt (init is handled by useOneSignal after login)
-      const permission = await OS.Notifications.requestPermission();
-      console.log("[OneSignalDebug] permission result:", permission);
-
-      if (permission === "granted") {
-        await OS?.User?.PushSubscription?.optIn?.();
-      }
-      
-      toast({
-        title: "✅ Žádost odeslána",
-        description: "Povolte prosím push notifikace v dialogu prohlížeče",
-      });
     } catch (error) {
-      console.error("[OneSignalDebug] Init error:", error);
+      console.error("[OneSignalDebug] Permission error:", error);
       toast({
-        title: "❌ Chyba inicializace",
+        title: "❌ Chyba",
         description: String(error),
         variant: "destructive",
       });
