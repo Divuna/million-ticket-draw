@@ -1,30 +1,35 @@
 
 
-## Problem
+## Diagnosis: Preview is blank due to lost HMR connection
 
-The "Připravujeme" section on the homepage shows empty placeholder cards because the `coming_soon_banners` table has Row Level Security (RLS) enabled with only an admin policy. Regular and anonymous users cannot read the data.
+### What happened
+The previous change to `vite.config.ts` caused the Vite dev server to restart. The client (preview iframe) lost its WebSocket connection and is stuck in "Polling for restart..." mode. 
 
-The images themselves are stored correctly in the `banner-images` bucket (which is public), and the URLs in the database are valid full public URLs. The issue is purely an RLS policy problem.
+### Evidence
+- **Dev server is running fine** — Vite started successfully on port 8080 at 14:12:29
+- **TypeScript compiles** — zero errors
+- **Vite build succeeds** — full production build completes in 16s
+- **Console log**: `[vite] server connection lost. Polling for restart...`
+- **Network**: Vite ping requests return 204 (healthy)
+- The `vite.config.ts` has `port: 5173` but the sandbox runs on `--port 8080` (overridden by CLI flag). This is harmless but could confuse HMR reconnection.
 
-## Root Cause
+### Fix Plan
 
-- Table `coming_soon_banners` has RLS enabled
-- Only policy: `Admins can manage coming soon banners` (ALL for admin/superadmin roles)
-- No SELECT policy exists for anonymous or authenticated users
-- Homepage queries this table as the current user, which gets zero rows back
+**Step 1: Fix the port in vite.config.ts**
+Change `port: 5173` to `port: 8080` to match the actual sandbox port. This eliminates any mismatch that could interfere with HMR reconnection.
 
-## Plan
-
-**Step 1: Add a public SELECT RLS policy** on `coming_soon_banners` to allow everyone (including anonymous visitors) to read banners.
-
-```sql
-CREATE POLICY "Anyone can view coming soon banners"
-  ON public.coming_soon_banners
-  FOR SELECT
-  USING (true);
+```typescript
+server: {
+  host: true,
+  port: 8080,  // was 5173
+  hmr: isLovableSandbox
+    ? { protocol: "wss", clientPort: 443 }
+    : undefined,
+},
 ```
 
-This is safe because the table only contains public display data (id, image_url, title, created_at) with no sensitive information.
+This single change should trigger a server restart and restore the preview connection.
 
-No code changes needed -- the frontend logic in `Homepage.tsx` and `useComingSoonBanners.ts` is already correct.
+### Why it should work
+The sandbox runs `vite --port 8080`, which overrides the config. But having them match avoids any edge cases where the HMR client gets confused about which port to reconnect to. After this change, the server restarts cleanly and the preview iframe should reconnect.
 
