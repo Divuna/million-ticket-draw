@@ -447,7 +447,7 @@ export default function MessagesPage() {
 
             // Always append admin/support messages — do not filter out
             if (newMessage.sender === "admin" || newMessage.sender === "support") {
-              return [...prev, newMessage];
+              return sortMessagesByCreatedAtAsc([...prev, newMessage]);
             }
 
             // Block stale in-flight AI messages from appearing in admin mode
@@ -455,7 +455,22 @@ export default function MessagesPage() {
 
             if (!newMessage.content || newMessage.content.trim() === "") return prev;
 
-            return [...prev, newMessage];
+            // For user messages: replace matching optimistic instead of appending alongside it
+            if (newMessage.sender === "user") {
+              const optIdx = prev.findIndex(
+                (m) =>
+                  m.id.startsWith(OPTIMISTIC_MESSAGE_ID_PREFIX) &&
+                  m.sender === "user" &&
+                  m.content === newMessage.content,
+              );
+              if (optIdx >= 0) {
+                const next = [...prev];
+                next[optIdx] = newMessage;
+                return sortMessagesByCreatedAtAsc(next);
+              }
+            }
+
+            return sortMessagesByCreatedAtAsc([...prev, newMessage]);
           });
         },
       )
@@ -883,11 +898,7 @@ export default function MessagesPage() {
           setIsAwaitingReply(false);
           toast({ title: "Odesláno" });
         } else {
-          setMessages((prev) =>
-            sortMessagesByCreatedAtAsc(
-              capAfterTailGrowth(prev.length, prev.filter((msg) => msg.id !== optimisticId)),
-            ),
-          );
+          // Keep optimistic visible — user message was saved to DB; realtime will replace it
           setIsAwaitingReply(false);
           toast({ title: "Chyba", description: "Odeslání selhalo", variant: "destructive" });
         }
@@ -921,11 +932,7 @@ export default function MessagesPage() {
         setIsAwaitingReply(false);
         toast({ title: "Odesláno" });
       } else {
-        setMessages((prev) =>
-          sortMessagesByCreatedAtAsc(
-            capAfterTailGrowth(prev.length, prev.filter((msg) => msg.id !== optimisticId)),
-          ),
-        );
+        // Keep optimistic visible — user message was saved to DB; realtime will replace it
         setIsAwaitingReply(false);
         toast({ title: "Chyba", description: "Odeslání selhalo", variant: "destructive" });
       }
