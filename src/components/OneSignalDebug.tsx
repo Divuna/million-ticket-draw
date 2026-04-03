@@ -10,7 +10,7 @@ import { toast } from "@/components/ui/use-toast";
 
 export const OneSignalDebug: React.FC = () => {
   const { user } = useAuth();
-  const { playerId, permissionState } = useOneSignal();
+  const { playerId, permissionState, requestPermission } = useOneSignal();
   const [deviceCount, setDeviceCount] = useState<number>(0);
   const ONESIGNAL_APP_ID = "357be038-dbaf-4551-9a16-96d9897197a3";
   const appId = ONESIGNAL_APP_ID;
