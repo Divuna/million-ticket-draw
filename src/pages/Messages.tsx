@@ -791,6 +791,10 @@ export default function MessagesPage() {
     setTimeout(() => setSparkles([]), 1000);
   }, []);
 
+  const chatMode = useMemo(() => computeChatMode(messages), [messages]);
+  const chatModeRef = useRef(chatMode);
+  chatModeRef.current = chatMode;
+
   /** Send pipeline (button / Enter). AI reply comes back in the same await — no DB poll needed. */
   const handleSend = async () => {
     if (!newMessage.trim() || sendInFlightRef.current) return;
@@ -817,7 +821,7 @@ export default function MessagesPage() {
         return sorted;
       });
       setLastUserMessageAt(optimisticCreatedAt);
-      setIsAwaitingReply(true);
+      setIsAwaitingReply(chatModeRef.current === 'ai');
     });
 
     setFlyingMessage({ id: Date.now(), content: messageContent });
@@ -826,7 +830,7 @@ export default function MessagesPage() {
 
     try {
       console.log("SEND START");
-      const mode = computeChatMode(messagesRef.current);
+      const mode = chatModeRef.current;
       if (mode === "admin") {
         const result = await sendMessageToAdmin(messageContent, { supportActive: true });
         console.log("RESULT", result);
