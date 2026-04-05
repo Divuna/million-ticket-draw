@@ -32,6 +32,57 @@ type CallbackBody = {
 
 const MESSAGE_TABLE = "messages";
 
+/** Loose UUID check for DB lookups by `messages.id` (avoids throwing on invalid uuid). */
+function isProbablyMessageUuid(s: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+}
+
+function userIdFromPayloadField(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const t = raw.trim();
+  return t.length > 0 ? t : null;
+}
+
+type ServiceSupabase = ReturnType<typeof createClient>;
+
+async function resolveUserIdFromMessageRow(
+  supabase: ServiceSupabase,
+  messageId: string,
+): Promise<string | null> {
+  if (!isProbablyMessageUuid(messageId)) return null;
+  const { data, error } = await supabase
+    .from(MESSAGE_TABLE)
+    .select("user_id")
+    .eq("id", messageId)
+    .maybeSingle();
+  if (error) {
+    logWarning("resolveUserIdFromMessageRow lookup failed", { messageId, error: error.message });
+    return null;
+  }
+  const uid = data?.user_id;
+  return typeof uid === "string" && uid.trim().length > 0 ? uid.trim() : null;
+}
+
+/**
+ * Prefer payload user_id; if missing/empty, resolve from `messages.id` when id is a UUID
+ * (correlation_id / callback_id often equals the originating user message id).
+ */
+async function resolveEffectiveUserId(
+  supabase: ServiceSupabase,
+  payloadUserId: unknown,
+  correlationOrMessageId: string | null,
+): Promise<string | null> {
+  const direct = userIdFromPayloadField(payloadUserId);
+  if (direct) return direct;
+  if (!correlationOrMessageId) return null;
+  const fromRow = await resolveUserIdFromMessageRow(supabase, correlationOrMessageId);
+  if (fromRow) return fromRow;
+  logWarning("user_id missing and could not resolve from messages.id", {
+    correlationOrMessageId,
+  });
+  return null;
+}
+
 function jsonResponse(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
     status,
@@ -136,17 +187,25 @@ serve(async (req) => {
       if (!body.payload || typeof body.payload !== "object") {
         return jsonResponse({ success: false, error: "Missing payload" }, 400);
       }
-      const { correlation_id, content, user_id } = body.payload;
+      const { correlation_id, content, user_id: payloadUserId } = body.payload;
       if (
         typeof correlation_id !== "string" ||
         correlation_id.length === 0 ||
-        typeof user_id !== "string" ||
-        user_id.length === 0 ||
         typeof content !== "string" ||
         content.length === 0
       ) {
-        logWarning("Missing or invalid ai_response payload fields", { correlation_id, user_id, hasContent: !!content });
-        return jsonResponse({ success: false, error: "Missing correlation_id, user_id, or content" }, 400);
+        logWarning("Missing or invalid ai_response payload fields", { correlation_id, hasContent: !!content });
+        return jsonResponse({ success: false, error: "Missing correlation_id or content" }, 400);
+      }
+
+      const user_id = await resolveEffectiveUserId(supabase, payloadUserId, correlation_id);
+      console.log("Sofinity user_id:", user_id);
+
+      if (!user_id) {
+        logWarning("ai_response skipped insert: no user_id after payload + DB resolution", {
+          correlation_id,
+        });
+        return jsonResponse({ success: true, event_name: "ai_response", correlation_id }, 200);
       }
 
       const { error: insertAiError } = await supabase.from(MESSAGE_TABLE).insert({
@@ -171,10 +230,7 @@ serve(async (req) => {
         body.payload && typeof body.payload.correlation_id === "string" && body.payload.correlation_id.length > 0
           ? body.payload.correlation_id
           : null;
-      const user_id =
-        body.payload && typeof body.payload.user_id === "string" && body.payload.user_id.length > 0
-          ? body.payload.user_id
-          : null;
+      const payloadUserId = body.payload?.user_id;
       const content =
         body.payload && typeof body.payload.content === "string" && body.payload.content.length > 0
           ? body.payload.content
@@ -189,19 +245,14 @@ serve(async (req) => {
         logWarning("Missing payload.correlation_id", { event_name: body.event_name });
         return jsonResponse({ success: false, error: "Missing payload.correlation_id" }, 400);
       }
-      if (!user_id) {
-        logWarning("Missing payload.user_id", { event_name: body.event_name, correlation_id });
-        return jsonResponse({ success: false, error: "Missing payload.user_id" }, 400);
-      }
       if (!content) {
-        logWarning("Missing payload.content", { event_name: body.event_name, correlation_id, user_id });
+        logWarning("Missing payload.content", { event_name: body.event_name, correlation_id });
         return jsonResponse({ success: false, error: "Missing payload.content" }, 400);
       }
 
       const { data: existing, error: existingError } = await supabase
         .from(MESSAGE_TABLE)
-        .select("id")
-        .eq("user_id", user_id)
+        .select("id, user_id")
         .eq("payload->>sofinity_correlation_id", correlation_id)
         .eq("payload->>source_event", body.event_name)
         .maybeSingle();
@@ -210,46 +261,56 @@ serve(async (req) => {
         logError("Failed to check existing message", {
           event_name: body.event_name,
           correlation_id,
-          user_id,
           error: existingError.message,
         });
         return jsonResponse({ success: false, error: existingError.message }, 500);
       }
 
+      const user_id = existing?.user_id && typeof existing.user_id === "string" && existing.user_id.trim().length > 0
+        ? existing.user_id.trim()
+        : await resolveEffectiveUserId(supabase, payloadUserId, correlation_id);
+      console.log("Sofinity user_id:", user_id);
+
       let insertedMessageId: string | null = null;
       if (!existing?.id) {
-        const sender = body.event_name === "ai_fallback" ? "admin" : "ai";
-        const { data: inserted, error: insertError } = await supabase
-          .from(MESSAGE_TABLE)
-          .insert({
-            user_id,
-            sender,
-            content,
-            private: true,
-            event: "sofinity_ai_result",
-            payload: {
-              sofinity_correlation_id: correlation_id,
-              original_message_id: correlation_id,
-              source_event: body.event_name,
-              requires_manual_reply: body.event_name === "ai_fallback",
-              ...(fallbackReason ? { reason: fallbackReason } : {}),
-            },
-          })
-          .select("id")
-          .single();
-
-        // Important for retry flow: non-200 so Sofinity can retry.
-        if (insertError) {
-          logError("Failed to insert callback message", {
-            event_name: body.event_name,
+        if (!user_id) {
+          logWarning("ai_fallback skipped insert: no user_id after payload + DB resolution", {
             correlation_id,
-            user_id,
-            sender,
-            error: insertError.message,
           });
-          return jsonResponse({ success: false, error: insertError.message }, 500);
+        } else {
+          const sender = body.event_name === "ai_fallback" ? "admin" : "ai";
+          const { data: inserted, error: insertError } = await supabase
+            .from(MESSAGE_TABLE)
+            .insert({
+              user_id,
+              sender,
+              content,
+              private: true,
+              event: "sofinity_ai_result",
+              payload: {
+                sofinity_correlation_id: correlation_id,
+                original_message_id: correlation_id,
+                source_event: body.event_name,
+                requires_manual_reply: body.event_name === "ai_fallback",
+                ...(fallbackReason ? { reason: fallbackReason } : {}),
+              },
+            })
+            .select("id")
+            .single();
+
+          // Important for retry flow: non-200 so Sofinity can retry.
+          if (insertError) {
+            logError("Failed to insert callback message", {
+              event_name: body.event_name,
+              correlation_id,
+              user_id,
+              sender,
+              error: insertError.message,
+            });
+            return jsonResponse({ success: false, error: insertError.message }, 500);
+          }
+          insertedMessageId = inserted.id;
         }
-        insertedMessageId = inserted.id;
       } else {
         insertedMessageId = existing.id;
       }
@@ -293,7 +354,7 @@ serve(async (req) => {
             user_id: adminUserId,
             type: "info",
             title: "AI chat fallback requires manual reply",
-            message: `User ${user_id} requires manual reply (${fallbackReason ?? "error"}).`,
+            message: `User ${user_id ?? correlation_id} requires manual reply (${fallbackReason ?? "error"}).`,
             status: "queued",
           }));
 
@@ -344,49 +405,53 @@ serve(async (req) => {
           : null;
 
     const meta = metadata ?? {};
-    const user_id =
-      typeof body.user_id === "string" && body.user_id.length > 0
-        ? body.user_id
-        : typeof meta.user_id === "string" && meta.user_id.length > 0
-          ? meta.user_id
-          : null;
+    const payloadUserIdLegacy =
+      userIdFromPayloadField(body.user_id) ?? userIdFromPayloadField(meta.user_id);
 
     if (!callback_id) {
       logWarning("Missing callback_id/message_id for legacy payload");
       return jsonResponse({ success: false, error: "Missing callback_id (or message_id)" }, 400);
     }
 
-    if (!user_id) {
-      logWarning("Missing user_id for legacy payload", { callback_id });
-      return jsonResponse({ success: false, error: "Missing user_id" }, 400);
-    }
-
     if (!content) {
-      logWarning("Missing content/response for legacy payload", { callback_id, user_id });
+      logWarning("Missing content/response for legacy payload", { callback_id });
       return jsonResponse({ success: false, error: "Missing content (or response)" }, 400);
     }
 
-    // Routing: ONLY fallback flag (never confidence / heuristics)
-    const sender = fallback === true ? "admin" : "ai";
-
     const { data: existing, error: existingError } = await supabase
       .from(MESSAGE_TABLE)
-      .select("id")
-      .eq("user_id", user_id)
+      .select("id, user_id")
       .eq("payload->>sofinity_callback_id", callback_id)
       .maybeSingle();
 
     if (existingError) {
       logError("Legacy existing message lookup failed", {
         callback_id,
-        user_id,
         error: existingError.message,
       });
       return jsonResponse({ success: false, error: existingError.message }, 500);
     }
 
+    const user_id = existing?.user_id && typeof existing.user_id === "string" && existing.user_id.trim().length > 0
+      ? existing.user_id.trim()
+      : await resolveEffectiveUserId(supabase, payloadUserIdLegacy, callback_id);
+    console.log("Sofinity user_id:", user_id);
+
+    // Routing: ONLY fallback flag (never confidence / heuristics)
+    const sender = fallback === true ? "admin" : "ai";
+
     if (existing?.id) {
       return jsonResponse({ success: true, idempotent: true, message_id: existing.id }, 200);
+    }
+
+    if (!user_id) {
+      logWarning("Legacy callback skipped insert: no user_id after payload + DB resolution", {
+        callback_id,
+      });
+      return jsonResponse(
+        { success: true, idempotent: false, message_id: null, sender },
+        200,
+      );
     }
 
     const payload = {
