@@ -811,6 +811,10 @@ export default function MessagesPage() {
     });
   }, [user?.id]);
 
+  const chatMode = useMemo(() => computeChatMode(messages), [messages]);
+  const chatModeRef = useRef<'ai' | 'admin'>('ai');
+  chatModeRef.current = chatMode;
+
   // Create sparkle effect
   const createSparkles = useCallback(() => {
     const newSparkles: Sparkle[] = [];
@@ -826,11 +830,6 @@ export default function MessagesPage() {
     setSparkles(newSparkles);
     setTimeout(() => setSparkles([]), 1000);
   }, []);
-
-  const chatMode = useMemo(() => computeChatMode(messages), [messages]);
-  const chatModeRef = useRef<'ai' | 'admin'>('ai');
-  // Sync ref after commit — never override during render (would clobber immediate realtime sets)
-  useEffect(() => { chatModeRef.current = chatMode; }, [chatMode]);
 
   /** Send pipeline (button / Enter). AI reply comes back in the same await — no DB poll needed. */
   const handleSend = async () => {
@@ -868,67 +867,34 @@ export default function MessagesPage() {
     try {
       console.log("SEND START");
       const mode = chatModeRef.current;
-      if (mode === "admin") {
-        const result = await sendMessageToAdmin(messageContent, { supportActive: true });
-        console.log("RESULT", result);
+      // Single routing decision — exactly one send path per message
+      console.log(`ROUTE: ${mode === "admin" ? "ADMIN" : "AI"}`);
 
-        if (result) {
-          const { userMessage, aiMessage } = result;
-          console.log("AI MESSAGE", aiMessage);
-          setLastUserMessageAt(userMessage.created_at);
-          console.log("SETTING STATE");
-          setMessages((prev) => {
-            const replacedUser = prev
-              .filter((m) => m.id !== userMessage.id)
-              .map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
-            let next: Message[] = replacedUser;
-            if (aiMessage) {
-              const ai = aiMessage as Message;
-              const text = parseMessageContent(ai.content).text?.trim();
-              if (text) {
-                next = [...replacedUser.filter((m) => m.id !== ai.id), ai];
-              }
-            }
-            const merged = sortMessagesByCreatedAtAsc(next);
-            messagesRef.current = merged;
-            return merged;
-          });
-          requestAnimationFrame(() => queuePinToBottom());
-          console.log("STATE SET DONE");
-          setIsAwaitingReply(false);
-          toast({ title: "Odesláno" });
-        } else {
-          // Keep optimistic visible — user message was saved to DB; realtime will replace it
-          setIsAwaitingReply(false);
-          toast({ title: "Chyba", description: "Odeslání selhalo", variant: "destructive" });
-        }
-        return;
-      }
-
-      const result = await sendMessageToAdmin(messageContent, { supportActive: false });
+      const result = await sendMessageToAdmin(messageContent, { supportActive: mode === "admin" });
       console.log("RESULT", result);
 
       if (result) {
         const { userMessage, aiMessage } = result;
-        console.log("AI MESSAGE", aiMessage);
         setLastUserMessageAt(userMessage.created_at);
-        console.log("SETTING STATE");
         setMessages((prev) => {
-          const replacedUser = prev
-            .filter((m) => m.id !== userMessage.id)
-            .map((m) => (m.id === optimisticId ? (userMessage as Message) : m));
-          let next: Message[] = replacedUser;
-          // Only inject AI message if still in AI mode — admin may have written mid-await
-          if (aiMessage && chatModeRef.current === "ai") {
+          // Remove optimistic placeholder, dedup real row (realtime may have placed it already),
+          // then re-insert the confirmed real row — message can never disappear.
+          const withoutOptimistic = prev.filter((m) => m.id !== optimisticId);
+          const withoutDup = withoutOptimistic.filter((m) => m.id !== userMessage.id);
+          let next: Message[] = [...withoutDup, userMessage as Message];
+          // Inject AI reply only when route was AI and we are still in AI mode
+          if (mode === "ai" && aiMessage && chatModeRef.current === "ai") {
             const ai = aiMessage as Message;
-            next = [...replacedUser.filter((m) => m.id !== ai.id), ai];
+            const text = parseMessageContent(ai.content).text?.trim();
+            if (text && !next.some((m) => m.id === ai.id)) {
+              next = [...next, ai];
+            }
           }
           const merged = sortMessagesByCreatedAtAsc(next);
           messagesRef.current = merged;
           return merged;
         });
         requestAnimationFrame(() => queuePinToBottom());
-        console.log("STATE SET DONE");
         setIsAwaitingReply(false);
         toast({ title: "Odesláno" });
       } else {
