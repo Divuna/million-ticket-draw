@@ -903,7 +903,7 @@ export default function MessagesPage() {
           // Inject AI reply only when route was AI and we are still in AI mode.
           // Double-check committed state (prev) alongside the ref — if admin has already
           // been placed in state by the time this updater runs, suppress the AI reply.
-          if (mode === "ai" && aiMessage && computeChatMode(prev) === "ai") {
+          if (aiMessage && computeChatMode(prev) === "ai") {
             const ai = aiMessage as Message;
             const text = parseMessageContent(ai.content).text?.trim();
             if (text && !next.some((m) => m.id === ai.id)) {
