@@ -9,6 +9,7 @@ import { NavigateToLogin } from "@/components/NavigateToLogin";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { AI_ASSISTANT_BOB_LABEL } from "@/constants/messagesUi";
+import { SUPPORT_REQUEST_MARKER } from "@/constants/supportRequestMarker";
 
 function parseMessageContent(content: string): { text: string; cta?: { label: string; action: string } } {
   try {
@@ -214,6 +215,14 @@ export default function AdminMessageThread() {
       loadMessages();
       return;
     }
+
+    await supabase
+      .from("messages")
+      .update({ read: true })
+      .eq("user_id", userId)
+      .eq("sender", "admin")
+      .eq("content", SUPPORT_REQUEST_MARKER)
+      .eq("read", false);
 
     loadMessages();
   };
