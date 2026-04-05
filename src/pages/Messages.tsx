@@ -619,7 +619,7 @@ export default function MessagesPage() {
         );
 
         if (existingIndex >= 0) {
-          // Already have exact DB row — skip
+          merged[existingIndex] = row as unknown as Message;
           return;
         }
 
@@ -905,7 +905,12 @@ export default function MessagesPage() {
           // been placed in state by the time this updater runs, suppress the AI reply.
           if (aiMessage && computeChatMode(prev) === "ai") {
             const ai = aiMessage as Message;
-            if (!next.some((m) => m.id === ai.id)) {
+            const aiIdx = next.findIndex((m) => m.id === ai.id);
+            if (aiIdx >= 0) {
+              const updated = [...next];
+              updated[aiIdx] = ai;
+              next = updated;
+            } else {
               next = [...next, ai];
             }
           }
