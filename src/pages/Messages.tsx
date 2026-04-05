@@ -450,8 +450,11 @@ export default function MessagesPage() {
               return sortMessagesByCreatedAtAsc([...prev, newMessage]);
             }
 
-            // Block stale in-flight AI messages from appearing in admin mode
-            if (newMessage.sender === "ai" && chatModeRef.current === "admin") return prev;
+            // Block stale in-flight AI messages from appearing in admin mode.
+            // Check both the ref (immediate) and the committed state (source of truth)
+            // so duplicate suppression works even when chatModeRef is briefly stale.
+            if (newMessage.sender === "ai" &&
+                (chatModeRef.current === "admin" || computeChatMode(prev) === "admin")) return prev;
 
             if (!newMessage.content || newMessage.content.trim() === "") return prev;
 
@@ -813,7 +816,12 @@ export default function MessagesPage() {
 
   const chatMode = useMemo(() => computeChatMode(messages), [messages]);
   const chatModeRef = useRef<'ai' | 'admin'>('ai');
-  chatModeRef.current = chatMode;
+  // Only advance toward "admin" from rendered state — never retrograde to "ai".
+  // The "ai" direction is handled by the realtime callback (SUPPORT_CHAT_ENDED_MESSAGE)
+  // and by loadMessages. A stale render can compute chatMode="ai" before the admin
+  // message lands in `messages`, which would clobber the ref already set by the
+  // realtime callback — that is the root cause of both BUG-1 and BUG-2.
+  if (chatMode === "admin") chatModeRef.current = chatMode;
 
   // Create sparkle effect
   const createSparkles = useCallback(() => {
@@ -882,8 +890,11 @@ export default function MessagesPage() {
           const withoutOptimistic = prev.filter((m) => m.id !== optimisticId);
           const withoutDup = withoutOptimistic.filter((m) => m.id !== userMessage.id);
           let next: Message[] = [...withoutDup, userMessage as Message];
-          // Inject AI reply only when route was AI and we are still in AI mode
-          if (mode === "ai" && aiMessage && chatModeRef.current === "ai") {
+          // Inject AI reply only when route was AI and we are still in AI mode.
+          // Double-check committed state (prev) alongside the ref — if admin has already
+          // been placed in state by the time this updater runs, suppress the AI reply.
+          if (mode === "ai" && aiMessage &&
+              chatModeRef.current === "ai" && computeChatMode(prev) === "ai") {
             const ai = aiMessage as Message;
             const text = parseMessageContent(ai.content).text?.trim();
             if (text && !next.some((m) => m.id === ai.id)) {

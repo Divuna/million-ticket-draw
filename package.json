@@ -12,6 +12,7 @@
     "diagnose:push": "node scripts/diagnose-push.mjs",
     "e2e:contest-flow": "node scripts/e2e-contest-flow-full.mjs",
     "test:concurrency": "node scripts/concurrency-test-race-condition.mjs",
+    "test:chat-mode": "node scripts/test-chat-mode.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
