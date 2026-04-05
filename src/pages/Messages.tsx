@@ -765,6 +765,15 @@ export default function MessagesPage() {
     })();
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Polling fallback when Realtime is unavailable (e.g. preview); loadMessages merges by id — no blind overwrite.
+  useEffect(() => {
+    if (!user?.id) return;
+    const id = window.setInterval(() => {
+      void loadMessagesRef.current();
+    }, 2000);
+    return () => window.clearInterval(id);
+  }, [user?.id]);
+
   const showTypingIndicator = isAwaitingReply;
 
   const lastUserMessage = useMemo(() => {
