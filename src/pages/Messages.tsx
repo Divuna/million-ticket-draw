@@ -905,8 +905,7 @@ export default function MessagesPage() {
           // been placed in state by the time this updater runs, suppress the AI reply.
           if (aiMessage && computeChatMode(prev) === "ai") {
             const ai = aiMessage as Message;
-            const text = parseMessageContent(ai.content).text?.trim();
-            if (text && !next.some((m) => m.id === ai.id)) {
+            if (!next.some((m) => m.id === ai.id)) {
               next = [...next, ai];
             }
           }
