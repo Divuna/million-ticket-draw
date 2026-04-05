@@ -50,11 +50,10 @@ export default function AdminMessageThread() {
   const [newMessage, setNewMessage] = useState("");
   const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
 
-  const supportEnded = messages.some(
-    (m) =>
-      m.sender === "admin" &&
-      m.content === SUPPORT_CHAT_ENDED_MESSAGE
-  );
+  const supportEnded =
+    messages.length > 0 &&
+    messages[messages.length - 1].sender === "admin" &&
+    messages[messages.length - 1].content === SUPPORT_CHAT_ENDED_MESSAGE;
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
