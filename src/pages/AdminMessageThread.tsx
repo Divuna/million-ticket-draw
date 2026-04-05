@@ -50,6 +50,12 @@ export default function AdminMessageThread() {
   const [newMessage, setNewMessage] = useState("");
   const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
 
+  const supportEnded = messages.some(
+    (m) =>
+      m.sender === "admin" &&
+      m.content === SUPPORT_CHAT_ENDED_MESSAGE
+  );
+
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const scrollToBottom = () => {
@@ -181,6 +187,7 @@ export default function AdminMessageThread() {
 
   const handleEndSupportChat = async () => {
     if (!userId || !user || !isAdmin) return;
+    if (supportEnded) return;
 
     const nowIso = new Date().toISOString();
     const optimistic: Message = {
@@ -392,6 +399,7 @@ export default function AdminMessageThread() {
         <button
           type="button"
           onClick={handleEndSupportChat}
+          disabled={supportEnded || loading}
           className="px-5 rounded-lg bg-[hsl(220,25%,14%)] hover:bg-[hsl(220,25%,18%)] text-foreground border border-[hsl(45,70%,50%,0.25)]"
         >
           Ukončit chat
