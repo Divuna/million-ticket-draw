@@ -427,6 +427,7 @@ export default function MessagesPage() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${uid}` },
         (payload) => {
+          console.log("REALTIME EVENT:", payload);
           const newMessage = payload.new as Message;
 
           // Immediately sync mode ref before React re-renders — prevents stale reads in handleSend
