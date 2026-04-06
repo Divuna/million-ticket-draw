@@ -788,9 +788,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
     if (distributionType === "even") {
       // Evenly spaced positions
-      const spacing = Math.floor(ticketCount / (computedPositionCount + 1));
+      const spacing = Math.max(1, Math.floor(ticketCount / (computedPositionCount + 1)));
       for (let i = 1; i <= computedPositionCount; i++) {
         let position = spacing * i;
+        if (position < 1) continue;
         // Adjust if position is already used
         while (usedPositions.has(position) && position <= ticketCount) {
           position++;
