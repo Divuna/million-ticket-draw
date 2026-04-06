@@ -81,7 +81,7 @@ serve(async (req) => {
         main_prize,
         main_image,
         status: status || 'draft',
-        ticket_count: ticket_count || 1000000,
+        ticket_count: ticket_count,
         ticket_price: ticket_price || 1
       })
       .select()
