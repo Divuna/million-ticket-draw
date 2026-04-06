@@ -755,8 +755,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }));
   };
 
+  const ticketCount = form.ticket_count || 1000000;
+
   // Computed number of positions
-  const computedPositionCount = stepValue > 0 ? Math.floor(totalMioCoinsInput / stepValue) : 0;
+  const originalComputedPositionCount = stepValue > 0 ? Math.floor(totalMioCoinsInput / stepValue) : 0;
+  const computedPositionCount = Math.min(
+    originalComputedPositionCount,
+    ticketCount
+  );
 
   // MioCoin bonus generation - saves immediately to DB when editing existing contest
   const generateMioCoinBonuses = async () => {
@@ -784,7 +790,6 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     ]);
 
     const newBonuses: MioCoinBonus[] = [];
-    const ticketCount = form.ticket_count || 1000000;
 
     if (distributionType === "even") {
       // Evenly spaced positions
