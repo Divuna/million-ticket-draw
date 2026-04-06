@@ -1024,6 +1024,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             }
           );
 
+          console.log("distributionError", distributionError);
+          console.log("distributionResult", distributionResult);
+
           if (distributionError) {
             throw new Error(`Chyba při generování MioCoin bonusů: ${distributionError.message}`);
           }
