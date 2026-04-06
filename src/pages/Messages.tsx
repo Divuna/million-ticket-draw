@@ -415,6 +415,10 @@ export default function MessagesPage() {
   messagesRef.current = messages;
   currentUserIdRef.current = user?.id;
 
+  const visibleMessages = messages.filter(
+    (m) => m.content !== "SUPPORT REQUEST"
+  );
+
   // Realtime: merge new messages instantly (admin replies, ai replies, etc).
   useEffect(() => {
     const uid = user?.id;
@@ -1057,7 +1061,7 @@ export default function MessagesPage() {
               scrollbarColor: 'hsl(45, 70%, 40%, 0.3) transparent',
             }}
           >
-          {messages.length === 0 && !loading && (
+          {visibleMessages.length === 0 && !loading && (
             <div 
               className="flex flex-col items-center justify-center h-full text-center py-12"
               style={{ animation: 'fade-in 0.5s ease-out' }}
@@ -1077,7 +1081,7 @@ export default function MessagesPage() {
           )}
 
           <MessagesThreadList
-            messages={messages}
+            messages={visibleMessages}
             userName={userName}
             supportSent={supportSent}
             setSupportSent={setSupportSent}
