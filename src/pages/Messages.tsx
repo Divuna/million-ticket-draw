@@ -146,7 +146,6 @@ type MessageThreadItemProps = {
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
   appendSupportRequestMessage: () => void;
-  appendSupportSystemConfirmation: () => void;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
   supportHandoffMessage: string;
 };
@@ -158,7 +157,6 @@ function MessageThreadItem({
   supportSent,
   setSupportSent,
   appendSupportRequestMessage,
-  appendSupportSystemConfirmation,
   supportHandoffInFlightRef,
   supportHandoffMessage,
 }: MessageThreadItemProps) {
@@ -298,7 +296,6 @@ function MessageThreadItem({
                     console.log("SUPPORT SHOULD ONLY TRIGGER HERE");
                     await invokeSupportHandoff({ message: supportHandoffMessage });
                     setSupportSent(true);
-                    // appendSupportSystemConfirmation();
                   } finally {
                     supportHandoffInFlightRef.current = false;
                   }
@@ -341,7 +338,6 @@ type MessagesThreadListProps = {
   supportSent: boolean;
   setSupportSent: React.Dispatch<React.SetStateAction<boolean>>;
   appendSupportRequestMessage: () => void;
-  appendSupportSystemConfirmation: () => void;
   supportHandoffInFlightRef: React.MutableRefObject<boolean>;
   supportHandoffMessage: string;
 };
@@ -352,7 +348,6 @@ function MessagesThreadList({
   supportSent,
   setSupportSent,
   appendSupportRequestMessage,
-  appendSupportSystemConfirmation,
   supportHandoffInFlightRef,
   supportHandoffMessage,
 }: MessagesThreadListProps) {
@@ -369,7 +364,6 @@ function MessagesThreadList({
             supportSent={supportSent}
             setSupportSent={setSupportSent}
             appendSupportRequestMessage={appendSupportRequestMessage}
-            appendSupportSystemConfirmation={appendSupportSystemConfirmation}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
             supportHandoffMessage={supportHandoffMessage}
           />
@@ -416,7 +410,7 @@ export default function MessagesPage() {
   currentUserIdRef.current = user?.id;
 
   const visibleMessages = messages.filter(
-    (m) => m.content !== "SUPPORT REQUEST"
+    (m) => m.content !== SUPPORT_REQUEST_MARKER
   );
 
   // Realtime: merge new messages instantly (admin replies, ai replies, etc).
@@ -806,27 +800,6 @@ export default function MessagesPage() {
     });
   }, [user?.id]);
 
-  const appendSupportSystemConfirmation = useCallback(() => {
-    const systemMessage: Message = {
-      id: `${OPTIMISTIC_MESSAGE_ID_PREFIX}support-confirm-${Date.now()}`,
-      user_id: user?.id || "",
-      sender: "system",
-      content: JSON.stringify({
-        text: "Váš dotaz jsem předal podpoře. Ta vás bude co nejdříve kontaktovat a pomůže vám s řešením.",
-        cta: null,
-      }),
-      read: false,
-      created_at: new Date(Date.now() + 100).toISOString(),
-      isOptimistic: true,
-    };
-
-    setMessages((prev) => {
-      const merged = sortMessagesByCreatedAtAsc([...prev, systemMessage]);
-      messagesRef.current = merged;
-      return merged;
-    });
-  }, [user?.id]);
-
   const chatMode = useMemo(() => computeChatMode(messages), [messages]);
   const chatModeRef = useRef<'ai' | 'admin'>('ai');
   // Only advance toward "admin" from rendered state — never retrograde to "ai".
@@ -1086,7 +1059,6 @@ export default function MessagesPage() {
             supportSent={supportSent}
             setSupportSent={setSupportSent}
             appendSupportRequestMessage={appendSupportRequestMessage}
-            appendSupportSystemConfirmation={appendSupportSystemConfirmation}
             supportHandoffInFlightRef={supportHandoffInFlightRef}
             supportHandoffMessage={supportHandoffMessage}
           />
