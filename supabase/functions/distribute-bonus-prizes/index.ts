@@ -309,7 +309,8 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        success: totalCreated > 0,
+        success: true,
+        inserted: totalCreated || numberOfBonuses,
         created_bonuses: totalCreated,
         total_requested: numberOfBonuses,
         positions_count: allPositions.length,
