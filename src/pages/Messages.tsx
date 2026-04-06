@@ -298,7 +298,7 @@ function MessageThreadItem({
                     console.log("SUPPORT SHOULD ONLY TRIGGER HERE");
                     await invokeSupportHandoff({ message: supportHandoffMessage });
                     setSupportSent(true);
-                    appendSupportSystemConfirmation();
+                    // appendSupportSystemConfirmation();
                   } finally {
                     supportHandoffInFlightRef.current = false;
                   }
