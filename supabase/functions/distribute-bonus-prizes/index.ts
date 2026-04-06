@@ -17,34 +17,27 @@ interface DistributeBonusRequest {
   step_max?: number
 }
 
-// Efficient random position generator using Set for collision detection
+// Efficient random position generator using shuffle (no retry loops)
 function generateRandomPositions(count: number, maxPosition: number, excludeSet: Set<number>): number[] {
-  const positions: number[] = []
-  const selectedPositions = new Set<number>(excludeSet)
-  
-  const availableCount = maxPosition - excludeSet.size
-  if (count > availableCount) {
-    throw new Error(`Not enough available positions. Requested: ${count}, Available: ${availableCount}`)
+  const available: number[] = []
+
+  for (let i = 1; i <= maxPosition; i++) {
+    if (!excludeSet.has(i)) available.push(i)
   }
-  
-  let attempts = 0
-  const maxAttempts = count * 10
-  
-  while (positions.length < count && attempts < maxAttempts) {
-    const randomPos = Math.floor(Math.random() * maxPosition) + 1
-    
-    if (!selectedPositions.has(randomPos)) {
-      positions.push(randomPos)
-      selectedPositions.add(randomPos)
-    }
-    attempts++
+
+  if (count > available.length) {
+    throw new Error(`Not enough available positions. Requested: ${count}, Available: ${available.length}`)
   }
-  
-  if (positions.length < count) {
-    console.warn(`Could only generate ${positions.length} positions out of ${count} requested`)
+
+  // Fisher-Yates shuffle (in place)
+  for (let i = available.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = available[i]
+    available[i] = available[j]
+    available[j] = tmp
   }
-  
-  return positions.sort((a, b) => a - b)
+
+  return available.slice(0, count).sort((a, b) => a - b)
 }
 
 // Step interval position generator with random fallback
