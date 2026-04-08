@@ -1,61 +1,73 @@
 
-Do I know what the issue is? Yes. At this point it no longer looks like a Vite port/security-header problem. The stronger suspects are:
 
-1. `tsconfig.node.tsbuildinfo` and `tsconfig.app.tsbuildinfo` are generated cache files sitting in the repo root, while `.gitignore` does not ignore `*.tsbuildinfo`. Those files can be rewritten by typecheck/build tooling and trigger repeated preview restarts.
-2. `src/hooks/useOneSignal.ts` is mounted globally from `src/App.tsx` and does heavy startup work for logged-in users: unregistering OneSignal service workers, clearing caches/storage, and automatically calling `OneSignal.Notifications.requestPermission()`. That is risky inside the Lovable preview iframe and can make the app briefly load and then become unstable.
+## Plan: Add `fast_game` visual toggle
 
-What I checked
-- `vite.config.ts` is now aligned with Lovable (`port: 8080`, `wss`, `clientPort: 443`).
-- I did not find blocking security headers in `vercel.json`; `middleware.ts` does not affect `/`.
-- Console logs show only React Router warnings plus repeated `[Admin Realtime] Not admin, skipping subscriptions`, which suggests remount/restart churn rather than one clean fatal crash.
-- `.gitignore` currently does not ignore `*.tsbuildinfo`.
-- `useOneSignal` contains aggressive browser-reset logic and an automatic permission request on app load.
+### Overview
+Add a `fast_game` boolean column to `contests`, expose it as a checkbox in admin form, show a "Fast game" badge on contest cards and detail page. Purely visual — no logic changes.
 
-Plan
-1. Stop generated-file restart churn
-   - add `*.tsbuildinfo` to `.gitignore`
-   - remove `tsconfig.node.tsbuildinfo` and `tsconfig.app.tsbuildinfo` from tracked/project edits
-   - treat them as disposable local artifacts only
+### Step 1 — Database migration
 
-2. Stabilize startup side effects
-   - remove automatic notification permission requests from normal app mount
-   - stop clearing OneSignal service workers/caches/storage on every startup
-   - keep reset logic only behind an explicit debug/reset action
+Create `supabase/migrations/20260408120000_add_fast_game.sql`:
 
-3. Harden the app shell
-   - clean up `src/App.tsx` so app-level hooks stay unconditional and predictable
-   - reduce repeated parallel `useUserRole()` fetches across the shell where possible
+1. `ALTER TABLE contests ADD COLUMN fast_game boolean NOT NULL DEFAULT false;`
+2. Update `admin_manage_contest` RPC — add `p_fast_game boolean DEFAULT NULL` parameter. On create: insert value (default false). On update: `COALESCE(p_fast_game, existing.fast_game)`.
+3. Update `get_contest_management_data` RPC — add `c.fast_game` to the SELECT list.
 
-4. Verify after the fix
-   - homepage stays open when logged out
-   - homepage stays open when logged in
-   - refresh does not restart the preview loop
-   - if the issue remains only when logged in, the remaining suspect is the OneSignal path
+### Step 2 — Admin form (`AdminContestManagement.tsx`)
 
-Files to update
-- `.gitignore`
-- `src/App.tsx`
-- `src/hooks/useOneSignal.ts`
+- Add `fast_game: boolean` to `ContestFormData` (line 67) and `fast_game?: boolean` to `ContestData` (line 43).
+- Default `false` in both reset branches (lines 179, 197). Initialize from `editingContest.fast_game ?? false` when editing.
+- Add checkbox after the Status select (line 1230, inside the `basic` tab):
+  ```tsx
+  <div className="flex items-center gap-2 mt-2">
+    <input type="checkbox" id="fast_game" checked={form.fast_game}
+      onChange={e => setForm(f => ({...f, fast_game: e.target.checked}))} />
+    <label htmlFor="fast_game" className="text-sm text-white">Fast game</label>
+  </div>
+  ```
+- Pass `p_fast_game: form.fast_game` to the RPC call (line 953).
 
-Technical detail
-```text
-Most likely current loop
+### Step 3 — Contest Card (`ContestCard.tsx`)
 
-tool/typecheck rewrites *.tsbuildinfo
--> Lovable detects project file changes
--> preview/dev process restarts
--> iframe reloads again
+- Add `fast_game?: boolean` to the `Contest` interface (line 10).
+- Show badge in the top row (after line 200, next to status badge):
+  ```tsx
+  {contest.fast_game && (
+    <Badge className="bg-amber-500/80 text-white text-[10px] px-2 py-0.5">Fast game</Badge>
+  )}
+  ```
 
-and/or for signed-in users
+### Step 4 — Data queries + interfaces
 
-AppContent mounts
--> useOneSignal runs globally
--> clears SW/cache/storage + requests permission
--> preview becomes unstable
--> page loads briefly, then falls again
+| File | Interface line | Select line | Change |
+|------|---------------|-------------|--------|
+| `Homepage.tsx` | 29 | 73 | Add `fast_game?: boolean` to interface, add `, fast_game` to select |
+| `Games.tsx` | 22 | 85 | Same |
+| `FavoriteGames.tsx` | 23 | 129 | Same (nested select) |
+| `ContestDetail.tsx` | 27 | 415 | Same |
+
+### Step 5 — Contest Detail badge (`ContestDetail.tsx`)
+
+Show badge next to the title (after line 630):
+```tsx
+{contest.fast_game && (
+  <Badge className="bg-amber-500/80 text-white">Fast game</Badge>
+)}
 ```
 
-Expected result
-- preview stops endlessly loading/falling
-- editor becomes usable again
-- notifications remain possible, but only after explicit user action
+### Files changed (7 total, 1 new)
+1. `supabase/migrations/20260408120000_add_fast_game.sql` — new migration
+2. `src/components/AdminContestManagement.tsx` — checkbox + save + interfaces
+3. `src/components/ContestCard.tsx` — badge + interface
+4. `src/pages/Homepage.tsx` — query + interface
+5. `src/pages/Games.tsx` — query + interface
+6. `src/pages/FavoriteGames.tsx` — query + interface
+7. `src/pages/ContestDetail.tsx` — query + interface + badge
+
+### What is NOT changed
+- No ticket, wallet, winner, or contest close logic
+- No new component files
+- No layout or text changes beyond checkbox and badge
+- No refactoring
+- `src/integrations/supabase/types.ts` left untouched
+
