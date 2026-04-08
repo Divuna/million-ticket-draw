@@ -124,6 +124,159 @@ export type Database = {
           },
         ]
       }
+      backup_audit_logs: {
+        Row: {
+          created_at: string | null
+          event: string | null
+          event_type: string | null
+          id: string | null
+          metadata: Json | null
+          reference_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event?: string | null
+          event_type?: string | null
+          id?: string | null
+          metadata?: Json | null
+          reference_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event?: string | null
+          event_type?: string | null
+          id?: string | null
+          metadata?: Json | null
+          reference_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      backup_contests: {
+        Row: {
+          banner_image: string | null
+          created_at: string | null
+          description: string | null
+          generated_poster_url: string | null
+          id: string | null
+          main_image: string | null
+          main_prize: string | null
+          main_prize_secondary_image: string | null
+          name: string | null
+          next_ticket_number: number | null
+          status: string | null
+          ticket_count: number | null
+          ticket_price: number | null
+          title: string | null
+          total_miocoin_bonus: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          banner_image?: string | null
+          created_at?: string | null
+          description?: string | null
+          generated_poster_url?: string | null
+          id?: string | null
+          main_image?: string | null
+          main_prize?: string | null
+          main_prize_secondary_image?: string | null
+          name?: string | null
+          next_ticket_number?: number | null
+          status?: string | null
+          ticket_count?: number | null
+          ticket_price?: number | null
+          title?: string | null
+          total_miocoin_bonus?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          banner_image?: string | null
+          created_at?: string | null
+          description?: string | null
+          generated_poster_url?: string | null
+          id?: string | null
+          main_image?: string | null
+          main_prize?: string | null
+          main_prize_secondary_image?: string | null
+          name?: string | null
+          next_ticket_number?: number | null
+          status?: string | null
+          ticket_count?: number | null
+          ticket_price?: number | null
+          title?: string | null
+          total_miocoin_bonus?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      backup_tickets: {
+        Row: {
+          contest_id: string | null
+          created_at: string | null
+          id: string | null
+          number: number | null
+          user_id: string | null
+        }
+        Insert: {
+          contest_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          number?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          contest_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          number?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      backup_winners: {
+        Row: {
+          contest_id: string | null
+          created_at: string | null
+          delivered: boolean | null
+          id: string | null
+          notes: string | null
+          prize_id: string | null
+          status: string | null
+          ticket_id: string | null
+          type: string | null
+          user_id: string | null
+          user_seen: boolean | null
+        }
+        Insert: {
+          contest_id?: string | null
+          created_at?: string | null
+          delivered?: boolean | null
+          id?: string | null
+          notes?: string | null
+          prize_id?: string | null
+          status?: string | null
+          ticket_id?: string | null
+          type?: string | null
+          user_id?: string | null
+          user_seen?: boolean | null
+        }
+        Update: {
+          contest_id?: string | null
+          created_at?: string | null
+          delivered?: boolean | null
+          id?: string | null
+          notes?: string | null
+          prize_id?: string | null
+          status?: string | null
+          ticket_id?: string | null
+          type?: string | null
+          user_id?: string | null
+          user_seen?: boolean | null
+        }
+        Relationships: []
+      }
       banners: {
         Row: {
           active: boolean
@@ -1313,6 +1466,242 @@ export type Database = {
           },
         ]
       }
+      partner_offer_contests: {
+        Row: {
+          attached_at: string
+          contest_id: string
+          detached_at: string | null
+          id: string
+          offer_id: string
+        }
+        Insert: {
+          attached_at?: string
+          contest_id: string
+          detached_at?: string | null
+          id?: string
+          offer_id: string
+        }
+        Update: {
+          attached_at?: string
+          contest_id?: string
+          detached_at?: string | null
+          id?: string
+          offer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_offer_contests_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "admin_contest_status"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_contests_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "admin_winner_delivery_stats"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_contests_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contest_analytics"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_contests_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contest_integrity_check"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_contests_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contest_progress"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_contests_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contest_revenue"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_contests_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_offer_contests_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "partner_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_offer_selected_contests: {
+        Row: {
+          attached_at: string
+          contest_id: string
+          detached_at: string | null
+          id: string
+          offer_id: string
+        }
+        Insert: {
+          attached_at?: string
+          contest_id: string
+          detached_at?: string | null
+          id?: string
+          offer_id: string
+        }
+        Update: {
+          attached_at?: string
+          contest_id?: string
+          detached_at?: string | null
+          id?: string
+          offer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_offer_selected_contests_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "admin_contest_status"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_selected_contests_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "admin_winner_delivery_stats"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_selected_contests_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contest_analytics"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_selected_contests_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contest_integrity_check"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_selected_contests_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contest_progress"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_selected_contests_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contest_revenue"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_selected_contests_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_offer_selected_contests_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "partner_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_offers: {
+        Row: {
+          approved_at: string | null
+          banner_url: string | null
+          created_at: string
+          deployment_mode: string
+          id: string
+          last_assigned_at: string | null
+          link_or_code: string | null
+          logo_url: string | null
+          partner_id: string
+          priority: number
+          rejected_at: string | null
+          rejection_reason: string | null
+          short_text: string
+          status: string
+          submitted_at: string | null
+          title: string
+          updated_at: string
+          valid_from: string | null
+          valid_to: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          banner_url?: string | null
+          created_at?: string
+          deployment_mode: string
+          id?: string
+          last_assigned_at?: string | null
+          link_or_code?: string | null
+          logo_url?: string | null
+          partner_id: string
+          priority?: number
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          short_text: string
+          status?: string
+          submitted_at?: string | null
+          title: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          banner_url?: string | null
+          created_at?: string
+          deployment_mode?: string
+          id?: string
+          last_assigned_at?: string | null
+          link_or_code?: string | null
+          logo_url?: string | null
+          partner_id?: string
+          priority?: number
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          short_text?: string
+          status?: string
+          submitted_at?: string | null
+          title?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_offers_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_reward_codes: {
         Row: {
           activated_at: string | null
@@ -2120,6 +2509,67 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_partner_offers: {
+        Row: {
+          created_at: string
+          hidden_at: string | null
+          id: string
+          last_reminder_at: string | null
+          obtained_at: string
+          offer_id: string
+          opened_at: string | null
+          status: string
+          ticket_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hidden_at?: string | null
+          id?: string
+          last_reminder_at?: string | null
+          obtained_at?: string
+          offer_id: string
+          opened_at?: string | null
+          status?: string
+          ticket_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hidden_at?: string | null
+          id?: string
+          last_reminder_at?: string | null
+          obtained_at?: string
+          offer_id?: string
+          opened_at?: string | null
+          status?: string
+          ticket_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_partner_offers_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "partner_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_partner_offers_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_partner_offers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_play_activity: {
         Row: {
@@ -3312,6 +3762,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      assign_partner_offer_to_ticket: {
+        Args: { p_contest_id: string; p_ticket_id?: string; p_user_id: string }
+        Returns: string
+      }
       build_isdoc_payload: { Args: { p_invoice_id: string }; Returns: Json }
       buy_ticket_atomic: {
         Args: { p_contest_id: string; p_user_id: string }
@@ -3697,6 +4151,7 @@ export type Database = {
       redeem_voucher: { Args: { p_voucher_id: string }; Returns: Json }
       resolve_partner_by_api_key: { Args: { p_key: string }; Returns: string }
       resume_contest: { Args: { contest_id: string }; Returns: undefined }
+      revise_partner_offer: { Args: { p_offer_id: string }; Returns: undefined }
       rotate_partner_api_key: {
         Args: { p_partner_id: string }
         Returns: {
