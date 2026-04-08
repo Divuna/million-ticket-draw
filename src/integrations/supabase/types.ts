@@ -580,6 +580,7 @@ export type Database = {
           banner_image: string | null
           created_at: string
           description: string | null
+          fast_game: boolean
           generated_poster_url: string | null
           id: string
           main_image: string | null
@@ -598,6 +599,7 @@ export type Database = {
           banner_image?: string | null
           created_at?: string
           description?: string | null
+          fast_game?: boolean
           generated_poster_url?: string | null
           id?: string
           main_image?: string | null
@@ -616,6 +618,7 @@ export type Database = {
           banner_image?: string | null
           created_at?: string
           description?: string | null
+          fast_game?: boolean
           generated_poster_url?: string | null
           id?: string
           main_image?: string | null
@@ -3708,20 +3711,36 @@ export type Database = {
         }
         Returns: Json
       }
-      admin_manage_contest: {
-        Args: {
-          p_contest_id?: string
-          p_description?: string
-          p_main_image?: string
-          p_main_prize?: string
-          p_operation?: string
-          p_status?: string
-          p_ticket_count?: number
-          p_ticket_price?: number
-          p_title?: string
-        }
-        Returns: Json
-      }
+      admin_manage_contest:
+        | {
+            Args: {
+              p_contest_id?: string
+              p_description?: string
+              p_fast_game?: boolean
+              p_main_image?: string
+              p_main_prize?: string
+              p_operation?: string
+              p_status?: string
+              p_ticket_count?: number
+              p_ticket_price?: number
+              p_title?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_contest_id?: string
+              p_description?: string
+              p_main_image?: string
+              p_main_prize?: string
+              p_operation?: string
+              p_status?: string
+              p_ticket_count?: number
+              p_ticket_price?: number
+              p_title?: string
+            }
+            Returns: Json
+          }
       admin_manage_notification: {
         Args: {
           p_message?: string
@@ -3966,6 +3985,7 @@ export type Database = {
           contest_id: string
           created_at: string
           description: string
+          fast_game: boolean
           main_image: string
           main_prize: string
           progress_percentage: number

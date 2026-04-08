@@ -32,6 +32,7 @@ interface Contest {
   status: string;
   ticket_count: number;
   created_at: string;
+  fast_game?: boolean;
 }
 
 interface UnlockTicketResult {
@@ -126,7 +127,7 @@ const FavoriteGames = () => {
         .select(`
           contest_id,
           contests (
-            id, title, description, main_prize, main_image, banner_image, main_prize_secondary_image, ticket_price, ticket_count, status, created_at
+            id, title, description, main_prize, main_image, banner_image, main_prize_secondary_image, ticket_price, ticket_count, status, created_at, fast_game
           )
         `)
         .eq('user_id', user.id)

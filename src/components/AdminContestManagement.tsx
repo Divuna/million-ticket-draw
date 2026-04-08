@@ -54,6 +54,7 @@ interface ContestData {
   total_miocoin_bonus: number | null;
   created_at: string;
   updated_at: string;
+  fast_game?: boolean;
 }
 
 interface ContestViewStats {
@@ -77,6 +78,7 @@ interface ContestFormData {
   main_image_url: string;
   banner_image_url: string;
   detail_image_url: string;
+  fast_game: boolean;
 }
 
 interface MioCoinBonus {
@@ -189,6 +191,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         main_image_url: editingContest.main_image || "",
         banner_image_url: "",
         detail_image_url: "",
+        fast_game: editingContest.fast_game ?? false,
       });
       // Load existing bonuses and gallery for editing
       loadExistingBonuses(editingContest.contest_id);
@@ -207,6 +210,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         main_image_url: "",
         banner_image_url: "",
         detail_image_url: "",
+        fast_game: false,
       });
       setMioCoinBonuses([]);
       setPhysicalPrizes([]);
@@ -960,7 +964,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         p_ticket_count: form.ticket_count,
         p_ticket_price: form.ticket_price,
         p_operation: isEditingContest ? "update" : "create",
-      });
+        p_fast_game: form.fast_game,
+      } as any);
 
       if (error) {
         throw error;
@@ -1227,6 +1232,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="checkbox"
+                  id="fast_game"
+                  checked={form.fast_game}
+                  onChange={(e) => setForm((f) => ({ ...f, fast_game: e.target.checked }))}
+                />
+                <label htmlFor="fast_game" className="text-sm text-white">Fast game</label>
               </div>
             </TabsContent>
 
