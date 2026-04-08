@@ -363,6 +363,16 @@ function AppContent() {
   const isPartnerRoute = location.pathname.startsWith('/partner');
   const isInfluencerRoute = location.pathname.startsWith('/influencer');
 
+  const PRIVATE_ACCESS_ALLOWED_EMAIL = "divispavel2@gmail.com";
+  const isLockExemptRoute =
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    location.pathname === "/delete-account" ||
+    location.pathname === "/unsubscribe/marketing";
+
+  const isAllowedByEmail = Boolean(user?.email && user.email === PRIVATE_ACCESS_ALLOWED_EMAIL);
+  const isLocked = !isLockExemptRoute && !isAllowedByEmail;
+
   // All hooks MUST be called unconditionally (React rules of hooks).
   const partnerData = usePartnerData(isPartnerAccount && !isInfluencerAccount ? user?.id : undefined);
   useOneSignal();
@@ -371,6 +381,26 @@ function AppContent() {
 
   if (authLoading) {
     return null;
+  }
+
+  if (isLocked) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-6 text-center space-y-4">
+          <h1 className="text-xl font-semibold text-foreground">Web je momentálně neveřejný.</h1>
+          <p className="text-sm text-muted-foreground">
+            Přístup je dočasně povolen pouze pro vybrané účty.
+          </p>
+          {user ? (
+            <p className="text-sm text-muted-foreground">Tento účet momentálně nemá přístup.</p>
+          ) : (
+            <Button onClick={() => navigate(buildLoginRedirectUrl(location.pathname + location.search))}>
+              Přihlásit se
+            </Button>
+          )}
+        </div>
+      </div>
+    );
   }
 
   // Hard-block: Redirect accounts away from unauthorized routes
