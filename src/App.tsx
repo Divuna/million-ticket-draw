@@ -394,7 +394,7 @@ function AppContent() {
           {user ? (
             <p className="text-sm text-muted-foreground">Tento účet momentálně nemá přístup.</p>
           ) : (
-            <Button onClick={() => navigate(buildLoginRedirectUrl(location.pathname + location.search))}>
+            <Button onClick={() => navigate(buildLoginRedirectUrl("/"))}>
               Přihlásit se
             </Button>
           )}
