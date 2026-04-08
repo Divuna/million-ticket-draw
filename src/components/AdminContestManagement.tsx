@@ -1707,72 +1707,114 @@ export const AdminContestManagement: React.FC = () => {
   const loadContests = async () => {
     setLoading(true);
 
-    const [
-      { data, error },
-      { data: progressRows },
-      { data: revenueRows },
-      { data: activityRows },
-    ] = await Promise.all([
-      supabase.rpc("get_contest_management_data", { p_contest_id_filter: null }),
-      supabase.from("contest_progress").select("*"),
-      supabase.from("contest_revenue").select("*"),
-      supabase.from("contest_activity_last_24h").select("*"),
-    ]);
+    try {
+      const [
+        contestsRes,
+        progressRes,
+        revenueRes,
+        activityRes,
+      ] = await Promise.all([
+        supabase
+          .from("contests")
+          .select("id, title, description, main_prize, main_image, status, ticket_count, ticket_price, total_miocoin_bonus, created_at, updated_at, fast_game")
+          .order("created_at", { ascending: false }),
+        supabase.from("contest_progress").select("contest_id, tickets_sold, tickets_remaining, sold_percent"),
+        supabase.from("contest_revenue").select("contest_id, estimated_revenue"),
+        supabase.from("contest_activity_last_24h").select("contest_id, tickets_last_24h, users_last_24h"),
+      ]);
 
-    if (error) {
+      if (contestsRes.error) {
+        throw contestsRes.error;
+      }
+
+      if (progressRes.error) {
+        console.error("Error fetching contest progress:", progressRes.error);
+      }
+
+      if (revenueRes.error) {
+        console.error("Error fetching contest revenue:", revenueRes.error);
+      }
+
+      if (activityRes.error) {
+        console.error("Error fetching contest activity:", activityRes.error);
+      }
+
+      const progressRows = progressRes.data || [];
+      const revenueRows = revenueRes.data || [];
+      const activityRows = activityRes.data || [];
+
+      const contestsData: ContestData[] = (contestsRes.data || []).map((contest) => {
+        const progress = progressRows.find((row: any) => row.contest_id === contest.id);
+
+        return {
+          contest_id: contest.id,
+          title: contest.title,
+          description: contest.description,
+          main_prize: contest.main_prize,
+          main_image: contest.main_image,
+          status: contest.status,
+          ticket_count: contest.ticket_count,
+          ticket_price: contest.ticket_price,
+          tickets_sold: progress?.tickets_sold ?? 0,
+          progress_percentage: progress?.sold_percent ?? 0,
+          total_miocoin_bonus: contest.total_miocoin_bonus ?? 0,
+          created_at: contest.created_at,
+          updated_at: contest.updated_at,
+          fast_game: contest.fast_game ?? false,
+        };
+      });
+
+      // Build per-contest stats map from analytics views
+      const newStatsMap: Record<string, ContestViewStats> = {};
+      contestsData.forEach((c) => {
+        const progress = progressRows.find((r: any) => r.contest_id === c.contest_id);
+        const revenue = revenueRows.find((r: any) => r.contest_id === c.contest_id);
+        const activity = activityRows.find((r: any) => r.contest_id === c.contest_id);
+        newStatsMap[c.contest_id] = {
+          tickets_remaining: progress?.tickets_remaining ?? c.ticket_count - c.tickets_sold,
+          sold_percent: progress?.sold_percent ?? c.progress_percentage,
+          estimated_revenue: revenue?.estimated_revenue ?? 0,
+          tickets_last_24h: activity?.tickets_last_24h ?? 0,
+          users_last_24h: activity?.users_last_24h ?? 0,
+        };
+      });
+      setStatsMap(newStatsMap);
+
+      // Fetch MioCoin counts per contest using count query (bypasses 1000 row limit)
+      const contestIds = contestsData.map(c => c.contest_id);
+      
+      if (contestIds.length > 0) {
+        const mioCoinTotals: Record<string, number> = {};
+        await Promise.all(
+          contestIds.map(async (contestId) => {
+            const { count } = await supabase
+              .from("bonus_prizes")
+              .select("*", { count: "exact", head: true })
+              .eq("contest_id", contestId)
+              .gt("amount", 0);
+            mioCoinTotals[contestId] = count || 0;
+          })
+        );
+
+        // Merge into contests data
+        contestsData.forEach((contest) => {
+          contest.total_miocoin_bonus = mioCoinTotals[contest.contest_id] || 0;
+        });
+      }
+
+      setContests(contestsData);
+    } catch (error: any) {
       console.error("Error fetching contests:", error);
+      setContests([]);
+      setStatsMap({});
       toast({
         title: "Chyba při načítání soutěží",
-        description: error.message || "Nepodařilo se načíst seznam soutěží. Zkus to znovu.",
+        description: error?.message || "Nepodařilo se načíst seznam soutěží. Zkus to znovu.",
         variant: "destructive",
       });
-      setContests([]);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const contestsData = (data || []) as ContestData[];
-
-    // Build per-contest stats map from analytics views
-    const newStatsMap: Record<string, ContestViewStats> = {};
-    contestsData.forEach((c) => {
-      const progress = (progressRows || []).find((r: any) => r.contest_id === c.contest_id);
-      const revenue  = (revenueRows  || []).find((r: any) => r.contest_id === c.contest_id);
-      const activity = (activityRows || []).find((r: any) => r.contest_id === c.contest_id);
-      newStatsMap[c.contest_id] = {
-        tickets_remaining:  progress?.tickets_remaining  ?? c.ticket_count - c.tickets_sold,
-        sold_percent:       progress?.sold_percent        ?? c.progress_percentage,
-        estimated_revenue:  revenue?.estimated_revenue    ?? 0,
-        tickets_last_24h:   activity?.tickets_last_24h   ?? 0,
-        users_last_24h:     activity?.users_last_24h     ?? 0,
-      };
-    });
-    setStatsMap(newStatsMap);
-
-    // Fetch MioCoin counts per contest using count query (bypasses 1000 row limit)
-    const contestIds = contestsData.map(c => c.contest_id);
-    
-    if (contestIds.length > 0) {
-      const mioCoinTotals: Record<string, number> = {};
-      await Promise.all(
-        contestIds.map(async (contestId) => {
-          const { count } = await supabase
-            .from("bonus_prizes")
-            .select("*", { count: "exact", head: true })
-            .eq("contest_id", contestId)
-            .gt("amount", 0);
-          mioCoinTotals[contestId] = count || 0;
-        })
-      );
-
-      // Merge into contests data
-      contestsData.forEach((contest) => {
-        contest.total_miocoin_bonus = mioCoinTotals[contest.contest_id] || 0;
-      });
-    }
-
-    setContests(contestsData);
-    setLoading(false);
   };
 
   useEffect(() => {
