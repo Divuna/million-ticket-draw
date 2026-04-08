@@ -1700,31 +1700,59 @@ export const AdminContestManagement: React.FC = () => {
   const loadContests = async () => {
     setLoading(true);
 
-    const [
-      { data, error },
-      { data: progressRows },
-      { data: revenueRows },
-      { data: activityRows },
-    ] = await Promise.all([
+    const [rpcRes, progressRes, revenueRes, activityRes] = await Promise.allSettled([
       supabase.rpc("get_contest_management_data", { p_contest_id_filter: null }),
       supabase.from("contest_progress").select("*"),
       supabase.from("contest_revenue").select("*"),
       supabase.from("contest_activity_last_24h").select("*"),
     ]);
 
-    if (error) {
-      console.error("Error fetching contests:", error);
+    const rpcData = rpcRes.status === "fulfilled" ? rpcRes.value.data : null;
+    const rpcError = rpcRes.status === "fulfilled" ? rpcRes.value.error : rpcRes.reason;
+    const progressRows = progressRes.status === "fulfilled" ? progressRes.value.data : [];
+    const revenueRows = revenueRes.status === "fulfilled" ? revenueRes.value.data : [];
+    const activityRows = activityRes.status === "fulfilled" ? activityRes.value.data : [];
+
+    let contestsData = (rpcData || []) as ContestData[];
+
+    // If admin dashboard RPC fails (e.g. bonus stats error/timeout), still load contest list directly
+    if (rpcError) {
+      console.error("Error fetching contests via get_contest_management_data:", rpcError);
       toast({
         title: "Chyba při načítání soutěží",
-        description: error.message || "Nepodařilo se načíst seznam soutěží. Zkus to znovu.",
+        description: "Nepodařilo se načíst bonusové statistiky. Načítám alespoň seznam soutěží.",
         variant: "destructive",
       });
-      setContests([]);
-      setLoading(false);
-      return;
-    }
 
-    const contestsData = (data || []) as ContestData[];
+      const { data: contestsFallback, error: contestsFallbackError } = await supabase
+        .from("contests")
+        .select("id, title, description, main_prize, main_image, status, ticket_count, ticket_price, created_at, updated_at, fast_game")
+        .order("created_at", { ascending: false });
+
+      if (contestsFallbackError) {
+        console.error("Error fetching contests fallback:", contestsFallbackError);
+        setContests([]);
+        setLoading(false);
+        return;
+      }
+
+      contestsData = (contestsFallback || []).map((c: any) => ({
+        contest_id: c.id,
+        title: c.title,
+        description: c.description ?? null,
+        main_prize: c.main_prize,
+        main_image: c.main_image ?? null,
+        fast_game: c.fast_game ?? false,
+        status: c.status,
+        ticket_count: c.ticket_count ?? 1000000,
+        ticket_price: c.ticket_price ?? 1,
+        tickets_sold: 0,
+        progress_percentage: 0,
+        total_miocoin_bonus: null,
+        created_at: c.created_at,
+        updated_at: c.updated_at,
+      })) as ContestData[];
+    }
 
     // Build per-contest stats map from analytics views
     const newStatsMap: Record<string, ContestViewStats> = {};
