@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback, memo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/Header";
 import { useAuth } from "@/hooks/useAuth";
 import { MIOCOIN_IMAGE_URL } from "@/components/MioCoin";

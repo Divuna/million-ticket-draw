@@ -133,6 +133,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     main_image_url: "",
     banner_image_url: "",
     detail_image_url: "",
+    fast_game: false,
   });
   const [saving, setSaving] = useState(false);
   const [generatingDescription, setGeneratingDescription] = useState(false);
