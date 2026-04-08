@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback, memo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/Header";
 import { useAuth } from "@/hooks/useAuth";
 import { MIOCOIN_IMAGE_URL } from "@/components/MioCoin";
@@ -35,6 +36,7 @@ type Contest = {
   main_image: string | null;
   banner_image: string | null;
   total_miocoin_bonus: number | null;
+  fast_game?: boolean;
 };
 
 type BonusPrize = {
@@ -412,7 +414,7 @@ export default function ContestDetail() {
       try {
         const { data: contestData, error: contestError } = await supabase
           .from("contests")
-          .select("id, title, description, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, total_miocoin_bonus")
+          .select("id, title, description, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, total_miocoin_bonus, fast_game")
           .eq("id", id)
           .maybeSingle();
 
@@ -626,9 +628,14 @@ export default function ContestDetail() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-6 md:p-8">
           {/* Text content */}
           <div className="flex-1 space-y-4 z-10">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-yellow-400 leading-tight">
-              {contest.title}
-            </h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-yellow-400 leading-tight">
+                {contest.title}
+              </h1>
+              {contest.fast_game && (
+                <Badge className="bg-amber-500/80 text-white text-sm px-3 py-1">Fast game</Badge>
+              )}
+            </div>
             {contest.main_prize && (
               <p className="text-xl md:text-2xl font-semibold text-gray-200">
                 Hlavní výhra: {contest.main_prize}

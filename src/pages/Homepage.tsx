@@ -37,6 +37,7 @@ interface Contest {
   ticket_count: number;
   ticket_price: number;
   created_at: string;
+  fast_game?: boolean;
 }
 
 const Homepage = () => {
@@ -70,7 +71,7 @@ const Homepage = () => {
     try {
       const { data, error } = await supabase
         .from("contests")
-        .select("id, title, main_prize, main_image, banner_image, main_prize_secondary_image, status, ticket_count, ticket_price, created_at")
+        .select("id, title, main_prize, main_image, banner_image, main_prize_secondary_image, status, ticket_count, ticket_price, created_at, fast_game")
         .in("status", ["active", "pending"])
         .order("created_at", { ascending: false })
         .limit(10);

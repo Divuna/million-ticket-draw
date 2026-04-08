@@ -16,6 +16,7 @@ interface Contest {
   main_prize_secondary_image?: string | null;
   status: string;
   ticket_price: number;
+  fast_game?: boolean;
 }
 
 interface ContestCardProps {
@@ -185,6 +186,11 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             <div />
           )}
           
+          {/* Fast game badge */}
+          {contest.fast_game && (
+            <Badge className="bg-amber-500/80 text-white text-[10px] px-2 py-0.5">Fast game</Badge>
+          )}
+
           {/* Status badge - only show for non-active states */}
           {contest.status !== 'active' && (
             <Badge 
