@@ -95,6 +95,23 @@ Technical:
 
 ---
 
+## Aktuální uzamčený stav (10. 04. 2026)
+- Partner Offers v1 je dokončené, nasazené a prošlo finálním E2E ověřením.
+- Chybějící wiring byl doplněn v `supabase/functions/purchase-ticket/index.ts`, takže assignment běží automaticky po `buy_ticket_atomic` při `won_type === null`.
+- Block E frontend je nasazený a builduje čistě (commit `b7aa4ce`):
+  - `src/components/OfferCard.tsx` — existuje
+  - `src/components/OfferDetailModal.tsx` — existuje
+  - `src/pages/Wins.tsx` — obsahuje tab Výhry / Nabídky
+- `category_contests` zůstává mimo v1, dokud nebude existovat skutečný model kategorií soutěží.
+- OneMil kanonické memory soubory jsou pouze:
+  - `onemil_state.md`
+  - `onemil_history.md`
+  - `CLAUDE.md`
+  v workspace `C:\Users\PC_3\Desktop\Onemil - Projekt\million-ticket-draw`.
+- Další správný krok je už jen běžný provozní bugfix nebo další samostatný modul, ne nový redesign Partner Offers.
+
+---
+
 ## Git workflow rule
 
 After ANY code change that is confirmed working:
