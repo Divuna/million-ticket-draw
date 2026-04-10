@@ -3,10 +3,12 @@ import { Header } from '@/components/Header';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Trophy, Filter, ArrowUp, ArrowDown, Gift, Sparkles, Crown } from 'lucide-react';
+import { Trophy, Filter, ArrowUp, ArrowDown, Gift, Sparkles, Crown, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { WinCard } from '@/components/WinCard';
 import { WinDetailModal } from '@/components/WinDetailModal';
+import { OfferCard, type UserOffer } from '@/components/OfferCard';
+import { OfferDetailModal } from '@/components/OfferDetailModal';
 import { toast } from '@/hooks/use-toast';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +57,7 @@ const deriveUiStatus = (
 type FilterStatus = 'all' | 'pending' | 'shipped' | 'delivered';
 type FilterType = 'all' | 'main' | 'bonus';
 type SortOrder = 'newest' | 'oldest';
+type ActiveTab = 'vyhry' | 'nabidky';
 
 const Wins: React.FC = () => {
   const { isAdmin } = useUserRole();
@@ -62,6 +65,11 @@ const Wins: React.FC = () => {
   const navigate = useNavigate();
   const { soundEnabled } = useNotificationSettings();
   const { refresh: refreshUnseenWins } = useUnseenWinsCount();
+
+  // ── Tab state ──────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<ActiveTab>('vyhry');
+
+  // ── Wins state ─────────────────────────────────────────────────────────────
   const [wins, setWins] = useState<Win[]>([]);
   const [loading, setLoading] = useState(true);
   const [highlightedWins, setHighlightedWins] = useState<Set<string>>(new Set());
@@ -71,16 +79,19 @@ const Wins: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
   const [userAge, setUserAge] = useState<number | null>(null);
 
-  // Filter and sort wins
+  // ── Offers state ───────────────────────────────────────────────────────────
+  const [offers, setOffers] = useState<UserOffer[]>([]);
+  const [offerLoading, setOfferLoading] = useState(true);
+  const [selectedOffer, setSelectedOffer] = useState<UserOffer | null>(null);
+
+  // ── Filter and sort wins ───────────────────────────────────────────────────
   const filteredWins = useMemo(() => {
     let result = wins;
-    
-    // Apply type filter
+
     if (typeFilter !== 'all') {
       result = result.filter(win => win.type === typeFilter);
     }
-    
-    // Apply status filter based on ui_status
+
     if (filter !== 'all') {
       result = result.filter(win => {
         if (filter === 'delivered') return win.ui_status === 'doručeno';
@@ -89,8 +100,7 @@ const Wins: React.FC = () => {
         return true;
       });
     }
-    
-    // Apply sort
+
     return [...result].sort((a, b) => {
       const dateA = new Date(a.created_at).getTime();
       const dateB = new Date(b.created_at).getTime();
@@ -98,7 +108,6 @@ const Wins: React.FC = () => {
     });
   }, [wins, filter, typeFilter, sortOrder]);
 
-  // Count wins by ui_status for badges
   const statusCounts = useMemo(() => ({
     all: wins.length,
     pending: wins.filter(w => w.ui_status === 'čeká').length,
@@ -106,29 +115,28 @@ const Wins: React.FC = () => {
     delivered: wins.filter(w => w.ui_status === 'doručeno').length,
   }), [wins]);
 
-  // Count wins by type for badges
   const typeCounts = useMemo(() => ({
     all: wins.length,
     main: wins.filter(w => w.type === 'main').length,
     bonus: wins.filter(w => w.type === 'bonus').length,
   }), [wins]);
 
-  // Play notification sound
+  // ── Notification sound ─────────────────────────────────────────────────────
   const playNotificationSound = useCallback(() => {
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
-      
+
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
-      
+
       oscillator.frequency.value = 800;
       oscillator.type = 'sine';
-      
+
       gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-      
+
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.3);
     } catch (error) {
@@ -136,15 +144,15 @@ const Wins: React.FC = () => {
     }
   }, []);
 
-  // Mark wins as seen and fetch data on page load (non-admin users only)
+  // ── Init ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) {
       setLoading(false);
+      setOfferLoading(false);
       return;
     }
 
     const initPage = async () => {
-      // Use user_roles table to check admin status instead of users.role
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
@@ -157,6 +165,7 @@ const Wins: React.FC = () => {
       }
 
       fetchWins();
+      fetchOffers();
       fetchUserAge();
     };
 
@@ -171,12 +180,12 @@ const Wins: React.FC = () => {
         .select('date_of_birth')
         .eq('id', user.id)
         .maybeSingle();
-      
+
       if (error) {
         console.error('Error fetching user age:', error);
         return;
       }
-      
+
       const dob = data?.date_of_birth;
       if (dob) {
         const birthDate = new Date(dob);
@@ -193,7 +202,7 @@ const Wins: React.FC = () => {
     }
   };
 
-  // Realtime subscription for winner status updates
+  // ── Realtime: win status updates ───────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
 
@@ -210,19 +219,19 @@ const Wins: React.FC = () => {
         (payload) => {
           const winId = payload.new.id as string;
           const newStatus = payload.new.status as string;
-          
+
           const newDelivered = payload.new.delivered as boolean;
           const newNotes = payload.new.notes as string | null;
-          setWins(prev => prev.map(win => 
-            win.id === winId 
+          setWins(prev => prev.map(win =>
+            win.id === winId
               ? { ...win, status: newStatus, delivered: newDelivered, notes: newNotes, ui_status: deriveUiStatus(newDelivered, newStatus, newNotes) }
               : win
           ));
-          
+
           if (soundEnabled) {
             playNotificationSound();
           }
-          
+
           toast({
             title: "Stav výhry aktualizován",
             description: `Nový stav: ${
@@ -235,9 +244,9 @@ const Wins: React.FC = () => {
                     : newStatus || 'Čeká'
             }`,
           });
-          
+
           setHighlightedWins(prev => new Set(prev).add(winId));
-          
+
           setTimeout(() => {
             setHighlightedWins(prev => {
               const next = new Set(prev);
@@ -254,6 +263,7 @@ const Wins: React.FC = () => {
     };
   }, [user]);
 
+  // ── Fetch wins ─────────────────────────────────────────────────────────────
   const fetchWins = async () => {
     if (!user) return;
 
@@ -279,7 +289,7 @@ const Wins: React.FC = () => {
           .from('contests')
           .select('id, title, main_prize, main_image, main_prize_secondary_image')
           .in('id', contestIds);
-        
+
         if (contestsData) {
           contestsMap = new Map(contestsData.map(c => [c.id, c]));
         }
@@ -291,7 +301,7 @@ const Wins: React.FC = () => {
           .from('bonus_prizes')
           .select('id, title, image_url, guardian_required')
           .in('id', prizeIds);
-        
+
         if (prizesData) {
           prizesMap = new Map(prizesData.map(p => [p.id, p]));
         }
@@ -312,6 +322,56 @@ const Wins: React.FC = () => {
     }
   };
 
+  // ── Fetch offers ───────────────────────────────────────────────────────────
+  // Reads user_partner_offers joined with partner_offers and partners.
+  // Only active, non-hidden rows are shown.
+  const fetchOffers = async () => {
+    if (!user) return;
+    setOfferLoading(true);
+    try {
+      const { data, error } = await (supabase
+        .from('user_partner_offers')
+        .select(`
+          id,
+          offer_id,
+          obtained_at,
+          opened_at,
+          partner_offers (
+            id,
+            title,
+            short_text,
+            logo_url,
+            banner_url,
+            valid_to,
+            link_or_code,
+            partners (
+              company_name,
+              name
+            )
+          )
+        `)
+        .eq('user_id', user.id)
+        .is('hidden_at', null)
+        .eq('status', 'active')
+        .order('obtained_at', { ascending: false }) as any);
+
+      if (error) throw error;
+      setOffers((data || []) as UserOffer[]);
+    } catch (err) {
+      console.error('Error fetching offers:', err);
+    } finally {
+      setOfferLoading(false);
+    }
+  };
+
+  // ── Hide offer callback ────────────────────────────────────────────────────
+  // Called by OfferDetailModal after a successful hidden_at write.
+  const handleOfferHidden = (upoId: string) => {
+    setOffers(prev => prev.filter(o => o.id !== upoId));
+    setSelectedOffer(null);
+  };
+
+  // ── Not logged in ──────────────────────────────────────────────────────────
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[hsl(220,20%,4%)] via-[hsl(220,25%,6%)] to-[hsl(220,20%,4%)] pb-20">
@@ -344,7 +404,7 @@ const Wins: React.FC = () => {
       </div>
 
       {/* Premium shimmer overlay */}
-      <div 
+      <div
         className="absolute inset-0 pointer-events-none opacity-[0.02]"
         style={{
           background: 'linear-gradient(45deg, transparent 30%, hsl(45, 93%, 60%) 50%, transparent 70%)',
@@ -354,11 +414,11 @@ const Wins: React.FC = () => {
       />
 
       <Header />
-      
+
       <div className="relative z-10 container mx-auto px-4 py-8">
         {/* Premium Header Card */}
-        <div 
-          className="relative overflow-hidden rounded-2xl p-6 mb-8"
+        <div
+          className="relative overflow-hidden rounded-2xl p-6 mb-6"
           style={{
             background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
             border: '1px solid hsl(45, 70%, 40%, 0.2)',
@@ -366,7 +426,7 @@ const Wins: React.FC = () => {
           }}
         >
           {/* Header shimmer */}
-          <div 
+          <div
             className="absolute inset-0 opacity-10"
             style={{
               background: 'linear-gradient(90deg, transparent 0%, hsl(45, 93%, 60%) 50%, transparent 100%)',
@@ -374,10 +434,10 @@ const Wins: React.FC = () => {
               animation: 'shimmer 4s ease-in-out infinite',
             }}
           />
-          
+
           <div className="relative flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div 
+              <div
                 className="w-16 h-16 rounded-xl flex items-center justify-center"
                 style={{
                   background: 'linear-gradient(135deg, hsl(45, 80%, 45%) 0%, hsl(35, 90%, 35%) 100%)',
@@ -386,9 +446,9 @@ const Wins: React.FC = () => {
               >
                 <Trophy className="w-8 h-8 text-black" />
               </div>
-              
+
               <div>
-                <h1 
+                <h1
                   className="text-3xl font-bold tracking-tight"
                   style={{
                     background: 'linear-gradient(135deg, hsl(45, 93%, 65%) 0%, hsl(35, 90%, 55%) 50%, hsl(45, 93%, 65%) 100%)',
@@ -412,202 +472,327 @@ const Wins: React.FC = () => {
           </div>
         </div>
 
-        {/* Filter and Sort Controls */}
-        {wins.length > 0 && (
-          <div 
-            className="relative overflow-hidden rounded-2xl p-5 mb-6 space-y-4"
-            style={{
-              background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 10%) 100%)',
-              border: '1px solid hsl(220, 20%, 18%)',
-              boxShadow: '0 4px 16px hsl(0, 0%, 0%, 0.3)',
-            }}
+        {/* ── Tab switcher: Výhry / Nabídky ─────────────────────────────────── */}
+        <div
+          className="flex gap-2 mb-6 p-1 rounded-xl"
+          style={{
+            background: 'hsl(220, 25%, 8%)',
+            border: '1px solid hsl(220, 20%, 16%)',
+          }}
+        >
+          <button
+            onClick={() => setActiveTab('vyhry')}
+            className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-sm font-semibold transition-all duration-300 ${
+              activeTab === 'vyhry'
+                ? 'bg-gradient-to-r from-[hsl(45,80%,45%)] to-[hsl(35,90%,35%)] text-black shadow-[0_4px_16px_hsl(45,80%,40%,0.3)]'
+                : 'text-gray-400 hover:text-gray-200'
+            }`}
           >
-            {/* Type Filter */}
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm text-gray-400 font-medium">Typ:</span>
-              <button
-                onClick={() => setTypeFilter('all')}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                  typeFilter === 'all' 
-                    ? 'bg-gradient-to-r from-[hsl(45,80%,45%)] to-[hsl(35,90%,35%)] text-black shadow-[0_4px_16px_hsl(45,80%,40%,0.3)]' 
-                    : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[hsl(45,70%,50%)]/30'
-                }`}
-              >
-                Všechny ({typeCounts.all})
-              </button>
-              <button
-                onClick={() => setTypeFilter('main')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                  typeFilter === 'main' 
-                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black shadow-[0_4px_16px_rgba(245,158,11,0.3)]' 
-                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20'
-                }`}
-              >
-                <Trophy className="w-4 h-4" />
-                Hlavní ({typeCounts.main})
-              </button>
-              <button
-                onClick={() => setTypeFilter('bonus')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                  typeFilter === 'bonus' 
-                    ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-[0_4px_16px_rgba(168,85,247,0.3)]' 
-                    : 'bg-purple-500/10 text-purple-400 border border-purple-500/30 hover:bg-purple-500/20'
-                }`}
-              >
-                <Gift className="w-4 h-4" />
-                Bonus ({typeCounts.bonus})
-              </button>
-            </div>
+            <Trophy className="w-4 h-4" />
+            Výhry
+            {wins.length > 0 && (
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                activeTab === 'vyhry' ? 'bg-black/20 text-black' : 'bg-[hsl(220,25%,14%)] text-gray-400'
+              }`}>
+                {wins.length}
+              </span>
+            )}
+          </button>
 
-            {/* Status Filter and Sort */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2 border-t border-[hsl(220,20%,15%)]">
-              {/* Status Filter Buttons */}
-              <div className="flex flex-wrap items-center gap-3">
-                <Filter className="w-4 h-4 text-gray-500" />
-                <button
-                  onClick={() => setFilter('all')}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                    filter === 'all' 
-                      ? 'bg-gradient-to-r from-[hsl(45,80%,45%)] to-[hsl(35,90%,35%)] text-black shadow-[0_4px_16px_hsl(45,80%,40%,0.3)]' 
-                      : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[hsl(45,70%,50%)]/30'
-                  }`}
-                >
-                  Všechny ({statusCounts.all})
-                </button>
-                <button
-                  onClick={() => setFilter('pending')}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                    filter === 'pending' 
-                      ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-black shadow-[0_4px_16px_rgba(234,179,8,0.3)]' 
-                      : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/20'
-                  }`}
-                >
-                  Čeká ({statusCounts.pending})
-                </button>
-                <button
-                  onClick={() => setFilter('shipped')}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                    filter === 'shipped' 
-                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0_4px_16px_rgba(59,130,246,0.3)]' 
-                      : 'bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20'
-                  }`}
-                >
-                  Odesláno ({statusCounts.shipped})
-                </button>
-                <button
-                  onClick={() => setFilter('delivered')}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                    filter === 'delivered' 
-                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-[0_4px_16px_rgba(34,197,94,0.3)]' 
-                      : 'bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20'
-                  }`}
-                >
-                  Doručeno ({statusCounts.delivered})
-                </button>
-              </div>
+          <button
+            onClick={() => setActiveTab('nabidky')}
+            className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-sm font-semibold transition-all duration-300 ${
+              activeTab === 'nabidky'
+                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-[0_4px_16px_rgba(37,99,235,0.3)]'
+                : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <Tag className="w-4 h-4" />
+            Nabídky
+            {offers.length > 0 && (
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                activeTab === 'nabidky' ? 'bg-white/20 text-white' : 'bg-[hsl(220,25%,14%)] text-gray-400'
+              }`}>
+                {offers.length}
+              </span>
+            )}
+          </button>
+        </div>
 
-              {/* Sort Toggle */}
-              <button
-                onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[hsl(220,25%,12%)] border border-[hsl(220,20%,20%)] hover:border-[hsl(45,70%,50%)]/30 transition-all duration-300 text-sm text-gray-300 hover:text-white"
-              >
-                {sortOrder === 'newest' ? (
-                  <ArrowDown className="w-4 h-4 text-[hsl(45,70%,50%)]" />
-                ) : (
-                  <ArrowUp className="w-4 h-4 text-[hsl(45,70%,50%)]" />
-                )}
-                {sortOrder === 'newest' ? 'Nejnovější' : 'Nejstarší'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div 
-                key={i} 
-                className="rounded-2xl overflow-hidden animate-pulse"
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* TAB: VÝHRY                                                        */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'vyhry' && (
+          <>
+            {/* Filter and Sort Controls */}
+            {wins.length > 0 && (
+              <div
+                className="relative overflow-hidden rounded-2xl p-5 mb-6 space-y-4"
                 style={{
-                  background: 'linear-gradient(135deg, hsl(220, 25%, 10%) 0%, hsl(220, 30%, 14%) 100%)',
+                  background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 10%) 100%)',
+                  border: '1px solid hsl(220, 20%, 18%)',
+                  boxShadow: '0 4px 16px hsl(0, 0%, 0%, 0.3)',
+                }}
+              >
+                {/* Type Filter */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-sm text-gray-400 font-medium">Typ:</span>
+                  <button
+                    onClick={() => setTypeFilter('all')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                      typeFilter === 'all'
+                        ? 'bg-gradient-to-r from-[hsl(45,80%,45%)] to-[hsl(35,90%,35%)] text-black shadow-[0_4px_16px_hsl(45,80%,40%,0.3)]'
+                        : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[hsl(45,70%,50%)]/30'
+                    }`}
+                  >
+                    Všechny ({typeCounts.all})
+                  </button>
+                  <button
+                    onClick={() => setTypeFilter('main')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                      typeFilter === 'main'
+                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black shadow-[0_4px_16px_rgba(245,158,11,0.3)]'
+                        : 'bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20'
+                    }`}
+                  >
+                    <Trophy className="w-4 h-4" />
+                    Hlavní ({typeCounts.main})
+                  </button>
+                  <button
+                    onClick={() => setTypeFilter('bonus')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                      typeFilter === 'bonus'
+                        ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-[0_4px_16px_rgba(168,85,247,0.3)]'
+                        : 'bg-purple-500/10 text-purple-400 border border-purple-500/30 hover:bg-purple-500/20'
+                    }`}
+                  >
+                    <Gift className="w-4 h-4" />
+                    Bonus ({typeCounts.bonus})
+                  </button>
+                </div>
+
+                {/* Status Filter and Sort */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2 border-t border-[hsl(220,20%,15%)]">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Filter className="w-4 h-4 text-gray-500" />
+                    <button
+                      onClick={() => setFilter('all')}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                        filter === 'all'
+                          ? 'bg-gradient-to-r from-[hsl(45,80%,45%)] to-[hsl(35,90%,35%)] text-black shadow-[0_4px_16px_hsl(45,80%,40%,0.3)]'
+                          : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[hsl(45,70%,50%)]/30'
+                      }`}
+                    >
+                      Všechny ({statusCounts.all})
+                    </button>
+                    <button
+                      onClick={() => setFilter('pending')}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                        filter === 'pending'
+                          ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-black shadow-[0_4px_16px_rgba(234,179,8,0.3)]'
+                          : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/20'
+                      }`}
+                    >
+                      Čeká ({statusCounts.pending})
+                    </button>
+                    <button
+                      onClick={() => setFilter('shipped')}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                        filter === 'shipped'
+                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0_4px_16px_rgba(59,130,246,0.3)]'
+                          : 'bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20'
+                      }`}
+                    >
+                      Odesláno ({statusCounts.shipped})
+                    </button>
+                    <button
+                      onClick={() => setFilter('delivered')}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                        filter === 'delivered'
+                          ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-[0_4px_16px_rgba(34,197,94,0.3)]'
+                          : 'bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20'
+                      }`}
+                    >
+                      Doručeno ({statusCounts.delivered})
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[hsl(220,25%,12%)] border border-[hsl(220,20%,20%)] hover:border-[hsl(45,70%,50%)]/30 transition-all duration-300 text-sm text-gray-300 hover:text-white"
+                  >
+                    {sortOrder === 'newest' ? (
+                      <ArrowDown className="w-4 h-4 text-[hsl(45,70%,50%)]" />
+                    ) : (
+                      <ArrowUp className="w-4 h-4 text-[hsl(45,70%,50%)]" />
+                    )}
+                    {sortOrder === 'newest' ? 'Nejnovější' : 'Nejstarší'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="rounded-2xl overflow-hidden animate-pulse"
+                    style={{
+                      background: 'linear-gradient(135deg, hsl(220, 25%, 10%) 0%, hsl(220, 30%, 14%) 100%)',
+                      border: '1px solid hsl(220, 20%, 18%)',
+                    }}
+                  >
+                    <div className="w-full h-64 bg-[hsl(220,25%,15%)]" />
+                  </div>
+                ))}
+              </div>
+            ) : wins.length === 0 ? (
+              <div
+                className="relative overflow-hidden rounded-2xl p-12 text-center"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
+                  border: '1px solid hsl(45, 70%, 40%, 0.15)',
+                  boxShadow: '0 8px 32px hsl(0, 0%, 0%, 0.3)',
+                }}
+              >
+                <div
+                  className="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 16%) 100%)',
+                    border: '1px solid hsl(45, 70%, 40%, 0.1)',
+                  }}
+                >
+                  <Trophy className="w-12 h-12 text-[hsl(45,70%,50%)]/30" />
+                </div>
+                <h3
+                  className="text-2xl font-bold mb-3"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(45, 93%, 65%) 0%, hsl(35, 90%, 55%) 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  Zatím nemáte žádné výhry
+                </h3>
+                <p className="text-gray-400 text-lg">Kupte si tikety v soutěžích a vyhrajte skvělé ceny!</p>
+              </div>
+            ) : filteredWins.length === 0 ? (
+              <div
+                className="relative overflow-hidden rounded-2xl p-12 text-center"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 100%)',
                   border: '1px solid hsl(220, 20%, 18%)',
                 }}
               >
-                <div className="w-full h-64 bg-[hsl(220,25%,15%)]" />
+                <Filter className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+                <h3 className="text-xl font-semibold text-gray-300 mb-2">Žádné výhry v této kategorii</h3>
+                <p className="text-gray-500">Zkuste jiný filtr pro zobrazení výher.</p>
               </div>
-            ))}
-          </div>
-        ) : wins.length === 0 ? (
-          <div 
-            className="relative overflow-hidden rounded-2xl p-12 text-center"
-            style={{
-              background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-              border: '1px solid hsl(45, 70%, 40%, 0.15)',
-              boxShadow: '0 8px 32px hsl(0, 0%, 0%, 0.3)',
-            }}
-          >
-            <div 
-              className="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 16%) 100%)',
-                border: '1px solid hsl(45, 70%, 40%, 0.1)',
-              }}
-            >
-              <Trophy className="w-12 h-12 text-[hsl(45,70%,50%)]/30" />
-            </div>
-            <h3 
-              className="text-2xl font-bold mb-3"
-              style={{
-                background: 'linear-gradient(135deg, hsl(45, 93%, 65%) 0%, hsl(35, 90%, 55%) 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              Zatím nemáte žádné výhry
-            </h3>
-            <p className="text-gray-400 text-lg">Kupte si tikety v soutěžích a vyhrajte skvělé ceny!</p>
-          </div>
-        ) : filteredWins.length === 0 ? (
-          <div 
-            className="relative overflow-hidden rounded-2xl p-12 text-center"
-            style={{
-              background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 100%)',
-              border: '1px solid hsl(220, 20%, 18%)',
-            }}
-          >
-            <Filter className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-            <h3 className="text-xl font-semibold text-gray-300 mb-2">Žádné výhry v této kategorii</h3>
-            <p className="text-gray-500">Zkuste jiný filtr pro zobrazení výher.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredWins.map((win, index) => (
-              <div
-                key={win.id}
-                className="transform transition-all duration-500 hover:scale-[1.02]"
-                style={{
-                  animation: `fade-in 0.5s ease-out ${index * 0.1}s both`,
-                }}
-              >
-                <WinCard
-                  win={win}
-                  onClick={() => setSelectedWin(win)}
-                  isHighlighted={highlightedWins.has(win.id)}
-                />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredWins.map((win, index) => (
+                  <div
+                    key={win.id}
+                    className="transform transition-all duration-500 hover:scale-[1.02]"
+                    style={{ animation: `fade-in 0.5s ease-out ${index * 0.1}s both` }}
+                  >
+                    <WinCard
+                      win={win}
+                      onClick={() => setSelectedWin(win)}
+                      isHighlighted={highlightedWins.has(win.id)}
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+
+            <WinDetailModal
+              win={selectedWin}
+              open={!!selectedWin}
+              onClose={() => setSelectedWin(null)}
+              onNavigateToContest={(contestId) => navigate(`/contest/${contestId}`)}
+              userAge={userAge}
+            />
+          </>
         )}
 
-        {/* Win Detail Modal */}
-        <WinDetailModal
-          win={selectedWin}
-          open={!!selectedWin}
-          onClose={() => setSelectedWin(null)}
-          onNavigateToContest={(contestId) => navigate(`/contest/${contestId}`)}
-          userAge={userAge}
-        />
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* TAB: NABÍDKY                                                      */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'nabidky' && (
+          <>
+            {offerLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="rounded-2xl overflow-hidden animate-pulse"
+                    style={{
+                      background: 'linear-gradient(135deg, hsl(220, 25%, 10%) 0%, hsl(220, 30%, 14%) 100%)',
+                      border: '1px solid hsl(220, 20%, 18%)',
+                    }}
+                  >
+                    <div className="w-full h-44 bg-[hsl(220,25%,15%)]" />
+                    <div className="p-4 space-y-2">
+                      <div className="h-3 bg-[hsl(220,25%,18%)] rounded w-1/3" />
+                      <div className="h-4 bg-[hsl(220,25%,18%)] rounded w-3/4" />
+                      <div className="h-3 bg-[hsl(220,25%,18%)] rounded w-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : offers.length === 0 ? (
+              <div
+                className="relative overflow-hidden rounded-2xl p-12 text-center"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
+                  border: '1px solid hsl(220, 20%, 18%)',
+                  boxShadow: '0 8px 32px hsl(0, 0%, 0%, 0.3)',
+                }}
+              >
+                <div
+                  className="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 16%) 100%)',
+                    border: '1px solid hsl(220, 20%, 20%)',
+                  }}
+                >
+                  <Tag className="w-12 h-12 text-blue-400/30" />
+                </div>
+                <h3 className="text-2xl font-bold mb-3 text-gray-200">
+                  Zatím nemáte žádné nabídky
+                </h3>
+                <p className="text-gray-400 text-lg">
+                  Nabídky partnerů se přidělují automaticky k vašim tiketům v soutěžích.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {offers.map((offer, index) => (
+                  <div
+                    key={offer.id}
+                    className="transform transition-all duration-500 hover:scale-[1.02]"
+                    style={{ animation: `fade-in 0.5s ease-out ${index * 0.1}s both` }}
+                  >
+                    <OfferCard
+                      offer={offer}
+                      onClick={() => setSelectedOffer(offer)}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <OfferDetailModal
+              offer={selectedOffer}
+              open={!!selectedOffer}
+              onClose={() => setSelectedOffer(null)}
+              onHidden={handleOfferHidden}
+            />
+          </>
+        )}
       </div>
 
       {/* Global animations */}
@@ -618,12 +803,12 @@ const Wins: React.FC = () => {
           50% { transform: translateY(-10px) translateX(-5px); }
           75% { transform: translateY(-30px) translateX(15px); }
         }
-        
+
         @keyframes shimmer {
           0% { background-position: 200% 0; }
           100% { background-position: -200% 0; }
         }
-        
+
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
