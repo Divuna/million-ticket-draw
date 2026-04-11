@@ -141,12 +141,17 @@ export const useAuthState = () => {
 
   const signIn = async (email: string, password: string) => {
     const normalizedEmail = email.trim().toLowerCase();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
       password,
     });
 
-    if (!error) {
+    if (!error && data.session) {
+      // Apply session immediately so consumers (Login redirect, useUserRole) are not blocked
+      // waiting for onAuthStateChange, which can lag one tick behind signInWithPassword.
+      setSession(data.session);
+      setUser(data.session.user);
+      setLoading(false);
       toast({
         title: "Přihlášeno",
         description: "Úspěšně jste se přihlásili."

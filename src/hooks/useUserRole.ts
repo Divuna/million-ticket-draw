@@ -31,6 +31,8 @@ export const useUserRole = (): {
         return;
       }
 
+      setLoading(true);
+
       try {
         // Check if user exists in partners table (auth_user_id = user.id)
         const { data: partnerData } = await supabase

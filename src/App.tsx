@@ -412,8 +412,15 @@ function AppContent() {
     return null;
   }
 
-  // Block rendering of customer routes while checking account type (prevents flash)
-  if (user && roleLoading) {
+  // While role is resolving, block main app flash — but keep auth screens mounted so
+  // Login/Register can finish redirect after signIn (otherwise spinner unmounts Login and pending nav is lost).
+  const authEntryPath =
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    location.pathname === "/partner/login" ||
+    location.pathname === "/partner/register";
+
+  if (user && roleLoading && !authEntryPath) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
