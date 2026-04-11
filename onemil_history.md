@@ -312,3 +312,10 @@ Byly vytvořeny a commitnuty tyto soubory:
 ### Commit
 - `b7aa4ce` — `feat: Block E – add Nabídky tab to /wins with OfferCard and OfferDetailModal`
 - Pushnut do `main`
+
+---
+
+## 2026-04-10 — Odstranění dočasného private-access gate v App
+
+- V `src/App.tsx` odstraněn email allowlist (`divispavel2@gmail.com`), `isLockExemptRoute` / `isLocked` a celá obrazovka „Web je momentálně neveřejný“; role redirecty v `useEffect` beze změny logiky kromě odstranění early return kvůli locku.
+- Ověřeno lokálně: `npm run build` — Vite production build dokončen úspěšně (`✓ built`).

@@ -1,4 +1,4 @@
-# OneMil – aktuální stav projektu
+﻿# OneMil – aktuální stav projektu
 
 **Aktualizováno:** 10. 04. 2026 CEST
 
@@ -11,6 +11,9 @@ Byly dokončeny bloky A–G, následně proběhlo vícekolové E2E ověření v�
 
 Výsledek:
 **Partner Offers v1 PASSED finálním E2E ověřením.**
+
+## Přístup k aplikaci
+Dočasný frontend gate v `src/App.tsx` (email allowlist a obrazovka „Web je momentálně neveřejný“) byl **odstraněn** (2026-04-10). Po přihlášení mají registrovaní uživatelé znovu normální přístup k trasám; Supabase Auth a stávající role redirecty zůstaly beze změny. Ověřeno: `npm run build` úspěšně (Vite production build dokončen).
 
 ---
 

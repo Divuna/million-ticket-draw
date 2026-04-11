@@ -96,6 +96,7 @@ Technical:
 ---
 
 ## Aktuální uzamčený stav (10. 04. 2026)
+- Dočasný frontend private-access gate v `src/App.tsx` byl odstraněn (2026-04-10); přihlášení a role routing beze změny; `npm run build` ověřen úspěšně.
 - Partner Offers v1 je dokončené, nasazené a prošlo finálním E2E ověřením.
 - Chybějící wiring byl doplněn v `supabase/functions/purchase-ticket/index.ts`, takže assignment běží automaticky po `buy_ticket_atomic` při `won_type === null`.
 - Block E frontend je nasazený a builduje čistě (commit `b7aa4ce`):
