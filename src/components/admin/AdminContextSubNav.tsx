@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
+import { usePendingOffersCount } from "@/hooks/usePendingOffersCount";
 import { cn } from "@/lib/utils";
 import {
   ADMIN_PERSISTENT_SUBNAV_SEGMENTS,
@@ -59,6 +60,7 @@ function subNavItemTo(item: AdminSubNavItem): string | { pathname: string; searc
 export const AdminContextSubNav: React.FC = () => {
   const location = useLocation();
   const { unreadCount } = useUnreadMessagesCount();
+  const { pendingCount: pendingOffersCount } = usePendingOffersCount();
 
   const activeSection = getAdminSectionFromPath(location.pathname, location.search);
   const meta = ADMIN_SECTION_META[activeSection];
@@ -76,6 +78,8 @@ export const AdminContextSubNav: React.FC = () => {
           const Icon = item.icon;
           const active = isAdminSubNavItemActive(item, location.pathname, location.search);
           const to = subNavItemTo(item);
+          const isOfferItem = item.path === "/admin/partner-offers";
+          const showOfferDot = isOfferItem && pendingOffersCount > 0;
           return (
             <DropdownMenuItem
               key={adminSubNavItemKey(item, ii)}
@@ -84,7 +88,12 @@ export const AdminContextSubNav: React.FC = () => {
             >
               <Link to={to}>
                 <Icon className="h-4 w-4 shrink-0 mr-2 opacity-80" aria-hidden />
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {showOfferDot && (
+                  <span className="ml-2 min-w-[1.25rem] h-5 flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-1">
+                    {pendingOffersCount > 99 ? "99+" : pendingOffersCount}
+                  </span>
+                )}
               </Link>
             </DropdownMenuItem>
           );
@@ -129,6 +138,12 @@ export const AdminContextSubNav: React.FC = () => {
     const MenuIcon = entry.icon;
     const menuActive = isContextMenuActive(entry.sections, location.pathname, location.search);
     const menuId = `${segmentId}-ctx-${entry.label}-${index}`;
+    // Show dot on trigger if this menu contains partner-offers item and there are pending offers
+    const menuContainsPendingOffers =
+      pendingOffersCount > 0 &&
+      entry.sections.some((sec) =>
+        sec.items.some((it) => it.path === "/admin/partner-offers"),
+      );
 
     return (
       <DropdownMenu key={menuId}>
@@ -140,6 +155,9 @@ export const AdminContextSubNav: React.FC = () => {
             />
             <span className="whitespace-nowrap">{entry.label}</span>
             <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
+            {menuContainsPendingOffers && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-destructive border-2 border-background" />
+            )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[min(100vw-2rem,17.5rem)] z-[60]">
