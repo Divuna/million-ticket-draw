@@ -71,6 +71,8 @@ interface PartnerOffer {
   valid_from: string | null;
   valid_to: string | null;
   link_or_code: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
   rejection_reason: string | null;
   approved_at: string | null;
   submitted_at: string | null;
@@ -130,6 +132,12 @@ const PartnerDashboard = () => {
   const [offerValidFrom, setOfferValidFrom] = useState('');
   const [offerValidTo, setOfferValidTo] = useState('');
   const [offerLinkOrCode, setOfferLinkOrCode] = useState('');
+  // Offer image state (stored URLs, populated from DB or after upload)
+  const [offerLogoUrl, setOfferLogoUrl] = useState<string | null>(null);
+  const [offerBannerUrl, setOfferBannerUrl] = useState<string | null>(null);
+  // Offer image upload state
+  const [uploadingOfferLogo, setUploadingOfferLogo] = useState(false);
+  const [uploadingOfferBanner, setUploadingOfferBanner] = useState(false);
 
   // API Documentation modal state
   const [apiDocsModalOpen, setApiDocsModalOpen] = useState(false);
@@ -351,6 +359,8 @@ const PartnerDashboard = () => {
     setOfferValidFrom('');
     setOfferValidTo('');
     setOfferLinkOrCode('');
+    setOfferLogoUrl(null);
+    setOfferBannerUrl(null);
     setOfferFormOpen(true);
   };
 
@@ -362,6 +372,8 @@ const PartnerDashboard = () => {
     setOfferValidFrom(offer.valid_from ? offer.valid_from.slice(0, 10) : '');
     setOfferValidTo(offer.valid_to ? offer.valid_to.slice(0, 10) : '');
     setOfferLinkOrCode(offer.link_or_code || '');
+    setOfferLogoUrl(offer.logo_url);
+    setOfferBannerUrl(offer.banner_url);
     setOfferFormOpen(true);
   };
 
@@ -383,6 +395,8 @@ const PartnerDashboard = () => {
             valid_from: offerValidFrom || null,
             valid_to: offerValidTo || null,
             link_or_code: offerLinkOrCode.trim() || null,
+            logo_url: offerLogoUrl,
+            banner_url: offerBannerUrl,
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingOffer.id);
@@ -400,6 +414,8 @@ const PartnerDashboard = () => {
             valid_from: offerValidFrom || null,
             valid_to: offerValidTo || null,
             link_or_code: offerLinkOrCode.trim() || null,
+            logo_url: offerLogoUrl,
+            banner_url: offerBannerUrl,
             status: 'draft',
           });
         if (error) throw error;
@@ -448,6 +464,49 @@ const PartnerDashboard = () => {
       toast.error('Nepodařilo se vrátit nabídku k úpravám');
     } finally {
       setRevisingOffer(null);
+    }
+  };
+
+  const handleOfferImageUpload = async (
+    file: File,
+    kind: 'logo' | 'banner',
+  ) => {
+    const setUploading = kind === 'logo' ? setUploadingOfferLogo : setUploadingOfferBanner;
+    const setUrl = kind === 'logo' ? setOfferLogoUrl : setOfferBannerUrl;
+    const maxMb = kind === 'logo' ? 2 : 5;
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Povolené formáty: PNG, JPG, WEBP');
+      return;
+    }
+    if (file.size > maxMb * 1024 * 1024) {
+      toast.error(`Maximální velikost souboru je ${maxMb} MB`);
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `offers/${partner!.id}/${kind}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('partner-offer-assets')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('partner-offer-assets')
+        .getPublicUrl(fileName);
+
+      setUrl(urlData.publicUrl);
+      toast.success(kind === 'logo' ? 'Logo nahráno' : 'Banner nahrán');
+    } catch (err: any) {
+      console.error(`Error uploading offer ${kind}:`, err);
+      toast.error(`Nepodařilo se nahrát ${kind === 'logo' ? 'logo' : 'banner'}`);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -1678,6 +1737,103 @@ const PartnerDashboard = () => {
                 onChange={(e) => setOfferLinkOrCode(e.target.value)}
                 placeholder="Např. SLEVA10 nebo https://vas-eshop.cz/akce"
               />
+            </div>
+
+            {/* Images */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              {/* Logo */}
+              <div className="space-y-1.5">
+                <Label className="text-sm">
+                  Logo nabídky
+                  <span className="text-muted-foreground font-normal ml-1">(512×512 px, max 2 MB)</span>
+                </Label>
+                {offerLogoUrl && (
+                  <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-border/50 bg-muted/30">
+                    <img
+                      src={offerLogoUrl}
+                      alt="Logo náhled"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setOfferLogoUrl(null)}
+                      className="absolute top-0.5 right-0.5 bg-destructive/80 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] leading-none hover:bg-destructive"
+                      title="Odebrat logo"
+                    >×</button>
+                  </div>
+                )}
+                <Label
+                  htmlFor="offer-logo-upload"
+                  className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {uploadingOfferLogo ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="w-3.5 h-3.5" />
+                  )}
+                  {offerLogoUrl ? 'Změnit logo' : 'Nahrát logo'}
+                </Label>
+                <input
+                  id="offer-logo-upload"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  className="hidden"
+                  disabled={uploadingOfferLogo}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleOfferImageUpload(f, 'logo');
+                    e.target.value = '';
+                  }}
+                />
+              </div>
+
+              {/* Banner */}
+              <div className="space-y-1.5">
+                <Label className="text-sm">
+                  Banner nabídky
+                  <span className="text-muted-foreground font-normal ml-1">(1600×900 px, max 5 MB)</span>
+                </Label>
+                {offerBannerUrl && (
+                  <div className="relative w-full h-16 rounded-lg overflow-hidden border border-border/50 bg-muted/30">
+                    <img
+                      src={offerBannerUrl}
+                      alt="Banner náhled"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setOfferBannerUrl(null)}
+                      className="absolute top-0.5 right-0.5 bg-destructive/80 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] leading-none hover:bg-destructive"
+                      title="Odebrat banner"
+                    >×</button>
+                  </div>
+                )}
+                <Label
+                  htmlFor="offer-banner-upload"
+                  className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {uploadingOfferBanner ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="w-3.5 h-3.5" />
+                  )}
+                  {offerBannerUrl ? 'Změnit banner' : 'Nahrát banner'}
+                </Label>
+                <input
+                  id="offer-banner-upload"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  className="hidden"
+                  disabled={uploadingOfferBanner}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleOfferImageUpload(f, 'banner');
+                    e.target.value = '';
+                  }}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
