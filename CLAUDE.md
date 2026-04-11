@@ -95,7 +95,7 @@ Technical:
 
 ---
 
-## Aktuální uzamčený stav (10. 04. 2026)
+## Aktuální uzamčený stav (11. 04. 2026)
 - Dočasný frontend private-access gate v `src/App.tsx` byl odstraněn (2026-04-10); přihlášení a role routing beze změny; `npm run build` ověřen úspěšně.
 - Partner Offers v1 je dokončené, nasazené a prošlo finálním E2E ověřením.
 - Chybějící wiring byl doplněn v `supabase/functions/purchase-ticket/index.ts`, takže assignment běží automaticky po `buy_ticket_atomic` při `won_type === null`.
@@ -103,6 +103,11 @@ Technical:
   - `src/components/OfferCard.tsx` — existuje
   - `src/components/OfferDetailModal.tsx` — existuje
   - `src/pages/Wins.tsx` — obsahuje tab Výhry / Nabídky
+- Partner portal offer management UI nasazeno v `src/pages/PartnerDashboard.tsx` (2026-04-11):
+  - Partner vidí seznam svých nabídek s reálnými stavy (draft/submitted/approved/rejected)
+  - Může vytvářet draft, odesílat ke schválení, vracet zamítnuté k úpravám
+  - Approved nabídky jsou read-only (nelze editovat)
+  - Build: ✅ exit code 0
 - `category_contests` zůstává mimo v1, dokud nebude existovat skutečný model kategorií soutěží.
 - OneMil kanonické memory soubory jsou pouze:
   - `onemil_state.md`

@@ -11,7 +11,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase, withEdgeInternalToken } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift, RefreshCw, Copy, Eye, EyeOff, Activity, Settings, Save } from 'lucide-react';
+import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift, RefreshCw, Copy, Eye, EyeOff, Activity, Settings, Save, Plus, Send, RotateCcw, Tag } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PartnerBillingForm from '@/components/PartnerBillingForm';
 import { format, startOfWeek, endOfWeek, subWeeks, subDays, isAfter } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -60,6 +62,22 @@ interface ApiActivity {
   created_at: string | null;
 }
 
+interface PartnerOffer {
+  id: string;
+  title: string;
+  short_text: string;
+  deployment_mode: string;
+  status: string;
+  valid_from: string | null;
+  valid_to: string | null;
+  link_or_code: string | null;
+  rejection_reason: string | null;
+  approved_at: string | null;
+  submitted_at: string | null;
+  created_at: string;
+  last_assigned_at: string | null;
+}
+
 const PartnerDashboard = () => {
   const navigate = useNavigate();
   const { isAdmin } = useUserRole();
@@ -96,6 +114,22 @@ const PartnerDashboard = () => {
   const [rotatePasswordVisible, setRotatePasswordVisible] = useState(false);
   const [newApiKey, setNewApiKey] = useState('');
   const [rotatingKey, setRotatingKey] = useState(false);
+
+  // ── Partner Offers state ───────────────────────────────────────────────────
+  const [partnerOffers, setPartnerOffers] = useState<PartnerOffer[]>([]);
+  const [offersLoading, setOffersLoading] = useState(false);
+  const [offerFormOpen, setOfferFormOpen] = useState(false);
+  const [editingOffer, setEditingOffer] = useState<PartnerOffer | null>(null);
+  const [savingOffer, setSavingOffer] = useState(false);
+  const [submittingOffer, setSubmittingOffer] = useState<string | null>(null);
+  const [revisingOffer, setRevisingOffer] = useState<string | null>(null);
+  // Offer form fields
+  const [offerTitle, setOfferTitle] = useState('');
+  const [offerShortText, setOfferShortText] = useState('');
+  const [offerDeploymentMode, setOfferDeploymentMode] = useState('all_contests');
+  const [offerValidFrom, setOfferValidFrom] = useState('');
+  const [offerValidTo, setOfferValidTo] = useState('');
+  const [offerLinkOrCode, setOfferLinkOrCode] = useState('');
 
   // API Documentation modal state
   const [apiDocsModalOpen, setApiDocsModalOpen] = useState(false);
@@ -290,6 +324,156 @@ const PartnerDashboard = () => {
     }
   };
 
+  // ── Partner Offers functions ───────────────────────────────────────────────
+
+  const loadPartnerOffers = async (partnerId: string) => {
+    setOffersLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('partner_offers')
+        .select('id, title, short_text, deployment_mode, status, valid_from, valid_to, link_or_code, rejection_reason, approved_at, submitted_at, created_at, last_assigned_at')
+        .eq('partner_id', partnerId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setPartnerOffers((data || []) as PartnerOffer[]);
+    } catch (err) {
+      console.error('Error loading partner offers:', err);
+    } finally {
+      setOffersLoading(false);
+    }
+  };
+
+  const openCreateOffer = () => {
+    setEditingOffer(null);
+    setOfferTitle('');
+    setOfferShortText('');
+    setOfferDeploymentMode('all_contests');
+    setOfferValidFrom('');
+    setOfferValidTo('');
+    setOfferLinkOrCode('');
+    setOfferFormOpen(true);
+  };
+
+  const openEditOffer = (offer: PartnerOffer) => {
+    setEditingOffer(offer);
+    setOfferTitle(offer.title);
+    setOfferShortText(offer.short_text);
+    setOfferDeploymentMode(offer.deployment_mode);
+    setOfferValidFrom(offer.valid_from ? offer.valid_from.slice(0, 10) : '');
+    setOfferValidTo(offer.valid_to ? offer.valid_to.slice(0, 10) : '');
+    setOfferLinkOrCode(offer.link_or_code || '');
+    setOfferFormOpen(true);
+  };
+
+  const handleSaveOfferDraft = async () => {
+    if (!partner) return;
+    if (!offerTitle.trim()) { toast.error('Název nabídky je povinný'); return; }
+    if (!offerShortText.trim()) { toast.error('Krátký popis je povinný'); return; }
+
+    setSavingOffer(true);
+    try {
+      if (editingOffer) {
+        // Update existing draft or rejected offer
+        const { error } = await supabase
+          .from('partner_offers')
+          .update({
+            title: offerTitle.trim(),
+            short_text: offerShortText.trim(),
+            deployment_mode: offerDeploymentMode,
+            valid_from: offerValidFrom || null,
+            valid_to: offerValidTo || null,
+            link_or_code: offerLinkOrCode.trim() || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', editingOffer.id);
+        if (error) throw error;
+        toast.success('Nabídka byla uložena');
+      } else {
+        // Create new draft
+        const { error } = await supabase
+          .from('partner_offers')
+          .insert({
+            partner_id: partner.id,
+            title: offerTitle.trim(),
+            short_text: offerShortText.trim(),
+            deployment_mode: offerDeploymentMode,
+            valid_from: offerValidFrom || null,
+            valid_to: offerValidTo || null,
+            link_or_code: offerLinkOrCode.trim() || null,
+            status: 'draft',
+          });
+        if (error) throw error;
+        toast.success('Nabídka byla vytvořena jako koncept');
+      }
+      setOfferFormOpen(false);
+      await loadPartnerOffers(partner.id);
+    } catch (err: any) {
+      console.error('Error saving offer draft:', err);
+      toast.error('Nepodařilo se uložit nabídku');
+    } finally {
+      setSavingOffer(false);
+    }
+  };
+
+  const handleSubmitOffer = async (offerId: string) => {
+    if (!partner) return;
+    setSubmittingOffer(offerId);
+    try {
+      const { error } = await supabase
+        .from('partner_offers')
+        .update({ status: 'submitted', submitted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', offerId)
+        .eq('partner_id', partner.id);
+      if (error) throw error;
+      toast.success('Nabídka byla odeslána ke schválení');
+      await loadPartnerOffers(partner.id);
+    } catch (err: any) {
+      console.error('Error submitting offer:', err);
+      toast.error('Nepodařilo se odeslat nabídku');
+    } finally {
+      setSubmittingOffer(null);
+    }
+  };
+
+  const handleReviseOffer = async (offerId: string) => {
+    if (!partner) return;
+    setRevisingOffer(offerId);
+    try {
+      const { error } = await supabase.rpc('revise_partner_offer', { p_offer_id: offerId });
+      if (error) throw error;
+      toast.success('Nabídka byla vrácena k úpravám');
+      await loadPartnerOffers(partner.id);
+    } catch (err: any) {
+      console.error('Error revising offer:', err);
+      toast.error('Nepodařilo se vrátit nabídku k úpravám');
+    } finally {
+      setRevisingOffer(null);
+    }
+  };
+
+  const getOfferStatusBadge = (status: string) => {
+    switch (status) {
+      case 'draft':
+        return <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20"><Clock className="w-3 h-3 mr-1" />Koncept</Badge>;
+      case 'submitted':
+        return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20"><Send className="w-3 h-3 mr-1" />Ke schválení</Badge>;
+      case 'approved':
+        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20"><CheckCircle className="w-3 h-3 mr-1" />Schváleno</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-500/20"><XCircle className="w-3 h-3 mr-1" />Zamítnuto</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getDeploymentModeLabel = (mode: string) => {
+    switch (mode) {
+      case 'all_contests': return 'Všechny soutěže';
+      case 'selected_contests': return 'Vybrané soutěže';
+      default: return mode;
+    }
+  };
+
   useEffect(() => {
     loadPartnerData();
   }, []);
@@ -319,6 +503,8 @@ const PartnerDashboard = () => {
       setPartner(partnerData);
       setRewardBaseCzk(String(partnerData.reward_base_czk ?? 0));
       setRewardMc(String(partnerData.reward_mc ?? 0));
+      // Load partner offers
+      await loadPartnerOffers(partnerData.id);
       // Load API keys
       const { data: keysData } = await supabase
         .from('partner_api_keys')
@@ -1274,7 +1460,250 @@ const PartnerDashboard = () => {
             </Table>
           </CardContent>
         </Card>
+
+        {/* ── Partner Offers ─────────────────────────────────────────────────── */}
+        <Card className="border-border/40 bg-card/60 backdrop-blur-sm">
+          <CardHeader className="flex flex-row items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Tag className="w-5 h-5 text-blue-400" />
+                Nabídky partnerů
+              </CardTitle>
+              <CardDescription>
+                Spravujte své nabídky přidělované uživatelům po nákupu tiketu
+              </CardDescription>
+            </div>
+            <Button
+              onClick={openCreateOffer}
+              size="sm"
+              className="shrink-0"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nová nabídka
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {offersLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : partnerOffers.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                <Tag className="w-8 h-8 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Zatím nemáte žádné nabídky.</p>
+                <p className="text-xs mt-1 opacity-70">Vytvořte první nabídku tlačítkem výše.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Název</TableHead>
+                    <TableHead>Stav</TableHead>
+                    <TableHead>Distribuce</TableHead>
+                    <TableHead>Platnost do</TableHead>
+                    <TableHead>Přiděleno</TableHead>
+                    <TableHead className="text-right">Akce</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {partnerOffers.map((offer) => (
+                    <TableRow key={offer.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-sm">{offer.title}</p>
+                          {offer.short_text && (
+                            <p className="text-xs text-muted-foreground truncate max-w-[200px]">{offer.short_text}</p>
+                          )}
+                          {offer.status === 'rejected' && offer.rejection_reason && (
+                            <p className="text-xs text-red-500 mt-0.5 truncate max-w-[200px]">
+                              Důvod: {offer.rejection_reason}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{getOfferStatusBadge(offer.status)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {getDeploymentModeLabel(offer.deployment_mode)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {offer.valid_to
+                          ? new Date(offer.valid_to).toLocaleDateString('cs-CZ')
+                          : '—'}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {offer.last_assigned_at
+                          ? new Date(offer.last_assigned_at).toLocaleDateString('cs-CZ')
+                          : '—'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Edit: only draft or rejected */}
+                          {(offer.status === 'draft' || offer.status === 'rejected') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditOffer(offer)}
+                            >
+                              Upravit
+                            </Button>
+                          )}
+                          {/* Submit: only draft */}
+                          {offer.status === 'draft' && (
+                            <Button
+                              size="sm"
+                              onClick={() => handleSubmitOffer(offer.id)}
+                              disabled={submittingOffer === offer.id}
+                            >
+                              {submittingOffer === offer.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                              ) : (
+                                <Send className="w-3 h-3 mr-1" />
+                              )}
+                              Odeslat
+                            </Button>
+                          )}
+                          {/* Revise: only rejected */}
+                          {offer.status === 'rejected' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleReviseOffer(offer.id)}
+                              disabled={revisingOffer === offer.id}
+                            >
+                              {revisingOffer === offer.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                              ) : (
+                                <RotateCcw className="w-3 h-3 mr-1" />
+                              )}
+                              Vrátit k úpravám
+                            </Button>
+                          )}
+                          {/* Approved: no edit allowed */}
+                          {offer.status === 'approved' && (
+                            <span className="text-xs text-muted-foreground italic">Schváleno – nelze měnit</span>
+                          )}
+                          {/* Submitted: waiting */}
+                          {offer.status === 'submitted' && (
+                            <span className="text-xs text-muted-foreground italic">Čeká na schválení</span>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
       </main>
+
+      {/* ── Create / Edit Offer Dialog ─────────────────────────────────────── */}
+      <Dialog open={offerFormOpen} onOpenChange={(open) => !open && setOfferFormOpen(false)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="w-5 h-5 text-blue-400" />
+              {editingOffer ? 'Upravit nabídku' : 'Nová nabídka'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingOffer
+                ? 'Upravte detaily nabídky a uložte jako koncept.'
+                : 'Vyplňte detaily nové nabídky. Po uložení ji můžete odeslat ke schválení.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* Title */}
+            <div className="space-y-1.5">
+              <Label htmlFor="offer-title">Název nabídky *</Label>
+              <Input
+                id="offer-title"
+                value={offerTitle}
+                onChange={(e) => setOfferTitle(e.target.value)}
+                placeholder="Např. 10% sleva na první nákup"
+                maxLength={120}
+              />
+            </div>
+            {/* Short text */}
+            <div className="space-y-1.5">
+              <Label htmlFor="offer-short-text">Krátký popis *</Label>
+              <Textarea
+                id="offer-short-text"
+                value={offerShortText}
+                onChange={(e) => setOfferShortText(e.target.value)}
+                placeholder="Stručný popis nabídky zobrazený uživateli"
+                rows={3}
+                maxLength={300}
+              />
+            </div>
+            {/* Deployment mode */}
+            <div className="space-y-1.5">
+              <Label>Distribuce</Label>
+              <Select value={offerDeploymentMode} onValueChange={setOfferDeploymentMode}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all_contests">Všechny soutěže</SelectItem>
+                  <SelectItem value="selected_contests">Vybrané soutěže</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Valid from / to */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="offer-valid-from">Platnost od</Label>
+                <Input
+                  id="offer-valid-from"
+                  type="date"
+                  value={offerValidFrom}
+                  onChange={(e) => setOfferValidFrom(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="offer-valid-to">Platnost do</Label>
+                <Input
+                  id="offer-valid-to"
+                  type="date"
+                  value={offerValidTo}
+                  onChange={(e) => setOfferValidTo(e.target.value)}
+                />
+              </div>
+            </div>
+            {/* Link or code */}
+            <div className="space-y-1.5">
+              <Label htmlFor="offer-link-or-code">Kód / odkaz nabídky</Label>
+              <Input
+                id="offer-link-or-code"
+                value={offerLinkOrCode}
+                onChange={(e) => setOfferLinkOrCode(e.target.value)}
+                placeholder="Např. SLEVA10 nebo https://vas-eshop.cz/akce"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOfferFormOpen(false)}
+              disabled={savingOffer}
+            >
+              Zrušit
+            </Button>
+            <Button onClick={handleSaveOfferDraft} disabled={savingOffer}>
+              {savingOffer ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Ukládám…
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Uložit jako koncept
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Activate Reward Modal - Admin only */}
       {isAdmin && (

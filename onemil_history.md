@@ -315,6 +315,22 @@ Byly vytvořeny a commitnuty tyto soubory:
 
 ---
 
+## 2026-04-11 — Partner portal UI: offer management v PartnerDashboard
+
+- `src/pages/PartnerDashboard.tsx` rozšířen o kompletní správu nabídek:
+  - `PartnerOffer` interface, 14 nových state proměnných, 8 nových funkcí
+  - `loadPartnerOffers(partnerId)` — SELECT z `partner_offers` filtrovaný na `partner_id`
+  - `openCreateOffer` / `openEditOffer` — správa form stavu
+  - `handleSaveOfferDraft` — INSERT (nová) nebo UPDATE (existující draft/rejected)
+  - `handleSubmitOffer` — UPDATE status na `submitted`
+  - `handleReviseOffer` — RPC `revise_partner_offer({p_offer_id})`
+  - `getOfferStatusBadge` / `getDeploymentModeLabel` — UI helpers
+  - Card sekce se seznamem nabídek (Table) + inline akce dle stavu
+  - Dialog pro vytvoření / úpravu s fieldy: title, short_text, deployment_mode, valid_from, valid_to, link_or_code
+  - Approved nabídky jsou read-only (žádné tlačítko editace)
+- `loadPartnerOffers(partnerData.id)` voláno z `loadPartnerData()` automaticky
+- Build: ✅ exit code 0
+
 ## 2026-04-10 — Odstranění dočasného private-access gate v App
 
 - V `src/App.tsx` odstraněn email allowlist (`divispavel2@gmail.com`), `isLockExemptRoute` / `isLocked` a celá obrazovka „Web je momentálně neveřejný“; role redirecty v `useEffect` beze změny logiky kromě odstranění early return kvůli locku.

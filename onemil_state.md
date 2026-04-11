@@ -262,6 +262,21 @@ Pravidlo:
 
 ---
 
+## Partner portal UI – offer management (2026-04-11)
+
+Nasazeno v `src/pages/PartnerDashboard.tsx`:
+- Partner vidí seznam svých nabídek (`partner_offers`) s reálnými stavy
+- Sloupce: název, stav (badge), distribuce, platnost do, datum posledního přidělení, akce
+- Tlačítko „Nová nabídka" → dialog pro vytvoření (INSERT jako draft)
+- Draft / Rejected → tlačítko Upravit (UPDATE) + Odeslat (→ submitted) / Vrátit k úpravám (RPC `revise_partner_offer`)
+- Submitted → zobrazí „Čeká na schválení"
+- Approved → zobrazí „Schváleno – nelze měnit" (bez editačního tlačítka)
+- Form fields: title, short_text, deployment_mode (Select), valid_from, valid_to, link_or_code
+- `loadPartnerOffers(partnerId)` voláno automaticky z `loadPartnerData()`
+- Build: ✅ exit code 0
+
+---
+
 ## Další správný krok
 Partner Offers v1 už se nemá znovu architektonicky otevírat.
 
