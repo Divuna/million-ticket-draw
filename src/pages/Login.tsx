@@ -31,7 +31,12 @@ const Login: React.FC = () => {
   const [searchParams] = useSearchParams();
   const redirectRaw = searchParams.get("redirect");
   const { signIn, signInWithOAuth, user, loading: authLoading } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const {
+    isAdmin,
+    isPartnerAccount,
+    isInfluencerAccount,
+    loading: roleLoading,
+  } = useUserRole();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,6 +49,10 @@ const Login: React.FC = () => {
       navigate(redirectTarget, { replace: true });
     } else if (isAdmin) {
       navigate("/admin", { replace: true });
+    } else if (isInfluencerAccount) {
+      navigate("/influencer/dashboard", { replace: true });
+    } else if (isPartnerAccount) {
+      navigate("/partner/dashboard", { replace: true });
     } else {
       navigate("/profile", { replace: true });
     }
@@ -54,6 +63,8 @@ const Login: React.FC = () => {
     user,
     roleLoading,
     isAdmin,
+    isPartnerAccount,
+    isInfluencerAccount,
     redirectRaw,
     navigate,
   ]);
@@ -63,7 +74,7 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(email.trim(), password);
 
       if (error) {
         toast({
@@ -119,7 +130,9 @@ const Login: React.FC = () => {
               </label>
               <Input
                 id="email"
-                type="email"
+                type="text"
+                inputMode="email"
+                autoComplete="email"
                 placeholder="vas@email.cz"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

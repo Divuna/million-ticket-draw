@@ -374,13 +374,17 @@ function AppContent() {
   React.useEffect(() => {
     if (roleLoading || !user) return;
     
-    // Influencer accounts: ONLY allow /influencer/* routes and login/register
+    // Influencer accounts: customer app + influencer/partner auth entry routes only
     if (isInfluencerAccount) {
-      const allowedForInfluencer = 
-        location.pathname.startsWith('/influencer') || 
-        location.pathname === '/partner/login' || 
-        location.pathname === '/partner/register';
-      
+      const allowedForInfluencer =
+        location.pathname.startsWith('/influencer') ||
+        location.pathname === '/partner/login' ||
+        location.pathname === '/partner/register' ||
+        location.pathname === '/login' ||
+        location.pathname === '/register' ||
+        location.pathname === '/delete-account' ||
+        location.pathname === '/unsubscribe/marketing';
+
       if (!allowedForInfluencer) {
         navigate('/influencer/dashboard', { replace: true });
         return;
@@ -442,11 +446,15 @@ function AppContent() {
 
   // Influencer: block all non-influencer routes (render guard matches useEffect logic)
   if (isInfluencerAccount && user) {
-    const allowedForInfluencer = 
-      location.pathname.startsWith('/influencer') || 
-      location.pathname === '/partner/login' || 
-      location.pathname === '/partner/register';
-    
+    const allowedForInfluencer =
+      location.pathname.startsWith('/influencer') ||
+      location.pathname === '/partner/login' ||
+      location.pathname === '/partner/register' ||
+      location.pathname === '/login' ||
+      location.pathname === '/register' ||
+      location.pathname === '/delete-account' ||
+      location.pathname === '/unsubscribe/marketing';
+
     if (!allowedForInfluencer) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-background">

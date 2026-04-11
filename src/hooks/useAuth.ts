@@ -88,10 +88,11 @@ export const useAuthState = () => {
   }, []);
 
   const signUp = async (email: string, password: string, marketingConsent: boolean = false) => {
+    const normalizedEmail = email.trim().toLowerCase();
     const redirectUrl = `${import.meta.env.VITE_APP_URL || window.location.origin}/`;
     
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: {
         emailRedirectTo: redirectUrl
@@ -139,8 +140,9 @@ export const useAuthState = () => {
   };
 
   const signIn = async (email: string, password: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password,
     });
 

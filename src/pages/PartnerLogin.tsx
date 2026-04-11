@@ -27,8 +27,9 @@ const PartnerLogin = () => {
     setLoading(true);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password,
       });
 
