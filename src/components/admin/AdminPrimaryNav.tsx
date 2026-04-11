@@ -2,6 +2,7 @@ import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { useUnseenWinsCount } from "@/hooks/useUnseenWinsCount";
+import { usePendingOffersCount } from "@/hooks/usePendingOffersCount";
 import {
   ADMIN_BOTTOM_NAV,
   adminBottomNavLinkEnd,
@@ -13,6 +14,7 @@ export const AdminPrimaryNav: React.FC = () => {
   const location = useLocation();
   const { unreadCount } = useUnreadMessagesCount();
   const { unseenCount: unseenWinsCount } = useUnseenWinsCount();
+  const { pendingCount: pendingOffersCount } = usePendingOffersCount();
 
   const activeSection = getAdminSectionFromPath(location.pathname, location.search);
 
@@ -24,8 +26,11 @@ export const AdminPrimaryNav: React.FC = () => {
           const active = entry.id === activeSection;
           const showMessagesBadge = entry.id === "messages" && unreadCount > 0;
           const showWinsBadge = entry.id === "wins" && unseenWinsCount > 0;
+          const showOffersBadge = entry.id === "users" && pendingOffersCount > 0;
           const badgeCount =
-            entry.id === "messages" ? unreadCount : entry.id === "wins" ? unseenWinsCount : 0;
+            entry.id === "messages" ? unreadCount :
+            entry.id === "wins" ? unseenWinsCount :
+            entry.id === "users" ? pendingOffersCount : 0;
           return (
             <NavLink
               key={entry.id}
@@ -46,7 +51,7 @@ export const AdminPrimaryNav: React.FC = () => {
                 aria-hidden
               />
               <span className="whitespace-nowrap">{entry.label}</span>
-              {(showMessagesBadge || showWinsBadge) && (
+              {(showMessagesBadge || showWinsBadge || showOffersBadge) && (
                 <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground px-0.5">
                   {badgeCount > 99 ? "99+" : badgeCount}
                 </span>

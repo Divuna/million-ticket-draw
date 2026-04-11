@@ -35,6 +35,7 @@ import {
   LayoutTemplate,
   MoreHorizontal,
   Truck,
+  Tag,
 } from "lucide-react";
 
 /**
@@ -120,6 +121,7 @@ const USERS_NAV = {
   onboarding: { path: "/admin/onboarding-incomplete", label: "Onboarding", icon: UserX },
   partners: { path: "/admin/partners", label: "Partneři", icon: Handshake },
   partnersPortal: { path: "/admin/partners-portal", label: "Partneři portál", icon: Handshake },
+  partnerOffers: { path: "/admin/partner-offers", label: "Nabídky ke schválení", icon: Tag },
   invoices: { path: "/admin/invoices", label: "Faktury", icon: Receipt },
   influencers: { path: "/admin/influencers", label: "Influenceři", icon: Megaphone },
   campaigns: { path: "/admin/influencer-campaigns", label: "Kampaně", icon: CalendarDays },
@@ -241,7 +243,7 @@ export const ADMIN_NAV_SECTIONS: readonly AdminNavSectionDefinition[] = [
         label: "Více",
         icon: MoreHorizontal,
         sections: [
-          { label: "Partneři", items: [USERS_NAV.partnersPortal] },
+          { label: "Partneři", items: [USERS_NAV.partnersPortal, USERS_NAV.partnerOffers] },
           { label: "Influencer", items: [USERS_NAV.campaigns, USERS_NAV.commissions] },
           {
             label: "Audit a compliance",
@@ -343,6 +345,7 @@ export function getAdminSectionFromPath(pathname: string, search: string = ""): 
     path.startsWith("/admin/users") ||
     path.startsWith("/admin/onboarding-incomplete") ||
     path.startsWith("/admin/partners-portal") ||
+    path.startsWith("/admin/partner-offers") ||
     path.startsWith("/admin/partners/") ||
     path === "/admin/partners" ||
     path.startsWith("/admin/influencers") ||

@@ -44,6 +44,7 @@ import AdminNotifications from "@/pages/AdminNotifications";
 import AdminWinners from "@/pages/AdminWinners";
 import AdminTests from "@/pages/AdminTests";
 import AdminPartners from "@/pages/AdminPartners";
+import AdminPartnerOffers from "@/pages/AdminPartnerOffers";
 import AdminAuditLogs from "@/pages/AdminAuditLogs";
 import AdminEventQueue from "@/pages/AdminEventQueue";
 import AdminAuditRepair from "@/pages/AdminAuditRepair";
@@ -515,6 +516,7 @@ function AppContent() {
             <Route path="/admin/prize-delivery" element={<AdminPrizeDeliveryPage />} />
             <Route path="/admin/tests" element={<AdminTests />} />
             <Route path="/admin/partners" element={<AdminPartners />} />
+            <Route path="/admin/partner-offers" element={<AdminPartnerOffers />} />
             <Route path="/admin/messages" element={<AdminMessages />} />
             <Route path="/admin/messages/:userId" element={<AdminMessageThread />} />
             <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
