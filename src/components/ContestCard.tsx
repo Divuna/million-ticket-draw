@@ -47,8 +47,8 @@ export const ContestCard: React.FC<ContestCardProps> = ({
   onPlay,
   fromPage,
   className = '',
-  ticketsSold = 0,
-  ticketsTotal = 1_000_000,
+  ticketsSold,
+  ticketsTotal,
   walletBalance,
 }) => {
   const navigate = useNavigate();
@@ -117,6 +117,10 @@ export const ContestCard: React.FC<ContestCardProps> = ({
   };
 
   const imageUrl = getBestImageUrl();
+
+  const showProgress =
+    typeof ticketsTotal === "number" && Number.isFinite(ticketsTotal);
+  const soldForBar = showProgress ? (ticketsSold ?? 0) : 0;
 
   return (
     <div 
@@ -214,21 +218,22 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             {contest.title}
           </h3>
           
-          {/* Progress */}
-          <div className="space-y-0.5">
-            <p className="text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
-              {(ticketsSold ?? 0).toLocaleString("cs-CZ")} / {(ticketsTotal ?? 1_000_000).toLocaleString("cs-CZ")} ticketů
-            </p>
-            <div className="w-full h-1 rounded-full overflow-hidden bg-white/20">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-[#f6e27a] to-[#d4a017] transition-all duration-300"
-                style={{
-                  width: `${(ticketsTotal ?? 1_000_000) > 0 ? Math.min(100, ((ticketsSold ?? 0) / (ticketsTotal ?? 1_000_000)) * 100) : 0}%`
-                }}
-              />
+          {showProgress && (
+            <div className="space-y-0.5">
+              <p className="text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
+                {soldForBar.toLocaleString("cs-CZ")} / {ticketsTotal.toLocaleString("cs-CZ")} ticketů
+              </p>
+              <div className="w-full h-1 rounded-full overflow-hidden bg-white/20">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#f6e27a] to-[#d4a017] transition-all duration-300"
+                  style={{
+                    width: `${ticketsTotal > 0 ? Math.min(100, (soldForBar / ticketsTotal) * 100) : 0}%`,
+                  }}
+                />
+              </div>
             </div>
-          </div>
-          
+          )}
+
           {/* CTA for logged-in users */}
           {user && (
             <div className="flex flex-col gap-1.5">

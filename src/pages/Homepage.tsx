@@ -61,7 +61,6 @@ const Homepage = () => {
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
   const megajackpotCarouselRef = useRef<HTMLDivElement>(null);
   const [contests, setContests] = useState<Contest[]>([]);
-  const [progressMap, setProgressMap] = useState<Record<string, { tickets_sold: number; tickets_total: number }>>({});
   const [loading, setLoading] = useState(true);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
@@ -79,27 +78,6 @@ const Homepage = () => {
       if (error) throw error;
 
       const contestRows = data || [];
-      if (contestRows.length === 0) {
-        setContests([]);
-        setLoading(false);
-        return;
-      }
-
-      const ids = contestRows.map((c) => c.id);
-      const { data: progressRows } = await supabase
-        .from("contest_progress")
-        .select("contest_id, tickets_sold, tickets_total")
-        .in("contest_id", ids);
-
-      const map: Record<string, { tickets_sold: number; tickets_total: number }> = {};
-      (progressRows || []).forEach((r) => {
-        map[r.contest_id] = {
-          tickets_sold: r.tickets_sold ?? 0,
-          tickets_total: r.tickets_total ?? 1_000_000,
-        };
-      });
-
-      setProgressMap(map);
       setContests(contestRows);
     } catch (error) {
       console.error("Error fetching contests:", error);
@@ -940,8 +918,6 @@ const Homepage = () => {
                   onPlay={handleContestClick}
                   fromPage="homepage"
                   className="flex-shrink-0 w-80"
-                  ticketsSold={progressMap[contest.id]?.tickets_sold ?? 0}
-                  ticketsTotal={progressMap[contest.id]?.tickets_total ?? 1_000_000}
                 />
               ))
             )}

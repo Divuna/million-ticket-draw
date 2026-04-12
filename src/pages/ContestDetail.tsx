@@ -36,7 +36,6 @@ type Contest = {
   main_prize_secondary_image: string | null;
   main_image: string | null;
   banner_image: string | null;
-  total_miocoin_bonus: number | null;
   fast_game?: boolean;
 };
 
@@ -124,6 +123,8 @@ export default function ContestDetail() {
   const [loading, setLoading] = useState(true);
 
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
+  /** Sum of `bonus_prizes.amount` for coin rows (amount > 0); physical rows use null/0 amount */
+  const [miocoinBonusPoolTotal, setMiocoinBonusPoolTotal] = useState(0);
   const [myWins, setMyWins] = useState<Winner[]>([]);
   const [balance, setBalance] = useState(0);
   const [balanceLoaded, setBalanceLoaded] = useState(false);
@@ -452,7 +453,7 @@ export default function ContestDetail() {
       try {
         const { data: contestData, error: contestError } = await supabase
           .from("contests")
-          .select("id, title, description, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, total_miocoin_bonus, fast_game")
+          .select("id, title, description, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, fast_game")
           .eq("id", id)
           .maybeSingle();
 
@@ -472,15 +473,25 @@ export default function ContestDetail() {
         const { data: bonusData, error: bonusError } = await supabase
           .from("bonus_prizes")
           .select("*")
-          .eq("contest_id", id)
-          .or("amount.is.null,amount.eq.0");
+          .eq("contest_id", id);
 
         if (bonusError) {
           console.error('[DEBUG ContestDetail] bonus_prizes fetch error:', bonusError, JSON.stringify(bonusError));
         }
 
-        console.log('[DEBUG ContestDetail] setBonusPrizes:', bonusData?.length, 'items');
-        setBonusPrizes((bonusData ?? []) as BonusPrize[]);
+        const allBonusRows = (bonusData ?? []) as BonusPrize[];
+        // Physical prizes: same filter as before (amount null or 0 — matches `.or("amount.is.null,amount.eq.0")`)
+        const physicalOnly = allBonusRows.filter(
+          (b) => b.amount == null || b.amount === 0
+        );
+        console.log('[DEBUG ContestDetail] setBonusPrizes:', physicalOnly?.length, 'items');
+        setBonusPrizes(physicalOnly);
+        setMiocoinBonusPoolTotal(
+          allBonusRows.reduce((sum, b) => {
+            const a = b.amount;
+            return typeof a === "number" && a > 0 ? sum + a : sum;
+          }, 0)
+        );
 
         const { data: auth } = await supabase.auth.getUser();
         const uid = auth?.user?.id ?? null;
@@ -877,7 +888,7 @@ export default function ContestDetail() {
           <div className="flex-1 flex flex-col justify-center">
             <p className="text-sm text-gray-200 leading-relaxed">
               Do této soutěže jsme navíc přidali{" "}
-              <span className="text-yellow-400 font-bold text-2xl md:text-3xl">{(contest.total_miocoin_bonus ?? 0).toLocaleString("cs-CZ")}</span>{" "}
+              <span className="text-yellow-400 font-bold text-2xl md:text-3xl">{miocoinBonusPoolTotal.toLocaleString("cs-CZ")}</span>{" "}
               MioCoinů jako bonusové výhry, které můžete během soutěže získat.
             </p>
           </div>
@@ -904,17 +915,7 @@ export default function ContestDetail() {
         <p className="text-yellow-400/90 font-medium text-sm md:text-base mb-2">
           {progressTicketsSold.toLocaleString("cs-CZ")} / {progressTicketsTotal.toLocaleString("cs-CZ")}
         </p>
-        
-        {/* Milestone labels */}
-        <div className="flex justify-between mb-2 px-0.5 overflow-x-auto">
-          {['0', '10k', '50k', '100k', '250k', '500k', '750k', '1M'].map((label) => (
-            <div key={label} className="flex flex-col items-center min-w-[30px]">
-              <span className="text-[10px] md:text-xs text-yellow-400/70 font-medium">{label}</span>
-              <div className="w-px h-1.5 bg-yellow-400/40 mt-0.5" />
-            </div>
-          ))}
-        </div>
-        
+
         {/* Progress bar */}
         <div
           className="w-full h-2.5 rounded-full overflow-hidden bg-white/10"

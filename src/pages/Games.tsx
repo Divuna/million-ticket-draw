@@ -100,8 +100,36 @@ const Index = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      setContests(data as Contest[]);
+
+      const rows = (data ?? []) as Contest[];
+      setContests(rows);
+
+      if (rows.length === 0) {
+        setProgressMap({});
+        return;
+      }
+
+      const ids = rows.map((c) => c.id);
+      const { data: progressRows, error: progressError } = await supabase
+        .from('contest_progress')
+        .select('contest_id, tickets_sold, tickets_total')
+        .in('contest_id', ids);
+
+      if (progressError) {
+        console.error('Error fetching contest progress:', progressError);
+        setProgressMap({});
+        return;
+      }
+
+      const map: Record<string, { tickets_sold: number; tickets_total: number }> = {};
+      (progressRows || []).forEach((r) => {
+        if (r.contest_id == null) return;
+        map[r.contest_id] = {
+          tickets_sold: r.tickets_sold ?? 0,
+          tickets_total: r.tickets_total ?? 1_000_000,
+        };
+      });
+      setProgressMap(map);
     } catch (error) {
       console.error('Error fetching contests:', error);
       toast.error('Chyba při načítání soutěží');
