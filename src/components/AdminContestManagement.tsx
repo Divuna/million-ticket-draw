@@ -1057,14 +1057,17 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             distribution_rule: "random",
             batch_size: 500,
           };
-          console.log("[AdminContestManagement] distribute-bonus-prizes before invoke", {
-            batch_length: mioCoinBonuses.length,
-            rows: mioCoinBonuses.map((b) => ({
-              contest_id: contestId,
+          console.log("[DEBUG BONUS PAYLOAD]", {
+            contest_id: contestId,
+            ticketCount: form.ticket_count,
+            newBonusesLength: mioCoinBonuses.length,
+            newBonuses: mioCoinBonuses,
+          });
+          mioCoinBonuses.forEach((b, idx) => {
+            console.log("[DEBUG BONUS PAYLOAD] row", idx, {
               ticket_position: b.ticket_position,
               amount: b.amount,
-            })),
-            invoke_body: distributeBody,
+            });
           });
 
           try {
