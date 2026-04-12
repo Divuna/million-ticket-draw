@@ -6,6 +6,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+function jsonFailure(
+  step: string,
+  message: string,
+  details: unknown,
+  received_rows_count: number,
+  elapsedMs: number,
+  warnings: string[] | undefined,
+  status = 400,
+) {
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: message,
+      step,
+      message,
+      details: details ?? null,
+      received_rows_count,
+      elapsed_ms: elapsedMs,
+      warnings: warnings && warnings.length > 0 ? warnings : undefined,
+    }),
+    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+  )
+}
+
 interface DistributeBonusRequest {
   contest_id: string
   bonus_type: 'MioCoin' | 'Physical Item'
@@ -102,6 +126,16 @@ async function processBonusBatchWithRetry(
     amount: bonusType === 'MioCoin' ? amountPerUnit : 1
   }))
 
+  const first10Rows = bonusesToInsert.slice(0, 10).map((r) => ({
+    ticket_position: r.ticket_position,
+    amount: r.amount,
+  }))
+  console.log('[distribute-bonus-prizes] before insert', {
+    contest_id: contestId,
+    rows_length: bonusesToInsert.length,
+    first_10_rows: first10Rows,
+  })
+
   let lastError: Error | null = null
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -112,7 +146,16 @@ async function processBonusBatchWithRetry(
         .select('id')
 
       if (insertError) {
-        throw new Error(insertError.message)
+        const pgErr = {
+          message: insertError.message,
+          details: insertError.details ?? null,
+          hint: insertError.hint ?? null,
+          code: insertError.code ?? null,
+        }
+        console.error('[distribute-bonus-prizes] bonus_prizes insert error', pgErr)
+        const err = new Error(insertError.message) as Error & { pg?: typeof pgErr }
+        err.pg = pgErr
+        throw err
       }
 
       return insertedBonuses || []
@@ -129,7 +172,15 @@ async function processBonusBatchWithRetry(
     }
   }
 
-  throw new Error(`Failed to insert batch ${batchNumber} after ${maxRetries} attempts: ${lastError?.message}`)
+  const err = new Error(
+    `Failed to insert batch ${batchNumber} after ${maxRetries} attempts: ${lastError?.message}`,
+  ) as Error & {
+    pg?: { message: string; details: string | null; hint: string | null; code: string | null }
+  }
+  if (lastError && 'pg' in lastError && (lastError as Error & { pg?: unknown }).pg) {
+    err.pg = (lastError as Error & { pg: typeof err.pg }).pg
+  }
+  throw err
 }
 
 serve(async (req) => {
@@ -158,12 +209,22 @@ serve(async (req) => {
       }
     )
 
-    const authHeader = req.headers.get('Authorization')!
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return jsonFailure(
+        'auth_header',
+        'Missing Authorization header',
+        null,
+        0,
+        Date.now() - startTime,
+        undefined,
+      )
+    }
     const token = authHeader.replace('Bearer ', '')
     const { data: { user } } = await supabaseAdmin.auth.getUser(token)
 
     if (!user) {
-      throw new Error('Unauthorized')
+      return jsonFailure('auth_user', 'Unauthorized', null, 0, Date.now() - startTime, undefined)
     }
 
     // Check if user is admin via user_roles (canonical role source)
@@ -174,10 +235,29 @@ serve(async (req) => {
       .maybeSingle()
 
     if (roleError || !roleData || !['admin', 'superadmin'].includes(roleData.role)) {
-      throw new Error('Admin access required')
+      return jsonFailure(
+        'admin_role',
+        'Admin access required',
+        { roleError: roleError?.message ?? null, role: roleData?.role ?? null },
+        0,
+        Date.now() - startTime,
+        undefined,
+      )
     }
 
-    const request: DistributeBonusRequest = await req.json()
+    let request: DistributeBonusRequest
+    try {
+      request = await req.json()
+    } catch (parseErr) {
+      return jsonFailure(
+        'parse_request',
+        'Invalid JSON body',
+        parseErr instanceof Error ? parseErr.message : String(parseErr),
+        0,
+        Date.now() - startTime,
+        undefined,
+      )
+    }
     const { 
       contest_id, 
       bonus_type, 
@@ -190,7 +270,14 @@ serve(async (req) => {
     } = request
 
     if (!contest_id || !bonus_type || !total_value || !amount_per_unit || !distribution_rule) {
-      throw new Error('All required fields must be provided')
+      return jsonFailure(
+        'validate_request',
+        'All required fields must be provided',
+        { contest_id, bonus_type, total_value, amount_per_unit, distribution_rule },
+        0,
+        Date.now() - startTime,
+        undefined,
+      )
     }
 
     // Limit batch size to prevent timeouts
@@ -207,7 +294,16 @@ serve(async (req) => {
       .single()
 
     if (contestError || !contest) {
-      throw new Error('Contest not found')
+      return jsonFailure(
+        'fetch_contest',
+        'Contest not found',
+        contestError
+          ? { message: contestError.message, details: contestError.details, code: contestError.code }
+          : { contest_id },
+        0,
+        Date.now() - startTime,
+        undefined,
+      )
     }
 
     const maxBonuses = Math.floor(total_value / amount_per_unit)
@@ -223,7 +319,19 @@ serve(async (req) => {
     const numberOfBonuses = Math.min(maxBonuses, availablePositions)
     
     if (numberOfBonuses === 0) {
-      throw new Error('No bonuses can be created. Contest may be full or insufficient budget.')
+      return jsonFailure(
+        'capacity',
+        'No bonuses can be created. Contest may be full or insufficient budget.',
+        {
+          maxBonuses,
+          availablePositions,
+          contest_ticket_count: contest.ticket_count,
+          existing_positions_count: existingPositions.size,
+        },
+        0,
+        Date.now() - startTime,
+        undefined,
+      )
     }
 
     if (numberOfBonuses < maxBonuses) {
@@ -234,10 +342,21 @@ serve(async (req) => {
 
     let allPositions: number[] = []
     
-    if (distribution_rule === 'random') {
-      allPositions = generateRandomPositions(numberOfBonuses, contest.ticket_count, existingPositions)
-    } else {
-      allPositions = generateStepPositions(numberOfBonuses, contest.ticket_count, existingPositions, step_min, step_max)
+    try {
+      if (distribution_rule === 'random') {
+        allPositions = generateRandomPositions(numberOfBonuses, contest.ticket_count, existingPositions)
+      } else {
+        allPositions = generateStepPositions(numberOfBonuses, contest.ticket_count, existingPositions, step_min, step_max)
+      }
+    } catch (genErr) {
+      return jsonFailure(
+        'generate_positions',
+        genErr instanceof Error ? genErr.message : 'Position generation failed',
+        genErr instanceof Error ? { name: genErr.name, stack: genErr.stack } : String(genErr),
+        0,
+        Date.now() - startTime,
+        warnings.length > 0 ? warnings : undefined,
+      )
     }
 
     if (allPositions.length < numberOfBonuses) {
@@ -248,6 +367,11 @@ serve(async (req) => {
     let totalCreated = 0
     let successfulBatches = 0
     let failedBatches = 0
+    let lastBatchFailure: {
+      batch: number
+      message: string
+      postgres: { message: string; details: string | null; hint: string | null; code: string | null } | null
+    } | null = null
 
     console.log(`Processing ${allPositions.length} positions in ${totalBatches} batches of size ${effectiveBatchSize}`)
 
@@ -280,6 +404,17 @@ serve(async (req) => {
       } catch (error) {
         console.error(`Error processing batch ${batchIndex + 1}:`, error)
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+        const pg = (error as Error & {
+          pg?: { message: string; details: string | null; hint: string | null; code: string | null }
+        }).pg
+        lastBatchFailure = {
+          batch: batchIndex + 1,
+          message: errorMessage,
+          postgres: pg ?? null,
+        }
+        if (pg) {
+          console.error('[distribute-bonus-prizes] batch failure postgres', pg)
+        }
         warnings.push(`Failed batch ${batchIndex + 1}: ${errorMessage}`)
         failedBatches++
         // Continue with next batch instead of failing completely
@@ -314,6 +449,42 @@ serve(async (req) => {
 
     const samplePositions = allPositions.slice(0, Math.min(10, allPositions.length))
 
+    if (totalCreated === 0 && allPositions.length > 0) {
+      const msg =
+        lastBatchFailure?.message ??
+        'All insert batches failed'
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: msg,
+          step: 'insert_bonus_prizes',
+          message: msg,
+          details: {
+            contest_id,
+            last_batch: lastBatchFailure?.batch ?? null,
+            postgres: lastBatchFailure?.postgres ?? null,
+            total_batches: totalBatches,
+            failed_batches: failedBatches,
+            positions_attempted: allPositions.length,
+          },
+          received_rows_count: allPositions.length,
+          created_bonuses: 0,
+          total_requested: numberOfBonuses,
+          positions_count: allPositions.length,
+          sample_positions: samplePositions,
+          batches_processed: totalBatches,
+          successful_batches: successfulBatches,
+          failed_batches: failedBatches,
+          elapsed_ms: elapsedMs,
+          warnings: warnings.length > 0 ? warnings : undefined,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        },
+      )
+    }
+
     return new Response(
       JSON.stringify({ 
         success: totalCreated > 0,
@@ -338,11 +509,18 @@ serve(async (req) => {
     console.error('Error in distribute-bonus-prizes:', error)
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    const errObj = error instanceof Error
+      ? { name: error.name, message: error.message, stack: error.stack }
+      : String(error)
     
     return new Response(
       JSON.stringify({ 
         success: false,
+        step: 'unhandled',
         error: errorMessage,
+        message: errorMessage,
+        details: errObj,
+        received_rows_count: 0,
         elapsed_ms: elapsedMs,
         warnings: warnings.length > 0 ? warnings : undefined 
       }),
