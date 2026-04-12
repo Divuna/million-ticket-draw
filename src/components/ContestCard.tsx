@@ -32,6 +32,8 @@ interface ContestCardProps {
   className?: string;
   ticketsSold?: number;
   ticketsTotal?: number;
+  /** Games page: show only total count line, no sold/progress */
+  showTotalOnly?: boolean;
   /** When set (e.g. on Games / Favorites), gates purchase CTA vs top-up using this balance */
   walletBalance?: number;
 }
@@ -218,6 +220,11 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             {contest.title}
           </h3>
           
+          {showTotalOnlyLine && (
+            <p className="text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
+              Celkem {ticketsTotal.toLocaleString("cs-CZ")} ticketů
+            </p>
+          )}
           {showProgress && (
             <div className="space-y-0.5">
               <p className="text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
