@@ -51,6 +51,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
   className = '',
   ticketsSold,
   ticketsTotal,
+  showTotalOnly = false,
   walletBalance,
 }) => {
   const navigate = useNavigate();
@@ -120,8 +121,10 @@ export const ContestCard: React.FC<ContestCardProps> = ({
 
   const imageUrl = getBestImageUrl();
 
-  const showProgress =
+  const hasTotal =
     typeof ticketsTotal === "number" && Number.isFinite(ticketsTotal);
+  const showTotalOnlyLine = Boolean(showTotalOnly && hasTotal);
+  const showProgress = !showTotalOnly && hasTotal;
   const soldForBar = showProgress ? (ticketsSold ?? 0) : 0;
 
   return (
