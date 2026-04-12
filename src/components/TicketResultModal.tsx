@@ -892,74 +892,77 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               </div>
             ) : isPartnerOffer && result?.partner_offer ? (
               /* ── Partner Offer win state ─────────────────────────────────── */
-              <div className="text-center space-y-4">
-                {/* Banner / logo */}
-                {(result.partner_offer.banner_url || result.partner_offer.logo_url) && (
-                  <div className="overflow-hidden rounded-xl">
-                    <img
-                      src={result.partner_offer.banner_url ?? result.partner_offer.logo_url!}
-                      alt={result.partner_offer.title}
-                      className="w-full max-h-36 object-cover"
-                      loading="eager"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  </div>
-                )}
-                {!shouldCelebrateWin && <div className="text-5xl">🎁</div>}
-                <div>
-                  {!shouldCelebrateWin && (
-                    <p className="text-lg font-bold text-amber-300">Gratulujeme!</p>
+              <div className="mx-auto flex min-h-[min(50vh,420px)] w-full max-w-3xl flex-col items-center justify-center p-6">
+                <div className="flex w-full flex-col items-center gap-3 text-center">
+                  {(result.partner_offer.banner_url || result.partner_offer.logo_url) && (
+                    <div className="w-full overflow-hidden rounded-xl">
+                      <img
+                        src={result.partner_offer.banner_url ?? result.partner_offer.logo_url!}
+                        alt={result.partner_offer.title}
+                        className="h-48 w-full object-cover sm:h-56"
+                        loading="eager"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    </div>
                   )}
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Získal jsi speciální nabídku od našeho partnera
+                  {!shouldCelebrateWin && <div className="text-5xl">🎁</div>}
+                  <div className="flex flex-col items-center gap-2">
+                    {!shouldCelebrateWin && (
+                      <p className="text-lg font-bold text-amber-300">Gratulujeme!</p>
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      Získal jsi speciální nabídku od našeho partnera
+                    </p>
+                  </div>
+                  <div className="flex w-full flex-col items-center gap-2 text-center">
+                    {result.partner_offer.partner_name && (
+                      <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                        {result.partner_offer.partner_name}
+                      </p>
+                    )}
+                    <p className="text-base font-bold text-white">{result.partner_offer.title}</p>
+                    {result.partner_offer.short_text && (
+                      <p className="text-sm text-muted-foreground">{result.partner_offer.short_text}</p>
+                    )}
+                    {result.partner_offer.valid_to && (
+                      <p className="text-xs text-muted-foreground">
+                        Platná do: {new Date(result.partner_offer.valid_to).toLocaleDateString('cs-CZ')}
+                      </p>
+                    )}
+                  </div>
+                  <p className="win-moment-cta-hint text-center text-[11px] font-semibold uppercase text-blue-200/75 sm:text-xs">
+                    Nabídka je uložena v tvých{' '}
+                    <span className="text-blue-100">výhrách → Nabídky</span>
                   </p>
-                </div>
-                {result.partner_offer.partner_name && (
-                  <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
-                    {result.partner_offer.partner_name}
-                  </p>
-                )}
-                <p className="text-base font-bold text-white">{result.partner_offer.title}</p>
-                {result.partner_offer.short_text && (
-                  <p className="text-sm text-muted-foreground">{result.partner_offer.short_text}</p>
-                )}
-                {result.partner_offer.valid_to && (
-                  <p className="text-xs text-muted-foreground">
-                    Platná do: {new Date(result.partner_offer.valid_to).toLocaleDateString('cs-CZ')}
-                  </p>
-                )}
-                <p className="win-moment-cta-hint -mb-1 text-center text-[11px] font-semibold uppercase text-blue-200/75 sm:text-xs">
-                  Nabídka je uložena v tvých{' '}
-                  <span className="text-blue-100">výhrách → Nabídky</span>
-                </p>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <Button
-                    type="button"
-                    onClick={handlePlayAgain}
-                    className="win-moment-cta-play-again w-full border-0 font-bold shadow-lg bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-400 text-black hover:brightness-110"
-                  >
-                    Hrát znovu
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGoToWins}
-                    className="w-full font-semibold border-blue-500/40"
-                  >
-                    Zobrazit nabídku
-                  </Button>
-                </div>
-                <div className="flex justify-center pt-0.5">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCopyWinShare}
-                    className="h-9 gap-1.5 text-amber-200/95 hover:bg-amber-500/10 hover:text-amber-50"
-                  >
-                    <Share2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                    Sdílet výhru
-                  </Button>
+                  <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+                    <Button
+                      type="button"
+                      onClick={handlePlayAgain}
+                      className="win-moment-cta-play-again w-full border-0 font-bold shadow-lg bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-400 text-black hover:brightness-110"
+                    >
+                      Hrát znovu
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleGoToWins}
+                      className="w-full font-semibold border-blue-500/40"
+                    >
+                      Zobrazit nabídku
+                    </Button>
+                  </div>
+                  <div className="flex w-full justify-center pt-0.5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCopyWinShare}
+                      className="h-9 gap-1.5 text-amber-200/95 hover:bg-amber-500/10 hover:text-amber-50"
+                    >
+                      <Share2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                      Sdílet výhru
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : null
