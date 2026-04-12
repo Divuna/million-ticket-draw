@@ -144,7 +144,6 @@ export default function ContestDetail() {
   const [realtimeStatus, setRealtimeStatus] = useState<string>('');
   const [lastWinnersEventAt, setLastWinnersEventAt] = useState<number | null>(null);
   const [, forceUpdate] = useState(0);
-  const [progressTicketsSold, setProgressTicketsSold] = useState(0);
   const [progressTicketsTotal, setProgressTicketsTotal] = useState(1_000_000);
 
   // Live activity rotating messages
@@ -350,11 +349,10 @@ export default function ContestDetail() {
         loadUserBalance(user.id);
         const { data: prog } = await supabase
           .from("contest_progress")
-          .select("tickets_sold, tickets_total")
+          .select("tickets_total")
           .eq("contest_id", contest.id)
           .maybeSingle();
         if (prog) {
-          setProgressTicketsSold(prog.tickets_sold ?? 0);
           setProgressTicketsTotal(prog.tickets_total ?? 1_000_000);
         }
 
@@ -538,10 +536,9 @@ export default function ContestDetail() {
 
         const { data: prog } = await supabase
           .from("contest_progress")
-          .select("tickets_sold, tickets_total")
+          .select("tickets_total")
           .eq("contest_id", id)
           .maybeSingle();
-        setProgressTicketsSold(prog?.tickets_sold ?? 0);
         setProgressTicketsTotal(prog?.tickets_total ?? 1_000_000);
         console.log("galleryMedia", mediaData);
 
@@ -913,10 +910,10 @@ export default function ContestDetail() {
       <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[hsl(40_60%_50%/0.2)]">
         <h2 className="text-white font-semibold text-sm md:text-base mb-4">Cesta k hlavní výhře</h2>
         <p className="text-yellow-400/90 font-medium text-sm md:text-base mb-2">
-          {progressTicketsSold.toLocaleString("cs-CZ")} / {progressTicketsTotal.toLocaleString("cs-CZ")}
+          Celkem {progressTicketsTotal.toLocaleString("cs-CZ")} ticketů
         </p>
 
-        {/* Progress bar */}
+        {/* Progress bar — static fill (no sold/total ratio) */}
         <div
           className="w-full h-2.5 rounded-full overflow-hidden bg-white/10"
           style={{ boxShadow: '0 0 20px rgba(250, 204, 21, 0.2)' }}
@@ -924,7 +921,7 @@ export default function ContestDetail() {
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{
-              width: `${progressTicketsTotal > 0 ? Math.min(100, (progressTicketsSold / progressTicketsTotal) * 100) : 0}%`,
+              width: "100%",
               background: 'linear-gradient(to right, #f6e27a, #d4a017)',
               boxShadow: '0 0 20px rgba(250, 204, 21, 0.4)'
             }}
