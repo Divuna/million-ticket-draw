@@ -57,6 +57,17 @@ type Winner = {
   bonus_prize_id?: string | null;
 };
 
+interface PartnerOfferResult {
+  id: string;            // user_partner_offers.id
+  title: string;
+  short_text: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
+  link_or_code: string | null;
+  valid_to: string | null;
+  partner_name: string;
+}
+
 interface UnlockTicketResult {
   ticket_number: number;
   ticket_price: number;
@@ -66,6 +77,7 @@ interface UnlockTicketResult {
   remaining_tickets?: number;
   won_type?: 'bonus' | 'main' | null;
   bonus_prize_id?: string | null;
+  partner_offer?: PartnerOfferResult | null;
 }
 
 // Memoized thumbnail strip to avoid re-renders on gallery index change
@@ -333,17 +345,6 @@ export default function ContestDetail() {
           ticketNumber: result.ticket_number,
         });
         
-        const mappedResult: UnlockTicketResult = {
-          ticket_number: result.ticket_number,
-          ticket_price: result.ticket_price ?? 1,
-          next_bonus_position: result.next_bonus_position ?? null,
-          distance_to_next_bonus: result.distance_to_next_bonus ?? null,
-          won_prize: result.won_prize ?? null,
-          won_type: result.won_type ?? null,
-          bonus_prize_id: result.bonus_prize_id ?? null,
-          remaining_tickets: result.remaining_tickets ?? 0
-        };
-
         // Refresh balance and progress immediately
         loadUserBalance(user.id);
         const { data: prog } = await supabase
@@ -355,6 +356,56 @@ export default function ContestDetail() {
           setProgressTicketsSold(prog.tickets_sold ?? 0);
           setProgressTicketsTotal(prog.tickets_total ?? 1_000_000);
         }
+
+        // ── Partner Offer lookup ──────────────────────────────────────────────
+        // buy_ticket_atomic returns ticket_row_id (UUID of the new tickets row).
+        // The DB trigger trg_assign_offer_on_ticket_insert runs synchronously in
+        // the same transaction, so the offer (if any) is already committed here.
+        let partnerOffer: PartnerOfferResult | null = null;
+        const ticketRowId = (data as any)?.ticket_row_id as string | undefined;
+        if (ticketRowId && user) {
+          try {
+            const { data: upoRow } = await supabase
+              .from('user_partner_offers')
+              .select(`
+                id,
+                partner_offers (
+                  title, short_text, logo_url, banner_url, link_or_code, valid_to,
+                  partners (company_name, name)
+                )
+              `)
+              .eq('ticket_id', ticketRowId)
+              .eq('user_id', user.id)
+              .maybeSingle();
+            if (upoRow?.partner_offers) {
+              const po = upoRow.partner_offers as any;
+              partnerOffer = {
+                id: upoRow.id,
+                title: po.title ?? '',
+                short_text: po.short_text ?? null,
+                logo_url: po.logo_url ?? null,
+                banner_url: po.banner_url ?? null,
+                link_or_code: po.link_or_code ?? null,
+                valid_to: po.valid_to ?? null,
+                partner_name: po.partners?.company_name || po.partners?.name || '',
+              };
+            }
+          } catch (poErr) {
+            console.warn('[ContestDetail] partner offer lookup skipped:', poErr);
+          }
+        }
+
+        const mappedResult: UnlockTicketResult = {
+          ticket_number: result.ticket_number,
+          ticket_price: result.ticket_price ?? 1,
+          next_bonus_position: result.next_bonus_position ?? null,
+          distance_to_next_bonus: result.distance_to_next_bonus ?? null,
+          won_prize: result.won_prize ?? null,
+          won_type: result.won_type ?? null,
+          bonus_prize_id: result.bonus_prize_id ?? null,
+          remaining_tickets: result.remaining_tickets ?? 0,
+          partner_offer: partnerOffer,
+        };
 
         const isWin = result.won_type === 'main' || result.won_type === 'bonus';
 
@@ -503,7 +554,8 @@ export default function ContestDetail() {
       won_prize: modalResult.won_prize,
       remaining_tickets: modalResult.remaining_tickets,
       won_type: modalResult.won_type,
-      bonus_prize_id: modalResult.bonus_prize_id
+      bonus_prize_id: modalResult.bonus_prize_id,
+      partner_offer: modalResult.partner_offer ?? null,
     };
   }, [
     modalResult?.ticket_number,
@@ -512,7 +564,8 @@ export default function ContestDetail() {
     modalResult?.won_prize,
     modalResult?.remaining_tickets,
     modalResult?.won_type,
-    modalResult?.bonus_prize_id
+    modalResult?.bonus_prize_id,
+    modalResult?.partner_offer,
   ]);
 
   const getYouTubeId = useCallback((url: string) => {

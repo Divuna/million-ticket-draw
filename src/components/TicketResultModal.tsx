@@ -53,6 +53,16 @@ interface TicketResultModalProps {
     bonus_prize_id?: string | null;
     won_bonus?: boolean;
     won_main?: boolean;
+    partner_offer?: {
+      id: string;
+      title: string;
+      short_text: string | null;
+      logo_url: string | null;
+      banner_url: string | null;
+      link_or_code: string | null;
+      valid_to: string | null;
+      partner_name: string;
+    } | null;
   } | null | undefined;
 }
 
@@ -397,7 +407,9 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   // hides the win celebration.
   const isBonusWin = bonusPrize !== null || result?.won_type === 'bonus';
   const isMainPrize = result?.won_type === 'main' || result?.won_main === true;
-  const isWinner = isBonusWin || isMainPrize;
+  // Partner offer assigned to this specific ticket → treated as special win type.
+  const isPartnerOffer = !!result?.partner_offer;
+  const isWinner = isBonusWin || isMainPrize || isPartnerOffer;
   const isBonusClaimed = bonusPrize?.status === 'won';
 
   /** Real win only — not “no prize” ticket purchase UI */
@@ -444,9 +456,11 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
   const prizeHeadline = isMainPrize
     ? (result?.won_prize?.trim() || 'Hlavní výhra')
-    : bonusPrize
+    : (isBonusWin && bonusPrize)
       ? (bonusPrize.title?.trim() || bonusPrize.description || 'Bonusová výhra')
-      : '';
+      : isPartnerOffer
+        ? 'Gratulujeme!'
+        : '';
 
   // Keep keyboard / SR attention on the prize title (beat dialog auto-focus to close button)
   useLayoutEffect(() => {
@@ -671,7 +685,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 id="win-moment-shout"
                 className="win-moment-win-headline mb-3 text-center text-2xl font-black uppercase tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-yellow-300 to-amber-200 drop-shadow-[0_0_28px_rgba(250,210,80,0.55)] md:text-3xl md:tracking-[0.12em]"
               >
-                🎉 VYHRÁL JSI!
+                {isPartnerOffer && !isBonusWin && !isMainPrize ? '🎁 SPECIÁLNÍ NABÍDKA!' : '🎉 VYHRÁL JSI!'}
               </p>
               <h2
                 ref={prizeTitleFocusRef}
@@ -709,7 +723,9 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             colors={
               isMainPrize
                 ? ['#FFD700', '#FFA500', '#FF4500', '#DC143C', '#8A2BE2', '#FFF8DC']
-                : ['#FDE047', '#A78BFA', '#38BDF8', '#FB923C', '#F472B6']
+                : (isPartnerOffer && !isBonusWin)
+                  ? ['#60A5FA', '#818CF8', '#A78BFA', '#34D399', '#F472B6']
+                  : ['#FDE047', '#A78BFA', '#38BDF8', '#FB923C', '#F472B6']
             }
             style={{ zIndex: 120, pointerEvents: 'none' }}
           />
@@ -859,6 +875,78 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     className="w-full font-semibold border-amber-500/40"
                   >
                     Zobrazit výhru
+                  </Button>
+                </div>
+                <div className="flex justify-center pt-0.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopyWinShare}
+                    className="h-9 gap-1.5 text-amber-200/95 hover:bg-amber-500/10 hover:text-amber-50"
+                  >
+                    <Share2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                    Sdílet výhru
+                  </Button>
+                </div>
+              </div>
+            ) : isPartnerOffer && result?.partner_offer ? (
+              /* ── Partner Offer win state ─────────────────────────────────── */
+              <div className="text-center space-y-4">
+                {/* Banner / logo */}
+                {(result.partner_offer.banner_url || result.partner_offer.logo_url) && (
+                  <div className="overflow-hidden rounded-xl">
+                    <img
+                      src={result.partner_offer.banner_url ?? result.partner_offer.logo_url!}
+                      alt={result.partner_offer.title}
+                      className="w-full max-h-36 object-cover"
+                      loading="eager"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  </div>
+                )}
+                {!shouldCelebrateWin && <div className="text-5xl">🎁</div>}
+                <div>
+                  {!shouldCelebrateWin && (
+                    <p className="text-lg font-bold text-amber-300">Gratulujeme!</p>
+                  )}
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Získal jsi speciální nabídku od našeho partnera
+                  </p>
+                </div>
+                {result.partner_offer.partner_name && (
+                  <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                    {result.partner_offer.partner_name}
+                  </p>
+                )}
+                <p className="text-base font-bold text-white">{result.partner_offer.title}</p>
+                {result.partner_offer.short_text && (
+                  <p className="text-sm text-muted-foreground">{result.partner_offer.short_text}</p>
+                )}
+                {result.partner_offer.valid_to && (
+                  <p className="text-xs text-muted-foreground">
+                    Platná do: {new Date(result.partner_offer.valid_to).toLocaleDateString('cs-CZ')}
+                  </p>
+                )}
+                <p className="win-moment-cta-hint -mb-1 text-center text-[11px] font-semibold uppercase text-blue-200/75 sm:text-xs">
+                  Nabídka je uložena v tvých{' '}
+                  <span className="text-blue-100">výhrách → Nabídky</span>
+                </p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <Button
+                    type="button"
+                    onClick={handlePlayAgain}
+                    className="win-moment-cta-play-again w-full border-0 font-bold shadow-lg bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-400 text-black hover:brightness-110"
+                  >
+                    Hrát znovu
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGoToWins}
+                    className="w-full font-semibold border-blue-500/40"
+                  >
+                    Zobrazit nabídku
                   </Button>
                 </div>
                 <div className="flex justify-center pt-0.5">

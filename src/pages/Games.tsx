@@ -34,6 +34,17 @@ interface Contest {
   fast_game?: boolean;
 }
 
+interface PartnerOfferResult {
+  id: string;
+  title: string;
+  short_text: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
+  link_or_code: string | null;
+  valid_to: string | null;
+  partner_name: string;
+}
+
 interface UnlockTicketResult {
   ticket_number: number;
   ticket_price: number;
@@ -43,6 +54,7 @@ interface UnlockTicketResult {
   remaining_tickets?: number;
   won_type?: 'bonus' | 'main' | null;
   bonus_prize_id?: string | null;
+  partner_offer?: PartnerOfferResult | null;
 }
 
 const Index = () => {
@@ -268,6 +280,41 @@ const Index = () => {
         ticketNumber: rpcResult.ticket_number,
       });
       
+      // ── Partner Offer lookup ──────────────────────────────────────────────
+      let partnerOffer: PartnerOfferResult | null = null;
+      const ticketRowId = rpcResult.ticket_row_id as string | undefined;
+      if (ticketRowId && user) {
+        try {
+          const { data: upoRow } = await supabase
+            .from('user_partner_offers')
+            .select(`
+              id,
+              partner_offers (
+                title, short_text, logo_url, banner_url, link_or_code, valid_to,
+                partners (company_name, name)
+              )
+            `)
+            .eq('ticket_id', ticketRowId)
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (upoRow?.partner_offers) {
+            const po = upoRow.partner_offers as any;
+            partnerOffer = {
+              id: upoRow.id,
+              title: po.title ?? '',
+              short_text: po.short_text ?? null,
+              logo_url: po.logo_url ?? null,
+              banner_url: po.banner_url ?? null,
+              link_or_code: po.link_or_code ?? null,
+              valid_to: po.valid_to ?? null,
+              partner_name: po.partners?.company_name || po.partners?.name || '',
+            };
+          }
+        } catch (poErr) {
+          console.warn('[Games] partner offer lookup skipped:', poErr);
+        }
+      }
+
       const result: UnlockTicketResult = {
         ticket_number: rpcResult.ticket_number,
         ticket_price: rpcResult.ticket_price ?? 1,
@@ -276,7 +323,8 @@ const Index = () => {
         won_prize: rpcResult.won_prize ?? null,
         won_type: rpcResult.won_type ?? null,
         bonus_prize_id: rpcResult.bonus_prize_id ?? null,
-        remaining_tickets: rpcResult.remaining_tickets ?? 0
+        remaining_tickets: rpcResult.remaining_tickets ?? 0,
+        partner_offer: partnerOffer,
       };
 
       // Send event to Sofinity
