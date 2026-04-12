@@ -855,16 +855,48 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           }
         }
 
-        // Insert new MioCoin bonuses via RPC
+        // Insert new MioCoin bonuses via RPC (writes to bonus_prizes)
+        console.log(
+          "[AdminContestManagement] MioCoin bonus RPC batch length:",
+          newBonuses.length
+        );
         for (const bonus of newBonuses) {
-          await supabase.rpc("admin_manage_bonus_prize", {
-            p_contest_id: contestId,
-            p_ticket_position: bonus.ticket_position,
-            p_amount: bonus.amount,
-            p_description: `${bonus.amount} MioCoinů`,
-            p_status: "pending",
-            p_operation: "create",
+          console.log("[AdminContestManagement] MioCoin bonus RPC before insert", {
+            contest_id: contestId,
+            ticket_position: bonus.ticket_position,
+            amount: bonus.amount,
           });
+          try {
+            const { error: rpcError } = await supabase.rpc("admin_manage_bonus_prize", {
+              p_contest_id: contestId,
+              p_ticket_position: bonus.ticket_position,
+              p_amount: bonus.amount,
+              p_description: `${bonus.amount} MioCoinů`,
+              p_status: "pending",
+              p_operation: "create",
+            });
+            if (rpcError) {
+              console.error("[AdminContestManagement] MioCoin bonus RPC failed", {
+                message: rpcError.message,
+                details: rpcError.details,
+                code: rpcError.code,
+              });
+            } else {
+              console.log("[AdminContestManagement] MioCoin bonus RPC success", {
+                contest_id: contestId,
+                ticket_position: bonus.ticket_position,
+                amount: bonus.amount,
+              });
+            }
+          } catch (rpcErr: unknown) {
+            const err = rpcErr as { message?: string; details?: string; code?: string };
+            console.error("[AdminContestManagement] MioCoin bonus RPC exception", rpcErr, {
+              message: err?.message,
+              details: err?.details,
+              code: err?.code,
+            });
+            throw rpcErr;
+          }
         }
 
         // Note: total_miocoin_bonus is updated automatically by database trigger trg_sync_total_miocoin_bonus
@@ -874,8 +906,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           title: "MioCoiny uloženy",
           description: `${newBonuses.length} MioCoin bonusů (celkem ${totalMioCoins}) bylo uloženo do databáze.`,
         });
-      } catch (err) {
-        console.error("Error saving MioCoin bonuses:", err);
+      } catch (err: unknown) {
+        const e = err as { message?: string; details?: string; code?: string };
+        console.error("Error saving MioCoin bonuses:", err, {
+          message: e?.message,
+          details: e?.details,
+          code: e?.code,
+        });
         toast({
           title: "Chyba při ukládání",
           description: "MioCoiny byly vygenerovány, ale nepodařilo se je uložit.",
@@ -1009,30 +1046,64 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         // Delete existing bonuses for this contest
         await supabase.from("bonus_prizes").delete().eq("contest_id", contestId);
 
-        // Generate MioCoin bonuses via edge function (handles batching to avoid timeout)
+        // Generate MioCoin bonuses via edge function (handles batching → inserts into bonus_prizes)
         if (mioCoinBonuses.length > 0) {
           const totalMioCoinCount = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
-          
-          const { data: distributionResult, error: distributionError } = await supabase.functions.invoke(
-            'distribute-bonus-prizes',
-            {
-              body: {
-                contest_id: contestId,
-                bonus_type: 'MioCoin',
-                total_value: totalMioCoinCount,
-                amount_per_unit: 1,
-                distribution_rule: 'random',
-                batch_size: 500,
-              },
+          const distributeBody = {
+            contest_id: contestId,
+            bonus_type: "MioCoin",
+            total_value: totalMioCoinCount,
+            amount_per_unit: 1,
+            distribution_rule: "random",
+            batch_size: 500,
+          };
+          console.log("[AdminContestManagement] distribute-bonus-prizes before invoke", {
+            batch_length: mioCoinBonuses.length,
+            rows: mioCoinBonuses.map((b) => ({
+              contest_id: contestId,
+              ticket_position: b.ticket_position,
+              amount: b.amount,
+            })),
+            invoke_body: distributeBody,
+          });
+
+          try {
+            const { data: distributionResult, error: distributionError } =
+              await supabase.functions.invoke("distribute-bonus-prizes", {
+                body: distributeBody,
+              });
+
+            if (distributionError) {
+              console.error("[AdminContestManagement] distribute-bonus-prizes invoke error", {
+                message: distributionError.message,
+                details: (distributionError as { details?: string }).details,
+                code: (distributionError as { code?: string }).code,
+                raw: distributionError,
+              });
+              throw new Error(`Chyba při generování MioCoin bonusů: ${distributionError.message}`);
             }
-          );
 
-          if (distributionError) {
-            throw new Error(`Chyba při generování MioCoin bonusů: ${distributionError.message}`);
-          }
+            console.log("[AdminContestManagement] distribute-bonus-prizes after invoke", {
+              success: distributionResult?.success,
+              result: distributionResult,
+            });
 
-          if (!distributionResult?.success) {
-            throw new Error(distributionResult?.error || 'Nepodařilo se vygenerovat MioCoin bonusy');
+            if (!distributionResult?.success) {
+              console.error("[AdminContestManagement] distribute-bonus-prizes logical failure", {
+                distributionResult,
+              });
+              throw new Error(
+                distributionResult?.error || "Nepodařilo se vygenerovat MioCoin bonusy"
+              );
+            }
+          } catch (distErr: unknown) {
+            const e = distErr as { message?: string; details?: string; code?: string };
+            console.error("[AdminContestManagement] distribute-bonus-prizes catch", distErr, {
+              message: e?.message,
+              details: e?.details,
+              code: e?.code,
+            });
+            throw distErr;
           }
 
           // Explicitly set total_miocoin_bonus in contests table
