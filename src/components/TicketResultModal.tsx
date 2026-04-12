@@ -638,7 +638,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         className={cn(
           'data-[state=open]:duration-[280ms] data-[state=closed]:duration-[280ms]',
           shouldCelebrateWin
-            ? '!fixed !inset-0 !left-0 !top-0 z-[100] flex !max-h-none h-[100dvh] !max-w-none w-screen !translate-x-0 !translate-y-0 flex-col overflow-hidden rounded-none border-0 bg-[#050810] p-0 shadow-[0_0_100px_rgba(255,190,60,0.25)] sm:rounded-none'
+            ? 'fixed left-1/2 top-1/2 z-[100] flex max-h-[min(calc(100dvh-2rem),56rem)] w-[min(calc(100vw-2rem),64rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 flex-col gap-0 overflow-hidden rounded-2xl border border-yellow-500/40 bg-[#050810] p-0 shadow-[0_0_100px_rgba(255,190,60,0.25)]'
             : 'sm:max-w-md rounded-2xl border border-yellow-500/40 bg-gradient-to-b from-[#0b1220] via-[#0f1b33] to-[#0a1428] shadow-[0_0_40px_rgba(255,200,0,0.15)]'
         )}
       >
@@ -650,8 +650,15 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           />
         )}
 
+        <div
+          className={cn(
+            'flex min-h-0 flex-1 flex-col',
+            shouldCelebrateWin &&
+              'relative z-10 w-full overflow-hidden px-4 md:px-6'
+          )}
+        >
         {shouldCelebrateWin && (
-          <div className="relative flex min-h-[min(42vh,380px)] shrink-0 flex-col items-center justify-center overflow-hidden px-4 pb-6 pt-10">
+          <div className="relative flex min-h-[min(42vh,380px)] shrink-0 flex-col items-center justify-center overflow-hidden px-0 pb-6 pt-10">
             <div
               className="win-moment-glow-orb -left-1/4 h-[min(55vw,420px)] w-[min(55vw,420px)] bg-[radial-gradient(circle,hsl(43_90%_55%/0.55)_0%,transparent_70%)]"
               style={{ top: '8%' }}
@@ -734,7 +741,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         <div
           className={cn(
             'flex min-h-0 flex-1 flex-col',
-            shouldCelebrateWin && 'win-moment-deferred-content overflow-y-auto px-5 pb-6 pt-2 sm:px-8'
+            shouldCelebrateWin && 'win-moment-deferred-content overflow-y-auto pb-6 pt-2'
           )}
         >
           <DialogHeader className={cn(shouldCelebrateWin && 'px-0')}>
@@ -1107,6 +1114,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           <Button type="button" onClick={onClose} variant={shouldCelebrateWin ? 'outline' : 'default'} className="w-full border-white/10">
             Zavřít
           </Button>
+        </div>
         </div>
         </div>
       </DialogContent>
