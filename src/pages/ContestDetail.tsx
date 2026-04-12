@@ -24,6 +24,7 @@ import { TicketResultModal } from "@/components/TicketResultModal";
 import { BonusPrizeDetailModal } from "@/components/BonusPrizeDetailModal";
 import { usePlacementBanners } from "@/hooks/usePlacementBanners";
 import "@/components/ContestCard.css";
+import { Helmet } from "react-helmet-async";
 
 type Contest = {
   id: string;
@@ -359,32 +360,18 @@ export default function ContestDetail() {
 
         recordLocalTicketPlay();
 
+        // Always show the ticket result modal (win or no-win) — user should
+        // always see a reveal screen. Win celebration triggers inside the modal.
+        setModalResult(mappedResult);
+        setModalContestId(contest.id);
+
         if (isWin) {
-          // Show full modal only for wins
-          console.log('[DEBUG ContestDetail] WIN detected, opening modal');
-          setModalResult(mappedResult);
-          setModalContestId(contest.id);
+          console.log('[DEBUG ContestDetail] WIN detected, modal opened');
           if (result.won_type === 'main') {
             toast.success("Gratulujeme! Vyhrál jsi hlavní cenu!");
           } else {
             toast.success("Gratulujeme! Vyhrál jsi bonusovou cenu!");
           }
-        } else {
-          // Non-win: lightweight inline toast feedback, no modal
-          const distanceInfo = mappedResult.distance_to_next_bonus && mappedResult.distance_to_next_bonus > 0
-            ? ` · Do bonusu: ${mappedResult.distance_to_next_bonus.toLocaleString('cs-CZ')} tiketů`
-            : '';
-          toast(`🎟️ Tiket #${result.ticket_number.toLocaleString('cs-CZ')} zakoupen!${distanceInfo}`, {
-            duration: 4000,
-            style: {
-              background: 'linear-gradient(135deg, hsl(222, 47%, 11%), hsl(222, 40%, 16%))',
-              border: '1px solid hsl(220, 30%, 25%)',
-              borderRadius: '0.75rem',
-              color: 'hsl(210, 20%, 90%)',
-              fontWeight: 500,
-              maxWidth: '380px',
-            },
-          });
         }
       }
     } catch (err) {
@@ -595,8 +582,36 @@ export default function ContestDetail() {
         : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${contest.main_prize_secondary_image}`)
       : null);
 
+  const PRIMARY_DOMAIN = "https://onemil.cz";
+  const canonicalUrl = `${PRIMARY_DOMAIN}/contest/${contest.id}`;
+  const fallbackDescription =
+    "OneMil je prémiová platforma spotřebitelských soutěží o exkluzivní a luxusní věcné ceny. Pro využití voucherů a účast ve spotřebitelských soutěžích slouží MioCoin jako interní digitální kredit.";
+  const cleanDescription = (contest.description ?? "").replace(/\s+/g, " ").trim();
+  const metaDescription =
+    cleanDescription.length > 0 ? (cleanDescription.length > 170 ? `${cleanDescription.slice(0, 167)}…` : cleanDescription) : fallbackDescription;
+  const metaTitle = `${contest.title} | OneMil`;
+  const ogImage = heroImage?.startsWith("http") ? heroImage : `${PRIMARY_DOMAIN}/og-image.png`;
+
   return (
     <div className="relative min-h-screen">
+      <Helmet>
+        <title>{metaTitle}</title>
+        <meta name="description" content={metaDescription} />
+        <link rel="canonical" href={canonicalUrl} />
+        <meta name="robots" content="index,follow" />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="OneMil" />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={metaDescription} />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:image" content={ogImage} />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={metaTitle} />
+        <meta name="twitter:description" content={metaDescription} />
+        <meta name="twitter:image" content={ogImage} />
+      </Helmet>
       {/* Cinematic background - Image */}
       {bgImageUrl && (
         <div

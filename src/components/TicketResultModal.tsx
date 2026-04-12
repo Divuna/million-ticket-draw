@@ -391,8 +391,11 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     }
   };
 
-  // Detection logic - use safe access since result can be null
-  const isBonusWin = bonusPrize !== null;
+  // Detection logic - use safe access since result can be null.
+  // isBonusWin uses both the DB-fetched bonusPrize AND the RPC-returned won_type
+  // as a fallback, so a race condition or empty bonus_prizes row never silently
+  // hides the win celebration.
+  const isBonusWin = bonusPrize !== null || result?.won_type === 'bonus';
   const isMainPrize = result?.won_type === 'main' || result?.won_main === true;
   const isWinner = isBonusWin || isMainPrize;
   const isBonusClaimed = bonusPrize?.status === 'won';
