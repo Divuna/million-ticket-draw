@@ -109,7 +109,7 @@ function generateStepPositions(count: number, maxPosition: number, excludeSet: S
 
 // Process bonus prizes in batches with retry logic
 async function processBonusBatchWithRetry(
-  supabase: any,
+  supabaseService: any,
   contestId: string,
   positions: number[],
   bonusType: string,
@@ -140,7 +140,7 @@ async function processBonusBatchWithRetry(
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const { data: insertedBonuses, error: insertError } = await supabase
+      const { data: insertedBonuses, error: insertError } = await supabaseService
         .from('bonus_prizes')
         .insert(bonusesToInsert)
         .select('id')
@@ -192,11 +192,13 @@ serve(async (req) => {
   let warnings: string[] = []
 
   try {
+    // Service-role client: used for DB writes to bypass RLS
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
+    // User-scoped client: used only for auth context (no writes)
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -384,7 +386,7 @@ serve(async (req) => {
 
       try {
         const batchBonuses = await processBonusBatchWithRetry(
-          supabase,
+          supabaseAdmin,
           contest_id,
           batchPositions,
           bonus_type,
