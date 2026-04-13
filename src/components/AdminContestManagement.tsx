@@ -2044,13 +2044,13 @@ export const AdminContestManagement: React.FC = () => {
     setDeletingContest(contestToDelete.contest_id);
     setDeleteDialogOpen(false);
 
-    // Allow delete only for pending (test) contests
-    if (contestToDelete.status !== "pending") {
-      console.log("[AdminContestManagement] delete blocked: status is not pending, got:", contestToDelete.status);
+    // Allow delete only for draft or pending (test) contests
+    if (contestToDelete.status !== "draft" && contestToDelete.status !== "pending") {
+      console.log("[AdminContestManagement] delete blocked: status is not draft or pending, got:", contestToDelete.status);
       setDeletingContest(null);
       toast({
         title: "Mazání zakázáno",
-        description: "Mazání je povoleno jen u testovacích soutěží ve stavu Čeká na start.",
+        description: "Mazání je povoleno jen u testovacích soutěží ve stavu Koncept nebo Čeká na start.",
         variant: "destructive",
       });
       return;
