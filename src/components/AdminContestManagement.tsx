@@ -981,6 +981,19 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       return;
     }
 
+    // Normalize + validate ticket_count before submit (debug + guard against defaulting to 1,000,000)
+    console.log("[AdminContestManagement] submit form.ticket_count:", form.ticket_count);
+    const normalizedTicketCount = Number(form.ticket_count);
+    console.log("[AdminContestManagement] normalizedTicketCount:", normalizedTicketCount);
+    if (!Number.isFinite(normalizedTicketCount) || normalizedTicketCount < 100) {
+      toast({
+        title: "Chyba",
+        description: "Počet ticketů musí být platné číslo alespoň 100.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -1002,7 +1015,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         p_main_prize: form.main_prize,
         p_main_image: imagePath,
         p_status: form.status,
-        p_ticket_count: form.ticket_count,
+        p_ticket_count: normalizedTicketCount,
         p_ticket_price: form.ticket_price,
         p_operation: isEditingContest ? "update" : "create",
         p_fast_game: form.fast_game,
@@ -1010,6 +1023,27 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
       if (error) {
         throw error;
+      }
+
+      const savedTicketCount = Number(
+        (contestResult as any)?.contest_data?.ticket_count ??
+          (contestResult as any)?.contestData?.ticket_count ??
+          (contestResult as any)?.ticket_count
+      );
+      console.log("[AdminContestManagement] RPC response ticket_count:", savedTicketCount, contestResult);
+      if (Number.isFinite(savedTicketCount) && savedTicketCount !== normalizedTicketCount) {
+        console.error("[AdminContestManagement] ticket_count mismatch", {
+          submitted: form.ticket_count,
+          normalizedTicketCount,
+          savedTicketCount,
+          contestResult,
+        });
+        toast({
+          title: "Chyba",
+          description: "Počet ticketů se neuložil správně.",
+          variant: "destructive",
+        });
+        return;
       }
 
       // Get contest_id for bonus saving and additional updates
