@@ -94,6 +94,9 @@ interface PartnerOffer {
   submitted_at: string | null;
   created_at: string;
   last_assigned_at: string | null;
+  billing_mode: string;
+  price_per_activation: number;
+  billing_admin_override: boolean;
 }
 
 const PartnerDashboard = () => {
@@ -155,6 +158,8 @@ const PartnerDashboard = () => {
   const [offerValidFrom, setOfferValidFrom] = useState('');
   const [offerValidTo, setOfferValidTo] = useState('');
   const [offerLinkOrCode, setOfferLinkOrCode] = useState('');
+  const [offerBillingMode, setOfferBillingMode] = useState('paid_distribution');
+  const [offerPricePerActivation, setOfferPricePerActivation] = useState('0');
   // Offer image state (stored URLs, populated from DB or after upload)
   const [offerLogoUrl, setOfferLogoUrl] = useState<string | null>(null);
   const [offerBannerUrl, setOfferBannerUrl] = useState<string | null>(null);
@@ -362,7 +367,7 @@ const PartnerDashboard = () => {
     try {
       const { data, error } = await supabase
         .from('partner_offers')
-        .select('id, title, short_text, deployment_mode, status, valid_from, valid_to, link_or_code, rejection_reason, approved_at, submitted_at, created_at, last_assigned_at')
+        .select('id, title, short_text, deployment_mode, status, valid_from, valid_to, link_or_code, rejection_reason, approved_at, submitted_at, created_at, last_assigned_at, billing_mode, price_per_activation, billing_admin_override')
         .eq('partner_id', partnerId)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -439,6 +444,9 @@ const PartnerDashboard = () => {
     setOfferLinkOrCode('');
     setOfferLogoUrl(null);
     setOfferBannerUrl(null);
+    // Pre-fill billing from partner config if available, otherwise defaults
+    setOfferBillingMode(offerBillingConfig?.billing_mode ?? 'paid_distribution');
+    setOfferPricePerActivation(String(offerBillingConfig?.price_per_activation ?? 0));
     setOfferFormOpen(true);
   };
 
@@ -452,6 +460,8 @@ const PartnerDashboard = () => {
     setOfferLinkOrCode(offer.link_or_code || '');
     setOfferLogoUrl(offer.logo_url);
     setOfferBannerUrl(offer.banner_url);
+    setOfferBillingMode(offer.billing_mode ?? 'paid_distribution');
+    setOfferPricePerActivation(String(offer.price_per_activation ?? 0));
     setOfferFormOpen(true);
   };
 
@@ -475,6 +485,8 @@ const PartnerDashboard = () => {
             link_or_code: offerLinkOrCode.trim() || null,
             logo_url: offerLogoUrl,
             banner_url: offerBannerUrl,
+            billing_mode: offerBillingMode,
+            price_per_activation: parseFloat(offerPricePerActivation) || 0,
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingOffer.id);
@@ -495,6 +507,8 @@ const PartnerDashboard = () => {
             logo_url: offerLogoUrl,
             banner_url: offerBannerUrl,
             status: 'draft',
+            billing_mode: offerBillingMode,
+            price_per_activation: parseFloat(offerPricePerActivation) || 0,
           });
         if (error) throw error;
         toast.success('Nabídka byla vytvořena jako koncept');
@@ -1918,6 +1932,57 @@ const PartnerDashboard = () => {
                 placeholder="Např. SLEVA10 nebo https://vas-eshop.cz/akce"
               />
             </div>
+
+            {/* Billing */}
+            {(() => {
+              const billingLocked =
+                editingOffer?.status === 'approved' ||
+                editingOffer?.billing_admin_override === true;
+              return (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="offer-billing-mode">
+                      Typ spolupráce
+                      {billingLocked && (
+                        <span className="ml-1.5 text-xs text-muted-foreground font-normal">(uzamčeno)</span>
+                      )}
+                    </Label>
+                    <Select
+                      value={offerBillingMode}
+                      onValueChange={setOfferBillingMode}
+                      disabled={billingLocked}
+                    >
+                      <SelectTrigger id="offer-billing-mode">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="paid_distribution">Placená distribuce</SelectItem>
+                        <SelectItem value="affiliate_direct">Affiliate přímý</SelectItem>
+                        <SelectItem value="affiliate_external">Affiliate externí</SelectItem>
+                        <SelectItem value="hybrid">Hybrid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="offer-price">
+                      Cena za aktivaci (Kč)
+                      {billingLocked && (
+                        <span className="ml-1.5 text-xs text-muted-foreground font-normal">(uzamčeno)</span>
+                      )}
+                    </Label>
+                    <Input
+                      id="offer-price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={offerPricePerActivation}
+                      onChange={(e) => setOfferPricePerActivation(e.target.value)}
+                      disabled={billingLocked}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Images */}
             <div className="grid grid-cols-2 gap-3 pt-1">
