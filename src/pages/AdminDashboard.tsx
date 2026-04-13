@@ -334,10 +334,13 @@ const AdminDashboard: React.FC = () => {
       return;
     }
 
-    if (contestForm.ticket_count < 1) {
+    console.log("[AdminDashboard] submit contestForm.ticket_count:", contestForm.ticket_count);
+    const normalizedTicketCount = Number(contestForm.ticket_count);
+    console.log("[AdminDashboard] normalizedTicketCount:", normalizedTicketCount);
+    if (!Number.isFinite(normalizedTicketCount) || normalizedTicketCount < 100) {
       toast({
         title: "Chyba",
-        description: "Počet tiketů musí být alespoň 1.",
+        description: "Počet ticketů musí být platné číslo alespoň 100.",
         variant: "destructive"
       });
       return;
@@ -373,14 +376,33 @@ const AdminDashboard: React.FC = () => {
       // Create contest with uploaded image URL
       const contestData = {
         ...contestForm,
+        ticket_count: normalizedTicketCount,
         main_image: publicUrl
       }
 
+      console.log("[AdminDashboard] create-contest payload ticket_count:", contestData.ticket_count);
       const { data, error } = await supabase.functions.invoke('create-contest', {
         body: contestData
       });
 
       if (error) throw error;
+
+      const returnedTicketCount = Number((data as any)?.contest?.ticket_count);
+      console.log("[AdminDashboard] create-contest response ticket_count:", returnedTicketCount, data);
+      if (Number.isFinite(returnedTicketCount) && returnedTicketCount !== normalizedTicketCount) {
+        console.error("[AdminDashboard] ticket_count mismatch", {
+          submitted: contestForm.ticket_count,
+          normalizedTicketCount,
+          returnedTicketCount,
+          data,
+        });
+        toast({
+          title: "Chyba",
+          description: "Počet ticketů se neuložil správně.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       toast({
         title: "Úspěch",

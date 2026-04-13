@@ -58,8 +58,10 @@ serve(async (req) => {
       throw new Error('Title, main prize and main image are required')
     }
 
-    if (ticket_count && ticket_count < 1) {
-      throw new Error('Ticket count must be at least 1')
+    const normalizedTicketCount = Number(ticket_count)
+    console.log('[create-contest] submitted ticket_count', ticket_count, 'normalized', normalizedTicketCount)
+    if (!Number.isFinite(normalizedTicketCount) || normalizedTicketCount < 100) {
+      throw new Error('Ticket count must be a finite number >= 100')
     }
 
     if (ticket_price && ticket_price < 0) {
@@ -81,7 +83,7 @@ serve(async (req) => {
         main_prize,
         main_image,
         status: status || 'draft',
-        ticket_count: ticket_count || 1000000,
+        ticket_count: normalizedTicketCount,
         ticket_price: ticket_price || 1
       })
       .select()
