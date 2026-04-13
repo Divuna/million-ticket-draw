@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Loader2, Tag, CheckCircle, XCircle, Clock, ExternalLink,
-  Image as ImageIcon, Calendar, Layers,
+  Image as ImageIcon, Calendar, Layers, Coins, ShieldAlert,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -26,6 +26,9 @@ interface PendingOffer {
   banner_url: string | null;
   submitted_at: string | null;
   created_at: string;
+  billing_mode: string;
+  price_per_activation: number;
+  billing_admin_override: boolean;
   partners: {
     name: string;
     company_name: string | null;
@@ -40,6 +43,8 @@ const AdminPartnerOffers: React.FC = () => {
   // per-offer reject form state
   const [rejectOpenId, setRejectOpenId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  // per-offer admin billing override toggle
+  const [billingOverrides, setBillingOverrides] = useState<Record<string, boolean>>({});
 
   const loadOffers = useCallback(async () => {
     try {
@@ -50,6 +55,7 @@ const AdminPartnerOffers: React.FC = () => {
           valid_from, valid_to, link_or_code,
           logo_url, banner_url,
           submitted_at, created_at,
+          billing_mode, price_per_activation, billing_admin_override,
           partners (name, company_name)
         `)
         .eq('status', 'submitted')
@@ -75,6 +81,7 @@ const AdminPartnerOffers: React.FC = () => {
 
   const handleApprove = async (offerId: string) => {
     setApprovingId(offerId);
+    const applyOverride = !!billingOverrides[offerId];
     try {
       const { error } = await supabase
         .from('partner_offers')
@@ -82,11 +89,13 @@ const AdminPartnerOffers: React.FC = () => {
           status: 'approved',
           approved_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          ...(applyOverride ? { billing_mode: 'free', billing_admin_override: true } : {}),
         })
         .eq('id', offerId);
       if (error) throw error;
-      toast.success('Nabídka byla schválena');
+      toast.success(applyOverride ? 'Nabídka schválena se zdarma overridem' : 'Nabídka byla schválena');
       setOffers((prev) => prev.filter((o) => o.id !== offerId));
+      setBillingOverrides((prev) => { const n = { ...prev }; delete n[offerId]; return n; });
     } catch (err) {
       console.error('Error approving offer:', err);
       toast.error('Nepodařilo se schválit nabídku');
@@ -133,6 +142,17 @@ const AdminPartnerOffers: React.FC = () => {
     switch (mode) {
       case 'all_contests': return 'Všechny soutěže';
       case 'selected_contests': return 'Vybrané soutěže';
+      default: return mode;
+    }
+  };
+
+  const getBillingLabel = (mode: string) => {
+    switch (mode) {
+      case 'paid_distribution': return 'Placená distribuce';
+      case 'free':              return 'Zdarma';
+      case 'affiliate_direct':  return 'Affiliate přímý';
+      case 'affiliate_external':return 'Affiliate externí';
+      case 'hybrid':            return 'Hybrid';
       default: return mode;
     }
   };
@@ -251,6 +271,34 @@ const AdminPartnerOffers: React.FC = () => {
                         <span className="font-mono text-xs bg-muted/50 px-1.5 py-0.5 rounded">{offer.link_or_code}</span>
                       </span>
                     )}
+                  </div>
+
+                  {/* Billing info + admin override */}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 p-3 rounded-lg border border-border/30 bg-muted/20 text-sm">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Coins className="w-3.5 h-3.5 shrink-0" />
+                      <span>Typ spolupráce:</span>
+                      <strong className="text-foreground">{getBillingLabel(offer.billing_mode)}</strong>
+                      {offer.billing_mode !== 'free' && offer.price_per_activation > 0 && (
+                        <span className="text-muted-foreground">— {offer.price_per_activation} Kč/aktivaci</span>
+                      )}
+                      {offer.billing_admin_override && (
+                        <Badge className="ml-1 bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px]">
+                          <ShieldAlert className="w-2.5 h-2.5 mr-0.5" />override adminem
+                        </Badge>
+                      )}
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer ml-auto select-none">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 accent-amber-500 cursor-pointer"
+                        checked={!!billingOverrides[offer.id]}
+                        onChange={(e) =>
+                          setBillingOverrides((prev) => ({ ...prev, [offer.id]: e.target.checked }))
+                        }
+                      />
+                      <span className="text-amber-600 font-medium">Zdarma (override adminem)</span>
+                    </label>
                   </div>
 
                   {/* Reject form (inline) */}
