@@ -68,6 +68,8 @@ interface Invoice {
   status: InvoiceStatus;
   created_at: string;
   issued_at: string | null;
+  type?: string | null;
+  invoice_number?: string | null;
 }
 
 interface InvoiceDetail extends Invoice {
@@ -134,6 +136,8 @@ const AdminPartnersPortal = () => {
   const [invoiceDetailOpen, setInvoiceDetailOpen] = useState(false);
   const [issueConfirmOpen, setIssueConfirmOpen] = useState(false);
   const [issuingInvoice, setIssuingInvoice] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   // Pending registrations state
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
@@ -386,21 +390,38 @@ const AdminPartnersPortal = () => {
 
   const openInvoiceDetail = async (invoice: Invoice) => {
     try {
-      // Load partner and activation lines
+      const isOffer = invoice.type === 'offer';
+
+      // Load partner and activation lines (differ by invoice type)
       const [partnerRes, linesRes] = await Promise.all([
         supabase.from('partners').select('*').eq('id', invoice.partner_id).single(),
-        supabase
-          .from('partner_invoice_lines')
-          .select('coins, activated_at, external_order_id')
-          .eq('invoice_id', invoice.id)
-          .order('activated_at', { ascending: false }),
+        isOffer
+          ? supabase
+              .from('partner_offer_invoice_lines')
+              .select('amount, activated_at')
+              .eq('invoice_id', invoice.id)
+              .order('activated_at', { ascending: false })
+          : supabase
+              .from('partner_invoice_lines')
+              .select('coins, activated_at, external_order_id')
+              .eq('invoice_id', invoice.id)
+              .order('activated_at', { ascending: false }),
       ]);
 
-      // Build STRING_AGG-like summary
-      const activationsSummary = (linesRes.data || [])
-        .slice(0, 20)
-        .map(line => `${line.coins} MioCoins (${format(new Date(line.activated_at), 'dd.MM.', { locale: cs })})`)
-        .join(', ');
+      // Build summary string
+      const activationsSummary = isOffer
+        ? (linesRes.data || [])
+            .slice(0, 20)
+            .map((line: any) =>
+              `${Number(line.amount || 0).toLocaleString('cs-CZ', { minimumFractionDigits: 2 })} Kč (${format(new Date(line.activated_at), 'dd.MM.', { locale: cs })})`
+            )
+            .join(', ')
+        : (linesRes.data || [])
+            .slice(0, 20)
+            .map((line: any) =>
+              `${line.coins} MioCoins (${format(new Date(line.activated_at), 'dd.MM.', { locale: cs })})`
+            )
+            .join(', ');
 
       setSelectedInvoice({
         ...invoice,
@@ -561,6 +582,53 @@ const AdminPartnersPortal = () => {
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast.error('Nepodařilo se vygenerovat PDF');
+    }
+  };
+
+  // ── Generate PDF via Edge Function (works for both coin and offer invoices) ──
+  const generateInvoicePdf = async () => {
+    if (!selectedInvoice) return;
+    setGeneratingPdf(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-partner-invoice-pdf', {
+        headers: withEdgeInternalToken({}),
+        body: { invoice_id: selectedInvoice.id },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Nepodařilo se vygenerovat PDF');
+      toast.success('PDF bylo vygenerováno');
+      if (data.file_url) {
+        window.open(data.file_url, '_blank');
+      }
+    } catch (error: any) {
+      console.error('Error generating PDF:', error);
+      toast.error(`Nepodařilo se vygenerovat PDF: ${error.message || ''}`);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  // ── Send invoice email via Edge Function (works for both coin and offer invoices) ──
+  const sendInvoiceEmail = async () => {
+    if (!selectedInvoice) return;
+    setSendingEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-partner-invoice-email', {
+        headers: withEdgeInternalToken({}),
+        body: { invoice_id: selectedInvoice.id },
+      });
+      if (error) throw error;
+      if (data?.skipped) {
+        toast.info(data.reason || 'E-mail nebyl odeslán');
+        return;
+      }
+      if (!data?.success) throw new Error(data?.error || 'Nepodařilo se odeslat e-mail');
+      toast.success('Faktura byla odeslána e-mailem');
+    } catch (error: any) {
+      console.error('Error sending invoice email:', error);
+      toast.error(`Nepodařilo se odeslat fakturu: ${error.message || ''}`);
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -1208,22 +1276,57 @@ const AdminPartnersPortal = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="pt-4 border-t border-border/50 flex flex-col sm:flex-row gap-3">
+                <div className="pt-4 border-t border-border/50 flex flex-col sm:flex-row gap-3 flex-wrap">
+                  {/* Legacy local PDF (coin invoices without invoice_number) */}
+                  {selectedInvoice.type !== 'offer' && !selectedInvoice.invoice_number && (
+                    <Button
+                      variant="outline"
+                      onClick={downloadInvoicePdf}
+                      className="flex-1"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Stáhnout PDF (lokální)
+                    </Button>
+                  )}
+
+                  {/* Generate PDF via Edge Function — works for all invoice types */}
                   <Button
                     variant="outline"
-                    onClick={downloadInvoicePdf}
+                    onClick={generateInvoicePdf}
+                    disabled={generatingPdf}
                     className="flex-1"
                   >
-                    <Download className="w-4 h-4 mr-2" />
-                    Stáhnout PDF
+                    {generatingPdf ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <FileText className="w-4 h-4 mr-2" />
+                    )}
+                    Vygenerovat PDF
                   </Button>
-                  
+
+                  {/* Send invoice email — only for draft invoices */}
+                  {selectedInvoice.status === 'draft' && (
+                    <Button
+                      variant="outline"
+                      onClick={sendInvoiceEmail}
+                      disabled={sendingEmail}
+                      className="flex-1"
+                    >
+                      {sendingEmail ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Send className="w-4 h-4 mr-2" />
+                      )}
+                      Odeslat fakturu
+                    </Button>
+                  )}
+
                   {selectedInvoice.status === 'draft' && (
                     <Button
                       onClick={() => setIssueConfirmOpen(true)}
                       className="flex-1"
                     >
-                      <Send className="w-4 h-4 mr-2" />
+                      <CheckCircle className="w-4 h-4 mr-2" />
                       Vydat fakturu
                     </Button>
                   )}
