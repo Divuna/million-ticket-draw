@@ -1,6 +1,6 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
-**Timestamp (Europe/Prague): 2026-04-09 19:44**
+**Timestamp (Europe/Prague): 2026-04-13 20:46:33 +02:00** (poslední dokumentační synchronizace)
 
 ## Strict header (do not break)
 ### What belongs in this file
@@ -354,9 +354,10 @@ Byly vytvořeny a commitnuty tyto soubory:
 ## 2026-04-13 — Contest admin fixes: create, status model, archive UX, delete safety
 
 ### Contest create – ticket_count fix
-- Zjištěno: `admin_manage_contest` tiše přepisoval `ticket_count` na fallback `1000000` pokud nebyl správně předán z frontendu
-- Opraveno na frontend straně v `AdminContestManagement`
-- Nasazení vyžadovalo Lovable Share → Publish (ne jen git push)
+- Zjištěno: `admin_manage_contest` dříve tiše přepisoval `ticket_count` na fallback `1000000`, pokud nebyl správně předán z frontendu
+- Opraveno na frontendu v `AdminContestManagement` (žádný tichý fallback)
+- Na straně DB/RPC: při **create** už `admin_manage_contest` **netiše** nepřijímá neplatný nebo chybějící `ticket_count` (vyžaduje se platná hodnota / chyba místo mlčení)
+- Nasazení frontend opravy na Lovable vyžadovalo **Share → Publish** (ne jen git push)
 
 ### DB status constraint rozšíření
 - `contests_status_check` byl rozšířen o chybějící hodnoty tak, aby odpovídal UI statusům: `draft`, `pending`, `active`, `paused`, `closed`
@@ -385,5 +386,10 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Soft detach (`detached_at = now()`) logicky odpojí nabídku, ale FK řádky fyzicky zůstávají
 - Hard delete po soft detach stále selže s FK violation
 - Závěr: **hard delete contestů není bezpečný; testovací soutěže se archivují do `draft`**
+- Testovací soutěže se nemají řešit jako běžné produkční „cleanup" cíle — bezpečná cesta je statusová archivace, ne mazání
 - Delete v admin UI povolen pouze pro `draft` a `pending` (testovací fáze); pro `active`, `paused`, `closed` zablokováno
+- Invariant: **nemazat** řádky `partner_offer_contests` natvrdo; u úklidu soutěží se **nesahat** na triggery ani na `buy_ticket_atomic` / `assign_partner_offer_to_ticket`
 - Commity: `ac52556`, `8026382`
+
+### Dokumentační synchronizace (13. 04. 2026, 20:46:33 +02:00)
+- Do kanonické trojice `onemil_state.md` + `onemil_history.md` + `CLAUDE.md` doplněny výše uvedené ověřené body (create path, DB create validace `ticket_count`, Lovable Publish, status constraint, 3 archivní filtry, pravidla `draft`, FK/delete závěry, Partner Offers invarianty). Žádná změna aplikačního kódu v rámci tohoto kroku.

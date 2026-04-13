@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 13. 04. 2026 CEST
+**Aktualizováno:** 13. 04. 2026, 20:46:33 +02:00 (dokumentační synchronizace contest-admin)
 
 ## Aktuální fáze
 Partner Offers v1 – **dokončeno, nasazeno a finálně ověřeno end-to-end**.
@@ -296,30 +296,33 @@ Stránka `AdminContestManagement` má 3 filtrovací taby přímo pod hlavičkou:
 - **Archiv ukončených soutěží** — zobrazuje `closed`
 
 Chování je na jedné stránce, ne na samostatné stránce ani ve row dropdownu.
+- Soutěže ve stavu `closed` patří výhradně do tabu **Archiv ukončených soutěží** (filtrování podle statusu, ne samostatná route)
 
 ### Pravidla přechodu statusu (admin)
-- Do `draft` (Archiv test) lze přesunout pouze z `pending` nebo `paused`
+- Ruční přesun do `draft` (Archiv test) z admin UI je povolen jen ze stavů **`pending`** nebo **`paused`** (ne z `active`)
 - `active` → `draft` je zablokováno (UI i frontend guard)
 - Zablokovaný přechod zobrazí toast: _„Aktivní soutěž nelze přesunout do Archivu test. Nejprve ji pozastavte nebo vraťte do stavu Čeká na start."_
 - V dropdown je `draft` option pro `active` contest viditelná, ale disabled
 
 ### Contest create flow
-- Admin vytváří soutěž přes `AdminContestManagement` → RPC `admin_manage_contest`
-- Opravena tichá chyba: `ticket_count` se již netiše přepisoval na fallback `1000000` pokud nebyl zadán
-- Frontend oprava vyžadovala Lovable Share → Publish k nasazení
+- Aktivní admin cesta: `AdminContestManagement` → RPC `admin_manage_contest`
+- Opravena tichá chyba na frontendu: `ticket_count` se již netiše přepisoval na fallback `1_000_000`, pokud nebyl správně předán
+- Na straně DB/RPC: `admin_manage_contest` při **create** už **netiše** nepřijímá neplatný nebo chybějící `ticket_count` (místo tichého defaultu je vyžadována platná hodnota / chyba)
+- Aby se oprava projevila v prohlížeči na Lovable hostovaném buildu, bylo nutné **Share → Publish** (samotný git push nestačí pro live frontend)
 
 ### Hard delete contestů – ZAKAZANO v produkci
 - Hard delete contestů není bezpečný se stávajícím FK modelem
 - `partner_offer_contests.contest_id` odkazuje FK na `contests(id)`
 - Soft detach (`detached_at`) odstraní logickou vazbu, ale FK řádky fyzicky zůstávají → hard delete i po soft detach selže s FK violation
 - **Bezpečný způsob „úklidu" testovacích soutěží = přesun do `draft` (Archiv test), ne hard delete**
+- Testovací soutěže se **nemají** řešit stejně jako produkční „cleanup" cíle; cílem je statusová archivace, ne mazání řádků
 - Delete je v admin UI povolen pouze pro `draft` a `pending` soutěže (testovací fáze)
 
 ### Partner Offers + contest lifecycle – potvrzené invarianty
-- `partner_offer_contests` řádky se NESMÍ mazat natvrdo
+- `partner_offer_contests` řádky se **NESMÍ** mazat natvrdo (ani kvůli „úklidu" soutěže)
 - Trigger `trg_partner_offer_approved` attachuje nabídky pouze na `active` nebo `pending` soutěže → `draft` soutěže jsou z automatického attachmentu vyloučeny
 - `buy_ticket_atomic` stráží `status = 'active'` → `draft` soutěže jsou pro uživatele inertní
-- `assign_partner_offer_to_ticket` a `buy_ticket_atomic` se NESMÍ měnit v kontextu contest cleanup
+- V kontextu úklidu soutěží se **nepouštět** do změn triggerů, `buy_ticket_atomic` ani `assign_partner_offer_to_ticket` — řešení je stavová archivace a respekt FK modelu
 
 ---
 

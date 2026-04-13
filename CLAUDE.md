@@ -95,7 +95,7 @@ Technical:
 
 ---
 
-## Aktuální uzamčený stav (13. 04. 2026)
+## Aktuální uzamčený stav (13. 04. 2026, dokumentace synchronizována 20:46:33 +02:00)
 - Dočasný frontend private-access gate v `src/App.tsx` byl odstraněn (2026-04-10); přihlášení a role routing beze změny; `npm run build` ověřen úspěšně.
 - Partner Offers v1 je dokončené, nasazené a prošlo finálním E2E ověřením.
 - Chybějící wiring byl doplněn v `supabase/functions/purchase-ticket/index.ts`, takže assignment běží automaticky po `buy_ticket_atomic` při `won_type === null`.
@@ -118,30 +118,33 @@ Technical:
   - `CLAUDE.md`
   v workspace `C:\Users\PC_3\Desktop\Onemil - Projekt\million-ticket-draw`.
 
-## Contest admin – uzamčená pravidla (13. 04. 2026)
+## Contest admin – uzamčená pravidla (13. 04. 2026, sync 20:46:33 +02:00)
 
 ### Statuses
-- Platné hodnoty: `draft`, `pending`, `active`, `paused`, `closed`
+- Platné hodnoty v DB (constraint `contests_status_check`): `draft`, `pending`, `active`, `paused`, `closed`
 - `draft` se v admin UI zobrazuje jako **„Archiv test"** — DB hodnota se nemění
 - `closed` je pouze systémový přechod — admin ho nemůže nastavit ručně
 
 ### Admin contest management UX
-- `src/components/AdminContestManagement.tsx` — 3 taby: Aktivní soutěže / Archiv test / Archiv ukončených soutěží
+- `src/components/AdminContestManagement.tsx` — 3 taby: Aktivní soutěže / Archiv test / Archiv ukončených soutěží (archiv na stejné stránce, ne nová stránka ani row dropdown)
+- `closed` soutěže patří do tabu Archiv ukončených soutěží
 - Přechod do `draft` (Archiv test): povolen jen z `pending` nebo `paused`; z `active` zablokován
-- Contest create jde přes `admin_manage_contest` RPC; `ticket_count` musí být správně předán (bez tichého fallbacku)
+- Contest create: `AdminContestManagement` → `admin_manage_contest`; `ticket_count` musí být platný na frontendu i při create na RPC (žádný tichý default / žádné tiché přijetí neplatného nebo chybějícího `ticket_count`)
+- Lovable: po změnách admin UI často **Share → Publish**, aby byl live build v prohlížeči
 
 ### Hard delete – zakázáno
 - Hard delete soutěže je nebezpečný: `partner_offer_contests.contest_id` má FK na `contests(id)`
 - Soft detach (`detached_at`) logicky odpojí nabídku, ale FK řádky fyzicky zůstávají → DELETE selže
-- Testovací soutěže se archivují přesunem do `draft`, ne mazáním
+- Testovací soutěže se archivují přesunem do `draft`, ne mazáním; neřadit je mezi běžné produkční „cleanup" cíle
 - V admin UI je delete povolen pouze pro `draft` a `pending` (testovací fáze)
 
 ### Co se nesmí měnit
 - `buy_ticket_atomic` — bez explicitní instrukce
 - `assign_partner_offer_to_ticket` — bez explicitní instrukce
-- `partner_offer_contests` FK — neměnit ani nemazat řádky natvrdo
+- `partner_offer_contests` — neměnit FK model; **nemazat** vazební řádky natvrdo kvůli úklidu soutěží
 - Trigger `trg_partner_offer_approved` — neměnit
 - Přechod `active` → `draft` musí zůstat zablokovaný
+- Úklid soutěží: řešit stavem (`draft` / Archiv test), ne mazáním contestu ani mazáním `partner_offer_contests`
 
 ---
 
