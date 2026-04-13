@@ -2048,28 +2048,14 @@ export const AdminContestManagement: React.FC = () => {
     setContests((prev) => prev.filter((c) => c.contest_id !== contestToDelete.contest_id));
 
     try {
-      // Clear partner offer contest links first (prevents FK/RLS issues and reappearing contests)
-      const { data: poLinksData, error: poLinksError } = await supabase
-        .from("partner_offer_contests")
-        .delete()
-        .eq("contest_id", contestToDelete.contest_id)
-        .select("id");
-
-      console.log("[AdminContestManagement] delete partner_offer_contests data:", poLinksData);
-      console.log("[AdminContestManagement] delete partner_offer_contests error:", poLinksError);
-
-      if (poLinksError) {
-        throw poLinksError;
-      }
-
       const { data, error } = await supabase
         .from("contests")
         .delete()
         .eq("id", contestToDelete.contest_id)
         .select("id");
 
-      console.log("[AdminContestManagement] contest delete response data:", data);
-      console.log("[AdminContestManagement] contest delete response error:", error);
+      console.log("[AdminContestManagement] delete response data:", data);
+      console.log("[AdminContestManagement] delete response error:", error);
 
       if (error) {
         throw error;
