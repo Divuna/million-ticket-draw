@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase, withEdgeInternalToken } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift, RefreshCw, Copy, Eye, EyeOff, Activity, Settings, Save, Plus, Send, RotateCcw, Tag } from 'lucide-react';
+import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift, RefreshCw, Copy, Eye, EyeOff, Activity, Settings, Save, Plus, Send, RotateCcw, Tag, Receipt, Download } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PartnerBillingForm from '@/components/PartnerBillingForm';
@@ -60,6 +60,22 @@ interface WeeklyReport {
 interface ApiActivity {
   endpoint: string | null;
   created_at: string | null;
+}
+
+interface OfferBillingConfig {
+  billing_mode: string;
+  price_per_activation: number;
+}
+
+interface OfferInvoice {
+  id: string;
+  invoice_number: string | null;
+  period_start: string;
+  period_end: string;
+  amount_gross: number | null;
+  amount_inc_vat: number | null;
+  status: string;
+  created_at: string;
 }
 
 interface PartnerOffer {
@@ -116,6 +132,13 @@ const PartnerDashboard = () => {
   const [rotatePasswordVisible, setRotatePasswordVisible] = useState(false);
   const [newApiKey, setNewApiKey] = useState('');
   const [rotatingKey, setRotatingKey] = useState(false);
+
+  // ── Offer billing state ────────────────────────────────────────────────────
+  const [offerActivationCount, setOfferActivationCount] = useState<number>(0);
+  const [offerBillingConfig, setOfferBillingConfig] = useState<OfferBillingConfig | null>(null);
+  const [offerInvoices, setOfferInvoices] = useState<OfferInvoice[]>([]);
+  const [offerBillingLoading, setOfferBillingLoading] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
 
   // ── Partner Offers state ───────────────────────────────────────────────────
   const [partnerOffers, setPartnerOffers] = useState<PartnerOffer[]>([]);
@@ -351,6 +374,61 @@ const PartnerDashboard = () => {
     }
   };
 
+  // ── Offer billing loader ──────────────────────────────────────────────────
+  const loadOfferBilling = async (partnerId: string) => {
+    setOfferBillingLoading(true);
+    try {
+      // 1. activation count
+      const { count } = await supabase
+        .from('partner_offer_activations')
+        .select('id', { count: 'exact', head: true })
+        .eq('partner_id', partnerId);
+      setOfferActivationCount(count ?? 0);
+
+      // 2. billing config
+      const { data: cfgData } = await supabase
+        .from('partner_offer_billing_configs')
+        .select('billing_mode, price_per_activation')
+        .eq('partner_id', partnerId)
+        .maybeSingle();
+      setOfferBillingConfig(cfgData ?? null);
+
+      // 3. offer invoices
+      const { data: invData } = await supabase
+        .from('partner_invoices')
+        .select('id, invoice_number, period_start, period_end, amount_gross, amount_inc_vat, status, created_at')
+        .eq('partner_id', partnerId)
+        .eq('type', 'offer')
+        .order('created_at', { ascending: false });
+      setOfferInvoices((invData ?? []) as OfferInvoice[]);
+    } catch (err) {
+      console.error('Error loading offer billing:', err);
+    } finally {
+      setOfferBillingLoading(false);
+    }
+  };
+
+  const downloadOfferInvoicePdf = async (invoiceId: string) => {
+    setGeneratingPdf(invoiceId);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-partner-invoice-pdf', {
+        headers: withEdgeInternalToken({}),
+        body: { invoice_id: invoiceId },
+      });
+      if (error) throw error;
+      if (data?.success && data.file_url) {
+        window.open(data.file_url, '_blank');
+      } else {
+        toast.error('PDF se nepodařilo vygenerovat');
+      }
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      toast.error('Chyba při generování PDF');
+    } finally {
+      setGeneratingPdf(null);
+    }
+  };
+
   const openCreateOffer = () => {
     setEditingOffer(null);
     setOfferTitle('');
@@ -564,6 +642,8 @@ const PartnerDashboard = () => {
       setRewardMc(String(partnerData.reward_mc ?? 0));
       // Load partner offers
       await loadPartnerOffers(partnerData.id);
+      // Load offer billing
+      await loadOfferBilling(partnerData.id);
       // Load API keys
       const { data: keysData } = await supabase
         .from('partner_api_keys')
@@ -1335,6 +1415,106 @@ const PartnerDashboard = () => {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Offer Billing Section */}
+        {offerBillingConfig && (
+          <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
+                <Receipt className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
+                Fakturace nabídek
+              </CardTitle>
+              <CardDescription>
+                Přehled aktivací a faktur za vaše nabídky
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {offerBillingLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="w-6 h-6 animate-spin text-[hsl(var(--neon-gold))]" />
+                </div>
+              ) : (
+                <>
+                  {/* Stats row */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="rounded-lg bg-muted/30 border border-border/50 p-4 text-center">
+                      <p className="text-sm text-muted-foreground">Celkem aktivací</p>
+                      <p className="text-2xl font-bold text-foreground mt-1">{offerActivationCount}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/30 border border-border/50 p-4 text-center">
+                      <p className="text-sm text-muted-foreground">Způsob fakturace</p>
+                      <p className="text-sm font-medium text-foreground mt-1">
+                        {offerBillingConfig.billing_mode === 'paid_distribution' ? 'Placená distribuce' : offerBillingConfig.billing_mode}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-muted/30 border border-border/50 p-4 text-center">
+                      <p className="text-sm text-muted-foreground">Cena za aktivaci</p>
+                      <p className="text-2xl font-bold text-foreground mt-1">
+                        {offerBillingConfig.price_per_activation} <span className="text-sm font-normal">Kč</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Invoice list */}
+                  {offerInvoices.length > 0 ? (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-3">Faktury</h4>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Číslo faktury</TableHead>
+                            <TableHead>Období</TableHead>
+                            <TableHead>Částka</TableHead>
+                            <TableHead>Stav</TableHead>
+                            <TableHead className="text-right">PDF</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {offerInvoices.map((inv) => (
+                            <TableRow key={inv.id}>
+                              <TableCell className="font-mono text-sm">
+                                {inv.invoice_number ?? '—'}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {format(new Date(inv.period_start), 'dd.MM.yyyy', { locale: cs })} – {format(new Date(inv.period_end), 'dd.MM.yyyy', { locale: cs })}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {(inv.amount_inc_vat ?? inv.amount_gross ?? 0).toLocaleString('cs-CZ')} Kč
+                              </TableCell>
+                              <TableCell>
+                                {inv.status === 'draft' && <Badge variant="outline">Návrh</Badge>}
+                                {inv.status === 'sent' && <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">Odesláno</Badge>}
+                                {inv.status === 'paid' && <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Zaplaceno</Badge>}
+                                {inv.status === 'void' && <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-500/20">Storno</Badge>}
+                                {!['draft','sent','paid','void'].includes(inv.status) && <Badge variant="outline">{inv.status}</Badge>}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => downloadOfferInvoicePdf(inv.id)}
+                                  disabled={generatingPdf === inv.id}
+                                >
+                                  {generatingPdf === inv.id
+                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                    : <Download className="w-4 h-4" />}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg bg-muted/30 border border-border/50 p-4 text-center text-sm text-muted-foreground">
+                      Zatím nebyly vystaveny žádné faktury za nabídky.
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
         )}
