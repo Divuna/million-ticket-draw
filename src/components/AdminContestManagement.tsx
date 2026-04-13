@@ -2040,8 +2040,43 @@ export const AdminContestManagement: React.FC = () => {
     if (!contestToDelete) return;
 
     console.log("[AdminContestManagement] delete contest id:", contestToDelete.contest_id);
+    console.log("[AdminContestManagement] delete contest status:", contestToDelete.status);
     setDeletingContest(contestToDelete.contest_id);
     setDeleteDialogOpen(false);
+
+    // Allow delete only for pending (test) contests
+    if (contestToDelete.status !== "pending") {
+      console.log("[AdminContestManagement] delete blocked: status is not pending, got:", contestToDelete.status);
+      setDeletingContest(null);
+      toast({
+        title: "Mazání zakázáno",
+        description: "Mazání je povoleno jen u testovacích soutěží ve stavu Čeká na start.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Soft-detach all active partner offer links before the count check
+    const { data: detachData, error: detachError } = await supabase
+      .from("partner_offer_contests")
+      .update({ detached_at: new Date().toISOString() })
+      .eq("contest_id", contestToDelete.contest_id)
+      .is("detached_at", null)
+      .select("id");
+
+    console.log("[AdminContestManagement] soft detach response data:", detachData);
+    console.log("[AdminContestManagement] soft detach response error:", detachError);
+
+    if (detachError) {
+      console.log("[AdminContestManagement] delete blocked: soft detach failed");
+      setDeletingContest(null);
+      toast({
+        title: "Chyba",
+        description: detachError.message || "Nepodařilo se odpojit partner nabídky.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Block delete if contest is linked to active partner offers (detached_at IS NULL)
     const { count: activeLinkCount, error: activeLinkError } = await supabase
@@ -2050,7 +2085,7 @@ export const AdminContestManagement: React.FC = () => {
       .eq("contest_id", contestToDelete.contest_id)
       .is("detached_at", null);
 
-    console.log("[AdminContestManagement] active partner_offer_contests count:", activeLinkCount);
+    console.log("[AdminContestManagement] active partner_offer_contests count after soft detach:", activeLinkCount);
 
     if (activeLinkError) {
       console.log("[AdminContestManagement] delete blocked: active link check error");
