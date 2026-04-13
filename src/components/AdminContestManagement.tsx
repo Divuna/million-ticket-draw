@@ -2039,6 +2039,7 @@ export const AdminContestManagement: React.FC = () => {
   const handleDeleteConfirm = async () => {
     if (!contestToDelete) return;
 
+    console.log("[AdminContestManagement] delete contest id:", contestToDelete.contest_id);
     setDeletingContest(contestToDelete.contest_id);
     setDeleteDialogOpen(false);
 
@@ -2047,19 +2048,37 @@ export const AdminContestManagement: React.FC = () => {
     setContests((prev) => prev.filter((c) => c.contest_id !== contestToDelete.contest_id));
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("contests")
         .delete()
-        .eq("id", contestToDelete.contest_id);
+        .eq("id", contestToDelete.contest_id)
+        .select("id");
+
+      console.log("[AdminContestManagement] delete response data:", data);
+      console.log("[AdminContestManagement] delete response error:", error);
 
       if (error) {
         throw error;
+      }
+
+      if (!data || data.length !== 1) {
+        toast({
+          title: "Chyba",
+          description: "Soutěž se v databázi nesmazala.",
+          variant: "destructive",
+        });
+        // Revert optimistic update if DB did not delete
+        setContests(previousContests);
+        await loadContests();
+        return;
       }
 
       toast({
         title: "Soutěž smazána",
         description: `Soutěž "${contestToDelete.title}" byla úspěšně smazána.`,
       });
+      // Sync once with DB after successful delete
+      await loadContests();
     } catch (err: any) {
       console.error("Error deleting contest:", err);
       // Revert optimistic update on error
@@ -2069,6 +2088,7 @@ export const AdminContestManagement: React.FC = () => {
         description: err?.message || "Nepodařilo se smazat soutěž.",
         variant: "destructive",
       });
+      await loadContests();
     } finally {
       setDeletingContest(null);
       setContestToDelete(null);
