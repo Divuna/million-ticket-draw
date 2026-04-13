@@ -143,6 +143,10 @@ const PartnerDashboard = () => {
   const [offerBillingLoading, setOfferBillingLoading] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
 
+  // ── Per-offer performance stats ────────────────────────────────────────────
+  interface OfferPerf { offer_id: string; title: string; activations: number; clicks: number; }
+  const [offerPerfStats, setOfferPerfStats] = useState<OfferPerf[]>([]);
+
   // ── Partner Offers state ───────────────────────────────────────────────────
   const [partnerOffers, setPartnerOffers] = useState<PartnerOffer[]>([]);
   const [offersLoading, setOffersLoading] = useState(false);
@@ -406,6 +410,25 @@ const PartnerDashboard = () => {
         .eq('type', 'offer')
         .order('created_at', { ascending: false });
       setOfferInvoices((invData ?? []) as OfferInvoice[]);
+
+      // 4. per-offer performance stats
+      const [actData, clkData, offerListData] = await Promise.all([
+        supabase.from('partner_offer_activations').select('offer_id').eq('partner_id', partnerId),
+        supabase.from('partner_offer_clicks').select('offer_id'),
+        supabase.from('partner_offers').select('id, title').eq('partner_id', partnerId),
+      ]);
+      const actMap: Record<string, number> = {};
+      (actData.data ?? []).forEach((r: { offer_id: string }) => { actMap[r.offer_id] = (actMap[r.offer_id] ?? 0) + 1; });
+      const clkMap: Record<string, number> = {};
+      (clkData.data ?? []).forEach((r: { offer_id: string }) => { clkMap[r.offer_id] = (clkMap[r.offer_id] ?? 0) + 1; });
+      const perf = (offerListData.data ?? []).map((o: { id: string; title: string }) => ({
+        offer_id: o.id,
+        title: o.title,
+        activations: actMap[o.id] ?? 0,
+        clicks: clkMap[o.id] ?? 0,
+      }));
+      perf.sort((a, b) => b.activations - a.activations);
+      setOfferPerfStats(perf);
     } catch (err) {
       console.error('Error loading offer billing:', err);
     } finally {
@@ -1471,6 +1494,36 @@ const PartnerDashboard = () => {
                       </p>
                     </div>
                   </div>
+
+                  {/* Per-offer stats */}
+                  {offerPerfStats.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-3">Výkon nabídek</h4>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nabídka</TableHead>
+                            <TableHead className="text-center">Aktivace</TableHead>
+                            <TableHead className="text-center">Kliky</TableHead>
+                            <TableHead className="text-center">Konverze</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {offerPerfStats.map((s) => {
+                            const conv = s.clicks > 0 ? ((s.activations / s.clicks) * 100).toFixed(1) + ' %' : '—';
+                            return (
+                              <TableRow key={s.offer_id}>
+                                <TableCell className="text-sm font-medium max-w-[200px] truncate">{s.title}</TableCell>
+                                <TableCell className="text-center tabular-nums">{s.activations}</TableCell>
+                                <TableCell className="text-center tabular-nums">{s.clicks}</TableCell>
+                                <TableCell className="text-center tabular-nums text-blue-400">{conv}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
 
                   {/* Invoice list */}
                   {offerInvoices.length > 0 ? (

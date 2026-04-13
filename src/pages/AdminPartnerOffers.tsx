@@ -8,8 +8,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Loader2, Tag, CheckCircle, XCircle, Clock, ExternalLink,
-  Image as ImageIcon, Calendar, Layers, Coins, ShieldAlert,
+  Image as ImageIcon, Calendar, Layers, Coins, ShieldAlert, BarChart2,
 } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -46,6 +47,56 @@ const AdminPartnerOffers: React.FC = () => {
   // per-offer admin billing override toggle
   const [billingOverrides, setBillingOverrides] = useState<Record<string, boolean>>({});
 
+  // ── Per-offer performance stats ───────────────────────────────────────────
+  interface OfferStat {
+    offer_id: string;
+    title: string;
+    activations: number;
+    clicks: number;
+    conversion: string;
+  }
+  const [offerStats, setOfferStats] = useState<OfferStat[]>([]);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  const loadOfferStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const [activRes, clickRes, offersRes] = await Promise.all([
+        supabase.from('partner_offer_activations').select('offer_id'),
+        supabase.from('partner_offer_clicks').select('offer_id'),
+        supabase.from('partner_offers').select('id, title').eq('status', 'approved'),
+      ]);
+
+      const acts = activRes.data ?? [];
+      const clicks = clickRes.data ?? [];
+      const offers = offersRes.data ?? [];
+
+      const actMap: Record<string, number> = {};
+      acts.forEach((r) => { actMap[r.offer_id] = (actMap[r.offer_id] ?? 0) + 1; });
+
+      const clkMap: Record<string, number> = {};
+      clicks.forEach((r) => { clkMap[r.offer_id] = (clkMap[r.offer_id] ?? 0) + 1; });
+
+      const stats: OfferStat[] = offers.map((o) => {
+        const a = actMap[o.id] ?? 0;
+        const c = clkMap[o.id] ?? 0;
+        return {
+          offer_id: o.id,
+          title: o.title,
+          activations: a,
+          clicks: c,
+          conversion: c > 0 ? ((a / c) * 100).toFixed(1) + ' %' : '—',
+        };
+      });
+      stats.sort((a, b) => b.activations - a.activations);
+      setOfferStats(stats);
+    } catch (err) {
+      console.error('Error loading offer stats:', err);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
   const loadOffers = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -72,12 +123,13 @@ const AdminPartnerOffers: React.FC = () => {
 
   useEffect(() => {
     loadOffers();
+    loadOfferStats();
     const channel = supabase
       .channel('admin-pending-offers')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'partner_offers' }, loadOffers)
       .subscribe();
     return () => { channel.unsubscribe(); };
-  }, [loadOffers]);
+  }, [loadOffers, loadOfferStats]);
 
   const handleApprove = async (offerId: string) => {
     setApprovingId(offerId);
@@ -179,6 +231,46 @@ const AdminPartnerOffers: React.FC = () => {
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Obnovit'}
         </Button>
       </div>
+
+      {/* ── Per-offer performance stats ── */}
+      <Card className="border-border/40 bg-card/60">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <BarChart2 className="w-4 h-4 text-blue-400" />
+            Výkon nabídek (schválené)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {statsLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : offerStats.length === 0 ? (
+            <p className="text-sm text-muted-foreground px-6 py-4">Žádné schválené nabídky.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b border-white/10 hover:bg-transparent">
+                  <TableHead>Nabídka</TableHead>
+                  <TableHead className="text-center">Aktivace</TableHead>
+                  <TableHead className="text-center">Kliky</TableHead>
+                  <TableHead className="text-center">Konverze</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {offerStats.map((s) => (
+                  <TableRow key={s.offer_id} className="border-b border-white/5 hover:bg-white/5">
+                    <TableCell className="text-sm font-medium max-w-[260px] truncate">{s.title}</TableCell>
+                    <TableCell className="text-center tabular-nums">{s.activations}</TableCell>
+                    <TableCell className="text-center tabular-nums">{s.clicks}</TableCell>
+                    <TableCell className="text-center tabular-nums text-blue-400">{s.conversion}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Content */}
       {loading ? (

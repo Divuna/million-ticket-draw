@@ -41,6 +41,22 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
       });
   }, [open, offer?.id]); // depend on offer.id so effect re-runs if a different offer is opened
 
+  // ── Record click in partner_offer_clicks (fire-and-forget) ─────────────────
+  // Fires every time the modal opens — counts impressions/clicks per offer.
+  // Never blocks the user; errors are silently swallowed.
+  useEffect(() => {
+    if (!open || !offer) return;
+
+    supabase
+      .from('partner_offer_clicks')
+      .insert({ offer_id: offer.offer_id })
+      .then(({ error }) => {
+        if (error) {
+          console.warn('OfferDetailModal: click insert failed (non-fatal):', error.message);
+        }
+      });
+  }, [open, offer?.id]); // re-runs if a different offer is opened
+
   if (!offer) return null;
   const data = offer.partner_offers;
   if (!data) return null;
