@@ -2043,6 +2043,39 @@ export const AdminContestManagement: React.FC = () => {
     setDeletingContest(contestToDelete.contest_id);
     setDeleteDialogOpen(false);
 
+    // Block delete if contest is linked to active partner offers (detached_at IS NULL)
+    const { count: activeLinkCount, error: activeLinkError } = await supabase
+      .from("partner_offer_contests")
+      .select("id", { count: "exact", head: true })
+      .eq("contest_id", contestToDelete.contest_id)
+      .is("detached_at", null);
+
+    console.log("[AdminContestManagement] active partner_offer_contests count:", activeLinkCount);
+
+    if (activeLinkError) {
+      console.log("[AdminContestManagement] delete blocked: active link check error");
+      setDeletingContest(null);
+      toast({
+        title: "Chyba",
+        description: activeLinkError.message || "Nepodařilo se ověřit vazby na partner nabídky.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if ((activeLinkCount ?? 0) > 0) {
+      console.log("[AdminContestManagement] delete blocked: active partner offer links exist");
+      setDeletingContest(null);
+      toast({
+        title: "Chyba",
+        description:
+          "Tuto soutěž nelze smazat, protože je navázaná na aktivní partner nabídky.",
+        variant: "destructive",
+      });
+      return;
+    }
+    console.log("[AdminContestManagement] delete allowed: no active partner offer links");
+
     // Optimistic update - remove from list immediately
     const previousContests = [...contests];
     setContests((prev) => prev.filter((c) => c.contest_id !== contestToDelete.contest_id));
