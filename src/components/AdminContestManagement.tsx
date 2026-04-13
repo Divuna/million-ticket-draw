@@ -105,7 +105,7 @@ interface ContestModalProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: "draft", label: "Koncept", color: "bg-gray-500/20 text-gray-300 border-gray-500/30" },
+  { value: "draft", label: "Archiv test", color: "bg-gray-500/20 text-gray-300 border-gray-500/30" },
   { value: "pending", label: "Čeká na start", color: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" },
   { value: "active", label: "Aktivní", color: "bg-green-500/20 text-green-300 border-green-500/30" },
   { value: "paused", label: "Pozastaveno", color: "bg-orange-500/20 text-orange-300 border-orange-500/30" },
@@ -2051,7 +2051,7 @@ export const AdminContestManagement: React.FC = () => {
       setDeletingContest(null);
       toast({
         title: "Mazání zakázáno",
-        description: "Mazání je povoleno jen u testovacích soutěží ve stavu Koncept nebo Čeká na start.",
+        description: "Mazání je povoleno jen u testovacích soutěží ve stavu Archiv test nebo Čeká na start.",
         variant: "destructive",
       });
       return;
