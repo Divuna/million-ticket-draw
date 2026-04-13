@@ -116,19 +116,44 @@ serve(async (req) => {
       );
     }
 
-    // ── 2. Fetch invoice lines ──────────────────────────────────────
-    const { data: lines, error: linesError } = await supabase
-      .from('partner_invoice_lines')
-      .select('*')
-      .eq('invoice_id', invoice_id)
-      .order('activated_at', { ascending: true });
+    // ── Branch on invoice type ──────────────────────────────────────
+    const isOfferInvoice = invoice.type === 'offer';
 
-    if (linesError) {
-      console.error('Error fetching lines:', linesError);
-      return new Response(
-        JSON.stringify({ error: 'Nepodařilo se načíst položky faktury' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // ── 2. Fetch invoice lines ──────────────────────────────────────
+    // Coin invoices  → partner_invoice_lines       (coins, external_order_id)
+    // Offer invoices → partner_offer_invoice_lines (amount per activation)
+    let lines: any[] = [];
+
+    if (isOfferInvoice) {
+      const { data: offerLines, error: offerLinesError } = await supabase
+        .from('partner_offer_invoice_lines')
+        .select('*')
+        .eq('invoice_id', invoice_id)
+        .order('activated_at', { ascending: true });
+
+      if (offerLinesError) {
+        console.error('Error fetching offer lines:', offerLinesError);
+        return new Response(
+          JSON.stringify({ error: 'Nepodařilo se načíst položky faktury' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      lines = offerLines || [];
+    } else {
+      const { data: coinLines, error: linesError } = await supabase
+        .from('partner_invoice_lines')
+        .select('*')
+        .eq('invoice_id', invoice_id)
+        .order('activated_at', { ascending: true });
+
+      if (linesError) {
+        console.error('Error fetching lines:', linesError);
+        return new Response(
+          JSON.stringify({ error: 'Nepodařilo se načíst položky faktury' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      lines = coinLines || [];
     }
 
     // ── 3. Fetch activation details for the control list ────────────
@@ -137,26 +162,24 @@ serve(async (req) => {
     const partnerId = invoice.partner?.id;
 
     let activations: any[] = [];
-    if (partnerId && periodStart && periodEnd) {
+
+    if (isOfferInvoice) {
+      // Offer: activations tied to this invoice row, joined to partner_offers for title
       const { data: actData, error: actError } = await supabase
-        .from('partner_coin_activations')
-        .select('activated_at, coins, code, external_order_id, user_id')
-        .eq('partner_id', partnerId)
-        .gte('activated_at', periodStart)
-        .lte('activated_at', periodEnd)
+        .from('partner_offer_activations')
+        .select('user_id, activated_at, offer_id, partner_offers(title)')
+        .eq('invoice_id', invoice_id)
         .order('activated_at', { ascending: true });
 
       if (actError) {
-        console.error('Error fetching activations:', actError);
+        console.error('Error fetching offer activations:', actError);
       } else {
         activations = actData || [];
       }
 
-      // Fetch user emails from auth.users
       if (activations.length > 0) {
         const userIds = [...new Set(activations.map((a: any) => a.user_id))];
         const emailMap = new Map<string, string>();
-
         const userResults = await Promise.all(
           userIds.map((uid: string) => supabase.auth.admin.getUserById(uid))
         );
@@ -165,11 +188,45 @@ serve(async (req) => {
             emailMap.set(result.data.user.id, result.data.user.email || '-');
           }
         }
-
         activations = activations.map((a: any) => ({
           ...a,
           user_email: emailMap.get(a.user_id) || '-',
+          offer_title: (a.partner_offers as any)?.title || '-',
         }));
+      }
+    } else {
+      // Coin: existing logic — unchanged
+      if (partnerId && periodStart && periodEnd) {
+        const { data: actData, error: actError } = await supabase
+          .from('partner_coin_activations')
+          .select('activated_at, coins, code, external_order_id, user_id')
+          .eq('partner_id', partnerId)
+          .gte('activated_at', periodStart)
+          .lte('activated_at', periodEnd)
+          .order('activated_at', { ascending: true });
+
+        if (actError) {
+          console.error('Error fetching activations:', actError);
+        } else {
+          activations = actData || [];
+        }
+
+        if (activations.length > 0) {
+          const userIds = [...new Set(activations.map((a: any) => a.user_id))];
+          const emailMap = new Map<string, string>();
+          const userResults = await Promise.all(
+            userIds.map((uid: string) => supabase.auth.admin.getUserById(uid))
+          );
+          for (const result of userResults) {
+            if (result.data?.user) {
+              emailMap.set(result.data.user.id, result.data.user.email || '-');
+            }
+          }
+          activations = activations.map((a: any) => ({
+            ...a,
+            user_email: emailMap.get(a.user_id) || '-',
+          }));
+        }
       }
     }
 
@@ -292,10 +349,14 @@ serve(async (req) => {
     const periodFrom = invoice.period_start || invoice.period_from;
     const periodTo = invoice.period_end || invoice.period_to;
 
-    // Compute issue date = first Monday after period_to
-    const issueDate = firstMondayAfter(periodTo);
-    // Due date = issue date + 7 days
-    const dueDate = addDays(issueDate, 7);
+    // Use stored dates when present (offer invoices always have them after Block 2).
+    // Fall back to computed dates for legacy coin invoices without stored values.
+    const issueDate: Date = invoice.issue_date
+      ? new Date(invoice.issue_date)
+      : firstMondayAfter(periodTo);
+    const dueDate: Date = invoice.due_date
+      ? new Date(invoice.due_date)
+      : addDays(issueDate, 7);
 
     currentPage.drawText(`Období: ${formatDate(periodFrom)} – ${formatDate(periodTo)}`, {
       x: leftMargin, y, size: 10, font,
@@ -321,11 +382,17 @@ serve(async (req) => {
     const vatAmount = Number(invoice.vat_amount ?? 0);
     const amountGross = Number(invoice.amount_gross ?? invoice.amount_inc_vat ?? 0);
 
+    // First column differs by type: activation count vs coin count
+    const firstLabel = isOfferInvoice ? 'Celkem aktivací:' : 'Celkem coinů:';
+    const firstValue = isOfferInvoice
+      ? String(lines.length)
+      : String(invoice.coins_total ?? invoice.coins_activated ?? 0);
+
     const summaryItems = [
-      { label: 'Celkem coinů:', value: String(invoice.coins_total ?? invoice.coins_activated ?? 0) },
+      { label: firstLabel,       value: firstValue },
       { label: 'Cena bez DPH:', value: formatCurrency(amountNet) },
-      { label: 'DPH 21 %:', value: formatCurrency(vatAmount) },
-      { label: 'Cena s DPH:', value: formatCurrency(amountGross) },
+      { label: 'DPH 21 %:',     value: formatCurrency(vatAmount) },
+      { label: 'Cena s DPH:',   value: formatCurrency(amountGross) },
     ];
 
     let sx = leftMargin + 10;
@@ -355,109 +422,139 @@ serve(async (req) => {
       currentPage.drawText('Položky faktury', { x: leftMargin, y, size: 12, font: fontBold });
       y -= 20;
 
-      // Table header
-      currentPage.drawRectangle({
-        x: leftMargin, y: y - 2, width: 495, height: 16,
-        color: rgb(0.9, 0.9, 0.92),
-      });
-      currentPage.drawText('#', { x: leftMargin + 5, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
-      currentPage.drawText('Datum aktivace', { x: leftMargin + 30, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
-      currentPage.drawText('Ext. objednávka', { x: leftMargin + 180, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
-      currentPage.drawText('Coiny', { x: leftMargin + 400, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
-      y -= 18;
+      if (isOfferInvoice) {
+        // Offer lines: # | Datum aktivace | Cena za aktivaci
+        currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 16, color: rgb(0.9, 0.9, 0.92) });
+        currentPage.drawText('#',                { x: leftMargin + 5,   y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        currentPage.drawText('Datum aktivace',   { x: leftMargin + 30,  y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        currentPage.drawText('Cena za aktivaci', { x: leftMargin + 360, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        y -= 18;
 
-      for (let i = 0; i < lines.length; i++) {
-        if (y < 80) {
-          currentPage = pdfDoc.addPage([595, 842]);
-          y = 842 - 50;
+        for (let i = 0; i < lines.length; i++) {
+          if (y < 80) { currentPage = pdfDoc.addPage([595, 842]); y = 842 - 50; }
+          const line    = lines[i];
+          const bgColor = i % 2 === 0 ? rgb(1, 1, 1) : rgb(0.97, 0.97, 0.98);
+          currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 14, color: bgColor });
+          currentPage.drawText(String(i + 1),                            { x: leftMargin + 5,   y: y + 1, size: 8, font });
+          currentPage.drawText(formatDate(line.activated_at),            { x: leftMargin + 30,  y: y + 1, size: 8, font });
+          currentPage.drawText(formatCurrency(Number(line.amount ?? 0)), { x: leftMargin + 360, y: y + 1, size: 8, font: fontBold });
+          y -= 15;
         }
+      } else {
+        // Coin lines: # | Datum aktivace | Ext. objednávka | Coiny  (unchanged)
+        currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 16, color: rgb(0.9, 0.9, 0.92) });
+        currentPage.drawText('#',               { x: leftMargin + 5,   y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        currentPage.drawText('Datum aktivace',  { x: leftMargin + 30,  y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        currentPage.drawText('Ext. objednávka', { x: leftMargin + 180, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        currentPage.drawText('Coiny',           { x: leftMargin + 400, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        y -= 18;
 
-        const line = lines[i];
-        const bgColor = i % 2 === 0 ? rgb(1, 1, 1) : rgb(0.97, 0.97, 0.98);
-        currentPage.drawRectangle({
-          x: leftMargin, y: y - 2, width: 495, height: 14,
-          color: bgColor,
-        });
-
-        currentPage.drawText(String(i + 1), { x: leftMargin + 5, y: y + 1, size: 8, font });
-        currentPage.drawText(formatDate(line.activated_at), { x: leftMargin + 30, y: y + 1, size: 8, font });
-        currentPage.drawText(line.external_order_id || '-', { x: leftMargin + 180, y: y + 1, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
-        currentPage.drawText(String(line.coins), { x: leftMargin + 400, y: y + 1, size: 8, font: fontBold });
-        y -= 15;
+        for (let i = 0; i < lines.length; i++) {
+          if (y < 80) { currentPage = pdfDoc.addPage([595, 842]); y = 842 - 50; }
+          const line    = lines[i];
+          const bgColor = i % 2 === 0 ? rgb(1, 1, 1) : rgb(0.97, 0.97, 0.98);
+          currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 14, color: bgColor });
+          currentPage.drawText(String(i + 1),               { x: leftMargin + 5,   y: y + 1, size: 8, font });
+          currentPage.drawText(formatDate(line.activated_at), { x: leftMargin + 30,  y: y + 1, size: 8, font });
+          currentPage.drawText(line.external_order_id || '-', { x: leftMargin + 180, y: y + 1, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
+          currentPage.drawText(String(line.coins),           { x: leftMargin + 400, y: y + 1, size: 8, font: fontBold });
+          y -= 15;
+        }
       }
 
       y -= 10;
     }
 
-    // ── Activation control list (always rendered) ─────────────────
-    if (y < 120) {
-      currentPage = pdfDoc.addPage([595, 842]);
-      y = 842 - 50;
-    }
+    // ── Activation control list ────────────────────────────────────
+    if (y < 120) { currentPage = pdfDoc.addPage([595, 842]); y = 842 - 50; }
 
-    currentPage.drawText('Kontrolní přehled aktivací MioCoinů', {
-      x: leftMargin, y, size: 12, font: fontBold,
-    });
-    y -= 20;
-
-    if (activations.length === 0) {
-      currentPage.drawText('Žádné aktivace v tomto období.', {
-        x: leftMargin, y, size: 9, font, color: rgb(0.5, 0.5, 0.5),
-      });
+    if (isOfferInvoice) {
+      // ── Přehled aktivací nabídek ─────────────────────────────────
+      currentPage.drawText('Přehled aktivací nabídek', { x: leftMargin, y, size: 12, font: fontBold });
       y -= 20;
-    } else {
-      // Table header
-      currentPage.drawRectangle({
-        x: leftMargin, y: y - 2, width: 495, height: 16,
-        color: rgb(0.9, 0.9, 0.92),
-      });
-      currentPage.drawText('#', { x: leftMargin + 5, y: y + 2, size: 7, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
-      currentPage.drawText('E-mail', { x: leftMargin + 25, y: y + 2, size: 7, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
-      currentPage.drawText('Datum aktivace', { x: leftMargin + 200, y: y + 2, size: 7, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
-      currentPage.drawText('Kód', { x: leftMargin + 320, y: y + 2, size: 7, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
-      currentPage.drawText('MioCoiny', { x: leftMargin + 430, y: y + 2, size: 7, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
-      y -= 18;
 
-      let totalCoins = 0;
-      for (let i = 0; i < activations.length; i++) {
-        if (y < 60) {
-          currentPage = pdfDoc.addPage([595, 842]);
-          y = 842 - 50;
+      if (activations.length === 0) {
+        currentPage.drawText('Žádné aktivace k této faktuře.', { x: leftMargin, y, size: 9, font, color: rgb(0.5, 0.5, 0.5) });
+        y -= 20;
+      } else {
+        // Header: # | E-mail | Datum aktivace | Nabídka
+        currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 16, color: rgb(0.9, 0.9, 0.92) });
+        currentPage.drawText('#',              { x: leftMargin + 5,   y: y + 2, size: 7, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        currentPage.drawText('E-mail',         { x: leftMargin + 25,  y: y + 2, size: 7, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        currentPage.drawText('Datum aktivace', { x: leftMargin + 200, y: y + 2, size: 7, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        currentPage.drawText('Nabídka',        { x: leftMargin + 330, y: y + 2, size: 7, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        y -= 18;
+
+        for (let i = 0; i < activations.length; i++) {
+          if (y < 60) { currentPage = pdfDoc.addPage([595, 842]); y = 842 - 50; }
+          const act     = activations[i];
+          const bgColor = i % 2 === 0 ? rgb(1, 1, 1) : rgb(0.97, 0.97, 0.98);
+          currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 14, color: bgColor });
+
+          let email = act.user_email || '-';
+          if (email.length > 30) email = email.substring(0, 28) + '…';
+
+          let offerTitle = act.offer_title || '-';
+          if (offerTitle.length > 28) offerTitle = offerTitle.substring(0, 26) + '…';
+
+          currentPage.drawText(String(i + 1),               { x: leftMargin + 5,   y: y + 1, size: 7, font });
+          currentPage.drawText(email,                        { x: leftMargin + 25,  y: y + 1, size: 7, font });
+          currentPage.drawText(formatDate(act.activated_at), { x: leftMargin + 200, y: y + 1, size: 7, font });
+          currentPage.drawText(offerTitle,                   { x: leftMargin + 330, y: y + 1, size: 7, font, color: rgb(0.4, 0.4, 0.4) });
+          y -= 14;
         }
 
-        const act = activations[i];
-        totalCoins += act.coins;
-        const bgColor = i % 2 === 0 ? rgb(1, 1, 1) : rgb(0.97, 0.97, 0.98);
-        currentPage.drawRectangle({
-          x: leftMargin, y: y - 2, width: 495, height: 14,
-          color: bgColor,
-        });
-
-        // Truncate email if too long
-        let email = act.user_email || '-';
-        if (email.length > 30) email = email.substring(0, 28) + '…';
-
-        currentPage.drawText(String(i + 1), { x: leftMargin + 5, y: y + 1, size: 7, font });
-        currentPage.drawText(email, { x: leftMargin + 25, y: y + 1, size: 7, font });
-        currentPage.drawText(formatDate(act.activated_at), { x: leftMargin + 200, y: y + 1, size: 7, font });
-        currentPage.drawText(act.code || '-', { x: leftMargin + 320, y: y + 1, size: 7, font, color: rgb(0.4, 0.4, 0.4) });
-        currentPage.drawText(String(act.coins), { x: leftMargin + 430, y: y + 1, size: 7, font: fontBold });
-        y -= 14;
+        // Total row
+        if (y < 40) { currentPage = pdfDoc.addPage([595, 842]); y = 842 - 50; }
+        currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 16, color: rgb(0.92, 0.92, 0.95) });
+        currentPage.drawText('Celkem aktivací:',         { x: leftMargin + 200, y: y + 2, size: 8, font: fontBold });
+        currentPage.drawText(String(activations.length), { x: leftMargin + 330, y: y + 2, size: 8, font: fontBold });
+        y -= 25;
       }
+    } else {
+      // ── Kontrolní přehled aktivací MioCoinů (unchanged) ──────────
+      currentPage.drawText('Kontrolní přehled aktivací MioCoinů', { x: leftMargin, y, size: 12, font: fontBold });
+      y -= 20;
 
-      // Sum row
-      if (y < 40) {
-        currentPage = pdfDoc.addPage([595, 842]);
-        y = 842 - 50;
+      if (activations.length === 0) {
+        currentPage.drawText('Žádné aktivace v tomto období.', { x: leftMargin, y, size: 9, font, color: rgb(0.5, 0.5, 0.5) });
+        y -= 20;
+      } else {
+        currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 16, color: rgb(0.9, 0.9, 0.92) });
+        currentPage.drawText('#',              { x: leftMargin + 5,   y: y + 2, size: 7, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        currentPage.drawText('E-mail',         { x: leftMargin + 25,  y: y + 2, size: 7, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        currentPage.drawText('Datum aktivace', { x: leftMargin + 200, y: y + 2, size: 7, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        currentPage.drawText('Kód',            { x: leftMargin + 320, y: y + 2, size: 7, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        currentPage.drawText('MioCoiny',       { x: leftMargin + 430, y: y + 2, size: 7, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        y -= 18;
+
+        let totalCoins = 0;
+        for (let i = 0; i < activations.length; i++) {
+          if (y < 60) { currentPage = pdfDoc.addPage([595, 842]); y = 842 - 50; }
+          const act     = activations[i];
+          totalCoins   += act.coins;
+          const bgColor = i % 2 === 0 ? rgb(1, 1, 1) : rgb(0.97, 0.97, 0.98);
+          currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 14, color: bgColor });
+
+          let email = act.user_email || '-';
+          if (email.length > 30) email = email.substring(0, 28) + '…';
+
+          currentPage.drawText(String(i + 1),               { x: leftMargin + 5,   y: y + 1, size: 7, font });
+          currentPage.drawText(email,                        { x: leftMargin + 25,  y: y + 1, size: 7, font });
+          currentPage.drawText(formatDate(act.activated_at), { x: leftMargin + 200, y: y + 1, size: 7, font });
+          currentPage.drawText(act.code || '-',              { x: leftMargin + 320, y: y + 1, size: 7, font, color: rgb(0.4, 0.4, 0.4) });
+          currentPage.drawText(String(act.coins),            { x: leftMargin + 430, y: y + 1, size: 7, font: fontBold });
+          y -= 14;
+        }
+
+        // Sum row
+        if (y < 40) { currentPage = pdfDoc.addPage([595, 842]); y = 842 - 50; }
+        currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 16, color: rgb(0.92, 0.92, 0.95) });
+        currentPage.drawText('Celkem:',          { x: leftMargin + 320, y: y + 2, size: 8, font: fontBold });
+        currentPage.drawText(String(totalCoins), { x: leftMargin + 430, y: y + 2, size: 8, font: fontBold });
+        y -= 25;
       }
-      currentPage.drawRectangle({
-        x: leftMargin, y: y - 2, width: 495, height: 16,
-        color: rgb(0.92, 0.92, 0.95),
-      });
-      currentPage.drawText('Celkem:', { x: leftMargin + 320, y: y + 2, size: 8, font: fontBold });
-      currentPage.drawText(String(totalCoins), { x: leftMargin + 430, y: y + 2, size: 8, font: fontBold });
-      y -= 25;
-    }
+    } // end else (coin)
 
     // ── QR payment code ─────────────────────────────────────────────
     if (qrPngBytes) {
