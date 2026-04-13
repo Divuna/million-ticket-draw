@@ -1814,6 +1814,7 @@ export const AdminContestManagement: React.FC = () => {
   const [deletingContest, setDeletingContest] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contestToDelete, setContestToDelete] = useState<ContestData | null>(null);
+  const [archiveTab, setArchiveTab] = useState<"active" | "test" | "closed">("active");
 
   const loadContests = async () => {
     setLoading(true);
@@ -2186,6 +2187,13 @@ export const AdminContestManagement: React.FC = () => {
     ? ((summaryTotals.tickets_sold / summaryTotals.total_tickets) * 100).toFixed(1)
     : "0.0";
 
+  const filteredContests = contests.filter((c) => {
+    if (archiveTab === "active") return ["pending", "active", "paused"].includes(c.status);
+    if (archiveTab === "test")   return c.status === "draft";
+    if (archiveTab === "closed") return c.status === "closed";
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -2198,6 +2206,39 @@ export const AdminContestManagement: React.FC = () => {
         >
           <Plus className="mr-2 h-4 w-4" /> Nová soutěž
         </Button>
+      </div>
+
+      {/* ── Archive tabs ── */}
+      <div className="flex gap-1 border-b border-white/10 pb-0">
+        {(["active", "test", "closed"] as const).map((tab) => {
+          const labels: Record<string, string> = {
+            active: "Aktivní soutěže",
+            test:   "Archiv test",
+            closed: "Archiv ukončených soutěží",
+          };
+          const counts: Record<string, number> = {
+            active: contests.filter((c) => ["pending", "active", "paused"].includes(c.status)).length,
+            test:   contests.filter((c) => c.status === "draft").length,
+            closed: contests.filter((c) => c.status === "closed").length,
+          };
+          const isActive = archiveTab === tab;
+          return (
+            <button
+              key={tab}
+              onClick={() => setArchiveTab(tab)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                isActive
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-white/30"
+              }`}
+            >
+              {labels[tab]}
+              <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${isActive ? "bg-primary/20 text-primary" : "bg-white/10 text-muted-foreground"}`}>
+                {counts[tab]}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* ── Contest statistics panel ── */}
@@ -2261,8 +2302,8 @@ export const AdminContestManagement: React.FC = () => {
             <div className="flex justify-center py-10">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          ) : contests.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground">Žádné soutěže nebyly nalezeny.</div>
+          ) : filteredContests.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">Žádné soutěže v této kategorii.</div>
           ) : (
             <div className="rounded-md border border-white/10 max-h-[550px] overflow-auto relative">
               <div className="min-w-max">
@@ -2280,7 +2321,7 @@ export const AdminContestManagement: React.FC = () => {
                 </TableHeader>
 
                 <TableBody>
-                  {contests.map((contest, index) => (
+                  {filteredContests.map((contest, index) => (
                     <TableRow
                       key={contest.contest_id}
                       className={`border-b border-white/5 transition-colors hover:bg-white/5 ${index % 2 === 0 ? "bg-white/[0.02]" : ""}`}
