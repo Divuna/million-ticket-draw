@@ -1943,6 +1943,18 @@ export const AdminContestManagement: React.FC = () => {
       return;
     }
 
+    if (newStatus === "draft") {
+      const current = contests.find((c) => c.contest_id === contestId);
+      if (current?.status === "active") {
+        toast({
+          title: "Akce zamítnuta",
+          description: "Aktivní soutěž nelze přesunout do Archivu test. Nejprve ji pozastavte nebo vraťte do stavu Čeká na start.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setUpdatingStatus(contestId);
 
     try {
@@ -2353,15 +2365,19 @@ export const AdminContestManagement: React.FC = () => {
                               )}
                             </SelectTrigger>
                             <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
-                              {SELECTABLE_STATUS_OPTIONS.map((option) => (
-                                <SelectItem
-                                  key={option.value}
-                                  value={option.value}
-                                  className="text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"
-                                >
-                                  {option.label}
-                                </SelectItem>
-                              ))}
+                              {SELECTABLE_STATUS_OPTIONS.map((option) => {
+                                const isBlocked = option.value === "draft" && contest.status === "active";
+                                return (
+                                  <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                    disabled={isBlocked}
+                                    className={isBlocked ? "text-neutral-500 cursor-not-allowed" : "text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"}
+                                  >
+                                    {option.label}
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                         </div>
