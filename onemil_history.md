@@ -333,5 +333,57 @@ Byly vytvořeny a commitnuty tyto soubory:
 
 ## 2026-04-10 — Odstranění dočasného private-access gate v App
 
-- V `src/App.tsx` odstraněn email allowlist (`divispavel2@gmail.com`), `isLockExemptRoute` / `isLocked` a celá obrazovka „Web je momentálně neveřejný“; role redirecty v `useEffect` beze změny logiky kromě odstranění early return kvůli locku.
+- V `src/App.tsx` odstraněn email allowlist (`divispavel2@gmail.com`), `isLockExemptRoute` / `isLocked` a celá obrazovka „Web je momentálně neveřejný”; role redirecty v `useEffect` beze změny logiky kromě odstranění early return kvůli locku.
 - Ověřeno lokálně: `npm run build` — Vite production build dokončen úspěšně (`✓ built`).
+
+---
+
+## 2026-04-12 — Partner billing visibility + invoice PDF/email – Admin + Partner portal
+
+- `src/pages/PartnerDashboard.tsx` rozšířen o Block 5: read-only billing přehled pro partnera
+  - `loadOfferBilling(partnerId)` načítá: počet aktivací, billing config, seznam offer faktur
+  - `downloadOfferInvoicePdf(invoiceId)` volá `generate-partner-invoice-pdf` přes `withEdgeInternalToken`
+  - Karta „Fakturace nabídek” zobrazuje: aktivace, billing mode, cena za aktivaci, tabulku faktur s PDF tlačítkem
+  - Commit: `7272be5`
+- `supabase/migrations/20260412_extend_partner_offer_invoices_numbering.sql` — Block 2: `create_partner_offer_invoices_for_period` rozšířena o `invoice_number`, `variable_symbol`, `issue_date`, `due_date`, `taxable_date` voláním `generate_invoice_number()`
+- `supabase/functions/generate-partner-invoice-pdf/index.ts` — Block 3: přidána podpora `type='offer'` faktur; čte z `partner_offer_invoice_lines` a `partner_offer_activations`; oddělená větev od coin logiky; nasazeno jako verze 98
+- `src/pages/AdminPartnersPortal.tsx` — Block 4: tlačítka „Vygenerovat PDF” a „Odeslat fakturu” pro oba typy faktur (coin i offer); `skipped` response z `send-partner-invoice-email` zpracována jako `toast.info`; commit `f1554dc`
+
+---
+
+## 2026-04-13 — Contest admin fixes: create, status model, archive UX, delete safety
+
+### Contest create – ticket_count fix
+- Zjištěno: `admin_manage_contest` tiše přepisoval `ticket_count` na fallback `1000000` pokud nebyl správně předán z frontendu
+- Opraveno na frontend straně v `AdminContestManagement`
+- Nasazení vyžadovalo Lovable Share → Publish (ne jen git push)
+
+### DB status constraint rozšíření
+- `contests_status_check` byl rozšířen o chybějící hodnoty tak, aby odpovídal UI statusům: `draft`, `pending`, `active`, `paused`, `closed`
+- Předtím constraint způsoboval selhání při CREATE soutěže s neočekávanými hodnotami
+
+### Contest archive UX
+- `src/components/AdminContestManagement.tsx` rozšířena o 3 filtrovací taby pod hlavičkou stránky:
+  - Aktivní soutěže (`pending`, `active`, `paused`)
+  - Archiv test (`draft`)
+  - Archiv ukončených soutěží (`closed`)
+- Archiv zůstává na stejné stránce, ne na nové stránce, ne ve row dropdownu
+- Commit: `2d0cc84`
+
+### Draft přejmenován na „Archiv test” v admin UI
+- `STATUS_OPTIONS`: label `”Koncept”` → `”Archiv test”` pro value `”draft”`
+- DB hodnota `draft` beze změny
+- Commit: `f26caa9`
+
+### Pravidlo přechodu do Archiv test
+- `active` → `draft` zablokováno: frontend guard v `handleStatusChange` + disabled dropdown option
+- Povoleno pouze z `pending` nebo `paused`
+- Commit: `b4b55b0`
+
+### Hard delete – audit a závěr
+- Bylo potvrzeno: `partner_offer_contests.contest_id` má FK na `contests(id)`
+- Soft detach (`detached_at = now()`) logicky odpojí nabídku, ale FK řádky fyzicky zůstávají
+- Hard delete po soft detach stále selže s FK violation
+- Závěr: **hard delete contestů není bezpečný; testovací soutěže se archivují do `draft`**
+- Delete v admin UI povolen pouze pro `draft` a `pending` (testovací fáze); pro `active`, `paused`, `closed` zablokováno
+- Commity: `ac52556`, `8026382`

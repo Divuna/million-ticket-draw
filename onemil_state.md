@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 10. 04. 2026 CEST
+**Aktualizováno:** 13. 04. 2026 CEST
 
 ## Aktuální fáze
 Partner Offers v1 – **dokončeno, nasazeno a finálně ověřeno end-to-end**.
@@ -274,6 +274,52 @@ Nasazeno v `src/pages/PartnerDashboard.tsx`:
 - Form fields: title, short_text, deployment_mode (Select), valid_from, valid_to, link_or_code
 - `loadPartnerOffers(partnerId)` voláno automaticky z `loadPartnerData()`
 - Build: ✅ exit code 0
+
+---
+
+---
+
+## Admin contest management – aktuální stav (13. 04. 2026)
+
+### Contest statuses (DB + UI)
+Platné hodnoty v `contests.status` (constraint `contests_status_check` byl rozšířen):
+- `draft` — v admin UI zobrazováno jako **„Archiv test"**
+- `pending` — „Čeká na start"
+- `active` — „Aktivní"
+- `paused` — „Pozastaveno"
+- `closed` — „Ukončeno" (pouze systémový přechod, admin nemůže nastavit ručně)
+
+### Admin UI – Správa soutěží
+Stránka `AdminContestManagement` má 3 filtrovací taby přímo pod hlavičkou:
+- **Aktivní soutěže** — zobrazuje `pending`, `active`, `paused`
+- **Archiv test** — zobrazuje `draft`
+- **Archiv ukončených soutěží** — zobrazuje `closed`
+
+Chování je na jedné stránce, ne na samostatné stránce ani ve row dropdownu.
+
+### Pravidla přechodu statusu (admin)
+- Do `draft` (Archiv test) lze přesunout pouze z `pending` nebo `paused`
+- `active` → `draft` je zablokováno (UI i frontend guard)
+- Zablokovaný přechod zobrazí toast: _„Aktivní soutěž nelze přesunout do Archivu test. Nejprve ji pozastavte nebo vraťte do stavu Čeká na start."_
+- V dropdown je `draft` option pro `active` contest viditelná, ale disabled
+
+### Contest create flow
+- Admin vytváří soutěž přes `AdminContestManagement` → RPC `admin_manage_contest`
+- Opravena tichá chyba: `ticket_count` se již netiše přepisoval na fallback `1000000` pokud nebyl zadán
+- Frontend oprava vyžadovala Lovable Share → Publish k nasazení
+
+### Hard delete contestů – ZAKAZANO v produkci
+- Hard delete contestů není bezpečný se stávajícím FK modelem
+- `partner_offer_contests.contest_id` odkazuje FK na `contests(id)`
+- Soft detach (`detached_at`) odstraní logickou vazbu, ale FK řádky fyzicky zůstávají → hard delete i po soft detach selže s FK violation
+- **Bezpečný způsob „úklidu" testovacích soutěží = přesun do `draft` (Archiv test), ne hard delete**
+- Delete je v admin UI povolen pouze pro `draft` a `pending` soutěže (testovací fáze)
+
+### Partner Offers + contest lifecycle – potvrzené invarianty
+- `partner_offer_contests` řádky se NESMÍ mazat natvrdo
+- Trigger `trg_partner_offer_approved` attachuje nabídky pouze na `active` nebo `pending` soutěže → `draft` soutěže jsou z automatického attachmentu vyloučeny
+- `buy_ticket_atomic` stráží `status = 'active'` → `draft` soutěže jsou pro uživatele inertní
+- `assign_partner_offer_to_ticket` a `buy_ticket_atomic` se NESMÍ měnit v kontextu contest cleanup
 
 ---
 
