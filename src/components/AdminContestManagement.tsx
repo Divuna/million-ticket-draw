@@ -1183,6 +1183,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             p_contest_id: contestId,
             p_ticket_position: prize.ticket_position,
             p_description: prize.description,
+            p_detailed_description: prize.detailed_description ?? null,
             p_status: "pending",
             p_operation: "create",
             p_image_url: imageUrl ?? null,
