@@ -17,7 +17,7 @@ import {
   logTicketPurchaseSuccess,
   recordTicketPurchaseAttemptForAbuseCheck,
 } from '@/lib/monitoring';
-import { Heart, Trophy, Wallet, Plus, TrendingUp } from 'lucide-react';
+import { Heart, Trophy } from 'lucide-react';
 
 interface Contest {
   id: string;
@@ -411,40 +411,48 @@ if (loading) {
     );
   }
 
-  const featuredContest = contests[0] ?? null;
-  const remainingContests = contests.slice(1);
-
-  // Total MioCoins invested per contest
-  const totalInvested = (contestId: string, ticketPrice: number) => {
-    const sold = progressMap[contestId]?.tickets_sold ?? 0;
-    return sold * ticketPrice;
-  };
-
   return (
     <div className="min-h-screen bg-background dark pb-20">
       <Header />
-      <div className="container mx-auto px-4 py-5 space-y-3">
-
-        {/* Page header row */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-heading-gold flex items-center gap-2">
-            <Trophy className="w-5 h-5" />
-            Soutěže
-          </h1>
-          <button
-            className="
-              flex items-center gap-1.5 px-4 py-2
-              rounded-full border border-[hsl(40_75%_50%/0.4)]
-              text-[hsl(45_85%_55%)] text-sm font-medium
-              bg-[rgba(0,0,0,0.3)] backdrop-blur-sm
-              hover:border-[hsl(40_75%_55%)] hover:bg-[rgba(0,0,0,0.5)]
-              transition-all duration-200
-            "
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Page Header - matching homepage typography */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="text-center md:text-left flex-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-heading-gold flex items-center gap-3 justify-center md:justify-start">
+              <Trophy className="w-7 h-7 md:w-8 md:h-8" />
+              Soutěže
+            </h1>
+            <p className="text-sm text-text-silver mt-2">Vyberte si soutěž a zkuste štěstí!</p>
+          </div>
+          
+          <Button 
+            className="bg-primary hover:brightness-110 text-primary-foreground font-bold px-6 py-3 rounded-xl shadow-[0_0_12px_hsl(var(--primary)/0.35)] transition-all duration-200"
             onClick={() => navigate('/favorite-games')}
           >
-            <Heart className="w-4 h-4" />
+            <Heart className="w-5 h-5 mr-2" />
             Oblíbené
-          </button>
+          </Button>
+        </div>
+        
+        {/* Contests Grid - matching homepage card styling */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {contests.map((contest) => (
+            <ContestCard
+              key={contest.id}
+              contest={contest}
+              user={user}
+              isAdmin={isAdmin}
+              processingContestId={processingContestId}
+              favorites={favorites}
+              onToggleFavorite={toggleFavorite}
+              onPlay={handleUnlockTicket}
+              fromPage="games"
+              showTotalOnly
+              ticketsSold={progressMap[contest.id]?.tickets_sold ?? 0}
+              ticketsTotal={progressMap[contest.id]?.tickets_total ?? 1_000_000}
+              walletBalance={walletBalance}
+            />
+          ))}
         </div>
 
         {contests.length === 0 && (
@@ -454,135 +462,6 @@ if (loading) {
             <p className="text-sm text-muted-foreground">Momentálně nejsou dostupné žádné soutěže.</p>
           </div>
         )}
-
-        {/* ── HERO BLOCK: featured contest (2/3) + info tiles (1/3) ── */}
-        {featuredContest && (
-          <div className="flex gap-3" style={{ height: '300px' }}>
-
-            {/* Featured contest – large tile */}
-            <div className="flex-[2] min-w-0">
-              <ContestCard
-                contest={featuredContest}
-                user={user}
-                isAdmin={isAdmin}
-                processingContestId={processingContestId}
-                favorites={favorites}
-                onToggleFavorite={toggleFavorite}
-                onPlay={handleUnlockTicket}
-                fromPage="games"
-                showTotalOnly
-                ticketsSold={progressMap[featuredContest.id]?.tickets_sold ?? 0}
-                ticketsTotal={progressMap[featuredContest.id]?.tickets_total ?? 1_000_000}
-                walletBalance={walletBalance}
-                size="featured"
-                totalInvestedCoins={totalInvested(featuredContest.id, featuredContest.ticket_price)}
-              />
-            </div>
-
-            {/* Right column – 3 info tiles stacked */}
-            <div className="flex-1 flex flex-col gap-3 min-w-0">
-
-              {/* Wallet tile */}
-              <div
-                className="
-                  flex-1 rounded-[16px]
-                  border-[2px] border-[hsl(40_75%_45%/0.5)]
-                  bg-[rgba(8,8,12,0.97)]
-                  p-3 flex flex-col justify-between
-                  cursor-pointer
-                  hover:border-[hsl(40_75%_60%/0.7)]
-                  transition-colors duration-200
-                "
-                onClick={() => navigate('/profile')}
-              >
-                <Wallet className="w-4 h-4 text-[hsl(45_75%_55%)]" />
-                <div>
-                  <div className="text-[11px] text-white/40 uppercase tracking-wider leading-tight mb-0.5">Peněženka</div>
-                  <div className="text-lg font-bold text-[hsl(45_85%_60%)] leading-tight">
-                    {walletBalance !== undefined ? walletBalance.toLocaleString('cs-CZ') : '–'}
-                  </div>
-                  <div className="text-[10px] text-white/35 leading-tight">MioCoinů</div>
-                </div>
-              </div>
-
-              {/* Top-up tile */}
-              <div
-                className="
-                  flex-1 rounded-[16px]
-                  border-[2px] border-[hsl(40_75%_45%/0.5)]
-                  bg-gradient-to-br from-[rgba(28,18,4,0.97)] to-[rgba(8,8,12,0.97)]
-                  p-3 flex flex-col justify-between
-                  cursor-pointer
-                  hover:border-[hsl(40_75%_60%/0.7)]
-                  transition-all duration-200
-                "
-                onClick={() => navigate('/profile', { state: { paymentReturnTo: '/games' } })}
-              >
-                <Plus className="w-4 h-4 text-[hsl(45_75%_55%)]" />
-                <div>
-                  <div className="text-[11px] text-white/40 uppercase tracking-wider leading-tight mb-0.5">Dobít</div>
-                  <div className="text-sm font-bold text-[hsl(45_85%_60%)] leading-tight">MioCoiny</div>
-                </div>
-              </div>
-
-              {/* Invested tile */}
-              <div
-                className="
-                  flex-1 rounded-[16px]
-                  border-[2px] border-[hsl(40_75%_45%/0.5)]
-                  bg-[rgba(8,8,12,0.97)]
-                  p-3 flex flex-col justify-between
-                "
-              >
-                <TrendingUp className="w-4 h-4 text-[hsl(45_75%_55%)]" />
-                <div>
-                  <div className="text-[11px] text-white/40 uppercase tracking-wider leading-tight mb-0.5">Vloženo</div>
-                  <div className="text-sm font-bold text-[hsl(45_85%_60%)] leading-tight">
-                    {totalInvested(featuredContest.id, featuredContest.ticket_price).toLocaleString('cs-CZ')}
-                  </div>
-                  <div className="text-[10px] text-white/35 leading-tight">MioCoinů</div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        )}
-
-        {/* ── MOSAIC GRID: remaining contests ── */}
-        {remainingContests.length > 0 && (
-          <div className="grid grid-cols-2 gap-3">
-            {remainingContests.map((contest, i) => {
-              // Every 3rd card (index 2, 5, 8…) spans full width as a secondary featured
-              const isWide = i > 0 && (i + 1) % 3 === 0;
-              const invested = totalInvested(contest.id, contest.ticket_price);
-              return (
-                <div
-                  key={contest.id}
-                  className={isWide ? 'col-span-2' : ''}
-                  style={{ height: isWide ? '200px' : '180px' }}
-                >
-                  <ContestCard
-                    contest={contest}
-                    user={user}
-                    isAdmin={isAdmin}
-                    processingContestId={processingContestId}
-                    favorites={favorites}
-                    onToggleFavorite={toggleFavorite}
-                    onPlay={handleUnlockTicket}
-                    fromPage="games"
-                    showTotalOnly
-                    ticketsSold={progressMap[contest.id]?.tickets_sold ?? 0}
-                    ticketsTotal={progressMap[contest.id]?.tickets_total ?? 1_000_000}
-                    walletBalance={walletBalance}
-                    size={isWide ? 'featured' : 'compact'}
-                    totalInvestedCoins={invested}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
-
       </div>
 
       <TicketResultModal

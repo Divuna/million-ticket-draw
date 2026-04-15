@@ -36,10 +36,6 @@ interface ContestCardProps {
   showTotalOnly?: boolean;
   /** When set (e.g. on Games / Favorites), gates purchase CTA vs top-up using this balance */
   walletBalance?: number;
-  /** Visual size variant – controls card height and typography scale */
-  size?: 'featured' | 'normal' | 'compact';
-  /** Total MioCoins invested into this contest (tickets_sold × ticket_price) */
-  totalInvestedCoins?: number;
 }
 
 export const ContestCard: React.FC<ContestCardProps> = ({
@@ -57,8 +53,6 @@ export const ContestCard: React.FC<ContestCardProps> = ({
   ticketsTotal,
   showTotalOnly = false,
   walletBalance,
-  size = 'normal',
-  totalInvestedCoins,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -106,6 +100,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
     }
   };
 
+  // Determine the best image source with priority
   const resolveStorageUrl = (fileName: string, bucket: string): string => {
     if (fileName.startsWith('http')) return fileName;
     return supabase.storage.from(bucket).getPublicUrl(fileName).data.publicUrl;
@@ -126,24 +121,14 @@ export const ContestCard: React.FC<ContestCardProps> = ({
 
   const imageUrl = getBestImageUrl();
 
-  const hasTotal = typeof ticketsTotal === 'number' && Number.isFinite(ticketsTotal);
+  const hasTotal =
+    typeof ticketsTotal === "number" && Number.isFinite(ticketsTotal);
   const showTotalOnlyLine = Boolean(showTotalOnly && hasTotal);
   const showProgress = !showTotalOnly && hasTotal;
   const soldForBar = showProgress ? (ticketsSold ?? 0) : 0;
 
-  // Height based on size variant — when featured/compact, parent controls height via h-full
-  const contentHeight =
-    size === 'featured' ? 'h-full' :
-    size === 'compact'  ? 'h-full' :
-    'h-48';
-
-  const titleSize =
-    size === 'featured' ? 'text-2xl md:text-3xl' :
-    size === 'compact'  ? 'text-sm'              :
-    'text-xl';
-
   return (
-    <div
+    <div 
       className={`
         contest-card-glow
         relative overflow-hidden
@@ -151,7 +136,6 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         border-[3px] border-[hsl(40_75%_55%)]
         transition-all duration-300 ease-out
         hover:scale-[1.02]
-        ${size !== 'normal' ? 'h-full' : ''}
         ${className}
       `}
     >
@@ -173,27 +157,25 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           </div>
         )}
       </div>
-
-      {/* Layer 2: Gradient for text readability */}
-      <div
+      
+      {/* Layer 2: Subtle bottom gradient for text readability */}
+      <div 
         className="absolute inset-0 pointer-events-none"
         style={{
-          background:
-            size === 'featured'
-              ? 'linear-gradient(to bottom, transparent 20%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.82) 100%)'
-              : 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.25) 65%, rgba(0,0,0,0.65) 100%)',
+          background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.25) 65%, rgba(0,0,0,0.65) 100%)'
         }}
       />
-
+      
       {/* Content container */}
-      <div className={`relative z-10 flex flex-col ${contentHeight} p-4`}>
+      <div className="relative z-10 flex flex-col h-48 p-4">
         {/* Top row: Favorite + Status */}
         <div className="flex items-start justify-between mb-auto">
+          {/* Favorite button - simple outline style */}
           {user && (onToggleFavorite || onRemoveFavorite) ? (
             <button
               onClick={handleFavoriteClick}
               className="
-                p-2 rounded-full
+                p-2 rounded-full 
                 bg-[rgba(0,0,0,0.25)]
                 backdrop-blur-sm
                 transition-all duration-200
@@ -212,55 +194,44 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           ) : (
             <div />
           )}
-
-          <div className="flex gap-1.5">
-            {contest.fast_game && (
-              <Badge className="bg-amber-500/80 text-white text-[10px] px-2 py-0.5">Fast game</Badge>
-            )}
-            {contest.status !== 'active' && (
-              <Badge
-                className={`
-                  px-4 py-1.5 rounded-full text-sm font-medium
-                  ${contest.status === 'closed'
-                    ? 'bg-[rgba(60,60,60,0.85)] text-white/90'
-                    : 'bg-[rgba(40,45,55,0.9)] text-white'}
-                `}
-              >
-                {contest.status === 'closed' ? 'Hra ukončena' : 'Připravuje se'}
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* Bottom content */}
-        <div className="mt-auto space-y-2">
-          {/* Featured: prize label above title */}
-          {size === 'featured' && contest.main_prize && (
-            <p className="text-[11px] uppercase tracking-[0.15em] text-[hsl(45_85%_65%)] font-semibold drop-shadow-md">
-              {contest.main_prize}
-            </p>
+          
+          {/* Fast game badge */}
+          {contest.fast_game && (
+            <Badge className="bg-amber-500/80 text-white text-[10px] px-2 py-0.5">Fast game</Badge>
           )}
 
-          <h3 className={`font-bold ${titleSize} text-white drop-shadow-md line-clamp-2`}>
+          {/* Status badge - only show for non-active states */}
+          {contest.status !== 'active' && (
+            <Badge 
+              className={`
+                px-4 py-1.5 rounded-full text-sm font-medium
+                ${contest.status === 'closed' 
+                  ? 'bg-[rgba(60,60,60,0.85)] text-white/90' 
+                  : 'bg-[rgba(40,45,55,0.9)] text-white'
+                }
+              `}
+            >
+              {contest.status === 'closed' ? 'Hra ukončena' : 'Připravuje se'}
+            </Badge>
+          )}
+        </div>
+        
+        {/* Bottom content - text directly on gradient */}
+        <div className="mt-auto space-y-3">
+          {/* Title */}
+          <h3 className="font-bold text-xl text-white drop-shadow-md line-clamp-2">
             {contest.title}
           </h3>
-
-          {/* Total invested – shown on featured and normal sizes */}
-          {size !== 'compact' && typeof totalInvestedCoins === 'number' && totalInvestedCoins > 0 && (
-            <p className="text-[10px] text-[hsl(45_75%_65%)] drop-shadow-md leading-tight">
-              {totalInvestedCoins.toLocaleString('cs-CZ')} MioCoinů vloženo
-            </p>
-          )}
-
+          
           {showTotalOnlyLine && (
             <p className="text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
-              Celkem {ticketsTotal.toLocaleString('cs-CZ')} ticketů
+              Celkem {ticketsTotal.toLocaleString("cs-CZ")} ticketů
             </p>
           )}
           {showProgress && (
             <div className="space-y-0.5">
               <p className="text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
-                {soldForBar.toLocaleString('cs-CZ')} / {ticketsTotal.toLocaleString('cs-CZ')} ticketů
+                {soldForBar.toLocaleString("cs-CZ")} / {ticketsTotal.toLocaleString("cs-CZ")} ticketů
               </p>
               <div className="w-full h-1 rounded-full overflow-hidden bg-white/20">
                 <div
@@ -282,57 +253,65 @@ export const ContestCard: React.FC<ContestCardProps> = ({
                 </p>
               )}
               <div className="flex items-stretch gap-2">
-                <button
-                  className="
-                    flex-1 flex items-center justify-center gap-2
-                    h-11 px-5
-                    whitespace-nowrap
-                    bg-[rgba(0,0,0,0.4)]
-                    backdrop-blur-sm
-                    text-[hsl(45_85%_55%)] font-semibold text-sm
-                    rounded-full
-                    border-2 border-[hsl(40_75%_50%)]
-                    hover:bg-[rgba(0,0,0,0.5)]
-                    hover:text-[hsl(45_90%_60%)]
-                    active:scale-[0.98]
-                    transition-all duration-200
-                    disabled:opacity-40 disabled:cursor-not-allowed
-                  "
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (insufficientFunds) {
-                      navigate('/profile', {
-                        state: { paymentReturnTo: `${location.pathname}${location.search}` },
-                      });
-                      return;
-                    }
-                    handlePlayClick(e);
-                  }}
-                  disabled={contest.status !== 'active' || (!insufficientFunds && isProcessing)}
-                >
-                  {insufficientFunds ? <>Dobít MioCoiny</> : <>🏆 {getPlayButtonText()}</>}
-                </button>
-                <button
-                  className="
-                    h-11 px-4
-                    bg-[rgba(0,0,0,0.4)]
-                    backdrop-blur-sm
-                    text-white/80 font-medium text-sm
-                    rounded-full
-                    border border-white/20
-                    hover:bg-[rgba(0,0,0,0.5)]
-                    hover:text-white
-                    active:scale-[0.98]
-                    transition-all duration-200
-                  "
-                  onClick={handleDetailClick}
-                >
-                  Detail
-                </button>
+              {/* Gold outlined pill CTA — purchase or top-up */}
+              <button
+                className="
+                  flex-1 flex items-center justify-center gap-2
+                  h-11 px-5
+                  whitespace-nowrap
+                  bg-[rgba(0,0,0,0.4)]
+                  backdrop-blur-sm
+                  text-[hsl(45_85%_55%)] font-semibold text-sm
+                  rounded-full
+                  border-2 border-[hsl(40_75%_50%)]
+                  hover:bg-[rgba(0,0,0,0.5)]
+                  hover:text-[hsl(45_90%_60%)]
+                  active:scale-[0.98]
+                  transition-all duration-200
+                  disabled:opacity-40 disabled:cursor-not-allowed
+                "
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (insufficientFunds) {
+                    navigate('/profile', {
+                      state: {
+                        paymentReturnTo: `${location.pathname}${location.search}`,
+                      },
+                    });
+                    return;
+                  }
+                  handlePlayClick(e);
+                }}
+                disabled={contest.status !== 'active' || (!insufficientFunds && isProcessing)}
+              >
+                {insufficientFunds ? (
+                  <>Dobít MioCoiny</>
+                ) : (
+                  <>🏆 {getPlayButtonText()}</>
+                )}
+              </button>
+              {/* Detail button */}
+              <button
+                className="
+                  h-11 px-4
+                  bg-[rgba(0,0,0,0.4)]
+                  backdrop-blur-sm
+                  text-white/80 font-medium text-sm
+                  rounded-full
+                  border border-white/20
+                  hover:bg-[rgba(0,0,0,0.5)]
+                  hover:text-white
+                  active:scale-[0.98]
+                  transition-all duration-200
+                "
+                onClick={handleDetailClick}
+              >
+                Detail
+              </button>
               </div>
             </div>
           )}
-
+          
           {/* Login prompt for non-logged-in users */}
           {!user && (
             <button
