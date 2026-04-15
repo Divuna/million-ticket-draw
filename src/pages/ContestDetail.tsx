@@ -936,51 +936,29 @@ export default function ContestDetail() {
         {bonusPrizes.length === 0 ? (
           <p className="text-gray-500 text-sm py-4 text-center">Zatím nebyly přidány žádné věcné bonusové výhry.</p>
         ) : (
-          <div className="grid grid-cols-3 gap-2 md:gap-3 auto-rows-[140px] sm:auto-rows-[160px] md:auto-rows-[180px]">
-            {bonusPrizes.map((b, idx) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {bonusPrizes.map((b) => {
               let bonusImageUrl: string | null = null;
-              
+
               if (b.image) {
-                bonusImageUrl = b.image.startsWith('http') 
-                  ? b.image 
+                bonusImageUrl = b.image.startsWith('http')
+                  ? b.image
                   : supabase.storage.from('contest-images').getPublicUrl(b.image).data.publicUrl;
               } else if (b.image_url) {
-                bonusImageUrl = b.image_url.startsWith('http') 
-                  ? b.image_url 
+                bonusImageUrl = b.image_url.startsWith('http')
+                  ? b.image_url
                   : supabase.storage.from('contest-images').getPublicUrl(b.image_url).data.publicUrl;
               }
 
-              // Bento zigzag pattern: alternating large/small tiles
-              // Pattern repeats every 6 items:
-              // Row 1: [large 2x2] [small 1x1] [small 1x1]
-              // Row 2: (large continues) [wide 2x1]
-              // Row 3: [small 1x1] [small 1x1] [large 2x2]
-              // Row 4: [wide 2x1] (large continues)
-              const patternIndex = idx % 6;
-              let spanClass = '';
-              if (patternIndex === 0) {
-                // First item: large tile spanning 2 cols and 2 rows
-                spanClass = 'col-span-2 row-span-2';
-              } else if (patternIndex === 3) {
-                // Fourth item: wide tile spanning 2 cols
-                spanClass = 'col-span-2';
-              } else if (patternIndex === 4) {
-                // Fifth item: large tile spanning 2 cols and 2 rows (right side)
-                spanClass = 'col-span-2 row-span-2';
-              } else {
-                // Regular small tiles
-                spanClass = 'col-span-1';
-              }
-              
               return (
-                <button 
+                <button
                   key={b.id}
                   type="button"
                   onClick={() => {
                     console.log('[DEBUG ContestDetail] setSelectedBonusPrize:', b.id);
                     setSelectedBonusPrize({ ...b, image_url: bonusImageUrl });
                   }}
-                  className={`${spanClass} rounded-xl border border-white/5 hover:border-yellow-500/30 transition-all duration-300 text-left cursor-pointer relative overflow-hidden group hover:scale-[1.02]`}
+                  className="p-3 rounded-xl border border-white/5 hover:border-yellow-500/30 transition-colors text-left cursor-pointer relative overflow-hidden"
                   style={{
                     backgroundImage: starryBackgroundUrl ? `url(${starryBackgroundUrl})` : undefined,
                     backgroundSize: 'cover',
@@ -989,24 +967,21 @@ export default function ContestDetail() {
                   }}
                 >
                   {bonusImageUrl && (
-                    <div className="absolute inset-0">
+                    <div className="aspect-[4/3] mb-2 rounded-lg overflow-hidden bg-black/20">
                       <img
                         src={bonusImageUrl}
                         alt={b.description ?? "Bonus prize"}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-contain"
                         onError={(e) => (e.currentTarget.style.display = "none")}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                     </div>
                   )}
-                  <div className="relative z-10 flex flex-col justify-end h-full p-3">
-                    <p className="text-white text-sm font-medium drop-shadow-lg">{b.description || "Bonusová výhra"}</p>
-                    {myWins.some((w) => w.bonus_prize_id === b.id) && (
-                      <span className="inline-block mt-1.5 text-green-400 text-xs bg-green-500/10 px-2 py-0.5 rounded w-fit">
-                        Moje výhra
-                      </span>
-                    )}
-                  </div>
+                  <p className="text-white text-sm font-medium">{b.description || "Bonusová výhra"}</p>
+                  {myWins.some((w) => w.bonus_prize_id === b.id) && (
+                    <span className="inline-block mt-2 text-green-400 text-xs bg-green-500/10 px-2 py-0.5 rounded">
+                      Moje výhra
+                    </span>
+                  )}
                 </button>
               );
             })}
