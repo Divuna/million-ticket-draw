@@ -112,7 +112,11 @@ const AdminPartnerOffers: React.FC = () => {
         .eq('status', 'submitted')
         .order('submitted_at', { ascending: true });
       if (error) throw error;
-      setOffers((data || []) as PendingOffer[]);
+      const mapped = (data || []).map((d: any) => ({
+        ...d,
+        partners: Array.isArray(d.partners) ? d.partners[0] ?? null : d.partners ?? null,
+      }));
+      setOffers(mapped as PendingOffer[]);
     } catch (err) {
       console.error('Error loading pending offers:', err);
       toast.error('Nepodařilo se načíst nabídky ke schválení');
