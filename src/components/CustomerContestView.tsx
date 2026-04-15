@@ -367,26 +367,36 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
             </CardHeader>
             <CardContent>
               {physicalPrizes.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {physicalPrizes.map((prize) => (
-                    <div
-                      key={prize.id}
-                      className="rounded-2xl border border-border/70 bg-card/80 overflow-hidden"
-                    >
-                      {prize.image_url && (
-                        <div className="aspect-[4/3] w-full overflow-hidden">
-                          <img 
-                            src={prize.image_url} 
-                            alt={prize.description}
-                            className="w-full h-full object-cover"
-                          />
+                <div className="grid grid-cols-3 gap-2 md:gap-3 auto-rows-[140px] sm:auto-rows-[160px] md:auto-rows-[180px]">
+                  {physicalPrizes.map((prize, idx) => {
+                    const patternIndex = idx % 6;
+                    let spanClass = '';
+                    if (patternIndex === 0) spanClass = 'col-span-2 row-span-2';
+                    else if (patternIndex === 3) spanClass = 'col-span-2';
+                    else if (patternIndex === 4) spanClass = 'col-span-2 row-span-2';
+                    else spanClass = 'col-span-1';
+
+                    return (
+                      <div
+                        key={prize.id}
+                        className={`${spanClass} rounded-2xl border border-border/70 bg-card/80 overflow-hidden relative group`}
+                      >
+                        {prize.image_url && (
+                          <div className="absolute inset-0">
+                            <img 
+                              src={prize.image_url} 
+                              alt={prize.description}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                          </div>
+                        )}
+                        <div className="relative z-10 flex flex-col justify-end h-full p-3 md:p-4">
+                          <p className="text-sm font-medium text-foreground drop-shadow-lg">{prize.description}</p>
                         </div>
-                      )}
-                      <div className="p-4">
-                        <p className="text-sm font-medium text-foreground">{prize.description}</p>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-6 text-muted-foreground">
