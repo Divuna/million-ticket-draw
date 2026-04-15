@@ -62,10 +62,10 @@ export const BonusPrizeDetailModal: React.FC<BonusPrizeDetailModalProps> = ({
             </div>
           )}
 
-          {/* Detailed description */}
-          {prize?.detailed_description ? (
+          {/* Detailed description — prefer detailed_description, fall back to description */}
+          {(prize?.detailed_description || prize?.description) ? (
             <div className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
-              {prize.detailed_description}
+              {prize.detailed_description || prize.description}
             </div>
           ) : (
             <p className="text-gray-500 text-sm italic">
