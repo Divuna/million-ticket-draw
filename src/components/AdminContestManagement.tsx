@@ -1185,6 +1185,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             p_description: prize.description,
             p_status: "pending",
             p_operation: "create",
+            p_image_url: imageUrl ?? null,
           });
 
           if (insertError) {
