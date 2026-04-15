@@ -1405,6 +1405,7 @@ export type Database = {
           period_to: string | null
           status: Database["public"]["Enums"]["partner_invoice_status"]
           taxable_date: string | null
+          type: string
           variable_symbol: string | null
           vat_amount: number
           vat_rate: number
@@ -1430,6 +1431,7 @@ export type Database = {
           period_to?: string | null
           status?: Database["public"]["Enums"]["partner_invoice_status"]
           taxable_date?: string | null
+          type?: string
           variable_symbol?: string | null
           vat_amount?: number
           vat_rate?: number
@@ -1455,6 +1457,7 @@ export type Database = {
           period_to?: string | null
           status?: Database["public"]["Enums"]["partner_invoice_status"]
           taxable_date?: string | null
+          type?: string
           variable_symbol?: string | null
           vat_amount?: number
           vat_rate?: number
@@ -1465,6 +1468,183 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_offer_activations: {
+        Row: {
+          activated_at: string
+          created_at: string
+          id: string
+          invoice_id: string | null
+          invoiced: boolean
+          offer_id: string
+          partner_id: string
+          upo_id: string
+          user_id: string
+        }
+        Insert: {
+          activated_at: string
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          invoiced?: boolean
+          offer_id: string
+          partner_id: string
+          upo_id: string
+          user_id: string
+        }
+        Update: {
+          activated_at?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          invoiced?: boolean
+          offer_id?: string
+          partner_id?: string
+          upo_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_offer_activations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_offer_activations_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_offer_activations_upo_id_fkey"
+            columns: ["upo_id"]
+            isOneToOne: true
+            referencedRelation: "user_partner_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_offer_billing_configs: {
+        Row: {
+          billing_mode: string
+          created_at: string
+          id: string
+          notes: string | null
+          partner_id: string
+          price_per_activation: number
+          updated_at: string
+        }
+        Insert: {
+          billing_mode?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          partner_id: string
+          price_per_activation?: number
+          updated_at?: string
+        }
+        Update: {
+          billing_mode?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          partner_id?: string
+          price_per_activation?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_offer_billing_configs_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: true
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_offer_clicks: {
+        Row: {
+          clicked_at: string
+          contest_id: string | null
+          id: string
+          offer_id: string
+          user_id: string | null
+        }
+        Insert: {
+          clicked_at?: string
+          contest_id?: string | null
+          id?: string
+          offer_id: string
+          user_id?: string | null
+        }
+        Update: {
+          clicked_at?: string
+          contest_id?: string | null
+          id?: string
+          offer_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_offer_clicks_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "admin_contest_status"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_clicks_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "admin_winner_delivery_stats"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_clicks_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contest_analytics"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_clicks_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contest_integrity_check"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_clicks_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contest_progress"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_clicks_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contest_revenue"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "partner_offer_clicks_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_offer_clicks_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "partner_offers"
             referencedColumns: ["id"]
           },
         ]
@@ -1546,6 +1726,48 @@ export type Database = {
             columns: ["offer_id"]
             isOneToOne: false
             referencedRelation: "partner_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_offer_invoice_lines: {
+        Row: {
+          activated_at: string
+          activation_id: string
+          amount: number
+          created_at: string
+          id: string
+          invoice_id: string
+        }
+        Insert: {
+          activated_at: string
+          activation_id: string
+          amount?: number
+          created_at?: string
+          id?: string
+          invoice_id: string
+        }
+        Update: {
+          activated_at?: string
+          activation_id?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_offer_invoice_lines_activation_id_fkey"
+            columns: ["activation_id"]
+            isOneToOne: true
+            referencedRelation: "partner_offer_activations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_offer_invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -1635,6 +1857,8 @@ export type Database = {
         Row: {
           approved_at: string | null
           banner_url: string | null
+          billing_admin_override: boolean
+          billing_mode: string
           created_at: string
           deployment_mode: string
           id: string
@@ -1642,6 +1866,7 @@ export type Database = {
           link_or_code: string | null
           logo_url: string | null
           partner_id: string
+          price_per_activation: number
           priority: number
           rejected_at: string | null
           rejection_reason: string | null
@@ -1656,6 +1881,8 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           banner_url?: string | null
+          billing_admin_override?: boolean
+          billing_mode?: string
           created_at?: string
           deployment_mode: string
           id?: string
@@ -1663,6 +1890,7 @@ export type Database = {
           link_or_code?: string | null
           logo_url?: string | null
           partner_id: string
+          price_per_activation?: number
           priority?: number
           rejected_at?: string | null
           rejection_reason?: string | null
@@ -1677,6 +1905,8 @@ export type Database = {
         Update: {
           approved_at?: string | null
           banner_url?: string | null
+          billing_admin_override?: boolean
+          billing_mode?: string
           created_at?: string
           deployment_mode?: string
           id?: string
@@ -1684,6 +1914,7 @@ export type Database = {
           link_or_code?: string | null
           logo_url?: string | null
           partner_id?: string
+          price_per_activation?: number
           priority?: number
           rejected_at?: string | null
           rejection_reason?: string | null
@@ -3711,36 +3942,21 @@ export type Database = {
         }
         Returns: Json
       }
-      admin_manage_contest:
-        | {
-            Args: {
-              p_contest_id?: string
-              p_description?: string
-              p_fast_game?: boolean
-              p_main_image?: string
-              p_main_prize?: string
-              p_operation?: string
-              p_status?: string
-              p_ticket_count?: number
-              p_ticket_price?: number
-              p_title?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_contest_id?: string
-              p_description?: string
-              p_main_image?: string
-              p_main_prize?: string
-              p_operation?: string
-              p_status?: string
-              p_ticket_count?: number
-              p_ticket_price?: number
-              p_title?: string
-            }
-            Returns: Json
-          }
+      admin_manage_contest: {
+        Args: {
+          p_contest_id?: string
+          p_description?: string
+          p_fast_game?: boolean
+          p_main_image?: string
+          p_main_prize?: string
+          p_operation?: string
+          p_status?: string
+          p_ticket_count?: number
+          p_ticket_price?: number
+          p_title?: string
+        }
+        Returns: Json
+      }
       admin_manage_notification: {
         Args: {
           p_message?: string
@@ -3840,6 +4056,10 @@ export type Database = {
         Args: { p_period_from: string; p_period_to: string }
         Returns: undefined
       }
+      create_partner_offer_invoices_for_period: {
+        Args: { p_end: string; p_start: string }
+        Returns: Json
+      }
       create_referral_reward_from_wallet_credit: {
         Args: { p_amount: number; p_user_id: string }
         Returns: undefined
@@ -3928,6 +4148,22 @@ export type Database = {
           unique_admins: number
         }[]
       }
+      get_admin_activation_summary: {
+        Args: never
+        Returns: {
+          billing_mode: string
+          display_name: string
+          estimated_unbilled_czk: number
+          hidden_count: number
+          open_rate_pct: number
+          opened_count: number
+          partner_id: string
+          partner_name: string
+          price_per_activation: number
+          total_activations: number
+          unbilled_activations: number
+        }[]
+      }
       get_admin_summary_dashboard: {
         Args: never
         Returns: {
@@ -3969,14 +4205,8 @@ export type Database = {
       get_contest_bonus_stats_enhanced: {
         Args: { contest_id: string }
         Returns: {
-          first_20_positions: string
-          max_position: number
-          min_position: number
-          pending_count: number
-          physical_items: number
-          total_miocoins: number
-          total_positions: number
-          won_count: number
+          bonus_count: number
+          total_miocoin_bonus: number
         }[]
       }
       get_contest_management_data: {
@@ -4008,6 +4238,21 @@ export type Database = {
       }
       get_contests_json: { Args: never; Returns: Json }
       get_current_user_role: { Args: never; Returns: string }
+      get_due_offer_reminder_rows: {
+        Args: never
+        Returns: {
+          last_reminder_at: string
+          obtained_at: string
+          offer_id: string
+          offer_short_text: string
+          offer_title: string
+          partner_display_name: string
+          upo_id: string
+          user_email: string
+          user_id: string
+          valid_to: string
+        }[]
+      }
       get_latest_winners: {
         Args: { winners_limit?: number }
         Returns: {
@@ -4023,6 +4268,17 @@ export type Database = {
           user_id: string
           user_name: string
           user_nickname: string
+        }[]
+      }
+      get_partner_offer_billing_config: {
+        Args: { p_partner_id: string }
+        Returns: {
+          billing_mode: string
+          id: string
+          notes: string
+          partner_id: string
+          price_per_activation: number
+          updated_at: string
         }[]
       }
       get_pending_event_forward_log: {
@@ -4217,6 +4473,7 @@ export type Database = {
         Returns: undefined
       }
       setup_crud_test_data: { Args: { p_user_email?: string }; Returns: Json }
+      sync_partner_offer_activations: { Args: never; Returns: Json }
       test_admin_crud_operations: { Args: never; Returns: Json }
       test_admin_security_rls: { Args: never; Returns: Json }
       test_audit_logging: { Args: never; Returns: Json }
@@ -4258,6 +4515,15 @@ export type Database = {
       update_onesignal_id: {
         Args: { p_player_id: string; p_user_id: string }
         Returns: Json
+      }
+      upsert_partner_offer_billing_config: {
+        Args: {
+          p_billing_mode: string
+          p_notes: string
+          p_partner_id: string
+          p_price_per_activation: number
+        }
+        Returns: undefined
       }
       upsert_user_security_signals: {
         Args: {
