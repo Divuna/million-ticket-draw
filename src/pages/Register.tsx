@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
+import { useDateOfBirthCheck } from '@/hooks/useDateOfBirthCheck';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-onemil.png';
@@ -24,6 +25,7 @@ const Register: React.FC = () => {
   const [marketingAccepted, setMarketingAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signUp, signInWithOAuth } = useAuth();
+  const { setDateOfBirthOptimistic } = useDateOfBirthCheck();
   const navigate = useNavigate();
 
   // Persist referral code from URL so it can be applied after signup (or after OAuth return)
@@ -106,12 +108,20 @@ const Register: React.FC = () => {
         // Store date of birth in profiles table
         const { data: { user: newUser } } = await supabase.auth.getUser();
         if (newUser) {
-          await supabase
+          const { error: dobError } = await supabase
             .from('profiles')
             .upsert({
               id: newUser.id,
               date_of_birth: dateOfBirth
             }, { onConflict: 'id' });
+
+          if (dobError) {
+            console.error('Error saving date of birth during registration:', dobError);
+          } else {
+            // Mark DOB as present in context immediately so DateOfBirthGuard
+            // does not redirect to onboarding before the DB check catches up.
+            setDateOfBirthOptimistic(dateOfBirth);
+          }
 
           // Apply referral code from URL if present (e.g. /register?ref=CODE)
           try {

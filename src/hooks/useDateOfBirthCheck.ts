@@ -34,6 +34,7 @@ export const DateOfBirthProvider: React.FC<{ children: React.ReactNode }> = ({ c
       }
 
       if (skipFetchRef.current) {
+        setIsLoading(false);
         return;
       }
 
