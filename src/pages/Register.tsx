@@ -110,10 +110,8 @@ const Register: React.FC = () => {
         if (newUser) {
           const { error: dobError } = await supabase
             .from('profiles')
-            .upsert({
-              id: newUser.id,
-              date_of_birth: dateOfBirth
-            }, { onConflict: 'id' });
+            .update({ date_of_birth: dateOfBirth })
+            .eq('id', newUser.id);
 
           if (dobError) {
             console.error('Error saving date of birth during registration:', dobError);

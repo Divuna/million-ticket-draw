@@ -63,10 +63,8 @@ const OnboardingDateOfBirth: React.FC = () => {
     try {
       const { error: updateError } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
-          date_of_birth: dateOfBirth
-        }, { onConflict: 'id' });
+        .update({ date_of_birth: dateOfBirth })
+        .eq('id', user.id);
 
       if (updateError) throw updateError;
 
