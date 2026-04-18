@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-onemil.png';
 import { PENDING_REFERRAL_STORAGE_KEY } from '@/hooks/useApplyPendingReferral';
+import { analytics } from '@/lib/analytics';
 
 const Register: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -129,6 +130,7 @@ const Register: React.FC = () => {
             // non-blocking; user can add code later in Profile
           }
         }
+        analytics.registrationCompleted();
         navigate('/profile');
       }
     } catch (error) {

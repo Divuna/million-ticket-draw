@@ -17,6 +17,7 @@ import {
   logTicketPurchaseSuccess,
   recordTicketPurchaseAttemptForAbuseCheck,
 } from '@/lib/monitoring';
+import { analytics } from '@/lib/analytics';
 import { Heart, Trophy } from 'lucide-react';
 
 interface Contest {
@@ -307,7 +308,8 @@ const Index = () => {
         contestId: contestId,
         ticketNumber: rpcResult.ticket_number,
       });
-      
+      analytics.ticketPurchase({ contestId: contestId, ticketNumber: rpcResult.ticket_number });
+
       // ── Partner Offer lookup ──────────────────────────────────────────────
       let partnerOffer: PartnerOfferResult | null = null;
       const ticketRowId = rpcResult.ticket_row_id as string | undefined;

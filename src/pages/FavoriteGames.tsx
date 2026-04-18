@@ -19,6 +19,7 @@ import {
   logTicketPurchaseSuccess,
   recordTicketPurchaseAttemptForAbuseCheck,
 } from '@/lib/monitoring';
+import { analytics } from '@/lib/analytics';
 
 interface Contest {
   id: string;
@@ -275,6 +276,7 @@ const FavoriteGames = () => {
       }
 
       console.log('🔥 RPC raw response:', JSON.stringify(rpcResult, null, 2));
+      analytics.ticketPurchase({ contestId: contestId, ticketNumber: rpcResult.ticket_number });
 
       // ── Partner Offer lookup ──────────────────────────────────────────────
       let partnerOffer: PartnerOfferResult | null = null;

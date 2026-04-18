@@ -9,6 +9,7 @@ import {
   clearPaymentSuccessContext,
   resolvePaymentSuccessViewContext,
 } from '@/lib/paymentSuccessContext';
+import { analytics } from '@/lib/analytics';
 
 const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
@@ -38,7 +39,10 @@ const PaymentSuccess: React.FC = () => {
     toast({
       title: line,
     });
-  }, [kind]);
+    if (kind === 'voucher') {
+      analytics.voucherPurchase(sessionId);
+    }
+  }, [kind, sessionId]);
 
   return (
     <div className="min-h-screen bg-background">

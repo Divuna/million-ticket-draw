@@ -19,6 +19,7 @@ import {
   logTicketPurchaseSuccess,
   recordTicketPurchaseAttemptForAbuseCheck,
 } from "@/lib/monitoring";
+import { analytics } from "@/lib/analytics";
 import { buildBuyTicketAtomicRpcPayload } from "@/utils/buyTicketAtomicRpcArgs";
 import { TicketResultModal } from "@/components/TicketResultModal";
 import { BonusPrizeDetailModal } from "@/components/BonusPrizeDetailModal";
@@ -344,6 +345,7 @@ export default function ContestDetail() {
           contestId: contest.id,
           ticketNumber: result.ticket_number,
         });
+        analytics.ticketPurchase({ contestId: contest.id, ticketNumber: result.ticket_number });
         
         // Refresh balance and progress immediately
         loadUserBalance(user.id);
