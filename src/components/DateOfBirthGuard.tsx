@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useDateOfBirthCheck } from '@/hooks/useDateOfBirthCheck';
 import { supabase } from '@/integrations/supabase/client';
@@ -74,7 +74,7 @@ const EmailNotConfirmed: React.FC<{ email: string | undefined }> = ({ email }) =
 
 export const DateOfBirthGuard: React.FC<DateOfBirthGuardProps> = ({ children }) => {
   const { user } = useAuth();
-  const { isLoading, hasDateOfBirth } = useDateOfBirthCheck();
+  const { isLoading } = useDateOfBirthCheck();
   const location = useLocation();
 
   // Check if current route is exempt
@@ -113,11 +113,6 @@ export const DateOfBirthGuard: React.FC<DateOfBirthGuardProps> = ({ children }) 
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
-  }
-
-  // If user is logged in but has no date of birth, redirect to onboarding
-  if (hasDateOfBirth === false) {
-    return <Navigate to="/onboarding/date-of-birth" replace />;
   }
 
   return <>{children}</>;
