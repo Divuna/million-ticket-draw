@@ -25,6 +25,7 @@ import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, Exter
 import { Footer } from "@/components/Footer";
 import { toast } from "sonner";
 import { logMonitoringEvent, logStripeCheckoutClientFailure } from "@/lib/monitoring";
+import { analytics } from "@/lib/analytics";
 
 interface Contest {
   id: string;
@@ -262,6 +263,7 @@ const Homepage = () => {
         return;
       }
 
+      analytics.voucherRedeem(voucherId, 5);
       toast.success("Voucher úspěšně zakoupen za 5 MioCoinů!");
     } catch (error) {
       console.error("Error purchasing voucher:", error);
