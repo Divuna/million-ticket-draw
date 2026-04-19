@@ -1817,6 +1817,7 @@ export const AdminContestManagement: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contestToDelete, setContestToDelete] = useState<ContestData | null>(null);
   const [archiveTab, setArchiveTab] = useState<"active" | "test" | "closed">("active");
+  const [linkedContestIds, setLinkedContestIds] = useState<Set<string>>(new Set());
 
   const loadContests = async () => {
     setLoading(true);
@@ -1896,7 +1897,19 @@ export const AdminContestManagement: React.FC = () => {
 
       // Fetch MioCoin counts per contest using count query (bypasses 1000 row limit)
       const contestIds = contestsData.map(c => c.contest_id);
-      
+
+      // Fetch contest IDs that have ANY row in partner_offer_contests (FK guard for delete)
+      if (contestIds.length > 0) {
+        const { data: linkedRows } = await supabase
+          .from("partner_offer_contests")
+          .select("contest_id")
+          .in("contest_id", contestIds);
+        const linked = new Set((linkedRows || []).map((r: any) => r.contest_id as string));
+        setLinkedContestIds(linked);
+      } else {
+        setLinkedContestIds(new Set());
+      }
+
       if (contestIds.length > 0) {
         const mioCoinTotals: Record<string, number> = {};
         await Promise.all(
@@ -2047,6 +2060,14 @@ export const AdminContestManagement: React.FC = () => {
   };
 
   const handleDeleteClick = (contest: ContestData) => {
+    if (linkedContestIds.has(contest.contest_id)) {
+      toast({
+        title: "Nelze smazat",
+        description: "Soutěž nelze smazat – je navázaná na nabídky. Přesuň ji do Archivu test.",
+        variant: "destructive",
+      });
+      return;
+    }
     setContestToDelete(contest);
     setDeleteDialogOpen(true);
   };
@@ -2450,7 +2471,11 @@ export const AdminContestManagement: React.FC = () => {
                             size="sm"
                             onClick={() => handleDeleteClick(contest)}
                             disabled={deletingContest === contest.contest_id}
-                            className="text-red-400 border-red-500/30 hover:bg-red-500/10 hover:text-red-300"
+                            className={
+                              linkedContestIds.has(contest.contest_id)
+                                ? "opacity-40 cursor-not-allowed text-red-400 border-red-500/30"
+                                : "text-red-400 border-red-500/30 hover:bg-red-500/10 hover:text-red-300"
+                            }
                           >
                             {deletingContest === contest.contest_id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
