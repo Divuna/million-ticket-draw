@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { analytics } from '@/lib/analytics';
 import './ContestCard.css';
 
 interface Voucher {
@@ -64,6 +65,7 @@ export const VoucherCarousel: React.FC = () => {
         return;
       }
 
+      analytics.voucherRedeem(voucherId, 5);
       toast.success('Voucher byl úspěšně uplatněn!');
       fetchVouchers();
     } catch (error: any) {
