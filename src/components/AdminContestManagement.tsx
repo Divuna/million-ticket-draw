@@ -2470,7 +2470,7 @@ export const AdminContestManagement: React.FC = () => {
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeleteClick(contest)}
-                            disabled={deletingContest === contest.contest_id}
+                            disabled={deletingContest === contest.contest_id || linkedContestIds.has(contest.contest_id)}
                             className={
                               linkedContestIds.has(contest.contest_id)
                                 ? "opacity-40 cursor-not-allowed text-red-400 border-red-500/30"
