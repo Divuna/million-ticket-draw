@@ -41,6 +41,25 @@ const PaymentSuccess: React.FC = () => {
     });
     if (kind === 'voucher') {
       analytics.voucherPurchase(sessionId);
+    } else if (kind === 'miocoin' && sessionId) {
+      (async () => {
+        try {
+          const { supabase } = await import('@/integrations/supabase/client');
+          const { data } = await supabase
+            .from('payments')
+            .select('amount, status, stripe_session_id')
+            .eq('stripe_session_id', sessionId)
+            .maybeSingle();
+          if (data && data.status === 'completed') {
+            const coins = Number(data.amount) || 0;
+            const COIN_TO_CZK: Record<number, number> = { 50: 50, 310: 300, 525: 500, 1280: 1200 };
+            const value = COIN_TO_CZK[coins] ?? coins;
+            analytics.miocoinPurchase({ value, amount: coins, sessionId });
+          }
+        } catch (err) {
+          console.error('[analytics] miocoin_purchase fetch failed', err);
+        }
+      })();
     }
   }, [kind, sessionId]);
 
