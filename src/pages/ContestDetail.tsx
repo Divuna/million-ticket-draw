@@ -263,6 +263,11 @@ export default function ContestDetail() {
 
     if (!contest) return;
 
+    if (contest.status !== 'active') {
+      toast.error("Soutěž není aktivní");
+      return;
+    }
+
     let effectiveBalance: number;
     if (!balanceLoaded) {
       effectiveBalance = await loadUserBalance(user.id);

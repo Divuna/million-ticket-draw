@@ -211,6 +211,35 @@ serve(async (req) => {
       });
     }
 
+    // ── Contest status check ───────────────────────────────────────────────
+    const { data: contestRow, error: contestFetchError } = await supabase
+      .from("contests")
+      .select("status")
+      .eq("id", p_contest_id)
+      .maybeSingle();
+
+    if (contestFetchError) {
+      console.error("Contest status fetch error:", contestFetchError.message);
+      return new Response(JSON.stringify({ error: "Nelze ověřit stav soutěže" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
+
+    if (!contestRow) {
+      return new Response(JSON.stringify({ error: "Soutěž nenalezena" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404,
+      });
+    }
+
+    if (contestRow.status !== "active") {
+      return new Response(JSON.stringify({ error: "Soutěž není aktivní" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
     const payload = {
       p_contest_id,
       p_user_id,
