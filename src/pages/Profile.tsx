@@ -570,6 +570,7 @@ const Profile: React.FC = () => {
   };
 
   const handleTopUpPurchase = async () => {
+    if (purchaseLoading) return;
     let priceInCzk: number;
     let totalCoins: number;
 
@@ -658,7 +659,6 @@ const Profile: React.FC = () => {
         description: "Nepodařilo se vytvořit platbu. Zkuste to znovu.",
         variant: "destructive"
       });
-    } finally {
       setPurchaseLoading(false);
     }
   };
