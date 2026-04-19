@@ -231,9 +231,12 @@ const Vouchers: React.FC = () => {
         return;
       }
 
+      // Optimistically remove from favorites list immediately (covers oblíbené tab)
+      optimisticRemoveByVoucherId(voucherId);
+
       toast.success(`Voucher úspěšně zakoupen za 5 MioCoinů!`);
-      refetchUserVouchers();
-      refetchAvailable();
+      await refetchUserVouchers();
+      await refetchAvailable();
     } catch (error) {
       console.error("Error purchasing voucher:", error);
       toast.error("Nepodařilo se zakoupit voucher");
