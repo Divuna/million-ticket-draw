@@ -98,6 +98,7 @@ const Index = () => {
         .select(`
           id, title, description, main_prize, main_image, banner_image, main_prize_secondary_image, ticket_price, ticket_count, status, created_at, fast_game
         `)
+        .in('status', ['active', 'pending', 'paused'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
