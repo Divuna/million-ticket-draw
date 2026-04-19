@@ -3062,7 +3062,6 @@ export type Database = {
       wallets: {
         Row: {
           balance_coins: number
-          balance_vouchers: number
           bonus_balance_coins: number
           created_at: string
           id: string
@@ -3070,7 +3069,6 @@ export type Database = {
         }
         Insert: {
           balance_coins?: number
-          balance_vouchers?: number
           bonus_balance_coins?: number
           created_at?: string
           id?: string
@@ -3078,7 +3076,6 @@ export type Database = {
         }
         Update: {
           balance_coins?: number
-          balance_vouchers?: number
           bonus_balance_coins?: number
           created_at?: string
           id?: string
@@ -3930,18 +3927,33 @@ export type Database = {
         Args: { p_blocked: boolean; p_reason?: string; p_user_id: string }
         Returns: undefined
       }
-      admin_manage_bonus_prize: {
-        Args: {
-          p_amount?: number
-          p_contest_id?: string
-          p_description?: string
-          p_operation?: string
-          p_prize_id?: string
-          p_status?: string
-          p_ticket_position?: number
-        }
-        Returns: Json
-      }
+      admin_manage_bonus_prize:
+        | {
+            Args: {
+              p_amount?: number
+              p_contest_id?: string
+              p_description?: string
+              p_operation?: string
+              p_prize_id?: string
+              p_status?: string
+              p_ticket_position?: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_amount?: number
+              p_contest_id?: string
+              p_description?: string
+              p_detailed_description?: string
+              p_image_url?: string
+              p_operation?: string
+              p_prize_id?: string
+              p_status?: string
+              p_ticket_position?: number
+            }
+            Returns: Json
+          }
       admin_manage_contest: {
         Args: {
           p_contest_id?: string
@@ -4424,7 +4436,6 @@ export type Database = {
           success: boolean
         }[]
       }
-      redeem_voucher: { Args: { p_voucher_id: string }; Returns: Json }
       resolve_partner_by_api_key: { Args: { p_key: string }; Returns: string }
       resume_contest: { Args: { contest_id: string }; Returns: undefined }
       revise_partner_offer: { Args: { p_offer_id: string }; Returns: undefined }
@@ -4499,6 +4510,7 @@ export type Database = {
         | { Args: { p_user_id: string }; Returns: undefined }
       trigger_contest_draw: { Args: { contest_id: string }; Returns: undefined }
       try_credit_wallet_mc:
+        | { Args: { p_user_id: string }; Returns: undefined }
         | {
             Args: { p_amount: number; p_reason?: string; p_user_id: string }
             Returns: undefined
