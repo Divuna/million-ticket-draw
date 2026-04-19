@@ -32,4 +32,13 @@ export const analytics = {
     console.log('[analytics] voucher_purchase', { voucherId, price });
     push('voucher_purchase', { voucher_id: voucherId, price });
   },
+  miocoinPurchase: (params: { value: number; amount: number; sessionId?: string | null }) => {
+    console.log('[analytics] miocoin_purchase', params);
+    push('miocoin_purchase', {
+      value: params.value,
+      currency: 'CZK',
+      amount: params.amount,
+      ...(params.sessionId ? { transaction_id: params.sessionId } : {}),
+    });
+  },
 };
