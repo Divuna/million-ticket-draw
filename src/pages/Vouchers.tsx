@@ -222,11 +222,23 @@ const Vouchers: React.FC = () => {
         p_voucher_id: voucherId,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[buy_voucher_atomic] RPC transport error:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          full: error,
+        });
+        throw error;
+      }
 
       const result = data as { success: boolean; error?: string };
 
+      console.log('[buy_voucher_atomic] RPC result:', result);
+
       if (!result.success) {
+        console.error('[buy_voucher_atomic] Business error:', result.error);
         toast.error(result.error || "Nepodařilo se zakoupit voucher");
         return;
       }
