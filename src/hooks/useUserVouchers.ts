@@ -42,7 +42,7 @@ export const useUserVouchers = () => {
           voucher_id,
           created_at,
           redeemed,
-          voucher:vouchers(id, name, image_url, banner_url)
+          voucher:vouchers!user_vouchers_voucher_id_fkey(id, name, image_url, banner_url)
         `,
         )
         .eq("user_id", user.id)
