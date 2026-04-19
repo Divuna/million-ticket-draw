@@ -192,7 +192,7 @@ const AdminVouchers: React.FC = () => {
           id,
           created_at,
           users!inner(email),
-          vouchers!inner(name)
+          vouchers!user_vouchers_voucher_id_fkey!inner(name)
         `)
         .eq('redeemed', true)
         .order('created_at', { ascending: false });
