@@ -31,6 +31,7 @@ import { Gift, Copy, Heart, Ticket, Clock, ShoppingCart, Loader2 } from 'lucide-
 import { supabase } from '@/integrations/supabase/client';
 import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { toast } from 'sonner';
+import { analytics } from '@/lib/analytics';
 
 // Voucher expiration duration in days (from purchase date)
 const VOUCHER_EXPIRATION_DAYS = 30;
@@ -242,6 +243,8 @@ const Vouchers: React.FC = () => {
         toast.error(result.error || "Nepodařilo se zakoupit voucher");
         return;
       }
+
+      analytics.voucherRedeem(voucherId, 5);
 
       // Optimistically remove from favorites list immediately (covers oblíbené tab)
       optimisticRemoveByVoucherId(voucherId);
