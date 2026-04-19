@@ -38,6 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
 
 interface ContestData {
@@ -2466,26 +2467,39 @@ export const AdminContestManagement: React.FC = () => {
                               )}
                             </Button>
                           )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteClick(contest)}
-                            disabled={deletingContest === contest.contest_id || linkedContestIds.has(contest.contest_id)}
-                            className={
-                              linkedContestIds.has(contest.contest_id)
-                                ? "opacity-40 cursor-not-allowed text-red-400 border-red-500/30"
-                                : "text-red-400 border-red-500/30 hover:bg-red-500/10 hover:text-red-300"
-                            }
-                          >
-                            {deletingContest === contest.contest_id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <>
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Smazat
-                              </>
-                            )}
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={linkedContestIds.has(contest.contest_id) ? "cursor-not-allowed" : ""}>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDeleteClick(contest)}
+                                    disabled={deletingContest === contest.contest_id || linkedContestIds.has(contest.contest_id)}
+                                    className={
+                                      linkedContestIds.has(contest.contest_id)
+                                        ? "opacity-40 cursor-not-allowed text-red-400 border-red-500/30"
+                                        : "text-red-400 border-red-500/30 hover:bg-red-500/10 hover:text-red-300"
+                                    }
+                                  >
+                                    {deletingContest === contest.contest_id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <Trash2 className="h-4 w-4 mr-1" />
+                                        Smazat
+                                      </>
+                                    )}
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              {linkedContestIds.has(contest.contest_id) && (
+                                <TooltipContent>
+                                  <p>Soutěž nelze smazat – je navázaná na nabídky</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                       </TableCell>
                     </TableRow>
