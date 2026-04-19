@@ -1,73 +1,44 @@
 
 
-## Plan: Add `fast_game` visual toggle
+## Diagnóza
 
-### Overview
-Add a `fast_game` boolean column to `contests`, expose it as a checkbox in admin form, show a "Fast game" badge on contest cards and detail page. Purely visual — no logic changes.
+**Příčina:** Trigger `log_partner_coin_activation` na `UPDATE` tabulky `user_vouchers` se dotazuje na neexistující sloupec:
 
-### Step 1 — Database migration
-
-Create `supabase/migrations/20260408120000_add_fast_game.sql`:
-
-1. `ALTER TABLE contests ADD COLUMN fast_game boolean NOT NULL DEFAULT false;`
-2. Update `admin_manage_contest` RPC — add `p_fast_game boolean DEFAULT NULL` parameter. On create: insert value (default false). On update: `COALESCE(p_fast_game, existing.fast_game)`.
-3. Update `get_contest_management_data` RPC — add `c.fast_game` to the SELECT list.
-
-### Step 2 — Admin form (`AdminContestManagement.tsx`)
-
-- Add `fast_game: boolean` to `ContestFormData` (line 67) and `fast_game?: boolean` to `ContestData` (line 43).
-- Default `false` in both reset branches (lines 179, 197). Initialize from `editingContest.fast_game ?? false` when editing.
-- Add checkbox after the Status select (line 1230, inside the `basic` tab):
-  ```tsx
-  <div className="flex items-center gap-2 mt-2">
-    <input type="checkbox" id="fast_game" checked={form.fast_game}
-      onChange={e => setForm(f => ({...f, fast_game: e.target.checked}))} />
-    <label htmlFor="fast_game" className="text-sm text-white">Fast game</label>
-  </div>
-  ```
-- Pass `p_fast_game: form.fast_game` to the RPC call (line 953).
-
-### Step 3 — Contest Card (`ContestCard.tsx`)
-
-- Add `fast_game?: boolean` to the `Contest` interface (line 10).
-- Show badge in the top row (after line 200, next to status badge):
-  ```tsx
-  {contest.fast_game && (
-    <Badge className="bg-amber-500/80 text-white text-[10px] px-2 py-0.5">Fast game</Badge>
-  )}
-  ```
-
-### Step 4 — Data queries + interfaces
-
-| File | Interface line | Select line | Change |
-|------|---------------|-------------|--------|
-| `Homepage.tsx` | 29 | 73 | Add `fast_game?: boolean` to interface, add `, fast_game` to select |
-| `Games.tsx` | 22 | 85 | Same |
-| `FavoriteGames.tsx` | 23 | 129 | Same (nested select) |
-| `ContestDetail.tsx` | 27 | 415 | Same |
-
-### Step 5 — Contest Detail badge (`ContestDetail.tsx`)
-
-Show badge next to the title (after line 630):
-```tsx
-{contest.fast_game && (
-  <Badge className="bg-amber-500/80 text-white">Fast game</Badge>
-)}
+```sql
+SELECT * FROM partner_reward_codes WHERE voucher_id = NEW.voucher_id
 ```
 
-### Files changed (7 total, 1 new)
-1. `supabase/migrations/20260408120000_add_fast_game.sql` — new migration
-2. `src/components/AdminContestManagement.tsx` — checkbox + save + interfaces
-3. `src/components/ContestCard.tsx` — badge + interface
-4. `src/pages/Homepage.tsx` — query + interface
-5. `src/pages/Games.tsx` — query + interface
-6. `src/pages/FavoriteGames.tsx` — query + interface
-7. `src/pages/ContestDetail.tsx` — query + interface + badge
+Tabulka `partner_reward_codes` ale sloupec `voucher_id` **neobsahuje** (má jen `code`, `partner_id`, `coins`, `external_order_id`, `customer_email`, …).
 
-### What is NOT changed
-- No ticket, wallet, winner, or contest close logic
-- No new component files
-- No layout or text changes beyond checkbox and badge
-- No refactoring
-- `src/integrations/supabase/types.ts` left untouched
+**Proč to selže jen z oblíbených:**
+- Přímý nákup → RPC dělá `INSERT` → trigger neběží (je vázán jen na UPDATE) → OK.
+- Nákup z oblíbených → existuje řádek `redeemed=false` → RPC dělá `UPDATE redeemed=true` → trigger se spustí → spadne na `column "voucher_id" does not exist` → celá transakce se rollbackne → frontend zobrazí „Nepodařilo se zakoupit voucher".
+
+Potvrzeno v Postgres logu: `ERROR: column "voucher_id" does not exist` (dvakrát, v čase odpovídajícím tvým pokusům).
+
+## Návrh opravy
+
+Trigger spojuje partnerský reward s voucherem přes neexistující vztah. Tabulka `partner_reward_codes` má místo toho `code` (kód voucheru). Tabulka `vouchers` ale není přístupná (neviděl jsem zatím její sloupce v tomto kontextu) — proto navrhuji **bezpečnou minimální opravu**:
+
+**Migrace** (`supabase/migrations/<timestamp>_fix_log_partner_coin_activation.sql`):
+
+Přepsat funkci `log_partner_coin_activation()` tak, aby se napojila na partnerský reward přes existující vazbu:
+
+1. Načíst z `vouchers` pole, které mapuje na partner reward (typicky `code` nebo `partner_reward_code_id`) — toto si při implementaci ověřím doplňkovým dotazem na schéma `vouchers`.
+2. Pokud žádné takové pole neexistuje (= vouchery nejsou propojené s partnerskými kódy), trigger jen `RETURN NEW` bez dotazu — voucher se v klidu uplatní a partner accounting se nezasekne.
+
+Tím se odblokuje uplatnění voucheru z oblíbených, aniž by se cokoliv změnilo v RPC `buy_voucher_atomic` ani v RLS.
+
+## Co se NEmění
+
+- `buy_voucher_atomic` RPC — beze změny
+- RLS policies, schéma tabulek, ceny, peněženky
+- Frontend (`Vouchers.tsx`, `useUserVouchers.ts`) — beze změny
+- Logika nákupu, odečet MioCoinů, wallet transactions
+
+## Implementační kroky (po schválení)
+
+1. Dotázat se na schéma `vouchers` a `partner_reward_codes`, abych určil správné napojení.
+2. Vytvořit migraci, která přepíše tělo `log_partner_coin_activation()`.
+3. Otestovat: voucher do oblíbených → koupit → očekávaný úspěch + odečet 5 MC.
 
