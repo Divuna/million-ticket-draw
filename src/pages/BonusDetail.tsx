@@ -45,11 +45,15 @@ const BonusDetail: React.FC = () => {
       // Fetch contest info
       const { data: contestData, error: contestError } = await supabase
         .from('contests')
-        .select('id, title')
+        .select('id, title, status')
         .eq('id', id)
         .single();
 
       if (contestError) throw contestError;
+      if (contestData?.status === 'draft') {
+        navigate('/games', { replace: true });
+        return;
+      }
       setContest(contestData);
 
       // Fetch bonus prizes

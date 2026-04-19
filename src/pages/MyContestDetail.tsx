@@ -77,6 +77,10 @@ const MyContestDetail: React.FC = () => {
         .single();
 
       if (error) throw error;
+      if (data?.status === 'draft') {
+        navigate('/games', { replace: true });
+        return;
+      }
       setContest(data);
     } catch (error) {
       console.error('Error fetching contest:', error);

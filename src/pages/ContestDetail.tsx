@@ -467,6 +467,11 @@ export default function ContestDetail() {
           return;
         }
 
+        if (contestData.status === 'draft') {
+          navigate('/games', { replace: true });
+          return;
+        }
+
         console.log('[DEBUG ContestDetail] setContest:', JSON.stringify(contestData));
         setContest(contestData as Contest);
 
