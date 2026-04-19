@@ -28,4 +28,8 @@ export const analytics = {
     console.log('[analytics] ticket_purchase', params);
     push('ticket_purchase', { contest_id: params.contestId, ticket_number: params.ticketNumber });
   },
+  voucherRedeem: (voucherId: string, price = 5) => {
+    console.log('[analytics] voucher_purchase', { voucherId, price });
+    push('voucher_purchase', { voucher_id: voucherId, price });
+  },
 };
