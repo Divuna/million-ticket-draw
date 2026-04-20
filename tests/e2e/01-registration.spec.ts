@@ -33,7 +33,7 @@ test.describe('User Registration', () => {
 
   test('new user registers and lands on profile page', async ({ page }) => {
     // Each CI run creates a fresh test account – cleanup is manual
-    const uniqueEmail = `e2e+${Date.now()}@onemil-test.invalid`;
+    const uniqueEmail = `e2e+${Date.now()}@example.com`;
     const password = 'E2eSmoke123!';
 
     const dob = new Date();
