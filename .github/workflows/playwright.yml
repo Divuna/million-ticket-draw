@@ -1,0 +1,59 @@
+name: Playwright Smoke Tests
+
+on:
+  push:
+    branches: [main, master, claude/**]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  smoke:
+    name: Smoke E2E (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run smoke tests
+        run: npm run test:smoke
+        env:
+          CI: true
+          # Vite app needs these to connect to Supabase at build/runtime
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_INTERNAL_FUNCTION_TOKEN: ${{ secrets.VITE_INTERNAL_FUNCTION_TOKEN }}
+          # Smoke test credentials (pre-seeded customer account)
+          E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+          # Optional: pin a specific active contest UUID for the ticket-purchase test
+          E2E_CONTEST_ID: ${{ secrets.E2E_CONTEST_ID }}
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ github.run_id }}
+          path: test-results/
+          retention-days: 7
