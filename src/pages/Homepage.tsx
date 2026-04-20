@@ -249,6 +249,8 @@ const Homepage = () => {
 
 
     try {
+      await supabase.rpc('ensure_wallet_exists', { p_user_id: user.id });
+
       const { data, error } = await supabase.rpc('buy_voucher_atomic', {
         p_user_id: user.id,
         p_voucher_id: voucherId,

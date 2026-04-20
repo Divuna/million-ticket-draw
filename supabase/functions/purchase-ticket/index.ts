@@ -246,6 +246,9 @@ serve(async (req) => {
     };
     console.log(payload);
 
+    // ── Ensure wallet row exists before ticket purchase ───────────────────
+    await supabase.rpc("ensure_wallet_exists", { p_user_id: userId });
+
     // ── Ticket purchase ────────────────────────────────────────────────────
     // Call buy_ticket_atomic via fetch rather than the Supabase JS client.
     // The JS client's internal auth middleware can override the Authorization
