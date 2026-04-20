@@ -18,7 +18,8 @@
     "preview": "vite preview",
     "functions:serve": "supabase functions serve",
     "deploy:ai": "supabase functions deploy ai-chat --project-ref xkzhjldrojjlrkezorey",
-    "auto-deploy:ai": "node scripts/auto-deploy-on-save.mjs"
+    "auto-deploy:ai": "node scripts/auto-deploy-on-save.mjs",
+    "test:smoke": "playwright test"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
