@@ -29,6 +29,7 @@ jobs:
         run: npx playwright install chromium --with-deps
 
       - name: Run smoke tests
+        id: smoke_tests
         run: npm run test:smoke
         env:
           CI: true
@@ -41,6 +42,21 @@ jobs:
           E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
           # Optional: pin a specific active contest UUID for the ticket-purchase test
           E2E_CONTEST_ID: ${{ secrets.E2E_CONTEST_ID }}
+
+      - name: Payment pipeline status — OK
+        if: success()
+        run: |
+          echo "PAYMENT PIPELINE OK"
+          echo "## ✅ PAYMENT PIPELINE OK" >> $GITHUB_STEP_SUMMARY
+          echo "All Playwright smoke tests passed." >> $GITHUB_STEP_SUMMARY
+
+      - name: Payment pipeline status — FAILED
+        if: failure()
+        run: |
+          echo "PAYMENT PIPELINE FAILED"
+          echo "## ❌ PAYMENT PIPELINE FAILED" >> $GITHUB_STEP_SUMMARY
+          echo "One or more Playwright smoke tests failed." >> $GITHUB_STEP_SUMMARY
+          echo "Check the HTML report artifact and screenshots above." >> $GITHUB_STEP_SUMMARY
 
       - name: Upload HTML report
         if: always()
