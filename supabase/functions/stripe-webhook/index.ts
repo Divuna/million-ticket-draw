@@ -174,7 +174,7 @@ serve(async (req) => {
         .maybeSingle()
 
       if (existingPayment) {
-        console.log(`Payment already processed for session ${session.id}`)
+        console.log('STRIPE WEBHOOK DUPLICATE', { session_id: session.id })
         return new Response(
           JSON.stringify({ received: true, message: 'Payment already processed' }),
           {
