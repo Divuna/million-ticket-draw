@@ -117,25 +117,25 @@ serve(async (req) => {
       const cur = (session.currency || '').toLowerCase()
       if (cur !== 'czk') {
         console.error('STRIPE WEBHOOK ERROR', { session_id: session.id, reason: `Unsupported currency: ${session.currency}` })
-        return new Response(JSON.stringify({ received: true }), {
+        return new Response(JSON.stringify({ error: 'Unsupported currency' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
+          status: 500,
         })
       }
 
       const amountTotal = session.amount_total
       if (amountTotal == null || !Number.isInteger(amountTotal) || amountTotal < 100) {
         console.error('STRIPE WEBHOOK ERROR', { session_id: session.id, reason: 'Invalid or missing amount_total', amount_total: amountTotal })
-        return new Response(JSON.stringify({ received: true }), {
+        return new Response(JSON.stringify({ error: 'Invalid amount_total' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
+          status: 500,
         })
       }
       if (amountTotal % 100 !== 0) {
         console.error('STRIPE WEBHOOK ERROR', { session_id: session.id, reason: 'amount_total is not a whole CZK amount', amount_total: amountTotal })
-        return new Response(JSON.stringify({ received: true }), {
+        return new Response(JSON.stringify({ error: 'amount_total not whole CZK' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
+          status: 500,
         })
       }
 
@@ -143,18 +143,18 @@ serve(async (req) => {
       const coinsToCredit = miocoinsForCzkPrice(priceCzk)
       if (coinsToCredit < 1) {
         console.error('STRIPE WEBHOOK ERROR', { session_id: session.id, reason: 'Could not derive MioCoin amount from paid total', price_czk: priceCzk })
-        return new Response(JSON.stringify({ received: true }), {
+        return new Response(JSON.stringify({ error: 'Could not derive MioCoin amount' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
+          status: 500,
         })
       }
 
       const userId = normalizeUserId(session.metadata?.user_id)
       if (!userId) {
         console.error('STRIPE WEBHOOK ERROR', { session_id: session.id, reason: 'Missing or invalid user_id in session metadata', raw_user_id: session.metadata?.user_id ?? null })
-        return new Response(JSON.stringify({ received: true }), {
+        return new Response(JSON.stringify({ error: 'Missing or invalid user_id' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
+          status: 500,
         })
       }
 
@@ -201,9 +201,9 @@ serve(async (req) => {
           code: paymentError.code,
         })
         console.error('STRIPE WEBHOOK ERROR', { session_id: session.id, reason: 'Failed to record payment', db_error: paymentError.message, db_code: paymentError.code })
-        return new Response(JSON.stringify({ received: true }), {
+        return new Response(JSON.stringify({ error: 'Failed to record payment' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
+          status: 500,
         })
       }
 
