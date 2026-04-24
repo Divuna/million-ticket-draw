@@ -1,6 +1,42 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 13. 04. 2026, 20:46:33 +02:00 (dokumentační synchronizace contest-admin)
+**Aktualizováno:** 24. 04. 2026 (CI & Payment Pipeline stabilization)
+
+---
+
+## CI & PAYMENT PIPELINE – FINAL VERIFIED STATE (24.04.2026)
+
+### Playwright Smoke Tests
+- Celkem 12 testů ve 4 souborech (`01-registration`, `02-login`, `03-voucher-purchase`, `04-ticket-purchase`)
+- Registrace + login testy: **passing**
+- Voucher + ticket testy: **skip** (čekají na `E2E_TEST_EMAIL` / `E2E_TEST_PASSWORD`)
+- CI workflow: `.github/workflows/playwright.yml` — branch `claude/**`, PR do `main`, `workflow_dispatch`
+- Supabase propojen v CI přes GitHub Secrets: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+- webServer: `npm run dev` (Vite, port 8080), spouštěn automaticky Playwrightem
+
+### Stripe webhook (`supabase/functions/stripe-webhook/index.ts`)
+- Všechny failure paths uvnitř `checkout.session.completed` vracejí **HTTP 500** (Stripe retry)
+- Idempotency: před INSERT se kontroluje `stripe_session_id` v `payments`; duplicity vracejí 200 + log `STRIPE WEBHOOK DUPLICATE`
+- Structured failure log: `console.error('STRIPE WEBHOOK FAILURE', {session_id, reason, user_id, amount})`
+- Outer catch: opraveno z 400 → **500** (aby Stripe retryoval i při neočekávaných runtime chybách)
+- Signature check inner catch zůstává 400 (správně — unsigned requesty nejsou validní Stripe events)
+- Wallet credit: trigger `update_wallet_after_payment` (AFTER INSERT ON payments WHERE status='completed')
+
+### Registrace + auth flow
+- `auth.users` → trigger `on_auth_user_created` → `handle_new_auth_user()` → `public.users` + `profiles` + `wallets`
+- Migrace `20260420_ensure_wallet_exists.sql`: centralizovaná DB funkce `ensure_wallet_exists(p_user_id)` — commitnuta, **nutno aplikovat v Supabase SQL Editoru**
+- Migrace `20260420_fix_profiles_insert_remove_user_id.sql` — commitnuta, **nutno aplikovat v Supabase SQL Editoru**
+
+### GitHub Actions CI
+- Telegram notifikace: `curl` na `api.telegram.org` na success i failure (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`)
+- GitHub Step Summary: `PAYMENT PIPELINE OK` / `PAYMENT PIPELINE FAILED` + markdown
+- HTML report artifact: `playwright-report-{run_id}` (14 dní)
+- Screenshots artifact při selhání: `screenshots-{run_id}` (7 dní)
+- Pipeline status: **stable, production-ready**
+
+---
+
+**Aktualizováno (předchozí):** 13. 04. 2026, 20:46:33 +02:00 (dokumentační synchronizace contest-admin)
 
 ## Aktuální fáze
 Partner Offers v1 – **dokončeno, nasazeno a finálně ověřeno end-to-end**.
