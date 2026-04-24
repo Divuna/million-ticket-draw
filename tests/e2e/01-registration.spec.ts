@@ -31,6 +31,17 @@ function dobString(yearsAgo: number): string {
   return d.toISOString().split('T')[0];
 }
 
+/**
+ * Verify a Supabase session was written to localStorage.
+ * The app configures storageKey: 'onemil-auth' in the Supabase client.
+ */
+async function expectSessionExists(page: Page): Promise<void> {
+  const isLoggedIn = await page.evaluate(() =>
+    localStorage.getItem('onemil-auth') !== null,
+  );
+  expect(isLoggedIn, 'Expected Supabase session in localStorage (onemil-auth) but none found').toBe(true);
+}
+
 test.describe('User Registration', () => {
   test('registration form renders all required fields', async ({ page }) => {
     await page.goto('/register');
@@ -55,11 +66,10 @@ test.describe('User Registration', () => {
     await page.locator('#gdpr').click();
     await page.getByRole('button', { name: 'Zaregistrovat se' }).click();
 
-    // Should stay on /register — DOB mismatch never navigates away
     await expect(page).toHaveURL('/register');
   });
 
-  test('new user registers and is redirected away from /register', async ({ page }) => {
+  test('new user registers and is authenticated', async ({ page }) => {
     const uniqueEmail = `e2e+${Date.now()}@example.com`;
     const password = 'E2eSmoke123!';
     const dob = dobString(25);
@@ -70,13 +80,13 @@ test.describe('User Registration', () => {
     await page.fill('#confirmPassword', password);
     await fillDateInput(page, '#dateOfBirth', dob);
 
-    // Confirm DOB was accepted before proceeding
+    // Confirm DOB was accepted before submitting
     await expect(page.locator('#dateOfBirth')).toHaveValue(dob);
 
     await page.locator('#terms').click();
     await page.locator('#gdpr').click();
 
-    // Submit and wait for the Supabase auth API response concurrently
+    // Submit and wait for Supabase auth response concurrently
     const [authResponse] = await Promise.all([
       page.waitForResponse(
         (res) => res.url().includes('/auth/v1/signup'),
@@ -85,28 +95,29 @@ test.describe('User Registration', () => {
       page.getByRole('button', { name: 'Zaregistrovat se' }).click(),
     ]);
 
-    // A 4xx/5xx here means Supabase rejected the signup itself
+    // Supabase must accept the signup before we check anything else
     expect(
       authResponse.status(),
-      `Supabase signup returned HTTP ${authResponse.status()}`,
+      `Supabase /auth/v1/signup returned HTTP ${authResponse.status()}`,
     ).toBeLessThan(400);
 
-    // Wait for React to process and navigate away from /register.
-    // Register.tsx always calls navigate('/profile') on success, even when
-    // email confirmation is required. The DateOfBirthGuard may then show the
-    // email-confirmation notice at /profile, but the URL still changes.
-    await page.waitForURL(
-      (url) => url.pathname !== '/register',
-      { timeout: 20_000 },
-    );
+    // Register.tsx always calls navigate('/profile') on success — wait to leave /register
+    await expect(page).not.toHaveURL(/\/register/, { timeout: 15_000 });
 
-    const finalPath = new URL(page.url()).pathname;
+    // Allow 3 s for Supabase to write the session token and React to settle
+    await page.waitForTimeout(3_000);
 
-    // Accept: /profile (auto-confirm or email-confirm), /onboarding/* (DOB guard)
-    const validDestinations = ['/profile', '/onboarding'];
-    expect(
-      validDestinations.some((p) => finalPath.startsWith(p)),
-      `Unexpected post-registration path: ${finalPath}`,
-    ).toBeTruthy();
+    // Primary auth check: Supabase session must be in localStorage (storageKey: 'onemil-auth')
+    await expectSessionExists(page);
+
+    // Visual confirmation: one of two screens is expected after registration —
+    //   email auto-confirmed → app renders and the bottom nav is visible
+    //   email confirmation required → DateOfBirthGuard shows the confirm-email notice
+    const bottomNav = page.getByRole('navigation', { name: 'Hlavní menu' });
+    const emailConfirmScreen = page.getByText('Potvrďte svůj e-mail', { exact: false });
+    await expect(
+      bottomNav.or(emailConfirmScreen),
+      'Expected to see either the app navigation or the email confirmation notice',
+    ).toBeVisible({ timeout: 5_000 });
   });
 });
