@@ -95,6 +95,19 @@ Technical:
 
 ---
 
+## CURRENT SYSTEM STATUS (24. 04. 2026)
+
+- CI pipeline stabilní: `.github/workflows/playwright.yml` — registration + login testy passing
+- Payment pipeline ověřen: Stripe webhook vrací 500 na selhání (retry), idempotency funguje, wallet credit přes trigger
+- Registrace + login plně otestovány v Playwright (Chromium, CI)
+- Telegram notifikace na CI success/failure nakonfigurovány a funkční
+- Připraveno k rozšíření: voucher testy (doplnit `E2E_TEST_EMAIL`/`PASSWORD`), ticket testy (`E2E_CONTEST_ID`)
+- Dvě migrace commitnuty ale **neaplikovány** v Supabase:
+  - `20260420_ensure_wallet_exists.sql` — wallet auto-creation helper
+  - `20260420_fix_profiles_insert_remove_user_id.sql` — oprava trigger profiles INSERT
+
+---
+
 ## Aktuální uzamčený stav (13. 04. 2026, dokumentace synchronizována 20:46:33 +02:00)
 - Dočasný frontend private-access gate v `src/App.tsx` byl odstraněn (2026-04-10); přihlášení a role routing beze změny; `npm run build` ověřen úspěšně.
 - Partner Offers v1 je dokončené, nasazené a prošlo finálním E2E ověřením.
