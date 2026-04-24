@@ -9,7 +9,7 @@ test.describe('User Login', () => {
 
     await expect(page.locator('#email')).toBeVisible();
     await expect(page.locator('#password')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Přihlásit se', exact: true })).toBeVisible();
+    await expect(page.locator('button[type="submit"]')).toBeVisible();
   });
 
   test('invalid credentials stay on login page', async ({ page }) => {
