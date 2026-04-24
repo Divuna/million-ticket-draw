@@ -7,12 +7,24 @@
 ## CI & PAYMENT PIPELINE – FINAL VERIFIED STATE (24.04.2026)
 
 ### Playwright Smoke Tests
-- Celkem 12 testů ve 4 souborech (`01-registration`, `02-login`, `03-voucher-purchase`, `04-ticket-purchase`)
+- Celkem **8 spec souborů**, ~20 testů:
+  - `01-registration` — registrace nového účtu
+  - `02-login` — přihlášení existujícího účtu
+  - `03-ticket-purchase` — navigace na contest + pokus o koupi tiketu
+  - `04-voucher-purchase` — (starší spec, čeká na credentials)
+  - `05-win-flow` — koupě poslední tikety → výhra (vyžaduje `E2E_WIN_CONTEST_ID`)
+  - `06-partner-offers` — po nákupu tikety detekce partner offer v result modalu
+  - `07-partner-offer-open` — /wins → Nabídky tab → klik na nabídku → assert dialog + opened_at PATCH
+  - `08-partner-offer-persistence` — otevření nabídky → reload → nabídka stále přítomna + žádný „Nová" badge
 - Registrace + login testy: **passing**
-- Voucher + ticket testy: **skip** (čekají na `E2E_TEST_EMAIL` / `E2E_TEST_PASSWORD`)
+- Testy 03–08: **skip** (čekají na `E2E_TEST_EMAIL` / `E2E_TEST_PASSWORD`; 05 navíc `E2E_WIN_CONTEST_ID`)
 - CI workflow: `.github/workflows/playwright.yml` — branch `claude/**`, PR do `main`, `workflow_dispatch`
 - Supabase propojen v CI přes GitHub Secrets: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
 - webServer: `npm run dev` (Vite, port 8080), spouštěn automaticky Playwrightem
+
+### Nový env var pro win-flow test
+- `E2E_WIN_CONTEST_ID` — musí ukazovat na soutěž se **právě 1 zbývající tiketou** (seeded contest)
+- Přidat jako GitHub Secret + případně do lokálního `.env`
 
 ### Stripe webhook (`supabase/functions/stripe-webhook/index.ts`)
 - Všechny failure paths uvnitř `checkout.session.completed` vracejí **HTTP 500** (Stripe retry)
@@ -26,6 +38,13 @@
 - `auth.users` → trigger `on_auth_user_created` → `handle_new_auth_user()` → `public.users` + `profiles` + `wallets`
 - Migrace `20260420_ensure_wallet_exists.sql`: centralizovaná DB funkce `ensure_wallet_exists(p_user_id)` — commitnuta, **nutno aplikovat v Supabase SQL Editoru**
 - Migrace `20260420_fix_profiles_insert_remove_user_id.sql` — commitnuta, **nutno aplikovat v Supabase SQL Editoru**
+
+### won_type priority oprava
+- Migrace `supabase/migrations/20260424_fix_won_type_main_priority_over_bonus.sql` — commitnuta (commit `68e06fc`), **nutno aplikovat v Supabase SQL Editoru**
+- Bug: pokud poslední tiket zároveň zasáhl bonusovou pozici, `won_type` vracel `'bonus'` místo `'main'`
+- Fix: CASE pořadí vyměněno — `v_next_ticket = v_ticket_count → 'main'` je teď před `v_bonus_prize_id IS NOT NULL → 'bonus'`
+- Platí i pro `won_prize` CASE (konzistence)
+- Frontend: tři místa volají `buy_ticket_atomic` **přímo** (ne přes Edge Function): `ContestDetail.tsx`, `Games.tsx`, `FavoriteGames.tsx` — všechna správně kontrolují `data.success` a `data.won_type`
 
 ### GitHub Actions CI
 - Telegram notifikace: `curl` na `api.telegram.org` na success i failure (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`)
