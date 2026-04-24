@@ -454,3 +454,63 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Login testy: **passing** (2/2 stabilní, 1 skip bez credentials)
 - Voucher/ticket testy: **skip** (čekají na `E2E_TEST_EMAIL` + `E2E_TEST_PASSWORD`)
 - Pipeline: **stable, production-ready**
+
+---
+
+## 2026-04-24 (session 2) — Integrity audity buy_ticket_atomic + won_type fix + Playwright testy 03–08
+
+### Audity buy_ticket_atomic (READ-ONLY)
+
+**1. Wallet deduction audit**
+- Potvrzeno: wallet deduction probíhá **přesně jednou** — single `UPDATE wallets SET balance_coins = v_balance - v_ticket_price WHERE id = v_wallet_id`
+- `FOR UPDATE` lock na wallet row serializuje souběžné nákupy (žádný double-deduct možný)
+- Nedostatek mincí vrací `{success: false, error: 'Nedostatek miocoinu'}` a rollbackuje transakci
+
+**2. Frontend response handling audit**
+- Potvrzeno: všechna 3 místa volají `buy_ticket_atomic` **přímo** (ne přes Edge Function): `ContestDetail.tsx`, `Games.tsx`, `FavoriteGames.tsx`
+- `ContestDetail.tsx:329` — `if (result.success === false || result.error)`
+- `Games.tsx` + `FavoriteGames.tsx` — `if (!rpcResult.success)` po normalizaci
+- HTTP 200 je vždy vrácen i pro business logic failures; success check je správně implementován
+
+**3. Ticket creation audit**
+- Potvrzeno: přesně **jeden** INSERT do `tickets` — žádný tichý fail, žádná duplicate
+- `ticket_row_id` je generován jako `gen_random_uuid()` přímo v INSERT
+- Žádný EXCEPTION blok kolem INSERT → selhání propaguje a rollbackuje celou transakci
+
+**4. Purchase integrity audit**
+- Contest limit: `FOR UPDATE` lock na `contests` row + guard `IF v_next_ticket > v_ticket_count THEN RETURN error` — overfill impossible
+- Ticket number: `UPDATE contests SET sold_tickets = sold_tickets + 1 RETURNING sold_tickets` — atomický increment, duplicate impossible
+- won_type logic: CASE v_next_ticket = v_ticket_count (main) / v_bonus_prize_id NOT NULL (bonus) / ELSE NULL
+
+### won_type priority fix
+
+- Bug nalezen: poslední tiket + bonusová pozice → `won_type` vracel `'bonus'` místo `'main'`
+- Root cause: CASE vyhodnocoval `v_bonus_prize_id IS NOT NULL` před `v_next_ticket = v_ticket_count`
+- Fix: `CASE WHEN v_next_ticket = v_ticket_count THEN 'main' WHEN v_bonus_prize_id IS NOT NULL THEN 'bonus' ELSE NULL END`
+- Migrace: `supabase/migrations/20260424_fix_won_type_main_priority_over_bonus.sql` — commit `68e06fc`
+- **Nutno aplikovat v Supabase SQL Editoru**
+
+### Playwright testy — nové spec soubory
+
+- `tests/e2e/03-ticket-purchase.spec.ts` (commit `c9e4607`):
+  - Skip bez credentials; login → /games → první Detail → /contest/:id
+  - Pokud buy button: klik → assert toast/dialog/alert; pokud top-up: assert enabled
+- `tests/e2e/05-win-flow.spec.ts` (commit `ac2da53`):
+  - Vyžaduje `E2E_WIN_CONTEST_ID` (soutěž se 1 zbývající tiketou)
+  - `page.on('response')` zachytí `won_type` z RPC
+  - Assert: Gratulujeme toast + dialog viditelný + won_type in ['main', 'bonus']
+- `tests/e2e/06-partner-offers.spec.ts` (commit `be301de`):
+  - Login → /games → koupě tikety → zachycení won_type + user_partner_offers response
+  - Pokud won_type === null: assert "SPECIÁLNÍ NABÍDKA" nebo "Nabídka je uložena v tvých" v result modalu
+  - Pokud won_type !== null: annotace skip-reason (prize win)
+- `tests/e2e/07-partner-offer-open.spec.ts` (commit `be7fedb`):
+  - Login → /wins → Nabídky tab → klik na první offer card
+  - OfferCard selector: `div.group.cursor-pointer` (ne button — OfferCard je `<div onClick>`)
+  - Assert: dialog viditelný + heading viditelný + pokud wasNew: PATCH user_partner_offers fired
+- `tests/e2e/08-partner-offer-persistence.spec.ts` (commit `d37dd7a`):
+  - Login → /wins → Nabídky → otevřít nabídku → waitForResponse PATCH (s catch pro already-opened)
+  - Escape → reload → přepnout zpět na Nabídky tab
+  - Assert: nabídka stále viditelná + "Nová" badge NOT visible
+
+### Nový env var
+- `E2E_WIN_CONTEST_ID` — přidat jako GitHub Secret; musí ukazovat na seeded contest s 1 zbývající tiketou
