@@ -17,7 +17,7 @@ test.describe('User Login', () => {
 
     await page.fill('#email', 'nosuchuser@onemil-test.invalid');
     await page.fill('#password', 'wrongpassword');
-    await page.getByRole('button', { name: 'Přihlásit se', exact: true }).click();
+    await page.locator('button[type="submit"]').click();
 
     // Should remain on /login – no redirect on bad credentials
     await expect(page).toHaveURL('/login', { timeout: 10_000 });
@@ -31,7 +31,7 @@ test.describe('User Login', () => {
     await page.goto('/login');
     await page.fill('#email', TEST_EMAIL);
     await page.fill('#password', TEST_PASSWORD);
-    await page.getByRole('button', { name: 'Přihlásit se', exact: true }).click();
+    await page.locator('button[type="submit"]').click();
 
     // After successful login the app redirects to /profile (customer) or /admin
     await page.waitForURL((url) => !url.pathname.endsWith('/login'), { timeout: 20_000 });
