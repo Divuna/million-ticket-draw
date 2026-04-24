@@ -50,6 +50,13 @@ jobs:
           echo "## ✅ PAYMENT PIPELINE OK" >> $GITHUB_STEP_SUMMARY
           echo "All Playwright smoke tests passed." >> $GITHUB_STEP_SUMMARY
 
+      - name: Telegram — OK
+        if: success()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d '{"chat_id":"${{ secrets.TELEGRAM_CHAT_ID }}","text":"✅ OneMil PAYMENT PIPELINE OK"}'
+
       - name: Payment pipeline status — FAILED
         if: failure()
         run: |
@@ -57,6 +64,13 @@ jobs:
           echo "## ❌ PAYMENT PIPELINE FAILED" >> $GITHUB_STEP_SUMMARY
           echo "One or more Playwright smoke tests failed." >> $GITHUB_STEP_SUMMARY
           echo "Check the HTML report artifact and screenshots above." >> $GITHUB_STEP_SUMMARY
+
+      - name: Telegram — FAILED
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d '{"chat_id":"${{ secrets.TELEGRAM_CHAT_ID }}","text":"❌ OneMil PAYMENT PIPELINE FAILED\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}'
 
       - name: Upload HTML report
         if: always()
