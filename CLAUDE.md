@@ -166,6 +166,21 @@ Technical:
 
 ---
 
+## Brand Identity (uzamčeno 27. 04. 2026)
+
+Full reference: `docs/brand/onemil_brand_kit/graphics.md`
+
+- **Aesthetic:** dark premium tech-luxury — never casino / gambling / jackpot / roulette / chips / slot-machine (visuals or wording)
+- **Headings:** Poppins 600–800
+- **Body / UI:** Inter 400–500
+- **Accent colour:** orange `#FF6B00`
+- **Logo colour:** metallic silver / platinum gradient
+- **Primary logo:** trophy / "1" motif *behind* the OneMil wordmark
+- **Secondary logo:** trophy *above* the OneMil wordmark (stacked)
+- **Forbidden words:** casino, gambling, betting, jackpot, roulette, chips, slot → use: soutěž, tiket, MioCoiny, hlavní výhra
+
+---
+
 ## Git workflow rule
 
 After ANY code change that is confirmed working:
