@@ -319,25 +319,34 @@ Pravidlo:
 
 ## Brand Identity — uzamčený stav (27. 04. 2026)
 
-**Plný brand kit:** `docs/brand/onemil_brand_kit/graphics.md`
+**Plný brand kit:** `docs/brand/onemil_brand_kit/graphics.md` (zdroj: `docs/brand/onemil_brand_kit.zip`)
+**Tagline:** Luxusní soutěže. Skutečné výhry.
 
 ### Směr
-- **Dark premium tech-luxury** — ne casino, ne gambling, ne lottery kitsch
-- Zakázané vizuály i slovník: casino, gambling, betting, jackpot, roulette, chips, slot-machine
+- **Dark premium tech-luxury** — ne casino, ne hazard, ne lottery kitsch
+- Zakázané vizuály i slovník: casino, hazard, sázení, sázka, jackpot, žetony, zbohatni, roulette, slot-machine
 
 ### Typografie
-- Nadpisy / display: **Poppins** 600–800
+- Nadpisy: **Poppins** 600–800 (Google Fonts, ne soubory v repozitáři)
 - Body / UI text: **Inter** 400–500
 
-### Barvy
-- Pozadí: `#0A0A0F` (deep) / `#13131A` (surface) / `#1C1C28` (elevated)
-- Hlavní akcent: **oranžová** `#FF6B00`
-- Logo: **metallic silver / platinum** gradient
+### Barvy (kanonické hex hodnoty z brand kitu)
+| Název | Hex | Token |
+|-------|-----|-------|
+| Midnight Black | `#0A0B0F` | `--om-black` |
+| Deep Navy | `#101722` | `--om-navy` |
+| Graphite | `#1D2128` | `--om-graphite` |
+| Platinum | `#E7EBF0` | `--om-platinum` |
+| Silver | `#BFC6CF` | `--om-silver` |
+| Energy Orange | `#FF8A00` | `--om-orange` |
+| Warm Amber | `#FFB547` | `--om-amber` |
 
 ### Logo
-- **Primární:** trophy / číslo „1" *za* wordmarkem OneMil (wordmark v popředí)
-- **Sekundární:** trophy *nad* wordmarkem (stacked, pro čtvercové formáty)
-- Export: PNG 512 × 512, PNG 1024 × 1024, SVG, banner 1600 × 900
+- **Primární:** trophy / číslo „1" *za* wordmarkem OneMil (wordmark v popředí) — web, appka, hero
+- **Sekundární:** trophy *nad* wordmarkem (stacked) — sociální sítě, bannery, plakáty
+- **Standalone ikona:** trophy / číslo „1" samostatně — favicon, app icon, avatar
+- Export: PNG 512 × 512, PNG 1024 × 1024, SVG (pouze placeholder — pro produkci vektorizovat)
+- Hero banner: 1920 × 480 px; partner/OG banner: 1600 × 900 px
 
 ---
 

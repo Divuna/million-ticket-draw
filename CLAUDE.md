@@ -168,16 +168,23 @@ Technical:
 
 ## Brand Identity (uzamčeno 27. 04. 2026)
 
-Full reference: `docs/brand/onemil_brand_kit/graphics.md`
+Full reference: `docs/brand/onemil_brand_kit/graphics.md` (source zip: `docs/brand/onemil_brand_kit.zip`)
+**Tagline:** Luxusní soutěže. Skutečné výhry.
 
-- **Aesthetic:** dark premium tech-luxury — never casino / gambling / jackpot / roulette / chips / slot-machine (visuals or wording)
-- **Headings:** Poppins 600–800
+- **Aesthetic:** dark premium tech-luxury — never casino / hazard / gambling / jackpot / roulette / chips / slot-machine (visuals or wording)
+- **Headings:** Poppins 600–800 (Google Fonts import only — no font files in repo)
 - **Body / UI:** Inter 400–500
-- **Accent colour:** orange `#FF6B00`
-- **Logo colour:** metallic silver / platinum gradient
-- **Primary logo:** trophy / "1" motif *behind* the OneMil wordmark
-- **Secondary logo:** trophy *above* the OneMil wordmark (stacked)
-- **Forbidden words:** casino, gambling, betting, jackpot, roulette, chips, slot → use: soutěž, tiket, MioCoiny, hlavní výhra
+- **Accent colour:** Energy Orange `#FF8A00` (primary CTA gradient: `#FF8A00` → `#FFB547`)
+- **Backgrounds:** Midnight Black `#0A0B0F` / Deep Navy `#101722` / Graphite `#1D2128`
+- **Text:** Platinum `#E7EBF0` / Silver `#BFC6CF` / Muted Silver `#8E98A6`
+- **CSS token prefix:** `--om-*` (e.g. `--om-orange`, `--om-black`, `--om-platinum`)
+- **Primary logo:** trophy / "1" motif *behind* the OneMil wordmark (web, app, hero)
+- **Secondary logo:** trophy *above* the OneMil wordmark — stacked (social, banners, posters)
+- **Standalone icon:** trophy / "1" symbol only — favicon, app icon, avatars
+- **Logo colour:** metallic silver / platinum gradient (not flat white, not yellow gold)
+- **Forbidden words (CZ):** casino, hazard, sázení, sázka, jackpot, žetony, zbohatni
+- **Forbidden words (EN):** casino, gambling, betting, jackpot, roulette, chips, slot
+- **Use instead:** soutěž, tiket, MioCoin, voucher, hlavní výhra, luxusní cena
 
 ---
 
