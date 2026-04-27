@@ -1,10 +1,23 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, Navigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { AdminContextSubNav } from "@/components/admin/AdminContextSubNav";
 import { AdminPrimaryNav } from "@/components/admin/AdminPrimaryNav";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/hooks/useAuth";
 
 /** Persistent shell for all /admin/* routes — only the outlet content swaps on navigation. */
 export function AdminLayout() {
+  const { user } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
+
+  // Wait for role resolution to avoid flicker/false redirects during refresh.
+  if (roleLoading) return null;
+
+  // Non-admins (including guests) must never see the admin shell.
+  if (!user || !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
