@@ -27,7 +27,7 @@ const MioCoin: React.FC<MioCoinProps> = ({ amount, size = "md", showAmount = tru
   return (
     <div className={`inline-flex items-center gap-2 text-sm text-zinc-100 ${className}`}>
       <div
-        className="relative flex items-center justify-center rounded-full bg-gradient-to-br from-yellow-500/40 via-yellow-400/10 to-black/80 p-[2px] shadow-[0_0_12px_rgba(234,179,8,0.35)]"
+        className="relative flex items-center justify-center rounded-full bg-gradient-to-br from-amber-800/25 via-amber-700/8 to-black/80 p-[2px] shadow-[0_0_8px_rgba(150,90,0,0.18)]"
         style={{ width: px + 6, height: px + 6 }}
       >
         <div className="relative flex items-center justify-center rounded-full bg-black/80">

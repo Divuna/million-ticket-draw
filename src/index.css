@@ -28,11 +28,11 @@
     --popover-foreground: 210 20% 98%;
     --primary: 220 80% 45%;
     --primary-foreground: 210 20% 98%;
-    --secondary: 43 90% 55%;
+    --secondary: 33 70% 44%;
     --secondary-foreground: 220 45% 8%;
     --muted: 220 30% 18%;
     --muted-foreground: 215 15% 70%;
-    --accent: 43 90% 55%;
+    --accent: 33 70% 44%;
     --accent-foreground: 220 45% 8%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 20% 98%;
@@ -57,7 +57,7 @@
 
     /* Luxury Colors - Dark Blue, Gold, Silver */
     --neon-blue: 220 80% 45%;
-    --neon-gold: 43 90% 55%;
+    --neon-gold: 33 70% 44%;
     --neon-red: 0 72% 51%;
     --neon-purple: 270 50% 60%;
     --neon-cyan: 210 80% 65%;
@@ -66,14 +66,14 @@
     
     /* Package Colors - for MioCoin tiers */
     --package-blue: 210 80% 65%;
-    --package-gold: 43 90% 55%;
+    --package-gold: 33 70% 44%;
     --package-purple: 270 60% 60%;
     --package-green: 160 55% 50%;
     
     /* Premium Typography Colors - matched to OneMil logo */
-    --heading-gold: 43 78% 54%;
-    --heading-gold-soft: 43 65% 48%;
-    --heading-gold-muted: 43 50% 42%;
+    --heading-gold: 33 65% 46%;
+    --heading-gold-soft: 33 55% 38%;
+    --heading-gold-muted: 33 42% 32%;
     --text-silver: 210 18% 88%;
     --text-muted-gray: 215 10% 55%;
 
@@ -85,7 +85,7 @@
 
     /* Luxury Shadows */
     --glow-blue: 0 0 16px hsl(var(--neon-blue) / 0.4), 0 0 32px hsl(var(--neon-blue) / 0.2);
-    --glow-gold: 0 0 16px hsl(var(--neon-gold) / 0.4), 0 0 32px hsl(var(--neon-gold) / 0.2);
+    --glow-gold: 0 0 12px hsl(var(--neon-gold) / 0.2), 0 0 24px hsl(var(--neon-gold) / 0.1);
     --glow-red: 0 0 16px hsl(var(--neon-red) / 0.3), 0 0 32px hsl(var(--neon-red) / 0.15);
     --mystery-shadow: 0 0 24px hsl(var(--neon-blue) / 0.15), inset 0 0 16px hsl(var(--background) / 0.1);
   }
@@ -100,11 +100,11 @@
     --popover-foreground: 210 20% 98%;
     --primary: 220 85% 50%;
     --primary-foreground: 210 20% 98%;
-    --secondary: 43 95% 60%;
+    --secondary: 33 75% 48%;
     --secondary-foreground: 220 50% 6%;
     --muted: 220 35% 16%;
     --muted-foreground: 215 15% 75%;
-    --accent: 43 95% 60%;
+    --accent: 33 75% 48%;
     --accent-foreground: 220 50% 6%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 20% 98%;
@@ -118,7 +118,7 @@
 
     /* Enhanced Luxury Glow Effects */
     --glow-blue: 0 0 20px hsl(var(--neon-blue) / 0.5), 0 0 40px hsl(var(--neon-blue) / 0.25);
-    --glow-gold: 0 0 20px hsl(var(--neon-gold) / 0.5), 0 0 40px hsl(var(--neon-gold) / 0.25);
+    --glow-gold: 0 0 14px hsl(var(--neon-gold) / 0.25), 0 0 28px hsl(var(--neon-gold) / 0.12);
     --glow-red: 0 0 20px hsl(var(--neon-red) / 0.4), 0 0 40px hsl(var(--neon-red) / 0.2);
     --mystery-shadow: 0 0 32px hsl(var(--neon-blue) / 0.2), inset 0 0 24px hsl(var(--background) / 0.15);
   }
@@ -250,12 +250,12 @@
   .text-heading-gold {
     background: linear-gradient(
       180deg,
-      hsl(50 95% 85%) 0%,
-      hsl(48 90% 78%) 8%,
-      hsl(45 85% 68%) 30%,
-      hsl(43 80% 55%) 55%,
-      hsl(40 75% 48%) 80%,
-      hsl(35 70% 40%) 100%
+      hsl(36 70% 68%) 0%,
+      hsl(34 65% 58%) 8%,
+      hsl(33 62% 50%) 30%,
+      hsl(32 60% 42%) 55%,
+      hsl(30 55% 36%) 80%,
+      hsl(28 50% 30%) 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
@@ -278,7 +278,7 @@
 
   .text-neon-gold {
     color: hsl(var(--neon-gold));
-    text-shadow: 0 0 12px hsl(var(--neon-gold) / 0.5), 0 0 24px hsl(var(--neon-gold) / 0.25);
+    text-shadow: 0 0 10px hsl(var(--neon-gold) / 0.28), 0 0 20px hsl(var(--neon-gold) / 0.12);
   }
 
   .text-neon-red {
@@ -400,26 +400,26 @@
       box-shadow: var(--glow-blue);
     }
     50% {
-      text-shadow: 
-        0 0 12px hsl(var(--neon-gold) / 0.6),
-        0 0 24px hsl(var(--neon-gold) / 0.4),
-        0 0 36px hsl(var(--neon-gold) / 0.2);
+      text-shadow:
+        0 0 10px hsl(var(--neon-gold) / 0.35),
+        0 0 20px hsl(var(--neon-gold) / 0.2),
+        0 0 30px hsl(var(--neon-gold) / 0.1);
       box-shadow: var(--glow-gold);
     }
   }
 
   @keyframes luxury-glow {
     0%, 100% {
-      box-shadow: 
+      box-shadow:
         0 0 16px hsl(var(--neon-blue) / 0.4),
         0 0 32px hsl(var(--neon-blue) / 0.2),
         0 0 48px hsl(var(--neon-blue) / 0.1);
     }
     50% {
-      box-shadow: 
-        0 0 20px hsl(var(--neon-gold) / 0.5),
-        0 0 40px hsl(var(--neon-gold) / 0.3),
-        0 0 60px hsl(var(--neon-gold) / 0.15);
+      box-shadow:
+        0 0 14px hsl(var(--neon-gold) / 0.25),
+        0 0 28px hsl(var(--neon-gold) / 0.14),
+        0 0 42px hsl(var(--neon-gold) / 0.07);
     }
   }
 
@@ -452,11 +452,11 @@
         0 0 48px hsl(var(--neon-gold) / 0.2);
     }
     50% {
-      text-shadow: 
-        0 0 12px hsl(var(--neon-gold) / 0.7),
-        0 0 24px hsl(var(--neon-gold) / 0.5),
-        0 0 36px hsl(var(--neon-gold) / 0.3),
-        0 0 48px hsl(var(--neon-blue) / 0.2);
+      text-shadow:
+        0 0 10px hsl(var(--neon-gold) / 0.38),
+        0 0 20px hsl(var(--neon-gold) / 0.22),
+        0 0 30px hsl(var(--neon-gold) / 0.1),
+        0 0 40px hsl(var(--neon-blue) / 0.15);
     }
   }
 

@@ -133,7 +133,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         contest-card-glow
         relative overflow-hidden
         rounded-[20px]
-        border-[3px] border-[hsl(40_75%_55%)]
+        border-[3px] border-[rgba(191,198,207,0.16)]
         transition-all duration-300 ease-out
         hover:scale-[1.02]
         ${className}
@@ -235,7 +235,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
               </p>
               <div className="w-full h-1 rounded-full overflow-hidden bg-white/20">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#f6e27a] to-[#d4a017] transition-all duration-300"
+                  className="h-full rounded-full bg-gradient-to-r from-[#C07018] to-[#884A08] transition-all duration-300"
                   style={{
                     width: `${ticketsTotal > 0 ? Math.min(100, (soldForBar / ticketsTotal) * 100) : 0}%`,
                   }}
@@ -261,11 +261,11 @@ export const ContestCard: React.FC<ContestCardProps> = ({
                   whitespace-nowrap
                   bg-[rgba(0,0,0,0.4)]
                   backdrop-blur-sm
-                  text-[hsl(45_85%_55%)] font-semibold text-sm
+                  text-[hsl(33_65%_58%)] font-semibold text-sm
                   rounded-full
-                  border-2 border-[hsl(40_75%_50%)]
+                  border-2 border-[rgba(191,198,207,0.30)]
                   hover:bg-[rgba(0,0,0,0.5)]
-                  hover:text-[hsl(45_90%_60%)]
+                  hover:text-[hsl(33_70%_64%)]
                   active:scale-[0.98]
                   transition-all duration-200
                   disabled:opacity-40 disabled:cursor-not-allowed

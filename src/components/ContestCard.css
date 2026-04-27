@@ -14,19 +14,19 @@
     90deg,
     transparent 0%,
     transparent 20%,
-    hsl(45, 100%, 65%) 35%,
-    hsl(50, 100%, 80%) 50%,
-    hsl(45, 100%, 65%) 65%,
+    hsl(33, 65%, 48%) 35%,
+    hsl(35, 55%, 60%) 50%,
+    hsl(33, 65%, 48%) 65%,
     transparent 80%,
     transparent 100%
   );
   background-size: 250% 100%;
   animation: borderSweep 2.5s linear infinite;
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
-  mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -34,15 +34,15 @@
   z-index: 20;
 }
 
-/* Inner gold glow layer */
+/* Inner glow layer */
 .contest-card-glow::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 20px;
-  box-shadow: 
-    inset 0 0 20px 0 hsla(40, 80%, 50%, 0.15),
-    inset 0 1px 0 0 hsla(40, 80%, 70%, 0.2);
+  box-shadow:
+    inset 0 0 16px 0 hsla(33, 60%, 40%, 0.07),
+    inset 0 1px 0 0 hsla(33, 55%, 50%, 0.09);
   pointer-events: none;
   z-index: 15;
 }
@@ -58,9 +58,9 @@
 
 /* Subtle hover enhancement */
 .contest-card-glow:hover::after {
-  box-shadow: 
-    inset 0 0 30px 0 hsla(40, 80%, 50%, 0.2),
-    inset 0 1px 0 0 hsla(40, 80%, 70%, 0.3);
+  box-shadow:
+    inset 0 0 20px 0 hsla(33, 60%, 40%, 0.1),
+    inset 0 1px 0 0 hsla(33, 55%, 50%, 0.13);
 }
 
 /* Voucher card subtle inner glow - muted champagne version */
@@ -143,19 +143,19 @@
     90deg,
     transparent 0%,
     transparent 20%,
-    hsl(45, 100%, 65%) 35%,
-    hsl(50, 100%, 80%) 50%,
-    hsl(45, 100%, 65%) 65%,
+    hsl(33, 65%, 48%) 35%,
+    hsl(35, 55%, 60%) 50%,
+    hsl(33, 65%, 48%) 65%,
     transparent 80%,
     transparent 100%
   );
   background-size: 250% 100%;
   animation: borderSweep 2.5s linear infinite;
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
-  mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -163,24 +163,24 @@
   z-index: 20;
 }
 
-/* Inner gold glow layer - slightly reduced */
+/* Inner glow layer - slightly reduced */
 .coming-soon-card-glow::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 20px;
-  box-shadow: 
-    inset 0 0 15px 0 hsla(40, 80%, 50%, 0.12),
-    inset 0 1px 0 0 hsla(40, 80%, 70%, 0.15);
+  box-shadow:
+    inset 0 0 12px 0 hsla(33, 60%, 40%, 0.06),
+    inset 0 1px 0 0 hsla(33, 55%, 50%, 0.08);
   pointer-events: none;
   z-index: 15;
 }
 
 /* Subtle hover enhancement */
 .coming-soon-card-glow:hover::after {
-  box-shadow: 
-    inset 0 0 25px 0 hsla(40, 80%, 50%, 0.18),
-    inset 0 1px 0 0 hsla(40, 80%, 70%, 0.25);
+  box-shadow:
+    inset 0 0 16px 0 hsla(33, 60%, 40%, 0.09),
+    inset 0 1px 0 0 hsla(33, 55%, 50%, 0.11);
 }
 
 /* Premium gallery fade+slide transition */
