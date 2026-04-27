@@ -103,7 +103,7 @@ const GalleryThumbnails = memo(({ items, activeIndex, onSelect, getYouTubeId, ge
           onClick={() => onSelect(idx)}
           className={`flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
             idx === activeIndex
-              ? 'border-[hsl(40_75%_55%)] scale-110 shadow-[0_0_14px_rgba(250,204,21,0.35)]'
+              ? 'border-[hsl(32_100%_50%/0.6)] scale-110 shadow-[0_0_14px_rgba(255,138,0,0.35)]'
               : 'border-white/10 opacity-60 hover:opacity-90 hover:scale-105'
           }`}
         >
@@ -713,7 +713,7 @@ export default function ContestDetail() {
 
 
       {/* 1. HERO SECTION */}
-      <section className="contest-card-glow w-full rounded-[20px] relative overflow-hidden bg-gradient-to-br from-[hsl(220_25%_8%)] to-[hsl(220_20%_12%)] border-[3px] border-[hsl(40_75%_55%)]">
+      <section className="contest-card-glow w-full rounded-[20px] relative overflow-hidden bg-gradient-to-br from-[hsl(220_25%_8%)] to-[hsl(220_20%_12%)] border-[3px] border-[hsl(32_100%_50%/0.6)]">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-6 md:p-8">
           {/* Text content */}
           <div className="flex-1 space-y-4 z-10">
@@ -935,8 +935,8 @@ export default function ContestDetail() {
             className="h-full rounded-full transition-all duration-500"
             style={{
               width: "100%",
-              background: 'linear-gradient(to right, #f6e27a, #d4a017)',
-              boxShadow: '0 0 20px rgba(250, 204, 21, 0.4)'
+              background: 'linear-gradient(to right, #FF8A00, #FFB547)',
+              boxShadow: '0 0 20px rgba(255, 138, 0, 0.4)'
             }}
           />
         </div>
