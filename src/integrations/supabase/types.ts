@@ -4099,6 +4099,7 @@ export type Database = {
         Returns: undefined
       }
       ensure_referral_code: { Args: { p_user_id: string }; Returns: string }
+      ensure_wallet_exists: { Args: { p_user_id: string }; Returns: undefined }
       fn_close_contest: { Args: { p_contest: string }; Returns: undefined }
       forward_event_to_sofinity: {
         Args: { v_payload: Json }
