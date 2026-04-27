@@ -317,6 +317,30 @@ Pravidlo:
 
 ---
 
+## Brand Identity — uzamčený stav (27. 04. 2026)
+
+**Plný brand kit:** `docs/brand/onemil_brand_kit/graphics.md`
+
+### Směr
+- **Dark premium tech-luxury** — ne casino, ne gambling, ne lottery kitsch
+- Zakázané vizuály i slovník: casino, gambling, betting, jackpot, roulette, chips, slot-machine
+
+### Typografie
+- Nadpisy / display: **Poppins** 600–800
+- Body / UI text: **Inter** 400–500
+
+### Barvy
+- Pozadí: `#0A0A0F` (deep) / `#13131A` (surface) / `#1C1C28` (elevated)
+- Hlavní akcent: **oranžová** `#FF6B00`
+- Logo: **metallic silver / platinum** gradient
+
+### Logo
+- **Primární:** trophy / číslo „1" *za* wordmarkem OneMil (wordmark v popředí)
+- **Sekundární:** trophy *nad* wordmarkem (stacked, pro čtvercové formáty)
+- Export: PNG 512 × 512, PNG 1024 × 1024, SVG, banner 1600 × 900
+
+---
+
 ## Partner portal UI – offer management (2026-04-11)
 
 Nasazeno v `src/pages/PartnerDashboard.tsx`:
