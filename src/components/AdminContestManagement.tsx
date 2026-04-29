@@ -1059,6 +1059,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       if (contestId) {
         const additionalUpdates: Record<string, string | null> = {};
 
+        // Always persist rules (RPC does not handle this column)
+        additionalUpdates.rules = form.rules.trim() ? form.rules : null;
+
         // Handle secondary/detail image (hero layout) - manual upload only
         if (form.detail_image_file) {
           const detailPath = await handleImageUpload(form.detail_image_file);
