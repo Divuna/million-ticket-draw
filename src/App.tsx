@@ -590,6 +590,7 @@ function App() {
                     <AppContent />
                     <Toaster />
                     <Sonner />
+                    <CookieConsentBanner />
                   </BrowserRouter>
                 </TooltipProvider>
               </AdminRealtimeProvider>
