@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { Facebook, Download, Share2 } from 'lucide-react';
 import logoOnemil from '@/assets/logo-onemil.png';
+import miocoinLogo from '@/assets/miocoin.png';
 import { cn } from '@/lib/utils';
 import { playWinChime } from '@/lib/playWinChime';
 import { pickRandomAlmostWinMessage, rollAlmostWinEffect } from '@/lib/retentionLocal';
@@ -35,6 +36,8 @@ interface BonusPrizeData {
   id: string;
   title: string | null;
   description: string;
+  detailed_description: string | null;
+  image_url: string | null;
   amount: number | null;
   status: string;
 }
@@ -217,7 +220,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       try {
         const { data, error } = await supabase
           .from('bonus_prizes')
-          .select('id, title, description, amount, status')
+          .select('id, title, description, detailed_description, image_url, amount, status')
           .eq('contest_id', contestId)
           .eq('ticket_position', result.ticket_number)
           .maybeSingle();
@@ -776,6 +779,27 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                   </>
                 ) : (
                   <p className="text-sm font-medium text-emerald-400/95">Gratulujeme k výhře!</p>
+                )}
+                {/* Bonus prize image (or MioCoin logo for MioCoin prizes) */}
+                <div className="flex justify-center">
+                  <img
+                    src={
+                      bonusPrize.image_url
+                        ? bonusPrize.image_url
+                        : (bonusPrize.amount && bonusPrize.amount > 0)
+                          ? miocoinLogo
+                          : (bonusPrize.image_url ?? miocoinLogo)
+                    }
+                    alt={bonusPrize.title || bonusPrize.description || 'Bonusová výhra'}
+                    className="max-h-40 w-auto object-contain rounded-xl"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                </div>
+                {/* Bonus prize description */}
+                {(bonusPrize.detailed_description || bonusPrize.description) && (
+                  <p className="text-sm text-amber-100/90 whitespace-pre-line max-w-md mx-auto">
+                    {bonusPrize.detailed_description || bonusPrize.description}
+                  </p>
                 )}
                 <p className="text-muted-foreground text-sm">
                   Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
