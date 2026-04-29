@@ -337,10 +337,10 @@ const AdminDashboard: React.FC = () => {
     console.log("[AdminDashboard] submit contestForm.ticket_count:", contestForm.ticket_count);
     const normalizedTicketCount = Number(contestForm.ticket_count);
     console.log("[AdminDashboard] normalizedTicketCount:", normalizedTicketCount);
-    if (!Number.isFinite(normalizedTicketCount) || normalizedTicketCount < 100) {
+    if (!Number.isFinite(normalizedTicketCount) || normalizedTicketCount < 5) {
       toast({
         title: "Chyba",
-        description: "Počet ticketů musí být platné číslo alespoň 100.",
+        description: "Počet ticketů musí být platné číslo alespoň 5.",
         variant: "destructive"
       });
       return;

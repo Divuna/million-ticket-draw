@@ -1,44 +1,54 @@
+## Plan
 
+I found why the app still shows the old error about minimum 100 tickets.
 
-## Diagnóza
+### What is actually wrong
+There are still two older contest-creation paths that use `100`, even though `AdminContestManagement` was already changed to `5`:
 
-**Příčina:** Trigger `log_partner_coin_activation` na `UPDATE` tabulky `user_vouchers` se dotazuje na neexistující sloupec:
+1. `src/pages/AdminDashboard.tsx`
+   - still validates `ticket_count < 100`
+   - still shows the toast text `Počet ticketů musí být platné číslo alespoň 100.`
 
-```sql
-SELECT * FROM partner_reward_codes WHERE voucher_id = NEW.voucher_id
-```
+2. `supabase/functions/create-contest/index.ts`
+   - still rejects `ticket_count < 100`
+   - still throws `Ticket count must be a finite number >= 100`
 
-Tabulka `partner_reward_codes` ale sloupec `voucher_id` **neobsahuje** (má jen `code`, `partner_id`, `coins`, `external_order_id`, `customer_email`, …).
+I also checked the database constraint on `public.contests`, and it is currently `CHECK (ticket_count >= 1)`, so the database itself is not forcing 100.
 
-**Proč to selže jen z oblíbených:**
-- Přímý nákup → RPC dělá `INSERT` → trigger neběží (je vázán jen na UPDATE) → OK.
-- Nákup z oblíbených → existuje řádek `redeemed=false` → RPC dělá `UPDATE redeemed=true` → trigger se spustí → spadne na `column "voucher_id" does not exist` → celá transakce se rollbackne → frontend zobrazí „Nepodařilo se zakoupit voucher".
+## Implementation
 
-Potvrzeno v Postgres logu: `ERROR: column "voucher_id" does not exist` (dvakrát, v čase odpovídajícím tvým pokusům).
+Once approved, I will make only these minimal changes:
 
-## Návrh opravy
+1. Update `src/pages/AdminDashboard.tsx`
+   - change the validation from minimum `100` to minimum `5`
+   - change the Czech error message from `alespoň 100` to `alespoň 5`
 
-Trigger spojuje partnerský reward s voucherem přes neexistující vztah. Tabulka `partner_reward_codes` má místo toho `code` (kód voucheru). Tabulka `vouchers` ale není přístupná (neviděl jsem zatím její sloupce v tomto kontextu) — proto navrhuji **bezpečnou minimální opravu**:
+2. Update `supabase/functions/create-contest/index.ts`
+   - change the server-side validation from minimum `100` to minimum `5`
+   - update the thrown error message accordingly
 
-**Migrace** (`supabase/migrations/<timestamp>_fix_log_partner_coin_activation.sql`):
+3. Verify there are no remaining user-facing or active validation paths still requiring 100 for contest creation
+   - specifically re-check all active contest creation flows
+   - leave unrelated `100` occurrences untouched
 
-Přepsat funkci `log_partner_coin_activation()` tak, aby se napojila na partnerský reward přes existující vazbu:
+## Technical notes
 
-1. Načíst z `vouchers` pole, které mapuje na partner reward (typicky `code` nebo `partner_reward_code_id`) — toto si při implementaci ověřím doplňkovým dotazem na schéma `vouchers`.
-2. Pokud žádné takové pole neexistuje (= vouchery nejsou propojené s partnerskými kódy), trigger jen `RETURN NEW` bez dotazu — voucher se v klidu uplatní a partner accounting se nezasekne.
+Files to change:
+- `src/pages/AdminDashboard.tsx`
+- `supabase/functions/create-contest/index.ts`
 
-Tím se odblokuje uplatnění voucheru z oblíbených, aniž by se cokoliv změnilo v RPC `buy_voucher_atomic` ani v RLS.
+Files already correct and not to be changed further:
+- `src/components/AdminContestManagement.tsx`
 
-## Co se NEmění
+Files not requiring DB changes:
+- no migration needed
+- no RLS changes needed
+- no table changes needed
 
-- `buy_voucher_atomic` RPC — beze změny
-- RLS policies, schéma tabulek, ceny, peněženky
-- Frontend (`Vouchers.tsx`, `useUserVouchers.ts`) — beze změny
-- Logika nákupu, odečet MioCoinů, wallet transactions
+## Expected result
 
-## Implementační kroky (po schválení)
-
-1. Dotázat se na schéma `vouchers` a `partner_reward_codes`, abych určil správné napojení.
-2. Vytvořit migraci, která přepíše tělo `log_partner_coin_activation()`.
-3. Otestovat: voucher do oblíbených → koupit → očekávaný úspěch + odečet 5 MC.
-
+After the fix:
+- contest creation should allow `5` or more tickets
+- the old toast saying `alespoň 100` should no longer appear
+- both frontend and server validation will be aligned at `5`
+- no banner/UI/design changes or unrelated logic changes will be made
