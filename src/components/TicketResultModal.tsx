@@ -645,6 +645,16 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             : 'sm:max-w-md rounded-2xl border border-yellow-500/40 bg-gradient-to-b from-[#0b1220] via-[#0f1b33] to-[#0a1428] shadow-[0_0_40px_rgba(255,200,0,0.15)]'
         )}
       >
+        {/* Explicit close button — sits above confetti / glow layers so X always works */}
+        <button
+          type="button"
+          aria-label="Zavřít"
+          onClick={() => onClose()}
+          className="absolute right-4 top-4 z-[200] flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white/90 ring-1 ring-white/20 backdrop-blur transition hover:bg-black/80 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-400/70"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
         {shouldCelebrateWin && result && (
           <div
             key={`win-flash-${contestId}-${result.ticket_number}`}
