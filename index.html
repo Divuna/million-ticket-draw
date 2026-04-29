@@ -7,6 +7,36 @@
     <meta name="facebook-domain-verification" content="gxkf1jmavmy2zhzwmslyan4fc92az" />
     <title>OneMil</title>
 
+    <!-- Consent Mode v2 default (deny everything until user chooses) -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){window.dataLayer.push(arguments);}
+      window.gtag = gtag;
+      try {
+        var stored = localStorage.getItem('cookie_consent');
+        var parsed = stored ? JSON.parse(stored) : null;
+        var granted = parsed && parsed.analytics ? 'granted' : 'denied';
+        var adGranted = parsed && parsed.marketing ? 'granted' : 'denied';
+        gtag('consent', 'default', {
+          ad_storage: adGranted,
+          ad_user_data: adGranted,
+          ad_personalization: adGranted,
+          analytics_storage: granted,
+          functionality_storage: 'granted',
+          security_storage: 'granted'
+        });
+      } catch (e) {
+        gtag('consent', 'default', {
+          ad_storage: 'denied',
+          ad_user_data: 'denied',
+          ad_personalization: 'denied',
+          analytics_storage: 'denied',
+          functionality_storage: 'granted',
+          security_storage: 'granted'
+        });
+      }
+    </script>
+
     <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
