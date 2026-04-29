@@ -4,6 +4,7 @@ import { Facebook, Twitter, Instagram } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useFooterLinks } from '@/hooks/useFooterLinks';
+import { openConsentSettings } from '@/lib/consent';
 
 export const Footer: React.FC = () => {
   const { user } = useAuth();
