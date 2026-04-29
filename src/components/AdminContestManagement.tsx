@@ -45,6 +45,7 @@ interface ContestData {
   contest_id: string;
   title: string;
   description: string | null;
+  rules: string | null;
   main_prize: string;
   main_image: string | null;
   status: string;
@@ -69,6 +70,7 @@ interface ContestViewStats {
 interface ContestFormData {
   title: string;
   description: string;
+  rules: string;
   main_prize: string;
   ticket_count: number;
   ticket_price: number;
@@ -124,6 +126,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   const [form, setForm] = useState<ContestFormData>({
     title: "",
     description: "",
+    rules: "",
     main_prize: "",
     ticket_count: 1000000,
     ticket_price: 1,
@@ -183,6 +186,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setForm({
         title: editingContest.title || "",
         description: editingContest.description || "",
+        rules: editingContest.rules || "",
         main_prize: editingContest.main_prize || "",
         ticket_count: editingContest.ticket_count || 1000000,
         ticket_price: editingContest.ticket_price || 1,
@@ -202,6 +206,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setForm({
         title: "",
         description: "",
+        rules: "",
         main_prize: "",
         ticket_count: 1000000,
         ticket_price: 1,
@@ -1054,6 +1059,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       if (contestId) {
         const additionalUpdates: Record<string, string | null> = {};
 
+        // Always persist rules (RPC does not handle this column)
+        additionalUpdates.rules = form.rules.trim() ? form.rules : null;
+
         // Handle secondary/detail image (hero layout) - manual upload only
         if (form.detail_image_file) {
           const detailPath = await handleImageUpload(form.detail_image_file);
@@ -1315,6 +1323,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   onChange={handleChange("description")}
                   placeholder="Stručný popis soutěže… Nebo klikni na tlačítko pro AI generování."
                   rows={4}
+                />
+              </div>
+
+              <div>
+                <Label>Pravidla soutěže</Label>
+                <Textarea
+                  value={form.rules}
+                  onChange={handleChange("rules")}
+                  placeholder="Volitelná pravidla soutěže…"
+                  rows={6}
                 />
               </div>
 
@@ -1832,7 +1850,7 @@ export const AdminContestManagement: React.FC = () => {
       ] = await Promise.all([
         supabase
           .from("contests")
-          .select("id, title, description, main_prize, main_image, status, ticket_count, ticket_price, total_miocoin_bonus, created_at, updated_at, fast_game")
+          .select("id, title, description, rules, main_prize, main_image, status, ticket_count, ticket_price, total_miocoin_bonus, created_at, updated_at, fast_game")
           .order("created_at", { ascending: false }),
         supabase.from("contest_progress").select("contest_id, tickets_sold, tickets_remaining, sold_percent"),
         supabase.from("contest_revenue").select("contest_id, estimated_revenue"),
@@ -1866,6 +1884,7 @@ export const AdminContestManagement: React.FC = () => {
           contest_id: contest.id,
           title: contest.title,
           description: contest.description,
+          rules: (contest as any).rules ?? null,
           main_prize: contest.main_prize,
           main_image: contest.main_image,
           status: contest.status,

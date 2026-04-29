@@ -588,6 +588,7 @@ export type Database = {
           main_prize_secondary_image: string | null
           name: string
           next_ticket_number: number
+          rules: string | null
           status: string
           ticket_count: number
           ticket_price: number
@@ -607,6 +608,7 @@ export type Database = {
           main_prize_secondary_image?: string | null
           name?: string
           next_ticket_number?: number
+          rules?: string | null
           status?: string
           ticket_count?: number
           ticket_price?: number
@@ -626,6 +628,7 @@ export type Database = {
           main_prize_secondary_image?: string | null
           name?: string
           next_ticket_number?: number
+          rules?: string | null
           status?: string
           ticket_count?: number
           ticket_price?: number
