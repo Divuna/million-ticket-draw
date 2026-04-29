@@ -13,7 +13,7 @@ import { supabase, supabaseUrl } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Facebook, Download, Share2 } from 'lucide-react';
+import { Facebook, Download, Share2, X } from 'lucide-react';
 import logoOnemil from '@/assets/logo-onemil.png';
 import miocoinLogo from '@/assets/miocoin.png';
 import { cn } from '@/lib/utils';
