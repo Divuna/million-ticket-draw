@@ -3993,21 +3993,37 @@ export type Database = {
             }
             Returns: Json
           }
-      admin_manage_contest: {
-        Args: {
-          p_contest_id?: string
-          p_description?: string
-          p_fast_game?: boolean
-          p_main_image?: string
-          p_main_prize?: string
-          p_operation?: string
-          p_status?: string
-          p_ticket_count?: number
-          p_ticket_price?: number
-          p_title?: string
-        }
-        Returns: Json
-      }
+      admin_manage_contest:
+        | {
+            Args: {
+              p_contest_id?: string
+              p_description?: string
+              p_fast_game?: boolean
+              p_main_image?: string
+              p_main_prize?: string
+              p_operation?: string
+              p_status?: string
+              p_ticket_count?: number
+              p_ticket_price?: number
+              p_title?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_contest_id?: string
+              p_description?: string
+              p_fast_game?: boolean
+              p_main_image?: string
+              p_main_prize?: string
+              p_operation: string
+              p_status?: string
+              p_ticket_count?: number
+              p_ticket_price?: number
+              p_title?: string
+            }
+            Returns: Json
+          }
       admin_manage_notification: {
         Args: {
           p_message?: string
