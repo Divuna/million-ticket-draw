@@ -12,6 +12,7 @@ import { DateOfBirthProvider } from "@/hooks/useDateOfBirthCheck";
 import { useOneSignal } from "@/hooks/useOneSignal";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminRealtimeProvider } from "@/components/AdminRealtimeProvider";
+import CookieConsentBanner from "@/components/CookieConsentBanner";
 import ContestDetailAdmin from "@/components/ContestDetailAdmin";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -590,6 +591,7 @@ function App() {
                     <AppContent />
                     <Toaster />
                     <Sonner />
+                    <CookieConsentBanner />
                   </BrowserRouter>
                 </TooltipProvider>
               </AdminRealtimeProvider>
