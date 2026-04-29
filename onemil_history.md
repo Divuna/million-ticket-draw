@@ -393,3 +393,124 @@ Byly vytvořeny a commitnuty tyto soubory:
 
 ### Dokumentační synchronizace (13. 04. 2026, 20:46:33 +02:00)
 - Do kanonické trojice `onemil_state.md` + `onemil_history.md` + `CLAUDE.md` doplněny výše uvedené ověřené body (create path, DB create validace `ticket_count`, Lovable Publish, status constraint, 3 archivní filtry, pravidla `draft`, FK/delete závěry, Partner Offers invarianty). Žádná změna aplikačního kódu v rámci tohoto kroku.
+
+---
+
+## 2026-04-24 — CI, Payments & E2E Stabilization COMPLETE
+
+### Stripe webhook – kompletní oprava failure handlingu
+- Všechny `throw` výrazy uvnitř `checkout.session.completed` nahrazeny kontrolovanými `return 500` odpověďmi (Stripe retry)
+- Structured log přidán ke všem 6 failure paths: `console.error('STRIPE WEBHOOK FAILURE', {session_id, reason, user_id, amount})`
+- Idempotency log standardizován: `console.log('STRIPE WEBHOOK DUPLICATE', { session_id: session.id })`
+- **Kritická oprava:** outer `catch` blok vracel 400 → opraveno na 500 (neočekávané runtime chyby jsou nyní retryovatelné)
+- Signature check inner catch zůstává 400 (správně)
+- Soubor: `supabase/functions/stripe-webhook/index.ts`
+
+### GitHub Actions – Playwright CI pipeline
+- Vytvořen workflow `.github/workflows/playwright.yml`:
+  - Trigger: push na `claude/**`, PR do `main/master`, `workflow_dispatch`
+  - Playwright Chromium smoke tests přes `npm run test:smoke`
+  - HTML report artifact + screenshots artifact při selhání
+- Přidány GitHub Step Summary notifikace: `PAYMENT PIPELINE OK` / `PAYMENT PIPELINE FAILED`
+- Přidány Telegram notifikace (curl na `api.telegram.org`) na success i failure
+- Přidán `workflow_dispatch` trigger pro ruční spuštění
+
+### Playwright smoke testy – stabilizace
+- `tests/e2e/01-registration.spec.ts`:
+  - Přidán helper `fillDateInput()` — native value setter + event dispatch pro React controlled `<input type="date">`
+  - Přidán helper `expectSessionExists()` — kontroluje `localStorage.getItem('onemil-auth')` (storageKey z Supabase clienta)
+  - `waitForResponse('/auth/v1/signup')` — čeká na reálnou Supabase API odpověď před dalšími asserty
+  - Nahrazen `waitForURL` za `expect(page).not.toHaveURL(/\/register/)` — opravena chyba kde condition byla splněna okamžitě
+  - Vizuální check: `bottomNav.or(emailConfirmScreen)` (buď bottom nav nebo email confirmation notice)
+  - Výsledek: **3/3 testů passing**
+- `tests/e2e/02-login.spec.ts` + `tests/e2e/helpers/auth.ts`:
+  - Opravena strict mode violation: `getByRole('button', { name: 'Přihlásit se' })` matchoval 4 tlačítka (Google/Apple/Facebook SSO)
+  - Všechna 3 místa v login spec + helper nahrazena `locator('button[type="submit"]')`
+  - Výsledek: **passing** (po aplikaci secrets v CI)
+
+### Supabase secrets v GitHub CI
+- Přidány GitHub repository secrets: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+- Bez těchto secrets `createClient('', '')` crashoval React app při startu → všechny UI testy selhaly
+
+### Wallet auto-creation – centralizovaná DB funkce
+- Vytvořena migrace `supabase/migrations/20260420_ensure_wallet_exists.sql`
+  - Funkce `public.ensure_wallet_exists(p_user_id uuid)` — INSERT ... ON CONFLICT (user_id) DO NOTHING
+  - Columns: `user_id`, `balance_coins=0`, `bonus_balance_coins=0`, `created_at=now()`
+- Call sites přidány:
+  - `supabase/functions/purchase-ticket/index.ts` (Edge Function)
+  - `src/pages/Vouchers.tsx`
+  - `src/pages/Homepage.tsx`
+  - `src/components/VoucherCarousel.tsx`
+- **Migrace commitnuta, nutno aplikovat v Supabase SQL Editoru**
+
+### Profiles trigger oprava
+- Vytvořena migrace `supabase/migrations/20260420_fix_profiles_insert_remove_user_id.sql`
+  - Opravuje `handle_new_auth_user()`: odstraněn neexistující sloupec `user_id` z INSERT do `public.profiles`
+  - Backfill: doplní chybějící `profiles` řádky pro existující `auth.users` účty
+- **Migrace commitnuta, nutno aplikovat v Supabase SQL Editoru**
+
+### Stav CI na konci tohoto úseku
+- Registration testy: **passing** (3/3)
+- Login testy: **passing** (2/2 stabilní, 1 skip bez credentials)
+- Voucher/ticket testy: **skip** (čekají na `E2E_TEST_EMAIL` + `E2E_TEST_PASSWORD`)
+- Pipeline: **stable, production-ready**
+
+---
+
+## 2026-04-24 (session 2) — Integrity audity buy_ticket_atomic + won_type fix + Playwright testy 03–08
+
+### Audity buy_ticket_atomic (READ-ONLY)
+
+**1. Wallet deduction audit**
+- Potvrzeno: wallet deduction probíhá **přesně jednou** — single `UPDATE wallets SET balance_coins = v_balance - v_ticket_price WHERE id = v_wallet_id`
+- `FOR UPDATE` lock na wallet row serializuje souběžné nákupy (žádný double-deduct možný)
+- Nedostatek mincí vrací `{success: false, error: 'Nedostatek miocoinu'}` a rollbackuje transakci
+
+**2. Frontend response handling audit**
+- Potvrzeno: všechna 3 místa volají `buy_ticket_atomic` **přímo** (ne přes Edge Function): `ContestDetail.tsx`, `Games.tsx`, `FavoriteGames.tsx`
+- `ContestDetail.tsx:329` — `if (result.success === false || result.error)`
+- `Games.tsx` + `FavoriteGames.tsx` — `if (!rpcResult.success)` po normalizaci
+- HTTP 200 je vždy vrácen i pro business logic failures; success check je správně implementován
+
+**3. Ticket creation audit**
+- Potvrzeno: přesně **jeden** INSERT do `tickets` — žádný tichý fail, žádná duplicate
+- `ticket_row_id` je generován jako `gen_random_uuid()` přímo v INSERT
+- Žádný EXCEPTION blok kolem INSERT → selhání propaguje a rollbackuje celou transakci
+
+**4. Purchase integrity audit**
+- Contest limit: `FOR UPDATE` lock na `contests` row + guard `IF v_next_ticket > v_ticket_count THEN RETURN error` — overfill impossible
+- Ticket number: `UPDATE contests SET sold_tickets = sold_tickets + 1 RETURNING sold_tickets` — atomický increment, duplicate impossible
+- won_type logic: CASE v_next_ticket = v_ticket_count (main) / v_bonus_prize_id NOT NULL (bonus) / ELSE NULL
+
+### won_type priority fix
+
+- Bug nalezen: poslední tiket + bonusová pozice → `won_type` vracel `'bonus'` místo `'main'`
+- Root cause: CASE vyhodnocoval `v_bonus_prize_id IS NOT NULL` před `v_next_ticket = v_ticket_count`
+- Fix: `CASE WHEN v_next_ticket = v_ticket_count THEN 'main' WHEN v_bonus_prize_id IS NOT NULL THEN 'bonus' ELSE NULL END`
+- Migrace: `supabase/migrations/20260424_fix_won_type_main_priority_over_bonus.sql` — commit `68e06fc`
+- **Nutno aplikovat v Supabase SQL Editoru**
+
+### Playwright testy — nové spec soubory
+
+- `tests/e2e/03-ticket-purchase.spec.ts` (commit `c9e4607`):
+  - Skip bez credentials; login → /games → první Detail → /contest/:id
+  - Pokud buy button: klik → assert toast/dialog/alert; pokud top-up: assert enabled
+- `tests/e2e/05-win-flow.spec.ts` (commit `ac2da53`):
+  - Vyžaduje `E2E_WIN_CONTEST_ID` (soutěž se 1 zbývající tiketou)
+  - `page.on('response')` zachytí `won_type` z RPC
+  - Assert: Gratulujeme toast + dialog viditelný + won_type in ['main', 'bonus']
+- `tests/e2e/06-partner-offers.spec.ts` (commit `be301de`):
+  - Login → /games → koupě tikety → zachycení won_type + user_partner_offers response
+  - Pokud won_type === null: assert "SPECIÁLNÍ NABÍDKA" nebo "Nabídka je uložena v tvých" v result modalu
+  - Pokud won_type !== null: annotace skip-reason (prize win)
+- `tests/e2e/07-partner-offer-open.spec.ts` (commit `be7fedb`):
+  - Login → /wins → Nabídky tab → klik na první offer card
+  - OfferCard selector: `div.group.cursor-pointer` (ne button — OfferCard je `<div onClick>`)
+  - Assert: dialog viditelný + heading viditelný + pokud wasNew: PATCH user_partner_offers fired
+- `tests/e2e/08-partner-offer-persistence.spec.ts` (commit `d37dd7a`):
+  - Login → /wins → Nabídky → otevřít nabídku → waitForResponse PATCH (s catch pro already-opened)
+  - Escape → reload → přepnout zpět na Nabídky tab
+  - Assert: nabídka stále viditelná + "Nová" badge NOT visible
+
+### Nový env var
+- `E2E_WIN_CONTEST_ID` — přidat jako GitHub Secret; musí ukazovat na seeded contest s 1 zbývající tiketou

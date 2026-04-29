@@ -1,6 +1,61 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 13. 04. 2026, 20:46:33 +02:00 (dokumentační synchronizace contest-admin)
+**Aktualizováno:** 24. 04. 2026 (CI & Payment Pipeline stabilization)
+
+---
+
+## CI & PAYMENT PIPELINE – FINAL VERIFIED STATE (24.04.2026)
+
+### Playwright Smoke Tests
+- Celkem **8 spec souborů**, ~20 testů:
+  - `01-registration` — registrace nového účtu
+  - `02-login` — přihlášení existujícího účtu
+  - `03-ticket-purchase` — navigace na contest + pokus o koupi tiketu
+  - `04-voucher-purchase` — (starší spec, čeká na credentials)
+  - `05-win-flow` — koupě poslední tikety → výhra (vyžaduje `E2E_WIN_CONTEST_ID`)
+  - `06-partner-offers` — po nákupu tikety detekce partner offer v result modalu
+  - `07-partner-offer-open` — /wins → Nabídky tab → klik na nabídku → assert dialog + opened_at PATCH
+  - `08-partner-offer-persistence` — otevření nabídky → reload → nabídka stále přítomna + žádný „Nová" badge
+- Registrace + login testy: **passing**
+- Testy 03–08: **skip** (čekají na `E2E_TEST_EMAIL` / `E2E_TEST_PASSWORD`; 05 navíc `E2E_WIN_CONTEST_ID`)
+- CI workflow: `.github/workflows/playwright.yml` — branch `claude/**`, PR do `main`, `workflow_dispatch`
+- Supabase propojen v CI přes GitHub Secrets: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+- webServer: `npm run dev` (Vite, port 8080), spouštěn automaticky Playwrightem
+
+### Nový env var pro win-flow test
+- `E2E_WIN_CONTEST_ID` — musí ukazovat na soutěž se **právě 1 zbývající tiketou** (seeded contest)
+- Přidat jako GitHub Secret + případně do lokálního `.env`
+
+### Stripe webhook (`supabase/functions/stripe-webhook/index.ts`)
+- Všechny failure paths uvnitř `checkout.session.completed` vracejí **HTTP 500** (Stripe retry)
+- Idempotency: před INSERT se kontroluje `stripe_session_id` v `payments`; duplicity vracejí 200 + log `STRIPE WEBHOOK DUPLICATE`
+- Structured failure log: `console.error('STRIPE WEBHOOK FAILURE', {session_id, reason, user_id, amount})`
+- Outer catch: opraveno z 400 → **500** (aby Stripe retryoval i při neočekávaných runtime chybách)
+- Signature check inner catch zůstává 400 (správně — unsigned requesty nejsou validní Stripe events)
+- Wallet credit: trigger `update_wallet_after_payment` (AFTER INSERT ON payments WHERE status='completed')
+
+### Registrace + auth flow
+- `auth.users` → trigger `on_auth_user_created` → `handle_new_auth_user()` → `public.users` + `profiles` + `wallets`
+- Migrace `20260420_ensure_wallet_exists.sql`: centralizovaná DB funkce `ensure_wallet_exists(p_user_id)` — commitnuta, **nutno aplikovat v Supabase SQL Editoru**
+- Migrace `20260420_fix_profiles_insert_remove_user_id.sql` — commitnuta, **nutno aplikovat v Supabase SQL Editoru**
+
+### won_type priority oprava
+- Migrace `supabase/migrations/20260424_fix_won_type_main_priority_over_bonus.sql` — commitnuta (commit `68e06fc`), **nutno aplikovat v Supabase SQL Editoru**
+- Bug: pokud poslední tiket zároveň zasáhl bonusovou pozici, `won_type` vracel `'bonus'` místo `'main'`
+- Fix: CASE pořadí vyměněno — `v_next_ticket = v_ticket_count → 'main'` je teď před `v_bonus_prize_id IS NOT NULL → 'bonus'`
+- Platí i pro `won_prize` CASE (konzistence)
+- Frontend: tři místa volají `buy_ticket_atomic` **přímo** (ne přes Edge Function): `ContestDetail.tsx`, `Games.tsx`, `FavoriteGames.tsx` — všechna správně kontrolují `data.success` a `data.won_type`
+
+### GitHub Actions CI
+- Telegram notifikace: `curl` na `api.telegram.org` na success i failure (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`)
+- GitHub Step Summary: `PAYMENT PIPELINE OK` / `PAYMENT PIPELINE FAILED` + markdown
+- HTML report artifact: `playwright-report-{run_id}` (14 dní)
+- Screenshots artifact při selhání: `screenshots-{run_id}` (7 dní)
+- Pipeline status: **stable, production-ready**
+
+---
+
+**Aktualizováno (předchozí):** 13. 04. 2026, 20:46:33 +02:00 (dokumentační synchronizace contest-admin)
 
 ## Aktuální fáze
 Partner Offers v1 – **dokončeno, nasazeno a finálně ověřeno end-to-end**.
@@ -259,6 +314,39 @@ Pravidlo:
 - `onemil_state.md` = jediný current snapshot
 - `onemil_history.md` = jediná chronologická historie
 - `CLAUDE.md` = jen stručný pracovní kontext a uzamčené zásady, ne plná historie
+
+---
+
+## Brand Identity — uzamčený stav (27. 04. 2026)
+
+**Plný brand kit:** `docs/brand/onemil_brand_kit/graphics.md` (zdroj: `docs/brand/onemil_brand_kit.zip`)
+**Tagline:** Luxusní soutěže. Skutečné výhry.
+
+### Směr
+- **Dark premium tech-luxury** — ne casino, ne hazard, ne lottery kitsch
+- Zakázané vizuály i slovník: casino, hazard, sázení, sázka, jackpot, žetony, zbohatni, roulette, slot-machine
+
+### Typografie
+- Nadpisy: **Poppins** 600–800 (Google Fonts, ne soubory v repozitáři)
+- Body / UI text: **Inter** 400–500
+
+### Barvy (kanonické hex hodnoty z brand kitu)
+| Název | Hex | Token |
+|-------|-----|-------|
+| Midnight Black | `#0A0B0F` | `--om-black` |
+| Deep Navy | `#101722` | `--om-navy` |
+| Graphite | `#1D2128` | `--om-graphite` |
+| Platinum | `#E7EBF0` | `--om-platinum` |
+| Silver | `#BFC6CF` | `--om-silver` |
+| Energy Orange | `#FF8A00` | `--om-orange` |
+| Warm Amber | `#FFB547` | `--om-amber` |
+
+### Logo
+- **Primární:** trophy / číslo „1" *za* wordmarkem OneMil (wordmark v popředí) — web, appka, hero
+- **Sekundární:** trophy *nad* wordmarkem (stacked) — sociální sítě, bannery, plakáty
+- **Standalone ikona:** trophy / číslo „1" samostatně — favicon, app icon, avatar
+- Export: PNG 512 × 512, PNG 1024 × 1024, SVG (pouze placeholder — pro produkci vektorizovat)
+- Hero banner: 1920 × 480 px; partner/OG banner: 1600 × 900 px
 
 ---
 

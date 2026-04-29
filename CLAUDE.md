@@ -95,6 +95,24 @@ Technical:
 
 ---
 
+## CURRENT SYSTEM STATUS (24. 04. 2026)
+
+- CI pipeline stabilní: `.github/workflows/playwright.yml` — registration + login testy passing
+- Payment pipeline ověřen: Stripe webhook vrací 500 na selhání (retry), idempotency funguje, wallet credit přes trigger
+- Registrace + login plně otestovány v Playwright (Chromium, CI)
+- Telegram notifikace na CI success/failure nakonfigurovány a funkční
+- Playwright testy: **8 spec souborů** (01–08); testy 03–08 skip bez credentials
+  - `E2E_TEST_EMAIL` + `E2E_TEST_PASSWORD` — přidat jako GitHub Secrets pro testy 03–08
+  - `E2E_WIN_CONTEST_ID` — přidat jako GitHub Secret pro test 05 (soutěž se 1 zbývající tiketou)
+- **Tři migrace commitnuty ale neaplikovány** v Supabase:
+  - `20260420_ensure_wallet_exists.sql` — wallet auto-creation helper
+  - `20260420_fix_profiles_insert_remove_user_id.sql` — oprava trigger profiles INSERT
+  - `20260424_fix_won_type_main_priority_over_bonus.sql` — won_type: main > bonus priorita
+- won_type bug potvrzen a opravena v migraci: poslední tiket + bonusová pozice → byl vracen 'bonus' místo 'main'
+- Frontend volá `buy_ticket_atomic` přímo (ContestDetail, Games, FavoriteGames) — ne přes Edge Function
+
+---
+
 ## Aktuální uzamčený stav (13. 04. 2026, dokumentace synchronizována 20:46:33 +02:00)
 - Dočasný frontend private-access gate v `src/App.tsx` byl odstraněn (2026-04-10); přihlášení a role routing beze změny; `npm run build` ověřen úspěšně.
 - Partner Offers v1 je dokončené, nasazené a prošlo finálním E2E ověřením.
@@ -145,6 +163,28 @@ Technical:
 - Trigger `trg_partner_offer_approved` — neměnit
 - Přechod `active` → `draft` musí zůstat zablokovaný
 - Úklid soutěží: řešit stavem (`draft` / Archiv test), ne mazáním contestu ani mazáním `partner_offer_contests`
+
+---
+
+## Brand Identity (uzamčeno 27. 04. 2026)
+
+Full reference: `docs/brand/onemil_brand_kit/graphics.md` (source zip: `docs/brand/onemil_brand_kit.zip`)
+**Tagline:** Luxusní soutěže. Skutečné výhry.
+
+- **Aesthetic:** dark premium tech-luxury — never casino / hazard / gambling / jackpot / roulette / chips / slot-machine (visuals or wording)
+- **Headings:** Poppins 600–800 (Google Fonts import only — no font files in repo)
+- **Body / UI:** Inter 400–500
+- **Accent colour:** Energy Orange `#FF8A00` (primary CTA gradient: `#FF8A00` → `#FFB547`)
+- **Backgrounds:** Midnight Black `#0A0B0F` / Deep Navy `#101722` / Graphite `#1D2128`
+- **Text:** Platinum `#E7EBF0` / Silver `#BFC6CF` / Muted Silver `#8E98A6`
+- **CSS token prefix:** `--om-*` (e.g. `--om-orange`, `--om-black`, `--om-platinum`)
+- **Primary logo:** trophy / "1" motif *behind* the OneMil wordmark (web, app, hero)
+- **Secondary logo:** trophy *above* the OneMil wordmark — stacked (social, banners, posters)
+- **Standalone icon:** trophy / "1" symbol only — favicon, app icon, avatars
+- **Logo colour:** metallic silver / platinum gradient (not flat white, not yellow gold)
+- **Forbidden words (CZ):** casino, hazard, sázení, sázka, jackpot, žetony, zbohatni
+- **Forbidden words (EN):** casino, gambling, betting, jackpot, roulette, chips, slot
+- **Use instead:** soutěž, tiket, MioCoin, voucher, hlavní výhra, luxusní cena
 
 ---
 

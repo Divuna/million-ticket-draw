@@ -116,30 +116,46 @@ serve(async (req) => {
 
       const cur = (session.currency || '').toLowerCase()
       if (cur !== 'czk') {
-        throw new Error(`Unsupported currency: ${session.currency}`)
+        console.error('STRIPE WEBHOOK FAILURE', { session_id: session.id, reason: `Unsupported currency: ${session.currency}`, user_id: session.metadata?.user_id ?? null, amount: session.amount_total ?? null })
+        return new Response(JSON.stringify({ error: 'Unsupported currency' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        })
       }
 
       const amountTotal = session.amount_total
       if (amountTotal == null || !Number.isInteger(amountTotal) || amountTotal < 100) {
-        throw new Error('Invalid or missing amount_total from Stripe session')
+        console.error('STRIPE WEBHOOK FAILURE', { session_id: session.id, reason: 'Invalid or missing amount_total', user_id: session.metadata?.user_id ?? null, amount: amountTotal })
+        return new Response(JSON.stringify({ error: 'Invalid amount_total' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        })
       }
       if (amountTotal % 100 !== 0) {
-        throw new Error('amount_total must be a whole CZK amount (multiple of 100 haléřů)')
+        console.error('STRIPE WEBHOOK FAILURE', { session_id: session.id, reason: 'amount_total is not a whole CZK amount', user_id: session.metadata?.user_id ?? null, amount: amountTotal })
+        return new Response(JSON.stringify({ error: 'amount_total not whole CZK' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        })
       }
 
       const priceCzk = amountTotal / 100
       const coinsToCredit = miocoinsForCzkPrice(priceCzk)
       if (coinsToCredit < 1) {
-        throw new Error('Could not derive MioCoin amount from paid total')
+        console.error('STRIPE WEBHOOK FAILURE', { session_id: session.id, reason: 'Could not derive MioCoin amount from paid total', user_id: session.metadata?.user_id ?? null, amount: amountTotal })
+        return new Response(JSON.stringify({ error: 'Could not derive MioCoin amount' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        })
       }
 
       const userId = normalizeUserId(session.metadata?.user_id)
       if (!userId) {
-        omLog('error', 'payment_metadata_invalid_user', {
-          action: 'stripe_webhook',
-          stripe_session_id: session.id,
+        console.error('STRIPE WEBHOOK FAILURE', { session_id: session.id, reason: 'Missing or invalid user_id in session metadata', user_id: session.metadata?.user_id ?? null, amount: amountTotal })
+        return new Response(JSON.stringify({ error: 'Missing or invalid user_id' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
         })
-        throw new Error('Missing or invalid user_id in session metadata')
       }
 
       omLog('info', 'payment_credit_pending', {
@@ -158,7 +174,7 @@ serve(async (req) => {
         .maybeSingle()
 
       if (existingPayment) {
-        console.log(`Payment already processed for session ${session.id}`)
+        console.log('STRIPE WEBHOOK DUPLICATE', { session_id: session.id })
         return new Response(
           JSON.stringify({ received: true, message: 'Payment already processed' }),
           {
@@ -184,7 +200,11 @@ serve(async (req) => {
           message: paymentError.message,
           code: paymentError.code,
         })
-        throw new Error('Failed to record payment')
+        console.error('STRIPE WEBHOOK FAILURE', { session_id: session.id, reason: 'Failed to record payment', user_id: userId, amount: coinsToCredit, db_error: paymentError.message, db_code: paymentError.code })
+        return new Response(JSON.stringify({ error: 'Failed to record payment' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        })
       }
 
       omLog('info', 'payment_credited', {
@@ -210,7 +230,7 @@ serve(async (req) => {
       JSON.stringify({ error: errorMessage }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       },
     )
   }

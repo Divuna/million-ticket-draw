@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -20,25 +20,25 @@
 @layer base {
   :root {
     /* Premium Dark Navy/Graphite Theme */
-    --background: 222 47% 5%;
+    --background: 225 44% 5%;
     --foreground: 210 20% 98%;
-    --card: 222 40% 10% / 0.85;
+    --card: 222 38% 10% / 0.85;
     --card-foreground: 210 20% 98%;
-    --popover: 222 40% 10% / 0.92;
+    --popover: 222 38% 10% / 0.92;
     --popover-foreground: 210 20% 98%;
-    --primary: 220 80% 45%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 43 90% 55%;
-    --secondary-foreground: 220 45% 8%;
+    --primary: 32 100% 50%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 38 100% 64%;
+    --secondary-foreground: 0 0% 7%;
     --muted: 220 30% 18%;
     --muted-foreground: 215 15% 70%;
-    --accent: 43 90% 55%;
-    --accent-foreground: 220 45% 8%;
+    --accent: 32 100% 50%;
+    --accent-foreground: 0 0% 7%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 20% 98%;
     --border: 215 20% 28%;
     --input: 220 30% 14%;
-    --ring: 220 80% 45%;
+    --ring: 32 100% 50%;
     --radius: 0.625rem;
     
     /* Unified box styles */
@@ -98,19 +98,19 @@
     --card-foreground: 210 20% 98%;
     --popover: 225 42% 10% / 0.92;
     --popover-foreground: 210 20% 98%;
-    --primary: 220 85% 50%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 43 95% 60%;
-    --secondary-foreground: 220 50% 6%;
+    --primary: 32 100% 50%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 38 100% 64%;
+    --secondary-foreground: 0 0% 7%;
     --muted: 220 35% 16%;
     --muted-foreground: 215 15% 75%;
-    --accent: 43 95% 60%;
-    --accent-foreground: 220 50% 6%;
+    --accent: 32 100% 50%;
+    --accent-foreground: 0 0% 7%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 20% 98%;
     --border: 215 20% 30%;
     --input: 220 35% 12%;
-    --ring: 220 85% 50%;
+    --ring: 32 100% 50%;
     
     /* Unified box styles */
     --card-shadow: 0 4px 20px hsl(225 50% 2% / 0.6), 0 1px 4px hsl(225 50% 2% / 0.4);
@@ -143,7 +143,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-family: 'Poppins', system-ui, sans-serif;
     font-weight: 700;
     letter-spacing: -0.02em;
     line-height: 1.2;
@@ -698,7 +698,7 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
     animation: title-glow 3s ease-in-out infinite;
-    font-family: 'Orbitron', monospace;
+    font-family: 'Poppins', system-ui, sans-serif;
     font-weight: 900;
     letter-spacing: 0.1em;
     text-transform: uppercase;
