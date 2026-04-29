@@ -102,7 +102,6 @@ export const CookieConsentBanner: React.FC = () => {
                   <Link
                     to="/privacy"
                     className="text-heading-gold hover:underline"
-                    onClick={() => setVisible(false)}
                   >
                     Ochrana osobních údajů
                   </Link>
@@ -141,7 +140,7 @@ export const CookieConsentBanner: React.FC = () => {
             <DialogTitle className="text-heading-gold">Nastavení cookies</DialogTitle>
             <DialogDescription>
               Vyberte, které kategorie cookies chcete povolit.{' '}
-              <Link to="/privacy" className="text-heading-gold hover:underline" onClick={() => setSettingsOpen(false)}>
+              <Link to="/privacy" className="text-heading-gold hover:underline">
                 Ochrana osobních údajů
               </Link>
             </DialogDescription>
