@@ -37,10 +37,33 @@
       }
     </script>
 
-    <!-- GTM (and downstream GA4 / Meta Pixel) is NOT loaded here.
-         It is injected dynamically from src/lib/consent.ts only after the user
-         grants analytics or marketing consent. This keeps the site GDPR-compliant
-         (no tracking scripts before consent). -->
+    <!-- GTM is injected dynamically from src/lib/consent.ts after consent.
+         GA4 (gtag.js) loads here but respects Consent Mode v2 defaults above
+         (analytics_storage / ad_storage = 'denied' until user grants consent).
+         Meta Pixel base script is loaded here but fbq('init') and PageView
+         are deferred until marketing consent is granted (see consent.ts). -->
+
+    <!-- Google Analytics GA4 (Consent Mode v2 gated) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-REZ7MGTEKK"></script>
+    <script>
+      gtag('js', new Date());
+      gtag('config', 'G-REZ7MGTEKK', { anonymize_ip: true });
+    </script>
+
+    <!-- Meta Pixel base code (init + PageView deferred until marketing consent) -->
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=1412172897183369&ev=PageView&noscript=1"
+    /></noscript>
 
     <!-- Initialize the OneSignal deferred queue without blocking SDK init -->
     <script>
