@@ -628,7 +628,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   // Always render Dialog to prevent mount/unmount flicker in React StrictMode
   // Control visibility via isOpen && result !== null
   return (
-    <Dialog open={isOpen && result !== null} onOpenChange={onClose}>
+    <Dialog open={isOpen && result !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent
         onOpenAutoFocus={(e) => {
           if (shouldCelebrateWin) {
