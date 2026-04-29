@@ -70,6 +70,7 @@ interface ContestViewStats {
 interface ContestFormData {
   title: string;
   description: string;
+  rules: string;
   main_prize: string;
   ticket_count: number;
   ticket_price: number;
