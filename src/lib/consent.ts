@@ -19,7 +19,20 @@ declare global {
     gtag?: (...args: unknown[]) => void;
     dataLayer: unknown[];
     __gtmLoaded?: boolean;
+    fbq?: ((...args: unknown[]) => void) & { loaded?: boolean };
+    __fbPixelInitialized?: boolean;
   }
+}
+
+const META_PIXEL_ID = '1412172897183369';
+
+function initMetaPixelOnce() {
+  if (typeof window === 'undefined') return;
+  if (window.__fbPixelInitialized) return;
+  if (typeof window.fbq !== 'function') return;
+  window.__fbPixelInitialized = true;
+  window.fbq('init', META_PIXEL_ID);
+  window.fbq('track', 'PageView');
 }
 
 export function readConsent(): Consent | null {
@@ -78,6 +91,11 @@ export function applyConsent(c: Consent) {
     // Inject GTM only when at least one tracking category is granted.
     if (c.analytics || c.marketing) {
       loadGtmOnce();
+    }
+
+    // Meta Pixel: init + PageView only after marketing consent is granted.
+    if (c.marketing) {
+      initMetaPixelOnce();
     }
   } catch (e) {
     console.error('[consent] applyConsent failed', e);
