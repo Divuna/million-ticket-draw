@@ -991,10 +991,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     console.log("[AdminContestManagement] submit form.ticket_count:", form.ticket_count);
     const normalizedTicketCount = Number(form.ticket_count);
     console.log("[AdminContestManagement] normalizedTicketCount:", normalizedTicketCount);
-    if (!Number.isFinite(normalizedTicketCount) || normalizedTicketCount < 100) {
+    if (!Number.isFinite(normalizedTicketCount) || normalizedTicketCount < 5) {
       toast({
         title: "Chyba",
-        description: "Počet ticketů musí být platné číslo alespoň 100.",
+        description: "Počet ticketů musí být platné číslo alespoň 5.",
         variant: "destructive",
       });
       return;
