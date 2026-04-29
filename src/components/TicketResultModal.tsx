@@ -36,6 +36,8 @@ interface BonusPrizeData {
   id: string;
   title: string | null;
   description: string;
+  detailed_description: string | null;
+  image_url: string | null;
   amount: number | null;
   status: string;
 }
