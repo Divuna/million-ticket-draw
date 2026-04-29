@@ -780,6 +780,27 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 ) : (
                   <p className="text-sm font-medium text-emerald-400/95">Gratulujeme k výhře!</p>
                 )}
+                {/* Bonus prize image (or MioCoin logo for MioCoin prizes) */}
+                <div className="flex justify-center">
+                  <img
+                    src={
+                      bonusPrize.image_url
+                        ? bonusPrize.image_url
+                        : (bonusPrize.amount && bonusPrize.amount > 0)
+                          ? miocoinLogo
+                          : (bonusPrize.image_url ?? miocoinLogo)
+                    }
+                    alt={bonusPrize.title || bonusPrize.description || 'Bonusová výhra'}
+                    className="max-h-40 w-auto object-contain rounded-xl"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                </div>
+                {/* Bonus prize description */}
+                {(bonusPrize.detailed_description || bonusPrize.description) && (
+                  <p className="text-sm text-amber-100/90 whitespace-pre-line max-w-md mx-auto">
+                    {bonusPrize.detailed_description || bonusPrize.description}
+                  </p>
+                )}
                 <p className="text-muted-foreground text-sm">
                   Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
                 </p>
