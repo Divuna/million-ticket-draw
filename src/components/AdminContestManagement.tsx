@@ -126,6 +126,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   const [form, setForm] = useState<ContestFormData>({
     title: "",
     description: "",
+    rules: "",
     main_prize: "",
     ticket_count: 1000000,
     ticket_price: 1,
@@ -185,6 +186,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setForm({
         title: editingContest.title || "",
         description: editingContest.description || "",
+        rules: editingContest.rules || "",
         main_prize: editingContest.main_prize || "",
         ticket_count: editingContest.ticket_count || 1000000,
         ticket_price: editingContest.ticket_price || 1,
@@ -204,6 +206,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setForm({
         title: "",
         description: "",
+        rules: "",
         main_prize: "",
         ticket_count: 1000000,
         ticket_price: 1,
