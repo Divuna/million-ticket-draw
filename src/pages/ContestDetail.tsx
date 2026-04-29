@@ -31,6 +31,7 @@ type Contest = {
   id: string;
   title: string;
   description: string | null;
+  rules: string | null;
   main_prize: string | null;
   ticket_price: number;
   status: string;
@@ -458,7 +459,7 @@ export default function ContestDetail() {
       try {
         const { data: contestData, error: contestError } = await supabase
           .from("contests")
-          .select("id, title, description, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, fast_game")
+          .select("id, title, description, rules, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, fast_game")
           .eq("id", id)
           .maybeSingle();
 
