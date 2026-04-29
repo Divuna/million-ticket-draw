@@ -1326,6 +1326,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 />
               </div>
 
+              <div>
+                <Label>Pravidla soutěže</Label>
+                <Textarea
+                  value={form.rules}
+                  onChange={handleChange("rules")}
+                  placeholder="Volitelná pravidla soutěže…"
+                  rows={6}
+                />
+              </div>
+
               <div className="flex gap-4">
                 <div className="flex-1">
                   <Label>Počet tiketů</Label>
