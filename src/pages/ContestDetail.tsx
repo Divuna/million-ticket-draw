@@ -31,6 +31,7 @@ type Contest = {
   id: string;
   title: string;
   description: string | null;
+  rules: string | null;
   main_prize: string | null;
   ticket_price: number;
   status: string;
@@ -458,7 +459,7 @@ export default function ContestDetail() {
       try {
         const { data: contestData, error: contestError } = await supabase
           .from("contests")
-          .select("id, title, description, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, fast_game")
+          .select("id, title, description, rules, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, fast_game")
           .eq("id", id)
           .maybeSingle();
 
@@ -1000,6 +1001,20 @@ export default function ContestDetail() {
           </div>
         )}
       </section>
+
+      {/* CONTEST RULES */}
+      {contest.rules && contest.rules.trim() && (
+        <section className="relative z-10 px-4 py-12 max-w-4xl mx-auto">
+          <div className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-6 md:p-8">
+            <h2 className="text-2xl md:text-3xl font-bold mb-4 text-heading-gold">
+              Pravidla soutěže
+            </h2>
+            <div className="text-white/80 whitespace-pre-wrap leading-relaxed">
+              {contest.rules}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* BONUS PRIZE DETAIL MODAL */}
       <BonusPrizeDetailModal
