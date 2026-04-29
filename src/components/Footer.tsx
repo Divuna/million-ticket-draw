@@ -147,6 +147,14 @@ export const Footer: React.FC = () => {
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <Link to="/kontakt" className="hover:text-neon-gold transition-colors">Kontakt</Link>
             <span className="text-border">•</span>
+            <button
+              type="button"
+              onClick={openConsentSettings}
+              className="hover:text-neon-gold transition-colors"
+            >
+              Nastavení cookies
+            </button>
+            <span className="text-border">•</span>
             <span>Česká republika</span>
             <span className="text-border">•</span>
             <span>
