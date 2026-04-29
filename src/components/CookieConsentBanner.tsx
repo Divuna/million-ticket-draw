@@ -102,7 +102,6 @@ export const CookieConsentBanner: React.FC = () => {
                   <Link
                     to="/privacy"
                     className="text-heading-gold hover:underline"
-                    onClick={() => setVisible(false)}
                   >
                     Ochrana osobních údajů
                   </Link>
