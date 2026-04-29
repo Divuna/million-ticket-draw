@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { Facebook, Download, Share2 } from 'lucide-react';
 import logoOnemil from '@/assets/logo-onemil.png';
+import miocoinLogo from '@/assets/miocoin.png';
 import { cn } from '@/lib/utils';
 import { playWinChime } from '@/lib/playWinChime';
 import { pickRandomAlmostWinMessage, rollAlmostWinEffect } from '@/lib/retentionLocal';
