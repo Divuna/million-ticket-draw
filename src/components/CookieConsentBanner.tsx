@@ -11,6 +11,21 @@ import {
   saveConsent,
   type Consent,
 } from '@/lib/consent';
+import { supabase } from '@/integrations/supabase/client';
+
+async function persistConsentToDb(analytics: boolean, marketing: boolean) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from('cookie_consents').insert({
+      user_id: user?.id ?? null,
+      necessary: true,
+      analytics,
+      marketing,
+    });
+  } catch (e) {
+    console.error('[consent] DB persist failed', e);
+  }
+}
 
 export const CookieConsentBanner: React.FC = () => {
   const [visible, setVisible] = useState(false);

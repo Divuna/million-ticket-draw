@@ -638,6 +638,42 @@ export type Database = {
         }
         Relationships: []
       }
+      cookie_consents: {
+        Row: {
+          analytics: boolean | null
+          consent_given_at: string | null
+          id: string
+          ip_address: string | null
+          marketing: boolean | null
+          necessary: boolean | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          analytics?: boolean | null
+          consent_given_at?: string | null
+          id?: string
+          ip_address?: string | null
+          marketing?: boolean | null
+          necessary?: boolean | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          analytics?: boolean | null
+          consent_given_at?: string | null
+          id?: string
+          ip_address?: string | null
+          marketing?: boolean | null
+          necessary?: boolean | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       cron_audit_log: {
         Row: {
           executed_at: string
