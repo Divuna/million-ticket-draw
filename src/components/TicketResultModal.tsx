@@ -220,7 +220,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       try {
         const { data, error } = await supabase
           .from('bonus_prizes')
-          .select('id, title, description, amount, status')
+          .select('id, title, description, detailed_description, image_url, amount, status')
           .eq('contest_id', contestId)
           .eq('ticket_position', result.ticket_number)
           .maybeSingle();
