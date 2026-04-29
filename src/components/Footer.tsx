@@ -78,6 +78,21 @@ export const Footer: React.FC = () => {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link to="/vop" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
+                  VOP
+                </Link>
+              </li>
+              <li>
+                <Link to="/gdpr" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
+                  GDPR
+                </Link>
+              </li>
+              <li>
+                <Link to="/pravidla-souteze" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
+                  Pravidla soutěže
+                </Link>
+              </li>
             </ul>
           </div>
 

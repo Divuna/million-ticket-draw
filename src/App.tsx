@@ -55,6 +55,7 @@ import AdminContentPages from "@/pages/AdminContentPages";
 import AdminLegalAcceptances from "@/pages/AdminLegalAcceptances";
 import AdminOnboardingIncomplete from "@/pages/AdminOnboardingIncomplete";
 import ContentPage from "@/pages/ContentPage";
+import SlugContentPage from "@/pages/SlugContentPage";
 import OneMilAudit from "@/pages/OneMilAudit";
 import Winners from "@/pages/Winners";
 import Wins from "@/pages/Wins";
@@ -567,6 +568,9 @@ function AppContent() {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsConditions />} />
           <Route path="/kontakt" element={<Kontakt />} />
+          <Route path="/vop" element={<SlugContentPage slug="vop" />} />
+          <Route path="/gdpr" element={<SlugContentPage slug="gdpr" />} />
+          <Route path="/pravidla-souteze" element={<SlugContentPage slug="pravidla-souteze" />} />
           <Route path="/:section/:slug" element={<ContentPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
