@@ -19,7 +19,20 @@ declare global {
     gtag?: (...args: unknown[]) => void;
     dataLayer: unknown[];
     __gtmLoaded?: boolean;
+    fbq?: ((...args: unknown[]) => void) & { loaded?: boolean };
+    __fbPixelInitialized?: boolean;
   }
+}
+
+const META_PIXEL_ID = '1412172897183369';
+
+function initMetaPixelOnce() {
+  if (typeof window === 'undefined') return;
+  if (window.__fbPixelInitialized) return;
+  if (typeof window.fbq !== 'function') return;
+  window.__fbPixelInitialized = true;
+  window.fbq('init', META_PIXEL_ID);
+  window.fbq('track', 'PageView');
 }
 
 export function readConsent(): Consent | null {
