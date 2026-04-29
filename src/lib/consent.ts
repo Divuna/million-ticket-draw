@@ -92,6 +92,11 @@ export function applyConsent(c: Consent) {
     if (c.analytics || c.marketing) {
       loadGtmOnce();
     }
+
+    // Meta Pixel: init + PageView only after marketing consent is granted.
+    if (c.marketing) {
+      initMetaPixelOnce();
+    }
   } catch (e) {
     console.error('[consent] applyConsent failed', e);
   }
