@@ -4,6 +4,7 @@ import { Facebook, Twitter, Instagram } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useFooterLinks } from '@/hooks/useFooterLinks';
+import { openConsentSettings } from '@/lib/consent';
 
 export const Footer: React.FC = () => {
   const { user } = useAuth();
@@ -145,6 +146,14 @@ export const Footer: React.FC = () => {
           <div className="text-sm text-muted-foreground">© 2024 iCONIC POINT s.r.o. Všechna práva vyhrazena.</div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <Link to="/kontakt" className="hover:text-neon-gold transition-colors">Kontakt</Link>
+            <span className="text-border">•</span>
+            <button
+              type="button"
+              onClick={openConsentSettings}
+              className="hover:text-neon-gold transition-colors"
+            >
+              Nastavení cookies
+            </button>
             <span className="text-border">•</span>
             <span>Česká republika</span>
             <span className="text-border">•</span>
