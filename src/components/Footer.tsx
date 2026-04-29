@@ -67,32 +67,34 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Legal Terms - from CMS */}
+          {/* Legal Terms - from CMS (deduped + URL overrides) */}
           <div className="space-y-4">
             <h4 className="font-semibold text-base text-foreground">Právní podmínky</h4>
             <ul className="space-y-2.5 text-sm">
-              {links.legal.map((page) => (
-                <li key={page.id}>
-                  <Link to={`/${page.section}/${page.slug}`} className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
-                    {page.title}
-                  </Link>
-                </li>
-              ))}
-              <li>
-                <Link to="/vop" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
-                  VOP
-                </Link>
-              </li>
-              <li>
-                <Link to="/gdpr" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
-                  GDPR
-                </Link>
-              </li>
-              <li>
-                <Link to="/pravidla-souteze" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
-                  Pravidla soutěže
-                </Link>
-              </li>
+              {(() => {
+                // Allowed slugs with their final URL + display title.
+                // Order here defines render order.
+                const legalConfig: Array<{ slug: string; href: string; title: string }> = [
+                  { slug: 'autorska-prava', href: '/legal/autorska-prava', title: 'Autorská práva' },
+                  { slug: 'ochrana-osobnich-udaju', href: '/legal/ochrana-osobnich-udaju', title: 'Ochrana osobních údajů' },
+                  { slug: 'pravidla-souteze', href: '/pravidla-souteze', title: 'Pravidla soutěže' },
+                  { slug: 'obchodni-podminky', href: '/vop', title: 'Všeobecné obchodní podmínky' },
+                  { slug: 'cookies', href: '/legal/cookies', title: 'Zásady použití cookies' },
+                ];
+                const availableSlugs = new Set(links.legal.map((p) => p.slug));
+                return legalConfig
+                  .filter((entry) => availableSlugs.has(entry.slug))
+                  .map((entry) => (
+                    <li key={entry.slug}>
+                      <Link
+                        to={entry.href}
+                        className="text-muted-foreground hover:text-neon-gold transition-colors duration-200"
+                      >
+                        {entry.title}
+                      </Link>
+                    </li>
+                  ));
+              })()}
             </ul>
           </div>
 
