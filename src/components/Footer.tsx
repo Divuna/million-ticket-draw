@@ -78,12 +78,11 @@ export const Footer: React.FC = () => {
                   { slug: 'autorska-prava', href: '/legal/autorska-prava', title: 'Autorská práva' },
                   { slug: 'ochrana-osobnich-udaju', href: '/legal/ochrana-osobnich-udaju', title: 'Ochrana osobních údajů' },
                   { slug: 'pravidla-souteze', href: '/pravidla-souteze', title: 'Pravidla soutěže' },
-                  { slug: 'obchodni-podminky', href: '/vop', title: 'Všeobecné obchodní podmínky' },
+                  { slug: 'vop', href: '/vop', title: 'Všeobecné obchodní podmínky' },
+                  { slug: 'gdpr', href: '/gdpr', title: 'Zásady zpracování osobních údajů (GDPR)' },
                   { slug: 'cookies', href: '/legal/cookies', title: 'Zásady použití cookies' },
                 ];
-                const availableSlugs = new Set(links.legal.map((p) => p.slug));
                 return legalConfig
-                  .filter((entry) => availableSlugs.has(entry.slug))
                   .map((entry) => (
                     <li key={entry.slug}>
                       <Link
