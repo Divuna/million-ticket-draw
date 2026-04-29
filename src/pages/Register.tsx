@@ -49,7 +49,7 @@ const Register: React.FC = () => {
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-    return age >= 15;
+    return age >= 18;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,7 +62,7 @@ const Register: React.FC = () => {
     }
 
     if (!validateAge(dateOfBirth)) {
-      setDateOfBirthError('Pro registraci musíte mít alespoň 15 let.');
+      setDateOfBirthError('Pro registraci musíte mít alespoň 18 let.');
       return;
     }
     
