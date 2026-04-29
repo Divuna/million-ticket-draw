@@ -1833,7 +1833,7 @@ export const AdminContestManagement: React.FC = () => {
       ] = await Promise.all([
         supabase
           .from("contests")
-          .select("id, title, description, main_prize, main_image, status, ticket_count, ticket_price, total_miocoin_bonus, created_at, updated_at, fast_game")
+          .select("id, title, description, rules, main_prize, main_image, status, ticket_count, ticket_price, total_miocoin_bonus, created_at, updated_at, fast_game")
           .order("created_at", { ascending: false }),
         supabase.from("contest_progress").select("contest_id, tickets_sold, tickets_remaining, sold_percent"),
         supabase.from("contest_revenue").select("contest_id, estimated_revenue"),
