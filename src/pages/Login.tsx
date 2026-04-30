@@ -77,9 +77,14 @@ const Login: React.FC = () => {
       const { error } = await signIn(email.trim(), password);
 
       if (error) {
+        const isEmailNotConfirmed =
+          error.message?.toLowerCase().includes("email not confirmed") ||
+          (error as any)?.code === "email_not_confirmed";
         toast({
           title: "Chyba přihlášení",
-          description: error.message,
+          description: isEmailNotConfirmed
+            ? "Váš e-mail ještě nebyl potvrzen. Zkontrolujte svou e-mailovou schránku a klikněte na potvrzovací odkaz."
+            : error.message,
           variant: "destructive",
         });
       } else {
