@@ -46,6 +46,7 @@ interface ContestData {
   title: string;
   description: string | null;
   rules: string | null;
+  rules_pdf_url: string | null;
   main_prize: string;
   main_image: string | null;
   status: string;
@@ -71,6 +72,8 @@ interface ContestFormData {
   title: string;
   description: string;
   rules: string;
+  rules_pdf_file: File | null;
+  rules_pdf_url: string;
   main_prize: string;
   ticket_count: number;
   ticket_price: number;
@@ -127,6 +130,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     title: "",
     description: "",
     rules: "",
+    rules_pdf_file: null,
+    rules_pdf_url: "",
     main_prize: "",
     ticket_count: 1000000,
     ticket_price: 1,
@@ -187,6 +192,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         title: editingContest.title || "",
         description: editingContest.description || "",
         rules: editingContest.rules || "",
+        rules_pdf_file: null,
+        rules_pdf_url: editingContest.rules_pdf_url || "",
         main_prize: editingContest.main_prize || "",
         ticket_count: editingContest.ticket_count || 1000000,
         ticket_price: editingContest.ticket_price || 1,
@@ -207,6 +214,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         title: "",
         description: "",
         rules: "",
+        rules_pdf_file: null,
+        rules_pdf_url: "",
         main_prize: "",
         ticket_count: 1000000,
         ticket_price: 1,
@@ -987,6 +996,24 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       return;
     }
 
+    // Required: rules PDF (either freshly selected or already uploaded for an existing contest)
+    if (!form.rules_pdf_file && !form.rules_pdf_url) {
+      toast({
+        title: "Chyba",
+        description: "Nahrajte prosím pravidla soutěže ve formátu PDF",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (form.rules_pdf_file && form.rules_pdf_file.type !== "application/pdf") {
+      toast({
+        title: "Chyba",
+        description: "Nahrajte prosím pravidla soutěže ve formátu PDF",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Normalize + validate ticket_count before submit (debug + guard against defaulting to 1,000,000)
     console.log("[AdminContestManagement] submit form.ticket_count:", form.ticket_count);
     const normalizedTicketCount = Number(form.ticket_count);
@@ -1061,6 +1088,30 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
         // Always persist rules (RPC does not handle this column)
         additionalUpdates.rules = form.rules.trim() ? form.rules : null;
+
+        // Upload contest rules PDF if a new file was selected
+        if (form.rules_pdf_file) {
+          const filePath = `${contestId}-rules.pdf`;
+          const { error: uploadError } = await supabase.storage
+            .from("contest-rules")
+            .upload(filePath, form.rules_pdf_file, {
+              contentType: "application/pdf",
+              upsert: true,
+            });
+          if (uploadError) {
+            console.error("Error uploading rules PDF:", uploadError);
+            toast({
+              title: "Chyba",
+              description: `Nepodařilo se nahrát PDF s pravidly: ${uploadError.message}`,
+              variant: "destructive",
+            });
+            setSaving(false);
+            return;
+          }
+          const { data: pub } = supabase.storage.from("contest-rules").getPublicUrl(filePath);
+          // Cache-bust so the new file is fetched immediately
+          additionalUpdates.rules_pdf_url = `${pub.publicUrl}?t=${Date.now()}`;
+        }
 
         // Handle secondary/detail image (hero layout) - manual upload only
         if (form.detail_image_file) {
@@ -1327,13 +1378,28 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               </div>
 
               <div>
-                <Label>Pravidla soutěže</Label>
-                <Textarea
-                  value={form.rules}
-                  onChange={handleChange("rules")}
-                  placeholder="Volitelná pravidla soutěže…"
-                  rows={6}
+                <Label>Pravidla soutěže (PDF) <span className="text-red-400">*</span></Label>
+                <Input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setForm((prev) => ({ ...prev, rules_pdf_file: file }));
+                  }}
                 />
+                {form.rules_pdf_url && !form.rules_pdf_file && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Aktuální PDF:{" "}
+                    <a href={form.rules_pdf_url} target="_blank" rel="noopener noreferrer" className="underline text-primary">
+                      Zobrazit
+                    </a>
+                  </p>
+                )}
+                {form.rules_pdf_file && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Vybráno: {form.rules_pdf_file.name}
+                  </p>
+                )}
               </div>
 
               <div className="flex gap-4">
@@ -1850,7 +1916,7 @@ export const AdminContestManagement: React.FC = () => {
       ] = await Promise.all([
         supabase
           .from("contests")
-          .select("id, title, description, rules, main_prize, main_image, status, ticket_count, ticket_price, total_miocoin_bonus, created_at, updated_at, fast_game")
+          .select("id, title, description, rules, rules_pdf_url, main_prize, main_image, status, ticket_count, ticket_price, total_miocoin_bonus, created_at, updated_at, fast_game")
           .order("created_at", { ascending: false }),
         supabase.from("contest_progress").select("contest_id, tickets_sold, tickets_remaining, sold_percent"),
         supabase.from("contest_revenue").select("contest_id, estimated_revenue"),
@@ -1885,6 +1951,7 @@ export const AdminContestManagement: React.FC = () => {
           title: contest.title,
           description: contest.description,
           rules: (contest as any).rules ?? null,
+          rules_pdf_url: (contest as any).rules_pdf_url ?? null,
           main_prize: contest.main_prize,
           main_image: contest.main_image,
           status: contest.status,
