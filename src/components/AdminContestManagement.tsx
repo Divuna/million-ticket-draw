@@ -996,6 +996,24 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       return;
     }
 
+    // Required: rules PDF (either freshly selected or already uploaded for an existing contest)
+    if (!form.rules_pdf_file && !form.rules_pdf_url) {
+      toast({
+        title: "Chyba",
+        description: "Nahrajte prosím pravidla soutěže ve formátu PDF",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (form.rules_pdf_file && form.rules_pdf_file.type !== "application/pdf") {
+      toast({
+        title: "Chyba",
+        description: "Nahrajte prosím pravidla soutěže ve formátu PDF",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Normalize + validate ticket_count before submit (debug + guard against defaulting to 1,000,000)
     console.log("[AdminContestManagement] submit form.ticket_count:", form.ticket_count);
     const normalizedTicketCount = Number(form.ticket_count);
