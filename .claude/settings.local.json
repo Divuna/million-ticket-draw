@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(ls:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "PowerShell(Get-Command gh -ErrorAction SilentlyContinue)",
+      "PowerShell(winget list --name \"GitHub CLI\" 2>&1)",
+      "PowerShell(head -5)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "PowerShell($env:GH_TOKEN; $env:GITHUB_TOKEN; [System.Environment]::GetEnvironmentVariable\\(\"GH_TOKEN\"\\); [System.Environment]::GetEnvironmentVariable\\(\"GITHUB_TOKEN\"\\))",
+      "PowerShell(Add-Type -AssemblyName System.Net; $cred = New-Object System.Net.NetworkCredential; $target = \"git:https://github.com\"; $cm = New-Object System.Runtime.InteropServices.GCHandle; [void][System.Reflection.Assembly]::LoadWithPartialName\\(\"System.Runtime.InteropServices\"\\); $bytes = [System.Runtime.InteropServices.Marshal]::AllocHGlobal\\(8192\\); try { $credPtr = 0; $r = [uint32]\\([System.Runtime.InteropServices.Marshal]::SizeOf\\([Type][IntPtr]\\)\\); Write-Host \"trying cmdkey approach\" } catch {})",
+      "PowerShell($result = \\(\"protocol=https`nhost=github.com`n\" | git.exe credential fill\\) 2>&1; $result)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

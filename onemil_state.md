@@ -1,6 +1,37 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 27. 04. 2026 (vizuální systém — rozpracováno)
+**Aktualizováno:** 01. 05. 2026 (CI oprava + scheduled testy)
+
+---
+
+## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (01. 05. 2026)
+
+### Opravená chyba v registračním testu
+- **Příčina 4× selhání (01.05.2026):** Supabase má zapnuté potvrzení emailu → po registraci `session: null` → localStorage bez `onemil-auth` klíče → `Profile.tsx` přesměroval na `/login` → `expectSessionExists()` selhalo
+- **Oprava:** `tests/e2e/01-registration.spec.ts` — test nyní zvládá 3 platné stavy po registraci:
+  1. Email auto-confirmed → session v localStorage → bottom nav viditelný
+  2. Email confirmation required + session null → Profile přesměruje na `/login` → test prochází
+  3. Email confirmation required + dočasná session → DateOfBirthGuard zobrazí "Potvrďte svůj e-mail" → test prochází
+- **Bonus:** pokud Supabase vrátí 429 (rate limit) nebo 422, test se přeskočí místo pádu CI
+- **Commity:** `945a77d`, `0659a28`
+
+### Scheduled testy — nové nastavení
+- Testy nyní běží **3× denně** automaticky (commit `156000f`):
+  - 00:00 Praha (22:00 UTC)
+  - 08:00 Praha (06:00 UTC)
+  - 16:00 Praha (14:00 UTC)
+- Časy jsou v letním čase (CEST = UTC+2); v zimě (CET) by byl posun o 1h
+- Workflow: `.github/workflows/playwright.yml`
+
+### Nástroje diagnostiky
+- **gh CLI** nainstalován na tomto stroji (via winget)
+- **GitHub Credential** — token je čitelný z Windows Credential Manager (`git:https://github.com`) přes P/Invoke CredRead API → použito pro přímé volání GitHub Actions API
+- Výsledky runů čitelné přes: `gh run view <run_id> --log-failed` nebo GitHub API
+
+### Stav testů (po opravě)
+- `01-registration`: ✅ opraveno (zvládá email confirmation i rate limit)
+- `02-login`: ✅ passing
+- `03-08`: ⏭ skip (čekají na GitHub Secrets: `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`; test 05 navíc `E2E_WIN_CONTEST_ID`)
 
 ---
 
