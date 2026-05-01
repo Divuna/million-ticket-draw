@@ -1894,6 +1894,7 @@ export const AdminContestManagement: React.FC = () => {
           title: contest.title,
           description: contest.description,
           rules: (contest as any).rules ?? null,
+          rules_pdf_url: (contest as any).rules_pdf_url ?? null,
           main_prize: contest.main_prize,
           main_image: contest.main_image,
           status: contest.status,
