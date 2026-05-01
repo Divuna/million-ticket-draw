@@ -1089,6 +1089,30 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         // Always persist rules (RPC does not handle this column)
         additionalUpdates.rules = form.rules.trim() ? form.rules : null;
 
+        // Upload contest rules PDF if a new file was selected
+        if (form.rules_pdf_file) {
+          const filePath = `${contestId}-rules.pdf`;
+          const { error: uploadError } = await supabase.storage
+            .from("contest-rules")
+            .upload(filePath, form.rules_pdf_file, {
+              contentType: "application/pdf",
+              upsert: true,
+            });
+          if (uploadError) {
+            console.error("Error uploading rules PDF:", uploadError);
+            toast({
+              title: "Chyba",
+              description: `Nepodařilo se nahrát PDF s pravidly: ${uploadError.message}`,
+              variant: "destructive",
+            });
+            setSaving(false);
+            return;
+          }
+          const { data: pub } = supabase.storage.from("contest-rules").getPublicUrl(filePath);
+          // Cache-bust so the new file is fetched immediately
+          additionalUpdates.rules_pdf_url = `${pub.publicUrl}?t=${Date.now()}`;
+        }
+
         // Handle secondary/detail image (hero layout) - manual upload only
         if (form.detail_image_file) {
           const detailPath = await handleImageUpload(form.detail_image_file);
