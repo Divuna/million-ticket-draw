@@ -460,7 +460,7 @@ export default function ContestDetail() {
       try {
         const { data: contestData, error: contestError } = await supabase
           .from("contests")
-          .select("id, title, description, rules, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, fast_game")
+          .select("id, title, description, rules, rules_pdf_url, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, fast_game")
           .eq("id", id)
           .maybeSingle();
 
