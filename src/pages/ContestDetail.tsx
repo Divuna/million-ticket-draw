@@ -32,6 +32,7 @@ type Contest = {
   title: string;
   description: string | null;
   rules: string | null;
+  rules_pdf_url: string | null;
   main_prize: string | null;
   ticket_price: number;
   status: string;
