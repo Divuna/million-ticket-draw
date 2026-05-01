@@ -1004,15 +1004,27 @@ export default function ContestDetail() {
       </section>
 
       {/* CONTEST RULES */}
-      {contest.rules && contest.rules.trim() && (
+      {(contest.rules_pdf_url || (contest.rules && contest.rules.trim())) && (
         <section className="relative z-10 px-4 py-12 max-w-4xl mx-auto">
           <div className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-6 md:p-8">
             <h2 className="text-2xl md:text-3xl font-bold mb-4 text-heading-gold">
               Pravidla soutěže
             </h2>
-            <div className="text-white/80 whitespace-pre-wrap leading-relaxed">
-              {contest.rules}
-            </div>
+            {contest.rules_pdf_url && (
+              <a
+                href={contest.rules_pdf_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 px-5 py-2.5 text-sm font-semibold text-black shadow-lg hover:from-amber-400 hover:to-yellow-300 transition mb-4"
+              >
+                📄 Stáhnout pravidla soutěže
+              </a>
+            )}
+            {contest.rules && contest.rules.trim() && (
+              <div className="text-white/80 whitespace-pre-wrap leading-relaxed">
+                {contest.rules}
+              </div>
+            )}
           </div>
         </section>
       )}
