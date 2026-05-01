@@ -130,6 +130,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     title: "",
     description: "",
     rules: "",
+    rules_pdf_file: null,
+    rules_pdf_url: "",
     main_prize: "",
     ticket_count: 1000000,
     ticket_price: 1,
