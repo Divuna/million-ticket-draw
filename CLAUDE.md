@@ -223,3 +223,13 @@ Rules:
 - NEVER skip push after confirmed fix
 
 ---
+
+## State/History auto-commit rule
+
+Po každém zápisu do `onemil_state.md` nebo `onemil_history.md` automaticky spusť:
+
+```sh
+git add -A && git commit -m "update state" && git push origin main
+```
+
+Toto pravidlo platí vždy, bez výjimky — nikdy nenechávej state/history změny bez commitu a pushe.
