@@ -46,6 +46,7 @@ interface ContestData {
   title: string;
   description: string | null;
   rules: string | null;
+  rules_pdf_url: string | null;
   main_prize: string;
   main_image: string | null;
   status: string;
