@@ -1336,13 +1336,28 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               </div>
 
               <div>
-                <Label>Pravidla soutěže</Label>
-                <Textarea
-                  value={form.rules}
-                  onChange={handleChange("rules")}
-                  placeholder="Volitelná pravidla soutěže…"
-                  rows={6}
+                <Label>Pravidla soutěže (PDF) <span className="text-red-400">*</span></Label>
+                <Input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setForm((prev) => ({ ...prev, rules_pdf_file: file }));
+                  }}
                 />
+                {form.rules_pdf_url && !form.rules_pdf_file && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Aktuální PDF:{" "}
+                    <a href={form.rules_pdf_url} target="_blank" rel="noopener noreferrer" className="underline text-primary">
+                      Zobrazit
+                    </a>
+                  </p>
+                )}
+                {form.rules_pdf_file && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Vybráno: {form.rules_pdf_file.name}
+                  </p>
+                )}
               </div>
 
               <div className="flex gap-4">
