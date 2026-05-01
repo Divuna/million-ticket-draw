@@ -192,6 +192,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         title: editingContest.title || "",
         description: editingContest.description || "",
         rules: editingContest.rules || "",
+        rules_pdf_file: null,
+        rules_pdf_url: editingContest.rules_pdf_url || "",
         main_prize: editingContest.main_prize || "",
         ticket_count: editingContest.ticket_count || 1000000,
         ticket_price: editingContest.ticket_price || 1,
