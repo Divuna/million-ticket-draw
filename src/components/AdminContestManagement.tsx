@@ -72,6 +72,8 @@ interface ContestFormData {
   title: string;
   description: string;
   rules: string;
+  rules_pdf_file: File | null;
+  rules_pdf_url: string;
   main_prize: string;
   ticket_count: number;
   ticket_price: number;
