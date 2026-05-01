@@ -589,6 +589,7 @@ export type Database = {
           name: string
           next_ticket_number: number
           rules: string | null
+          rules_pdf_url: string | null
           status: string
           ticket_count: number
           ticket_price: number
@@ -609,6 +610,7 @@ export type Database = {
           name?: string
           next_ticket_number?: number
           rules?: string | null
+          rules_pdf_url?: string | null
           status?: string
           ticket_count?: number
           ticket_price?: number
@@ -629,6 +631,7 @@ export type Database = {
           name?: string
           next_ticket_number?: number
           rules?: string | null
+          rules_pdf_url?: string | null
           status?: string
           ticket_count?: number
           ticket_price?: number
