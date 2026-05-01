@@ -14,6 +14,29 @@
 
 ---
 
+## 2026-04-27 — Vizuální systém: brand aplikace a zmírnění zlaté (nedokončeno)
+
+### Kontext
+Proběhla analýza stavu větví a vizuálních změn. Bylo zjištěno, že brand změny z předchozí práce (Poppins, Energy Orange) nikdy nebyly mergovány do `main` — zůstaly izolované na větvi `claude/setup-playwright-tests-bShrg`.
+
+### Co proběhlo
+**Analýza větví:**
+- Větev `claude/setup-playwright-tests-bShrg` obsahuje commity `d6d4597` + `25e87dd`: Poppins font, Energy Orange CSS proměnné, orange bordery/gradienty na ContestCard + ContestDetail.
+- Tyto commity nikdy neprošly do `main`.
+
+**Vizuální zmírnění na `claude/thirsty-volhard-e1eb7c` (commit `a21ef28`):**
+- Zadání: nesnižovat layout/strukturu, pouze vizuálně zmírnit — méně intenzivní zlatá, dark overlay, soft rgba bordery, potlačení glow efektů.
+- Změněné soubory: `src/index.css`, `src/components/ContestCard.css`, `src/components/ContestCard.tsx`, `src/components/MioCoin.tsx`
+- Klíčová změna: `--neon-gold` přesunut z jasné zlaté (`43 90% 55%`) na tlumenou amber-oranžovou (`33 70% 44%`); glow opacity snížena ~50 %; bordery → `rgba(191,198,207,0.16)`; progress bar → `#C07018/#884A08`.
+- Pushnuté na remote, nemergnuto do `main`.
+
+### Stav na konci dne
+- Grafika je **nedokončená**.
+- Probíhá testování funkčnosti systému (platební pipeline, tiket purchase, contest flow) — grafika se dořeší až po ověření funkčnosti.
+- Otevřená otázka: která větev se merguje do `main` (nebo cherry-pick obou sad změn).
+
+---
+
 ## 2026-02-08 — Partner Offers v1: reminder automation
 - Edge Function `supabase/functions/send-offer-reminders/index.ts` present (documented as "Block F — send-offer-reminders").
 - Uses DB RPC `get_due_offer_reminder_rows()` and updates `user_partner_offers.last_reminder_at`.

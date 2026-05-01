@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OneMil – Contest Detail Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0f; color: #fff; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px;
+    background: rgba(10,10,15,0.95);
+    border-bottom: 1px solid rgba(212,160,23,0.15);
+  }
+  .header-logo { font-size: 18px; font-weight: 800; color: #d4a017; letter-spacing: 0.05em; }
+  .header-back {
+    display: flex; align-items: center; gap: 6px;
+    color: rgba(255,255,255,0.6); font-size: 13px; cursor: pointer;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    padding: 6px 14px; border-radius: 20px;
+  }
+
+  /* ── MAIN BANNER ── */
+  .main-banner {
+    position: relative; width: 100%; height: 280px; overflow: hidden;
+  }
+  .main-banner-img {
+    width: 100%; height: 100%; object-fit: cover; object-position: center;
+    background: linear-gradient(135deg, #1a0f02 0%, #2d1a04 40%, #0a0a0f 100%);
+  }
+  .main-banner-gradient {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 10%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.85) 100%);
+  }
+  .main-banner-content {
+    position: absolute; bottom: 0; left: 0; right: 0; padding: 20px;
+  }
+  .prize-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em;
+    color: #d4a017; font-weight: 600; margin-bottom: 6px;
+  }
+  .prize-title {
+    font-size: 26px; font-weight: 800; color: #fff;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.6); line-height: 1.15; margin-bottom: 10px;
+  }
+  .live-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(220,50,50,0.85); color: #fff;
+    font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+  }
+  .live-dot { width: 6px; height: 6px; background: #fff; border-radius: 50%; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── GALLERY THUMBNAILS ── */
+  .gallery-strip {
+    display: flex; gap: 8px; padding: 12px 16px; overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .gallery-strip::-webkit-scrollbar { display: none; }
+  .gallery-thumb {
+    flex-shrink: 0; width: 60px; height: 44px; border-radius: 8px;
+    background: linear-gradient(135deg, #2a1a04, #1a0a0f);
+    border: 2px solid rgba(212,160,23,0.25);
+    overflow: hidden;
+  }
+  .gallery-thumb.active { border-color: #d4a017; box-shadow: 0 0 10px rgba(212,160,23,0.4); }
+  .gallery-thumb-img { width: 100%; height: 100%; object-fit: cover; background: #1a1205; }
+
+  /* ── INFO GRID (3 small tiles) ── */
+  .info-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
+    padding: 0 16px 12px;
+  }
+  .info-tile {
+    background: rgba(15,12,5,0.95);
+    border: 2px solid rgba(212,160,23,0.3);
+    border-radius: 14px; padding: 12px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .info-tile-label {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.4);
+  }
+  .info-tile-value { font-size: 15px; font-weight: 700; color: #d4a017; line-height: 1.1; }
+  .info-tile-sub { font-size: 9px; color: rgba(255,255,255,0.3); }
+
+  /* ── CTA BUTTON ── */
+  .cta-row { padding: 0 16px 14px; display: flex; gap: 10px; }
+  .btn-primary {
+    flex: 1; height: 48px;
+    background: linear-gradient(135deg, #d4a017 0%, #b8860b 100%);
+    color: #0a0a0f; font-weight: 800; font-size: 15px; border: none;
+    border-radius: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 0 20px rgba(212,160,23,0.35);
+  }
+  .btn-secondary {
+    height: 48px; padding: 0 18px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.7); font-size: 14px; font-weight: 600;
+    border-radius: 24px; cursor: pointer;
+  }
+
+  /* ── SECTION HEADER ── */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 16px 10px;
+  }
+  .section-title {
+    font-size: 13px; font-weight: 700; color: #d4a017;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .section-badge {
+    background: rgba(212,160,23,0.15); color: #d4a017;
+    font-size: 10px; padding: 2px 8px; border-radius: 10px;
+  }
+
+  /* ── MOSAIC GRID ── */
+  .mosaic-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    padding: 0 16px 14px;
+  }
+  .mosaic-tile {
+    position: relative; border-radius: 16px; overflow: hidden;
+    border: 2px solid rgba(212,160,23,0.3);
+    height: 140px;
+    background: linear-gradient(135deg, #1a0f02 0%, #0a0a0f 100%);
+  }
+  .mosaic-tile.wide { grid-column: span 2; height: 120px; }
+  .mosaic-tile-gradient {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.75) 100%);
+  }
+  .mosaic-tile-content {
+    position: absolute; bottom: 0; left: 0; right: 0; padding: 10px 12px;
+  }
+  .mosaic-tile-label { font-size: 9px; color: rgba(212,160,23,0.8); text-transform: uppercase; letter-spacing: 0.1em; }
+  .mosaic-tile-value { font-size: 13px; font-weight: 700; color: #fff; line-height: 1.2; }
+  .mosaic-tile-sub { font-size: 10px; color: rgba(255,255,255,0.5); }
+  .mosaic-tile-icon {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(0,0,0,0.4); border-radius: 50%; width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  /* ── FAKE IMAGES ── */
+  .img-car { background: linear-gradient(135deg, #1a0d00 0%, #3d2000 40%, #1a0d00 100%); }
+  .img-watch { background: linear-gradient(135deg, #0d1a20 0%, #1a3040 40%, #0d1a20 100%); }
+  .img-cash { background: linear-gradient(135deg, #001a0d 0%, #003d20 40%, #001a0d 100%); }
+  .img-tech { background: linear-gradient(135deg, #0d0020 0%, #200040 40%, #0d0020 100%); }
+  .img-main { background: linear-gradient(135deg, #1a0d00 0%, #3d2000 60%, #1a0d00 100%); }
+
+  /* Fake car shape */
+  .img-car::after {
+    content: '🏎'; position: absolute; font-size: 48px;
+    top: 50%; left: 50%; transform: translate(-50%,-50%); opacity: 0.6;
+  }
+  .img-watch::after { content: '⌚'; position: absolute; font-size: 48px; top: 50%; left: 50%; transform: translate(-50%,-50%); opacity: 0.6; }
+  .img-cash::after { content: '💰'; position: absolute; font-size: 36px; top: 50%; left: 50%; transform: translate(-50%,-50%); opacity: 0.6; }
+  .img-tech::after { content: '📱'; position: absolute; font-size: 36px; top: 50%; left: 50%; transform: translate(-50%,-50%); opacity: 0.6; }
+
+  /* ── DIVIDER ── */
+  .divider { height: 1px; background: rgba(212,160,23,0.1); margin: 4px 16px; }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(10,10,15,0.97); border-top: 1px solid rgba(212,160,23,0.15);
+    display: flex; padding: 10px 0 20px;
+  }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 10px; color: rgba(255,255,255,0.4); cursor: pointer;
+  }
+  .nav-item.active { color: #d4a017; }
+  .nav-icon { font-size: 20px; }
+
+  .page { max-width: 420px; margin: 0 auto; padding-bottom: 80px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-back">← Soutěže</div>
+    <div class="header-logo">OneMil</div>
+    <div style="width:80px"></div>
+  </div>
+
+  <!-- Main Banner -->
+  <div class="main-banner">
+    <div class="main-banner-img img-main" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:100px;opacity:0.4">🏎</div>
+    <div class="main-banner-gradient"></div>
+    <div class="main-banner-content">
+      <div class="prize-label">🏆 Hlavní výhra</div>
+      <div class="prize-title">Porsche 911 Carrera<br/>+ 500 000 Kč</div>
+      <div class="live-badge"><div class="live-dot"></div>LIVE · Soutěž aktivní</div>
+    </div>
+  </div>
+
+  <!-- Gallery thumbnails -->
+  <div class="gallery-strip">
+    <div class="gallery-thumb active img-car"></div>
+    <div class="gallery-thumb img-watch"></div>
+    <div class="gallery-thumb img-cash"></div>
+    <div class="gallery-thumb img-tech"></div>
+    <div class="gallery-thumb img-car"></div>
+  </div>
+
+  <!-- Info tiles (wallet / invested / tickets) -->
+  <div class="info-grid">
+    <div class="info-tile">
+      <div class="info-tile-label">Peněženka</div>
+      <div class="info-tile-value">12 500</div>
+      <div class="info-tile-sub">MioCoinů</div>
+    </div>
+    <div class="info-tile">
+      <div class="info-tile-label">Vloženo</div>
+      <div class="info-tile-value">8 240 000</div>
+      <div class="info-tile-sub">MioCoinů</div>
+    </div>
+    <div class="info-tile">
+      <div class="info-tile-label">Ticketů</div>
+      <div class="info-tile-value">824 000</div>
+      <div class="info-tile-sub">z 1 000 000</div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-row">
+    <button class="btn-primary">🎟 Uplatnit 10 MioCoinů</button>
+    <button class="btn-secondary">♡</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Bonus prizes -->
+  <div class="section-header">
+    <div class="section-title">⭐ Bonusové výhry <span class="section-badge">12</span></div>
+  </div>
+
+  <div class="mosaic-grid">
+
+    <!-- Tile 1 – velká bonusová výhra -->
+    <div class="mosaic-tile img-watch" style="position:relative">
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:50px;opacity:0.5">⌚</div>
+      <div class="mosaic-tile-gradient"></div>
+      <div class="mosaic-tile-icon">⭐</div>
+      <div class="mosaic-tile-content">
+        <div class="mosaic-tile-label">Bonus #1 · ticket 50 000</div>
+        <div class="mosaic-tile-value">Rolex Datejust</div>
+      </div>
+    </div>
+
+    <!-- Tile 2 -->
+    <div class="mosaic-tile img-cash" style="position:relative">
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:50px;opacity:0.5">💰</div>
+      <div class="mosaic-tile-gradient"></div>
+      <div class="mosaic-tile-icon">⭐</div>
+      <div class="mosaic-tile-content">
+        <div class="mosaic-tile-label">Bonus #2 · ticket 100 000</div>
+        <div class="mosaic-tile-value">100 000 MioCoinů</div>
+      </div>
+    </div>
+
+    <!-- Tile 3 – wide -->
+    <div class="mosaic-tile wide img-tech" style="position:relative">
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:60px;opacity:0.4">📱</div>
+      <div class="mosaic-tile-gradient"></div>
+      <div class="mosaic-tile-icon">⭐</div>
+      <div class="mosaic-tile-content">
+        <div class="mosaic-tile-label">Bonus #3 · ticket 200 000</div>
+        <div class="mosaic-tile-value">iPhone 16 Pro Max + Apple Watch Ultra</div>
+      </div>
+    </div>
+
+    <!-- Tile 4 -->
+    <div class="mosaic-tile img-car" style="position:relative">
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:50px;opacity:0.5">🏎</div>
+      <div class="mosaic-tile-gradient"></div>
+      <div class="mosaic-tile-icon">⭐</div>
+      <div class="mosaic-tile-content">
+        <div class="mosaic-tile-label">Bonus #4 · ticket 300 000</div>
+        <div class="mosaic-tile-value">Víkend v Ferrari</div>
+      </div>
+    </div>
+
+    <!-- Tile 5 -->
+    <div class="mosaic-tile img-cash" style="position:relative">
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:50px;opacity:0.5">💎</div>
+      <div class="mosaic-tile-gradient"></div>
+      <div class="mosaic-tile-icon">⭐</div>
+      <div class="mosaic-tile-content">
+        <div class="mosaic-tile-label">Bonus #5 · ticket 500 000</div>
+        <div class="mosaic-tile-value">500 000 MioCoinů</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Progress section -->
+  <div class="section-header" style="margin-top:8px">
+    <div class="section-title">📊 Postup soutěže</div>
+  </div>
+  <div style="padding: 0 16px 16px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+      <span style="font-size:12px;color:rgba(255,255,255,0.5)">Prodáno</span>
+      <span style="font-size:12px;color:#d4a017;font-weight:700">824 000 / 1 000 000</span>
+    </div>
+    <div style="width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden">
+      <div style="width:82.4%;height:100%;background:linear-gradient(90deg,#f6e27a,#d4a017);border-radius:4px"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px">
+      <span style="font-size:10px;color:rgba(255,255,255,0.3)">82.4% obsazeno</span>
+      <span style="font-size:10px;color:rgba(255,255,255,0.3)">Zbývá 176 000 ticketů</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom nav -->
+<div class="bottom-nav">
+  <div class="nav-item"><div class="nav-icon">🏠</div>Domů</div>
+  <div class="nav-item active"><div class="nav-icon">🏆</div>Soutěže</div>
+  <div class="nav-item"><div class="nav-icon">🛒</div>Shop</div>
+  <div class="nav-item"><div class="nav-icon">👤</div>Profil</div>
+</div>
+
+</body>
+</html>

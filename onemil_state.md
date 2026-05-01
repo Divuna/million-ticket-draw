@@ -1,6 +1,46 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 24. 04. 2026 (CI & Payment Pipeline stabilization)
+**Aktualizováno:** 27. 04. 2026 (vizuální systém — rozpracováno)
+
+---
+
+## VIZUÁLNÍ SYSTÉM / GRAFIKA — NEDOKONČENO (27. 04. 2026)
+
+### Aktuální situace
+Grafický systém je v přechodném stavu. Momentálně probíhá testování funkčnosti systému (platby, tiket purchase, contest flow). Grafika bude dořešena až po ověření funkčnosti.
+
+### Co bylo uděláno (větev `claude/setup-playwright-tests-bShrg`)
+Commity `d6d4597` a `25e87dd` — **nemergnuto do `main`**:
+- Font nadpisů změněn z `Plus Jakarta Sans` → **Poppins**
+- CSS proměnné `--primary`, `--secondary`, `--accent` přepsány z modré/zlaté na **Energy Orange** (`hsl(32 100% 50%)`)
+- Bordery a gradienty ContestCard a ContestDetail přepsány ze zlaté na oranžovou
+- Progress bary: `#f6e27a/#d4a017` → `#FF8A00/#FFB547`
+
+### Co bylo uděláno (větev `claude/thirsty-volhard-e1eb7c`, commit `a21ef28`)
+Vizuální zmírnění na aktuální větvi — **pushnuté, nemergnuto do `main`**:
+- `src/index.css` — `--neon-gold` z `43 90% 55%` → `33 70% 44%`, stejně `--package-gold`, `--secondary`, `--accent`; `--heading-gold*` sada ztmavena; `--glow-gold` opacity snížena ~50 %; keyframes `luxury-pulse`, `luxury-glow`, `title-glow` — gold opacity snížena; `.text-heading-gold` gradient zmírněn; `.text-neon-gold` text-shadow snížena
+- `src/components/ContestCard.css` — border sweep barvy ze zlaté na tlumenou amber-oranžovou; inner glow opacity snížena
+- `src/components/ContestCard.tsx` — statický border → `rgba(191,198,207,0.16)`; progress bar gradient → `#C07018/#884A08`; CTA button text/border → tlumená amber-oranžová
+- `src/components/MioCoin.tsx` — outer ring gradient ze `yellow-500/40` → `amber-800/25`; shadow opacity snížena
+
+### Co ještě chybí / co je potřeba dořešit
+- [ ] Rozhodnutí: mergovat brand větev (`setup-playwright-tests-bShrg`) nebo aplikovat brand tokeny přímo na `main`
+- [ ] Sjednotit font: `Plus Jakarta Sans` → `Poppins` (nebo potvrdit jiný výběr)
+- [ ] Sjednotit primární barvu: zlatá → Energy Orange `#FF8A00` (nebo potvrdit výsledek zmírnění z `thirsty-volhard`)
+- [ ] Projít stránky: Homepage, Games, ContestDetail, Profile, Vouchers — vizuálně ověřit konzistenci po brand změnách
+- [ ] MioCoin package karty (Vouchers page) — přidat dark overlay, ověřit kontrast
+- [ ] Otestovat v prohlížeči na localhost:8080/8081 a schválit výsledek před mergem
+
+### Větve relevantní pro grafiku
+| Větev | Co obsahuje | Stav |
+|---|---|---|
+| `claude/setup-playwright-tests-bShrg` | Poppins + Energy Orange (úplná brand aplikace) | Hotovo, nemergnuto |
+| `claude/thirsty-volhard-e1eb7c` | Zmírnění zlaté, soft rgba bordery | Hotovo, nemergnuto |
+| `main` | Původní zlatá/modrá paleta | Žádné brand změny |
+
+---
+
+**Aktualizováno (předchozí):** 24. 04. 2026 (CI & Payment Pipeline stabilization)
 
 ---
 

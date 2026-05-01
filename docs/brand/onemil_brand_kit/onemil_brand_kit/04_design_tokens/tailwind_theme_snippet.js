@@ -1,0 +1,2 @@
+// OneMil Tailwind theme snippet — merge into existing config only after review
+module.exports={theme:{extend:{fontFamily:{heading:['Poppins','system-ui','sans-serif'],sans:['Inter','system-ui','sans-serif']},colors:{om:{black:'#0A0B0F',navy:'#101722',graphite:'#1D2128',platinum:'#E7EBF0',silver:'#BFC6CF',muted:'#8E98A6',orange:'#FF8A00',amber:'#FFB547',gold:'#D8BA78'}},boxShadow:{'om-glow':'0 0 24px rgba(255, 138, 0, 0.20)','om-card':'0 18px 50px rgba(0,0,0,0.35)'}}}};

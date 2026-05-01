@@ -1,0 +1,6 @@
+I want to apply the final OneMil brand style to the existing app UI. It should include:
+1. Use Poppins for headings, Inter for body/UI text, and the approved dark premium tech-luxury color system with orange as the main accent.
+2. Apply the approved OneMil logo usage consistently in header, app navigation, hero area and key brand placements without changing app logic.
+3. Keep the existing routes, tables, payments, contests, tickets, wallet, winners and Partner Offers logic unchanged; only improve visual consistency.
+
+Ensure to use best practices. Double-check the already existing code. Changes to other parts of the code must not be made without permission. Lovable must never create new files, rename files, or change UI/graphics unless explicitly specified in the prompt.

@@ -113,6 +113,28 @@ Technical:
 
 ---
 
+## Vizuální systém — NEDOKONČENO (27. 04. 2026)
+
+Grafika je rozpracovaná. Momentálně testujeme funkčnost systému. Grafika se dořeší poté.
+
+**Větve s vizuálními změnami (obě nemergnuto do `main`):**
+- `claude/setup-playwright-tests-bShrg` — Poppins + Energy Orange (commity `d6d4597`, `25e87dd`)
+- `claude/thirsty-volhard-e1eb7c` — zmírnění zlaté, soft rgba bordery (commit `a21ef28`)
+
+**Soubory dotčené vizuálními změnami:**
+- `src/index.css` — CSS proměnné gold → amber-orange, glow opacity snížena
+- `src/components/ContestCard.css` — border sweep a inner glow zmírněny
+- `src/components/ContestCard.tsx` — border, progress bar, CTA button barvy
+- `src/components/MioCoin.tsx` — outer ring gradient, shadow snížena
+
+**Co je potřeba dořešit:**
+- Rozhodnutí o mergi větví do `main`
+- Sjednocení fontu (Poppins vs Plus Jakarta Sans)
+- Vizuální review všech stránek po brand aplikaci
+- Schválení výsledku v prohlížeči před mergem
+
+---
+
 ## Aktuální uzamčený stav (13. 04. 2026, dokumentace synchronizována 20:46:33 +02:00)
 - Dočasný frontend private-access gate v `src/App.tsx` byl odstraněn (2026-04-10); přihlášení a role routing beze změny; `npm run build` ověřen úspěšně.
 - Partner Offers v1 je dokončené, nasazené a prošlo finálním E2E ověřením.

@@ -1,0 +1,40 @@
+{
+  "brand": "OneMil",
+  "tagline": "Luxusní soutěže. Skutečné výhry.",
+  "visual_direction": "dark premium tech-luxury",
+  "fonts": {
+    "headings": "Poppins",
+    "body_ui": "Inter",
+    "google_fonts_import": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap"
+  },
+  "colors": {
+    "midnight_black": "#0A0B0F",
+    "deep_navy": "#101722",
+    "graphite": "#1D2128",
+    "platinum": "#E7EBF0",
+    "silver": "#BFC6CF",
+    "muted_silver": "#8E98A6",
+    "energy_orange": "#FF8A00",
+    "warm_amber": "#FFB547",
+    "soft_gold": "#D8BA78"
+  },
+  "forbidden_terms": [
+    "casino",
+    "hazard",
+    "sázení",
+    "sázka",
+    "jackpot",
+    "žetony",
+    "zbohatni"
+  ],
+  "recommended_terms": [
+    "soutěž",
+    "výhra",
+    "ticket",
+    "MioCoin",
+    "voucher",
+    "luxusní cena",
+    "skutečné výhry",
+    "rychlá hra"
+  ]
+}

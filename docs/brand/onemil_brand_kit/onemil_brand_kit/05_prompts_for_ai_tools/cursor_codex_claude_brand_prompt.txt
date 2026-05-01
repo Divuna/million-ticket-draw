@@ -1,0 +1,17 @@
+Use this as the official OneMil brand manual for all future design and UI work.
+
+OneMil is a premium competition app for CZ/SK users. The brand must feel modern, trustworthy, luxurious and energetic. It must never look like casino, gambling, betting, lottery or cheap “get rich quick” design.
+
+Final visual direction: dark premium tech-luxury.
+Typography: Poppins for headings, Inter for body/UI text.
+Main accent: orange (#FF8A00).
+Base colors: black, dark navy, graphite.
+Premium accents: metallic silver, platinum and subtle champagne/gold.
+
+Primary logo: OneMil wordmark with trophy/number 1 behind or connected to text.
+Secondary logo: trophy/number 1 above OneMil wordmark.
+Icon-only: trophy/number 1 symbol.
+
+Do not use casino, hazard, betting, jackpot, chips, roulette, cards or slot-machine aesthetics.
+Do not change business logic, routes, database, payments, wallet, contests, tickets, winners or Partner Offers unless explicitly requested.
+When applying this manual, only adjust visual styling, typography, colors, spacing, logo usage and brand consistency.

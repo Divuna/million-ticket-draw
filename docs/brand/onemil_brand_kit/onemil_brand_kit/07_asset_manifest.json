@@ -1,0 +1,22 @@
+{
+  "package": "OneMil Brand Kit",
+  "created_files": {
+    "manual_pdf": "01_brand_manual/onemil_brand_manual_text.pdf",
+    "manual_md": "01_brand_manual/onemil_brand_manual_text.md",
+    "primary_logo_source": "02_logos/source/primary_logo_trophy_behind_text.jpg",
+    "secondary_logo_source": "02_logos/source/secondary_logo_trophy_above_text.jpg",
+    "primary_logo_png": "02_logos/png/primary_logo_trophy_behind_text.png",
+    "secondary_logo_png": "02_logos/png/secondary_logo_trophy_above_text.png",
+    "transparent_estimated": [
+      "02_logos/png/primary_logo_trophy_behind_text_transparent_estimated.png",
+      "02_logos/png/secondary_logo_trophy_above_text_transparent_estimated.png",
+      "02_logos/png/icon_symbol_trophy_1_transparent_estimated.png"
+    ],
+    "icons": "03_icons/favicon_app/",
+    "css_tokens": "04_design_tokens/onemil_brand_tokens.css",
+    "tailwind_snippet": "04_design_tokens/tailwind_theme_snippet.js",
+    "ai_prompts": "05_prompts_for_ai_tools/",
+    "web_manifest": "07_web_snippets/manifest.webmanifest"
+  },
+  "note": "Transparent PNGs are estimated from raster images. For final production SVG, vectorize the approved logo in Figma/Illustrator. Do not share font files. Use Google Fonts import for Poppins and Inter."
+}
