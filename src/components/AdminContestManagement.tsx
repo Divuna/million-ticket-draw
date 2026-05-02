@@ -1355,10 +1355,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         if (pendingItems.length > 0) {
           let okCount = 0;
           let failCount = 0;
+          const errorMessages: string[] = [];
           for (const item of pendingItems) {
             try {
               let url = item.url;
-              const file = pendingMediaFiles[item.id];
+              const file = effectivePendingFiles[item.id];
               if (file) {
                 const filePath = `contests/${contestId}/gallery/${Date.now()}-${file.name}`;
                 const { error: uploadError } = await supabase.storage
@@ -1376,16 +1377,18 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               });
               if (insertError) throw insertError;
               okCount++;
-            } catch (err) {
+            } catch (err: any) {
               console.error("Error flushing pending media:", err);
               failCount++;
+              const msg = err?.message || String(err);
+              if (!errorMessages.includes(msg)) errorMessages.push(msg);
             }
           }
           setPendingMediaFiles({});
           if (failCount > 0) {
             toast({
-              title: "Galerie částečně uložena",
-              description: `Uloženo ${okCount}, selhalo ${failCount}. Zkontrolujte galerii v editaci.`,
+              title: "Galerie se neuložila",
+              description: `Uloženo ${okCount}, selhalo ${failCount}. Chyba: ${errorMessages.slice(0, 2).join(" | ")}`,
               variant: "destructive",
             });
           }
