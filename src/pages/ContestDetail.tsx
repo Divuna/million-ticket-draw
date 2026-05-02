@@ -139,6 +139,7 @@ export default function ContestDetail() {
   const [selectedBonusPrize, setSelectedBonusPrize] = useState<BonusPrize | null>(null);
   const [galleryMedia, setGalleryMedia] = useState<{ id: string; contest_id: string; type: string; url: string; sort_order: number | null; created_at: string | null }[]>([]);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
+  const [descExpanded, setDescExpanded] = useState(false);
   
   const { banners: placementBanners } = usePlacementBanners(['vzhled_karta_vyher']);
   const starryBackgroundUrl = placementBanners.vzhled_karta_vyher?.image_url || null;
