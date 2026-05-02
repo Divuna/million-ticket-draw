@@ -2502,7 +2502,14 @@ export const AdminContestManagement: React.FC = () => {
           p_operation: "update",
           p_contest_id: c.contest_id,
           p_status: "draft",
-        });
+          p_title: null,
+          p_description: null,
+          p_main_prize: null,
+          p_main_image: null,
+          p_ticket_count: null,
+          p_ticket_price: null,
+          p_fast_game: null,
+        } as any);
         if (error) {
           console.error("[BulkMoveToDraft] failed:", c.title, c.contest_id, error);
           failed.push({ contest: c, error });
