@@ -1408,8 +1408,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   );
 
   return (
-    <Dialog open={open} onOpenChange={(open) => !open && !saving && onClose()}>
-      <DialogContent className="max-w-4xl w-[95vw] h-[90vh] flex flex-col p-0">
+    <Dialog open={open} onOpenChange={(next) => { if (!next) attemptClose(); }}>
+      <DialogContent
+        className="max-w-4xl w-[95vw] h-[90vh] flex flex-col p-0"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-white/10 shrink-0">
           <DialogTitle>{isEditing ? "Upravit soutěž" : "Vytvořit novou soutěž"}</DialogTitle>
         </DialogHeader>
