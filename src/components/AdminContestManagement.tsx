@@ -2494,10 +2494,25 @@ export const AdminContestManagement: React.FC = () => {
     if (movableSelected.length === 0) return;
     setBulkMoving(true);
     try {
-      const ids = movableSelected.map((c) => c.contest_id);
-      const { error } = await supabase.from("contests").update({ status: "draft" }).in("id", ids);
-      if (error) throw error;
-      toast({ title: "Hotovo", description: `${ids.length} soutěží přesunuto do Archivu test.` });
+      const results = await Promise.all(
+        movableSelected.map((c) =>
+          supabase.rpc("admin_manage_contest", {
+            p_operation: "update",
+            p_contest_id: c.contest_id,
+            p_status: "draft",
+          })
+        )
+      );
+      const failed = results.filter((r) => r.error);
+      if (failed.length > 0) {
+        toast({
+          title: "Částečná chyba",
+          description: `${movableSelected.length - failed.length} přesunuto, ${failed.length} selhalo.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Hotovo", description: `${movableSelected.length} soutěží přesunuto do Archivu test.` });
+      }
       setSelectedIds(new Set());
       await loadContests();
     } catch (err: any) {
