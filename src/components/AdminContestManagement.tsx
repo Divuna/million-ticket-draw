@@ -496,6 +496,18 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     const previousMedia = [...galleryMedia];
     setGalleryMedia((prev) => prev.filter((m) => m.id !== mediaId));
 
+    // Temp items only exist in client state (new contest buffer) — skip DB call
+    if (mediaId.startsWith("temp-")) {
+      setPendingMediaFiles((prev) => {
+        const next = { ...prev };
+        delete next[mediaId];
+        return next;
+      });
+      toast({ title: "Odebráno", description: "Médium bylo odebráno z fronty." });
+      setDeletingMediaId(null);
+      return;
+    }
+
     const { error } = await supabase.from("contest_media").delete().eq("id", mediaId);
     if (error) {
       // Revert on failure
