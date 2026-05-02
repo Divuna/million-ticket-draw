@@ -2495,20 +2495,24 @@ export const AdminContestManagement: React.FC = () => {
     setBulkMoving(true);
     try {
       const results = await Promise.all(
-        movableSelected.map((c) =>
-          supabase.rpc("admin_manage_contest", {
+        movableSelected.map(async (c) => {
+          const res = await supabase.rpc("admin_manage_contest", {
             p_operation: "update",
             p_contest_id: c.contest_id,
             p_status: "draft",
-          })
-        )
+          });
+          return { contest: c, error: res.error };
+        })
       );
       const failed = results.filter((r) => r.error);
-      const succeeded = movableSelected.slice(0, movableSelected.length - failed.length);
+      const succeeded = results.filter((r) => !r.error).map((r) => r.contest);
       if (failed.length > 0) {
+        failed.forEach((f) => console.error("[BulkMoveToDraft] failed:", f.contest.title, f.contest.contest_id, f.error));
+        const failedNames = failed.map((f) => f.contest.title).slice(0, 2).join(", ");
+        const firstErr = failed[0].error?.message || "neznámá chyba";
         toast({
           title: "Částečná chyba",
-          description: `${movableSelected.length - failed.length} přesunuto, ${failed.length} selhalo.`,
+          description: `${succeeded.length} přesunuto. Selhalo (${failed.length}): ${failedNames}. Důvod: ${firstErr}`,
           variant: "destructive",
         });
       } else {
