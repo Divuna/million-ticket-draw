@@ -460,7 +460,7 @@ export default function ContestDetail() {
       try {
         const { data: contestData, error: contestError } = await supabase
           .from("contests")
-          .select("id, title, description, rules, rules_pdf_url, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, fast_game")
+          .select("id, title, description, rules, rules_pdf_url, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, fast_game, total_miocoin_bonus")
           .eq("id", id)
           .maybeSingle();
 
@@ -485,24 +485,18 @@ export default function ContestDetail() {
         const { data: bonusData, error: bonusError } = await supabase
           .from("bonus_prizes")
           .select("*")
-          .eq("contest_id", id);
+          .eq("contest_id", id)
+          .or("amount.is.null,amount.eq.0")
+          .order("ticket_position", { ascending: true });
 
         if (bonusError) {
           console.error('[DEBUG ContestDetail] bonus_prizes fetch error:', bonusError, JSON.stringify(bonusError));
         }
 
-        const allBonusRows = (bonusData ?? []) as BonusPrize[];
-        const physicalOnly = allBonusRows.filter(
-          (b) => b.amount == null || b.amount === 0
-        );
-        console.log('[DEBUG ContestDetail] setBonusPrizes:', physicalOnly.length, 'items');
-        setBonusPrizes(physicalOnly);
-        setMiocoinBonusPoolTotal(
-          allBonusRows.reduce((sum, b) => {
-            const a = b.amount;
-            return typeof a === "number" && a > 0 ? sum + a : sum;
-          }, 0)
-        );
+        const physicalPrizes = (bonusData ?? []) as BonusPrize[];
+        console.log('[DEBUG ContestDetail] setBonusPrizes:', physicalPrizes.length, 'items');
+        setBonusPrizes(physicalPrizes);
+        setMiocoinBonusPoolTotal((contestData as any).total_miocoin_bonus ?? 0);
 
         const { data: auth } = await supabase.auth.getUser();
         const uid = auth?.user?.id ?? null;
