@@ -2046,6 +2046,8 @@ export const AdminContestManagement: React.FC = () => {
   const [contestToDelete, setContestToDelete] = useState<ContestData | null>(null);
   const [archiveTab, setArchiveTab] = useState<"active" | "test" | "closed">("active");
   const [linkedContestIds, setLinkedContestIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkMoving, setBulkMoving] = useState(false);
 
   const loadContests = async () => {
     setLoading(true);
@@ -2459,6 +2461,52 @@ export const AdminContestManagement: React.FC = () => {
     return true;
   });
 
+  const movableSelected = filteredContests.filter(
+    (c) => selectedIds.has(c.contest_id) && (c.status === "pending" || c.status === "paused")
+  );
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const movable = filteredContests.filter((c) => c.status === "pending" || c.status === "paused");
+    if (movable.every((c) => selectedIds.has(c.contest_id))) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        movable.forEach((c) => next.delete(c.contest_id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        movable.forEach((c) => next.add(c.contest_id));
+        return next;
+      });
+    }
+  };
+
+  const handleBulkMoveToDraft = async () => {
+    if (movableSelected.length === 0) return;
+    setBulkMoving(true);
+    try {
+      const ids = movableSelected.map((c) => c.contest_id);
+      const { error } = await supabase.from("contests").update({ status: "draft" }).in("id", ids);
+      if (error) throw error;
+      toast({ title: "Hotovo", description: `${ids.length} soutěží přesunuto do Archivu test.` });
+      setSelectedIds(new Set());
+      await loadContests();
+    } catch (err: any) {
+      toast({ title: "Chyba", description: err?.message || "Nepodařilo se přesunout soutěže.", variant: "destructive" });
+    } finally {
+      setBulkMoving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -2570,11 +2618,47 @@ export const AdminContestManagement: React.FC = () => {
           ) : filteredContests.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">Žádné soutěže v této kategorii.</div>
           ) : (
+            <>
+              {/* Bulk action bar — visible only on active tab when something is selected */}
+              {archiveTab === "active" && selectedIds.size > 0 && (
+                <div className="flex items-center gap-3 px-4 py-2 bg-primary/10 border border-primary/30 rounded-md mb-2">
+                  <span className="text-sm text-primary font-medium">
+                    Vybráno: {selectedIds.size} ({movableSelected.length} lze přesunout)
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-primary/50 text-primary hover:bg-primary/10"
+                    disabled={bulkMoving || movableSelected.length === 0}
+                    onClick={handleBulkMoveToDraft}
+                  >
+                    {bulkMoving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                    Přesunout do Archivu test ({movableSelected.length})
+                  </Button>
+                  <button className="text-xs text-muted-foreground hover:text-foreground ml-auto" onClick={() => setSelectedIds(new Set())}>
+                    Zrušit výběr
+                  </button>
+                </div>
+              )}
             <div className="rounded-md border border-white/10 max-h-[550px] overflow-auto relative">
               <div className="min-w-max">
                 <Table>
                   <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow className="border-b border-white/10 hover:bg-transparent">
+                    {archiveTab === "active" && (
+                      <TableHead className="w-10 bg-card">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-white/30 accent-primary cursor-pointer"
+                          checked={
+                            filteredContests.filter((c) => c.status === "pending" || c.status === "paused").length > 0 &&
+                            filteredContests.filter((c) => c.status === "pending" || c.status === "paused").every((c) => selectedIds.has(c.contest_id))
+                          }
+                          onChange={toggleSelectAll}
+                          title="Vybrat vše (jen přesunutelné)"
+                        />
+                      </TableHead>
+                    )}
                     <TableHead className="bg-card">Název</TableHead>
                     <TableHead className="text-center bg-card">Hlavní výhra</TableHead>
                     <TableHead className="text-center bg-card">Status</TableHead>
@@ -2589,8 +2673,20 @@ export const AdminContestManagement: React.FC = () => {
                   {filteredContests.map((contest, index) => (
                     <TableRow
                       key={contest.contest_id}
-                      className={`border-b border-white/5 transition-colors hover:bg-white/5 ${index % 2 === 0 ? "bg-white/[0.02]" : ""}`}
+                      className={`border-b border-white/5 transition-colors hover:bg-white/5 ${index % 2 === 0 ? "bg-white/[0.02]" : ""} ${selectedIds.has(contest.contest_id) ? "bg-primary/5" : ""}`}
                     >
+                      {archiveTab === "active" && (
+                        <TableCell className="w-10">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-white/30 accent-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-30"
+                            checked={selectedIds.has(contest.contest_id)}
+                            disabled={contest.status === "active"}
+                            onChange={() => toggleSelect(contest.contest_id)}
+                            title={contest.status === "active" ? "Aktivní soutěž nelze přesunout" : ""}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="font-medium">{contest.title}</div>
                         <div className="text-xs text-muted-foreground">ID: {contest.contest_id}</div>
@@ -2737,6 +2833,7 @@ export const AdminContestManagement: React.FC = () => {
               </Table>
               </div>
             </div>
+            </>
           )}
         </CardContent>
       </Card>
