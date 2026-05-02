@@ -1,86 +1,91 @@
-## Cíl
+## Co je špatně u soutěže `e594d0bd-56d1-4192-abe6-138c54b09f40`
 
-Sjednotit zakládání nové soutěže do **jednoho kroku** — admin bude moci v záložce **Grafika** přidávat fotky + YouTube videa do galerie hlavní výhry už při zakládání nové soutěže, ne až po jejím prvním uložení.
+Zkontroloval jsem DB:
 
-## Současný stav (proč je to dvoukrokové)
+- `main_image` ✅ uložen
+- `main_prize_secondary_image` ❌ **NULL** (Detailní obrázek se neuložil)
+- `banner_image` ❌ **NULL** (Banner se neuložil)
+- `contest_media` ❌ **0 řádků** (žádná galerie, žádné pozadí)
 
-V `src/components/AdminContestManagement.tsx` (řádek ~1805) galerie ukáže:
+Soutěž vznikla, ale 5 ze 6 grafik se ztratilo. Toast „chyby při vytváření" pochází z bloku flush galerie, když insert do `contest_media` selže.
 
-```tsx
-{!editingContest ? (
-  <p>Galerii lze spravovat po uložení soutěže.</p>
-) : (
-  // existing media list + "Add new media" UI
-)}
+## Tři reálné příčiny
+
+### 1. Tabulka `contest_media` nemá ŽÁDNOU RLS policy
+
+RLS je zapnuté, ale nula policies → každý INSERT z klienta vrací `permission denied`. Proto se galerie (vč. pozadí) **nikdy** neuloží — bug existoval celou dobu a tichoval. Tohle je hlavní příčina.
+
+### 2. Detail + Banner se ukládají pouze pokud `form.detail_image_file` / `form.banner_image_file` jsou v `form` stavu
+
+V handleru je:
+```ts
+if (form.detail_image_file) { ... upload ... }
+if (form.banner_image_file) { ... upload ... }
+```
+Žádná validace, že soubor existuje. Když je `null`, prostě se to **tiše přeskočí** bez toast/warningu.
+
+### 3. Galerie typu „Pozadí" — soubor zmizí když user neklikne „Přidat do galerie"
+
+UI má samostatný file input pro pozadí. Když user vybere soubor a rovnou klikne „Vytvořit soutěž" (místo „Přidat do galerie"), soubor se nikam neuloží — žádný auto-add.
+
+## Plán opravy
+
+### Krok 1 — SQL migrace: RLS policies na `contest_media`
+
+```sql
+ALTER TABLE public.contest_media ENABLE ROW LEVEL SECURITY;
+
+-- Public read (potřeba pro ContestDetail)
+CREATE POLICY "contest_media_public_select"
+  ON public.contest_media FOR SELECT
+  TO anon, authenticated USING (true);
+
+-- Admin write/update/delete
+CREATE POLICY "contest_media_admin_insert"
+  ON public.contest_media FOR INSERT TO authenticated
+  WITH CHECK (public.has_role(auth.uid(), 'admin'::app_role)
+           OR public.has_role(auth.uid(), 'superadmin'::app_role));
+
+CREATE POLICY "contest_media_admin_update"
+  ON public.contest_media FOR UPDATE TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'::app_role)
+      OR public.has_role(auth.uid(), 'superadmin'::app_role));
+
+CREATE POLICY "contest_media_admin_delete"
+  ON public.contest_media FOR DELETE TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'::app_role)
+      OR public.has_role(auth.uid(), 'superadmin'::app_role));
+
+GRANT SELECT ON public.contest_media TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.contest_media TO authenticated;
 ```
 
-Důvod je technický: galerie zapisuje rovnou do tabulky `contest_media` a potřebuje `contest_id` (FK). U nové soutěže žádné `contest_id` ještě neexistuje. Přidávání médií jede přes `supabase.from("contest_media").insert(...)` okamžitě po výběru souboru.
+### Krok 2 — Frontend: `src/components/AdminContestManagement.tsx`
 
-## Návrh řešení — „pending media" buffer
+- **Auto-flush** vybraného souboru/URL z formuláře „Přidat nové médium" do galerie těsně před Save — aby se neztratil když user neklikne explicitně „Přidat do galerie". Funguje pro typy `image`, `background` i `video`.
+- **Konkrétní DB error message** v toastu když selže flush galerie (místo obecného „Galerie částečně uložena").
+- **Toast** když selže update detail/banner v `additionalUpdates` (dnes jen `console.error` = tichá ztráta).
+- (Volitelně) Warning toast při vytváření, když chybí detail nebo banner — neblokující, jen aby admin viděl, že to bylo prázdné.
 
-Přidávání médií u **nové soutěže** se buffuje na klientovi a propíše do DB až po vytvoření soutěže (kdy už máme `contestId`). Editace existující soutěže zůstává beze změny (insert hned).
+### Krok 3 — Oprava existující soutěže `e594d0bd…`
 
-### Změny v `src/components/AdminContestManagement.tsx`
-
-1. **Nový state pro pending položky** (jen u nové soutěže):
-   ```ts
-   type PendingMedia = {
-     id: string;              // temp-uuid
-     type: "image" | "video" | "background";
-     file: File | null;       // pokud upload
-     url: string;             // pokud externí URL nebo YouTube
-     sort_order: number;
-   };
-   const [pendingMedia, setPendingMedia] = useState<PendingMedia[]>([]);
-   ```
-
-2. **Render galerie i pro novou soutěž** — odstranit „Galerii lze spravovat po uložení soutěže." Místo toho ukázat:
-   - Stejné UI pro výběr typu (image / video / background) + soubor / URL + sort_order.
-   - Seznam médií složený z `editingContest ? galleryMedia : pendingMedia` (a pro existující soutěž i nadále z DB).
-   - Tlačítko Smazat u pending položky odmaže jen z lokálního pole.
-
-3. **Upravit `handleAddMedia`** — větvit podle existence `contestId`:
-   - **Existující soutěž**: stávající chování (upload do `contest-images` + insert do `contest_media`).
-   - **Nová soutěž**: nepoužít DB. Soubor držet jako `File` v `pendingMedia` (lokálně), URL jen uložit jako string. Upload na storage proběhne až po vytvoření soutěže (krok 5).
-
-4. **Pravidlo „jeden background"** — vynutit i v pending bufferu (před přidáním nového typu `background` smazat existující pending background).
-
-5. **Po úspěšném vytvoření soutěže** v hlavním save handleru (po obdržení `contestId` z RPC `admin_manage_contest`, řádek ~1185):
-   ```ts
-   for (const item of pendingMedia) {
-     let url = item.url;
-     if (item.file) {
-       url = await uploadGalleryFile(item.file); // contest-images bucket
-     }
-     await supabase.from("contest_media").insert({
-       contest_id: contestId,
-       type: item.type,
-       url,
-       sort_order: item.sort_order,
-     });
-   }
-   setPendingMedia([]);
-   ```
-   - Při chybě některé položky pokračovat dál (toast s počtem úspěšných / neúspěšných), aby se nezablokovalo dokončení jinak úspěšného create.
-
-6. **Draft persistence** — `pendingMedia` neukládat do `localStorage` jako `File` (Files nejdou serializovat). Ukládat jen URL položky, položky se souborem se po reloadu neobnoví (uživatel je musí přidat znovu). Tohle je konzistentní s tím, jak se to dělá s `main_image_file` / `banner_image_file` (taky se nezachovávají v draftu).
-
-7. **Reset pending médií** ve stejných místech, kde se reset uje formulář (`clearDraft`, po úspěšném create, při zavření modálu novou soutěží).
+Po nasazení Krok 1+2: otevřít tu soutěž v adminu (Edit), znovu nahrát detail + banner + položky galerie. Tentokrát to projde, protože RLS bude povolovat insert.
 
 ## Co se NEMĚNÍ
 
-- Žádná DB migrace ani změna schématu `contest_media`.
-- Žádná změna RLS, RPC `admin_manage_contest`, walletu, ticketové ekonomiky.
-- Beze změny zůstává editace existujících soutěží — galerie se tam nadále ukládá okamžitě (jako dnes).
-- Beze změny zůstávají pravidla pro 3 hlavní obrázky (main / detail / banner) a předchozí oprava bucketu pro banner (`contest-banners`) — ta zůstává součástí stejné „cleanup" iterace.
+- Žádná změna `contests` schématu, RPC `admin_manage_contest`, `buy_ticket_atomic`, walletu, ticketové ekonomiky.
+- Žádná změna existujících RLS policies — jen se **doplní** chybějící na `contest_media`.
+- Žádná změna `ContestDetail.tsx` (customer side).
+
+## Soubory k úpravě
+
+- `supabase/migrations/20260502_contest_media_rls_policies.sql` — nový (Krok 1)
+- `src/components/AdminContestManagement.tsx` — Krok 2
 
 ## Test po nasazení
 
-1. Otevřít „Vytvořit novou soutěž", vyplnit povinná pole, v záložce Grafika nahrát 3 hlavní obrázky **a** přidat 2 fotky + 1 YouTube video do galerie.
-2. Kliknout Vytvořit soutěž.
-3. Ověřit:
-   - Soutěž je založená s `contestId`.
-   - V `contests` tabulce sedí `main_image`, `main_prize_secondary_image`, `banner_image`.
-   - V `contest_media` jsou 3 řádky pro tuto soutěž (2 image + 1 video).
-4. Otevřít detail soutěže jako zákazník — galerie ukazuje vše, video se přehrává.
-5. Otevřít soutěž v adminu (edit) — galerie načte všech 6 položek (3 hlavní + 3 v `contest_media`).
+1. Aplikovat SQL migraci.
+2. Vytvořit testovací soutěž, nahrát všechny 3 hlavní obrázky + 2 položky galerie (1× pozadí, 1× YouTube).
+3. Ověřit v DB: všechna 3 image pole vyplněná, `contest_media` má 2 řádky.
+4. Otevřít detail soutěže jako customer — pozadí se aplikuje, video je v galerii.
+5. Pokud cokoli selže, toast ukáže konkrétní chybu z DB.
