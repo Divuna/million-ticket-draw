@@ -1282,15 +1282,26 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         }
 
         // Handle secondary/detail image (hero layout) - manual upload only
+        let detailPathSaved: string | null = null;
         if (form.detail_image_file) {
-          const detailPath = await handleImageUpload(form.detail_image_file);
-          additionalUpdates.main_prize_secondary_image = detailPath;
+          detailPathSaved = await handleImageUpload(form.detail_image_file);
+          additionalUpdates.main_prize_secondary_image = detailPathSaved;
         }
 
         // Handle banner image - manual upload only (uploads into contest-banners bucket)
         if (form.banner_image_file) {
           const bannerPath = await handleImageUpload(form.banner_image_file, "contest-banners");
           additionalUpdates.banner_image = bannerPath;
+        }
+
+        // FALLBACK: pokud admin nenahrál samostatný "detail" obrázek a v DB žádný není,
+        // použij hlavní obrázek i jako detail/secondary, aby byl detail soutěže vždy plný.
+        if (
+          !detailPathSaved &&
+          imagePath &&
+          !((editingContest as any)?.main_prize_secondary_image)
+        ) {
+          additionalUpdates.main_prize_secondary_image = imagePath;
         }
 
         // Apply additional updates if any
