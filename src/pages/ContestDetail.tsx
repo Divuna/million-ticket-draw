@@ -635,15 +635,19 @@ export default function ContestDetail() {
     );
   }
 
-  const heroImage = contest.main_prize_secondary_image 
-    ? (contest.main_prize_secondary_image.startsWith('http') 
-        ? contest.main_prize_secondary_image 
-        : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${contest.main_prize_secondary_image}`)
-    : (contest.main_image 
-        ? (contest.main_image.startsWith('http') 
-            ? contest.main_image 
-            : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${contest.main_image}`)
-        : "/fallback-car.png");
+  // Helper: resolve relative storage path or pass-through absolute URL
+  const resolveImg = (path?: string | null, bucket: string = 'contest-images'): string | null => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
+  };
+
+  // HERO image fallback chain: secondary -> main -> banner -> fallback
+  const heroImage =
+    resolveImg(contest.main_prize_secondary_image) ||
+    resolveImg(contest.main_image) ||
+    resolveImg(contest.banner_image, 'contest-banners') ||
+    "/fallback-car.png";
 
   const isProcessing = processingContestId === contest.id;
 
@@ -656,16 +660,13 @@ export default function ContestDetail() {
     ? Math.max(0, Math.ceil(contest.ticket_price - balance))
     : 0;
 
+  // BACKGROUND fallback chain: explicit background media -> banner -> secondary -> main
   const backgroundMedia = galleryMedia.find((m) => m.type === 'background');
-  const bgImageUrl = backgroundMedia
-    ? (backgroundMedia.url.startsWith('http')
-        ? backgroundMedia.url
-        : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${backgroundMedia.url}`)
-    : (contest.main_prize_secondary_image
-      ? (contest.main_prize_secondary_image.startsWith('http')
-        ? contest.main_prize_secondary_image
-        : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/contest-images/${contest.main_prize_secondary_image}`)
-      : null);
+  const bgImageUrl =
+    resolveImg(backgroundMedia?.url) ||
+    resolveImg(contest.banner_image, 'contest-banners') ||
+    resolveImg(contest.main_prize_secondary_image) ||
+    resolveImg(contest.main_image);
 
   const PRIMARY_DOMAIN = "https://onemil.cz";
   const canonicalUrl = `${PRIMARY_DOMAIN}/contest/${contest.id}`;
