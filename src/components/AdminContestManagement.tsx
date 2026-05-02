@@ -1846,9 +1846,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   )}
                 </div>
 
-                {!editingContest ? (
-                  <p className="text-sm text-muted-foreground">Galerii lze spravovat po uložení soutěže.</p>
-                ) : (
+                <>
+                  {!editingContest && (
+                    <p className="text-xs text-muted-foreground">
+                      Přidaná média se uloží do galerie po vytvoření soutěže.
+                    </p>
+                  )}
                   <>
                     {/* Existing media list */}
                     {loadingMedia ? (
