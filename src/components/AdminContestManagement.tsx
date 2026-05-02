@@ -1250,7 +1250,45 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         // Delete existing bonuses for this contest
         await supabase.from("bonus_prizes").delete().eq("contest_id", contestId);
 
-        // Generate MioCoin bonuses via edge function (handles batching → inserts into bonus_prizes)
+        // Insert physical prizes FIRST so MioCoin generation excludes their positions
+        for (const prize of physicalPrizes) {
+          let imageUrl = prize.image_url;
+
+          // Upload image if file exists
+          if (prize.image_file) {
+            const ext = prize.image_file.name.split(".").pop();
+            const fileName = `bonus-prizes/${contestId}/${crypto.randomUUID()}.${ext}`;
+            const { error: uploadError } = await supabase.storage
+              .from("contest-images")
+              .upload(fileName, prize.image_file);
+
+            if (uploadError) {
+              throw new Error(`Chyba při nahrávání obrázku: ${uploadError.message}`);
+            }
+            imageUrl = fileName;
+          }
+
+          // Insert bonus prize record via RPC
+          const { data: insertData, error: insertError } = await supabase.rpc("admin_manage_bonus_prize", {
+            p_contest_id: contestId,
+            p_ticket_position: prize.ticket_position,
+            p_description: prize.description,
+            p_detailed_description: prize.detailed_description ?? null,
+            p_status: "pending",
+            p_operation: "create",
+            p_image_url: imageUrl ?? null,
+          });
+
+          if (insertError) {
+            throw new Error(`Chyba při ukládání výhry: ${insertError.message}`);
+          }
+          // RPC catches exceptions internally and returns {success:false, message:...}
+          if (insertData && (insertData as any).success === false) {
+            throw new Error(`Chyba při ukládání výhry: ${(insertData as any).message}`);
+          }
+        }
+
+        // Generate MioCoin bonuses via edge function (excludes already-occupied physical positions)
         if (mioCoinBonuses.length > 0) {
           const totalMioCoinCount = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
           const distributeBody = {
@@ -1327,40 +1365,6 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
           if (updateMioCoinError) {
             console.error("Error updating total_miocoin_bonus:", updateMioCoinError);
-          }
-        }
-
-        // Insert physical prizes sequentially
-        for (const prize of physicalPrizes) {
-          let imageUrl = prize.image_url;
-
-          // Upload image if file exists
-          if (prize.image_file) {
-            const ext = prize.image_file.name.split(".").pop();
-            const fileName = `bonus-prizes/${contestId}/${crypto.randomUUID()}.${ext}`;
-            const { error: uploadError } = await supabase.storage
-              .from("contest-images")
-              .upload(fileName, prize.image_file);
-            
-            if (uploadError) {
-              throw new Error(`Chyba při nahrávání obrázku: ${uploadError.message}`);
-            }
-            imageUrl = fileName;
-          }
-
-          // Insert bonus prize record via RPC
-          const { error: insertError } = await supabase.rpc("admin_manage_bonus_prize", {
-            p_contest_id: contestId,
-            p_ticket_position: prize.ticket_position,
-            p_description: prize.description,
-            p_detailed_description: prize.detailed_description ?? null,
-            p_status: "pending",
-            p_operation: "create",
-            p_image_url: imageUrl ?? null,
-          });
-
-          if (insertError) {
-            throw new Error(`Chyba při ukládání výhry: ${insertError.message}`);
           }
         }
       }
