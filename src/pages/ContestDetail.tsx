@@ -496,7 +496,15 @@ export default function ContestDetail() {
         const physicalPrizes = (bonusData ?? []) as BonusPrize[];
         console.log('[DEBUG ContestDetail] setBonusPrizes:', physicalPrizes.length, 'items');
         setBonusPrizes(physicalPrizes);
-        setMiocoinBonusPoolTotal((contestData as any).total_miocoin_bonus ?? 0);
+
+        // Aggregate sum of MioCoin bonuses — avoids 1000-row limit and trigger reliability issues
+        const { data: miocoinAgg } = await supabase
+          .from("bonus_prizes")
+          .select("amount.sum()")
+          .eq("contest_id", id)
+          .gt("amount", 0)
+          .maybeSingle();
+        setMiocoinBonusPoolTotal((miocoinAgg as any)?.sum ?? 0);
 
         const { data: auth } = await supabase.auth.getUser();
         const uid = auth?.user?.id ?? null;
