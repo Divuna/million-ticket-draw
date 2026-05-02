@@ -1181,7 +1181,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       }
 
       // Get contest_id for bonus saving and additional updates
-      const contestId = isEditingContest ? editingContest.contest_id : (contestResult as any)?.contest_id;
+      console.log("[AdminContestManagement] RPC contestResult shape:", JSON.stringify(contestResult));
+      const contestId = isEditingContest
+        ? editingContest.contest_id
+        : ((contestResult as any)?.contest_id || (contestResult as any)?.contest_data?.id);
+
+      if (!contestId) {
+        toast({ title: "Chyba", description: "Nepodařilo se získat ID soutěže", variant: "destructive" });
+        setSaving(false);
+        return;
+      }
 
       // Update images directly in contests table (manual uploads only)
       if (contestId) {
