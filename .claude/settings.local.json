@@ -12,7 +12,8 @@
       "PowerShell($result = \\(\"protocol=https`nhost=github.com`n\" | git.exe credential fill\\) 2>&1; $result)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "mcp__Google_Drive__download_file_content"
     ]
   }
 }
