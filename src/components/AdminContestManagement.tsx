@@ -174,8 +174,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   // MioCoin bonus state
   const [mioCoinBonuses, setMioCoinBonuses] = useState<MioCoinBonus[]>([]);
-  const [totalMioCoinsInput, setTotalMioCoinsInput] = useState<number>(1000);
-  const [stepValue, setStepValue] = useState<number>(10);
+  const [totalMioCoinsInput, setTotalMioCoinsInput] = useState<number>(0);
+  const [stepValue, setStepValue] = useState<number>(0);
   const [distributionType, setDistributionType] = useState<"even" | "random">("even");
 
   // Physical prize state
