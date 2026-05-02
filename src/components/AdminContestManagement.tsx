@@ -1299,7 +1299,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         if (
           !detailPathSaved &&
           imagePath &&
-          !editingContest?.main_prize_secondary_image
+          !((editingContest as any)?.main_prize_secondary_image)
         ) {
           additionalUpdates.main_prize_secondary_image = imagePath;
         }
