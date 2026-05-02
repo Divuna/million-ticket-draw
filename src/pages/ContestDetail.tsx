@@ -482,25 +482,33 @@ export default function ContestDetail() {
         console.log('[DEBUG ContestDetail] setContest:', JSON.stringify(contestData));
         setContest(contestData as Contest);
 
+        // Single SELECT on bonus_prizes — split client-side into physical (grid)
+        // and MioCoin pool (sum). Explicit .limit(200000) bypasses default 1000-row cap.
         const { data: bonusData, error: bonusError } = await supabase
           .from("bonus_prizes")
-          .select("*")
+          .select("id, contest_id, description, detailed_description, amount, image_url, ticket_position")
           .eq("contest_id", id)
-          .or("amount.is.null,amount.eq.0")
-          .order("ticket_position", { ascending: true });
+          .order("ticket_position", { ascending: true })
+          .limit(200000);
 
         if (bonusError) {
           console.error('[DEBUG ContestDetail] bonus_prizes fetch error:', bonusError, JSON.stringify(bonusError));
         }
 
-        const physicalPrizes = (bonusData ?? []) as BonusPrize[];
+        const allBonusRows = (bonusData ?? []) as BonusPrize[];
+
+        const physicalPrizes = allBonusRows.filter(
+          (b) => b.amount == null || Number(b.amount) === 0
+        );
         console.log('[DEBUG ContestDetail] setBonusPrizes:', physicalPrizes.length, 'items');
         setBonusPrizes(physicalPrizes);
 
-        const { data: mgmtData } = await supabase
-          .rpc("get_contest_management_data", { p_contest_id_filter: id })
-          .maybeSingle();
-        setMiocoinBonusPoolTotal((mgmtData as any)?.total_miocoin_bonus ?? 0);
+        const miocoinPoolSum = allBonusRows.reduce((sum, b) => {
+          const a = Number(b.amount ?? 0);
+          return a > 0 ? sum + a : sum;
+        }, 0);
+        console.log('[DEBUG ContestDetail] miocoinBonusPoolTotal:', miocoinPoolSum);
+        setMiocoinBonusPoolTotal(miocoinPoolSum);
 
         const { data: auth } = await supabase.auth.getUser();
         const uid = auth?.user?.id ?? null;
