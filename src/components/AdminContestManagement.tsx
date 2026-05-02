@@ -235,6 +235,107 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     setActiveTab("basic");
   }, [editingContest, open]);
 
+  // ---- Draft persistence (only for new contests, not editing) ----
+  const DRAFT_KEY = "draft_new_contest";
+  const isNewContest = !editingContest;
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
+  const draftHydratedRef = React.useRef(false);
+
+  // Restore draft on open (new contest only)
+  useEffect(() => {
+    if (!open || !isNewContest) {
+      draftHydratedRef.current = false;
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setForm((prev) => ({
+          ...prev,
+          ...parsed,
+          // never restore File objects
+          rules_pdf_file: null,
+          main_image_file: null,
+          banner_image_file: null,
+          detail_image_file: null,
+        }));
+      }
+    } catch (e) {
+      console.warn("Failed to restore contest draft", e);
+    }
+    draftHydratedRef.current = true;
+  }, [open, isNewContest]);
+
+  // Save draft on every form change (new contest only)
+  useEffect(() => {
+    if (!open || !isNewContest || !draftHydratedRef.current) return;
+    try {
+      const { rules_pdf_file, main_image_file, banner_image_file, detail_image_file, ...serializable } = form;
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(serializable));
+    } catch (e) {
+      console.warn("Failed to save contest draft", e);
+    }
+  }, [form, open, isNewContest]);
+
+  // Detect if form has any user-entered data
+  const isFormDirty = React.useMemo(() => {
+    if (!isNewContest) return false;
+    return Boolean(
+      form.title?.trim() ||
+        form.description?.trim() ||
+        form.rules?.trim() ||
+        form.main_prize?.trim() ||
+        form.rules_pdf_file ||
+        form.rules_pdf_url ||
+        form.main_image_file ||
+        form.banner_image_file ||
+        form.detail_image_file ||
+        form.main_image_url ||
+        form.banner_image_url ||
+        form.detail_image_url,
+    );
+  }, [form, isNewContest]);
+
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {}
+    setForm({
+      title: "",
+      description: "",
+      rules: "",
+      rules_pdf_file: null,
+      rules_pdf_url: "",
+      main_prize: "",
+      ticket_count: 1000000,
+      ticket_price: 1,
+      status: "pending",
+      main_image_file: null,
+      banner_image_file: null,
+      detail_image_file: null,
+      main_image_url: "",
+      banner_image_url: "",
+      detail_image_url: "",
+      fast_game: false,
+    });
+    toast({ title: "Rozdělaná práce smazána" });
+  };
+
+  const attemptClose = () => {
+    if (saving) return;
+    if (isFormDirty) {
+      setConfirmCloseOpen(true);
+    } else {
+      onClose();
+    }
+  };
+
+  const confirmDiscardAndClose = () => {
+    setConfirmCloseOpen(false);
+    onClose();
+  };
+
   const loadGalleryMedia = async (contestId: string) => {
     setLoadingMedia(true);
     const { data, error } = await supabase
