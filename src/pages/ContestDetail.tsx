@@ -492,12 +492,8 @@ export default function ContestDetail() {
         }
 
         const allBonusRows = (bonusData ?? []) as BonusPrize[];
-        // Physical prizes: same filter as before (amount null or 0 — matches `.or("amount.is.null,amount.eq.0")`)
-        const physicalOnly = allBonusRows.filter(
-          (b) => b.amount == null || b.amount === 0
-        );
-        console.log('[DEBUG ContestDetail] setBonusPrizes:', physicalOnly?.length, 'items');
-        setBonusPrizes(physicalOnly);
+        console.log('[DEBUG ContestDetail] setBonusPrizes:', allBonusRows.length, 'items');
+        setBonusPrizes(allBonusRows);
         setMiocoinBonusPoolTotal(
           allBonusRows.reduce((sum, b) => {
             const a = b.amount;
