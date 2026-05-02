@@ -234,6 +234,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setPhysicalPrizes([]);
       setGalleryMedia([]);
       setPendingMediaFiles({});
+      // Reset MioCoin generator inputs so the "Počet pozic" preview doesn't show
+      // a phantom number based on stale defaults from a previous session.
+      setTotalMioCoinsInput(0);
+      setStepValue(0);
+      setDistributionType("even");
     }
     setActiveTab("basic");
   }, [editingContest, open]);
