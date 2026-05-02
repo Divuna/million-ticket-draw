@@ -729,9 +729,9 @@ export default function ContestDetail() {
       <section className="contest-card-glow w-full rounded-[20px] relative overflow-hidden bg-gradient-to-br from-[hsl(220_25%_8%)] to-[hsl(220_20%_12%)] border-[3px] border-[hsl(32_100%_50%/0.6)]">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-6 md:p-8">
           {/* Text content */}
-          <div className="flex-1 space-y-4 z-10">
+          <div className="flex-1 min-w-0 md:max-w-[55%] space-y-4 z-10">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-yellow-400 leading-tight">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-yellow-400 leading-tight break-words">
                 {contest.title}
               </h1>
               {contest.fast_game && (
@@ -739,23 +739,38 @@ export default function ContestDetail() {
               )}
             </div>
             {contest.main_prize && (
-              <p className="text-xl md:text-2xl font-semibold text-gray-200">
+              <p className="text-xl md:text-2xl font-semibold text-gray-200 break-words">
                 Hlavní výhra: {contest.main_prize}
               </p>
             )}
             {contest.description && (
-              <p className="text-gray-300 text-sm md:text-base leading-relaxed whitespace-pre-line max-w-lg">
-                {contest.description}
-              </p>
+              <div className="space-y-2">
+                <p
+                  className={`text-gray-300 text-sm md:text-base leading-relaxed whitespace-pre-line ${
+                    descExpanded ? '' : 'line-clamp-6 md:line-clamp-8 overflow-hidden'
+                  }`}
+                >
+                  {contest.description}
+                </p>
+                {contest.description.length > 280 && (
+                  <button
+                    type="button"
+                    onClick={() => setDescExpanded((v) => !v)}
+                    className="text-xs md:text-sm font-medium text-yellow-400 hover:text-yellow-300 transition-colors"
+                  >
+                    {descExpanded ? 'Zobrazit méně' : 'Zobrazit více'}
+                  </button>
+                )}
+              </div>
             )}
           </div>
-          
-          {/* Hero image */}
-          <div className="flex-shrink-0 flex justify-center md:justify-end">
+
+          {/* Hero image - fixed slot, won't shrink under long text */}
+          <div className="md:w-[320px] md:flex-none flex justify-center md:justify-end">
             <img
               src={heroImage}
               alt={contest.title}
-              className="w-full max-w-[280px] md:max-w-[320px] lg:max-w-[380px] object-contain"
+              className="w-full max-w-[280px] md:max-w-[320px] max-h-[260px] md:max-h-[300px] object-contain"
               onError={(e) => (e.currentTarget.src = "/fallback-car.png")}
             />
           </div>
