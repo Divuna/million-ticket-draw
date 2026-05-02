@@ -1893,7 +1893,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleDeleteMedia(media.id)}
-                                disabled={isDeleting || isTemp}
+                                disabled={isDeleting}
                                 className="shrink-0 h-8 w-8 p-0"
                               >
                                 {isDeleting ? (
