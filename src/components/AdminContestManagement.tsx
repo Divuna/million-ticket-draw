@@ -1276,9 +1276,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           additionalUpdates.main_prize_secondary_image = detailPath;
         }
 
-        // Handle banner image - manual upload only
+        // Handle banner image - manual upload only (uploads into contest-banners bucket)
         if (form.banner_image_file) {
-          const bannerPath = await handleImageUpload(form.banner_image_file);
+          const bannerPath = await handleImageUpload(form.banner_image_file, "contest-banners");
           additionalUpdates.banner_image = bannerPath;
         }
 
@@ -1288,6 +1288,47 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
           if (updateError) {
             console.error("Error updating images:", updateError);
+          }
+        }
+
+        // Flush pending gallery media (only set when creating a new contest)
+        const pendingItems = galleryMedia.filter((m) => String(m.id).startsWith("temp-"));
+        if (pendingItems.length > 0) {
+          let okCount = 0;
+          let failCount = 0;
+          for (const item of pendingItems) {
+            try {
+              let url = item.url;
+              const file = pendingMediaFiles[item.id];
+              if (file) {
+                const filePath = `contests/${contestId}/gallery/${Date.now()}-${file.name}`;
+                const { error: uploadError } = await supabase.storage
+                  .from("contest-images")
+                  .upload(filePath, file);
+                if (uploadError) throw uploadError;
+                const { data: pub } = supabase.storage.from("contest-images").getPublicUrl(filePath);
+                url = pub.publicUrl;
+              }
+              const { error: insertError } = await supabase.from("contest_media").insert({
+                contest_id: contestId,
+                type: item.type,
+                url,
+                sort_order: item.sort_order,
+              });
+              if (insertError) throw insertError;
+              okCount++;
+            } catch (err) {
+              console.error("Error flushing pending media:", err);
+              failCount++;
+            }
+          }
+          setPendingMediaFiles({});
+          if (failCount > 0) {
+            toast({
+              title: "Galerie částečně uložena",
+              description: `Uloženo ${okCount}, selhalo ${failCount}. Zkontrolujte galerii v editaci.`,
+              variant: "destructive",
+            });
           }
         }
       }
