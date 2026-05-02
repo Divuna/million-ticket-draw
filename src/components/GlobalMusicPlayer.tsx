@@ -126,7 +126,7 @@ export const GlobalMusicPlayer: React.FC = () => {
     <>
       <audio
         ref={audioRef}
-        src="/sounds/onemil.mp3"
+        src="/sounds/onemil.mp3?v=2"
         loop
         preload="auto"
       />
