@@ -482,33 +482,38 @@ export default function ContestDetail() {
         console.log('[DEBUG ContestDetail] setContest:', JSON.stringify(contestData));
         setContest(contestData as Contest);
 
-        // Single SELECT on bonus_prizes — split client-side into physical (grid)
-        // and MioCoin pool (sum). Explicit .limit(200000) bypasses default 1000-row cap.
-        const { data: bonusData, error: bonusError } = await supabase
-          .from("bonus_prizes")
-          .select("id, contest_id, description, detailed_description, amount, image_url, ticket_position")
-          .eq("contest_id", id)
-          .order("ticket_position", { ascending: true })
-          .limit(200000);
-
-        if (bonusError) {
-          console.error('[DEBUG ContestDetail] bonus_prizes fetch error:', bonusError, JSON.stringify(bonusError));
+        // === Bonusové MioCoiny (součet) — přes RPC, obchází 1000-row cap PostgRESTu ===
+        const { data: poolSum, error: poolError } = await supabase
+          .rpc("get_contest_miocoin_bonus", { p_contest_id: id });
+        if (poolError) {
+          console.error('[ContestDetail] miocoin pool RPC error:', poolError);
         }
+        setMiocoinBonusPoolTotal(Number(poolSum ?? 0));
 
-        const allBonusRows = (bonusData ?? []) as BonusPrize[];
-
-        const physicalPrizes = allBonusRows.filter(
-          (b) => b.amount == null || Number(b.amount) === 0
-        );
-        console.log('[DEBUG ContestDetail] setBonusPrizes:', physicalPrizes.length, 'items');
-        setBonusPrizes(physicalPrizes);
-
-        const miocoinPoolSum = allBonusRows.reduce((sum, b) => {
-          const a = Number(b.amount ?? 0);
-          return a > 0 ? sum + a : sum;
-        }, 0);
-        console.log('[DEBUG ContestDetail] miocoinBonusPoolTotal:', miocoinPoolSum);
-        setMiocoinBonusPoolTotal(miocoinPoolSum);
+        // === Fyzické bonusové ceny — stránkované načtení VŠECH řádků, BEZ stropu ===
+        // Může jich být klidně 10 000 nebo 50 000; načítáme po stránkách dokud chodí data.
+        const PHYS_PAGE = 1000;
+        let physFrom = 0;
+        const physical: BonusPrize[] = [];
+        // Hard safety cap proti nekonečné smyčce (1M řádků = 1000 stránek).
+        for (let guard = 0; guard < 1000; guard++) {
+          const { data: pageData, error: pageError } = await supabase
+            .from("bonus_prizes")
+            .select("id, contest_id, description, detailed_description, amount, image_url, ticket_position")
+            .eq("contest_id", id)
+            .or("amount.is.null,amount.eq.0")
+            .order("ticket_position", { ascending: true })
+            .range(physFrom, physFrom + PHYS_PAGE - 1);
+          if (pageError) {
+            console.error('[ContestDetail] physical bonus fetch error:', pageError);
+            break;
+          }
+          if (!pageData || pageData.length === 0) break;
+          physical.push(...(pageData as BonusPrize[]));
+          if (pageData.length < PHYS_PAGE) break;
+          physFrom += PHYS_PAGE;
+        }
+        setBonusPrizes(physical);
 
         const { data: auth } = await supabase.auth.getUser();
         const uid = auth?.user?.id ?? null;
