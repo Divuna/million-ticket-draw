@@ -169,6 +169,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   const [newMediaFile, setNewMediaFile] = useState<File | null>(null);
   const [loadingMedia, setLoadingMedia] = useState(false);
   const [deletingMediaId, setDeletingMediaId] = useState<string | null>(null);
+  // Pending media buffer for NEW contests (no contest_id yet) — File objects keyed by temp id
+  const [pendingMediaFiles, setPendingMediaFiles] = useState<Record<string, File>>({});
 
   // MioCoin bonus state
   const [mioCoinBonuses, setMioCoinBonuses] = useState<MioCoinBonus[]>([]);
