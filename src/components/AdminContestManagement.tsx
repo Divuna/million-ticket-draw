@@ -322,6 +322,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       detail_image_url: "",
       fast_game: false,
     });
+    setGalleryMedia([]);
+    setPendingMediaFiles({});
     toast({ title: "Rozdělaná práce smazána" });
   };
 
