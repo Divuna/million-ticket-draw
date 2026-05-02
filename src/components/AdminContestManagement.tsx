@@ -357,12 +357,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   const handleAddMedia = async () => {
     const contestId = editingContest?.contest_id;
-    if (!contestId) {
-      toast({ title: "Chyba", description: "Nejdříve uložte soutěž.", variant: "destructive" });
-      return;
-    }
+    const isNew = !contestId;
 
     let finalUrl = newMediaUrl.trim();
+    let pendingFile: File | null = null;
 
     // For image type, require file upload
     if (newMediaType === "image") {
@@ -370,35 +368,46 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         toast({ title: "Chyba", description: "Vyberte obrázek.", variant: "destructive" });
         return;
       }
-      setAddingMedia(true);
-      const filePath = `contests/${contestId}/gallery/${Date.now()}-${newMediaFile.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("contest-images")
-        .upload(filePath, newMediaFile);
-      if (uploadError) {
-        toast({ title: "Chyba uploadu", description: uploadError.message, variant: "destructive" });
-        setAddingMedia(false);
-        return;
+      if (isNew) {
+        // New contest: keep file locally, will upload on save
+        pendingFile = newMediaFile;
+        finalUrl = URL.createObjectURL(newMediaFile);
+      } else {
+        setAddingMedia(true);
+        const filePath = `contests/${contestId}/gallery/${Date.now()}-${newMediaFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from("contest-images")
+          .upload(filePath, newMediaFile);
+        if (uploadError) {
+          toast({ title: "Chyba uploadu", description: uploadError.message, variant: "destructive" });
+          setAddingMedia(false);
+          return;
+        }
+        const { data: publicUrlData } = supabase.storage.from("contest-images").getPublicUrl(filePath);
+        finalUrl = publicUrlData.publicUrl;
       }
-      const { data: publicUrlData } = supabase.storage.from("contest-images").getPublicUrl(filePath);
-      finalUrl = publicUrlData.publicUrl;
     } else if (newMediaType === "background") {
       if (!newMediaFile) {
         toast({ title: "Chyba", description: "Vyberte obrázek pozadí.", variant: "destructive" });
         return;
       }
-      setAddingMedia(true);
-      const filePath = `contests/${contestId}/gallery/${Date.now()}-${newMediaFile.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("contest-images")
-        .upload(filePath, newMediaFile);
-      if (uploadError) {
-        toast({ title: "Chyba uploadu", description: uploadError.message, variant: "destructive" });
-        setAddingMedia(false);
-        return;
+      if (isNew) {
+        pendingFile = newMediaFile;
+        finalUrl = URL.createObjectURL(newMediaFile);
+      } else {
+        setAddingMedia(true);
+        const filePath = `contests/${contestId}/gallery/${Date.now()}-${newMediaFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from("contest-images")
+          .upload(filePath, newMediaFile);
+        if (uploadError) {
+          toast({ title: "Chyba uploadu", description: uploadError.message, variant: "destructive" });
+          setAddingMedia(false);
+          return;
+        }
+        const { data: publicUrlData } = supabase.storage.from("contest-images").getPublicUrl(filePath);
+        finalUrl = publicUrlData.publicUrl;
       }
-      const { data: publicUrlData } = supabase.storage.from("contest-images").getPublicUrl(filePath);
-      finalUrl = publicUrlData.publicUrl;
     } else {
       if (!finalUrl) {
         toast({ title: "Chyba", description: "Zadejte URL.", variant: "destructive" });
@@ -419,18 +428,31 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         }
         // Optimistic: remove old backgrounds from state immediately
         setGalleryMedia((prev) => prev.filter((m) => m.type !== "background"));
-        // Delete from DB (ignore temp ids)
-        const realIds = existingBgIds.filter((id) => !String(id).startsWith("temp-"));
-        if (realIds.length > 0) {
-          await supabase.from("contest_media").delete().in("id", realIds);
+        // Drop pending file refs for removed backgrounds
+        setPendingMediaFiles((prev) => {
+          const next = { ...prev };
+          existingBgIds.forEach((id) => delete next[id]);
+          return next;
+        });
+        // Delete from DB (ignore temp ids) only when editing existing contest
+        if (!isNew) {
+          const realIds = existingBgIds.filter((id) => !String(id).startsWith("temp-"));
+          if (realIds.length > 0) {
+            await supabase.from("contest_media").delete().in("id", realIds);
+          }
         }
       }
     }
 
     // Optimistic: add placeholder immediately
-    const tempId = `temp-${Date.now()}`;
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const optimisticItem = { id: tempId, type: newMediaType, url: finalUrl, sort_order: newMediaSortOrder };
     setGalleryMedia((prev) => [...prev, optimisticItem].sort((a, b) => a.sort_order - b.sort_order));
+
+    // Track file for new-contest flush
+    if (isNew && pendingFile) {
+      setPendingMediaFiles((prev) => ({ ...prev, [tempId]: pendingFile! }));
+    }
 
     // Clear form immediately for snappy UX
     const savedType = newMediaType;
@@ -439,6 +461,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     setNewMediaUrl("");
     setNewMediaFile(null);
     setNewMediaSortOrder(0);
+
+    if (isNew) {
+      // For new contest, persistence happens on save. Just confirm and stop.
+      toast({ title: "Přidáno do galerie", description: "Bude uloženo po vytvoření soutěže." });
+      setAddingMedia(false);
+      return;
+    }
 
     const { data, error } = await supabase.from("contest_media").insert({
       contest_id: contestId,
