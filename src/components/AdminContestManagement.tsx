@@ -2504,6 +2504,7 @@ export const AdminContestManagement: React.FC = () => {
         )
       );
       const failed = results.filter((r) => r.error);
+      const succeeded = movableSelected.slice(0, movableSelected.length - failed.length);
       if (failed.length > 0) {
         toast({
           title: "Částečná chyba",
@@ -2511,7 +2512,11 @@ export const AdminContestManagement: React.FC = () => {
           variant: "destructive",
         });
       } else {
-        toast({ title: "Hotovo", description: `${movableSelected.length} soutěží přesunuto do Archivu test.` });
+        const names = movableSelected.map((c) => c.title);
+        const preview = names.slice(0, 3).join(", ");
+        const rest = names.length > 3 ? ` a ${names.length - 3} další` : "";
+        toast({ title: "Přesunuto do Archivu test", description: `${preview}${rest}.` });
+        setArchiveTab("test");
       }
       setSelectedIds(new Set());
       await loadContests();
