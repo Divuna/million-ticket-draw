@@ -556,6 +556,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
     setMioCoinBonuses(mioCoins);
     setPhysicalPrizes(physical);
+    // Reset generator inputs so the "Počet pozic" preview reflects only what
+    // the admin actively types, not stale defaults left over between contests.
+    setTotalMioCoinsInput(0);
+    setStepValue(0);
   };
 
   const handleChange =
