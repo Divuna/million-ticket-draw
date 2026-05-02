@@ -1976,7 +1976,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                       </Button>
                     </div>
                   </>
-                )}
+                </>
               </div>
             </TabsContent>
 
