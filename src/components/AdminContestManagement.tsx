@@ -174,8 +174,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   // MioCoin bonus state
   const [mioCoinBonuses, setMioCoinBonuses] = useState<MioCoinBonus[]>([]);
-  const [totalMioCoinsInput, setTotalMioCoinsInput] = useState<number>(1000);
-  const [stepValue, setStepValue] = useState<number>(10);
+  const [totalMioCoinsInput, setTotalMioCoinsInput] = useState<number>(0);
+  const [stepValue, setStepValue] = useState<number>(0);
   const [distributionType, setDistributionType] = useState<"even" | "random">("even");
 
   // Physical prize state
@@ -234,6 +234,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setPhysicalPrizes([]);
       setGalleryMedia([]);
       setPendingMediaFiles({});
+      // Reset MioCoin generator inputs so the "Počet pozic" preview doesn't show
+      // a phantom number based on stale defaults from a previous session.
+      setTotalMioCoinsInput(0);
+      setStepValue(0);
+      setDistributionType("even");
     }
     setActiveTab("basic");
   }, [editingContest, open]);
@@ -551,6 +556,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
     setMioCoinBonuses(mioCoins);
     setPhysicalPrizes(physical);
+    // Reset generator inputs so the "Počet pozic" preview reflects only what
+    // the admin actively types, not stale defaults left over between contests.
+    setTotalMioCoinsInput(0);
+    setStepValue(0);
   };
 
   const handleChange =

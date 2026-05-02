@@ -1,91 +1,37 @@
-## Co je špatně u soutěže `e594d0bd-56d1-4192-abe6-138c54b09f40`
+## Co se reálně děje
 
-Zkontroloval jsem DB:
+V `src/components/AdminContestManagement.tsx` jsem našel toto:
 
-- `main_image` ✅ uložen
-- `main_prize_secondary_image` ❌ **NULL** (Detailní obrázek se neuložil)
-- `banner_image` ❌ **NULL** (Banner se neuložil)
-- `contest_media` ❌ **0 řádků** (žádná galerie, žádné pozadí)
+1. Pole `totalMioCoinsInput` (default 1000) a `stepValue` (default 10) se **automaticky** používají k výpočtu `computedPositionCount = floor(totalMioCoinsInput / stepValue)` — tj. hned po otevření modalu se v UI zobrazí věta „Počet pozic: 100" i když uživatel nic nezadal.
+2. V tabu „Bonusy – MioCoins" je horní badge `Celkem: {totalMioCoins} MC ({mioCoinBonuses.length} pozic)` — `totalMioCoins` se počítá ze stavu `mioCoinBonuses`. Sám se „nevytváří", ale generování spustí jen kliknutí na **Vygenerovat MioCoiny**.
+3. Při otevření nové soutěže běží **draft restore z localStorage** (`DRAFT_KEY = "draft_new_contest"`). Ten ale ukládá **jen `form`**, ne `mioCoinBonuses` ani `totalMioCoinsInput`/`stepValue`. Takže po reopen modalu se vstupy resetují na 1000/10 → vidíš v UI „Počet pozic: 100" aniž bys cokoli zadal.
+4. Uživatelské vnímání „číslo se samo mění a vrací" odpovídá tomu, že:
+   - při psaní do polí se přepočítává `computedPositionCount` živě (každý keystroke),
+   - mezi taby (Detail/Bonusy/Galerie) se hodnoty drží ve state, ale po **zavření modalu** se MioCoin pole resetuje na default 1000/10, zatímco `form` se obnoví z draftu → opětovně otevřeno vypadá jako „samo se to vyplnilo".
+5. „Smazat vše" volá `clearMioCoinBonuses()` které vyčistí `mioCoinBonuses` → po tom už generování funguje normálně, protože uživatel sám stiskne tlačítko Vygenerovat.
 
-Soutěž vznikla, ale 5 ze 6 grafik se ztratilo. Toast „chyby při vytváření" pochází z bloku flush galerie, když insert do `contest_media` selže.
+Žádný cyklický refetch ani realtime kanál v tomto modalu na `bonus_prizes` neexistuje (realtime na bonusy je jen v `AdminBonusOverview` mimo modal a v `TicketMapAdmin`).
 
-## Tři reálné příčiny
+## Závěr
 
-### 1. Tabulka `contest_media` nemá ŽÁDNOU RLS policy
+Není to bug s automatickou tvorbou bonusů na DB. Je to UI bug:
 
-RLS je zapnuté, ale nula policies → každý INSERT z klienta vrací `permission denied`. Proto se galerie (vč. pozadí) **nikdy** neuloží — bug existoval celou dobu a tichoval. Tohle je hlavní příčina.
+- defaultní hodnoty 1000 / 10 se zobrazují jako by uživatel něco zadal,
+- draft persistence při nové soutěži ukládá jen `form` a ignoruje stav MioCoin/Physical/Gallery → po reopen modalu vznikne nekonzistentní stav (form má data, MioCoin je default, badge ukazuje „100 pozic"),
+- žádná indikace, jestli jsou MioCoiny opravdu uložené v DB nebo jen čekají v paměti.
 
-### 2. Detail + Banner se ukládají pouze pokud `form.detail_image_file` / `form.banner_image_file` jsou v `form` stavu
+## Navrhovaná oprava
 
-V handleru je:
-```ts
-if (form.detail_image_file) { ... upload ... }
-if (form.banner_image_file) { ... upload ... }
-```
-Žádná validace, že soubor existuje. Když je `null`, prostě se to **tiše přeskočí** bez toast/warningu.
+Soubor: `src/components/AdminContestManagement.tsx`
 
-### 3. Galerie typu „Pozadí" — soubor zmizí když user neklikne „Přidat do galerie"
+1. **Default vstupů na 0** — `useState<number>(1000)` → `useState<number>(0)` pro `totalMioCoinsInput` a `useState<number>(10)` → `useState<number>(0)` pro `stepValue`. Dokud uživatel nic nezadá, sekce nebude předstírat „100 pozic".
+2. **Sjednotit reset při otevření**: v `useEffect` reagujícím na `[editingContest, open]` (řádky 191–239) přidat při větvi `else` (nová soutěž) reset i pro `setTotalMioCoinsInput(0)`, `setStepValue(0)`, `setDistributionType("even")`. Při větvi `editingContest` při `loadExistingBonuses` taky resetovat vstupy na 0, ať se po načtení reálných bonusů z DB nemíchá.
+3. **Skrýt řádek „Počet pozic: …"** dokud nejsou obě hodnoty > 0 (už podmínka existuje, ale defaulty 1000/10 ji tříští). Po bodu 1 se to vyřeší samo.
+4. **Vizuální rozlišení uloženo vs neuloženo**: badge nahoře přejmenovat na `Celkem: X MC (Y pozic) – {ulozeno|cekajici}` podle toho, jestli je `editingContest` nastaven a `mioCoinBonuses` mají vyplněné `id`. Aby bylo jasné, že čísla nejsou „magická", ale jen v paměti.
+5. **Volitelně rozšířit draft persistence** o `mioCoinBonuses`, `totalMioCoinsInput`, `stepValue`, `distributionType`, `physicalPrizes` (bez File objektů) — aby se po zavření a opětovném otevření modalu obnovil i stav bonusů a uživatel neměl pocit, že se to „samo vytvořilo a zase smazalo".
 
-UI má samostatný file input pro pozadí. Když user vybere soubor a rovnou klikne „Vytvořit soutěž" (místo „Přidat do galerie"), soubor se nikam neuloží — žádný auto-add.
+Žádná DB migrace. Žádné změny v `bonus_prizes`, `distribute-bonus-prizes` ani RPC `admin_manage_bonus_prize` — ta logika je v pořádku.
 
-## Plán opravy
+## Riziko
 
-### Krok 1 — SQL migrace: RLS policies na `contest_media`
-
-```sql
-ALTER TABLE public.contest_media ENABLE ROW LEVEL SECURITY;
-
--- Public read (potřeba pro ContestDetail)
-CREATE POLICY "contest_media_public_select"
-  ON public.contest_media FOR SELECT
-  TO anon, authenticated USING (true);
-
--- Admin write/update/delete
-CREATE POLICY "contest_media_admin_insert"
-  ON public.contest_media FOR INSERT TO authenticated
-  WITH CHECK (public.has_role(auth.uid(), 'admin'::app_role)
-           OR public.has_role(auth.uid(), 'superadmin'::app_role));
-
-CREATE POLICY "contest_media_admin_update"
-  ON public.contest_media FOR UPDATE TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'::app_role)
-      OR public.has_role(auth.uid(), 'superadmin'::app_role));
-
-CREATE POLICY "contest_media_admin_delete"
-  ON public.contest_media FOR DELETE TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'::app_role)
-      OR public.has_role(auth.uid(), 'superadmin'::app_role));
-
-GRANT SELECT ON public.contest_media TO anon, authenticated;
-GRANT INSERT, UPDATE, DELETE ON public.contest_media TO authenticated;
-```
-
-### Krok 2 — Frontend: `src/components/AdminContestManagement.tsx`
-
-- **Auto-flush** vybraného souboru/URL z formuláře „Přidat nové médium" do galerie těsně před Save — aby se neztratil když user neklikne explicitně „Přidat do galerie". Funguje pro typy `image`, `background` i `video`.
-- **Konkrétní DB error message** v toastu když selže flush galerie (místo obecného „Galerie částečně uložena").
-- **Toast** když selže update detail/banner v `additionalUpdates` (dnes jen `console.error` = tichá ztráta).
-- (Volitelně) Warning toast při vytváření, když chybí detail nebo banner — neblokující, jen aby admin viděl, že to bylo prázdné.
-
-### Krok 3 — Oprava existující soutěže `e594d0bd…`
-
-Po nasazení Krok 1+2: otevřít tu soutěž v adminu (Edit), znovu nahrát detail + banner + položky galerie. Tentokrát to projde, protože RLS bude povolovat insert.
-
-## Co se NEMĚNÍ
-
-- Žádná změna `contests` schématu, RPC `admin_manage_contest`, `buy_ticket_atomic`, walletu, ticketové ekonomiky.
-- Žádná změna existujících RLS policies — jen se **doplní** chybějící na `contest_media`.
-- Žádná změna `ContestDetail.tsx` (customer side).
-
-## Soubory k úpravě
-
-- `supabase/migrations/20260502_contest_media_rls_policies.sql` — nový (Krok 1)
-- `src/components/AdminContestManagement.tsx` — Krok 2
-
-## Test po nasazení
-
-1. Aplikovat SQL migraci.
-2. Vytvořit testovací soutěž, nahrát všechny 3 hlavní obrázky + 2 položky galerie (1× pozadí, 1× YouTube).
-3. Ověřit v DB: všechna 3 image pole vyplněná, `contest_media` má 2 řádky.
-4. Otevřít detail soutěže jako customer — pozadí se aplikuje, video je v galerii.
-5. Pokud cokoli selže, toast ukáže konkrétní chybu z DB.
+Minimální. Změna je čistě frontend ve formuláři, žádné dotčení `buy_ticket_atomic`, žádné dotčení RLS. Existující soutěže s reálně uloženými bonusy se chovají stejně (načítají se z DB přes `loadExistingBonuses`).
