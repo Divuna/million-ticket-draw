@@ -1290,11 +1290,68 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
           if (updateError) {
             console.error("Error updating images:", updateError);
+            toast({
+              title: "Chyba ukládání obrázků",
+              description: `Detail/Banner se neuložil: ${updateError.message}`,
+              variant: "destructive",
+            });
           }
         }
 
+        // AUTO-FLUSH: pokud admin vybral soubor nebo URL v "Přidat nové médium" a neklikl
+        // explicitně "Přidat do galerie", zachytíme to tady, aby se to neztratilo.
+        const hasUnaddedMedia =
+          (newMediaType === "video" && newMediaUrl.trim().length > 0) ||
+          ((newMediaType === "image" || newMediaType === "background") && newMediaFile !== null);
+
+        if (hasUnaddedMedia) {
+          const tempId = `temp-autoflush-${Date.now()}`;
+          let url = newMediaUrl.trim();
+          if ((newMediaType === "image" || newMediaType === "background") && newMediaFile) {
+            url = URL.createObjectURL(newMediaFile);
+            setPendingMediaFiles((prev) => ({ ...prev, [tempId]: newMediaFile }));
+          }
+          // U "background" nahradíme případnou existující background položku
+          setGalleryMedia((prev) => {
+            const filtered =
+              newMediaType === "background"
+                ? prev.filter((m) => m.type !== "background")
+                : prev;
+            return [...filtered, { id: tempId, type: newMediaType, url, sort_order: newMediaSortOrder }];
+          });
+          // Reset form inputs
+          setNewMediaUrl("");
+          setNewMediaFile(null);
+        }
+
         // Flush pending gallery media (only set when creating a new contest)
-        const pendingItems = galleryMedia.filter((m) => String(m.id).startsWith("temp-"));
+        // Re-read galleryMedia synchronously by combining with the auto-flushed item above.
+        const autoFlushedItem = hasUnaddedMedia
+          ? (() => {
+              const tempId = `temp-autoflush-${Date.now()}`;
+              let url = newMediaUrl.trim();
+              const file = (newMediaType === "image" || newMediaType === "background") ? newMediaFile : null;
+              if (file) url = URL.createObjectURL(file);
+              return { id: tempId, type: newMediaType, url, sort_order: newMediaSortOrder, _file: file };
+            })()
+          : null;
+
+        const baseItems = galleryMedia.filter((m) => String(m.id).startsWith("temp-"));
+        const pendingItems = autoFlushedItem
+          ? [
+              ...(newMediaType === "background"
+                ? baseItems.filter((m) => m.type !== "background")
+                : baseItems),
+              { id: autoFlushedItem.id, type: autoFlushedItem.type, url: autoFlushedItem.url, sort_order: autoFlushedItem.sort_order },
+            ]
+          : baseItems;
+
+        // Pokud auto-flush měl File, přidáme ho do lookup mapy pro nahrávání
+        const effectivePendingFiles: Record<string, File> = { ...pendingMediaFiles };
+        if (autoFlushedItem && autoFlushedItem._file) {
+          effectivePendingFiles[autoFlushedItem.id] = autoFlushedItem._file;
+        }
+
         if (pendingItems.length > 0) {
           let okCount = 0;
           let failCount = 0;
