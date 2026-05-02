@@ -2494,20 +2494,24 @@ export const AdminContestManagement: React.FC = () => {
     if (movableSelected.length === 0) return;
     setBulkMoving(true);
     try {
-      const results = await Promise.all(
-        movableSelected.map(async (c) => {
-          const res = await supabase.rpc("admin_manage_contest", {
-            p_operation: "update",
-            p_contest_id: c.contest_id,
-            p_status: "draft",
-          });
-          return { contest: c, error: res.error };
-        })
-      );
-      const failed = results.filter((r) => r.error);
-      const succeeded = results.filter((r) => !r.error).map((r) => r.contest);
+      const succeeded: typeof movableSelected = [];
+      const failed: { contest: typeof movableSelected[0]; error: any }[] = [];
+
+      for (const c of movableSelected) {
+        const { error } = await supabase.rpc("admin_manage_contest", {
+          p_operation: "update",
+          p_contest_id: c.contest_id,
+          p_status: "draft",
+        });
+        if (error) {
+          console.error("[BulkMoveToDraft] failed:", c.title, c.contest_id, error);
+          failed.push({ contest: c, error });
+        } else {
+          succeeded.push(c);
+        }
+      }
+
       if (failed.length > 0) {
-        failed.forEach((f) => console.error("[BulkMoveToDraft] failed:", f.contest.title, f.contest.contest_id, f.error));
         const failedNames = failed.map((f) => f.contest.title).slice(0, 2).join(", ");
         const firstErr = failed[0].error?.message || "neznámá chyba";
         toast({
