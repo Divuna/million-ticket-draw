@@ -233,6 +233,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setMioCoinBonuses([]);
       setPhysicalPrizes([]);
       setGalleryMedia([]);
+      setPendingMediaFiles({});
     }
     setActiveTab("basic");
   }, [editingContest, open]);
