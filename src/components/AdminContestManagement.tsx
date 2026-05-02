@@ -784,12 +784,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     }
   };
 
-  const handleImageUpload = async (file: File): Promise<string> => {
+  const handleImageUpload = async (
+    file: File,
+    bucket: "contest-images" | "contest-banners" = "contest-images",
+  ): Promise<string> => {
     const ext = file.name.split(".").pop();
     const fileName = `${crypto.randomUUID()}.${ext}`;
     const filePath = fileName;
 
-    const { error } = await supabase.storage.from("contest-images").upload(filePath, file);
+    const { error } = await supabase.storage.from(bucket).upload(filePath, file);
 
     if (error) {
       throw error;
