@@ -1985,12 +1985,40 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           </div>
         </Tabs>
 
-        <DialogFooter className="px-6 py-4 border-t border-white/10 shrink-0 bg-background">
-          <Button variant="outline" onClick={onClose} disabled={saving}>
+        <DialogFooter className="px-6 py-4 border-t border-white/10 shrink-0 bg-background gap-2 sm:justify-between">
+          <div>
+            {isNewContest && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={clearDraft}
+                disabled={saving}
+                className="text-destructive hover:text-destructive"
+              >
+                Smazat rozdělanou práci
+              </Button>
+            )}
+          </div>
+          <Button variant="outline" onClick={attemptClose} disabled={saving}>
             Zavřít
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
+        <AlertDialogContent className="bg-card border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Zavřít bez uložení?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Máte nevyplněné údaje. Opravdu chcete zavřít bez uložení?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDiscardAndClose}>Zavřít</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
