@@ -727,26 +727,27 @@ export default function ContestDetail() {
 
       {/* 1. HERO SECTION */}
       <section className="contest-card-glow w-full rounded-[20px] relative overflow-hidden bg-gradient-to-br from-[hsl(220_25%_8%)] to-[hsl(220_20%_12%)] border-[3px] border-[hsl(32_100%_50%/0.6)]">
+        {/* Fast game badge - corner placement */}
+        {contest.fast_game && (
+          <Badge className="absolute top-3 left-3 z-20 bg-amber-500/90 text-white text-xs md:text-sm px-3 py-1 shadow-lg">
+            Fast game
+          </Badge>
+        )}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-6 md:p-8">
           {/* Text content */}
-          <div className="flex-1 min-w-0 md:max-w-[55%] space-y-4 z-10">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-yellow-400 leading-tight break-words">
-                {contest.title}
-              </h1>
-              {contest.fast_game && (
-                <Badge className="bg-amber-500/80 text-white text-sm px-3 py-1">Fast game</Badge>
-              )}
-            </div>
+          <div className="flex-1 min-w-0 md:max-w-[50%] space-y-4 z-10">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-yellow-400 leading-tight break-all">
+              {contest.title}
+            </h1>
             {contest.main_prize && (
-              <p className="text-xl md:text-2xl font-semibold text-gray-200 break-words">
+              <p className="text-lg md:text-xl font-semibold text-gray-200 break-words">
                 Hlavní výhra: {contest.main_prize}
               </p>
             )}
             {contest.description && (
               <div className="space-y-2">
                 <p
-                  className={`text-gray-300 text-sm md:text-base leading-relaxed whitespace-pre-line ${
+                  className={`text-gray-300 text-sm md:text-base leading-relaxed whitespace-pre-line break-words ${
                     descExpanded ? '' : 'line-clamp-6 md:line-clamp-8 overflow-hidden'
                   }`}
                 >
