@@ -1,53 +1,37 @@
+
 ## Problém
 
-`buy_ticket_atomic` stále padá s `57014 statement timeout` (8 s). Předchozí migrace `20260504_fix_nonblocking_sofinity_triggers.sql` opravila `trigger_sofinity_forward` a `process_event_queue_trigger`, ale v trigger řetězci, který se spouští během INSERTU tiketu / winners / notifications, **zůstávají dva další synchronní `net.http_post`**, které visí na pg_net workerech a překračují timeout.
+Zákazník si koupí ticket, kupón se mu **uloží** do `/wins → Nabídky` (DB záznam v `user_partner_offers` vznikne správně), ale v ticket-result modalu **kupón nevidí** — modal ukáže jen číslo ticketu, ne zprávu „🎁 SPECIÁLNÍ NABÍDKA!". Zákazník tedy neví, že kupón vyhrál.
 
-## Identifikované zbývající blokátory
+## Příčina
 
-Audit `pg_proc` (funkce volané triggery na `tickets`, `winners`, `notifications`):
+Frontend bug ve dvou souborech. `TicketResultModal` umí `partner_offer` zobrazit (`src/components/TicketResultModal.tsx`, větev `isPartnerOffer && result?.partner_offer`), a logika nákupu si nabídku správně načte z `user_partner_offers` do lokální proměnné `modalResult.partner_offer`. **Ale při předání do `<TicketResultModal result={...} />` se `partner_offer` zapomene přibalit:**
 
-1. **`trigger_notification_sent()`** — trigger `trigger_notification_sent` na `notifications` (AFTER INSERT).
-   - Volá synchronně `net.http_post('…/sofinity-event', …)` přímo v transakci.
-   - Trigger řetězec během nákupu: `tickets INSERT` → bonus pozice → `winners INSERT` → `notify_winner` → `event_logs INSERT` → `enqueue_notifications_from_event_logs` → `notifications INSERT` → **`trigger_notification_sent` → net.http_post** ⛔
+- `src/pages/Games.tsx`, řádky 470–479 — ručně se vypisuje `ticket_number, distance_to_next_bonus, next_bonus_position, won_prize, won_type, bonus_prize_id, remaining_tickets`, ale **chybí `partner_offer`**.
+- `src/pages/FavoriteGames.tsx`, řádky 424–433 — stejný bug.
+- `src/pages/ContestDetail.tsx` — **OK**, přes `stableResult` (ř. 591) `partner_offer` projde a modal ho zobrazí.
 
-2. **`call_event_forward_log_listener()`** — pokud někde v chainu vznikne řádek v `event_forward_log`, volá `net.http_post('…/event_forward_log_listener', …, timeout 5000)` přímo v transakci. Stejné riziko 5–10 s blokace.
+Tím pádem na `/games` a `/favorite-games` zákazník po nákupu kupón v modalu nikdy neuvidí, jen ho najde později v sekci Nabídky.
 
-Obě funkce jsou poslední dva přímé `net.http_post` v transakční cestě nákupu (ostatní funkce s `net.http_post` — `forward_event_to_sofinity`, `process_event_queue_message`, `send_push_via_onesignal`, `proxy_post_to_onesignal` atd. — buď nejsou připojené triggerem na tabulky dotčené nákupem, nebo už byly odpojeny).
+## Řešení
 
-## Návrh opravy (1 migrace, žádné schema změny)
+Dvouřádková oprava — do props `result` v obou modalech přidat jeden klíč `partner_offer: modalResult.partner_offer ?? null`. **Žádná změna logiky, žádná změna DB, žádná změna `assign_partner_offer_to_ticket`, žádná změna `buy_ticket_atomic`.** Jen propsání už načtených dat do komponenty, která je umí vykreslit.
 
-### Co se mění
+### Soubory ke změně
 
-Pouze tělo dvou trigger funkcí — **bez** drop, bez nových tabulek, bez nových sloupců, bez RLS změn, bez změn `buy_ticket_atomic`, bez změn ekonomiky.
-
-**A. `trigger_notification_sent()`**
-- Ponechá zápis `audit_logs('notification_sent', …)`.
-- `net.http_post` nahradí `INSERT INTO public.event_queue(event_name='notification_sent', …)`. Tu už dnes čte polling edge function, takže Sofinity dostane stejný payload, jen asynchronně.
-- Vše obalí `BEGIN/EXCEPTION WHEN OTHERS THEN RAISE LOG; RETURN NEW;` — nikdy neblokuje caller.
-
-**B. `call_event_forward_log_listener()`**
-- `net.http_post` nahradí `INSERT INTO public.event_queue(event_name='event_forward_log_listener', metadata=jsonb_build_object('id', NEW.id), …)`.
-- Stejný non-blocking exception handler.
+1. `src/pages/Games.tsx` — v bloku `<TicketResultModal result={modalResult ? {...} : null}>` (ř. 471–479) přidat `partner_offer: modalResult.partner_offer ?? null,`.
+2. `src/pages/FavoriteGames.tsx` — stejná úprava (ř. 425–433).
 
 ### Co se NEMĚNÍ
 
-- `buy_ticket_atomic`, `assign_partner_offer_to_ticket`
-- `tickets`, `winners`, `wallets`, `event_logs`, `event_queue`, `notifications`, `audit_logs` (žádný DDL)
-- RLS policies, granty
-- Ekonomika (cena tiketu, MioCoin, výherci, bonusy)
-- Polling edge funkce (`send_event_to_sofinity`, `event_forward_log_listener`) — payload v `event_queue` má všechny potřebné fieldy
-- Push pipeline (`notifications` → `push_log` → OneSignal) — `trigger_send_push_from_notifications` zůstává beze změny, OneSignal call je tam přes `send_push_via_onesignal`, který má svou vlastní non-blocking obálku
+- `assign_partner_offer_to_ticket` (cooldown, rotace, eligibility) — beze změny.
+- `buy_ticket_atomic`, RLS, schéma, ekonomika.
+- `TicketResultModal.tsx` — už dnes umí offer vykreslit, jen čeká na data.
+- `ContestDetail.tsx` — už funguje správně, nic se tam nedělá.
+- `/wins → Nabídky` — funguje a ukládání zůstává beze změny.
 
-### Reverzibilita
+## Důsledek
 
-Migrace v hlavičce uvádí přesné předchozí znění obou funkcí pro snadný rollback (analogicky jako `20260504_fix_nonblocking_sofinity_triggers.sql`).
+Po opravě: jakmile DB zákazníkovi nabídku přiřadí (dnes podle stávajících pravidel = první ticket po 5min cooldownu / rotace mezi partnery), v ticket modalu se okamžitě objeví karta „🎁 SPECIÁLNÍ NABÍDKA!" s logem partnera, názvem, krátkým textem a platností do. Zákazník tedy hned vidí, že vyhrál kupón, a stejný kupón najde i ve `/wins → Nabídky` (jako dnes).
 
-## Ověření po nasazení
-
-1. Zkusit nákup tiketu jako uživatel v `/contest/3a5ce8cd-…` → očekáváme 200 < 1 s.
-2. `SELECT count(*), status FROM event_queue WHERE event_name IN ('notification_sent','event_forward_log_listener') GROUP BY status;` — řádky se objevují jako `pending` a polling worker je odbavuje.
-3. `audit_logs` stále obsahuje `notification_sent` záznamy (stejné jako dnes).
-
-## Soubor migrace
-
-`supabase/migrations/20260504_fix_remaining_blocking_http_in_ticket_chain.sql` — jediná SQL migrace, dvě `CREATE OR REPLACE FUNCTION`, žádné `DROP`, žádné `ALTER TABLE`.
+Pokud DB v daném momentě žádnou nabídku nepřiřadí (cooldown, žádný platný offer v contestu), modal bude vypadat přesně jako dnes — žádná regrese.
