@@ -339,34 +339,59 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
     const isBonusWinCheck = bonusPrize !== null;
     const isMainPrizeCheck = result.won_type === 'main' || result.won_main === true;
-    const isWinnerCheck = isBonusWinCheck || isMainPrizeCheck;
+    const isPartnerOfferCheck = !!result.partner_offer;
+    const isWinnerCheck = isBonusWinCheck || isMainPrizeCheck || isPartnerOfferCheck;
+
+    // Sharing only for real wins (bonus physical, MioCoin, main prize, or partner offer).
+    if (!isWinnerCheck) {
+      return;
+    }
+
+    // Determine share-card kind, image, and Czech texts.
+    let kind: ShareKind;
+    let imageUrl: string | null = null;
+    let fallbackImageUrl: string | null = null;
+    let headline = 'Vyhrál jsem na OneMil';
+    let prizeTitle = '';
+    let bonusAmount: number | null = null;
+
+    if (isPartnerOfferCheck && result.partner_offer) {
+      kind = 'partner_offer';
+      headline = 'Získal jsem speciální nabídku na OneMil';
+      imageUrl = result.partner_offer.banner_url || null;
+      fallbackImageUrl = result.partner_offer.logo_url || null;
+      prizeTitle = result.partner_offer.title || result.partner_offer.partner_name || '';
+    } else if (isMainPrizeCheck) {
+      kind = 'main_prize';
+      // No reliable main-prize image is available in this modal; keep clean fallback.
+      imageUrl = null;
+      prizeTitle = result.won_prize?.trim() || 'Hlavní výhra';
+    } else if (isBonusWinCheck && bonusPrize) {
+      if (bonusPrize.image_url) {
+        kind = 'bonus_physical';
+        imageUrl = bonusPrize.image_url;
+      } else {
+        kind = 'miocoin';
+        imageUrl = miocoinLogo;
+        bonusAmount = bonusPrize.amount ?? null;
+      }
+      prizeTitle = bonusPrize.title?.trim() || bonusPrize.description || 'Bonusová výhra';
+    } else {
+      return;
+    }
 
     const generateAndUpload = async () => {
       setIsGeneratingImage(true);
       setIsUploading(true);
       try {
-        // Compute motivational text for the share image (no ticket number)
-        let canvasMotivationalText: string | null = null;
-        if (!isWinnerCheck) {
-          const dtb = typeof result.distance_to_next_bonus === 'number' && result.distance_to_next_bonus > 0
-            ? result.distance_to_next_bonus : null;
-          const rem = typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
-            ? result.remaining_tickets : null;
-          let nearest: number | null = null;
-          if (dtb !== null && rem !== null) nearest = Math.min(dtb, rem);
-          else nearest = dtb ?? rem ?? null;
-          canvasMotivationalText = nearest !== null
-            ? nextWinTicketText(nearest)
-            : 'Další výhra může být blíž, než si myslíš.';
-        }
-
-        const blob = await generateTicketCard(
-          result.ticket_number,
-          isWinnerCheck,
-          isMainPrizeCheck,
-          bonusPrize?.amount || null,
-          canvasMotivationalText
-        );
+        const blob = await generatePremiumShareCard({
+          kind,
+          imageUrl,
+          fallbackImageUrl,
+          headline,
+          prizeTitle,
+          bonusAmount,
+        });
         
         // Revoke old URL before setting new one
         if (previewImageUrl) {
