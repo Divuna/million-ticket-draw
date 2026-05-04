@@ -922,6 +922,7 @@ const Homepage = () => {
                   onPlay={handleContestClick}
                   fromPage="homepage"
                   className="flex-shrink-0 w-80"
+                  hideTitleAndCount
                 />
               ))
             )}
