@@ -304,7 +304,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           if (dtb !== null && rem !== null) nearest = Math.min(dtb, rem);
           else nearest = dtb ?? rem ?? null;
           canvasMotivationalText = nearest !== null
-            ? `Nejbližší výhra může být už za ${nearest.toLocaleString('cs-CZ')} tahů.`
+            ? nextWinTicketText(nearest)
             : 'Další výhra může být blíž, než si myslíš.';
         }
 
