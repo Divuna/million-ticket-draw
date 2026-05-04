@@ -1544,6 +1544,38 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         description: isEditing ? "Změny byly úspěšně uloženy." : "Nová soutěž byla úspěšně uložena.",
       });
 
+      // After successful save: clear draft + reset form to defaults (new contests only)
+      if (!isEditing) {
+        try {
+          localStorage.removeItem(DRAFT_KEY);
+        } catch {}
+        setForm({
+          title: "",
+          description: "",
+          rules: "",
+          rules_pdf_file: null,
+          rules_pdf_url: "",
+          main_prize: "",
+          ticket_count: 1000000,
+          ticket_price: 1,
+          status: "pending",
+          main_image_file: null,
+          banner_image_file: null,
+          detail_image_file: null,
+          main_image_url: "",
+          banner_image_url: "",
+          detail_image_url: "",
+          fast_game: false,
+        });
+        setMioCoinBonuses([]);
+        setPhysicalPrizes([]);
+        setGalleryMedia([]);
+        setPendingMediaFiles({});
+        setTotalMioCoinsInput(0);
+        setStepValue(0);
+        setDistributionType("even");
+      }
+
       onSaved();
       onClose();
     } catch (err: any) {
