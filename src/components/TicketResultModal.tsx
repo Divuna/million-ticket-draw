@@ -1280,6 +1280,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             </Button>
           </div>
         </div>
+        )}
 
         <div className="flex justify-center">
           <Button type="button" onClick={onClose} variant={shouldCelebrateWin ? 'outline' : 'default'} className="w-full border-white/10">
