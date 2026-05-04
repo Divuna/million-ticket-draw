@@ -334,8 +334,6 @@ const FavoriteGames = () => {
 
       if (result.won_prize) {
         toast.success(`Gratulujeme! Vyhrál jsi ${result.won_prize}!`);
-      } else {
-        toast.success(`Tiket #${result.ticket_number.toLocaleString('cs-CZ')} zakoupen!`);
       }
     } catch (error: any) {
       console.error('Error unlocking ticket:', error);
