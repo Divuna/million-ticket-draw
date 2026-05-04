@@ -83,7 +83,7 @@ const generateTicketCard = async (
   isWinner: boolean,
   isMainPrize: boolean,
   bonusAmount: number | null,
-  remainingTickets: number | undefined
+  motivationalText: string | null
 ): Promise<Blob> => {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -155,10 +155,12 @@ const generateTicketCard = async (
       : 'Zkusil jsem štěstí!';
   ctx.fillText(resultText, canvas.width / 2, 355);
 
-  // Ticket number
-  ctx.font = 'bold 64px system-ui, -apple-system, sans-serif';
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(`Ticket #${ticketNumber.toLocaleString('cs-CZ')}`, canvas.width / 2, 435);
+  // Motivational text for non-winners; omit ticket number entirely
+  if (!isWinner && motivationalText) {
+    ctx.font = 'bold 30px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#cccccc';
+    ctx.fillText(motivationalText, canvas.width / 2, 435);
+  }
 
   // Bonus amount if winner
   if (isWinner && bonusAmount && bonusAmount > 0) {
@@ -277,12 +279,27 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       setIsGeneratingImage(true);
       setIsUploading(true);
       try {
+        // Compute motivational text for the share image (no ticket number)
+        let canvasMotivationalText: string | null = null;
+        if (!isWinnerCheck) {
+          const dtb = typeof result.distance_to_next_bonus === 'number' && result.distance_to_next_bonus > 0
+            ? result.distance_to_next_bonus : null;
+          const rem = typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
+            ? result.remaining_tickets : null;
+          let nearest: number | null = null;
+          if (dtb !== null && rem !== null) nearest = Math.min(dtb, rem);
+          else nearest = dtb ?? rem ?? null;
+          canvasMotivationalText = nearest !== null
+            ? `Nejbližší výhra může být už za ${nearest.toLocaleString('cs-CZ')} tahů.`
+            : 'Další výhra může být blíž, než si myslíš.';
+        }
+
         const blob = await generateTicketCard(
           result.ticket_number,
           isWinnerCheck,
           isMainPrizeCheck,
           bonusPrize?.amount || null,
-          result.remaining_tickets
+          canvasMotivationalText
         );
         
         // Revoke old URL before setting new one
@@ -498,12 +515,15 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     return dtb ?? rem ?? null;
   }, [result, isWinner]);
 
-  // Dynamic share text based on result
+  // Dynamic share text based on result — no ticket number
   const getShareText = () => {
     if (isWinner) {
-      return `Vyhrál jsem na OneMil 🎉🎟️ Ticket #${result?.ticket_number?.toLocaleString('cs-CZ') ?? ''}. Zkus štěstí taky 👉 onemil.cz`;
+      return `Vyhrál jsem na OneMil 🎉🎟️ Zkus štěstí taky 👉 onemil.cz`;
     }
-    return `Zahrál jsem si na OneMil 🎟️ Ticket #${result?.ticket_number?.toLocaleString('cs-CZ') ?? ''}. Každý ticket tě blíží k výhře 👉 onemil.cz`;
+    const motivationalPart = nearestPrizeDistance !== null
+      ? `Nejbližší výhra může být už za ${nearestPrizeDistance.toLocaleString('cs-CZ')} tahů.`
+      : 'Další výhra může být blíž, než si myslíš.';
+    return `Zahrál jsem si na OneMil 🎟️ ${motivationalPart} 👉 onemil.cz`;
   };
 
   /** Text copied by „Sdílet výhru“ — short viral hook + CTA (clipboard only) */
@@ -1025,15 +1045,19 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 <p className="text-sm font-medium text-amber-200/90">{lossRetentionNudge}</p>
               )}
               <div className="rounded-2xl p-5 space-y-3 border border-yellow-500/30 bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
-                {nearestPrizeDistance !== null && (
-                  <p className="text-sm text-amber-100/85 text-center">
-                    Nejbližší výhra může být už za{' '}
-                    <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
-                      {nearestPrizeDistance.toLocaleString('cs-CZ')}
-                    </span>
-                    {' '}tahů.
-                  </p>
-                )}
+                <p className="text-sm text-amber-100/85 text-center">
+                  {nearestPrizeDistance !== null ? (
+                    <>
+                      Nejbližší výhra může být už za{' '}
+                      <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
+                        {nearestPrizeDistance.toLocaleString('cs-CZ')}
+                      </span>
+                      {' '}tahů.
+                    </>
+                  ) : (
+                    'Další výhra může být blíž, než si myslíš.'
+                  )}
+                </p>
               </div>
             </div>
           )}
