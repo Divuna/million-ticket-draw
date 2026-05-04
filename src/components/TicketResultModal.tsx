@@ -856,22 +856,34 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     {bonusPrize.detailed_description || bonusPrize.description}
                   </p>
                 )}
-                {result?.distance_to_next_bonus != null && result.distance_to_next_bonus > 0 && (
-                  <div className="mx-auto max-w-[320px] rounded-full border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center">
-                    <p className="text-sm text-amber-100/80">
-                      Nejbližší výhra může být už za{' '}
-                      <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
-                        {(Math.min(
-                          result.distance_to_next_bonus,
-                          typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
-                            ? result.remaining_tickets
-                            : result.distance_to_next_bonus
-                        )).toLocaleString('cs-CZ')}
-                      </span>
-                      {' '}tahů.
-                    </p>
-                  </div>
-                )}
+                {result?.distance_to_next_bonus != null && result.distance_to_next_bonus > 0 && (() => {
+                  const nextN = Math.min(
+                    result.distance_to_next_bonus,
+                    typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
+                      ? result.remaining_tickets
+                      : result.distance_to_next_bonus
+                  );
+                  return (
+                    <div className="mx-auto max-w-[360px] rounded-2xl border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center space-y-1">
+                      <p className="text-sm text-amber-100/80">
+                        {nextN === 1 ? (
+                          <>Další výherní ticket čeká už při dalším tahu.</>
+                        ) : (
+                          <>
+                            Další výherní ticket čeká už za{' '}
+                            <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
+                              {nextN.toLocaleString('cs-CZ')}
+                            </span>
+                            {' '}{tahPlural(nextN)}.
+                          </>
+                        )}
+                      </p>
+                      <p className="text-[11px] text-amber-100/60">
+                        {NEXT_WIN_EXPLAINER}
+                      </p>
+                    </div>
+                  );
+                })()}
                 <p className="win-moment-cta-hint -mb-1 text-center text-[11px] font-semibold uppercase text-amber-200/75 sm:text-xs">
                   Štěstí frčí —{' '}
                   <span className="text-amber-100">hrát znovu</span> je nejrychlejší cesta k další výhře
