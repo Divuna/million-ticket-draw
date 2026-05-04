@@ -1,47 +1,98 @@
-## Diagnóza
+## Diagnóza (na základě live DB dat)
 
-Nákup tiketu padá s chybou `57014: canceling statement due to statement timeout` po ~8.5 sekundy. Soutěž je čerstvá (0/100 prodaných tiketů), takže to není zámek řádku ani „contest full". DB pohled potvrdil:
+### Co skutečně víme
 
-- contest `3a5ce8cd…` je `active`, `next_ticket_number=1`, ticket_price=20
-- wallet uživatele má 16 902 MC (dostatek)
-- na tabulce `tickets` visí **více triggerů**, které se spouštějí při INSERT uvnitř `buy_ticket_atomic`:
-  - `trg_ticket_insert` → `fn_send_event_to_sofinity` — dělá **synchronní `net.http_post`** na vlastní edge funkci `send_event_to_sofinity`
-  - `trg_assign_offer_on_ticket_insert` → `assign_partner_offer_to_ticket`
-  - `audit_tickets_trigger` → `fn_audit_generic` (zápis do `audit_logs`)
-  - dále event_logs / winners triggery
+1. **RPC `buy_ticket_atomic` doběhne úspěšně.** V contestu `15a67cda…` byl ticket #1 vložen (`tickets.created_at = 11:41:04.271`), `contests.next_ticket_number` se posunul na 2, wallet byl odepsán. Proběhl i trigger `on_coin_redeemed` (do `event_queue` se založil řádek `coin_redeemed`).
+2. **Klient ale dostal `500 / 57014` po ~8.5 s.** PostgREST `authenticator` má `statement_timeout = 8 s`; RPC běžela déle a request byl klientovi zrušen. Server transakci ale dokončil = **„fantom" nákup** (peníze pryč, ticket existuje, UI ukáže chybu).
+3. **Souborový worker `event_queue` selhává s 401** (samostatný issue, nebrzdí nákup, ale potvrzuje že async pipeline jede).
 
-### Hlavní podezřelý
+### Co RPC zpomaluje (na hot-path INSERT do `tickets`)
 
-`fn_send_event_to_sofinity` volá `net.http_post(...)` synchronně uvnitř transakce nákupu tiketu. Pokud `pg_net` worker stojí, je zahlcený, nebo edge funkce odpovídá pomalu, **celá transakce `buy_ticket_atomic` čeká** a po 8 s ji Postgres zruší. To přesně sedí na pozorovaný 8.5 s timeout a 500 Internal Server Error.
+Aktuálně visí na `public.tickets` AFTER INSERT triggers:
 
-Architektonicky je to navíc špatně — projekt už má pipeline `event_logs → event_queue → Sofinity` (worker `process_event_queue_worker`), takže synchronní HTTP přímo z triggeru je duplicitní a nebezpečný (každý nákup tiketu = blokující externí volání).
+| Trigger | Funkce | Problém |
+|---|---|---|
+| `audit_tickets_trigger` | `fn_audit_generic` | INSERT do `audit_logs` s celým `to_jsonb(NEW)` — rychlé, ale spouští **`audit_logs` triggery**, viz níže |
+| `on_coin_redeemed` | `trigger_coin_redeemed` → `notify_sofinity_event` | ✅ správně async — jen INSERT do `event_queue` |
+| `trg_assign_offer_on_ticket_insert` | `assign_partner_offer_to_ticket` | čistý SQL, rychlý |
+| `trg_ticket_insert` | `fn_send_event_to_sofinity` | ❌ volá `net.http_post` synchronně (čeká na pg_net background worker pickup) |
+
+A na `event_logs` jsou **dva identické triggery** (duplicita — pravděpodobně historický rename, nikdy se neuklidil):
+
+- `trg_enqueue_notifications_from_event_logs` → `enqueue_notifications_from_event_logs`
+- `trg_event_logs_notifications` → `enqueue_notifications_from_event_logs` (tatáž funkce!)
+
+Každý INSERT do `event_logs` tedy běží **2× stejnou logiku** (2× `EXISTS` lookup + 2× INSERT do `notifications`). Pokud něco z hot-path píše do `event_logs`, dostáváme 2× zbytečnou práci a 2× šanci na zámek.
+
+### Jak to fungovalo „dřív"
+
+`trigger_coin_redeemed` (existuje a funguje) volá `notify_sofinity_event`, která **jen INSERTuje do `event_queue`** a vrátí. To je správný vzor — externí HTTP řeší async worker (`process_event_queue_worker`).
+
+`fn_send_event_to_sofinity` (na `tickets`/`winners`/`contests`) je starší duplicitní cesta, která místo enqueue dělá `net.http_post` přímo. To je ten zbytečný a riskantní krok.
+
+---
 
 ## Plán opravy
 
-### Krok 1 — okamžitě odblokovat nákup tiketů
-Přepsat `fn_send_event_to_sofinity` tak, aby místo synchronního `net.http_post` jen vložila řádek do `event_queue` (případně `event_logs`, podle toho, co worker konzumuje). Tím se transakce nákupu tiketu okamžitě dokončí a forwarding do Sofinity poběží asynchronně přes existující worker.
+### Krok 1 — DB migrace (jediný soubor)
 
-Záložní varianta (pokud nebude jasné, kterou tabulku worker čte): celé volání obalit do `BEGIN … EXCEPTION WHEN OTHERS THEN NULL; END;` s krátkým `statement_timeout` (např. 1 s) lokálně, aby selhání externí funkce nikdy neshodilo nákup.
+Vytvořit migraci `supabase/migrations/<timestamp>_unify_sofinity_pipeline.sql`:
 
-### Krok 2 — ověřit
-Po nasazení migrace zkusit nákup tiketu v soutěži CORVETTE. Očekávaná latence < 500 ms. Zkontrolovat, že:
-- `tickets` má nový řádek
-- `wallets.balance_coins` se snížil o 20
-- `event_logs` / `event_queue` má `prize_won`/`ticket_purchased` záznam (podle existující logiky)
-- Sofinity worker ho zpracuje v dalším běhu
+1. **Odstranit duplicitní trigger** na `event_logs`:
+   ```sql
+   DROP TRIGGER IF EXISTS trg_enqueue_notifications_from_event_logs ON public.event_logs;
+   ```
+   (ponecháváme `trg_event_logs_notifications` — jeden je dost)
 
-### Krok 3 — preventivně
-Projít ostatní triggery na hot-path tabulkách (`wallets`, `winners`) a ujistit se, že žádný další nedělá synchronní externí HTTP. Pokud ano, přepsat stejným vzorem.
+2. **Přepsat `fn_send_event_to_sofinity`** tak, aby místo `net.http_post` volala `notify_sofinity_event` (= jen enqueue do `event_queue`). Logika výběru `event_name` a `metadata` podle `TG_TABLE_NAME` (tickets / winners / contests) zůstává; obal celého těla do `BEGIN … EXCEPTION WHEN OTHERS THEN RAISE WARNING; RETURN NEW; END;` aby selhání nikdy neshodilo nákup. Worker `process_event_queue_worker` pak event vyzvedne a pošle do Sofinity stejně jako dnes pro `coin_redeemed`.
+
+3. **Nic jiného neměnit:**
+   - `buy_ticket_atomic` — nedotýkat se
+   - `assign_partner_offer_to_ticket` + jeho trigger — nedotýkat se
+   - `fn_audit_generic`, `trigger_coin_redeemed`, `notify_sofinity_event` — nedotýkat se
+   - žádné schema/RLS změny
+
+Migrace bude **jen jako soubor v repu**, podle pravidla projektu se aplikuje ručně v Supabase SQL Editoru po schválení.
+
+### Krok 2 — ověření v produkci
+
+Po aplikaci migrace:
+
+1. Klikneš v UI „Koupit tiket" v testovací soutěži.
+2. Očekávaná latence: < 500 ms, žádný 500/57014.
+3. Kontrolní dotazy (umím spustit):
+   - `tickets` má nový řádek s incrementovaným `number`
+   - `contests.next_ticket_number` posunutý
+   - `wallets.balance_coins` snížený o `ticket_price`
+   - `event_queue` má nový pending řádek `ticket_purchased` (od `fn_send_event_to_sofinity`) i `coin_redeemed` (od `trigger_coin_redeemed`)
+   - `audit_logs` má INSERT řádek pro `tickets`
+
+### Krok 3 — úklid „fantom" tiketu z 11:41
+
+Ticket #1 v contestu `15a67cda…` byl reálně vložen, ale uživatel ho v UI neviděl jako úspěch. Po opravě se rozhodneš:
+- nechat tak (uživatel ho má — vše OK ekonomicky), nebo
+- vrátit MioCoiny + smazat ticket + vrátit `next_ticket_number`. Pokud chceš, připravím samostatný cleanup script (mimo tuto migraci).
+
+### Krok 4 — preventivně
+
+- Worker `event_queue` aktuálně padá s 401 Unauthorized při volání edge funkce — to je samostatný issue (špatný service-role token / chybí internal token header). Doporučuju řešit v separátním ticketu, nesouvisí s nákupem tiketu.
+- Doporučuju přidat na contestu ještě hard read-only test (jednou po deployi): `SELECT count(*) FROM tickets WHERE contest_id=…` proti `next_ticket_number-1` — žádná divergence.
+
+---
 
 ## Co se NEbude měnit
-- `buy_ticket_atomic` RPC samotná (chráněné jádro)
-- `assign_partner_offer_to_ticket` a její trigger
-- ekonomická pravidla (cena, limity)
+
+- `buy_ticket_atomic` RPC
+- `assign_partner_offer_to_ticket` + trigger
+- ekonomická pravidla (cena, limity, 1M ticket cap)
 - RLS policies
-- schéma tabulek
+- schéma tabulek (žádné ALTER/RENAME/DROP)
+- `event_queue` worker (řeší se separátně)
 
-## Soubory / migrace
-- nová migrace v `supabase/migrations/` přepisující `public.fn_send_event_to_sofinity` (CREATE OR REPLACE FUNCTION)
-- migrace bude jen jako soubor, podle pravidla projektu se aplikuje ručně v Supabase SQL Editoru po schválení
+## Soubory
 
-Po schválení přepnu do build módu, vytvořím migraci a požádám o její aplikaci v SQL Editoru.
+- **Nový soubor:** `supabase/migrations/<timestamp>_unify_sofinity_pipeline.sql` — DROP duplicitního triggeru + CREATE OR REPLACE FUNCTION `fn_send_event_to_sofinity` (async enqueue + bezpečný EXCEPTION wrapper).
+- Žádné změny ve frontend kódu.
+- Žádné změny v edge funkcích.
+
+Po schválení přepnu do build módu, vytvořím migraci a požádám o její aplikaci v Supabase SQL Editoru.
