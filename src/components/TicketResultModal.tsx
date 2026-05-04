@@ -1070,20 +1070,29 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               {lossRetentionNudge && (
                 <p className="text-sm font-medium text-amber-200/90">{lossRetentionNudge}</p>
               )}
-              <div className="rounded-2xl p-5 space-y-3 border border-yellow-500/30 bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
+              <div className="rounded-2xl p-5 space-y-2 border border-yellow-500/30 bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
                 <p className="text-sm text-amber-100/85 text-center">
                   {nearestPrizeDistance !== null ? (
-                    <>
-                      Nejbližší výhra může být už za{' '}
-                      <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
-                        {nearestPrizeDistance.toLocaleString('cs-CZ')}
-                      </span>
-                      {' '}tahů.
-                    </>
+                    nearestPrizeDistance === 1 ? (
+                      <>Další výherní ticket čeká už při dalším tahu.</>
+                    ) : (
+                      <>
+                        Další výherní ticket čeká už za{' '}
+                        <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
+                          {nearestPrizeDistance.toLocaleString('cs-CZ')}
+                        </span>
+                        {' '}{tahPlural(nearestPrizeDistance)}.
+                      </>
+                    )
                   ) : (
                     'Další výhra může být blíž, než si myslíš.'
                   )}
                 </p>
+                {nearestPrizeDistance !== null && (
+                  <p className="text-[11px] text-amber-100/60 text-center">
+                    {NEXT_WIN_EXPLAINER}
+                  </p>
+                )}
               </div>
             </div>
           )}
