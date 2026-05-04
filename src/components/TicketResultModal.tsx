@@ -21,16 +21,27 @@ import { playWinChime } from '@/lib/playWinChime';
 import { pickRandomAlmostWinMessage, rollAlmostWinEffect } from '@/lib/retentionLocal';
 import './TicketResultModal.css';
 
-// Preload logo image
-const loadLogoImage = (): Promise<HTMLImageElement> => {
+// Preload an image with anonymous CORS so canvas stays untainted.
+const loadImage = (src: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = reject;
-    img.src = logoOnemil;
+    img.src = src;
   });
 };
+
+const loadImageSafe = async (src: string | null | undefined): Promise<HTMLImageElement | null> => {
+  if (!src) return null;
+  try {
+    return await loadImage(src);
+  } catch {
+    return null;
+  }
+};
+
+const loadLogoImage = (): Promise<HTMLImageElement> => loadImage(logoOnemil);
 
 interface BonusPrizeData {
   id: string;
