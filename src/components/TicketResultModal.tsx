@@ -535,7 +535,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       return `Vyhrál jsem na OneMil 🎉🎟️ Zkus štěstí taky 👉 onemil.cz`;
     }
     const motivationalPart = nearestPrizeDistance !== null
-      ? `Nejbližší výhra může být už za ${nearestPrizeDistance.toLocaleString('cs-CZ')} tahů.`
+      ? nextWinTicketText(nearestPrizeDistance)
       : 'Další výhra může být blíž, než si myslíš.';
     return `Zahrál jsem si na OneMil 🎟️ ${motivationalPart} 👉 onemil.cz`;
   };
