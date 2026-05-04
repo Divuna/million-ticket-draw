@@ -483,9 +483,20 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const prizeValueLine =
     !isMainPrize && bonusPrize?.amount != null && bonusPrize.amount > 0
       ? `${bonusPrize.amount.toLocaleString('cs-CZ')} MioCoinů`
-      : isMainPrize
-        ? `Tiket #${result?.ticket_number?.toLocaleString('cs-CZ') ?? ''}`
-        : null;
+      : null;
+
+  // Distance to the nearest real contest prize (bonus or main), excluding partner offers.
+  // distance_to_next_bonus = next pending bonus_prizes position minus purchased ticket number (from RPC).
+  // remaining_tickets      = ticket_count minus purchased ticket number = distance to main prize (from RPC).
+  const nearestPrizeDistance = useMemo(() => {
+    if (!result || isWinner) return null;
+    const dtb = typeof result.distance_to_next_bonus === 'number' && result.distance_to_next_bonus > 0
+      ? result.distance_to_next_bonus : null;
+    const rem = typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
+      ? result.remaining_tickets : null;
+    if (dtb !== null && rem !== null) return Math.min(dtb, rem);
+    return dtb ?? rem ?? null;
+  }, [result, isWinner]);
 
   // Dynamic share text based on result
   const getShareText = () => {
@@ -811,17 +822,19 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     {bonusPrize.detailed_description || bonusPrize.description}
                   </p>
                 )}
-                <p className="text-muted-foreground text-sm">
-                  Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
-                </p>
-                {result?.distance_to_next_bonus && result.distance_to_next_bonus > 0 && (
-                  <div className="mx-auto max-w-[280px] rounded-full border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Do další bonusové výhry</p>
-                    <p>
-                      <span className="text-2xl font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
-                        {result.distance_to_next_bonus.toLocaleString('cs-CZ')}
+                {result?.distance_to_next_bonus != null && result.distance_to_next_bonus > 0 && (
+                  <div className="mx-auto max-w-[320px] rounded-full border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center">
+                    <p className="text-sm text-amber-100/80">
+                      Nejbližší výhra může být už za{' '}
+                      <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
+                        {(Math.min(
+                          result.distance_to_next_bonus,
+                          typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
+                            ? result.remaining_tickets
+                            : result.distance_to_next_bonus
+                        )).toLocaleString('cs-CZ')}
                       </span>
-                      <span className="text-sm text-muted-foreground ml-1.5">tiketů</span>
+                      {' '}tahů.
                     </p>
                   </div>
                 )}
@@ -880,19 +893,9 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     <p className="text-lg font-semibold text-yellow-600">
                       Gratulujeme, vyhrál jsi hlavní cenu!
                     </p>
-                    <p className="text-muted-foreground">
-                      Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
-                    </p>
                   </>
                 ) : (
-                  <>
-                    <p className="text-sm font-medium text-amber-200/90">Gratulujeme k výhře!</p>
-                    {!prizeValueLine && (
-                      <p className="text-muted-foreground text-sm">
-                        Tiket #{result?.ticket_number?.toLocaleString('cs-CZ')}
-                      </p>
-                    )}
-                  </>
+                  <p className="text-sm font-medium text-amber-200/90">Gratulujeme k výhře!</p>
                 )}
                 <p className="win-moment-cta-hint -mb-1 text-center text-[11px] font-semibold uppercase text-amber-200/75 sm:text-xs">
                   Štěstí frčí —{' '}
@@ -1021,18 +1024,15 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               {lossRetentionNudge && (
                 <p className="text-sm font-medium text-amber-200/90">{lossRetentionNudge}</p>
               )}
-              <div className="rounded-2xl p-5 space-y-2 border border-yellow-500/30 bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
-                <p className="text-sm text-muted-foreground">
-                  Tvůj tiket: <span className="font-semibold">#{result?.ticket_number?.toLocaleString('cs-CZ')}</span>
-                </p>
-                {result?.distance_to_next_bonus && !isWinner && (
-                  <div className="mx-auto max-w-[280px] rounded-full border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center mt-2">
-                    <p className="text-xs text-muted-foreground mb-1">Do bonusové výhry zbývá</p>
-                    <p>
-                      <span className="text-2xl font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">{result.distance_to_next_bonus.toLocaleString('cs-CZ')}</span>
-                      <span className="text-sm text-muted-foreground ml-1.5">tiketů</span>
-                    </p>
-                  </div>
+              <div className="rounded-2xl p-5 space-y-3 border border-yellow-500/30 bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
+                {nearestPrizeDistance !== null && (
+                  <p className="text-sm text-amber-100/85 text-center">
+                    Nejbližší výhra může být už za{' '}
+                    <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
+                      {nearestPrizeDistance.toLocaleString('cs-CZ')}
+                    </span>
+                    {' '}tahů.
+                  </p>
                 )}
               </div>
             </div>

@@ -582,8 +582,8 @@ export default function ContestDetail() {
     if (!modalResult) return undefined;
     return {
       ticket_number: modalResult.ticket_number,
-      next_bonus_position: modalResult.next_bonus_position ?? 0,
-      distance_to_next_bonus: modalResult.distance_to_next_bonus ?? 0,
+      next_bonus_position: modalResult.next_bonus_position ?? null,
+      distance_to_next_bonus: modalResult.distance_to_next_bonus ?? null,
       won_prize: modalResult.won_prize,
       remaining_tickets: modalResult.remaining_tickets,
       won_type: modalResult.won_type,
