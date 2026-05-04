@@ -1,0 +1,32 @@
+-- Migration: 20260504_add_bonus_prizes_index_for_buy_ticket.sql
+--
+-- PURPOSE
+-- buy_ticket_atomic executes two queries on bonus_prizes for EVERY ticket purchase:
+--
+--   1. SELECT ticket_position FROM bonus_prizes
+--      WHERE contest_id = x AND ticket_position > v_next_ticket AND status = 'pending'
+--      ORDER BY ticket_position ASC LIMIT 1;
+--
+--   2. SELECT * FROM bonus_prizes
+--      WHERE contest_id = x AND ticket_position = v_next_ticket AND status = 'pending'
+--      LIMIT 1;
+--
+-- Without an index, each query is a full sequential scan of bonus_prizes filtered
+-- by contest_id. With ~30 000 rows per contest and 14+ active contests the table
+-- has 400 000+ rows. Both scans regularly exceed the 8-second PostgREST
+-- statement_timeout for the `authenticator` role → buy_ticket_atomic times out
+-- with error code 57014 ("canceling statement due to statement timeout").
+--
+-- FIX
+-- A single composite index on (contest_id, status, ticket_position) covers both
+-- queries: it narrows by contest_id and status in the index prefix, then uses
+-- the ticket_position leaf for the ORDER BY and equality lookups — all without
+-- a heap scan.
+--
+-- CONCURRENTLY: safe to create on a live table; does not lock writes.
+--
+-- REVERSAL (if needed):
+--   DROP INDEX IF EXISTS public.bonus_prizes_contest_status_position_idx;
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS bonus_prizes_contest_status_position_idx
+  ON public.bonus_prizes (contest_id, status, ticket_position);
