@@ -412,7 +412,7 @@ export default function ContestDetail() {
           won_prize: result.won_prize ?? null,
           won_type: result.won_type ?? null,
           bonus_prize_id: result.bonus_prize_id ?? null,
-          remaining_tickets: result.remaining_tickets ?? 0,
+          remaining_tickets: result.remaining_tickets ?? undefined,
           partner_offer: partnerOffer,
         };
 

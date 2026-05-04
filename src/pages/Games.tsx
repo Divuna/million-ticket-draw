@@ -354,7 +354,7 @@ const Index = () => {
         won_prize: rpcResult.won_prize ?? null,
         won_type: rpcResult.won_type ?? null,
         bonus_prize_id: rpcResult.bonus_prize_id ?? null,
-        remaining_tickets: rpcResult.remaining_tickets ?? 0,
+        remaining_tickets: rpcResult.remaining_tickets ?? undefined,
         partner_offer: partnerOffer,
       };
 
