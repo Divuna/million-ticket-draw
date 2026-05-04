@@ -77,6 +77,20 @@ const funnyMessages = [
   "Neúspěch je jen začátek úspěchu! 🌟"
 ];
 
+// Czech plural for "tah" (2-4 = tahy, 5+ = tahů)
+const tahPlural = (n: number): string => {
+  if (n >= 2 && n <= 4) return 'tahy';
+  return 'tahů';
+};
+
+// Build the "next winning ticket" message for non-winning results
+const nextWinTicketText = (n: number): string => {
+  if (n === 1) return 'Další výherní ticket čeká už při dalším tahu.';
+  return `Další výherní ticket čeká už za ${n.toLocaleString('cs-CZ')} ${tahPlural(n)}.`;
+};
+
+const NEXT_WIN_EXPLAINER = 'Může jít o bonusovou i hlavní výhru. Kdo výherní ticket otevře první, vyhrává.';
+
 // Generate ticket card image using Canvas API
 const generateTicketCard = async (
   ticketNumber: number,
