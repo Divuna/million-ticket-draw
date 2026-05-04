@@ -433,7 +433,7 @@ if (loading) {
             onClick={() => navigate('/favorite-games')}
           >
             <Heart className="w-5 h-5 mr-2" />
-            Oblíbené
+            Oblíbené ({favorites.size})
           </Button>
         </div>
         
