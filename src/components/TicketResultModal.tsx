@@ -77,6 +77,20 @@ const funnyMessages = [
   "Neúspěch je jen začátek úspěchu! 🌟"
 ];
 
+// Czech plural for "tah" (2-4 = tahy, 5+ = tahů)
+const tahPlural = (n: number): string => {
+  if (n >= 2 && n <= 4) return 'tahy';
+  return 'tahů';
+};
+
+// Build the "next winning ticket" message for non-winning results
+const nextWinTicketText = (n: number): string => {
+  if (n === 1) return 'Další výherní ticket čeká už při dalším tahu.';
+  return `Další výherní ticket čeká už za ${n.toLocaleString('cs-CZ')} ${tahPlural(n)}.`;
+};
+
+const NEXT_WIN_EXPLAINER = 'Může jít o bonusovou i hlavní výhru. Kdo výherní ticket otevře první, vyhrává.';
+
 // Generate ticket card image using Canvas API
 const generateTicketCard = async (
   ticketNumber: number,
@@ -290,7 +304,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           if (dtb !== null && rem !== null) nearest = Math.min(dtb, rem);
           else nearest = dtb ?? rem ?? null;
           canvasMotivationalText = nearest !== null
-            ? `Nejbližší výhra může být už za ${nearest.toLocaleString('cs-CZ')} tahů.`
+            ? nextWinTicketText(nearest)
             : 'Další výhra může být blíž, než si myslíš.';
         }
 
@@ -521,7 +535,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       return `Vyhrál jsem na OneMil 🎉🎟️ Zkus štěstí taky 👉 onemil.cz`;
     }
     const motivationalPart = nearestPrizeDistance !== null
-      ? `Nejbližší výhra může být už za ${nearestPrizeDistance.toLocaleString('cs-CZ')} tahů.`
+      ? nextWinTicketText(nearestPrizeDistance)
       : 'Další výhra může být blíž, než si myslíš.';
     return `Zahrál jsem si na OneMil 🎟️ ${motivationalPart} 👉 onemil.cz`;
   };
@@ -842,22 +856,34 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     {bonusPrize.detailed_description || bonusPrize.description}
                   </p>
                 )}
-                {result?.distance_to_next_bonus != null && result.distance_to_next_bonus > 0 && (
-                  <div className="mx-auto max-w-[320px] rounded-full border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center">
-                    <p className="text-sm text-amber-100/80">
-                      Nejbližší výhra může být už za{' '}
-                      <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
-                        {(Math.min(
-                          result.distance_to_next_bonus,
-                          typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
-                            ? result.remaining_tickets
-                            : result.distance_to_next_bonus
-                        )).toLocaleString('cs-CZ')}
-                      </span>
-                      {' '}tahů.
-                    </p>
-                  </div>
-                )}
+                {result?.distance_to_next_bonus != null && result.distance_to_next_bonus > 0 && (() => {
+                  const nextN = Math.min(
+                    result.distance_to_next_bonus,
+                    typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
+                      ? result.remaining_tickets
+                      : result.distance_to_next_bonus
+                  );
+                  return (
+                    <div className="mx-auto max-w-[360px] rounded-2xl border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center space-y-1">
+                      <p className="text-sm text-amber-100/80">
+                        {nextN === 1 ? (
+                          <>Další výherní ticket čeká už při dalším tahu.</>
+                        ) : (
+                          <>
+                            Další výherní ticket čeká už za{' '}
+                            <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
+                              {nextN.toLocaleString('cs-CZ')}
+                            </span>
+                            {' '}{tahPlural(nextN)}.
+                          </>
+                        )}
+                      </p>
+                      <p className="text-[11px] text-amber-100/60">
+                        {NEXT_WIN_EXPLAINER}
+                      </p>
+                    </div>
+                  );
+                })()}
                 <p className="win-moment-cta-hint -mb-1 text-center text-[11px] font-semibold uppercase text-amber-200/75 sm:text-xs">
                   Štěstí frčí —{' '}
                   <span className="text-amber-100">hrát znovu</span> je nejrychlejší cesta k další výhře
@@ -1044,20 +1070,29 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               {lossRetentionNudge && (
                 <p className="text-sm font-medium text-amber-200/90">{lossRetentionNudge}</p>
               )}
-              <div className="rounded-2xl p-5 space-y-3 border border-yellow-500/30 bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
+              <div className="rounded-2xl p-5 space-y-2 border border-yellow-500/30 bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
                 <p className="text-sm text-amber-100/85 text-center">
                   {nearestPrizeDistance !== null ? (
-                    <>
-                      Nejbližší výhra může být už za{' '}
-                      <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
-                        {nearestPrizeDistance.toLocaleString('cs-CZ')}
-                      </span>
-                      {' '}tahů.
-                    </>
+                    nearestPrizeDistance === 1 ? (
+                      <>Další výherní ticket čeká už při dalším tahu.</>
+                    ) : (
+                      <>
+                        Další výherní ticket čeká už za{' '}
+                        <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
+                          {nearestPrizeDistance.toLocaleString('cs-CZ')}
+                        </span>
+                        {' '}{tahPlural(nearestPrizeDistance)}.
+                      </>
+                    )
                   ) : (
                     'Další výhra může být blíž, než si myslíš.'
                   )}
                 </p>
+                {nearestPrizeDistance !== null && (
+                  <p className="text-[11px] text-amber-100/60 text-center">
+                    {NEXT_WIN_EXPLAINER}
+                  </p>
+                )}
               </div>
             </div>
           )}
