@@ -454,6 +454,7 @@ if (loading) {
               ticketsSold={progressMap[contest.id]?.tickets_sold ?? 0}
               ticketsTotal={progressMap[contest.id]?.tickets_total ?? 1_000_000}
               walletBalance={walletBalance}
+              hideTitleAndCount
             />
           ))}
         </div>

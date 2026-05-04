@@ -36,6 +36,8 @@ interface ContestCardProps {
   showTotalOnly?: boolean;
   /** When set (e.g. on Games / Favorites), gates purchase CTA vs top-up using this balance */
   walletBalance?: number;
+  /** Listing-only: hide contest title and ticket count/progress display */
+  hideTitleAndCount?: boolean;
 }
 
 export const ContestCard: React.FC<ContestCardProps> = ({
@@ -53,6 +55,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
   ticketsTotal,
   showTotalOnly = false,
   walletBalance,
+  hideTitleAndCount = false,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -219,16 +222,18 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         {/* Bottom content - text directly on gradient */}
         <div className="mt-auto space-y-3">
           {/* Title */}
-          <h3 className="font-bold text-xl text-white drop-shadow-md line-clamp-2">
-            {contest.title}
-          </h3>
-          
-          {showTotalOnlyLine && (
+          {!hideTitleAndCount && (
+            <h3 className="font-bold text-xl text-white drop-shadow-md line-clamp-2">
+              {contest.title}
+            </h3>
+          )}
+
+          {!hideTitleAndCount && showTotalOnlyLine && (
             <p className="text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
               Celkem {ticketsTotal.toLocaleString("cs-CZ")} ticketů
             </p>
           )}
-          {showProgress && (
+          {!hideTitleAndCount && showProgress && (
             <div className="space-y-0.5">
               <p className="text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
                 {soldForBar.toLocaleString("cs-CZ")} / {ticketsTotal.toLocaleString("cs-CZ")} ticketů
