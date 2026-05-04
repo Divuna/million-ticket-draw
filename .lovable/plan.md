@@ -1,47 +1,37 @@
-## Diagnóza
 
-Nákup tiketu padá s chybou `57014: canceling statement due to statement timeout` po ~8.5 sekundy. Soutěž je čerstvá (0/100 prodaných tiketů), takže to není zámek řádku ani „contest full". DB pohled potvrdil:
+## Problém
 
-- contest `3a5ce8cd…` je `active`, `next_ticket_number=1`, ticket_price=20
-- wallet uživatele má 16 902 MC (dostatek)
-- na tabulce `tickets` visí **více triggerů**, které se spouštějí při INSERT uvnitř `buy_ticket_atomic`:
-  - `trg_ticket_insert` → `fn_send_event_to_sofinity` — dělá **synchronní `net.http_post`** na vlastní edge funkci `send_event_to_sofinity`
-  - `trg_assign_offer_on_ticket_insert` → `assign_partner_offer_to_ticket`
-  - `audit_tickets_trigger` → `fn_audit_generic` (zápis do `audit_logs`)
-  - dále event_logs / winners triggery
+Zákazník si koupí ticket, kupón se mu **uloží** do `/wins → Nabídky` (DB záznam v `user_partner_offers` vznikne správně), ale v ticket-result modalu **kupón nevidí** — modal ukáže jen číslo ticketu, ne zprávu „🎁 SPECIÁLNÍ NABÍDKA!". Zákazník tedy neví, že kupón vyhrál.
 
-### Hlavní podezřelý
+## Příčina
 
-`fn_send_event_to_sofinity` volá `net.http_post(...)` synchronně uvnitř transakce nákupu tiketu. Pokud `pg_net` worker stojí, je zahlcený, nebo edge funkce odpovídá pomalu, **celá transakce `buy_ticket_atomic` čeká** a po 8 s ji Postgres zruší. To přesně sedí na pozorovaný 8.5 s timeout a 500 Internal Server Error.
+Frontend bug ve dvou souborech. `TicketResultModal` umí `partner_offer` zobrazit (`src/components/TicketResultModal.tsx`, větev `isPartnerOffer && result?.partner_offer`), a logika nákupu si nabídku správně načte z `user_partner_offers` do lokální proměnné `modalResult.partner_offer`. **Ale při předání do `<TicketResultModal result={...} />` se `partner_offer` zapomene přibalit:**
 
-Architektonicky je to navíc špatně — projekt už má pipeline `event_logs → event_queue → Sofinity` (worker `process_event_queue_worker`), takže synchronní HTTP přímo z triggeru je duplicitní a nebezpečný (každý nákup tiketu = blokující externí volání).
+- `src/pages/Games.tsx`, řádky 470–479 — ručně se vypisuje `ticket_number, distance_to_next_bonus, next_bonus_position, won_prize, won_type, bonus_prize_id, remaining_tickets`, ale **chybí `partner_offer`**.
+- `src/pages/FavoriteGames.tsx`, řádky 424–433 — stejný bug.
+- `src/pages/ContestDetail.tsx` — **OK**, přes `stableResult` (ř. 591) `partner_offer` projde a modal ho zobrazí.
 
-## Plán opravy
+Tím pádem na `/games` a `/favorite-games` zákazník po nákupu kupón v modalu nikdy neuvidí, jen ho najde později v sekci Nabídky.
 
-### Krok 1 — okamžitě odblokovat nákup tiketů
-Přepsat `fn_send_event_to_sofinity` tak, aby místo synchronního `net.http_post` jen vložila řádek do `event_queue` (případně `event_logs`, podle toho, co worker konzumuje). Tím se transakce nákupu tiketu okamžitě dokončí a forwarding do Sofinity poběží asynchronně přes existující worker.
+## Řešení
 
-Záložní varianta (pokud nebude jasné, kterou tabulku worker čte): celé volání obalit do `BEGIN … EXCEPTION WHEN OTHERS THEN NULL; END;` s krátkým `statement_timeout` (např. 1 s) lokálně, aby selhání externí funkce nikdy neshodilo nákup.
+Dvouřádková oprava — do props `result` v obou modalech přidat jeden klíč `partner_offer: modalResult.partner_offer ?? null`. **Žádná změna logiky, žádná změna DB, žádná změna `assign_partner_offer_to_ticket`, žádná změna `buy_ticket_atomic`.** Jen propsání už načtených dat do komponenty, která je umí vykreslit.
 
-### Krok 2 — ověřit
-Po nasazení migrace zkusit nákup tiketu v soutěži CORVETTE. Očekávaná latence < 500 ms. Zkontrolovat, že:
-- `tickets` má nový řádek
-- `wallets.balance_coins` se snížil o 20
-- `event_logs` / `event_queue` má `prize_won`/`ticket_purchased` záznam (podle existující logiky)
-- Sofinity worker ho zpracuje v dalším běhu
+### Soubory ke změně
 
-### Krok 3 — preventivně
-Projít ostatní triggery na hot-path tabulkách (`wallets`, `winners`) a ujistit se, že žádný další nedělá synchronní externí HTTP. Pokud ano, přepsat stejným vzorem.
+1. `src/pages/Games.tsx` — v bloku `<TicketResultModal result={modalResult ? {...} : null}>` (ř. 471–479) přidat `partner_offer: modalResult.partner_offer ?? null,`.
+2. `src/pages/FavoriteGames.tsx` — stejná úprava (ř. 425–433).
 
-## Co se NEbude měnit
-- `buy_ticket_atomic` RPC samotná (chráněné jádro)
-- `assign_partner_offer_to_ticket` a její trigger
-- ekonomická pravidla (cena, limity)
-- RLS policies
-- schéma tabulek
+### Co se NEMĚNÍ
 
-## Soubory / migrace
-- nová migrace v `supabase/migrations/` přepisující `public.fn_send_event_to_sofinity` (CREATE OR REPLACE FUNCTION)
-- migrace bude jen jako soubor, podle pravidla projektu se aplikuje ručně v Supabase SQL Editoru po schválení
+- `assign_partner_offer_to_ticket` (cooldown, rotace, eligibility) — beze změny.
+- `buy_ticket_atomic`, RLS, schéma, ekonomika.
+- `TicketResultModal.tsx` — už dnes umí offer vykreslit, jen čeká na data.
+- `ContestDetail.tsx` — už funguje správně, nic se tam nedělá.
+- `/wins → Nabídky` — funguje a ukládání zůstává beze změny.
 
-Po schválení přepnu do build módu, vytvořím migraci a požádám o její aplikaci v SQL Editoru.
+## Důsledek
+
+Po opravě: jakmile DB zákazníkovi nabídku přiřadí (dnes podle stávajících pravidel = první ticket po 5min cooldownu / rotace mezi partnery), v ticket modalu se okamžitě objeví karta „🎁 SPECIÁLNÍ NABÍDKA!" s logem partnera, názvem, krátkým textem a platností do. Zákazník tedy hned vidí, že vyhrál kupón, a stejný kupón najde i ve `/wins → Nabídky` (jako dnes).
+
+Pokud DB v daném momentě žádnou nabídku nepřiřadí (cooldown, žádný platný offer v contestu), modal bude vypadat přesně jako dnes — žádná regrese.

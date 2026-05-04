@@ -475,7 +475,8 @@ if (loading) {
           won_prize: modalResult.won_prize,
           won_type: modalResult.won_type,
           bonus_prize_id: modalResult.bonus_prize_id,
-          remaining_tickets: modalResult.remaining_tickets
+          remaining_tickets: modalResult.remaining_tickets,
+          partner_offer: modalResult.partner_offer ?? null,
         } : null}
         contestId={modalContestId}
         isOpen={!!modalResult}
