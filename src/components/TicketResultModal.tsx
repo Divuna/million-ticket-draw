@@ -1175,7 +1175,8 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           )}
         </div>
 
-        {/* Social Sharing Section with Preview */}
+        {/* Social Sharing Section with Preview — only for real wins */}
+        {isWinner && (
         <div className="border-t border-transparent pt-4 mt-2" style={{ borderImage: 'linear-gradient(to right, transparent, rgba(234,179,8,0.4), transparent) 1' }}>
           <p className="text-sm text-muted-foreground text-center mb-3">
             Sdílet výsledek
