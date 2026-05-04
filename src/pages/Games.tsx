@@ -428,13 +428,21 @@ if (loading) {
             <p className="text-sm text-text-silver mt-2">Vyberte si soutěž a zkuste štěstí!</p>
           </div>
           
-          <Button 
-            className="bg-primary hover:brightness-110 text-primary-foreground font-bold px-6 py-3 rounded-xl shadow-[0_0_12px_hsl(var(--primary)/0.35)] transition-all duration-200"
-            onClick={() => navigate('/favorite-games')}
-          >
-            <Heart className="w-5 h-5 mr-2" />
-            Oblíbené ({favorites.size})
-          </Button>
+          {(() => {
+            const visibleFavoritesCount = contests.reduce(
+              (n, c) => n + (favorites.has(c.id) ? 1 : 0),
+              0
+            );
+            return (
+              <Button
+                className="bg-primary hover:brightness-110 text-primary-foreground font-bold px-6 py-3 rounded-xl shadow-[0_0_12px_hsl(var(--primary)/0.35)] transition-all duration-200"
+                onClick={() => navigate('/favorite-games')}
+              >
+                <Heart className="w-5 h-5 mr-2" />
+                Oblíbené ({visibleFavoritesCount})
+              </Button>
+            );
+          })()}
         </div>
         
         {/* Contests Grid - matching homepage card styling */}
