@@ -207,45 +207,18 @@ const AdminDashboard: React.FC = () => {
 
       if (contestsError) throw contestsError;
 
-      // Then get aggregated bonus statistics for each contest
-      const contestsWithStats = await Promise.all(
-        (contestsData || []).map(async (contest) => {
-          const { data: bonusStats, error: bonusError } = await supabase
-            .rpc('get_contest_bonus_stats_enhanced' as any, { contest_id: contest.id });
-
-          if (bonusError) {
-            console.error('Error fetching bonus stats for contest:', contest.id, bonusError);
-            // Return contest with zero stats if query fails
-            return {
-              ...contest,
-              total_positions: 0,
-              total_miocoins: 0,
-              physical_items: 0,
-              pending_count: 0,
-              won_count: 0,
-              min_position: null,
-              max_position: null,
-              first_20_positions: 'No bonuses'
-            };
-          }
-
-          const stats = bonusStats?.[0] || {
-            total_positions: 0,
-            total_miocoins: 0,
-            physical_items: 0,
-            pending_count: 0,
-            won_count: 0,
-            min_position: null,
-            max_position: null,
-            first_20_positions: 'No bonuses'
-          };
-
-          return {
-            ...contest,
-            ...stats
-          };
-        })
-      );
+      // get_contest_bonus_stats_enhanced times out under load — use zero-stats defaults
+      const contestsWithStats = (contestsData || []).map((contest) => ({
+        ...contest,
+        total_positions: 0,
+        total_miocoins: 0,
+        physical_items: 0,
+        pending_count: 0,
+        won_count: 0,
+        min_position: null,
+        max_position: null,
+        first_20_positions: 'No bonuses'
+      }));
 
       setContests(contestsWithStats);
     } catch (error) {

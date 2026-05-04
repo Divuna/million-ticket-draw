@@ -2351,37 +2351,8 @@ export const AdminContestManagement: React.FC = () => {
         setLinkedContestIds(new Set());
       }
 
-      if (contestIds.length > 0) {
-        const mioCoinTotals: Record<string, number> = {};
-        await Promise.all(
-          contestIds.map(async (contestId) => {
-            let total = 0;
-            let from = 0;
-            const STEP = 1000;
-            // Paginate through bonus_prizes rows (default PostgREST cap is 1000)
-            // and sum amounts client-side. Same source of truth as ContestDetail.
-            // eslint-disable-next-line no-constant-condition
-            while (true) {
-              const { data, error } = await supabase
-                .from("bonus_prizes")
-                .select("amount")
-                .eq("contest_id", contestId)
-                .gt("amount", 0)
-                .range(from, from + STEP - 1);
-              if (error || !data || data.length === 0) break;
-              total += data.reduce((s, r: any) => s + Number(r.amount ?? 0), 0);
-              if (data.length < STEP) break;
-              from += STEP;
-            }
-            mioCoinTotals[contestId] = total;
-          })
-        );
-
-        // Merge into contests data
-        contestsData.forEach((contest) => {
-          contest.total_miocoin_bonus = mioCoinTotals[contest.contest_id] || 0;
-        });
-      }
+      // total_miocoin_bonus is maintained by DB trigger trg_sync_total_miocoin_bonus
+      // — already loaded from contests table above, no extra queries needed
 
       setContests(contestsData);
     } catch (error: any) {
