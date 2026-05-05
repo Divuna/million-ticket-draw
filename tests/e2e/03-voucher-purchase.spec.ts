@@ -27,7 +27,7 @@ test.describe('Voucher Purchase', () => {
     await page.goto('/vouchers');
 
     const buyButton = page.getByRole('button', { name: /KOUPIT ZA 5 MC/i }).first();
-    const emptyState = page.getByText(/Žádné dostupné vouchery|Momentálně nejsou/i);
+    const emptyState = page.getByRole('heading', { name: 'Žádné dostupné vouchery' });
 
     // Wait up to 15 s for either state: role loading (2 Supabase queries) +
     // voucher loading (1 Supabase query) can exceed 3 s on a cold CI connection.
