@@ -1312,9 +1312,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             console.error("Error updating images:", updateError);
             toast({
               title: "Chyba ukládání obrázků",
-              description: `Detail/Banner se neuložil: ${updateError.message}`,
+              description: `Pravidla soutěže / obrázky se neuložily: ${updateError.message}`,
               variant: "destructive",
             });
+            setSaving(false);
+            return;
           }
         }
 
