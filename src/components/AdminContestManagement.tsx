@@ -1304,15 +1304,21 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           additionalUpdates.main_prize_secondary_image = imagePath;
         }
 
-        // Apply additional updates if any
+        // Apply additional updates if any (rules_pdf_url, rules, images).
+        // .select('id') lets us detect silent no-ops (0 rows) caused by RLS filtering the row.
         if (Object.keys(additionalUpdates).length > 0) {
-          const { error: updateError } = await supabase.from("contests").update(additionalUpdates).eq("id", contestId);
+          const { data: updatedRows, error: updateError } = await supabase
+            .from("contests")
+            .update(additionalUpdates)
+            .eq("id", contestId)
+            .select("id");
 
-          if (updateError) {
-            console.error("Error updating images:", updateError);
+          if (updateError || !updatedRows || updatedRows.length === 0) {
+            const errMsg = updateError?.message ?? "Soutěž nebyla nalezena nebo přístup odepřen.";
+            console.error("Error updating contest extras:", updateError ?? "0 rows affected", { contestId, additionalUpdates });
             toast({
-              title: "Chyba ukládání obrázků",
-              description: `Pravidla soutěže / obrázky se neuložily: ${updateError.message}`,
+              title: "Chyba ukládání pravidel / obrázků",
+              description: `Pravidla soutěže a obrázky se neuložily: ${errMsg}`,
               variant: "destructive",
             });
             setSaving(false);
