@@ -21,24 +21,27 @@ import { playWinChime } from '@/lib/playWinChime';
 import { pickRandomAlmostWinMessage, rollAlmostWinEffect } from '@/lib/retentionLocal';
 import './TicketResultModal.css';
 
-function formatDrawsText(n: number): string {
-  if (n === 1) return 'Další výherní ticket čeká už při dalším tahu.';
-  const word = n >= 5 ? 'tahů' : 'tahy';
-  return `Další výherní ticket čeká už za ${n.toLocaleString('cs-CZ')} ${word}.`;
-}
-
-const DRAWS_EXPLANATION = 'Může jít o bonusovou i hlavní výhru. Kdo výherní ticket otevře první, vyhrává.';
-
-// Preload logo image
-const loadLogoImage = (): Promise<HTMLImageElement> => {
+// Preload an image with anonymous CORS so canvas stays untainted.
+const loadImage = (src: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = reject;
-    img.src = logoOnemil;
+    img.src = src;
   });
 };
+
+const loadImageSafe = async (src: string | null | undefined): Promise<HTMLImageElement | null> => {
+  if (!src) return null;
+  try {
+    return await loadImage(src);
+  } catch {
+    return null;
+  }
+};
+
+const loadLogoImage = (): Promise<HTMLImageElement> => loadImage(logoOnemil);
 
 interface BonusPrizeData {
   id: string;
@@ -85,111 +88,166 @@ const funnyMessages = [
   "Neúspěch je jen začátek úspěchu! 🌟"
 ];
 
-// Generate ticket card image using Canvas API
-const generateTicketCard = async (
-  ticketNumber: number,
-  isWinner: boolean,
-  isMainPrize: boolean,
-  bonusAmount: number | null,
-  motivationalText: string | null
-): Promise<Blob> => {
+// Czech plural for "tah" (2-4 = tahy, 5+ = tahů)
+const tahPlural = (n: number): string => {
+  if (n >= 2 && n <= 4) return 'tahy';
+  return 'tahů';
+};
+
+// Build the "next winning ticket" message for non-winning results
+const nextWinTicketText = (n: number): string => {
+  if (n === 1) return 'Další výherní ticket čeká už při dalším tahu.';
+  return `Další výherní ticket čeká už za ${n.toLocaleString('cs-CZ')} ${tahPlural(n)}.`;
+};
+
+const NEXT_WIN_EXPLAINER = 'Může jít o bonusovou i hlavní výhru. Kdo výherní ticket otevře první, vyhrává.';
+
+type ShareKind = 'bonus_physical' | 'miocoin' | 'partner_offer' | 'main_prize';
+
+interface ShareCardOptions {
+  kind: ShareKind;
+  imageUrl: string | null;       // primary product image (already known to exist or null for fallback)
+  fallbackImageUrl?: string | null; // e.g. partner logo if banner fails
+  headline: string;              // main CZ line
+  prizeTitle: string;            // displayed under headline (prize / offer name)
+  bonusAmount?: number | null;   // for MioCoin prize
+}
+
+// Generate a premium share card image (1200x630) using the real prize image.
+const generatePremiumShareCard = async (opts: ShareCardOptions): Promise<Blob> => {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    throw new Error('Cannot get canvas context');
+  if (!ctx) throw new Error('Cannot get canvas context');
+
+  const W = 1200;
+  const H = 630;
+  canvas.width = W;
+  canvas.height = H;
+
+  // Dark premium background (OneMil brand: Midnight Black -> Deep Navy -> Graphite)
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#0A0B0F');
+  bg.addColorStop(0.55, '#101722');
+  bg.addColorStop(1, '#1D2128');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle radial gold glow behind product
+  const glow = ctx.createRadialGradient(W * 0.32, H * 0.55, 20, W * 0.32, H * 0.55, 380);
+  glow.addColorStop(0, 'rgba(255, 138, 0, 0.18)');
+  glow.addColorStop(1, 'rgba(255, 138, 0, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  // Outer thin platinum border
+  ctx.strokeStyle = 'rgba(231, 235, 240, 0.16)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(16, 16, W - 32, H - 32);
+
+  // Product image area (left side)
+  const imgBoxX = 70;
+  const imgBoxY = 110;
+  const imgBoxW = 460;
+  const imgBoxH = 410;
+
+  let productImg = await loadImageSafe(opts.imageUrl);
+  if (!productImg && opts.fallbackImageUrl) {
+    productImg = await loadImageSafe(opts.fallbackImageUrl);
   }
 
-  // Card dimensions (1200x630 for optimal OG preview)
-  canvas.width = 1200;
-  canvas.height = 630;
-
-  // Dark premium gradient background
-  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-  gradient.addColorStop(0, '#0a0a0a');
-  gradient.addColorStop(0.5, '#1a1a2e');
-  gradient.addColorStop(1, '#16213e');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Decorative border
-  ctx.strokeStyle = isWinner ? '#ffd700' : '#333';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
-
-  // Inner glow for winners
-  if (isWinner) {
-    const glowGradient = ctx.createRadialGradient(
-      canvas.width / 2, canvas.height / 2, 0,
-      canvas.width / 2, canvas.height / 2, 400
-    );
-    glowGradient.addColorStop(0, 'rgba(255, 215, 0, 0.15)');
-    glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
-    ctx.fillStyle = glowGradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  if (productImg) {
+    // contain-fit
+    const ratio = Math.min(imgBoxW / productImg.width, imgBoxH / productImg.height);
+    const dw = productImg.width * ratio;
+    const dh = productImg.height * ratio;
+    const dx = imgBoxX + (imgBoxW - dw) / 2;
+    const dy = imgBoxY + (imgBoxH - dh) / 2;
+    ctx.drawImage(productImg, dx, dy, dw, dh);
+  } else {
+    // Premium fallback: trophy emoji on graphite plate
+    ctx.fillStyle = 'rgba(29, 33, 40, 0.7)';
+    ctx.fillRect(imgBoxX, imgBoxY, imgBoxW, imgBoxH);
+    ctx.strokeStyle = 'rgba(216, 186, 120, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(imgBoxX, imgBoxY, imgBoxW, imgBoxH);
+    ctx.font = '180px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🏆', imgBoxX + imgBoxW / 2, imgBoxY + imgBoxH / 2);
+    ctx.textBaseline = 'alphabetic';
   }
 
-  // Draw OneMil Logo
+  // OneMil logo top-right
   try {
     const logoImg = await loadLogoImage();
-    const logoHeight = 70;
-    const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
-    ctx.drawImage(logoImg, (canvas.width - logoWidth) / 2, 40, logoWidth, logoHeight);
-  } catch (err) {
-    // Fallback to text if logo fails to load
-    ctx.font = 'bold 48px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'center';
-    ctx.fillText('OneMil', canvas.width / 2, 80);
+    const logoH = 56;
+    const logoW = (logoImg.width / logoImg.height) * logoH;
+    ctx.drawImage(logoImg, W - logoW - 60, 50, logoW, logoH);
+  } catch {
+    ctx.font = 'bold 36px Poppins, system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#E7EBF0';
+    ctx.textAlign = 'right';
+    ctx.fillText('OneMil', W - 60, 90);
   }
 
-  // Subtitle
-  ctx.font = '20px system-ui, -apple-system, sans-serif';
-  ctx.fillStyle = '#888';
+  // Right column text block
+  const textX = 580;
+  const textRight = W - 60;
+  const textW = textRight - textX;
+
+  // Headline (Czech)
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#FF8A00';
+  ctx.font = 'bold 46px Poppins, system-ui, -apple-system, sans-serif';
+  // wrap headline
+  const wrap = (text: string, maxWidth: number, lineHeight: number, startY: number): number => {
+    const words = text.split(' ');
+    let line = '';
+    let y = startY;
+    for (let i = 0; i < words.length; i++) {
+      const test = line ? line + ' ' + words[i] : words[i];
+      if (ctx.measureText(test).width > maxWidth && line) {
+        ctx.fillText(line, textX, y);
+        line = words[i];
+        y += lineHeight;
+      } else {
+        line = test;
+      }
+    }
+    if (line) {
+      ctx.fillText(line, textX, y);
+      y += lineHeight;
+    }
+    return y;
+  };
+
+  let cursorY = 220;
+  cursorY = wrap(opts.headline, textW, 56, cursorY);
+
+  // Prize title (platinum, slightly smaller)
+  cursorY += 18;
+  ctx.fillStyle = '#E7EBF0';
+  ctx.font = '600 34px Poppins, system-ui, -apple-system, sans-serif';
+  cursorY = wrap(opts.prizeTitle, textW, 42, cursorY);
+
+  // MioCoin amount (if applicable)
+  if (opts.kind === 'miocoin' && opts.bonusAmount && opts.bonusAmount > 0) {
+    cursorY += 14;
+    ctx.fillStyle = '#FFB547';
+    ctx.font = 'bold 38px Poppins, system-ui, -apple-system, sans-serif';
+    ctx.fillText(`+${opts.bonusAmount.toLocaleString('cs-CZ')} MioCoin`, textX, cursorY);
+  }
+
+  // Footer CTA (centered bottom)
   ctx.textAlign = 'center';
-  ctx.fillText('Zkus štěstí a vyhraj!', canvas.width / 2, 130);
+  ctx.fillStyle = '#BFC6CF';
+  ctx.font = '500 26px Inter, system-ui, -apple-system, sans-serif';
+  ctx.fillText('Hraj taky na onemil.cz', W / 2, H - 50);
 
-  // Result emoji
-  const emoji = isMainPrize ? '🏆' : isWinner ? '🎉' : '🎟️';
-  ctx.font = '120px system-ui, -apple-system, sans-serif';
-  ctx.fillText(emoji, canvas.width / 2, 275);
-
-  // Result text
-  ctx.font = 'bold 42px system-ui, -apple-system, sans-serif';
-  ctx.fillStyle = isMainPrize ? '#ffd700' : isWinner ? '#22c55e' : '#ffffff';
-  const resultText = isMainPrize 
-    ? 'HLAVNÍ VÝHRA!' 
-    : isWinner 
-      ? 'VÝHRA!' 
-      : 'Zkusil jsem štěstí!';
-  ctx.fillText(resultText, canvas.width / 2, 355);
-
-  // Motivational text for non-winners; omit ticket number entirely
-  if (!isWinner && motivationalText) {
-    ctx.font = 'bold 30px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#cccccc';
-    ctx.fillText(motivationalText, canvas.width / 2, 435);
-  }
-
-  // Bonus amount if winner
-  if (isWinner && bonusAmount && bonusAmount > 0) {
-    ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#ffd700';
-    ctx.fillText(`+${bonusAmount.toLocaleString('cs-CZ')} MioCoinů`, canvas.width / 2, 495);
-  }
-
-  // Footer with URL
-  ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
-  ctx.fillStyle = '#666';
-  ctx.fillText('👉 onemil.cz', canvas.width / 2, 600);
-
-  // Convert to blob
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
-      if (blob) {
-        resolve(blob);
-      } else {
-        reject(new Error('Failed to create blob'));
-      }
+      if (blob) resolve(blob);
+      else reject(new Error('Failed to create blob'));
     }, 'image/png', 1.0);
   });
 };
@@ -281,34 +339,59 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
     const isBonusWinCheck = bonusPrize !== null;
     const isMainPrizeCheck = result.won_type === 'main' || result.won_main === true;
-    const isWinnerCheck = isBonusWinCheck || isMainPrizeCheck;
+    const isPartnerOfferCheck = !!result.partner_offer;
+    const isWinnerCheck = isBonusWinCheck || isMainPrizeCheck || isPartnerOfferCheck;
+
+    // Sharing only for real wins (bonus physical, MioCoin, main prize, or partner offer).
+    if (!isWinnerCheck) {
+      return;
+    }
+
+    // Determine share-card kind, image, and Czech texts.
+    let kind: ShareKind;
+    let imageUrl: string | null = null;
+    let fallbackImageUrl: string | null = null;
+    let headline = 'Vyhrál jsem na OneMil';
+    let prizeTitle = '';
+    let bonusAmount: number | null = null;
+
+    if (isPartnerOfferCheck && result.partner_offer) {
+      kind = 'partner_offer';
+      headline = 'Získal jsem speciální nabídku na OneMil';
+      imageUrl = result.partner_offer.banner_url || null;
+      fallbackImageUrl = result.partner_offer.logo_url || null;
+      prizeTitle = result.partner_offer.title || result.partner_offer.partner_name || '';
+    } else if (isMainPrizeCheck) {
+      kind = 'main_prize';
+      // No reliable main-prize image is available in this modal; keep clean fallback.
+      imageUrl = null;
+      prizeTitle = result.won_prize?.trim() || 'Hlavní výhra';
+    } else if (isBonusWinCheck && bonusPrize) {
+      if (bonusPrize.image_url) {
+        kind = 'bonus_physical';
+        imageUrl = bonusPrize.image_url;
+      } else {
+        kind = 'miocoin';
+        imageUrl = miocoinLogo;
+        bonusAmount = bonusPrize.amount ?? null;
+      }
+      prizeTitle = bonusPrize.title?.trim() || bonusPrize.description || 'Bonusová výhra';
+    } else {
+      return;
+    }
 
     const generateAndUpload = async () => {
       setIsGeneratingImage(true);
       setIsUploading(true);
       try {
-        // Compute motivational text for the share image (no ticket number)
-        let canvasMotivationalText: string | null = null;
-        if (!isWinnerCheck) {
-          const dtb = typeof result.distance_to_next_bonus === 'number' && result.distance_to_next_bonus > 0
-            ? result.distance_to_next_bonus : null;
-          const rem = typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
-            ? result.remaining_tickets : null;
-          let nearest: number | null = null;
-          if (dtb !== null && rem !== null) nearest = Math.min(dtb, rem);
-          else nearest = dtb ?? rem ?? null;
-          canvasMotivationalText = nearest !== null
-            ? formatDrawsText(nearest)
-            : 'Další výhra může být blíž, než si myslíš.';
-        }
-
-        const blob = await generateTicketCard(
-          result.ticket_number,
-          isWinnerCheck,
-          isMainPrizeCheck,
-          bonusPrize?.amount || null,
-          canvasMotivationalText
-        );
+        const blob = await generatePremiumShareCard({
+          kind,
+          imageUrl,
+          fallbackImageUrl,
+          headline,
+          prizeTitle,
+          bonusAmount,
+        });
         
         // Revoke old URL before setting new one
         if (previewImageUrl) {
@@ -529,7 +612,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       return `Vyhrál jsem na OneMil 🎉🎟️ Zkus štěstí taky 👉 onemil.cz`;
     }
     const motivationalPart = nearestPrizeDistance !== null
-      ? formatDrawsText(nearestPrizeDistance)
+      ? nextWinTicketText(nearestPrizeDistance)
       : 'Další výhra může být blíž, než si myslíš.';
     return `Zahrál jsem si na OneMil 🎟️ ${motivationalPart} 👉 onemil.cz`;
   };
@@ -850,19 +933,34 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     {bonusPrize.detailed_description || bonusPrize.description}
                   </p>
                 )}
-                {result?.distance_to_next_bonus != null && result.distance_to_next_bonus > 0 && (
-                  <div className="mx-auto max-w-[320px] rounded-full border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center">
-                    <p className="text-sm text-amber-100/80">
-                      {formatDrawsText(Math.min(
-                        result.distance_to_next_bonus,
-                        typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
-                          ? result.remaining_tickets
-                          : result.distance_to_next_bonus
-                      ))}
-                    </p>
-                    <p className="text-xs text-amber-100/55 mt-1">{DRAWS_EXPLANATION}</p>
-                  </div>
-                )}
+                {result?.distance_to_next_bonus != null && result.distance_to_next_bonus > 0 && (() => {
+                  const nextN = Math.min(
+                    result.distance_to_next_bonus,
+                    typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
+                      ? result.remaining_tickets
+                      : result.distance_to_next_bonus
+                  );
+                  return (
+                    <div className="mx-auto max-w-[360px] rounded-2xl border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center space-y-1">
+                      <p className="text-sm text-amber-100/80">
+                        {nextN === 1 ? (
+                          <>Další výherní ticket čeká už při dalším tahu.</>
+                        ) : (
+                          <>
+                            Další výherní ticket čeká už za{' '}
+                            <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
+                              {nextN.toLocaleString('cs-CZ')}
+                            </span>
+                            {' '}{tahPlural(nextN)}.
+                          </>
+                        )}
+                      </p>
+                      <p className="text-[11px] text-amber-100/60">
+                        {NEXT_WIN_EXPLAINER}
+                      </p>
+                    </div>
+                  );
+                })()}
                 <p className="win-moment-cta-hint -mb-1 text-center text-[11px] font-semibold uppercase text-amber-200/75 sm:text-xs">
                   Štěstí frčí —{' '}
                   <span className="text-amber-100">hrát znovu</span> je nejrychlejší cesta k další výhře
@@ -1049,21 +1147,36 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               {lossRetentionNudge && (
                 <p className="text-sm font-medium text-amber-200/90">{lossRetentionNudge}</p>
               )}
-              <div className="rounded-2xl p-5 space-y-3 border border-yellow-500/30 bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
+              <div className="rounded-2xl p-5 space-y-2 border border-yellow-500/30 bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
                 <p className="text-sm text-amber-100/85 text-center">
-                  {nearestPrizeDistance !== null
-                    ? formatDrawsText(nearestPrizeDistance)
-                    : 'Další výhra může být blíž, než si myslíš.'}
+                  {nearestPrizeDistance !== null ? (
+                    nearestPrizeDistance === 1 ? (
+                      <>Další výherní ticket čeká už při dalším tahu.</>
+                    ) : (
+                      <>
+                        Další výherní ticket čeká už za{' '}
+                        <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
+                          {nearestPrizeDistance.toLocaleString('cs-CZ')}
+                        </span>
+                        {' '}{tahPlural(nearestPrizeDistance)}.
+                      </>
+                    )
+                  ) : (
+                    'Další výhra může být blíž, než si myslíš.'
+                  )}
                 </p>
                 {nearestPrizeDistance !== null && (
-                  <p className="text-xs text-amber-100/55 text-center">{DRAWS_EXPLANATION}</p>
+                  <p className="text-[11px] text-amber-100/60 text-center">
+                    {NEXT_WIN_EXPLAINER}
+                  </p>
                 )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Social Sharing Section with Preview */}
+        {/* Social Sharing Section with Preview — only for real wins */}
+        {isWinner && (
         <div className="border-t border-transparent pt-4 mt-2" style={{ borderImage: 'linear-gradient(to right, transparent, rgba(234,179,8,0.4), transparent) 1' }}>
           <p className="text-sm text-muted-foreground text-center mb-3">
             Sdílet výsledek
@@ -1167,6 +1280,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             </Button>
           </div>
         </div>
+        )}
 
         <div className="flex justify-center">
           <Button type="button" onClick={onClose} variant={shouldCelebrateWin ? 'outline' : 'default'} className="w-full border-white/10">
