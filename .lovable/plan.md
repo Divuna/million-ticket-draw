@@ -1,37 +1,56 @@
+## Root cause
 
-## Problém
+The contest is created/updated via `admin_manage_contest` RPC (security definer, bypasses RLS). The RPC does **not** accept `rules` or `rules_pdf_url` parameters, so `AdminContestManagement.tsx` (lines 1253–1327) does a follow-up direct `supabase.from("contests").update({ rules_pdf_url, rules, ... })`.
 
-Zákazník si koupí ticket, kupón se mu **uloží** do `/wins → Nabídky` (DB záznam v `user_partner_offers` vznikne správně), ale v ticket-result modalu **kupón nevidí** — modal ukáže jen číslo ticketu, ne zprávu „🎁 SPECIÁLNÍ NABÍDKA!". Zákazník tedy neví, že kupón vyhrál.
+DB check confirms `public.contests` has only these RLS policies:
+- SELECT (public visible + admin select-all)
+- DELETE (admin)
+- **No INSERT, no UPDATE policy exists.**
 
-## Příčina
+So the direct UPDATE matches **zero rows** under RLS. The PDF uploads to the `contest-rules` bucket successfully (bucket is public), but the URL is never persisted. Contest `93dc5cdc-…` confirms: `rules_pdf_url = NULL`.
 
-Frontend bug ve dvou souborech. `TicketResultModal` umí `partner_offer` zobrazit (`src/components/TicketResultModal.tsx`, větev `isPartnerOffer && result?.partner_offer`), a logika nákupu si nabídku správně načte z `user_partner_offers` do lokální proměnné `modalResult.partner_offer`. **Ale při předání do `<TicketResultModal result={...} />` se `partner_offer` zapomene přibalit:**
+The frontend already detects 0 rows and shows the Czech toast `"Chyba ukládání pravidel / obrázků"` — so the existing error UX is correct, but the write itself is blocked.
 
-- `src/pages/Games.tsx`, řádky 470–479 — ručně se vypisuje `ticket_number, distance_to_next_bonus, next_bonus_position, won_prize, won_type, bonus_prize_id, remaining_tickets`, ale **chybí `partner_offer`**.
-- `src/pages/FavoriteGames.tsx`, řádky 424–433 — stejný bug.
-- `src/pages/ContestDetail.tsx` — **OK**, přes `stableResult` (ř. 591) `partner_offer` projde a modal ho zobrazí.
+## Fix
 
-Tím pádem na `/games` a `/favorite-games` zákazník po nákupu kupón v modalu nikdy neuvidí, jen ho najde později v sekci Nabídky.
+### 1. Add admin UPDATE policy on `public.contests` (migration)
 
-## Řešení
+This mirrors the existing `contests_admin_delete` / `contests_admin_select_all` pattern. No schema change, no function change, no policy weakening — purely an additive policy that matches workspace rules ("add additional RLS policy ONLY if explicitly requested").
 
-Dvouřádková oprava — do props `result` v obou modalech přidat jeden klíč `partner_offer: modalResult.partner_offer ?? null`. **Žádná změna logiky, žádná změna DB, žádná změna `assign_partner_offer_to_ticket`, žádná změna `buy_ticket_atomic`.** Jen propsání už načtených dat do komponenty, která je umí vykreslit.
+```sql
+CREATE POLICY "contests_admin_update"
+ON public.contests
+FOR UPDATE
+TO authenticated
+USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'superadmin'))
+WITH CHECK (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'superadmin'));
+```
 
-### Soubory ke změně
+This unblocks the existing follow-up UPDATE for `rules_pdf_url`, `rules`, `main_prize_secondary_image`, `banner_image`. No other code paths gain new abilities (non-admins still can't update — `has_role` check enforces it).
 
-1. `src/pages/Games.tsx` — v bloku `<TicketResultModal result={modalResult ? {...} : null}>` (ř. 471–479) přidat `partner_offer: modalResult.partner_offer ?? null,`.
-2. `src/pages/FavoriteGames.tsx` — stejná úprava (ř. 425–433).
+### 2. `src/components/AdminContestManagement.tsx` — keep the current flow, tighten the error message
 
-### Co se NEMĚNÍ
+The existing flow at lines 1261–1327 is already correct:
+- Upload PDF to `contest-rules` bucket
+- Get public URL → `additionalUpdates.rules_pdf_url`
+- `update(...).eq("id", contestId).select("id")` → if 0 rows or error, show Czech destructive toast and `return` (modal stays open, no success toast)
 
-- `assign_partner_offer_to_ticket` (cooldown, rotace, eligibility) — beze změny.
-- `buy_ticket_atomic`, RLS, schéma, ekonomika.
-- `TicketResultModal.tsx` — už dnes umí offer vykreslit, jen čeká na data.
-- `ContestDetail.tsx` — už funguje správně, nic se tam nedělá.
-- `/wins → Nabídky` — funguje a ukládání zůstává beze změny.
+Only adjust the toast title/description for the rules-PDF specific case to match the requested Czech wording, e.g. `"Nepodařilo se uložit pravidla soutěže. Zkuste to prosím znovu."` when `rules_pdf_url` was part of the failed update. Keep the modal open, do not call the success toast or close logic.
 
-## Důsledek
+### 3. `src/pages/ContestDetail.tsx` — no change
 
-Po opravě: jakmile DB zákazníkovi nabídku přiřadí (dnes podle stávajících pravidel = první ticket po 5min cooldownu / rotace mezi partnery), v ticket modalu se okamžitě objeví karta „🎁 SPECIÁLNÍ NABÍDKA!" s logem partnera, názvem, krátkým textem a platností do. Zákazník tedy hned vidí, že vyhrál kupón, a stejný kupón najde i ve `/wins → Nabídky` (jako dnes).
+Lines 1035–1048 already render the "📄 Zobrazit pravidla soutěže" link conditionally on `contest.rules_pdf_url`. Once the column saves, the link appears automatically.
 
-Pokud DB v daném momentě žádnou nabídku nepřiřadí (cooldown, žádný platný offer v contestu), modal bude vypadat přesně jako dnes — žádná regrese.
+## Out of scope (untouched)
+
+- `admin_manage_contest` RPC signature
+- `buy_ticket_atomic`, winner logic, Partner Offers, `partner_offer_contests`
+- Storage bucket config (`contest-rules` already public)
+- Public contest cards, routes, ContestDetail layout
+- `contests` table schema, columns, types
+
+## Verification after apply
+
+1. Edit contest `93dc5cdc-8bd2-4906-92b4-948d5eba1e60` in admin, upload a PDF, save.
+2. Confirm: success toast, modal closes, `SELECT rules_pdf_url FROM contests WHERE id='93dc5cdc-…'` returns the public URL with `?t=` cache-bust.
+3. Open `/contest/93dc5cdc-…` as a customer → "📄 Zobrazit pravidla soutěže" link visible and opens the PDF.
