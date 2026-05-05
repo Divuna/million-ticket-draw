@@ -179,6 +179,7 @@ Grafika je rozpracovaná. Momentálně testujeme funkčnost systému. Grafika se
 - Platné hodnoty v DB (constraint `contests_status_check`): `draft`, `pending`, `active`, `paused`, `closed`
 - `draft` se v admin UI zobrazuje jako **„Archiv test"** — DB hodnota se nemění
 - `closed` je pouze systémový přechod — admin ho nemůže nastavit ručně
+- **`closed` je finální** — uzavřená soutěž se nesmí vrátit do žádného jiného stavu; `handleStatusChange` to blokuje guard + disabled Select
 
 ### Admin contest management UX
 - `src/components/AdminContestManagement.tsx` — 3 taby: Aktivní soutěže / Archiv test / Archiv ukončených soutěží (archiv na stejné stránce, ne nová stránka ani row dropdown)

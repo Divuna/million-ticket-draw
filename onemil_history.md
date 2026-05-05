@@ -14,6 +14,22 @@
 
 ---
 
+## 2026-05-05 — Closed contest status made final
+
+### Bug
+Admin mohl v UI změnit status `closed` soutěže zpět na `draft`, `pending`, `active` nebo `paused`.
+
+### Fix
+- `src/components/AdminContestManagement.tsx` — commit `54466bb`
+- `handleStatusChange`: přidán guard na začátek funkce — pokud `current.status === "closed"`, zobrazí toast _„Ukončenou soutěž nelze znovu aktivovat ani přesunout."_ a okamžitě vrátí
+- Status Select v řádku tabulky: `disabled` rozšířen o `|| contest.status === "closed"`
+- Odstraněna duplicitní deklarace `const current` v `draft` větvi (sdílí nyní proměnnou z vrcholu funkce)
+
+### Ověřeno manuálně
+V tabu „Archiv ukončených soutěží" nelze otevřít status dropdown uzavřené soutěže. Soutěž zůstává uzavřena.
+
+---
+
 ## 2026-05-05 — Contest rules PDF fix (rules_pdf_url NULL bug)
 
 ### Bug

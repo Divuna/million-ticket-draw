@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 05. 05. 2026 (contest rules PDF fix + CI green 14/3/0)
+**Aktualizováno:** 05. 05. 2026 (closed contest final status + contest rules PDF fix)
 
 ---
 
@@ -72,6 +72,22 @@
 - Partner Offers se **nesmí** počítat do výpočtu vzdálenosti k nejbližší výhře
 - Partner Offers se **nesmí** zapisovat do `winners` ani `bonus_prizes`
 - `buy_ticket_atomic` se nemá znovu měnit bez explicitní instrukce
+
+---
+
+## CLOSED CONTEST STATUS — FINÁLNÍ (05. 05. 2026)
+
+### Bug
+V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změnit status na `draft`, `pending`, `active` nebo `paused`.
+
+### Fix (`src/components/AdminContestManagement.tsx`, commit `54466bb`)
+- `handleStatusChange` blokuje jakoukoli změnu statusu pokud `current.status === "closed"` — zobrazí toast: _„Ukončenou soutěž nelze znovu aktivovat ani přesunout."_
+- Status Select v tabulce je pro closed contests disabled (`contest.status === "closed"`)
+- Badge „Ukončeno" zůstává viditelný (readonly)
+- Duplicitní deklarace `const current` v `draft` bloku odstraněna (nyní sdílí proměnnou z vrcholu funkce)
+
+### Invariant (uzamčeno)
+`closed` je finální stav. Uzavřená soutěž nesmí být nikdy znovu aktivována, přesunuta do draftu, pending ani paused — ani z admin UI, ani přes `handleStatusChange`.
 
 ---
 
