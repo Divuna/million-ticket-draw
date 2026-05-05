@@ -117,8 +117,6 @@ Technical:
 
 ## NEDODĚLÁNO — otevřené body (05. 05. 2026)
 
-- **Sdílovací karta:** canvas generování v `TicketResultModal` není vizuálně přijatelné — nahradit reálnými result grafikami (viz onemil_state.md pro směr)
-- **Favorites UI:** počítadlo oblíbených se neaktualizuje po přidání/odebrání bez page refresh
 - **Vizuální systém:** brand větve nemergnuto do `main` (viz sekce níže)
 
 ## Partner Offers — invarianty (uzamčeno, nesmí se měnit)

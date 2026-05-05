@@ -39,16 +39,15 @@
 - Přidán vysvětlující řádek pod text vzdálenosti
 - Správná česká pluralizace: 2–4 = tahy, 5+ = tahů
 
-### Další opravy (uživatel)
+### Další opravy (uživatel — paralelní větev)
 - Odstraněno číslo tiketu z result boxu
 - Odstraněno extra „0" z modalu (React `{0 && <JSX>}` bug způsobený `?? 0`)
-- Odstraněn toast „Ticket #N zakoupen!" po nákupu (duplikace + odhalení čísla)
-- Skryt název soutěže a celkový počet tiketů na listing kartách (homepage + /games)
+- Odstraněn toast „Ticket #N zakoupen!" po nákupu — commit `5bae556`
+- Skryt název soutěže a celkový počet tiketů na listing kartách — commit `f2c1678`
+- Česká pluralizace opravena (`tahPlural`, `nextWinTicketText`, `NEXT_WIN_EXPLAINER`) — commit `6269732`
+- Sdílovací karta přepsána na `generatePremiumShareCard` (1200×630, reálné prize obrázky) — commit `0790362`
+- Favorites počítadlo opraveno (aktualizace bez refresh) — commity `ebf5e8e`, `00e1e99`
 - Partner Offers assignment ověřen funkční bez změny kódu
-
-### Otevřené body (nezapracováno)
-- Sdílovací karta — canvas generování není vizuálně přijatelné; směr zaznamenán v state.md
-- Favorites UI — počítadlo oblíbených se neaktualizuje bez refresh po přidání/odebrání
 
 ---
 

@@ -29,11 +29,11 @@
 ### TicketResultModal — opravené zobrazení (dokončeno)
 - Odstraněno číslo tiketu z hlavního result boxu
 - Odstraněno extra „0" (bylo způsobeno `?? 0` v mappedResult + React renderem `{0 && <JSX>}`)
-- Nový text vzdálenosti (helper `formatDrawsText`):
+- Nový text vzdálenosti (helper `nextWinTicketText` + `tahPlural`):
   - X = 1: „Další výherní ticket čeká už při dalším tahu."
   - X = 2–4: „Další výherní ticket čeká už za X tahy."
   - X ≥ 5: „Další výherní ticket čeká už za X tahů."
-- Přidán vysvětlující řádek: „Může jít o bonusovou i hlavní výhru. Kdo výherní ticket otevře první, vyhrává."
+- Přidán vysvětlující řádek (`NEXT_WIN_EXPLAINER`): „Může jít o bonusovou i hlavní výhru. Kdo výherní ticket otevře první, vyhrává."
 - Fallback (bez dat): „Další výhra může být blíž, než si myslíš."
 - **Partner Offers jsou striktně vyloučeny** z výpočtu vzdálenosti — počítají se pouze fyzické bonus_prizes a main výhra
 
@@ -47,20 +47,20 @@
 - Tyto detaily zůstávají záměrně pouze na stránce detailu soutěže
 - Důvod: název soutěže je součástí generovaného banneru/grafiky, ne UI textu na kartách
 
-### Sdílovací karta / generovaný obrázek tiketu — NEDODĚLÁNO
-- Aktuální canvas generování v `TicketResultModal` není vizuálně přijatelné
-- Problém: generický canvas místo reálné result grafiky
-- **Zamýšlený směr (nezapracováno):**
-  - Pro nevýherní tikety — žádné sdílení
-  - Bonusová fyzická výhra → použít `bonusPrize.image_url`
-  - MioCoin výhra → použít existující MioCoin asset
-  - Partner offer → použít `partner_offer.banner_url`, fallback `partner_offer.logo_url`; nápis „Získal jsem speciální nabídku na OneMil" (ne „výhra")
-  - Hlavní výhra → existující contest/main prize obrázek
-  - Reálná výhra: „Vyhrál jsem na OneMil"
+### Sdílovací karta / generovaný obrázek tiketu — IMPLEMENTOVÁNO
+- `generatePremiumShareCard` v `TicketResultModal.tsx` — nový canvas 1200×630 s reálnou grafikou výhry
+- Logika:
+  - Bonusová fyzická výhra → `bonusPrize.image_url`
+  - MioCoin výhra → existující MioCoin asset
+  - Partner offer → `partner_offer.banner_url`, fallback `partner_offer.logo_url`; nápis „Získal jsem speciální nabídku na OneMil"
+  - Hlavní výhra → contest/main prize obrázek
+  - Nevýherní tikety → sdílení odstraněno nebo minimalizováno
+- Dark premium background (OneMil brand: Midnight Black → Deep Navy → Graphite)
+- Commit: `0790362 Refined share image canvas`
 
-### Favorites UI — NEDODĚLÁNO
-- Identifikován problém: po kliknutí na srdce na contest kartě se naviguje na `/favorite-games`, ale počítadlo oblíbených se neaktualizuje bez refreshe stránky
-- Požadované chování: počet oblíbených se musí aktualizovat po přidání/odebrání bez page refresh
+### Favorites UI — OPRAVENO
+- Počítadlo oblíbených se aktualizuje bez page refresh po přidání/odebrání
+- Commity: `ebf5e8e Updated fav count display`, `00e1e99 Opravil počítadlo viditelnost`
 
 ### Partner Offers — potvrzeno funkční
 - Assignment po nákupu tiketu funguje správně (potvrzeno uživatelem)
