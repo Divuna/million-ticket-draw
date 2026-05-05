@@ -14,6 +14,28 @@
 
 ---
 
+## 2026-05-05 — Contest rules PDF fix (rules_pdf_url NULL bug)
+
+### Bug
+Admin nahrál PDF s pravidly, ale `contests.rules_pdf_url` zůstal `NULL`. ContestDetail proto nezobrazoval odkaz na pravidla.
+
+### Root cause
+Přímý `UPDATE contests SET rules_pdf_url = ...` z frontendu byl blokován chybějící RLS UPDATE policy na `public.contests`. Supabase vracel `{ data: [], error: null }` (0 rows affected, silent no-op). Navíc chyběl `return` po UPDATE error → frontend zobrazil false success toast i při selhání.
+
+### Opravy
+- **DB:** přidána RLS policy `contests_admin_update` — admin/superadmin mohou UPDATE `public.contests` (migrace commitnuty a aplikovány; commity `bfc7813`, `95ab8e3`)
+- **`src/components/AdminContestManagement.tsx`:** přidán `return` po UPDATE error (commit `20e4a34`); UPDATE změněn na `.select("id")` pro detekci 0-row no-op (commit `934bfbd`)
+- **`src/pages/ContestDetail.tsx`:** odkaz přejmenován na „Zobrazit pravidla soutěže", otevírá PDF v novém tabu
+
+### Playwright testy 03-voucher-purchase.spec.ts (opraveny souběžně)
+- `waitForTimeout(3_000)` → `expect(buyButton.or(emptyState)).toBeVisible({ timeout: 15_000 })` (commity `0d7acbd`, `f0094e7`)
+- `getByText(regex)` → `getByRole('heading', { name: '...' })` — eliminace strict mode violation (commit `1035273`)
+
+### CI výsledek
+14 passed / 3 skipped / 0 failed ✅
+
+---
+
 ## 2026-05-04/05 — Ticket result modal + buy_ticket_atomic oprava
 
 ### buy_ticket_atomic — timeout (57014)

@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 05. 05. 2026 (ticket result modal + buy_ticket_atomic oprava)
+**Aktualizováno:** 05. 05. 2026 (contest rules PDF fix + CI green 14/3/0)
 
 ---
 
@@ -72,6 +72,39 @@
 - Partner Offers se **nesmí** počítat do výpočtu vzdálenosti k nejbližší výhře
 - Partner Offers se **nesmí** zapisovat do `winners` ani `bonus_prizes`
 - `buy_ticket_atomic` se nemá znovu měnit bez explicitní instrukce
+
+---
+
+## CONTEST RULES PDF — OPRAVENO (05. 05. 2026)
+
+### Bug
+- Admin contest formulář vyžaduje nahrání PDF s pravidly soutěže.
+- Po uložení soutěže zůstával `contests.rules_pdf_url = NULL` v databázi.
+- ContestDetail proto nezobrazoval odkaz „Zobrazit pravidla soutěže".
+
+### Root cause
+- Přímý UPDATE `contests.rules_pdf_url` z frontendu byl blokován chybějící RLS UPDATE policy na `public.contests` pro admin role.
+- Supabase vracel `{ data: [], error: null }` (0 rows affected, žádná chyba) — silent no-op.
+- Navíc chyběl `return` po UPDATE error → úspěšný toast se zobrazil i při selhání (false confirmation).
+
+### Opravy
+- **DB migrace:** přidána RLS policy `contests_admin_update` — admin/superadmin mohou UPDATE `public.contests` (commity `bfc7813`, `95ab8e3`)
+- **Frontend `src/components/AdminContestManagement.tsx`:**
+  - Přidán `setSaving(false); return;` po UPDATE error (commit `20e4a34`)
+  - UPDATE změněn na `.update(additionalUpdates).eq("id", contestId).select("id")` — detekuje 0 rows affected (commit `934bfbd`)
+  - Chybová hláška upřesněna na „Pravidla soutěže / obrázky se neuložily"
+- **Frontend `src/pages/ContestDetail.tsx`:**
+  - Text odkazu změněn z „Stáhnout pravidla soutěže" na „Zobrazit pravidla soutěže" (link otevírá PDF v novém tabu)
+
+### Invariant (uzamčeno)
+- Každá veřejná soutěž s nahraným PDF pravidel musí zobrazovat tlačítko/odkaz „Zobrazit pravidla soutěže" na stránce ContestDetail.
+- `rules_pdf_url` se ukládá výhradně přes `additionalUpdates` UPDATE po RPC `admin_manage_contest` — RPC samotný tento sloupec neobsahuje.
+
+### Playwright — stav po opravě
+- E2E výsledek: **14 passed / 3 skipped / 0 failed** ✅
+- Opraveny také testy 03-voucher-purchase.spec.ts:
+  - Fixed: `waitForTimeout(3_000)` → `expect(buyButton.or(emptyState)).toBeVisible({ timeout: 15_000 })`
+  - Fixed: `getByText(regex)` → `getByRole('heading', { name: '...' })` (strict mode violation)
 
 ---
 
