@@ -766,60 +766,49 @@ export default function ContestDetail() {
             )}
           </div>
 
-          {/* Hero image - fixed slot, won't shrink under long text */}
-          <div className="md:w-[320px] md:flex-none flex justify-center md:justify-end">
-            <img
-              src={heroImage}
-              alt={contest.title}
-              className="w-full max-w-[280px] md:max-w-[320px] max-h-[260px] md:max-h-[300px] object-contain"
-              onError={(e) => (e.currentTarget.src = "/fallback-car.png")}
-            />
+          {/* Media: main image/video + secondary thumbnails — merged into hero */}
+          <div className="md:w-[360px] md:flex-none w-full flex flex-col gap-3">
+            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black/40 border border-[hsl(40_50%_45%/0.25)]">
+              {activeMedia ? (
+                activeMedia.type === 'video' ? (
+                  <div
+                    key={`video-${activeMedia.id}`}
+                    className="absolute inset-0"
+                    style={{ animation: 'galleryFadeSlide 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
+                  >
+                    <YouTubeEmbed url={activeMedia.url} className="absolute inset-0" />
+                  </div>
+                ) : (
+                  <img
+                    key={`img-${activeMedia.id}`}
+                    src={getMediaUrl(activeMedia.url)}
+                    alt={contest.title}
+                    className="w-full h-full object-contain"
+                    style={{ animation: 'galleryFadeSlide 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
+                  />
+                )
+              ) : (
+                <img
+                  src={heroImage}
+                  alt={contest.title}
+                  className="w-full h-full object-contain"
+                  onError={(e) => (e.currentTarget.src = "/fallback-car.png")}
+                />
+              )}
+            </div>
+
+            {displayGallery.length > 1 && (
+              <GalleryThumbnails
+                items={displayGallery}
+                activeIndex={activeGalleryIndex}
+                onSelect={setActiveGalleryIndex}
+                getYouTubeId={getYouTubeId}
+                getMediaUrl={getMediaUrl}
+              />
+            )}
           </div>
         </div>
       </section>
-
-      {/* GALLERY SECTION */}
-      {displayGallery.length > 0 && (
-        <section className="voucher-card-glow max-w-4xl mx-auto bg-[hsl(220_25%_8%)]/60 backdrop-blur rounded-xl p-3 md:p-4 border-[2px] border-[hsl(40_50%_45%/0.3)] space-y-3 animate-fade-in">
-          {/* Main display – 16:9 capped with premium transitions */}
-          <div className="relative aspect-video max-h-[420px] rounded-xl overflow-hidden bg-black/40 mx-auto">
-            {activeMedia && (
-              activeMedia.type === 'video' ? (
-                <div
-                  key={`video-${activeMedia.id}`}
-                  className="absolute inset-0"
-                  style={{
-                    animation: 'galleryFadeSlide 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
-                  }}
-                >
-                  <YouTubeEmbed url={activeMedia.url} className="absolute inset-0" />
-                </div>
-              ) : (
-                <img
-                  key={`img-${activeMedia.id}`}
-                  src={getMediaUrl(activeMedia.url)}
-                  alt="Gallery"
-                  className="w-full h-full object-contain"
-                  style={{
-                    animation: 'galleryFadeSlide 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
-                  }}
-                />
-              )
-            )}
-          </div>
-
-          {/* Memoized thumbnail strip */}
-          {displayGallery.length > 1 && (
-            <GalleryThumbnails
-              items={displayGallery}
-              activeIndex={activeGalleryIndex}
-              onSelect={setActiveGalleryIndex}
-              getYouTubeId={getYouTubeId}
-              getMediaUrl={getMediaUrl}
-            />
-          )}
-        </section>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Box 1: Stav MioCoinů + akce */}
