@@ -26,7 +26,8 @@ test.describe('Partner Offer Persistence', () => {
 
     // Open the offer so opened_at is written to DB
     await firstCard.click();
-    const dialog = page.locator('[role="dialog"]');
+    // Scoped to OfferDetailModal — the only dialog with a "Skrýt nabídku" button
+    const dialog = page.locator('[role="dialog"]:has(button:has-text("Skrýt nabídku"))');
     await expect(dialog).toBeVisible({ timeout: 5_000 });
 
     // Wait for opened_at PATCH to complete before reloading

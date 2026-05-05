@@ -46,8 +46,9 @@ test.describe('Partner Offer Open', () => {
 
     await firstCard.click();
 
-    // 1) Offer detail modal must be visible
-    const dialog = page.locator('[role="dialog"]');
+    // 1) Offer detail modal must be visible — scoped to the dialog containing
+    //    the "Skrýt nabídku" button, which is unique to OfferDetailModal
+    const dialog = page.locator('[role="dialog"]:has(button:has-text("Skrýt nabídku"))');
     await expect(dialog).toBeVisible({ timeout: 5_000 });
 
     // 2) Modal must contain a heading (DialogTitle = offer title)
