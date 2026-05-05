@@ -937,26 +937,67 @@ export default function ContestDetail() {
         </section>
       </div>
 
-      {/* 4. CESTA K HLAVNÍ VÝHŘE */}
-      <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[hsl(40_60%_50%/0.2)]">
-        <h2 className="text-white font-semibold text-sm md:text-base mb-4">Cesta k hlavní výhře</h2>
-        <p className="text-yellow-400/90 font-medium text-sm md:text-base mb-2">
-          Celkem {progressTicketsTotal.toLocaleString("cs-CZ")} ticketů
-        </p>
+      {/* 4. CESTA K VÝHERNÍMU TICKETU */}
+      <section className="relative overflow-hidden rounded-[20px] p-5 md:p-7 border border-[hsl(40_60%_50%/0.25)] bg-gradient-to-br from-[hsl(220_30%_7%)]/95 via-[hsl(220_28%_9%)]/85 to-[hsl(220_25%_6%)]/95 shadow-[0_18px_50px_rgba(0,0,0,0.45)]">
+        {/* Ambient glow */}
+        <div aria-hidden className="pointer-events-none absolute -top-24 -right-16 w-72 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #FF8A00 0%, transparent 70%)' }} />
+        <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-16 w-72 h-72 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, #FFB547 0%, transparent 70%)' }} />
 
-        {/* Progress bar — static fill (no sold/total ratio) */}
-        <div
-          className="w-full h-2.5 rounded-full overflow-hidden bg-white/10"
-          style={{ boxShadow: '0 0 20px rgba(250, 204, 21, 0.2)' }}
-        >
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: "100%",
-              background: 'linear-gradient(to right, #FF8A00, #FFB547)',
-              boxShadow: '0 0 20px rgba(255, 138, 0, 0.4)'
-            }}
-          />
+        <div className="relative">
+          <h2 className="font-heading text-white font-semibold text-lg md:text-xl tracking-tight mb-2">
+            Cesta k výhernímu ticketu
+          </h2>
+          <p className="text-[hsl(0_0%_85%)]/80 text-sm md:text-[15px] leading-relaxed mb-6 max-w-2xl">
+            V této soutěži je připraveno celkem{' '}
+            <span className="text-[#FFB547] font-semibold">{progressTicketsTotal.toLocaleString('cs-CZ')}</span>{' '}
+            ticketů. Každý uplatněný MioCoin posouvá soutěž blíž k hlavní výhře.
+          </p>
+
+          {/* Premium animated path */}
+          <div className="relative pt-2 pb-1">
+            {/* Track */}
+            <div className="relative h-3 rounded-full bg-white/[0.06] border border-white/[0.08] overflow-hidden" style={{ boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5), 0 0 24px rgba(255,138,0,0.08)' }}>
+              {/* Animated fill */}
+              <div
+                className="absolute inset-y-0 left-0 rounded-full"
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(90deg, rgba(255,138,0,0.0) 0%, #FF8A00 35%, #FFB547 70%, #FFD68A 100%)',
+                  boxShadow: '0 0 24px rgba(255,138,0,0.55), 0 0 48px rgba(255,181,71,0.25)',
+                }}
+              />
+              {/* Moving shimmer */}
+              <div
+                aria-hidden
+                className="absolute inset-y-0 w-1/3 animate-[golden-shimmer_4s_ease-in-out_infinite]"
+                style={{
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)',
+                  mixBlendMode: 'overlay',
+                }}
+              />
+            </div>
+
+            {/* Endpoint markers */}
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#FF8A00] shadow-[0_0_12px_#FF8A00]" />
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
+              <div
+                className="relative w-7 h-7 rounded-full flex items-center justify-center text-[13px]"
+                style={{
+                  background: 'linear-gradient(135deg, #FFB547, #FF8A00)',
+                  boxShadow: '0 0 18px rgba(255,138,0,0.7), 0 0 36px rgba(255,181,71,0.4)',
+                  border: '1.5px solid rgba(255,214,138,0.8)',
+                }}
+                aria-label="Hlavní výhra"
+              >
+                🏆
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-4 text-[11px] md:text-xs uppercase tracking-[0.14em]">
+            <span className="text-[hsl(0_0%_70%)]/70">Start</span>
+            <span className="text-[#FFB547] font-semibold">Hlavní výhra</span>
+          </div>
         </div>
       </section>
 
