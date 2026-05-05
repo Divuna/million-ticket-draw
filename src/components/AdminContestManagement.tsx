@@ -2385,6 +2385,17 @@ export const AdminContestManagement: React.FC = () => {
   }, []);
 
   const handleStatusChange = async (contestId: string, newStatus: string) => {
+    const current = contests.find((c) => c.contest_id === contestId);
+
+    if (current?.status === "closed") {
+      toast({
+        title: "Akce zamítnuta",
+        description: "Ukončenou soutěž nelze znovu aktivovat ani přesunout.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (newStatus === "closed") {
       toast({
         title: "Akce zamítnuta",
@@ -2395,7 +2406,6 @@ export const AdminContestManagement: React.FC = () => {
     }
 
     if (newStatus === "draft") {
-      const current = contests.find((c) => c.contest_id === contestId);
       if (current?.status === "active") {
         toast({
           title: "Akce zamítnuta",
@@ -2943,7 +2953,7 @@ export const AdminContestManagement: React.FC = () => {
                           <Select
                             value={contest.status}
                             onValueChange={(value) => handleStatusChange(contest.contest_id, value)}
-                            disabled={updatingStatus === contest.contest_id}
+                            disabled={updatingStatus === contest.contest_id || contest.status === "closed"}
                           >
                             <SelectTrigger className="w-8 h-8 p-0 bg-transparent border-white/10 hover:bg-white/10">
                               {updatingStatus === contest.contest_id ? (
