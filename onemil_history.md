@@ -14,6 +14,44 @@
 
 ---
 
+## 2026-05-04/05 — Ticket result modal + buy_ticket_atomic oprava
+
+### buy_ticket_atomic — timeout (57014)
+- **Root cause:** `trigger_sofinity_forward()` a `process_event_queue_trigger()` volaly `net.http_post()` synchronně uvnitř transakce; saturace pg_net workerů → 57014 statement timeout
+- **Fix:** migrace `20260504_fix_nonblocking_sofinity_triggers.sql` — `trigger_sofinity_forward()` přepsán na INSERT do `event_queue`; `process_event_queue_trigger()` je no-op
+
+### buy_ticket_atomic — chybějící fieldy v response
+- Funkce nevracela `remaining_tickets`, `next_bonus_position`, `distance_to_next_bonus`
+- Migrace `20260504_add_remaining_and_bonus_distance_to_buy_ticket_atomic.sql` přidala:
+  - `remaining_tickets = v_ticket_count - v_next_ticket`
+  - `v_next_bonus_position` — SELECT nejbližšího pending bonus_prizes.ticket_position > v_next_ticket po aktualizaci aktuálního bonusu na 'won'
+  - `distance_to_next_bonus = v_next_bonus_position - v_next_ticket`
+- Aplikováno v produkci, ověřeno STRING_AGG query
+
+### Frontend — null → 0 přepis (root cause fallback textu)
+- `remaining_tickets: result.remaining_tickets ?? 0` → `?? undefined` v `ContestDetail.tsx`, `Games.tsx`, `FavoriteGames.tsx`
+- `?? 0` převáděl null na 0 → `0 > 0 = false` → `nearestPrizeDistance` vždy null → vždy fallback text
+
+### TicketResultModal — text vzdálenosti
+- Přidán helper `formatDrawsText(n)` + konstanta `DRAWS_EXPLANATION`
+- Nahrazen text „Nejbližší výhra může být už za X tahů." na všech 4 místech (canvas, getShareText, bonus win pill, loss box)
+- Nový formát: „Další výherní ticket čeká už za X tahy/tahů." / „...při dalším tahu." (X=1)
+- Přidán vysvětlující řádek pod text vzdálenosti
+- Správná česká pluralizace: 2–4 = tahy, 5+ = tahů
+
+### Další opravy (uživatel)
+- Odstraněno číslo tiketu z result boxu
+- Odstraněno extra „0" z modalu (React `{0 && <JSX>}` bug způsobený `?? 0`)
+- Odstraněn toast „Ticket #N zakoupen!" po nákupu (duplikace + odhalení čísla)
+- Skryt název soutěže a celkový počet tiketů na listing kartách (homepage + /games)
+- Partner Offers assignment ověřen funkční bez změny kódu
+
+### Otevřené body (nezapracováno)
+- Sdílovací karta — canvas generování není vizuálně přijatelné; směr zaznamenán v state.md
+- Favorites UI — počítadlo oblíbených se neaktualizuje bez refresh po přidání/odebrání
+
+---
+
 ## 2026-05-01 — CI oprava: Payment Pipeline selhání diagnostikováno a opraveno
 
 ### Problém

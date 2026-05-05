@@ -95,7 +95,7 @@ Technical:
 
 ---
 
-## CURRENT SYSTEM STATUS (24. 04. 2026)
+## CURRENT SYSTEM STATUS (05. 05. 2026)
 
 - CI pipeline stabilní: `.github/workflows/playwright.yml` — registration + login testy passing
 - Payment pipeline ověřen: Stripe webhook vrací 500 na selhání (retry), idempotency funguje, wallet credit přes trigger
@@ -104,12 +104,29 @@ Technical:
 - Playwright testy: **8 spec souborů** (01–08); testy 03–08 skip bez credentials
   - `E2E_TEST_EMAIL` + `E2E_TEST_PASSWORD` — přidat jako GitHub Secrets pro testy 03–08
   - `E2E_WIN_CONTEST_ID` — přidat jako GitHub Secret pro test 05 (soutěž se 1 zbývající tiketou)
-- **Tři migrace commitnuty ale neaplikovány** v Supabase:
+- **Migrace commitnuty ale neaplikovány** v Supabase:
   - `20260420_ensure_wallet_exists.sql` — wallet auto-creation helper
   - `20260420_fix_profiles_insert_remove_user_id.sql` — oprava trigger profiles INSERT
   - `20260424_fix_won_type_main_priority_over_bonus.sql` — won_type: main > bonus priorita
+  - `20260504_fix_nonblocking_sofinity_triggers.sql` — 57014 timeout fix (trigger non-blocking)
+- **Migrace aplikované v produkci (05. 05. 2026):**
+  - `20260504_add_remaining_and_bonus_distance_to_buy_ticket_atomic.sql` ✅
 - won_type bug potvrzen a opravena v migraci: poslední tiket + bonusová pozice → byl vracen 'bonus' místo 'main'
 - Frontend volá `buy_ticket_atomic` přímo (ContestDetail, Games, FavoriteGames) — ne přes Edge Function
+- buy_ticket_atomic nyní vrací: `remaining_tickets`, `next_bonus_position`, `distance_to_next_bonus`
+
+## NEDODĚLÁNO — otevřené body (05. 05. 2026)
+
+- **Sdílovací karta:** canvas generování v `TicketResultModal` není vizuálně přijatelné — nahradit reálnými result grafikami (viz onemil_state.md pro směr)
+- **Favorites UI:** počítadlo oblíbených se neaktualizuje po přidání/odebrání bez page refresh
+- **Vizuální systém:** brand větve nemergnuto do `main` (viz sekce níže)
+
+## Partner Offers — invarianty (uzamčeno, nesmí se měnit)
+
+- Partner Offers **nejsou** výhry soutěže
+- Partner Offers se **nesmí** počítat do výpočtu vzdálenosti k nejbližší výhře v `TicketResultModal`
+- Partner Offers se **nesmí** zapisovat do tabulek `winners` ani `bonus_prizes`
+- `assign_partner_offer_to_ticket` se volá pouze při `won_type === null`
 
 ---
 

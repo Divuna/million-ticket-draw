@@ -1,6 +1,77 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 01. 05. 2026 (CI oprava + scheduled testy)
+**Aktualizováno:** 05. 05. 2026 (ticket result modal + buy_ticket_atomic oprava)
+
+---
+
+## TICKET PURCHASE FLOW — AKTUÁLNÍ STAV (04–05. 05. 2026)
+
+### buy_ticket_atomic — opravené odpovědní fieldy (aplikováno v produkci)
+- **Migrace:** `supabase/migrations/20260504_add_remaining_and_bonus_distance_to_buy_ticket_atomic.sql`
+- Funkce nyní vrací 3 nová pole:
+  - `remaining_tickets` = `v_ticket_count - v_next_ticket`
+  - `next_bonus_position` = nejbližší pending `bonus_prizes.ticket_position` > aktuální tiket
+  - `distance_to_next_bonus` = `next_bonus_position - v_next_ticket`
+- Ověřeno produkcí: STRING_AGG query potvrdila všechna 3 pole ✅
+- Nákupní logika, wallet, winner, Partner Offers — nedotčeny
+
+### buy_ticket_atomic — timeout fix (57014)
+- **Migrace:** `supabase/migrations/20260504_fix_nonblocking_sofinity_triggers.sql`
+- **Root cause:** `trigger_sofinity_forward()` a `process_event_queue_trigger()` volaly `net.http_post()` synchronně uvnitř transakce → při saturaci pg_net workerů → 57014 statement timeout
+- **Fix:** `trigger_sofinity_forward()` přepsán na INSERT do `event_queue`; `process_event_queue_trigger()` je no-op — doručení přebírá polling edge function
+- Stav: migrace commitnuta, nutno aplikovat v Supabase SQL Editoru (pokud ještě neaplikováno)
+
+### Frontend — oprava null → 0 přepisu
+- **Soubory:** `src/pages/ContestDetail.tsx`, `src/pages/Games.tsx`, `src/pages/FavoriteGames.tsx`
+- `remaining_tickets: result.remaining_tickets ?? 0` → `?? undefined` ve všech třech souborech
+- Root cause: `?? 0` převáděl null z RPC na 0 → `0 > 0 = false` → `nearestPrizeDistance = null` → vždy se zobrazoval fallback text místo vzdálenosti
+
+### TicketResultModal — opravené zobrazení (dokončeno)
+- Odstraněno číslo tiketu z hlavního result boxu
+- Odstraněno extra „0" (bylo způsobeno `?? 0` v mappedResult + React renderem `{0 && <JSX>}`)
+- Nový text vzdálenosti (helper `formatDrawsText`):
+  - X = 1: „Další výherní ticket čeká už při dalším tahu."
+  - X = 2–4: „Další výherní ticket čeká už za X tahy."
+  - X ≥ 5: „Další výherní ticket čeká už za X tahů."
+- Přidán vysvětlující řádek: „Může jít o bonusovou i hlavní výhru. Kdo výherní ticket otevře první, vyhrává."
+- Fallback (bez dat): „Další výhra může být blíž, než si myslíš."
+- **Partner Offers jsou striktně vyloučeny** z výpočtu vzdálenosti — počítají se pouze fyzické bonus_prizes a main výhra
+
+### TicketResultModal — toast po nákupu tiketu
+- Odstraněna spodní toast notifikace „Ticket #56 zakoupen!" po úspěšném nákupu
+- Důvod: result modal potvrzení nákupu duplikoval; toast navíc odhaloval číslo tiketu
+
+### Contest karty (Homepage + /games)
+- Skryt název soutěže na listing kartách
+- Skryt celkový počet tiketů na listing kartách
+- Tyto detaily zůstávají záměrně pouze na stránce detailu soutěže
+- Důvod: název soutěže je součástí generovaného banneru/grafiky, ne UI textu na kartách
+
+### Sdílovací karta / generovaný obrázek tiketu — NEDODĚLÁNO
+- Aktuální canvas generování v `TicketResultModal` není vizuálně přijatelné
+- Problém: generický canvas místo reálné result grafiky
+- **Zamýšlený směr (nezapracováno):**
+  - Pro nevýherní tikety — žádné sdílení
+  - Bonusová fyzická výhra → použít `bonusPrize.image_url`
+  - MioCoin výhra → použít existující MioCoin asset
+  - Partner offer → použít `partner_offer.banner_url`, fallback `partner_offer.logo_url`; nápis „Získal jsem speciální nabídku na OneMil" (ne „výhra")
+  - Hlavní výhra → existující contest/main prize obrázek
+  - Reálná výhra: „Vyhrál jsem na OneMil"
+
+### Favorites UI — NEDODĚLÁNO
+- Identifikován problém: po kliknutí na srdce na contest kartě se naviguje na `/favorite-games`, ale počítadlo oblíbených se neaktualizuje bez refreshe stránky
+- Požadované chování: počet oblíbených se musí aktualizovat po přidání/odebrání bez page refresh
+
+### Partner Offers — potvrzeno funkční
+- Assignment po nákupu tiketu funguje správně (potvrzeno uživatelem)
+- Cooldown 5 minut aktivní, žádné duplicity
+- Žádná mutace produkčních dat při ověřování
+
+### Invarianty (uzamčeno)
+- Partner Offers **nejsou** výhry soutěže
+- Partner Offers se **nesmí** počítat do výpočtu vzdálenosti k nejbližší výhře
+- Partner Offers se **nesmí** zapisovat do `winners` ani `bonus_prizes`
+- `buy_ticket_atomic` se nemá znovu měnit bez explicitní instrukce
 
 ---
 

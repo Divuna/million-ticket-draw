@@ -21,6 +21,14 @@ import { playWinChime } from '@/lib/playWinChime';
 import { pickRandomAlmostWinMessage, rollAlmostWinEffect } from '@/lib/retentionLocal';
 import './TicketResultModal.css';
 
+function formatDrawsText(n: number): string {
+  if (n === 1) return 'Další výherní ticket čeká už při dalším tahu.';
+  const word = n >= 5 ? 'tahů' : 'tahy';
+  return `Další výherní ticket čeká už za ${n.toLocaleString('cs-CZ')} ${word}.`;
+}
+
+const DRAWS_EXPLANATION = 'Může jít o bonusovou i hlavní výhru. Kdo výherní ticket otevře první, vyhrává.';
+
 // Preload logo image
 const loadLogoImage = (): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
@@ -290,7 +298,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           if (dtb !== null && rem !== null) nearest = Math.min(dtb, rem);
           else nearest = dtb ?? rem ?? null;
           canvasMotivationalText = nearest !== null
-            ? `Nejbližší výhra může být už za ${nearest.toLocaleString('cs-CZ')} tahů.`
+            ? formatDrawsText(nearest)
             : 'Další výhra může být blíž, než si myslíš.';
         }
 
@@ -521,7 +529,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       return `Vyhrál jsem na OneMil 🎉🎟️ Zkus štěstí taky 👉 onemil.cz`;
     }
     const motivationalPart = nearestPrizeDistance !== null
-      ? `Nejbližší výhra může být už za ${nearestPrizeDistance.toLocaleString('cs-CZ')} tahů.`
+      ? formatDrawsText(nearestPrizeDistance)
       : 'Další výhra může být blíž, než si myslíš.';
     return `Zahrál jsem si na OneMil 🎟️ ${motivationalPart} 👉 onemil.cz`;
   };
@@ -845,17 +853,14 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 {result?.distance_to_next_bonus != null && result.distance_to_next_bonus > 0 && (
                   <div className="mx-auto max-w-[320px] rounded-full border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center">
                     <p className="text-sm text-amber-100/80">
-                      Nejbližší výhra může být už za{' '}
-                      <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
-                        {(Math.min(
-                          result.distance_to_next_bonus,
-                          typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
-                            ? result.remaining_tickets
-                            : result.distance_to_next_bonus
-                        )).toLocaleString('cs-CZ')}
-                      </span>
-                      {' '}tahů.
+                      {formatDrawsText(Math.min(
+                        result.distance_to_next_bonus,
+                        typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
+                          ? result.remaining_tickets
+                          : result.distance_to_next_bonus
+                      ))}
                     </p>
+                    <p className="text-xs text-amber-100/55 mt-1">{DRAWS_EXPLANATION}</p>
                   </div>
                 )}
                 <p className="win-moment-cta-hint -mb-1 text-center text-[11px] font-semibold uppercase text-amber-200/75 sm:text-xs">
@@ -1046,18 +1051,13 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               )}
               <div className="rounded-2xl p-5 space-y-3 border border-yellow-500/30 bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
                 <p className="text-sm text-amber-100/85 text-center">
-                  {nearestPrizeDistance !== null ? (
-                    <>
-                      Nejbližší výhra může být už za{' '}
-                      <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
-                        {nearestPrizeDistance.toLocaleString('cs-CZ')}
-                      </span>
-                      {' '}tahů.
-                    </>
-                  ) : (
-                    'Další výhra může být blíž, než si myslíš.'
-                  )}
+                  {nearestPrizeDistance !== null
+                    ? formatDrawsText(nearestPrizeDistance)
+                    : 'Další výhra může být blíž, než si myslíš.'}
                 </p>
+                {nearestPrizeDistance !== null && (
+                  <p className="text-xs text-amber-100/55 text-center">{DRAWS_EXPLANATION}</p>
+                )}
               </div>
             </div>
           )}
