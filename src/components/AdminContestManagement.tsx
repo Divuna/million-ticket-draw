@@ -1316,9 +1316,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           if (updateError || !updatedRows || updatedRows.length === 0) {
             const errMsg = updateError?.message ?? "Soutěž nebyla nalezena nebo přístup odepřen.";
             console.error("Error updating contest extras:", updateError ?? "0 rows affected", { contestId, additionalUpdates });
+            const hasRulesPdf = "rules_pdf_url" in additionalUpdates;
             toast({
-              title: "Chyba ukládání pravidel / obrázků",
-              description: `Pravidla soutěže a obrázky se neuložily: ${errMsg}`,
+              title: hasRulesPdf ? "Chyba ukládání pravidel" : "Chyba ukládání pravidel / obrázků",
+              description: hasRulesPdf
+                ? "Nepodařilo se uložit pravidla soutěže. Zkuste to prosím znovu."
+                : `Pravidla soutěže a obrázky se neuložily: ${errMsg}`,
               variant: "destructive",
             });
             setSaving(false);
