@@ -155,6 +155,84 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ---
 
+## E2E TESTOVÁNÍ — PRODUKČNÍ BEZPEČNOST & STAGING PLÁN (05. 05. 2026)
+
+### Proč nelze destruktivní testy spouštět v produkci
+
+Nákup tiketu (`buy_ticket_atomic`) zapisuje do **12+ systémů** v jedné atomické transakci a mimo ni:
+- `wallets` (deduct balance)
+- `wallet_transactions` (append-only ledger — **nelze mazat ani upravovat**, trigger `fn_wallet_transactions_immutable()` RAISES EXCEPTION na UPDATE/DELETE)
+- `tickets`
+- `contests` (sold_tickets increment)
+- `bonus_prizes` (status → won)
+- `winners` + `winner_status_history`
+- `event_logs` → `event_queue` → Sofinity (analytika)
+- `user_partner_offers` (assign partner offer)
+- `partner_offers.last_assigned_at`
+- `partner_offer_activations`
+- `notifications` → `push_log` → OneSignal
+- `email_queue`
+
+**Klíčový závěr:** `wallet_transactions` je append-only permanentní finanční ledger. Jakýkoli test, který volá `buy_ticket_atomic`, vytváří permanentní záznamy. Cleanup není možný. **Destruktivní testy (03–08) se nesmí spouštět v produkci.**
+
+### Výsledek porovnání tří možností E2E izolace
+
+| Možnost | Závěr |
+|---|---|
+| Separátní staging Supabase projekt | ✅ **Doporučeno** — plná izolace, stejný kód aplikace, jiné env/secrets |
+| `is_e2e` flag na contestech v produkci | ⚠️ Neúplné — funguje pro čtecí cesty, ale wallet_transactions se stále píší trvale; neizoluje Sofinity pipeline |
+| Testovací tabulky + cleanup v produkci | ❌ **Nemožné** — `wallet_transactions` immutability trigger zakazuje DELETE i UPDATE |
+
+### Staging koncept
+
+- **Stejný kód aplikace** (`main` branch) — žádné speciální code paths
+- **Jiná instance Supabase** — jiný `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, jiné secrets
+- **Jiné env proměnné pro CI testy** (staging secrets v GitHub Actions)
+- Frontend klient je správně připraven: `client.ts` čte Supabase URL/key z env proměnných — žádné hardcodování ✅
+
+### Staging readiness audit — co brání plné izolaci
+
+**Frontend (Supabase klient):** ✅ env-var-based, připraven ihned
+
+**Tři hardcoded URL, které je nutno opravit před staging:**
+
+| Soubor | Řádek | Problém | Fix |
+|---|---|---|---|
+| `supabase/functions/process_event_queue_worker/index.ts` | 19 | **Nejvyšší riziko** — hardcoded `https://rrmvxsldrjgbdxluklka.supabase.co/functions/v1/sofinity-event` (Sofinity relay); staging by posílal události do produkční analytiky | `Deno.env.get("SOFINITY_RELAY_URL") ?? "<prod-url>"` |
+| `src/pages/ShareTicket.tsx` | 22 | Hardcoded prod Supabase URL pro OG image generování | Nahradit `` `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/og-ticket-share` `` |
+| `src/components/TicketResultModal.tsx` | 416 | Stejný hardcoded OG image URL | Stejný fix jako ShareTicket.tsx |
+
+`supabase/functions/daily-onboarding-reminder/index.ts:103` obsahuje fallback URL ale je nízké riziko — potlačí se nastavením `APP_URL` secret v staging projektu.
+
+### Dvoustupňová CI strategie (doporučeno)
+
+| CI | Testy | Databáze | Důvod |
+|---|---|---|---|
+| **Produkční CI** (current) | 01–02 (registration, login) | Produkce | Pouze read/auth — žádné peněžní transakce |
+| **Staging CI** (budoucí) | 01–08 (full suite) | Staging Supabase | Plná izolace — destruktivní testy bezpečné |
+
+### Krok-za-krokem plán pro staging (nezahájeno, čeká na souhlas)
+
+**Fáze 1 — Opravit hardcoded URLs (nutné před staging)**
+1. `process_event_queue_worker/index.ts:19` — nahradit hardcoded relay URL za `Deno.env.get("SOFINITY_RELAY_URL")`
+2. `src/pages/ShareTicket.tsx:22` — nahradit hardcoded Supabase URL za env var
+3. `src/components/TicketResultModal.tsx:416` — stejný fix
+4. Commit, build check, push
+
+**Fáze 2 — Vytvořit staging Supabase projekt**
+5. Nový Supabase projekt (stejná organizace nebo nový account)
+6. Aplikovat migrace z `supabase/migrations/` v pořadí
+7. Seedovat: testovacího uživatele, wallet s MioCoiny, test contest(y), partner offer
+
+**Fáze 3 — CI staging workflow**
+8. Přidat GitHub Secrets pro staging: `STAGING_SUPABASE_URL`, `STAGING_SUPABASE_ANON_KEY`, `STAGING_E2E_TEST_EMAIL`, `STAGING_E2E_TEST_PASSWORD`
+9. Vytvořit `.github/workflows/playwright-staging.yml` — spouští plný suite 01–08 proti staging projektu
+10. Ověřit že `process_event_queue_worker` v staging projektu má `SOFINITY_RELAY_URL` nastavenu na no-op nebo staging Sofinity endpoint
+
+**Aktuální stav:** Fáze 1 není zahájena. URL fixy jsou read-only known — neprovádět bez explicitního souhlasu uživatele.
+
+---
+
 ## VIZUÁLNÍ SYSTÉM / GRAFIKA — NEDOKONČENO (27. 04. 2026)
 
 ### Aktuální situace

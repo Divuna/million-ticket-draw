@@ -14,6 +14,41 @@
 
 ---
 
+## 2026-05-05 — E2E produkční bezpečnost: audit a staging plán
+
+### Cíl
+Navrhnout bezpečný způsob E2E testování, který neznečistí produkční data.
+
+### Klíčové závěry auditu
+
+**Contest 93dc5cdc-8bd2-4906-92b4-948d5eba1e60:**
+- Draft contest — správně neviditelný pro uživatele (RLS SELECT: `status IN (active, pending, paused)`)
+- `rules_pdf_url = NULL` — bug detekován, frontend fix nasazen, admin musí re-uploadovat PDF
+- `bonus_prizes.status = 'won'` na draft contest — NENÍ bug: contest byl legitimně aktivován (10 tiketů prodáno), `buy_ticket_atomic` správně nastavil status; poté admin omylem přesunul `closed → draft` před zavedením `closed`-je-finální guardu
+- `admin_actions` tabulka potvrdila timeline: `active → closed → draft` (přechod closed→draft byl umožněn, teprve pak byl guard nasazen)
+
+**wallet_transactions immutability:**
+- Trigger `fn_wallet_transactions_immutable()` RAISES EXCEPTION na UPDATE nebo DELETE — permanentní finanční ledger
+- Definitně vylučuje „cleanup + reset" přístup pro E2E testy v produkci
+
+**Porovnání tří možností E2E izolace:**
+1. ✅ Separátní staging projekt — doporučeno
+2. ⚠️ `is_e2e` flag — neúplné (wallet ledger + Sofinity stále zasaženy)
+3. ❌ Cleanup v produkci — nemožné (wallet_transactions immutability)
+
+**Staging readiness:**
+- Frontend Supabase klient: env-var-based ✅ (nulové code changes potřeba pro přepnutí projektu)
+- Hardcoded URLs blokující izolaci: 3 soubory:
+  - `process_event_queue_worker/index.ts:19` — Sofinity relay (nejvyšší riziko)
+  - `src/pages/ShareTicket.tsx:22` — OG image URL
+  - `src/components/TicketResultModal.tsx:416` — OG image URL
+- Staging plan zdokumentován v `onemil_state.md` — neprovádět bez souhlasu uživatele
+
+### Postup
+Audit proběhl read-only. Žádné produkční změny nebyly provedeny.
+
+---
+
 ## 2026-05-05 — Closed contest status made final
 
 ### Bug
