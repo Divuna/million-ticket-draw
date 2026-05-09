@@ -19,9 +19,7 @@ const ShareTicket: React.FC = () => {
 
   // Extract ticket number from ticketId (format: contestId-ticketNumber)
   const ticketNumber = ticketId?.split('-').pop() || ticketId || '';
-  const ogImage = `https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/og-ticket-share?id=${encodeURIComponent(
-    ticketId
-  )}`;
+  const ogImage = `${supabaseUrl}/functions/v1/og-ticket-share?id=${encodeURIComponent(ticketId)}`;
   const pageUrl = `https://onemil.cz/share/ticket/${ticketId}`;
   
   // Keep UI loading state, but compute image URL synchronously for OG crawlers.

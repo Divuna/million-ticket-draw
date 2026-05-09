@@ -413,9 +413,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         reader.onloadend = () => {
           // Show share URL immediately; upload is fully background.
           setPublicShareUrl(
-            `https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/og-ticket-share?id=${encodeURIComponent(
-              ticketShareId
-            )}`
+            `${supabaseUrl}/functions/v1/og-ticket-share?id=${encodeURIComponent(ticketShareId)}`
           );
           setIsUploading(false);
 

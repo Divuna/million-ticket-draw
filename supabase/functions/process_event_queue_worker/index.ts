@@ -16,6 +16,7 @@ const corsHeaders = {
 }
 
 const sendEndpoint =
+  Deno.env.get("SOFINITY_RELAY_URL") ??
   "https://rrmvxsldrjgbdxluklka.supabase.co/functions/v1/sofinity-event"
 
 serve(async (req) => {
