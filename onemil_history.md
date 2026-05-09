@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-05-09 — Staging projekt: potvrzená rozhodnutí
+
+- Produkce: projekt `onemil`, ref `xkzhjldrojjlrkezorey`, region `eu-north-1`
+- Staging: název `onemil-staging`, region `eu-north-1` (stejný jako produkce)
+- `SOFINITY_RELAY_URL` musí být první secret po vytvoření — vlastní no-op endpoint, nikdy produkční Sofinity relay
+
+---
+
 ## 2026-05-09, 22:17 — Staging-safe URL fix dokončen a pushnut
 
 ### Co bylo provedeno

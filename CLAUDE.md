@@ -117,12 +117,16 @@ Technical:
 
 ## STAGING READINESS — stav (09. 05. 2026)
 
+**Produkce:** projekt `onemil`, ref `xkzhjldrojjlrkezorey`, region `eu-north-1`
+**Staging:** projekt `onemil-staging`, region `eu-north-1`, ref TBD po vytvoření manuálně
+
 - **Fáze 1 dokončena** (commit `20c6452`): hardcoded produkční URL nahrazeny env/client-based hodnotami
   - `process_event_queue_worker/index.ts` — `SOFINITY_RELAY_URL` env var
   - `src/pages/ShareTicket.tsx` — `${supabaseUrl}/functions/v1/og-ticket-share`
   - `src/components/TicketResultModal.tsx` — `${supabaseUrl}/functions/v1/og-ticket-share`
 - `api/og-ticket.ts` + `vercel.json` — **legacy**, Lovable je aktivní deploy cesta; tyto soubory se nespouštějí
-- **Fáze 2** (vytvořit staging Supabase projekt) — čeká na souhlas
+- **Fáze 2** (vytvořit `onemil-staging` v Supabase Dashboard) — připraveno k manuálnímu vytvoření
+- **První secret po vytvoření:** `SOFINITY_RELAY_URL` = vlastní no-op endpoint — nikdy `rrmvxsldrjgbdxluklka.supabase.co`
 
 ## NEDODĚLÁNO — otevřené body (09. 05. 2026)
 
