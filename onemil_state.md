@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 09. 05. 2026, 22:45 (staging Sofinity izolace dokončena)
+**Aktualizováno:** 10. 05. 2026 (staging: partial migration failure — vyčištěno, čeká na baseline schema plán)
 
 ---
 
@@ -256,7 +256,29 @@ Hardcoded produkční URL nahrazeny env/client-based hodnotami:
 10. Aplikovat migrace na staging DB
 11. Seedovat: testovacího uživatele, wallet, test contest(y), partner offer
 
-**Aktuální stav:** Fáze 1 + 2 hotovy. Čeká Fáze 3 (migrace + CI workflow).
+**Aktuální stav:** Fáze 1 + 2 hotovy. Fáze 3 pozastavena — viz sekce níže (partial migration failure + cleanup).
+
+**Fáze 3 — Migrace na staging DB — POZASTAVENO (10. 05. 2026)**
+
+`npx supabase db push` selhal při migraci #3 (`20250914043049_`) — chyba: `relation "public.payments" does not exist`.
+
+**Root cause:** První ~5 migračních souborů (blank-name, 14. 09. 2025) jsou hotfixy na již existující schéma, ne CREATE skripty. Počáteční schéma (tabulky `payments`, `wallets`, `users`, `contests`, `tickets` atd.) bylo vytvořeno přímo v Supabase dashboardu a **nebylo nikdy zachyceno jako migrační soubor**. Staging má prázdnou DB — tyto tabulky neexistují.
+
+**Stav po vyčištění (10. 05. 2026):**
+- 2 migrace byly aplikovány před selháním (`20250914034944`, `20250914035127`) — oba záznamy vymazány z staging DB
+- Ověření: `remaining_migrations = null` (žádné záznamy v `supabase_migrations.schema_migrations`)
+- Na staging neexistují žádné `public.*` tabulky ✅
+- Produkce `xkzhjldrojjlrkezorey` nedotčena ✅
+
+**Dohodnutý recovery plán (čeká na souhlas pro každý krok):**
+1. Reset staging DB (Supabase dashboard → onemil-staging → Settings → Database → Reset database)
+2. Dump production schema only (read-only, žádná data): `npx supabase db dump --project-ref xkzhjldrojjlrkezorey`
+3. Aplikovat dump na staging (přes psql nebo SQL Editor)
+4. Označit všech 341 migrací jako aplikované v `supabase_migrations.schema_migrations` (staging SQL Editor, po schválení)
+5. Ověřit: `db push --dry-run` musí hlásit 0 pending migrací
+6. Pokračovat: seed data, deploy Edge Functions, CI workflow
+
+**⛔ Nespouštět `db push` na staging znovu, dokud není baseline schema plán schválen a proveden.**
 
 ---
 

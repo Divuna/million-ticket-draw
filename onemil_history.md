@@ -14,6 +14,29 @@
 
 ---
 
+## 2026-05-10 — Staging DB: partial migration failure + cleanup
+
+### Co se stalo
+- Spuštěn `npx supabase db push` na staging `dxmowysntemfqfnanxua`
+- Migrace #1 a #2 proběhly (`20250914034944_`, `20250914035127_`) — obě jsou `CREATE OR REPLACE FUNCTION`, žádné tabulky
+- Migrace #3 (`20250914043049_`) selhala: `ERROR: relation "public.payments" does not exist (SQLSTATE 42P01)`
+
+### Root cause
+První ~5 migračních souborů (blank-name, 14. 09. 2025) jsou hotfixy aplikované na existující schéma, ne DDL skripty pro prázdnou DB. Počáteční schéma (tabulky `payments`, `wallets`, `users`, `contests`, `tickets` atd.) bylo vytvořeno přímo v Supabase dashboardu a nikdy nebylo zachyceno jako migrační soubor. Staging má prázdnou DB — tyto tabulky neexistují.
+
+### Cleanup (provedeno uživatelem manuálně)
+- Odstraněny 2 záznamy z `supabase_migrations.schema_migrations` na staging:
+  - `20250914034944`
+  - `20250914035127`
+- Ověření: `remaining_migrations = null` (žádné záznamy v migration history)
+- Na staging neexistují žádné `public.*` tabulky
+- Produkce `xkzhjldrojjlrkezorey` nedotčena
+
+### Dohodnutý recovery plán
+Recovery plán zdokumentován v `onemil_state.md` — Fáze 3 sekce. Čeká na souhlas pro každý krok. `db push` se nespouští znovu, dokud není proveden baseline schema dump z produkce.
+
+---
+
 ## 2026-05-09, 22:45 — Staging Sofinity izolace dokončena
 
 ### Co bylo provedeno

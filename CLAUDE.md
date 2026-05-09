@@ -95,7 +95,7 @@ Technical:
 
 ---
 
-## CURRENT SYSTEM STATUS (09. 05. 2026, 22:45)
+## CURRENT SYSTEM STATUS (10. 05. 2026)
 
 - CI pipeline stabilní: `.github/workflows/playwright.yml` — registration + login testy passing
 - Payment pipeline ověřen: Stripe webhook vrací 500 na selhání (retry), idempotency funguje, wallet credit přes trigger
@@ -130,9 +130,15 @@ Technical:
   - `SOFINITY_RELAY_URL` nastaven → `https://dxmowysntemfqfnanxua.supabase.co/functions/v1/sofinity-noop`
   - `sofinity-noop` nasazena na staging, POST test ✅ `{"ok":true,"noop":true}`
   - Produkce `xkzhjldrojjlrkezorey` a Sofinity relay `rrmvxsldrjgbdxluklka` nedotčeny
-- **Fáze 3** (migrace + seeding + CI workflow) — čeká na souhlas
+- **Fáze 3 — POZASTAVENO (10. 05. 2026):**
+  - `db push` selhal na migraci #3 (`20250914043049_`) — `public.payments` neexistuje v prázdné staging DB
+  - Root cause: počáteční schéma nebylo nikdy zachyceno jako migrace; první migrace jsou hotfixy na existující schéma
+  - 2 záznamy odstraněny z `supabase_migrations.schema_migrations` staging — staging je čistý
+  - Ověřeno: `remaining_migrations = null`, žádné `public.*` tabulky na staging, produkce nedotčena
+  - **⛔ Nespouštět `db push` znovu, dokud není schválen a proveden baseline schema dump z produkce**
+  - Recovery plán zdokumentován v `onemil_state.md` — Fáze 3 sekce
 
-## NEDODĚLÁNO — otevřené body (09. 05. 2026)
+## NEDODĚLÁNO — otevřené body (10. 05. 2026)
 
 - **Vizuální systém:** brand větve nemergnuto do `main` (viz sekce níže)
 
