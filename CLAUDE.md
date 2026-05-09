@@ -95,7 +95,7 @@ Technical:
 
 ---
 
-## CURRENT SYSTEM STATUS (09. 05. 2026, 22:17)
+## CURRENT SYSTEM STATUS (09. 05. 2026, 22:45)
 
 - CI pipeline stabilní: `.github/workflows/playwright.yml` — registration + login testy passing
 - Payment pipeline ověřen: Stripe webhook vrací 500 na selhání (retry), idempotency funguje, wallet credit přes trigger
@@ -125,8 +125,12 @@ Technical:
   - `src/pages/ShareTicket.tsx` — `${supabaseUrl}/functions/v1/og-ticket-share`
   - `src/components/TicketResultModal.tsx` — `${supabaseUrl}/functions/v1/og-ticket-share`
 - `api/og-ticket.ts` + `vercel.json` — **legacy**, Lovable je aktivní deploy cesta; tyto soubory se nespouštějí
-- **Fáze 2** (vytvořit `onemil-staging` v Supabase Dashboard) — připraveno k manuálnímu vytvoření
-- **První secret po vytvoření:** `SOFINITY_RELAY_URL` = vlastní no-op endpoint — nikdy `rrmvxsldrjgbdxluklka.supabase.co`
+- **Fáze 2 dokončena** (09. 05. 2026, commit `4167527`):
+  - Projekt `onemil-staging` vytvořen, ref `dxmowysntemfqfnanxua`, region `eu-north-1`
+  - `SOFINITY_RELAY_URL` nastaven → `https://dxmowysntemfqfnanxua.supabase.co/functions/v1/sofinity-noop`
+  - `sofinity-noop` nasazena na staging, POST test ✅ `{"ok":true,"noop":true}`
+  - Produkce `xkzhjldrojjlrkezorey` a Sofinity relay `rrmvxsldrjgbdxluklka` nedotčeny
+- **Fáze 3** (migrace + seeding + CI workflow) — čeká na souhlas
 
 ## NEDODĚLÁNO — otevřené body (09. 05. 2026)
 

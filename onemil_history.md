@@ -14,6 +14,23 @@
 
 ---
 
+## 2026-05-09, 22:45 — Staging Sofinity izolace dokončena
+
+### Co bylo provedeno
+- Staging projekt `onemil-staging` vytvořen (ref `dxmowysntemfqfnanxua`, region `eu-north-1`)
+- Secret `SOFINITY_RELAY_URL` nastaven manuálně v Supabase Dashboard na staging projekt
+- Edge Function `supabase/functions/sofinity-noop/index.ts` vytvořena — přijímá POST, vrací `{"ok":true,"noop":true}`, nic nezapisuje
+- Nasazena výhradně na staging: `npx supabase functions deploy sofinity-noop --project-ref dxmowysntemfqfnanxua --no-verify-jwt`
+- POST test: HTTP 200 `{"ok":true,"noop":true}` ✅
+- Commit `4167527` — `feat: add staging Sofinity no-op relay`
+
+### Izolační záruky
+- Produkční projekt `xkzhjldrojjlrkezorey` — nedotčen
+- Produkční Sofinity relay `rrmvxsldrjgbdxluklka` — nedotčen
+- Žádné migrace nebyly spuštěny
+
+---
+
 ## 2026-05-09 — Staging projekt: potvrzená rozhodnutí
 
 - Produkce: projekt `onemil`, ref `xkzhjldrojjlrkezorey`, region `eu-north-1`

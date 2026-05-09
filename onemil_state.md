@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 09. 05. 2026, 22:17 (staging-safe URL fix dokončen a pushnut)
+**Aktualizováno:** 09. 05. 2026, 22:45 (staging Sofinity izolace dokončena)
 
 ---
 
@@ -241,17 +241,22 @@ Hardcoded produkční URL nahrazeny env/client-based hodnotami:
 2. `src/pages/ShareTicket.tsx` — hotovo
 3. `src/components/TicketResultModal.tsx` — hotovo
 
-**Fáze 2 — Vytvořit staging Supabase projekt**
-5. Nový Supabase projekt (stejná organizace nebo nový account)
-6. Aplikovat migrace z `supabase/migrations/` v pořadí
-7. Seedovat: testovacího uživatele, wallet s MioCoiny, test contest(y), partner offer
+**Fáze 2 — Vytvořit staging Supabase projekt ✅ HOTOVO (09. 05. 2026)**
+- Projekt `onemil-staging` vytvořen, ref `dxmowysntemfqfnanxua`, region `eu-north-1`
+- Secret `SOFINITY_RELAY_URL` nastaven manuálně → `https://dxmowysntemfqfnanxua.supabase.co/functions/v1/sofinity-noop`
+- Edge Function `supabase/functions/sofinity-noop/index.ts` vytvořena a nasazena pouze na staging (commit `4167527`)
+- POST test: HTTP 200 `{"ok":true,"noop":true}` ✅
+- Produkční projekt `xkzhjldrojjlrkezorey` nedotčen ✅
+- Produkční Sofinity relay `rrmvxsldrjgbdxluklka` nedotčen ✅
+- Žádné migrace nebyly spuštěny ✅
 
 **Fáze 3 — CI staging workflow**
-8. Přidat GitHub Secrets pro staging: `STAGING_SUPABASE_URL`, `STAGING_SUPABASE_ANON_KEY`, `STAGING_E2E_TEST_EMAIL`, `STAGING_E2E_TEST_PASSWORD`
+8. Přidat GitHub Secrets pro staging: `STAGING_VITE_SUPABASE_URL`, `STAGING_VITE_SUPABASE_ANON_KEY`, `STAGING_E2E_TEST_EMAIL`, `STAGING_E2E_TEST_PASSWORD`
 9. Vytvořit `.github/workflows/playwright-staging.yml` — spouští plný suite 01–08 proti staging projektu
-10. Ověřit že `process_event_queue_worker` v staging projektu má `SOFINITY_RELAY_URL` nastavenu na no-op nebo staging Sofinity endpoint
+10. Aplikovat migrace na staging DB
+11. Seedovat: testovacího uživatele, wallet, test contest(y), partner offer
 
-**Aktuální stav:** Fáze 1 není zahájena. URL fixy jsou read-only known — neprovádět bez explicitního souhlasu uživatele.
+**Aktuální stav:** Fáze 1 + 2 hotovy. Čeká Fáze 3 (migrace + CI workflow).
 
 ---
 
