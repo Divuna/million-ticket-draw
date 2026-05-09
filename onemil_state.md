@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 09. 05. 2026, 21:47 (E2E produkční bezpečnost & staging plán)
+**Aktualizováno:** 09. 05. 2026, 22:17 (staging-safe URL fix dokončen a pushnut)
 
 ---
 
@@ -211,13 +211,26 @@ Nákup tiketu (`buy_ticket_atomic`) zapisuje do **12+ systémů** v jedné atomi
 | **Produkční CI** (current) | 01–02 (registration, login) | Produkce | Pouze read/auth — žádné peněžní transakce |
 | **Staging CI** (budoucí) | 01–08 (full suite) | Staging Supabase | Plná izolace — destruktivní testy bezpečné |
 
-### Krok-za-krokem plán pro staging (nezahájeno, čeká na souhlas)
+### Fáze 1 — Staging-safe URL fix — DOKONČENO (09. 05. 2026, commit `20c6452`)
 
-**Fáze 1 — Opravit hardcoded URLs (nutné před staging)**
-1. `process_event_queue_worker/index.ts:19` — nahradit hardcoded relay URL za `Deno.env.get("SOFINITY_RELAY_URL")`
-2. `src/pages/ShareTicket.tsx:22` — nahradit hardcoded Supabase URL za env var
-3. `src/components/TicketResultModal.tsx:416` — stejný fix
-4. Commit, build check, push
+Hardcoded produkční URL nahrazeny env/client-based hodnotami:
+
+| Soubor | Změna |
+|---|---|
+| `supabase/functions/process_event_queue_worker/index.ts` | `sendEndpoint`: `Deno.env.get("SOFINITY_RELAY_URL") ?? "<prod URL>"` |
+| `src/pages/ShareTicket.tsx` | OG image URL: `${supabaseUrl}/functions/v1/og-ticket-share` |
+| `src/components/TicketResultModal.tsx` | OG image URL: `${supabaseUrl}/functions/v1/og-ticket-share` |
+
+- Build: ✅ passed (0 errors)
+- `.claude/settings.local.json` nebyl commitnut ani pushnut
+- `api/og-ticket.ts` a `vercel.json` — legacy; aktivní deploy cesta je Lovable, tyto soubory se nikdy nespouští v produkci; oprava odložena
+
+### Krok-za-krokem plán pro staging (Fáze 1 hotova, čeká na souhlas pro Fázi 2)
+
+**Fáze 1 — Opravit hardcoded URLs ✅ HOTOVO (commit `20c6452`)**
+1. `process_event_queue_worker/index.ts` — hotovo
+2. `src/pages/ShareTicket.tsx` — hotovo
+3. `src/components/TicketResultModal.tsx` — hotovo
 
 **Fáze 2 — Vytvořit staging Supabase projekt**
 5. Nový Supabase projekt (stejná organizace nebo nový account)

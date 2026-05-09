@@ -95,7 +95,7 @@ Technical:
 
 ---
 
-## CURRENT SYSTEM STATUS (09. 05. 2026, 21:47)
+## CURRENT SYSTEM STATUS (09. 05. 2026, 22:17)
 
 - CI pipeline stabilní: `.github/workflows/playwright.yml` — registration + login testy passing
 - Payment pipeline ověřen: Stripe webhook vrací 500 na selhání (retry), idempotency funguje, wallet credit přes trigger
@@ -115,7 +115,16 @@ Technical:
 - Frontend volá `buy_ticket_atomic` přímo (ContestDetail, Games, FavoriteGames) — ne přes Edge Function
 - buy_ticket_atomic nyní vrací: `remaining_tickets`, `next_bonus_position`, `distance_to_next_bonus`
 
-## NEDODĚLÁNO — otevřené body (05. 05. 2026)
+## STAGING READINESS — stav (09. 05. 2026)
+
+- **Fáze 1 dokončena** (commit `20c6452`): hardcoded produkční URL nahrazeny env/client-based hodnotami
+  - `process_event_queue_worker/index.ts` — `SOFINITY_RELAY_URL` env var
+  - `src/pages/ShareTicket.tsx` — `${supabaseUrl}/functions/v1/og-ticket-share`
+  - `src/components/TicketResultModal.tsx` — `${supabaseUrl}/functions/v1/og-ticket-share`
+- `api/og-ticket.ts` + `vercel.json` — **legacy**, Lovable je aktivní deploy cesta; tyto soubory se nespouštějí
+- **Fáze 2** (vytvořit staging Supabase projekt) — čeká na souhlas
+
+## NEDODĚLÁNO — otevřené body (09. 05. 2026)
 
 - **Vizuální systém:** brand větve nemergnuto do `main` (viz sekce níže)
 

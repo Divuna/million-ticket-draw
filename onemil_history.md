@@ -14,6 +14,26 @@
 
 ---
 
+## 2026-05-09, 22:17 — Staging-safe URL fix dokončen a pushnut
+
+### Co bylo provedeno
+Tři hardcoded produkční URL nahrazeny env/client-based hodnotami. Commit `20c6452`, pushnut na `main`.
+
+| Soubor | Změna |
+|---|---|
+| `supabase/functions/process_event_queue_worker/index.ts` | `Deno.env.get("SOFINITY_RELAY_URL") ?? "<prod URL>"` |
+| `src/pages/ShareTicket.tsx` | `${supabaseUrl}/functions/v1/og-ticket-share` |
+| `src/components/TicketResultModal.tsx` | `${supabaseUrl}/functions/v1/og-ticket-share` |
+
+- Build: ✅ `vite build` passed, 0 errors
+- `.claude/settings.local.json` nebyl commitnut ani pushnut
+- `api/og-ticket.ts` a `vercel.json` označeny jako legacy — Lovable je aktivní deploy cesta, Vercel soubory se v produkci nespouštějí
+
+### Výsledek
+Fáze 1 staging readiness je dokončena. Staging projekt lze nyní vytvořit — stačí nastavit env vars bez dalších code changes.
+
+---
+
 ## 2026-05-09, 21:47 — E2E produkční bezpečnost: audit a staging plán
 
 ### Cíl
