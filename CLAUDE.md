@@ -95,7 +95,7 @@ Technical:
 
 ---
 
-## CURRENT SYSTEM STATUS (05. 05. 2026)
+## CURRENT SYSTEM STATUS (09. 05. 2026, 21:47)
 
 - CI pipeline stabilní: `.github/workflows/playwright.yml` — registration + login testy passing
 - Payment pipeline ověřen: Stripe webhook vrací 500 na selhání (retry), idempotency funguje, wallet credit přes trigger

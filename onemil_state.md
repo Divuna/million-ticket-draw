@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 05. 05. 2026 (closed contest final status + contest rules PDF fix)
+**Aktualizováno:** 09. 05. 2026, 21:47 (E2E produkční bezpečnost & staging plán)
 
 ---
 

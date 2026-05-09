@@ -14,7 +14,7 @@
 
 ---
 
-## 2026-05-05 — E2E produkční bezpečnost: audit a staging plán
+## 2026-05-09, 21:47 — E2E produkční bezpečnost: audit a staging plán
 
 ### Cíl
 Navrhnout bezpečný způsob E2E testování, který neznečistí produkční data.
