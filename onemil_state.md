@@ -292,11 +292,14 @@ CLI extrahuje z lokálních `.sql` souborů **vedoucí číselný prefix** (ne c
 
 **Aktuální stav `schema_migrations` na staging:** 324 řádků (číselné prefixy).
 
-**⛔ Nespouštět `db push` na staging znovu bez nového plánu. Needitovat `schema_migrations` manuálně bez schválení.**
+**⛔ Nespouštět `db push` na staging. Needitovat `schema_migrations` bez schválení.**
 
-**Nutné pro vyřešení (delší horizont):**
-- Přejmenovat duplicitní migrační soubory na unikátní timestamps, NEBO
-- Přijmout stav 17 pending souborů a plánovat staging CI bez závislosti na `db push --dry-run` exit 0
+**Rozhodnutá strategie pro staging migrace — Option A (10. 05. 2026):**
+- `db push` se na staging **nepoužívá** — ani nyní, ani dokud nebudou přejmenovány duplicitní soubory
+- Nové změny DB se aplikují na staging **manuálně přes Supabase SQL Editor** — stejný workflow jako v produkci
+- Aktuální staging schema baseline je přijat jako správný; 17 pending souborů je již obsaženo v baseline schématu, CLI je nedokáže sledovat kvůli duplicitním/smíšeným timestamp prefixům
+- `schema_migrations` zůstává na 324 řádcích — neměnit
+- Staging CI (testy 03–08) nevyžaduje `db push --dry-run` exit 0 — závisí pouze na správnosti schématu DB
 
 ---
 

@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-05-10 — Staging migrace: strategie rozhodnuta (Option A)
+
+### Rozhodnutí
+- `db push` se na staging nepoužívá — blokováno duplicitními/smíšenými timestamp prefixy v repozitáři (17 souborů trvale pending, exit code 0 nelze dosáhnout bez přejmenování)
+- Nové DB změny se aplikují na staging **manuálně přes Supabase SQL Editor** — stejný workflow jako produkce
+- Aktuální staging schema baseline (`dxmowysntemfqfnanxua`, 73 tabulek, 95 RLS, `buy_ticket_atomic`, wallet trigger) je přijat jako správný a finální výchozí bod
+- `schema_migrations` zůstává na 324 řádcích — není potřeba měnit
+- Staging CI (testy 03–08) může pokračovat bez závislosti na `db push --dry-run`
+
+---
+
 ## 2026-05-10 — Staging schema_migrations: formát experimentů a finální stav
 
 ### Co se stalo

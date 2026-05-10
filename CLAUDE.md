@@ -137,7 +137,11 @@ Technical:
   - Ověřeno na staging: 73 tabulek ✅, `buy_ticket_atomic` ✅, wallet trigger ✅, 95 RLS ✅
   - `schema_migrations` testován ve 4 formátech — nejlepší dosažitelný stav: **324 číselných prefixů, 17 souborů permanently pending**
   - Root cause: repozitář obsahuje soubory s duplicitními timestamps a smíšenými 8/14-cifernými prefixy — exit code 0 nelze dosáhnout bez přejmenování souborů
-  - **⛔ Nespouštět `db push` na staging bez nového plánu. Needitovat `schema_migrations` bez schválení.**
+  - **Strategie rozhodnuta (10. 05. 2026): Option A — `db push` se na staging nepoužívá**
+  - Nové DB změny se aplikují manuálně přes SQL Editor (stejný workflow jako produkce)
+  - `schema_migrations`: 324 řádků — přijato jako finální stav, neměnit
+  - 17 permanently pending souborů je obsaženo v baseline schématu — CLI je nedokáže sledovat, ale schéma je správné
+  - **⛔ Nespouštět `db push` na staging. Needitovat `schema_migrations` bez schválení.**
   - Produkce `xkzhjldrojjlrkezorey` nedotčena ✅
   - Detaily v `onemil_state.md` — Fáze 3 sekce
 
