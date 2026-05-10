@@ -70,7 +70,7 @@ test.describe('User Registration', () => {
   });
 
   test('new user registers and is authenticated', async ({ page }) => {
-    const uniqueEmail = `e2e+${Date.now()}@example.com`;
+    const uniqueEmail = `e2e+${Date.now()}@onemil.cz`;
     const password = 'E2eSmoke123!';
     const dob = dobString(25);
 
