@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-05-10 — Production smoke: manuální ověření (run `25618763318`)
+
+### Co bylo provedeno
+- Spuštěn `workflow_dispatch` na `.github/workflows/playwright.yml`
+- Výsledek: **6 passed** za 1m 22s — `01-registration` (3 testy) + `02-login` (3 testy)
+- Specs 03–08 neběžely — potvrzeno z logu; žádný ticket purchase, voucher, wallet, win-flow ani Partner Offers test neproběhl v produkci
+- Telegram doručen: `✅ OneMil PROD smoke OK — registration + login passed`
+- Neblokující varování: orphaned worktree `.claude/worktrees/ecstatic-lichterman-1aa60a` způsobil `git exit 128` v post-job cleanup; pipeline neovlivněna
+
+---
+
 ## 2026-05-10 — CI workflow split: produkce vs staging (commit `82f979f`)
 
 ### Co bylo provedeno

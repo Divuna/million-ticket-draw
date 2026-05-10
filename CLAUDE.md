@@ -102,6 +102,7 @@ Technical:
   - `.github/workflows/playwright-staging.yml` — **staging full E2E**: všech 9 spec souborů; pouze `workflow_dispatch` (manuálně)
 - **Produkce nemůže spouštět** testy 03–08 (ticket purchase, voucher, wallet, win-flow, Partner Offers) — hard-coded file paths v `playwright.yml`
 - Telegram zprávy rozlišují: `✅ OneMil PROD smoke OK` / `❌ OneMil PROD smoke FAILED` vs `✅ OneMil STAGING full E2E OK` / `❌ OneMil STAGING full E2E FAILED`
+- **Production smoke manuálně ověřen** (run `25618763318`): 6 passed, 1m 22s, Telegram doručen, specs 03–08 neběžely ✅
 - Payment pipeline ověřen: Stripe webhook vrací 500 na selhání (retry), idempotency funguje, wallet credit přes trigger
 - Registrace + login plně otestovány v Playwright (Chromium, CI)
 - Playwright testy: **9 spec souborů** (01–08, dva soubory s prefixem 03); staging testy 03–08 čekají na seed a GitHub Secrets:

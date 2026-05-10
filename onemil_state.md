@@ -126,6 +126,18 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (10. 05. 2026)
 
+### Production smoke — manuálně ověřeno (10. 05. 2026, run `25618763318`)
+
+- Workflow: **Playwright Smoke Tests** (`.github/workflows/playwright.yml`)
+- Trigger: `workflow_dispatch`
+- Výsledek: **6 passed** za 1m 22s
+- Spuštěné testy:
+  - `01-registration.spec.ts` — 3 passed ✅
+  - `02-login.spec.ts` — 3 passed ✅
+- Specs 03–08 **nebyly spuštěny** — potvrzeno z logu; žádný ticket purchase, voucher purchase, wallet, win-flow ani Partner Offers test neproběhl v produkci
+- Telegram zpráva doručena: `✅ OneMil PROD smoke OK — registration + login passed` ✅
+- Neblokující varování: `.claude/worktrees/ecstatic-lichterman-1aa60a` způsobilo `git exit code 128` v post-job cleanup kroku — testy ani pipeline nebyly ovlivněny
+
 ### Workflow split — produkce vs staging (commit `82f979f`)
 
 Dva oddělené CI workflow:
