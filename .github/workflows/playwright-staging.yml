@@ -44,9 +44,10 @@ jobs:
               "next_ticket_number": 100,
               "fast_game": false
             }')
-          WIN_ID=$(echo "$RESPONSE" | jq -r '.[0].id')
+          echo "PostgREST response: $RESPONSE"
+          WIN_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
           if [ -z "$WIN_ID" ] || [ "$WIN_ID" = "null" ]; then
-            echo "ERROR: seed failed — response: $RESPONSE" >&2
+            echo "ERROR: seed failed — see PostgREST response above" >&2
             exit 1
           fi
           echo "win_contest_id=$WIN_ID" >> $GITHUB_OUTPUT
