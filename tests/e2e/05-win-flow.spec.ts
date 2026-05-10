@@ -45,8 +45,10 @@ test.describe('Win Flow', () => {
     const winToast = page.locator('[data-sonner-toast]').getByText(/Gratulujeme/i);
     await expect(winToast).toBeVisible({ timeout: 20_000 });
 
-    // The result modal is always shown — confirm it opened
-    const resultDialog = page.locator('[role="dialog"]');
+    // The result modal is always shown — confirm it opened.
+    // Scoped by accessible name to avoid strict-mode conflict with the
+    // CookieConsentBanner which also renders role="dialog".
+    const resultDialog = page.getByRole('dialog', { name: /Výhra/i });
     await expect(resultDialog).toBeVisible({ timeout: 5_000 });
 
     // won_type captured from API must be main or bonus
