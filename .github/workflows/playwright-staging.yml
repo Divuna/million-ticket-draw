@@ -2,6 +2,11 @@ name: Playwright Staging Full E2E
 
 on:
   workflow_dispatch:
+  schedule:
+    # Prague time (CEST = UTC+2): 04:00, 12:00, 20:00 — offset from prod smoke (00:00, 08:00, 16:00)
+    - cron: '0 2 * * *'    # 04:00 Praha
+    - cron: '0 10 * * *'   # 12:00 Praha
+    - cron: '0 18 * * *'   # 20:00 Praha
 
 jobs:
   e2e:
