@@ -126,6 +126,29 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (10. 05. 2026)
 
+### Staging full E2E — ZELENÝ (10. 05. 2026, run `25624552621`)
+
+- Workflow: **Playwright Staging Full E2E** (`.github/workflows/playwright-staging.yml`)
+- Trigger: `workflow_dispatch`
+- Výsledek: ✅ **ALL PASSED** — 13 passed, 4 skipped (expected), 0 failed, 2m 36s
+- Všech 9 spec souborů (`01–08`, plus `03-ticket-purchase` je ve dvou souborech): prošly nebo byly přeskočeny dle očekávání
+- Auto-seed win contestu funguje: `STAGING_SUPABASE_SERVICE_ROLE_KEY` → PostgREST INSERT → nový contest s `created_at: "2020-01-01T00:00:00Z"` (řadí se za všechny ostatní) → ID předáno jako step output
+- Telegram success notifikace doručena: `✅ OneMil STAGING full E2E OK — all specs passed`
+- Produkce nedotčena
+
+**Stabilizační commity:**
+| Commit | Popis |
+|--------|-------|
+| `3c4aecf` | `ci: keep auto win contest out of games first position` — seed contest dostane `created_at: 2020-01-01` → test 03 ho nespotřebuje |
+| `324a747` | `test: stabilize destructive win flow e2e` — toast scoped na `[data-sonner-toast]`; `retries: 0` pro win-flow |
+| `6ee26df` | `test: scope result dialog locator to avoid cookie banner conflict` — `getByRole('dialog', { name: /Výhra/i })` místo generického `[role="dialog"]` |
+| `e70fd5c` | `test: robust wait for offer cards or empty state in partner offer open spec` — `Promise.race` wait místo `waitForTimeout(2000)` |
+
+**Pravidla (nezměnit):**
+- Staging full E2E zůstává pouze `workflow_dispatch` — neplánovat automaticky, dokud se nerozhodne jinak
+- Destruktivní testy (03–08) **nesmí běžet v produkci** — `playwright.yml` je hard-coded pouze na `01-registration` + `02-login`
+- Staging workflow se spouští čistě; každý run dostane nový win contest, nekumuluje se stav
+
 ### Production smoke — manuálně ověřeno (10. 05. 2026, run `25618763318`)
 
 - Workflow: **Playwright Smoke Tests** (`.github/workflows/playwright.yml`)

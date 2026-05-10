@@ -14,6 +14,25 @@
 
 ---
 
+## 2026-05-10 — Staging full E2E: pipeline stabilizována a zelená (run `25624552621`)
+
+### Co bylo provedeno
+- Opraveny 4 postupné chyby v CI; výsledek: **všech 9 spec souborů prošlo**, 2m 36s, 0 selhání
+- Commit `3c4aecf` — `ci: keep auto win contest out of games first position`: auto-seedovaný win contest dostane `created_at: "2020-01-01T00:00:00Z"` → řadí se na konec `/games` (DESC order) → test 03 ho nespotřebuje před testem 05
+- Commit `324a747` — `test: stabilize destructive win flow e2e`: toast locator zúžen na `[data-sonner-toast]` (vyhýbá se ModalDialog konfliktu); přidán `test.describe.configure({ retries: 0 })` (retry by vždy selhal — soutěž je po prvním nákupu closed)
+- Commit `6ee26df` — `test: scope result dialog locator to avoid cookie banner conflict`: `page.locator('[role="dialog"]')` nahrazen `page.getByRole('dialog', { name: /Výhra/i })` — vyhýbá se `CookieConsentBanner` (také `role="dialog"`)
+- Commit `e70fd5c` — `test: robust wait for offer cards or empty state in partner offer open spec`: `waitForTimeout(2000)` nahrazen `Promise.race` na `firstCard.waitFor` vs `emptyState.waitFor` (10s timeout každý) + dvojitý guard skip — robustní bez ohledu na rychlost načítání
+- Staging workflow auto-seeduje nový win contest před každým spuštěním (`STAGING_SUPABASE_SERVICE_ROLE_KEY` → PostgREST INSERT → contest ID předán jako step output do `E2E_WIN_CONTEST_ID`)
+- Telegram success notifikace doručena: `✅ OneMil STAGING full E2E OK — all specs passed`
+- Produkce `xkzhjldrojjlrkezorey` nedotčena; žádný app kód ani Supabase data nebyly změněny
+- Monitor po dokončení stagnoval kvůli prázdnému `jq .status` výstupu — harmless, ignorován
+
+### Výsledek
+- Run `25624552621`: ✅ **ALL PASSED** — 13 passed, 4 skipped (expected), 0 failed, 2m 36s
+- Staging full E2E je stabilní a zelený
+
+---
+
 ## 2026-05-10 — Staging: upload-ticket-share nasazena, ticket-shares bucket ověřen
 
 ### Co bylo provedeno

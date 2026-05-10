@@ -108,6 +108,13 @@ Technical:
 - Playwright testy: **9 spec souborů** (01–08, dva soubory s prefixem 03); staging testy 03–08 čekají na GitHub Secrets:
   - `STAGING_E2E_TEST_EMAIL` → `e2e@onemil.cz`, `STAGING_E2E_TEST_PASSWORD`, `STAGING_E2E_CONTEST_ID` → `3fa56db0-4007-4fb7-aa2f-e460173070d8`, `STAGING_E2E_WIN_CONTEST_ID` → `7ff58a8e-c691-46e1-9e0c-ca6cddeb8abb`
 - **Staging seed ověřen** (10. 05. 2026): test user `e2e@onemil.cz`, wallet 5000 MioCoin, general contest + win contest active, partner offer approved a připojena — detaily v `onemil_state.md`
+- **Staging full E2E ZELENÝ** (run `25624552621`, 10. 05. 2026): ✅ ALL PASSED — 13 passed, 4 skipped, 0 failed, 2m 36s
+  - Workflow auto-seeduje nový win contest před každým spuštěním (PostgREST INSERT + step output)
+  - Telegram success doručen
+  - Stabilizační commity: `3c4aecf` (seed ordering), `324a747` (win-flow toast + retries), `6ee26df` (dialog locator), `e70fd5c` (offer card wait)
+  - Staging zůstává pouze `workflow_dispatch` — neplánovat automaticky, dokud se nerozhodne jinak
+  - Destruktivní testy (03–08) **nesmí běžet v produkci** (hard-coded v `playwright.yml`)
+  - Produkce nedotčena
 - **Migrace commitnuty ale neaplikovány** v Supabase:
   - `20260420_ensure_wallet_exists.sql` — wallet auto-creation helper
   - `20260420_fix_profiles_insert_remove_user_id.sql` — oprava trigger profiles INSERT
