@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-05-10 — Staging full E2E: wallet reset ověřen (run `25625184545`)
+
+### Co bylo provedeno
+- Commit `50ba68c` — `ci: reset staging e2e wallet before full run`: přidán krok `Reset test user wallet` do `playwright-staging.yml` (PostgREST PATCH `balance_coins: 5000, bonus_balance_coins: 0` před každým spuštěním testů)
+- Spuštěn `workflow_dispatch` na `.github/workflows/playwright-staging.yml` pro ověření nového kroku
+- Výsledek: **ALL PASSED** — 2m 33s, 0 selhání
+- Kroky v pořadí: Seed win contest ✅ → Reset test user wallet ✅ → Run full E2E suite ✅ → E2E status OK ✅ → Telegram OK ✅
+- Staging full E2E je nyní **bezpečný k plánování každých 8 hodin** — wallet se resetuje na 5 000 MioCoin před každým spuštěním, pipeline nevyčerpá zůstatek
+- Produkce `xkzhjldrojjlrkezorey` nedotčena; žádný app kód ani Supabase data nebyly změněny
+
+---
+
 ## 2026-05-10 — Staging full E2E: pipeline stabilizována a zelená (run `25624552621`)
 
 ### Co bylo provedeno

@@ -126,28 +126,31 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (10. 05. 2026)
 
-### Staging full E2E — ZELENÝ (10. 05. 2026, run `25624552621`)
+### Staging full E2E — ZELENÝ (10. 05. 2026, run `25625184545`)
 
 - Workflow: **Playwright Staging Full E2E** (`.github/workflows/playwright-staging.yml`)
 - Trigger: `workflow_dispatch`
-- Výsledek: ✅ **ALL PASSED** — 13 passed, 4 skipped (expected), 0 failed, 2m 36s
+- Výsledek: ✅ **ALL PASSED** — 13 passed, 4 skipped (expected), 0 failed, 2m 33s
 - Všech 9 spec souborů (`01–08`, plus `03-ticket-purchase` je ve dvou souborech): prošly nebo byly přeskočeny dle očekávání
-- Auto-seed win contestu funguje: `STAGING_SUPABASE_SERVICE_ROLE_KEY` → PostgREST INSERT → nový contest s `created_at: "2020-01-01T00:00:00Z"` (řadí se za všechny ostatní) → ID předáno jako step output
+- Auto-seed win contestu funguje: `STAGING_SUPABASE_SERVICE_ROLE_KEY` → PostgREST INSERT → nový contest s `created_at: "2020-01-01T00:00:00Z"` → ID předáno jako step output
+- Wallet reset funguje: PostgREST PATCH nastaví `balance_coins: 5000, bonus_balance_coins: 0` před každým spuštěním testů (commit `50ba68c`)
 - Telegram success notifikace doručena: `✅ OneMil STAGING full E2E OK — all specs passed`
 - Produkce nedotčena
+- **Pipeline je bezpečná k plánování každých 8 hodin** — čeká na schválení
 
-**Stabilizační commity:**
+**Commity (stabilizace + wallet reset):**
 | Commit | Popis |
 |--------|-------|
-| `3c4aecf` | `ci: keep auto win contest out of games first position` — seed contest dostane `created_at: 2020-01-01` → test 03 ho nespotřebuje |
-| `324a747` | `test: stabilize destructive win flow e2e` — toast scoped na `[data-sonner-toast]`; `retries: 0` pro win-flow |
-| `6ee26df` | `test: scope result dialog locator to avoid cookie banner conflict` — `getByRole('dialog', { name: /Výhra/i })` místo generického `[role="dialog"]` |
-| `e70fd5c` | `test: robust wait for offer cards or empty state in partner offer open spec` — `Promise.race` wait místo `waitForTimeout(2000)` |
+| `3c4aecf` | `ci: keep auto win contest out of games first position` — seed contest dostane `created_at: 2020-01-01` |
+| `324a747` | `test: stabilize destructive win flow e2e` — toast scoped na `[data-sonner-toast]`; `retries: 0` |
+| `6ee26df` | `test: scope result dialog locator to avoid cookie banner conflict` — `getByRole('dialog', { name: /Výhra/i })` |
+| `e70fd5c` | `test: robust wait for offer cards or empty state in partner offer open spec` — `Promise.race` wait |
+| `50ba68c` | `ci: reset staging e2e wallet before full run` — wallet reset na 5 000 MioCoin před testy |
 
 **Pravidla (nezměnit):**
-- Staging full E2E zůstává pouze `workflow_dispatch` — neplánovat automaticky, dokud se nerozhodne jinak
+- Staging full E2E zůstává pouze `workflow_dispatch` — neplánovat automaticky, dokud se neschválí
 - Destruktivní testy (03–08) **nesmí běžet v produkci** — `playwright.yml` je hard-coded pouze na `01-registration` + `02-login`
-- Staging workflow se spouští čistě; každý run dostane nový win contest, nekumuluje se stav
+- Každý run dostane nový win contest a resetovaný wallet; stav se nekumuluje mezi běhy
 
 ### Production smoke — manuálně ověřeno (10. 05. 2026, run `25618763318`)
 
