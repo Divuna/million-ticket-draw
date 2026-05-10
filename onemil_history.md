@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-05-10 — Staging: upload-ticket-share nasazena, ticket-shares bucket ověřen
+
+### Co bylo provedeno
+- Ověřeno: storage bucket `ticket-shares` existuje na staging `dxmowysntemfqfnanxua`, `public: true`, `file_size_limit: 5242880`
+- Nasazena Edge Function `upload-ticket-share` na staging: `npx supabase functions deploy upload-ticket-share --project-ref dxmowysntemfqfnanxua`
+- Status: **ACTIVE**
+- Staging nyní má 2 nasazené funkce: `sofinity-noop` + `upload-ticket-share`
+- Produkce `xkzhjldrojjlrkezorey` nedotčena; žádné jiné funkce nebyly nasazeny
+
+---
+
 ## 2026-05-10 — Staging seed: ověřen a zdokumentován
 
 ### Co bylo provedeno

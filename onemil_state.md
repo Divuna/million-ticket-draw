@@ -266,10 +266,21 @@ Nákup tiketu (`buy_ticket_atomic`) zapisuje do **12+ systémů** v jedné atomi
 
 | | Produkce | Staging |
 |---|---|---|
-| **Projekt** | `onemil` | `onemil-staging` (vytvořit manuálně) |
-| **Project ref** | `xkzhjldrojjlrkezorey` | TBD po vytvoření |
-| **Region** | `eu-north-1` | `eu-north-1` (stejný jako produkce) |
-| **První secret po vytvoření** | — | `SOFINITY_RELAY_URL` (no-op endpoint, nikdy prod Sofinity) |
+| **Projekt** | `onemil` | `onemil-staging` |
+| **Project ref** | `xkzhjldrojjlrkezorey` | `dxmowysntemfqfnanxua` |
+| **Region** | `eu-north-1` | `eu-north-1` |
+| **První secret po vytvoření** | — | `SOFINITY_RELAY_URL` → `sofinity-noop` |
+
+### Staging Edge Functions — aktuální stav (10. 05. 2026)
+
+| Funkce | Status | Poznámka |
+|--------|--------|---------|
+| `sofinity-noop` | ✅ ACTIVE | Absorbuje Sofinity eventy; nasazena dříve |
+| `upload-ticket-share` | ✅ ACTIVE | Nahrává share PNG do storage; nasazena 10. 05. 2026 |
+
+**Storage:** bucket `ticket-shares` existuje na staging `dxmowysntemfqfnanxua`, `public: true`, `file_size_limit: 5242880` (5 MB) ✅
+
+Produkce `xkzhjldrojjlrkezorey` nebyla dotčena. Žádné jiné funkce nebyly nasazeny.
 
 ### Staging koncept
 

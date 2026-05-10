@@ -148,6 +148,10 @@ Technical:
   - **⛔ Nespouštět `db push` na staging. Needitovat `schema_migrations` bez schválení.**
   - Produkce `xkzhjldrojjlrkezorey` nedotčena ✅
   - Detaily v `onemil_state.md` — Fáze 3 sekce
+- **Staging Edge Functions nasazeny (10. 05. 2026):**
+  - `sofinity-noop` — ACTIVE ✅ (nasazeno dříve)
+  - `upload-ticket-share` — ACTIVE ✅ (nasazeno 10. 05. 2026)
+  - Storage bucket `ticket-shares` existuje na staging, public: true ✅
 
 ## NEDODĚLÁNO — otevřené body (10. 05. 2026)
 
