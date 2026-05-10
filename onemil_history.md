@@ -14,6 +14,31 @@
 
 ---
 
+## 2026-05-10 — Staging schema_migrations: formát experimentů a finální stav
+
+### Co se stalo
+Po manuální aplikaci produkčního schéma na staging proběhlo několik pokusů o nastavení `supabase_migrations.schema_migrations` tak, aby `db push --dry-run` hlásil 0 pending migrací.
+
+### Výsledky experimentů
+Supabase CLI extrahuje z lokálních `.sql` souborů vedoucí číselný prefix (ne celý stem). Experimenty v pořadí:
+1. **341 plných stemů** (bez `.sql`) → všech 341 "Remote not found" (CLI nezná plné stemy)
+2. **327 deduplikovaných číselných prefixů** → 3 krátké 8-ciferné prefixy "Remote not found"
+3. **324 prefixů** (bez 3 konfliktních krátkých) → 17 souborů "pending before last remote"
+4. **324 + 17 plných stemů sekundárních souborů** → 22 chyb (plné stemy + 5 dříve fungujících se rozbilo)
+5. **Zpět na 324** → nejlepší dosažitelný stav, exit code stále 1
+
+### Root cause neřešitelnosti
+Repozitář obsahuje 4 páry souborů se stejným 14-ciferným timestampem a 3 skupiny se smíšenými 8/14-cifernými názvy. CLI může spárovat vždy jen jeden DB záznam na jeden prefix — sekundární soubory zůstávají jako "pending before last remote". Celkem 17 souborů nelze pokrýt bez přejmenování.
+
+### Výsledek ověření schématu na staging `dxmowysntemfqfnanxua`
+- 73 public tabulek ✅, `public.payments` existuje ✅, `buy_ticket_atomic` existuje ✅, `fn_wallet_transactions_immutable()` trigger existuje ✅, 95 RLS policies ✅
+- Produkce `xkzhjldrojjlrkezorey` nedotčena ✅
+
+### Aktuální stav
+`schema_migrations`: 324 řádků (číselné prefixy). `db push --dry-run` exit code 1 — 17 souborů pending. Žádný `db push` bez nového plánu.
+
+---
+
 ## 2026-05-10 — Staging DB: partial migration failure + cleanup
 
 ### Co se stalo

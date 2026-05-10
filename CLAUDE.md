@@ -133,10 +133,13 @@ Technical:
 - **Fáze 3 — POZASTAVENO (10. 05. 2026):**
   - `db push` selhal na migraci #3 (`20250914043049_`) — `public.payments` neexistuje v prázdné staging DB
   - Root cause: počáteční schéma nebylo nikdy zachyceno jako migrace; první migrace jsou hotfixy na existující schéma
-  - 2 záznamy odstraněny z `supabase_migrations.schema_migrations` staging — staging je čistý
-  - Ověřeno: `remaining_migrations = null`, žádné `public.*` tabulky na staging, produkce nedotčena
-  - **⛔ Nespouštět `db push` znovu, dokud není schválen a proveden baseline schema dump z produkce**
-  - Recovery plán zdokumentován v `onemil_state.md` — Fáze 3 sekce
+  - **Schema baseline aplikován manuálně:** produkční schéma zdumpováno a aplikováno na staging přes SQL Editor
+  - Ověřeno na staging: 73 tabulek ✅, `buy_ticket_atomic` ✅, wallet trigger ✅, 95 RLS ✅
+  - `schema_migrations` testován ve 4 formátech — nejlepší dosažitelný stav: **324 číselných prefixů, 17 souborů permanently pending**
+  - Root cause: repozitář obsahuje soubory s duplicitními timestamps a smíšenými 8/14-cifernými prefixy — exit code 0 nelze dosáhnout bez přejmenování souborů
+  - **⛔ Nespouštět `db push` na staging bez nového plánu. Needitovat `schema_migrations` bez schválení.**
+  - Produkce `xkzhjldrojjlrkezorey` nedotčena ✅
+  - Detaily v `onemil_state.md` — Fáze 3 sekce
 
 ## NEDODĚLÁNO — otevřené body (10. 05. 2026)
 

@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 10. 05. 2026 (staging: partial migration failure — vyčištěno, čeká na baseline schema plán)
+**Aktualizováno:** 10. 05. 2026 (staging: schema baseline aplikován manuálně a ověřen; schema_migrations 324 numerických verzí; db push --dry-run stále selhává — čeká na nový migrační plán)
 
 ---
 
@@ -264,21 +264,39 @@ Hardcoded produkční URL nahrazeny env/client-based hodnotami:
 
 **Root cause:** První ~5 migračních souborů (blank-name, 14. 09. 2025) jsou hotfixy na již existující schéma, ne CREATE skripty. Počáteční schéma (tabulky `payments`, `wallets`, `users`, `contests`, `tickets` atd.) bylo vytvořeno přímo v Supabase dashboardu a **nebylo nikdy zachyceno jako migrační soubor**. Staging má prázdnou DB — tyto tabulky neexistují.
 
-**Stav po vyčištění (10. 05. 2026):**
-- 2 migrace byly aplikovány před selháním (`20250914034944`, `20250914035127`) — oba záznamy vymazány z staging DB
-- Ověření: `remaining_migrations = null` (žádné záznamy v `supabase_migrations.schema_migrations`)
-- Na staging neexistují žádné `public.*` tabulky ✅
+**Stav staging DB — schema baseline aplikován manuálně (10. 05. 2026):**
+- Produkční schéma zdumpováno a aplikováno na staging přes Supabase SQL Editor (manuálně)
+- Ověřeno na staging `dxmowysntemfqfnanxua`:
+  - 73 public tabulek ✅ (včetně `public.payments`, `wallets`, `tickets`, `contests`, `users` atd.)
+  - `buy_ticket_atomic` funkce existuje ✅
+  - `fn_wallet_transactions_immutable()` trigger existuje ✅
+  - 95 RLS policies ✅
 - Produkce `xkzhjldrojjlrkezorey` nedotčena ✅
 
-**Dohodnutý recovery plán (čeká na souhlas pro každý krok):**
-1. Reset staging DB (Supabase dashboard → onemil-staging → Settings → Database → Reset database)
-2. Dump production schema only (read-only, žádná data): `npx supabase db dump --project-ref xkzhjldrojjlrkezorey`
-3. Aplikovat dump na staging (přes psql nebo SQL Editor)
-4. Označit všech 341 migrací jako aplikované v `supabase_migrations.schema_migrations` (staging SQL Editor, po schválení)
-5. Ověřit: `db push --dry-run` musí hlásit 0 pending migrací
-6. Pokračovat: seed data, deploy Edge Functions, CI workflow
+**`supabase_migrations.schema_migrations` — experimenty s formátem (10. 05. 2026):**
 
-**⛔ Nespouštět `db push` na staging znovu, dokud není baseline schema plán schválen a proveden.**
+CLI extrahuje z lokálních `.sql` souborů **vedoucí číselný prefix** (ne celý stem), např. `20250914034944_.sql` → `20250914034944`. DB záznamy s jiným formátem CLI nespáruje.
+
+| Pokus | Obsah | Počet | Výsledek dry-run |
+|-------|-------|-------|-----------------|
+| 1 | Celé filename stems (bez `.sql`) | 341 | ❌ Všech 341 "Remote not found" |
+| 2 | Číselné prefixy, deduplikováno | 327 | ❌ 3 krátké 8-ciferné prefixy "Remote not found" |
+| 3 | 324 prefixů (bez 3 konfliktních) | 324 | ❌ 17 lokálních souborů "pending before last remote" |
+| 4 | 324 + 17 plných stemů sekundárních souborů | 341 | ❌ 22 chyb (plné stemy + 5 dříve fungujících se rozbilo) |
+| **Finální** | **Zpět na 324 číselných prefixů** | **324** | **❌ 17 souborů pending — nejlepší dosažitelný stav** |
+
+**Root cause neřešitelného selhání dry-run:**
+- 4 páry souborů sdílí stejný 14-ciferný timestamp (např. `20260315280000_buy_ticket_rate_limit.sql` + `20260315280000_cleanup_winners_indexes.sql`) — CLI páruje jeden DB záznam s prvním souborem abecedně, druhý zůstává "pending before last remote"
+- 3 smíšené skupiny mají 8-ciferné i 14-ciferné soubory (např. `20260419_*` + `20260419104519_*`) — 8-ciferný prefix CLI nespáruje, soubor zůstává pending
+- **Celkem: 17 lokálních souborů permanentně pending** při 324 DB záznamy; exit code 0 nelze dosáhnout bez přejmenování souborů
+
+**Aktuální stav `schema_migrations` na staging:** 324 řádků (číselné prefixy).
+
+**⛔ Nespouštět `db push` na staging znovu bez nového plánu. Needitovat `schema_migrations` manuálně bez schválení.**
+
+**Nutné pro vyřešení (delší horizont):**
+- Přejmenovat duplicitní migrační soubory na unikátní timestamps, NEBO
+- Přijmout stav 17 pending souborů a plánovat staging CI bez závislosti na `db push --dry-run` exit 0
 
 ---
 
