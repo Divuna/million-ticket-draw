@@ -97,13 +97,15 @@ Technical:
 
 ## CURRENT SYSTEM STATUS (10. 05. 2026)
 
-- CI pipeline stabilní: `.github/workflows/playwright.yml` — registration + login testy passing
+- CI pipeline stabilní: dva oddělené workflow (commit `82f979f`):
+  - `.github/workflows/playwright.yml` — **production smoke**: pouze `01-registration` + `02-login`; spouští se 3× denně + push/PR na `main`
+  - `.github/workflows/playwright-staging.yml` — **staging full E2E**: všech 9 spec souborů; pouze `workflow_dispatch` (manuálně)
+- **Produkce nemůže spouštět** testy 03–08 (ticket purchase, voucher, wallet, win-flow, Partner Offers) — hard-coded file paths v `playwright.yml`
+- Telegram zprávy rozlišují: `✅ OneMil PROD smoke OK` / `❌ OneMil PROD smoke FAILED` vs `✅ OneMil STAGING full E2E OK` / `❌ OneMil STAGING full E2E FAILED`
 - Payment pipeline ověřen: Stripe webhook vrací 500 na selhání (retry), idempotency funguje, wallet credit přes trigger
 - Registrace + login plně otestovány v Playwright (Chromium, CI)
-- Telegram notifikace na CI success/failure nakonfigurovány a funkční
-- Playwright testy: **8 spec souborů** (01–08); testy 03–08 skip bez credentials
-  - `E2E_TEST_EMAIL` + `E2E_TEST_PASSWORD` — přidat jako GitHub Secrets pro testy 03–08
-  - `E2E_WIN_CONTEST_ID` — přidat jako GitHub Secret pro test 05 (soutěž se 1 zbývající tiketou)
+- Playwright testy: **9 spec souborů** (01–08, dva soubory s prefixem 03); staging testy 03–08 čekají na seed a GitHub Secrets:
+  - `STAGING_E2E_TEST_EMAIL`, `STAGING_E2E_TEST_PASSWORD`, `STAGING_E2E_CONTEST_ID`, `STAGING_E2E_WIN_CONTEST_ID`
 - **Migrace commitnuty ale neaplikovány** v Supabase:
   - `20260420_ensure_wallet_exists.sql` — wallet auto-creation helper
   - `20260420_fix_profiles_insert_remove_user_id.sql` — oprava trigger profiles INSERT

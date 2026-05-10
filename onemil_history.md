@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-05-10 — CI workflow split: produkce vs staging (commit `82f979f`)
+
+### Co bylo provedeno
+- `.github/workflows/playwright.yml` upraven: test command omezen na `tests/e2e/01-registration.spec.ts` a `tests/e2e/02-login.spec.ts`; Telegram zprávy přejmenovány na `PROD smoke OK/FAILED`
+- `.github/workflows/playwright-staging.yml` vytvořen: `workflow_dispatch` only, plný suite (`npm run test:smoke`), staging secrets mapovány do standardních env var názvů, Telegram zprávy `STAGING full E2E OK/FAILED`
+- Produkce nemůže fyzicky spustit testy 03–08 — hard-coded file paths
+- Žádný app kód, spec soubory, ani Supabase data nebyla změněna
+
+---
+
 ## 2026-05-10 — Staging migrace: strategie rozhodnuta (Option A)
 
 ### Rozhodnutí

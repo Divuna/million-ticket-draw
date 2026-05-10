@@ -124,7 +124,33 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ---
 
-## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (01. 05. 2026)
+## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (10. 05. 2026)
+
+### Workflow split — produkce vs staging (commit `82f979f`)
+
+Dva oddělené CI workflow:
+
+| Workflow | Soubor | Trigger | Testy |
+|----------|--------|---------|-------|
+| Production smoke | `.github/workflows/playwright.yml` | push/PR `main`, schedule 3× denně, `workflow_dispatch` | pouze `01-registration`, `02-login` |
+| Staging full E2E | `.github/workflows/playwright-staging.yml` | `workflow_dispatch` only | všech 9 spec souborů |
+
+**Produkce nemůže spustit testy 03–08** — `playwright.yml` má hard-coded paths na dva spec soubory. Ticket purchase, voucher purchase, wallet, win-flow a Partner Offers testy jsou fyzicky nedostupné z produkčního workflow.
+
+**Staging secrets** (mapovány na standardní env var názvy, které app a testy čtou):
+- `STAGING_VITE_SUPABASE_URL` → `VITE_SUPABASE_URL`
+- `STAGING_VITE_SUPABASE_ANON_KEY` → `VITE_SUPABASE_ANON_KEY`
+- `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` → `VITE_INTERNAL_FUNCTION_TOKEN`
+- `STAGING_E2E_TEST_EMAIL` → `E2E_TEST_EMAIL`
+- `STAGING_E2E_TEST_PASSWORD` → `E2E_TEST_PASSWORD`
+- `STAGING_E2E_CONTEST_ID` → `E2E_CONTEST_ID`
+- `STAGING_E2E_WIN_CONTEST_ID` → `E2E_WIN_CONTEST_ID`
+
+Staging workflow aktivní až po seedu staging DB a nastavení těchto secrets.
+
+**Telegram zprávy:**
+- Production: `✅ OneMil PROD smoke OK — registration + login passed` / `❌ OneMil PROD smoke FAILED` + run URL
+- Staging: `✅ OneMil STAGING full E2E OK — all specs passed` / `❌ OneMil STAGING full E2E FAILED` + run URL
 
 ### Opravená chyba v registračním testu
 - **Příčina 4× selhání (01.05.2026):** Supabase má zapnuté potvrzení emailu → po registraci `session: null` → localStorage bez `onemil-auth` klíče → `Profile.tsx` přesměroval na `/login` → `expectSessionExists()` selhalo
