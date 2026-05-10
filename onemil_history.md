@@ -14,6 +14,20 @@
 
 ---
 
+## 2026-05-10 — Staging full E2E: naplánováno 3× denně (commit `37cfd6c`)
+
+### Co bylo provedeno
+- Přidán `schedule` trigger do `.github/workflows/playwright-staging.yml`
+- Staging full E2E nyní běží automaticky 3× denně:
+  - `0 2 * * *` → 04:00 Praha (CEST)
+  - `0 10 * * *` → 12:00 Praha (CEST)
+  - `0 18 * * *` → 20:00 Praha (CEST)
+- Offset 4 hodiny od production smoke (00:00 / 08:00 / 16:00 Praha) — žádný překryv
+- `workflow_dispatch` zůstává dostupný pro manuální spuštění
+- Produkce `xkzhjldrojjlrkezorey` nedotčena; žádný app kód ani Supabase data nebyly změněny
+
+---
+
 ## 2026-05-10 — Staging full E2E: wallet reset ověřen (run `25625184545`)
 
 ### Co bylo provedeno

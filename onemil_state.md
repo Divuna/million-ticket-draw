@@ -147,8 +147,16 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 | `e70fd5c` | `test: robust wait for offer cards or empty state in partner offer open spec` — `Promise.race` wait |
 | `50ba68c` | `ci: reset staging e2e wallet before full run` — wallet reset na 5 000 MioCoin před testy |
 
+**Schedule (commit `37cfd6c`):**
+| Workflow | Časy (Praha CEST) | Cron |
+|----------|-------------------|------|
+| Production smoke | 00:00 / 08:00 / 16:00 | `0 22 * * *` / `0 6 * * *` / `0 14 * * *` |
+| Staging full E2E | 04:00 / 12:00 / 20:00 | `0 2 * * *` / `0 10 * * *` / `0 18 * * *` |
+
+- Žádný překryv mezi production smoke a staging full E2E
+- `workflow_dispatch` zůstává dostupný pro manuální spuštění
+
 **Pravidla (nezměnit):**
-- Staging full E2E zůstává pouze `workflow_dispatch` — neplánovat automaticky, dokud se neschválí
 - Destruktivní testy (03–08) **nesmí běžet v produkci** — `playwright.yml` je hard-coded pouze na `01-registration` + `02-login`
 - Každý run dostane nový win contest a resetovaný wallet; stav se nekumuluje mezi běhy
 
