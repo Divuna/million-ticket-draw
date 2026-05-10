@@ -138,7 +138,7 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 - Produkce nedotčena
 - **Pipeline je bezpečná k plánování každých 8 hodin** — čeká na schválení
 
-**Commity (stabilizace + wallet reset):**
+**Commity (stabilizace + wallet reset + signup fix):**
 | Commit | Popis |
 |--------|-------|
 | `3c4aecf` | `ci: keep auto win contest out of games first position` — seed contest dostane `created_at: 2020-01-01` |
@@ -146,6 +146,12 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 | `6ee26df` | `test: scope result dialog locator to avoid cookie banner conflict` — `getByRole('dialog', { name: /Výhra/i })` |
 | `e70fd5c` | `test: robust wait for offer cards or empty state in partner offer open spec` — `Promise.race` wait |
 | `50ba68c` | `ci: reset staging e2e wallet before full run` — wallet reset na 5 000 MioCoin před testy |
+| `631f915` | `test: use valid email domain for staging signup` — `@example.com` → `@onemil.cz`; HTTP 400 není skip |
+
+**Signup test — aktuální stav:**
+- Email doména: `e2e+${Date.now()}@onemil.cz`
+- HTTP 400 se neskipuje — reálný staging signup zůstává testován
+- Ověřeno: run `25627706906` ALL PASSED 2m 45s
 
 **Schedule (commit `37cfd6c`):**
 | Workflow | Časy (Praha CEST) | Cron |

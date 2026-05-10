@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-05-10 — Staging registration: signup email domain opravena (commit `631f915`)
+
+### Co bylo provedeno
+- Diagnosed: scheduled staging E2E selhal pouze na `01-registration` — Supabase vrátil HTTP 400 `Email address "e2e+...@example.com" is invalid`
+- Root cause: `@example.com` je IANA-rezervovaná doména; Supabase Auth ji odmítá s HTTP 400 (ne 422/429 → existující skip podmínka to nezachytila)
+- Fix: `tests/e2e/01-registration.spec.ts` — doména změněna z `@example.com` na `@onemil.cz` (line 73)
+- HTTP 400 **není přeskakován** — real staging signup zůstává testován; pokud Supabase odmítne `@onemil.cz`, test selže viditelně
+- Ověřovací run `25627706906`: ✅ **ALL PASSED** — 2m 45s, 0 selhání; wallet reset ✅, seed-win-contest ✅, všech 9 spec souborů ✅, Telegram OK ✅
+- Produkce `xkzhjldrojjlrkezorey` nedotčena; žádný app kód, workflow ani Supabase data nebyly změněny
+
+---
+
 ## 2026-05-10 — Staging full E2E: naplánováno 3× denně (commit `37cfd6c`)
 
 ### Co bylo provedeno

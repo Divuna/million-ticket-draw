@@ -112,7 +112,7 @@ Technical:
   - Workflow auto-seeduje nový win contest před každým spuštěním (PostgREST INSERT + step output)
   - Workflow resetuje wallet test uživatele na 5 000 MioCoin před testy (commit `50ba68c`)
   - Telegram success doručen
-  - Commity: `3c4aecf`, `324a747`, `6ee26df`, `e70fd5c` (stabilizace) + `50ba68c` (wallet reset)
+  - Commity: `3c4aecf`, `324a747`, `6ee26df`, `e70fd5c` (stabilizace) + `50ba68c` (wallet reset) + `631f915` (signup email domain `@example.com` → `@onemil.cz`)
   - Staging full E2E **naplánováno 3× denně** (commit `37cfd6c`): 04:00 / 12:00 / 20:00 Praha — offset od production smoke, žádný překryv
   - `workflow_dispatch` zůstává dostupný
   - Destruktivní testy (03–08) **nesmí běžet v produkci** (hard-coded v `playwright.yml`)
