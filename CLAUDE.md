@@ -105,8 +105,9 @@ Technical:
 - **Production smoke manuálně ověřen** (run `25618763318`): 6 passed, 1m 22s, Telegram doručen, specs 03–08 neběžely ✅
 - Payment pipeline ověřen: Stripe webhook vrací 500 na selhání (retry), idempotency funguje, wallet credit přes trigger
 - Registrace + login plně otestovány v Playwright (Chromium, CI)
-- Playwright testy: **9 spec souborů** (01–08, dva soubory s prefixem 03); staging testy 03–08 čekají na seed a GitHub Secrets:
-  - `STAGING_E2E_TEST_EMAIL`, `STAGING_E2E_TEST_PASSWORD`, `STAGING_E2E_CONTEST_ID`, `STAGING_E2E_WIN_CONTEST_ID`
+- Playwright testy: **9 spec souborů** (01–08, dva soubory s prefixem 03); staging testy 03–08 čekají na GitHub Secrets:
+  - `STAGING_E2E_TEST_EMAIL` → `e2e@onemil.cz`, `STAGING_E2E_TEST_PASSWORD`, `STAGING_E2E_CONTEST_ID` → `3fa56db0-4007-4fb7-aa2f-e460173070d8`, `STAGING_E2E_WIN_CONTEST_ID` → `7ff58a8e-c691-46e1-9e0c-ca6cddeb8abb`
+- **Staging seed ověřen** (10. 05. 2026): test user `e2e@onemil.cz`, wallet 5000 MioCoin, general contest + win contest active, partner offer approved a připojena — detaily v `onemil_state.md`
 - **Migrace commitnuty ale neaplikovány** v Supabase:
   - `20260420_ensure_wallet_exists.sql` — wallet auto-creation helper
   - `20260420_fix_profiles_insert_remove_user_id.sql` — oprava trigger profiles INSERT

@@ -189,7 +189,48 @@ Staging workflow aktivní až po seedu staging DB a nastavení těchto secrets.
 ### Stav testů (po opravě)
 - `01-registration`: ✅ opraveno (zvládá email confirmation i rate limit)
 - `02-login`: ✅ passing
-- `03-08`: ⏭ skip (čekají na GitHub Secrets: `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`; test 05 navíc `E2E_WIN_CONTEST_ID`)
+- `03-08`: ⏭ skip v produkci — čekají na staging secrets v `playwright-staging.yml`
+
+---
+
+## STAGING SEED — OVĚŘENÝ STAV (10. 05. 2026)
+
+**Projekt:** `onemil-staging`, ref `dxmowysntemfqfnanxua`, region `eu-north-1`
+
+### Test user
+| Pole | Hodnota |
+|------|---------|
+| Email | `e2e@onemil.cz` |
+| User ID | `7822a82e-f1d3-45ee-827b-679640ce6b65` |
+| Wallet balance | `5000.00` MioCoin |
+
+### Contests
+| Secret | Contest ID | Status | next_ticket_number |
+|--------|-----------|--------|-------------------|
+| `STAGING_E2E_CONTEST_ID` | `3fa56db0-4007-4fb7-aa2f-e460173070d8` | `active` | 1 |
+| `STAGING_E2E_WIN_CONTEST_ID` | `7ff58a8e-c691-46e1-9e0c-ca6cddeb8abb` | `active` | 100 |
+
+**Win contest poznámka:** Po každém úspěšném test-05 běhu je nutné resetovat `sold_tickets` zpět na `N - 1` a `next_ticket_number` na 100, jinak test 05 selže na dalším CI runu.
+
+### Partner offer
+| Pole | Hodnota |
+|------|---------|
+| Offer ID | `28278c87-17b6-49c3-ae7e-004d0d1f18b0` |
+| Status | `approved` |
+| deployment_mode | `selected_contests` |
+| Připojena k | `STAGING_E2E_CONTEST_ID` (`3fa56db0-4007-4fb7-aa2f-e460173070d8`) |
+
+### GitHub Secrets — co zbývá nastavit
+Staging seed je připraven. Zbývá přidat do GitHub Secrets repozitáře:
+- `STAGING_VITE_SUPABASE_URL`
+- `STAGING_VITE_SUPABASE_ANON_KEY`
+- `STAGING_VITE_INTERNAL_FUNCTION_TOKEN`
+- `STAGING_E2E_TEST_EMAIL` → `e2e@onemil.cz`
+- `STAGING_E2E_TEST_PASSWORD`
+- `STAGING_E2E_CONTEST_ID` → `3fa56db0-4007-4fb7-aa2f-e460173070d8`
+- `STAGING_E2E_WIN_CONTEST_ID` → `7ff58a8e-c691-46e1-9e0c-ca6cddeb8abb`
+
+Po nastavení secrets je `playwright-staging.yml` připraven ke spuštění přes `workflow_dispatch`.
 
 ---
 

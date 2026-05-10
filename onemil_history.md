@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-05-10 — Staging seed: ověřen a zdokumentován
+
+### Co bylo provedeno
+- Staging `dxmowysntemfqfnanxua` oseedován pro E2E testy 03–08
+- Test user: `e2e@onemil.cz` (ID `7822a82e-f1d3-45ee-827b-679640ce6b65`), wallet balance 5000.00 MioCoin
+- General contest (`STAGING_E2E_CONTEST_ID`): `3fa56db0-4007-4fb7-aa2f-e460173070d8`, active, next_ticket 1
+- Win contest (`STAGING_E2E_WIN_CONTEST_ID`): `7ff58a8e-c691-46e1-9e0c-ca6cddeb8abb`, active, next_ticket 100
+- Partner offer `28278c87-17b6-49c3-ae7e-004d0d1f18b0`, approved, selected_contests, připojena ke general contestu
+- Žádný app kód ani workflow nebyly změněny; produkce nedotčena
+
+---
+
 ## 2026-05-10 — Production smoke: manuální ověření (run `25618763318`)
 
 ### Co bylo provedeno
