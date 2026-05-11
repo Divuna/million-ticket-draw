@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Always read these files first — they are the source of truth for current system state, known bugs, and next steps:
 - `onemil_state.md` — current system state (treat as authoritative, ignore `state.md`)
+
+Always read `COMPANY_CONTEXT.md` for company identity, owner, public contacts, email signature, billing identity, and official OneMil context.
 - `onemil_history.md` — project timeline and context
 
 For schema/architecture context: `.cursor/SYSTEM_MAP.md` and `.cursor/PROJECT_CONTEXT.md`

@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-05-11 — Added permanent company context file COMPANY_CONTEXT.md
+
+### Co bylo provedeno
+- Vytvořen `COMPANY_CONTEXT.md` v rootu repozitáře — trvalý zdroj pravdy pro firemní identitu, kontakty, podpis a fakturační údaje
+- Obsah: iCONIC POINT s.r.o., IČO 17795851, DIČ CZ17795851, sídlo Praha 2, zakladatel Pavel Diviš, kontakty OneMil, veřejný e-mailový podpis
+- Do `CLAUDE.md` přidáno pravidlo pro čtení `COMPANY_CONTEXT.md`
+- Do `onemil_state.md` přidán odkaz na `COMPANY_CONTEXT.md`
+- Bankovní údaje nejsou v repozitáři — uloženy ve fakturačním systému
+- Žádný app kód, workflow, Supabase data ani produkce nebyly změněny
+
+---
+
 ## 2026-05-10 — Staging registration: signup email domain opravena (commit `631f915`)
 
 ### Co bylo provedeno

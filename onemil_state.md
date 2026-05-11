@@ -4,6 +4,13 @@
 
 ---
 
+## FIREMNÍ KONTEXT
+
+Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje jsou v souboru:
+**`COMPANY_CONTEXT.md`** — zdroj pravdy pro všechny asistenty a nástroje.
+
+---
+
 ## TICKET PURCHASE FLOW — AKTUÁLNÍ STAV (04–05. 05. 2026)
 
 ### buy_ticket_atomic — opravené odpovědní fieldy (aplikováno v produkci)
