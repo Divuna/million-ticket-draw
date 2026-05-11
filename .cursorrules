@@ -5,6 +5,7 @@ Before doing any task, always read:
 - onemil_history.md — project timeline and context
 - COMPANY_CONTEXT.md — firemní identita, kontakty, podpis a fakturační identita iCONIC POINT s.r.o.
 - ONEMIL_BUSINESS_CONTEXT.md — obchodní a produktové pochopení OneMil (B2B model, partneři, MioCoiny, soutěže, influenceři, agentury)
+- PAPERCLIP_SETUP_CONTEXT.md — Paperclip setup, AI agents, OneMil Chief of Staff, sales department, lead database, and AI employee structure.
 
 Treat onemil_state.md as the single source of truth for:
 - current system state

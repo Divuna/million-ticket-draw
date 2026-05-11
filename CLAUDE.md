@@ -11,6 +11,7 @@ Always read these files first — they are the source of truth for current syste
 Always read:
 - `COMPANY_CONTEXT.md` — for company identity, owner, contacts, email signature, billing identity, and official company context.
 - `ONEMIL_BUSINESS_CONTEXT.md` — for OneMil business model, product positioning, partner model, user rewards, influencers, agencies, social contests, vouchers, coupons, Partner Offers, and official explanation of what OneMil is.
+- `PAPERCLIP_SETUP_CONTEXT.md` — for Paperclip setup, AI agents, OneMil Chief of Staff, sales department, lead database, and AI employee structure.
 
 For schema/architecture context: `.cursor/SYSTEM_MAP.md` and `.cursor/PROJECT_CONTEXT.md`
 

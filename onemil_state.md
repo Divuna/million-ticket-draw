@@ -4,6 +4,15 @@
 
 ---
 
+## PAPERCLIP / AI TEAM CONTEXT
+
+Aktuální kontext pro nastavení Paperclipu, AI ředitele, obchodního oddělení, agentů a databáze firem je v souboru:
+**`PAPERCLIP_SETUP_CONTEXT.md`**
+
+Tento soubor je hlavní zdroj pravdy pro Paperclip setup, OneMil Chief of Staff, návrhy AI zaměstnanců, pravidla schvalování agentů a strukturu obchodních leadů.
+
+---
+
 ## BUSINESS / PRODUCT CONTEXT
 
 Aktuální obchodní a produktový kontext OneMil je v souboru:

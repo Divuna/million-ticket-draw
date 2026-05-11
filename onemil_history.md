@@ -14,6 +14,20 @@
 
 ---
 
+## 2026-05-11 — Added Paperclip setup context file PAPERCLIP_SETUP_CONTEXT.md
+
+### Co bylo provedeno
+- Přidán `PAPERCLIP_SETUP_CONTEXT.md` do rootu repozitáře.
+- Soubor definuje základ pro nastavení Paperclipu jako AI management vrstvy pro OneMil.
+- Popsán návrh prvního AI koordinátora `OneMil Chief of Staff`.
+- Potvrzeno, že Pavel Diviš zůstává owner a final decision maker.
+- Popsán approval model: Chief of Staff může navrhovat nové agenty, ale jejich spuštění musí schválit Pavel Diviš.
+- Popsán první fokus: obchodní oddělení a strukturovaná databáze firem / leadů.
+- Doplněny odkazy do `CLAUDE.md`, `.cursorrules` a `onemil_state.md`.
+- Žádný app kód, Supabase, migrace, workflow ani produkční systémy nebyly změněny.
+
+---
+
 ## 2026-05-11 — Added permanent business/product context file ONEMIL_BUSINESS_CONTEXT.md
 
 ### Co bylo provedeno
