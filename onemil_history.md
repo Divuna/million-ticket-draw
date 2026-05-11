@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-05-11 — Added permanent business/product context file ONEMIL_BUSINESS_CONTEXT.md
+
+### Co bylo provedeno
+- Přidán `ONEMIL_BUSINESS_CONTEXT.md` do rootu repozitáře.
+- Soubor definuje, že OneMil je B2B odměnová, partnerská a marketingová platforma, ne jen soutěžní aplikace.
+- Popsán partner model: firmy samy nastavují MioCoin odměny a platí pouze za aktivované / použité MioCoiny.
+- Popsány kupony, vouchery, Partner Offers, soutěže, uživatelé, osobní kódy, influenceři, agentury, sociální soutěže a podpora partnerů.
+- `CLAUDE.md`, `onemil_state.md` a `.cursorrules` byly doplněny o odkazy na tento nový zdroj pravdy.
+- Žádný app kód, Supabase, migrace, workflow ani produkční systémy nebyly změněny.
+
+---
+
 ## 2026-05-11 — Added permanent company context file COMPANY_CONTEXT.md
 
 ### Co bylo provedeno

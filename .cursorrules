@@ -1,8 +1,10 @@
 # OneMil – project rules (centralized)
 
 Before doing any task, always read:
-- onemil_state.md
-- onemil_history.md
+- onemil_state.md — current system state, known bugs, next steps
+- onemil_history.md — project timeline and context
+- COMPANY_CONTEXT.md — firemní identita, kontakty, podpis a fakturační identita iCONIC POINT s.r.o.
+- ONEMIL_BUSINESS_CONTEXT.md — obchodní a produktové pochopení OneMil (B2B model, partneři, MioCoiny, soutěže, influenceři, agentury)
 
 Treat onemil_state.md as the single source of truth for:
 - current system state

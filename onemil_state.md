@@ -4,6 +4,15 @@
 
 ---
 
+## BUSINESS / PRODUCT CONTEXT
+
+Aktuální obchodní a produktový kontext OneMil je v souboru:
+**`ONEMIL_BUSINESS_CONTEXT.md`**
+
+Tento soubor je hlavní zdroj pravdy pro pochopení toho, co OneMil je, jak funguje B2B odměnový model, partneři, MioCoiny, kupony, vouchery, soutěže, influenceři, agentury a sociální kampaně.
+
+---
+
 ## FIREMNÍ KONTEXT
 
 Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje jsou v souboru:
