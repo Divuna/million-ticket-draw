@@ -301,3 +301,27 @@ git add -A && git commit -m "update state" && git push origin main
 ```
 
 Toto pravidlo platí vždy, bez výjimky — nikdy nenechávej state/history změny bez commitu a pushe.
+
+---
+
+## Paperclip — operační pravidla (12. 05. 2026)
+
+Paperclip běží lokálně jako AI management vrstva pro OneMil.
+Spuštění: `npx paperclipai onboard --yes` z `C:\Users\divis\Desktop\Onemil - Projekt\million-ticket-draw`.
+Detailní setup viz `PAPERCLIP_SETUP_CONTEXT.md`.
+
+### Aktivní agenti
+
+| Agent | Adaptér | Role |
+|-------|---------|------|
+| Provozní ředitel OneMil | claude_local / codex_local | Manažer, deleguje práci |
+| Průzkumník obchodních leadů OneMil | codex_local | Lead research, hledá firmy |
+
+### Pravidla pro Claude Code při práci s Paperclipem
+
+- **Nikdy nečti `onemil_history.md` automaticky** v kontextu Paperclip agentů — pouze na výslovnou žádost Pavla.
+- Provozní ředitel **deleguje** lead scouting, velké tabulky, marketingový průzkum a repetitivní práci na Průzkumníka. Sám zpracovává, pouze pokud Pavel řekne „zpracuj osobně".
+- Výstupy se **zveřejňují přímo do komentáře Paperclip issue** (ne jen jako interní soubor).
+- Soubory (CSV, Markdown, reporty) se ukládají do: `C:\Users\divis\Desktop\OneMil Paperclip Outputs`
+- Nový agent se **navrhuje, ale nespouští** bez schválení Pavla Diviše.
+- Pavel Diviš je owner a final decision maker — žádná akce (e-mail, outreach, GitHub, Supabase, Stripe, produkce) bez jeho výslovného schválení.

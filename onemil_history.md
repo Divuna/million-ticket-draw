@@ -14,6 +14,24 @@
 
 ---
 
+## 2026-05-12 — Paperclip AI team first live session
+
+### Co bylo provedeno
+- Paperclip server spuštěn lokálně na portu 3100 z `C:\Users\divis\Desktop\Onemil - Projekt\million-ticket-draw`.
+- Claude Code (claude.exe v2.1.138) ověřen jako funkční adaptér; přihlášen jako divispavel2@gmail.com (Pro).
+- Codex local adaptér otestován a funkční na Windows s Extra args: `--skip-git-repo-check`.
+- Vytvořen a nakonfigurován agent **Provozní ředitel OneMil** (claude_local / codex_local).
+- Vytvořen a nakonfigurován agent **Průzkumník obchodních leadů OneMil** (codex_local, Enable search ON).
+- Duplikátní firma iCONIC POINT s.r.o. (prefix ICOA) smazána; zbyla pouze ICO.
+- Projekt **OneMil** vytvořen pod firmou ICO; Provozní ředitel nastaven jako lead agent.
+- Vytvořeny issues ICO-15 až ICO-19 (lead scouting, shortlist, kontakty, Dedoles one-pager, AI team návrh).
+- Výstupy uloženy do `C:\Users\divis\Desktop\OneMil Paperclip Outputs`.
+- Zjištěno a zdokumentováno pravidlo: Provozní ředitel je manažer, ne exekutor — deleguje na Průzkumníka.
+- `onemil_state.md`, `onemil_history.md`, `CLAUDE.md` a `PAPERCLIP_SETUP_CONTEXT.md` aktualizovány.
+- Žádný app kód, Supabase, migrace, workflow ani produkční systémy nebyly změněny.
+
+---
+
 ## 2026-05-11 — Added Paperclip setup context file PAPERCLIP_SETUP_CONTEXT.md
 
 ### Co bylo provedeno

@@ -6,10 +6,64 @@
 
 ## PAPERCLIP / AI TEAM CONTEXT
 
-Aktuální kontext pro nastavení Paperclipu, AI ředitele, obchodního oddělení, agentů a databáze firem je v souboru:
+**Aktualizováno:** 12. 05. 2026
+
+Detailní pravidla, schvalovací model a technické poznámky jsou v souboru:
 **`PAPERCLIP_SETUP_CONTEXT.md`**
 
-Tento soubor je hlavní zdroj pravdy pro Paperclip setup, OneMil Chief of Staff, návrhy AI zaměstnanců, pravidla schvalování agentů a strukturu obchodních leadů.
+### Aktuální stav Paperclip (12. 05. 2026)
+
+- **Server:** běží lokálně na `http://127.0.0.1:3100` (verze 2026.428.0)
+- **Spuštění:** `npx paperclipai onboard --yes` z `C:\Users\divis\Desktop\Onemil - Projekt\million-ticket-draw`
+- **PowerShell okno musí zůstat otevřené** po dobu běhu serveru
+
+**Firma v Paperclip:**
+- iCONIC POINT s.r.o. (prefix: ICO)
+
+**Projekt v Paperclip:**
+- OneMil
+
+**Aktivní agenti:**
+
+| Agent | Adaptér | Role |
+|-------|---------|------|
+| Provozní ředitel OneMil | claude_local nebo codex_local | Manažer, AI koordinátor, deleguje práci |
+| Průzkumník obchodních leadů OneMil | codex_local | Lead researcher, hledá a třídí firmy |
+
+**Pavel Diviš zůstává owner a final decision maker. Nic se neprovádí bez jeho schválení.**
+
+### Klíčová pravidla agentů
+
+- Provozní ředitel je **manažer, ne exekutor**. Specializovanou práci deleguje příslušnému agentovi.
+- Provozní ředitel **nečte onemil_history.md automaticky** — pouze na výslovnou žádost Pavla.
+- Provozní ředitel neřeší osobně: rozsáhlý výzkum, lead scouting, velké tabulky, marketingový průzkum, právní analýzu, technické práce ani repetitivní zpracování — pokud Pavel neřekne **„zpracuj osobně"**.
+- Pro lead výzkum deleguje vždy na Průzkumníka obchodních leadů OneMil.
+- Pokud vhodný agent neexistuje → navrhne nového agenta a čeká na schválení Pavla.
+- Výstup se **zveřejňuje přímo do komentáře Paperclip issue**, ne jen interně.
+- Reporty, CSV a Markdown soubory se ukládají do: `C:\Users\divis\Desktop\OneMil Paperclip Outputs`
+
+### Technické poznámky
+
+- Claude Code adaptér funkční; může být limitován kredity Pro účtu.
+- Codex local adaptér funkční na Windows.
+- Pro Codex local na Windows: Extra args → `--skip-git-repo-check`
+- Model: **Default** nebo **gpt-5.3-codex** (o4-mini nebyl podporován s aktuálním nastavením).
+- Provozní ředitel: Enable search **OFF**, Can assign tasks **ON**, Can create agents **OFF**, Heartbeat **OFF**.
+- Průzkumník: Enable search **ON**, Can assign tasks **OFF**, Can create agents **OFF**, Heartbeat **OFF**.
+
+### Issues vytvořené při nastavování (ICO projekt)
+
+| Issue | Obsah |
+|-------|-------|
+| ICO-15 | Lead scouting — 10 českých e-shopů/značek |
+| ICO-16 | Shortlist top 3 firem z existujících leadů |
+| ICO-17 | Ověření veřejných B2B kontaktů — Dedoles, Slevomat, Rohlik.cz |
+| ICO-18 | Dedoles one-pager draft → `dedoles_one_pager_ICO-18_2026-05-12.md` |
+| ICO-19 | Návrh ideálního AI týmu pro OneMil → `onemil_ai_team_ICO-19_2026-05-12.md` |
+
+### Další krok
+
+Pokračovat v budování lead databáze. Průzkumník rozšiřuje seznam; Provozní ředitel koordinuje priority a předkládá shortlisty Pavlovi ke schválení před jakýmkoli outreachem.
 
 ---
 
