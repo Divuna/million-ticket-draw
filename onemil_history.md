@@ -1041,3 +1041,20 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Ověření po merge do `main`:
   - Smoke E2E prošel: run `25816716804`.
   - Playwright Staging Full E2E prošel: run `25816763438`.
+
+---
+
+## 2026-05-13 - Produkční DB launch verification read-only
+
+- Produkční DB verification proběhla pouze read-only přes `SELECT`.
+- `handle_new_auth_user` původní FAIL byl false positive.
+- `public.profiles` insert používá `id`, `full_name`, `date_of_birth`, `avatar_url` a nevkládá `user_id` do `profiles`.
+- `trigger_sofinity_forward` nevolá `net.http_post` přímo.
+- Produkce aktuálně používá legacy Sofinity forwarding path:
+  `event_logs / trigger_sofinity_forward -> event_forward_log -> call_event_forward_log_listener -> event_queue -> process_event_queue_worker -> Sofinity`.
+- Tato legacy mezivrstva není Web/PWA launch blocker.
+- Technický dluh po launchi: zvážit zjednodušení legacy cesty `event_forward_log -> event_queue`, ale pouze po samostatném schválení.
+- Nebyla změněna data ani schema.
+- Nebyly spuštěny migrace.
+- Nebyl proveden deploy.
+- Nebyly měněny Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers, Sofinity, OneSignal ani `buy_ticket_atomic`.

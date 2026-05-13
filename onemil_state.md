@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 13. 05. 2026 (PR #5 launch wording cleanup merged to main after smoke + staging full E2E; staging schema baseline stále platí; db push se nepoužívá)
+**Aktualizováno:** 13. 05. 2026 (produkční DB launch verification proběhla read-only; staging schema baseline stále platí; db push se nepoužívá)
 
 ---
 
@@ -1099,3 +1099,27 @@ Ověření:
 - PR #5 Playwright Staging Full E2E prošel na větvi `fix/launch-copy-risk-wording-cleanup`.
 - Po merge do `main` smoke E2E prošel: GitHub Actions run `25816716804`.
 - Po merge do `main` Playwright Staging Full E2E prošel: GitHub Actions run `25816763438`.
+
+---
+
+## Produkční DB launch verification (13. 05. 2026)
+
+Ověření produkční databáze proběhlo pouze read-only přes `SELECT`.
+
+Výsledek:
+- `handle_new_auth_user` původní FAIL byl false positive.
+- `public.profiles` insert používá pouze `id`, `full_name`, `date_of_birth`, `avatar_url`.
+- `handle_new_auth_user` nevkládá `user_id` do `public.profiles`.
+- `trigger_sofinity_forward` nevolá `net.http_post` přímo.
+- Produkce aktuálně používá legacy Sofinity forwarding path:
+  `event_logs / trigger_sofinity_forward -> event_forward_log -> call_event_forward_log_listener -> event_queue -> process_event_queue_worker -> Sofinity`.
+- Tato legacy mezivrstva není Web/PWA launch blocker.
+
+Technický dluh po launchi:
+- Zvážit zjednodušení legacy cesty `event_forward_log -> event_queue`, ale pouze po samostatném schválení.
+
+Invariant:
+- Nebyla změněna data ani schema.
+- Nebyly spuštěny migrace.
+- Nebyl proveden deploy.
+- Nebyly měněny Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers, Sofinity, OneSignal ani `buy_ticket_atomic`.
