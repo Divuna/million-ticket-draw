@@ -218,6 +218,28 @@
     pointer-events: none;
     z-index: -1;
   }
+
+  @media (max-width: 768px) {
+    html,
+    body,
+    #root {
+      min-height: 100%;
+      overscroll-behavior-y: none;
+    }
+
+    .customer-layout {
+      padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .ios-pwa-bottom-nav {
+      bottom: 0;
+      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+      transform: translate3d(0, 0, 0);
+      -webkit-transform: translate3d(0, 0, 0);
+      will-change: transform;
+      contain: layout paint;
+    }
+  }
 }
 
 /* Luxury Glow Effects */
