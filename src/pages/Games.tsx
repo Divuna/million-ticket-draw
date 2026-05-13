@@ -423,7 +423,7 @@ if (loading) {
               <Trophy className="w-7 h-7 md:w-8 md:h-8" />
               Soutěže
             </h1>
-            <p className="text-sm text-text-silver mt-2">Vyberte si soutěž a zkuste štěstí!</p>
+            <p className="text-sm text-text-silver mt-2">Vyberte si soutěž a otevřete další tiket v pořadí.</p>
           </div>
           
           {(() => {

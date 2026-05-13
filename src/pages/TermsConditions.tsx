@@ -8,7 +8,7 @@ const TermsConditions = () => {
     <div className="min-h-screen bg-background">
       <Helmet>
         <title>Obchodní podmínky | OneMil</title>
-        <meta name="description" content="Obchodní podmínky aplikace OneMil. Pravidla spotřebitelských soutěží a používání virtuálního kreditu MioCoin." />
+        <meta name="description" content="Obchodní podmínky aplikace OneMil. Pravidla spotřebitelských soutěží a používání interního kreditu MioCoin." />
       </Helmet>
 
       <div className="container max-w-3xl mx-auto px-4 py-8">
@@ -53,14 +53,14 @@ const TermsConditions = () => {
               OneMil je platforma pro účast ve spotřebitelských soutěžích. Aplikace umožňuje:
             </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-              <li>Nákup soutěžních lístků za virtuální kredit MioCoin</li>
-              <li>Účast v losovacích soutěžích o věcné ceny</li>
+              <li>Uplatnění interního kreditu MioCoin na soutěžní tikety</li>
+              <li>Účast ve spotřebitelských soutěžích o věcné ceny</li>
               <li>Správu uživatelského účtu a historie soutěží</li>
               <li>Příjem informací o nových soutěžích a výhrách</li>
             </ul>
             <p className="text-muted-foreground mt-4 font-semibold">
-              OneMil není hazardní hra. Jedná se o spotřebitelské soutěže ve smyslu § 2881 a násl. 
-              občanského zákoníku. Výhry nejsou peněžité a nelze je směnit za peníze.
+              OneMil pořádá spotřebitelské soutěže ve smyslu § 2881 a násl. občanského zákoníku.
+              Výhry nejsou peněžité a nelze je směnit za peníze.
             </p>
           </section>
 
@@ -68,7 +68,7 @@ const TermsConditions = () => {
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">3. Registrace a uživatelský účet</h2>
             <p className="text-muted-foreground mb-4">Pro používání Aplikace je nutná registrace. Uživatel:</p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-              <li>Musí být starší 18 let nebo mít souhlas zákonného zástupce</li>
+              <li>Musí být starší 18 let</li>
               <li>Je povinen uvádět pravdivé a aktuální údaje</li>
               <li>Odpovídá za bezpečnost svého účtu a přihlašovacích údajů</li>
               <li>Nesmí sdílet přístupové údaje s třetími osobami</li>
@@ -77,21 +77,22 @@ const TermsConditions = () => {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">4. MioCoin – virtuální kredit</h2>
+            <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">4. MioCoin – interní kredit OneMil</h2>
             <p className="text-muted-foreground mb-4">
-              MioCoin je virtuální měna používaná výhradně v rámci Aplikace OneMil:
+              MioCoin je interní kredit OneMil používaný výhradně v rámci Aplikace OneMil:
             </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li>MioCoin lze získat nákupem za reálnou měnu (CZK) prostřednictvím platební brány</li>
-              <li>MioCoin slouží k nákupu soutěžních lístků</li>
-              <li>MioCoin <strong>nelze</strong> převést zpět na reálnou měnu ani vyplatit</li>
-              <li>MioCoin <strong>nelze</strong> převádět mezi uživateli</li>
+              <li>MioCoin lze použít pouze uvnitř OneMil</li>
+              <li>MioCoin slouží k uplatnění na soutěžní tikety, vouchery a další vybrané funkce OneMil</li>
+              <li>MioCoin <strong>nelze</strong> vybrat ani vyplatit jako peníze</li>
+              <li>MioCoin <strong>nelze</strong> převádět mimo OneMil</li>
               <li>MioCoin nemá žádnou hodnotu mimo Aplikaci</li>
               <li>Nevyužitý MioCoin propadá při zrušení účtu</li>
             </ul>
             <p className="text-muted-foreground mt-4">
-              Bonusový MioCoin získaný jako výhra v soutěži podléhá stejným pravidlům 
-              a může být použit pouze k nákupu soutěžních lístků.
+              Bonusový MioCoin získaný v rámci soutěže podléhá stejným pravidlům
+              a může být použit pouze uvnitř OneMil.
             </p>
           </section>
 
@@ -99,12 +100,12 @@ const TermsConditions = () => {
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">5. Pravidla soutěží</h2>
             <p className="text-muted-foreground mb-4">Spotřebitelské soutěže v Aplikaci OneMil:</p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-              <li>Jsou organizovány jako losovací soutěže s pevným počtem lístků</li>
-              <li>Každý lístek má přiřazeno unikátní číslo</li>
-              <li>Losování probíhá automaticky po prodeji všech lístků</li>
-              <li>Výherní čísla jsou určena náhodným generátorem</li>
+              <li>Mají pevně stanovený počet tiketů</li>
+              <li>Tikety se otevírají postupně v pořadí 1, 2, 3 a dále</li>
+              <li>Každý tiket má přiřazeno unikátní číslo</li>
+              <li>Výherní pozice jsou předem určeny v pravidlech dané soutěže</li>
               <li>Výsledky jsou zveřejněny v Aplikaci a oznámeny výhercům</li>
-              <li>Jeden uživatel může vlastnit více lístků v jedné soutěži</li>
+              <li>Jeden uživatel může vlastnit více tiketů v jedné soutěži</li>
             </ul>
           </section>
 
@@ -117,7 +118,7 @@ const TermsConditions = () => {
               <li>Fyzické výhry jsou doručovány na adresu v České republice</li>
               <li>Výhry nelze směnit za peníze ani jiné výhry</li>
               <li>Nepřevzaté výhry propadají po 30 dnech od oznámení</li>
-              <li>V případě nezletilých výherců je nutný souhlas zákonného zástupce</li>
+              <li>Účast v soutěžích je určena pouze uživatelům starším 18 let</li>
             </ul>
           </section>
 
@@ -136,8 +137,8 @@ const TermsConditions = () => {
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">8. Reklamace a vrácení</h2>
             <p className="text-muted-foreground">
-              Vzhledem k povaze virtuálního kreditu MioCoin <strong>není možné</strong> požadovat 
-              vrácení peněz za zakoupený MioCoin. Zakoupené soutěžní lístky rovněž nelze vrátit ani 
+              Vzhledem k povaze interního kreditu MioCoin <strong>není možné</strong> požadovat
+              vrácení peněz za zakoupený MioCoin. Uplatněné soutěžní tikety rovněž nelze vrátit ani
               vyměnit. V případě technických problémů s platbou kontaktujte zákaznickou podporu 
               na <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a>.
             </p>
@@ -148,7 +149,7 @@ const TermsConditions = () => {
             <p className="text-muted-foreground mb-4">Uživatelům je zakázáno:</p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li>Vytvářet více účtů nebo používat účty jiných osob</li>
-              <li>Pokoušet se o manipulaci s losováním nebo výsledky soutěží</li>
+              <li>Pokoušet se o manipulaci s průběhem nebo výsledky soutěží</li>
               <li>Využívat automatizované nástroje nebo boty</li>
               <li>Narušovat funkčnost nebo bezpečnost Aplikace</li>
               <li>Šířit nepravdivé informace o Aplikaci nebo soutěžích</li>

@@ -153,10 +153,10 @@ export default function ContestDetail() {
   // Live activity rotating messages
   const LIVE_MESSAGES = [
     'Soutěž je aktivní',
-    'Bonusové výhry mohou padnout kdykoliv',
-    'Každý ticket může rozhodnout',
-    'Hraj a vyhraj',
-    'Šance na výhru s každým tiketem',
+    'Bonusové výherní pozice jsou součástí pravidel soutěže',
+    'Každý další tiket posouvá pořadí soutěže',
+    'Otevři další tiket v pořadí',
+    'Výherní pozice jsou předem určeny',
   ];
   const [liveMessageIndex, setLiveMessageIndex] = useState(0);
   const [liveVisible, setLiveVisible] = useState(true);
@@ -672,7 +672,7 @@ export default function ContestDetail() {
   const PRIMARY_DOMAIN = "https://onemil.cz";
   const canonicalUrl = `${PRIMARY_DOMAIN}/contest/${contest.id}`;
   const fallbackDescription =
-    "OneMil je prémiová platforma spotřebitelských soutěží o exkluzivní a luxusní věcné ceny. Pro využití voucherů a účast ve spotřebitelských soutěžích slouží MioCoin jako interní digitální kredit.";
+    "OneMil je prémiová platforma spotřebitelských soutěží o exkluzivní a luxusní věcné ceny. Pro využití voucherů a účast ve spotřebitelských soutěžích slouží MioCoin jako interní kredit OneMil.";
   const cleanDescription = (contest.description ?? "").replace(/\s+/g, " ").trim();
   const metaDescription =
     cleanDescription.length > 0 ? (cleanDescription.length > 170 ? `${cleanDescription.slice(0, 167)}…` : cleanDescription) : fallbackDescription;
@@ -891,7 +891,7 @@ export default function ContestDetail() {
                   {isProcessing ? (
                     <span className="inline-flex items-center gap-2">
                       <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                      Losujeme…
+                      Otevírám…
                     </span>
                   ) : `Uplatnit ${contest.ticket_price} MioCoin`}
                 </Button>
@@ -930,7 +930,7 @@ export default function ContestDetail() {
                 />
               </TooltipTrigger>
               <TooltipContent>
-                <p>MioCoiny můžeš vyhrát při nákupu tiketů</p>
+                <p>MioCoiny můžeš získat otevřením výherního tiketu</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -945,12 +945,12 @@ export default function ContestDetail() {
 
         <div className="relative">
           <h2 className="font-heading text-white font-semibold text-lg md:text-xl tracking-tight mb-2">
-            Cesta k výhernímu ticketu
+            Cesta k výhernímu tiketu
           </h2>
           <p className="text-[hsl(0_0%_85%)]/80 text-sm md:text-[15px] leading-relaxed mb-6 max-w-2xl">
             V této soutěži je připraveno celkem{' '}
             <span className="text-[#FFB547] font-semibold">{progressTicketsTotal.toLocaleString('cs-CZ')}</span>{' '}
-            ticketů. Každý uplatněný MioCoin posouvá soutěž blíž k hlavní výhře.
+            tiketů. Tikety se otevírají postupně v pořadí 1, 2, 3 a dále.
           </p>
 
           {/* Premium animated path */}
