@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 10. 05. 2026 (staging: schema baseline aplikován manuálně a ověřen; schema_migrations 324 numerických verzí; db push --dry-run stále selhává — čeká na nový migrační plán)
+**Aktualizováno:** 13. 05. 2026 (PR #2 store-policy copy cleanup merged to main after smoke + staging full E2E; staging schema baseline stále platí; db push se nepoužívá)
 
 ---
 
@@ -80,6 +80,36 @@ Tento soubor je hlavní zdroj pravdy pro pochopení toho, co OneMil je, jak fung
 
 Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje jsou v souboru:
 **`COMPANY_CONTEXT.md`** — zdroj pravdy pro všechny asistenty a nástroje.
+
+---
+
+## STORE POLICY / LAUNCH COPY — UZAMČENO (13. 05. 2026)
+
+### Stav
+- PR #2 **Store policy copy cleanup: 18+ and ticket order model** byl mergnut do `main` (merge commit `c132be9ff60e15884d84f38d486c53dcb7f94666`).
+- PR obsahoval pouze:
+  - `src/pages/ContestDetail.tsx`
+  - `src/pages/Games.tsx`
+  - `src/pages/OnboardingDateOfBirth.tsx`
+  - `src/pages/PrivacyPolicy.tsx`
+  - `src/pages/TermsConditions.tsx`
+  - `src/pages/Vouchers.tsx`
+- Před mergem prošlo PR smoke E2E a Playwright Staging Full E2E na větvi `feature/store-policy-18plus-ticket-order-copy`.
+- Po mergi do `main` prošel production smoke workflow `25795875077` a Playwright Staging Full E2E workflow `25795953772`.
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
+
+### Veřejná launch pravidla
+- Launch age rule je **18+**.
+- Veřejný text nesmí popisovat soutěže jako loterii, losování ani náhodný generátor.
+- Správný veřejný model: **tikety se otevírají postupně v pořadí 1, 2, 3... a výherní pozice jsou předem určeny v pravidlech dané soutěže**.
+- MioCoin je **interní kredit OneMil**.
+- MioCoin **nelze vybrat ani vyplatit jako peníze**.
+- MioCoin **nelze převádět mimo OneMil**.
+- MioCoin lze použít pouze uvnitř OneMil.
+- Dobročinné / charitativní kampaně musí vždy uvádět konkrétního příjemce, účel a výši podpory pro danou kampaň.
+
+### Invariant
+Tyto změny jsou copy/legal/store-review cleanup. Neměnily contest engine, wallet, DB, Supabase, Stripe, Sofinity, OneSignal, Partner Offers, `tickets`, `winners`, `bonus_prizes` ani `buy_ticket_atomic`.
 
 ---
 

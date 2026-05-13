@@ -29,7 +29,7 @@ npm run test:concurrency # Race condition tests
 
 ## Architecture
 
-**OneMil** is a global lottery/contest platform (React 18 + TypeScript + Vite, hosted via Lovable/Vercel).
+**OneMil** is a global contest and reward platform (React 18 + TypeScript + Vite, hosted via Lovable/Vercel).
 
 **Core flow:** voucher purchase (Stripe) → wallet credit (MioCoin) → ticket purchase (`buy_ticket_atomic` RPC) → contest close at 1,000,000 tickets → winner distribution → prize delivery
 
@@ -70,6 +70,18 @@ Do not execute these without explicit user instruction:
 - Event pipeline: `event_logs` → `event_queue` → Sofinity
 - Push pipeline: `notifications` → `push_log` → OneSignal
 - Voucher → MioCoin → ticket economic flow
+
+## Store Policy / Launch Copy Rules
+
+- Public launch age rule is **18+**.
+- Public copy must not describe OneMil contests as lottery, drawing/losování, random-generator based, gambling, betting, jackpot, casino, or similar framing.
+- Correct public contest model: tickets open sequentially in order `1, 2, 3...`; winning positions are predefined in the rules of the given contest.
+- MioCoin is internal OneMil credit.
+- MioCoin cannot be withdrawn as money.
+- MioCoin cannot be transferred outside OneMil.
+- MioCoin can only be used inside OneMil.
+- Charitable campaigns must state the specific beneficiary, purpose, and support amount for that campaign.
+- PR #2 merged these copy rules to `main` after PR smoke and staging full E2E passed. No deploy was performed as part of that merge.
 
 ## Deployment rule
 After every file change, always run:

@@ -14,6 +14,32 @@
 
 ---
 
+## 2026-05-13 — Store policy copy cleanup PR #2 merged and post-merge validation passed
+
+### Co bylo provedeno
+- PR #2 **Store policy copy cleanup: 18+ and ticket order model** byl mergnut do `main`.
+- Zdrojová větev: `feature/store-policy-18plus-ticket-order-copy`; cílová větev: `main`.
+- Commit PR: `459367299d93bc1b57355b3ee3398be391a6cda7`.
+- Merge commit: `c132be9ff60e15884d84f38d486c53dcb7f94666`.
+- Změněno bylo pouze 6 schválených souborů:
+  - `src/pages/ContestDetail.tsx`
+  - `src/pages/Games.tsx`
+  - `src/pages/OnboardingDateOfBirth.tsx`
+  - `src/pages/PrivacyPolicy.tsx`
+  - `src/pages/TermsConditions.tsx`
+  - `src/pages/Vouchers.tsx`
+- Veřejný launch age rule sjednocen na **18+**.
+- Veřejná copy odstranila loterijní / random-generator framing a používá model: tikety se otevírají postupně v pořadí 1, 2, 3... a výherní pozice jsou předem určeny.
+- MioCoin wording sjednocen: interní kredit OneMil, nelze vybrat jako peníze, nelze převádět mimo OneMil, lze použít pouze uvnitř OneMil.
+- Charitativní wording upraven: vybrané kampaně mohou podporovat dobročinný účel a konkrétní příjemce / účel / výše podpory musí být uvedeny u dané kampaně.
+- Před mergem prošlo PR smoke E2E a Playwright Staging Full E2E na feature větvi.
+- Po mergi prošel `main` smoke workflow `25795875077`.
+- Po mergi prošel Playwright Staging Full E2E na `main`, workflow `25795953772`.
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
+- Nebyly měněny Supabase, Stripe, OneSignal, Sofinity, wallet, contest engine, tickets, winners, bonus_prizes, Partner Offers ani `buy_ticket_atomic`.
+
+---
+
 ## 2026-05-12 — Paperclip AI team first live session
 
 ### Co bylo provedeno
