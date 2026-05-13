@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 13. 05. 2026 (produkční DB launch verification proběhla read-only; staging schema baseline stále platí; db push se nepoužívá)
+**Aktualizováno:** 13. 05. 2026 (produkční contest cleanup vyřešil active contests missing rules_pdf_url blocker; staging schema baseline stále platí; db push se nepoužívá)
 
 ---
 
@@ -1123,3 +1123,26 @@ Invariant:
 - Nebyly spuštěny migrace.
 - Nebyl proveden deploy.
 - Nebyly měněny Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers, Sofinity, OneSignal ani `buy_ticket_atomic`.
+
+---
+
+## Produkční contest cleanup před Web/PWA launchem (13. 05. 2026)
+
+Produkční launch blocker `active contests missing rules_pdf_url` byl vyřešen.
+
+Co bylo provedeno:
+- 7 testovacích soutěží bylo přesunuto ze stavu `active` do `draft` / Archiv test.
+- 3 reálné soutěže bez PDF pravidel byly dočasně přesunuty ze stavu `active` do `draft` / Archiv test:
+  - BMW S 1000 RR
+  - Corvette
+  - MY26 CORVETTE C8 Stingray 6.2L V8 - Coupe
+
+Finální ověření:
+- PASS: žádné aktivní soutěže nemají chybějící `rules_pdf_url`.
+
+Invariant:
+- Žádná soutěž nebyla smazána.
+- Nebyly spuštěny migrace.
+- Nebyl proveden deploy.
+- Nebyl měněn app kód.
+- Nebyly měněny Stripe, wallet, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
