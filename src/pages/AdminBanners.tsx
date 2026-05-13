@@ -477,7 +477,7 @@ const AdminBanners: React.FC = () => {
                     id="title"
                     value={bannerForm.title}
                     onChange={(e) => setBannerForm({...bannerForm, title: e.target.value})}
-                    placeholder="Např. Mega Jackpot - Vyhrajte až 1 milion!"
+                    placeholder="Např. Prémiová hlavní výhra - vyhrajte až 1 milion!"
                   />
                 </div>
 
@@ -942,7 +942,7 @@ const AdminBanners: React.FC = () => {
                 id="edit-title"
                 value={bannerForm.title}
                 onChange={(e) => setBannerForm({...bannerForm, title: e.target.value})}
-                placeholder="Např. Mega Jackpot - Vyhrajte až 1 milion!"
+                placeholder="Např. Prémiová hlavní výhra - vyhrajte až 1 milion!"
               />
             </div>
 

@@ -170,12 +170,12 @@ export const ContestControlPanel: React.FC = () => {
     try {
       const { error } = await callRpc('trigger_contest_draw', { contest_id: selectedId });
       if (error) throw error;
-      toast({ title: 'Úspěch', description: 'Losování bylo spuštěno.' });
+      toast({ title: 'Úspěch', description: 'Soutěžní mechanismus byl spuštěn.' });
       fetchContests();
     } catch (err) {
       toast({
         title: 'Chyba',
-        description: (err as Error).message || 'Nepodařilo se spustit losování.',
+        description: (err as Error).message || 'Nepodařilo se spustit soutěžní mechanismus.',
         variant: 'destructive',
       });
     } finally {
@@ -196,7 +196,7 @@ export const ContestControlPanel: React.FC = () => {
       <div>
         <h2 className="text-xl font-semibold">Contest Control</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Správa životního cyklu soutěží – pozastavení, obnovení, uzavření a losování.
+          Správa životního cyklu soutěží – pozastavení, obnovení, uzavření a soutěžní mechanismus.
         </p>
       </div>
 
@@ -304,7 +304,7 @@ export const ContestControlPanel: React.FC = () => {
                       ) : (
                         <XCircle className="h-4 w-4 mr-2" />
                       )}
-                      Close Contest
+                      Uzavřít soutěž
                     </Button>
                     <Button
                       variant="outline"
@@ -330,12 +330,12 @@ export const ContestControlPanel: React.FC = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmAction === 'close' ? 'Uzavřít soutěž?' : 'Spustit losování?'}
+              {confirmAction === 'close' ? 'Uzavřít soutěž?' : 'Spustit soutěžní mechanismus?'}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmAction === 'close'
                 ? 'Při uzavření soutěže bude vybrán hlavní výherce a soutěž nebude možné obnovit. Pokračovat?'
-                : 'Spustí se losování hlavního výherce pro vybranou soutěž. Pokračovat?'}
+                : 'Spustí se soutěžní mechanismus hlavní výhry pro vybranou soutěž. Pokračovat?'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -345,7 +345,7 @@ export const ContestControlPanel: React.FC = () => {
               disabled={!!actionLoading}
               className={confirmAction === 'close' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
             >
-              {confirmAction === 'close' ? 'Uzavřít soutěž' : 'Spustit losování'}
+              {confirmAction === 'close' ? 'Uzavřít soutěž' : 'Spustit soutěžní mechanismus'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
