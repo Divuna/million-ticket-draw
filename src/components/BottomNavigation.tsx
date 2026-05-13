@@ -30,7 +30,7 @@ export const BottomNavigation = () => {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 flex justify-around bg-[#0B0F19] border-t border-white/10 py-2 shadow-[0_-8px_24px_rgba(0,0,0,0.35)]"
+      className="ios-pwa-bottom-nav fixed bottom-0 left-0 right-0 z-50 flex justify-around bg-[#0B0F19] border-t border-white/10 py-2 shadow-[0_-8px_24px_rgba(0,0,0,0.35)]"
       style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}
       role="navigation"
       aria-label="Hlavní menu"
