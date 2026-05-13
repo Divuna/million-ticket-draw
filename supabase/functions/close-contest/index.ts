@@ -59,7 +59,7 @@ serve(async (req) => {
       throw new Error('Contest is already closed')
     }
 
-    // Unified logic: use DB close_contest (random draw among sold tickets)
+    // Unified logic: use DB close_contest for the contest closing mechanism.
     const { error: closeError } = await supabaseAdmin.rpc('close_contest', {
       p_contest_id: contest_id,
     })

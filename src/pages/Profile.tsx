@@ -1046,7 +1046,7 @@ const Profile: React.FC = () => {
                                   <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-green-500 cursor-help transition-colors" />
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50">
-                                  <p className="text-sm">Bonusové MioCoiny získáváte jako odměnu při hraní soutěží. Můžete je převést do hlavní peněženky a použít na nákup losů.</p>
+                                  <p className="text-sm">Bonusové MioCoiny získáváte jako odměnu při hraní soutěží. Můžete je převést do hlavní peněženky a použít na otevření tiketů.</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>

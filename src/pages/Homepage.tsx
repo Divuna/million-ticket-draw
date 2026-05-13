@@ -356,7 +356,7 @@ const Homepage = () => {
       <Header />
 
       <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Megajackpot Banner Section */}
+        {/* Premium main prize banner section */}
         <section className="w-full">
           {bannersLoading ? (
             // Loading placeholder
@@ -1277,7 +1277,7 @@ const Homepage = () => {
                 </div>
                 <div className="text-xs text-muted-foreground/70 max-w-2xl mx-auto pt-2 space-y-0.5">
                   <p>MioCoiny nejsou peníze a nelze je vybrat.</p>
-                  <p>Nejedná se o hazardní hru.</p>
+                  <p>Soutěže mají předem určené výherní pozice.</p>
                   <p>Výhry jsou výhradně věcné.</p>
                 </div>
               </div>

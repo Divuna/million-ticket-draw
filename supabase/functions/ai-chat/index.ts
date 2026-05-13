@@ -199,7 +199,7 @@ Povinné „cta“: pokud uživatel v OTÁZCE jasně míří na jednu sekci apli
 • peněženka / MioCoiny / dobíjení / zůstatek mincí → {"label":"Peněženka","action":"/wallet"}
 • vouchery / platby / dobití → {"label":"Vouchery","action":"/vouchers"}
 • moje soutěže / účast → {"label":"Moje soutěže","action":"/my-contests"}
-• soutěže / tikety / losování / hraní → {"label":"Soutěže","action":"/games"}
+• soutěže / tikety / otevření tiketů / hraní → {"label":"Soutěže","action":"/games"}
 Jiné situace: jedno volitelné „cta“ jen když dává smysl; jinak „cta“ vynech.
 Při více tématech v jedné otázce zvol jedno „cta“ nejvíc odpovídající prvnímu / hlavnímu záměru (priorita pro rozklad shody: Výhry > Peněženka > Vouchery > Moje soutěže > Soutěže).
 Forma doprovodné věty: mluv přirozeně a lidsky — ne jako robot. Vyhni se generickým motivačním větám typu „Pokračuj ve hře a přibliž se výhře“.
@@ -992,7 +992,7 @@ function requiredBobCtaActionFromUserQuestion(userQuestion: string): BobCtaActio
       action: "/my-contests",
       re: /moje\s+soutez|ucast|ucasti|moje\s+tikety|my[\s-]contest/i,
     },
-    { action: "/games", re: /\bsoutez|tikety?\b|losovan|\bhrani\b/i },
+    { action: "/games", re: /\bsoutez|tikety?\b|otevreni\s+tiketu?|\bhrani\b/i },
     { action: "/customer-inbox", re: /customer[\s-]inbox|inbox/i },
   ]
   const priority: Record<BobCtaAction, number> = {

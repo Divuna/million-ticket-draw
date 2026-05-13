@@ -273,7 +273,7 @@ const MyContestDetail: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-primary">
                 <Trophy className="h-5 w-5" />
-                Hlavní cena / Megajackpot
+                Hlavní cena / Prémiová hlavní výhra
               </CardTitle>
             </CardHeader>
             <CardContent>
