@@ -1022,3 +1022,22 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Ověření po merge do `main`:
   - Smoke E2E prošel: run `25811447264`.
   - Playwright Staging Full E2E prošel: run `25811641231`.
+
+---
+
+## 2026-05-13 - PR #5 launch wording cleanup
+
+- Sloučen PR #5 `Clean launch wording risks` do `main`.
+- Merge commit: `acc43c90d313cbe2bd01adf333d74d3f424905fa`.
+- Z public/admin/Bob-visible textů byla odstraněna riziková wording stopa kolem `losy`, `losování`, `jackpot` a `Megajackpot`.
+- Texty jsou sjednocené na bezpečnější launch formulace: tikety, otevření tiketů, soutěžní mechanismus, předem určené výherní pozice, hlavní výhra.
+- Nebyla změněna business logika.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyly měněny Supabase, Stripe, wallet, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
+- Ověření před merge:
+  - Smoke E2E prošel na PR #5.
+  - Playwright Staging Full E2E prošel na větvi `fix/launch-copy-risk-wording-cleanup`.
+- Ověření po merge do `main`:
+  - Smoke E2E prošel: run `25816716804`.
+  - Playwright Staging Full E2E prošel: run `25816763438`.

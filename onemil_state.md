@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 13. 05. 2026 (PR #2 store-policy copy cleanup merged to main after smoke + staging full E2E; staging schema baseline stále platí; db push se nepoužívá)
+**Aktualizováno:** 13. 05. 2026 (PR #5 launch wording cleanup merged to main after smoke + staging full E2E; staging schema baseline stále platí; db push se nepoužívá)
 
 ---
 
@@ -1078,3 +1078,24 @@ Ověření:
 - PR #4 Playwright Staging Full E2E prošel na větvi `fix/ios-pwa-bottom-navigation`.
 - Po merge do `main` smoke E2E prošel: GitHub Actions run `25811447264`.
 - Po merge do `main` Playwright Staging Full E2E prošel: GitHub Actions run `25811641231`.
+
+---
+
+## Launch wording cleanup (13. 05. 2026)
+
+PR #5 `Clean launch wording risks` byl sloučen do `main` po ověření smoke + staging E2E.
+
+Aktuální stav:
+- Merge commit: `acc43c90d313cbe2bd01adf333d74d3f424905fa`.
+- Z public/admin/Bob-visible textů byla odstraněna riziková wording stopa kolem `losy`, `losování`, `jackpot` a `Megajackpot`.
+- Texty jsou sjednocené na bezpečnější launch formulace: tikety, otevření tiketů, soutěžní mechanismus, předem určené výherní pozice, hlavní výhra.
+- Nebyla změněna business logika.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyly měněny Supabase, Stripe, wallet, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
+
+Ověření:
+- PR #5 smoke E2E prošel.
+- PR #5 Playwright Staging Full E2E prošel na větvi `fix/launch-copy-risk-wording-cleanup`.
+- Po merge do `main` smoke E2E prošel: GitHub Actions run `25816716804`.
+- Po merge do `main` Playwright Staging Full E2E prošel: GitHub Actions run `25816763438`.
