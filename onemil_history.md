@@ -1002,3 +1002,23 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Ověření po merge do `main`:
   - Smoke E2E prošel: run `25807224457`.
   - Playwright Staging Full E2E prošel: run `25807653323`.
+
+---
+
+## 2026-05-13 - PR #4 iPhone/PWA spodní navigace
+
+- Sloučen PR #4 `Fix iOS PWA bottom navigation` do `main`.
+- Merge commit: `0013ab74864ed4c206e79721d67a7346ce54e48d`.
+- Spodní navigace v mobilním/PWA zobrazení zůstává fixovaná dole při scrollování.
+- Přidána podpora iPhone safe area přes `viewport-fit=cover` a `env(safe-area-inset-bottom)`.
+- Přidáno mobilní spodní odsazení obsahu, aby obsah nebyl schovaný za navigací.
+- Nebyly změněny routy, ikony, české labely ani business logika.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyly měněny Supabase, Stripe, wallet, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
+- Ověření před merge:
+  - Smoke E2E prošel na PR #4: run `25810873277`.
+  - Playwright Staging Full E2E prošel na větvi `fix/ios-pwa-bottom-navigation`: run `25811043511`.
+- Ověření po merge do `main`:
+  - Smoke E2E prošel: run `25811447264`.
+  - Playwright Staging Full E2E prošel: run `25811641231`.

@@ -1057,3 +1057,24 @@ Ověření:
 - PR #3 Playwright Staging Full E2E prošel na větvi `codex/pwa-icon-metadata`.
 - Po merge do `main` smoke E2E prošel: GitHub Actions run `25807224457`.
 - Po merge do `main` Playwright Staging Full E2E prošel: GitHub Actions run `25807653323`.
+
+---
+
+## iPhone/PWA spodní navigace (13. 05. 2026)
+
+PR #4 byl sloučen do `main` jako bezpečný UI/CSS fix pro mobilní PWA navigaci.
+
+Aktuální stav:
+- Spodní navigace v mobilním/PWA zobrazení zůstává vizuálně fixovaná dole při scrollování.
+- Přidána podpora iPhone safe area přes `viewport-fit=cover` a `env(safe-area-inset-bottom)`.
+- Obsah stránky má na mobilu spodní odsazení, aby nebyl schovaný za spodní navigací.
+- Ikony, české labely, routy a business logika nebyly měněny.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyly měněny Supabase, Stripe, wallet, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
+
+Ověření:
+- PR #4 smoke E2E prošel.
+- PR #4 Playwright Staging Full E2E prošel na větvi `fix/ios-pwa-bottom-navigation`.
+- Po merge do `main` smoke E2E prošel: GitHub Actions run `25811447264`.
+- Po merge do `main` Playwright Staging Full E2E prošel: GitHub Actions run `25811641231`.
