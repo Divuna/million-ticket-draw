@@ -113,6 +113,39 @@ Tyto změny jsou copy/legal/store-review cleanup. Neměnily contest engine, wall
 
 ---
 
+## LAUNCH STRATEGY — WEB/PWA FIRST (13. 05. 2026)
+
+### Strategické rozhodnutí
+- OneMil bude spuštěn nejdříve jako **Web/PWA**.
+- Podání do **Apple App Store** a **Google Play** se odkládá.
+- Důvod: OneMil nebude v této fázi platit Apple/Google poplatky 15–30 % z nákupů MioCoinů.
+- Stripe zůstává platebním providerem pro **Web/PWA MioCoin top-up**.
+- Budoucí nativní iOS/Android aplikace lze znovu zvážit pouze po schválení platební/store strategie.
+
+### Důsledky pro aktuální roadmapu
+- Priorita store-readiness se přesouvá z nativních store submission kroků na Web/PWA readiness.
+- Stripe web flow zůstává platný pro nákup MioCoinů mimo Apple/Google store billing.
+- Native app store práce se neimplementuje, dokud nebude schváleno, zda má být:
+  - consumption-only app bez nákupu MioCoinů,
+  - native billing přes Apple/Google,
+  - nebo jiný právně a obchodně schválený model.
+- Toto rozhodnutí nemění contest engine, wallet, DB, Supabase, Stripe webhook, Sofinity, OneSignal, Partner Offers, `tickets`, `winners`, `bonus_prizes` ani `buy_ticket_atomic`.
+
+### PWA readiness audit — aktuální nález
+- `index.html` má základní mobile viewport a title `OneMil`.
+- Produkční `public/` obsahuje pouze `favicon.ico`, `robots.txt`, `sitemap.xml`, `OneSignalSDKWorker.js`, `placeholder.svg`, `mockup-detail.html` a `sounds/`.
+- V aktivním `public/` není nalezený web app manifest.
+- V `index.html` není odkaz na manifest, `apple-touch-icon`, `theme-color` ani PWA splash metadata.
+- Brand kit obsahuje připravené PWA/icon podklady v `docs/brand/onemil_brand_kit/.../03_icons/favicon_app/` a ukázkový `manifest.webmanifest`, ale nejsou zapojené do aktivního web buildu.
+- Aktivní service worker pro offline/PWA cache nebyl nalezen. Existuje pouze OneSignal worker `public/OneSignalSDKWorker.js` pro push notifikace.
+- Add-to-home-screen chování není explicitně implementované ani zdokumentované v kódu.
+- Stripe Checkout je na Web/PWA dostupný přes existující `create-stripe-checkout` flow v `Homepage.tsx` a `Profile.tsx`.
+
+### Nejbližší PWA blocker
+Aktivní Web/PWA build zatím nemá zapojený manifest, app icons, `theme-color`, Apple touch icon, splash metadata ani offline/service worker strategii. Před veřejným Web/PWA launch je potřeba připravit samostatný PWA setup PR.
+
+---
+
 ## TICKET PURCHASE FLOW — AKTUÁLNÍ STAV (04–05. 05. 2026)
 
 ### buy_ticket_atomic — opravené odpovědní fieldy (aplikováno v produkci)

@@ -58,6 +58,25 @@
 
 ---
 
+## 2026-05-13 — Strategické rozhodnutí: Web/PWA first, native stores odloženy
+
+### Co bylo rozhodnuto
+- OneMil bude spuštěn nejdříve jako **Web/PWA**.
+- Podání do **Apple App Store** a **Google Play** se odkládá.
+- Důvod: OneMil nebude v této fázi platit Apple/Google poplatky 15–30 % z nákupů MioCoinů.
+- Stripe zůstává platebním providerem pro **Web/PWA MioCoin top-up**.
+- Budoucí nativní iOS/Android aplikace lze znovu zvážit pouze po schválení platební/store strategie.
+
+### Read-only PWA audit
+- Ověřeno, že aktivní `public/` zatím neobsahuje zapojený web app manifest ani PWA icon set.
+- `index.html` má základní mobile viewport a title `OneMil`, ale nemá manifest link, `apple-touch-icon`, `theme-color` ani splash metadata.
+- Aktivní offline/service-worker strategie nebyla nalezena; existuje pouze `public/OneSignalSDKWorker.js` pro OneSignal.
+- Stripe Checkout flow pro web/PWA zůstává dostupný přes `create-stripe-checkout`.
+- Nebyl změněn app kód, nebyl proveden deploy, migrace ani zásah do produkčních dat.
+- Nebyly měněny Supabase, Stripe, OneSignal, Sofinity, wallet, tickets, contests, winners, bonus_prizes, Partner Offers ani `buy_ticket_atomic`.
+
+---
+
 ## 2026-05-11 — Added Paperclip setup context file PAPERCLIP_SETUP_CONTEXT.md
 
 ### Co bylo provedeno

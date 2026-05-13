@@ -83,6 +83,15 @@ Do not execute these without explicit user instruction:
 - Charitable campaigns must state the specific beneficiary, purpose, and support amount for that campaign.
 - PR #2 merged these copy rules to `main` after PR smoke and staging full E2E passed. No deploy was performed as part of that merge.
 
+## Launch Strategy / Store Submission
+
+- OneMil launch strategy is **Web/PWA first**.
+- Apple App Store and Google Play submission is postponed.
+- Reason: OneMil will not pay Apple/Google 15–30% fees for MioCoin purchases in the current launch strategy.
+- Stripe remains the payment provider for Web/PWA MioCoin top-up.
+- Future native iOS/Android apps may be reconsidered only after payment/store strategy is explicitly approved.
+- Do not implement native store billing, native app submission changes, or mobile-only payment-routing changes without explicit user approval.
+
 ## Deployment rule
 After every file change, always run:
 git add -A && git commit -m "fix: <short description of change>" && git push
