@@ -979,3 +979,26 @@ Byly vytvořeny a commitnuty tyto soubory:
 
 ### Nový env var
 - `E2E_WIN_CONTEST_ID` — přidat jako GitHub Secret; musí ukazovat na seeded contest s 1 zbývající tiketou
+
+---
+
+## 2026-05-13 - PR #3 PWA metadata a schválené trophy ikony
+
+- Sloučen PR #3 `Add PWA manifest and approved icons` do `main`.
+- Merge commit: `365d7545894a2d4d9d89c349c55a563dee3d62a8`.
+- Přidán `public/manifest.webmanifest`.
+- Do `index.html` přidán manifest link, `theme-color` a `apple-touch-icon`.
+- Do `public/` byly zapojeny pouze schválené trophy ikony z brand kitu:
+  - `public/apple-touch-icon.png`
+  - `public/android-chrome-192x192.png`
+  - `public/android-chrome-512x512.png`
+- Nepřidán service worker ani offline caching.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyly měněny Supabase, Stripe, wallet, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
+- Ověření před merge:
+  - Smoke E2E prošel na PR #3.
+  - Playwright Staging Full E2E prošel na větvi `codex/pwa-icon-metadata`: run `25806842615`.
+- Ověření po merge do `main`:
+  - Smoke E2E prošel: run `25807224457`.
+  - Playwright Staging Full E2E prošel: run `25807653323`.

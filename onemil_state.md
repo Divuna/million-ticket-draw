@@ -1031,3 +1031,29 @@ Partner Offers v1 už se nemá znovu architektonicky otevírat.
 Další krok:
 1. jen případné bugfixy, pokud se objeví v běžném provozu
 2. až potom případná rozšíření mimo v1
+
+---
+
+## PWA metadata a ikony (13. 05. 2026)
+
+PR #3 byl sloučen do `main` jako bezpečná PWA metadata změna.
+
+Aktuální stav:
+- Přidán `public/manifest.webmanifest`.
+- Do `index.html` přidán manifest link, `theme-color` a `apple-touch-icon`.
+- Do `public/` byly z brand kitu zapojeny pouze schválené trophy ikony:
+  - `public/apple-touch-icon.png`
+  - `public/android-chrome-192x192.png`
+  - `public/android-chrome-512x512.png`
+- `src/assets/logo-onemil.png` nebyl použit jako PWA ikona.
+- Nebyl přidán service worker.
+- Nebylo přidáno offline cachování.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyly měněny Supabase, Stripe, wallet, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
+
+Ověření:
+- PR #3 smoke E2E prošel.
+- PR #3 Playwright Staging Full E2E prošel na větvi `codex/pwa-icon-metadata`.
+- Po merge do `main` smoke E2E prošel: GitHub Actions run `25807224457`.
+- Po merge do `main` Playwright Staging Full E2E prošel: GitHub Actions run `25807653323`.
