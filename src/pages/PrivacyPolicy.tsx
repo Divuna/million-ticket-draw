@@ -53,7 +53,7 @@ const PrivacyPolicy = () => {
               <li><strong>Kontaktní údaje:</strong> e-mailová adresa, telefonní číslo</li>
               <li><strong>Přihlašovací údaje:</strong> údaje z OAuth poskytovatelů (Google, Apple, Facebook)</li>
               <li><strong>Údaje o účtu:</strong> datum narození, adresa pro doručení výher</li>
-              <li><strong>Údaje o aktivitě:</strong> historie soutěží, zakoupené lístky, získané výhry</li>
+              <li><strong>Údaje o aktivitě:</strong> historie soutěží, uplatněné tikety, získané výhry</li>
               <li><strong>Technické údaje:</strong> IP adresa, typ zařízení, identifikátor pro push notifikace</li>
             </ul>
           </section>

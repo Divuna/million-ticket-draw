@@ -431,7 +431,7 @@ const Vouchers: React.FC = () => {
                               {isPurchasing ? "Kupuji..." : "KOUPIT ZA 5 MC"}
                             </Button>
                             <p className="text-[10px] text-muted-foreground/70">
-                              50 % z částky jde na pomoc potřebným.
+                              Vybrané kampaně mohou podpořit dobročinný účel. Konkrétní příjemce, účel a výše podpory budou vždy uvedeny u dané kampaně.
                             </p>
                           </div>
                         </div>
@@ -569,7 +569,7 @@ const Vouchers: React.FC = () => {
                               {isPurchasing ? "Kupuji..." : "KOUPIT ZA 5 MC"}
                             </Button>
                             <p className="text-[10px] text-muted-foreground/70">
-                              50 % z částky jde na pomoc potřebným.
+                              Vybrané kampaně mohou podpořit dobročinný účel. Konkrétní příjemce, účel a výše podpory budou vždy uvedeny u dané kampaně.
                             </p>
                           </div>
                         </div>

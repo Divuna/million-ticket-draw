@@ -33,7 +33,7 @@ const OnboardingDateOfBirth: React.FC = () => {
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-    return age >= 15;
+    return age >= 18;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,7 +46,7 @@ const OnboardingDateOfBirth: React.FC = () => {
     }
 
     if (!validateAge(dateOfBirth)) {
-      setError('Pro registraci musíte mít alespoň 15 let.');
+      setError('Pro registraci musíte mít alespoň 18 let.');
       return;
     }
 
@@ -127,7 +127,7 @@ const OnboardingDateOfBirth: React.FC = () => {
                   <p className="text-sm text-destructive">{error}</p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Musíte mít alespoň 15 let pro používání aplikace.
+                  Musíte mít alespoň 18 let pro používání aplikace.
                 </p>
               </div>
 
