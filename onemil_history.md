@@ -1075,3 +1075,24 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Nebyl proveden deploy.
 - Nebyl měněn app kód.
 - Nebyly měněny Stripe, wallet, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
+
+---
+
+## 2026-05-13 - Stripe Test Mode verification
+
+- Stripe je aktuálně správně v Test mode.
+- Testovací top-up pro `e2e@onemil.cz` byl vizuálně dokončen v OneMil a zobrazen ve Stripe.
+- Supabase ověření potvrdilo:
+  - wallet pro `e2e@onemil.cz` existuje,
+  - `balance_coins = 100507.00`,
+  - `bonus_balance_coins = 11.00`,
+  - latest payment `status = completed`,
+  - latest payment `method = stripe`,
+  - `stripe_session_id` začíná `cs_test_`,
+  - latest payment amount v DB je `1280.00`.
+- Amount `1280.00` je potřeba porovnat s vybraným UI balíčkem/bonusem před veřejným spuštěním.
+- Nebyla provedena žádná live platba.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyl měněn app kód.
+- Nebyly měněny Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.

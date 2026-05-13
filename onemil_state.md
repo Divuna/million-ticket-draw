@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 13. 05. 2026 (produkční contest cleanup vyřešil active contests missing rules_pdf_url blocker; staging schema baseline stále platí; db push se nepoužívá)
+**Aktualizováno:** 13. 05. 2026 (Stripe Test Mode top-up ověřen; staging schema baseline stále platí; db push se nepoužívá)
 
 ---
 
@@ -1146,3 +1146,30 @@ Invariant:
 - Nebyl proveden deploy.
 - Nebyl měněn app kód.
 - Nebyly měněny Stripe, wallet, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
+
+---
+
+## Stripe Test Mode verification (13. 05. 2026)
+
+Stripe je aktuálně správně v Test mode.
+
+Ověření:
+- Testovací top-up pro `e2e@onemil.cz` byl vizuálně dokončen v OneMil a zobrazen ve Stripe.
+- Supabase ověření potvrdilo:
+  - wallet pro `e2e@onemil.cz` existuje,
+  - `balance_coins = 100507.00`,
+  - `bonus_balance_coins = 11.00`,
+  - latest payment `status = completed`,
+  - latest payment `method = stripe`,
+  - `stripe_session_id` začíná `cs_test_`,
+  - latest payment amount v DB je `1280.00`.
+
+Poznámka před public launchem:
+- Amount `1280.00` je potřeba porovnat s vybraným UI balíčkem/bonusem před veřejným spuštěním.
+
+Invariant:
+- Nebyla provedena žádná live platba.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyl měněn app kód.
+- Nebyly měněny Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
