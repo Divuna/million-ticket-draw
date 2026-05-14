@@ -143,7 +143,7 @@ const AdminReferralDashboard: React.FC = () => {
         console.error('Error loading referral dashboard:', err);
         toast({
           title: 'Chyba',
-          description: 'Nepodařilo se načíst data referral dashboardu.',
+          description: 'Nepodařilo se načíst data přehledu doporučení.',
           variant: 'destructive',
         });
       } finally {
@@ -302,10 +302,10 @@ const AdminReferralDashboard: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <BarChart3 className="h-6 w-6 text-neon-gold" />
-            Referral Dashboard
+            Přehled doporučení
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Analytický přehled referral programu
+            Analytický přehled programu doporučení
           </p>
         </div>
 
@@ -541,7 +541,7 @@ const AdminReferralDashboard: React.FC = () => {
               <CardHeader>
                 <CardTitle className="text-base">Detail odměn</CardTitle>
                 <CardDescription>
-                  Kompletní přehled všech referral odměn ({rewards.length} záznamů)
+                  Kompletní přehled všech odměn za doporučení ({rewards.length} záznamů)
                 </CardDescription>
               </CardHeader>
               <CardContent>
