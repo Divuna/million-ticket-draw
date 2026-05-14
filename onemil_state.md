@@ -1468,3 +1468,44 @@ Invariant:
 - Nebyly spuštěny migrace.
 - Nebyla změněna Bob/AI logika ani message sending logika.
 - Nebyly změněny routes, DB, Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers, Affiliate ani `buy_ticket_atomic`.
+
+---
+
+## E2E COVERAGE - VOUCHER REDEEM DETAIL (14. 05. 2026)
+
+### PR #15 - Add voucher redeem E2E coverage - mergnut do `main`
+
+- Zdrojova vetev: `test/e2e-voucher-redeem`; cilova vetev: `main`.
+- Merge commit: `72810c94b3ce0397faf8246eb5e3820022d82203`.
+- Pridan novy staging-only spec soubor: `tests/e2e/11-voucher-redeem.spec.ts`.
+- Staging workflow `playwright-staging.yml` nove seeduje dedikovany `E2E Spec11 Voucher` a zakoupeny `user_vouchers` radek pro E2E uzivatele.
+
+### Co test overuje
+
+- Prihlaseni staging E2E uzivatele.
+- `/vouchers?tab=purchased` a zalozku `Zakoupene`.
+- Viditelnost zakoupeneho `E2E Spec11 Voucher`.
+- Otevreni redeem/detail modalu pres `Uplatnit voucher`.
+- Viditelnost voucher kodu ve formatu `OMV-XXXXXXXX`.
+- Shodu kodu na karte a v modalu.
+- Viditelnost a klikatelnost tlacitka `Zkopirovat kod`.
+
+### Production Smoke
+
+- Production Smoke zustava lightweight a unchanged.
+- Production Smoke dal spousti pouze specs 01 + 02.
+- Spec 11 je chraneny staging-only guardem pres `E2E_CONTEST_ID`, ktery production CI nema.
+
+### Vysledky CI
+
+- PR #15 Smoke E2E prosel: run `25884819703`.
+- PR #15 Playwright Staging Full E2E prosel na vetvi `test/e2e-voucher-redeem`: run `25884822640`.
+- Po merge do `main` prosel Smoke E2E: run `25885049877`.
+- Po merge do `main` prosel Playwright Staging Full E2E: run `25885285280`.
+
+### Invariant
+
+- Nebyl proveden deploy.
+- Nebyly spusteny migrace.
+- Nebyl zmenen app kod.
+- Nebyla zmenena DB, Supabase data, Stripe, wallet logika, contests, tickets, winners, Partner Offers, routes, tracking, login behavior ani `buy_ticket_atomic`.

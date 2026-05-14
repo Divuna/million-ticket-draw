@@ -1323,3 +1323,25 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Ověření po merge do `main`:
   - Smoke E2E prošel: run `25876891113`.
   - Playwright Staging Full E2E prošel: run `25877013278`.
+
+---
+
+## 2026-05-14 - PR #15 voucher redeem E2E coverage
+
+- Sloucen PR #15 `Add voucher redeem E2E coverage` do `main`.
+- Merge commit: `72810c94b3ce0397faf8246eb5e3820022d82203`.
+- Pridan staging-only spec `tests/e2e/11-voucher-redeem.spec.ts`.
+- Staging Full E2E nyni overuje zakoupeny voucher redeem/detail modal, `OMV-XXXXXXXX` voucher kod a tlacitko `Zkopirovat kod`.
+- Staging workflow nove seeduje dedikovany `E2E Spec11 Voucher` a zakoupeny `user_vouchers` radek pro E2E uzivatele.
+- Production Smoke zustava lightweight a unchanged: dal spousti pouze specs 01 + 02.
+- Nebyl zmenen app kod.
+- Nebyly zmeneny DB, Stripe, wallet logika, contests, tickets, winners, Partner Offers, routes, tracking, login behavior ani `buy_ticket_atomic`.
+- Nebyl proveden deploy.
+- Nebyly spusteny migrace.
+- Nebyla dotcena production data.
+- Overeni pred merge:
+  - Smoke E2E prosel na PR #15: run `25884819703`.
+  - Playwright Staging Full E2E prosel na vetvi `test/e2e-voucher-redeem`: run `25884822640`.
+- Overeni po merge do `main`:
+  - Smoke E2E prosel: run `25885049877`.
+  - Playwright Staging Full E2E prosel: run `25885285280`.
