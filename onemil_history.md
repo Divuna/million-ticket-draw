@@ -1222,3 +1222,24 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Ověření po merge do `main`:
   - Smoke E2E prošel: run `25861584394`.
   - Playwright Staging Full E2E prošel: run `25861663913`.
+
+---
+
+## 2026-05-14 - PR #9 visible referral / Influencer wording cleanup
+
+- Sloučen PR #9 `Clean visible referral and influencer wording` do `main`.
+- Merge commit: `06e98a392db9213be501085ee1d44daa89c43512`.
+- Viditelné UI/admin wording `referral` bylo nahrazeno českým wordingem `doporučení` / `doporučovací`.
+- Viditelné admin wording `Influencer` bylo nahrazeno wordingem `Affiliate partner`.
+- `/influencer` routes zůstávají beze změny.
+- Interní DB/table/function názvy `influencer_*` a interní `referral_*` názvy zůstávají beze změny kvůli kompatibilitě.
+- Nebyly změněny routes, DB, tracking, provize, login/routing, Stripe, wallet, contest, ticket, winner, Partner Offers ani `buy_ticket_atomic`.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyla dotčena Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers, commissions, tracking, routes, login behavior ani `buy_ticket_atomic`.
+- Ověření před merge:
+  - Smoke E2E prošel na PR #9.
+  - Playwright Staging Full E2E prošel na větvi `fix/visible-referral-affiliate-wording`.
+- Ověření po merge do `main`:
+  - Smoke E2E prošel: run `25862999591`.
+  - Playwright Staging Full E2E prošel: run `25863074687`.

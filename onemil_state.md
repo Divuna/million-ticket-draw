@@ -1306,6 +1306,30 @@ Invariant:
 
 ---
 
+## Visible referral / Influencer wording cleanup (14. 05. 2026)
+
+PR #9 `Clean visible referral and influencer wording` byl sloučen do `main`.
+
+Změna:
+- Viditelné UI/admin wording `referral` bylo nahrazeno českým wordingem `doporučení` / `doporučovací`.
+- Viditelné admin wording `Influencer` bylo nahrazeno wordingem `Affiliate partner`.
+- `/influencer` routes zůstávají beze změny.
+- Interní DB/table/function názvy `influencer_*` a interní `referral_*` názvy zůstávají beze změny kvůli kompatibilitě.
+- Nebyly změněny routes, DB, tracking, provize, login/routing, Stripe, wallet, contest, ticket, winner, Partner Offers ani `buy_ticket_atomic`.
+
+Ověření:
+- Smoke E2E prošel na PR #9.
+- Playwright Staging Full E2E prošel na větvi `fix/visible-referral-affiliate-wording`.
+- Po merge do `main` prošel Smoke E2E: run `25862999591`.
+- Po merge do `main` prošel Playwright Staging Full E2E: run `25863074687`.
+
+Invariant:
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyla dotčena Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers, commissions, tracking, routes, login behavior ani `buy_ticket_atomic`.
+
+---
+
 ## Footer Affiliate wording fix (14. 05. 2026)
 
 PR #8 `Update footer Affiliate wording` byl sloučen do `main`.
