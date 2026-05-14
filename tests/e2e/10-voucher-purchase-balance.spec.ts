@@ -133,28 +133,23 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
       `Check the staging wallet reset step — wallet should start at 5 000 MC.`,
     ).toBeGreaterThan(voucherPrice);
 
-    // ── 5. Arm user-vouchers refresh interceptor before clicking ─────────────
-    // After buy_voucher_atomic succeeds, handleVoucherPurchase() calls
-    // refetchUserVouchers() which fires a GET to /rest/v1/user_vouchers.
-    // We arm the interceptor BEFORE clicking so we can wait for the refresh
-    // response before asserting the Zakoupené tab — avoids a race where the
-    // test clicks the tab before the query has completed and sees empty state.
-    const userVouchersRefreshResponse = page.waitForResponse(
-      (res) =>
-        res.url().includes('/rest/v1/user_vouchers') &&
-        res.request().method() === 'GET',
-      { timeout: 15_000 },
-    );
-
-    // ── 6. Purchase the voucher ────────────────────────────────────────────────
+    // ── 5. Purchase the voucher ────────────────────────────────────────────────
     await buyButton.click();
 
-    // ── 7. Assert success toast ────────────────────────────────────────────────
+    // ── 6. Assert success toast ────────────────────────────────────────────────
     // Success: "Voucher úspěšně zakoupen za 5 MioCoinů!"
-    // Error:   "Nepodařilo se zakoupit voucher"
-    // Both render as [data-sonner-toast] via Sonner.
-    const successToast = page.locator('[data-sonner-toast]').filter({ hasText: /zakoupen/i });
-    const errorToast   = page.locator('[data-sonner-toast]').filter({ hasText: /Nepodařilo se zakoupit/i });
+    // Business errors from buy_voucher_atomic (all must NOT match successToast):
+    //   "Voucher již zakoupen"  — regex /zakoupen/i would falsely match this!
+    //   "Nedostatek MioCoinů"
+    //   "Voucher není dostupný"
+    //   "Nepodařilo se zakoupit voucher"  — frontend fallback
+    //
+    // Use /úspěšně zakoupen/i so it matches ONLY the actual success message and
+    // cannot be confused with the "Voucher již zakoupen" business error.
+    const successToast = page.locator('[data-sonner-toast]').filter({ hasText: /úspěšně zakoupen/i });
+    const errorToast   = page.locator('[data-sonner-toast]').filter({
+      hasText: /Nepodařilo se zakoupit|již zakoupen|Nedostatek MioCoin|není dostupný/i,
+    });
 
     await expect(
       successToast.or(errorToast).first(),
@@ -162,22 +157,24 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
     ).toBeVisible({ timeout: 10_000 });
 
     if (await errorToast.isVisible()) {
+      const toastText = (await errorToast.first().textContent()) ?? '(empty)';
       throw new Error(
-        `Voucher purchase returned an error toast on staging. ` +
+        `Voucher purchase returned an error toast on staging: "${toastText}". ` +
         `Balance before: ${balanceBefore} MC, voucher price: ${voucherPrice} MC. ` +
         `Check buy_voucher_atomic RPC logs and staging wallet state.`,
       );
     }
 
-    // ── 8. Wait for user_vouchers refetch to complete ─────────────────────────
-    // refetchUserVouchers() fires after toast — we must wait for the DB round-
-    // trip before switching to the Zakoupené tab, otherwise the tab renders
-    // empty state (race between test navigation and async React state update).
-    await userVouchersRefreshResponse;
-
-    // ── 9. Verify purchased voucher appears in Zakoupené tab ──────────────────
-    // After refetchUserVouchers() completes, the voucher (redeemed=true) renders
-    // in the Zakoupené tab with an "Uplatnit voucher" button.
+    // ── 7. Verify purchased voucher appears in Zakoupené tab ──────────────────
+    // After buy_voucher_atomic succeeds, handleVoucherPurchase() calls:
+    //   1. optimisticRemoveByVoucherId() — removes from favorites state immediately
+    //   2. toast.success() — toast appears
+    //   3. await refetchUserVouchers() — fires GET /rest/v1/user_vouchers
+    //   4. await refetchAvailable()
+    // Also the realtime subscription on user_vouchers fires fetchUserVouchers()
+    // when the INSERT lands. Both paths update React state before the Zakoupené
+    // tab shows the new entry. A 20 s timeout covers both the slow-network and
+    // the realtime race comfortably; no separate waitForResponse needed.
     const zakoupeneTab = page.getByRole('tab', { name: /Zakoupené|Zak\./i });
     await zakoupeneTab.click();
 
@@ -185,7 +182,7 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
     await expect(
       uplatnitButton,
       'Purchased voucher must appear in Zakoupené tab with "Uplatnit voucher" button',
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible({ timeout: 20_000 });
 
     // ── 10. Navigate back to ContestDetail to read refreshed balance ──────────
     // ContestDetail calls loadUserBalance(userId) on mount, which fires a GET
