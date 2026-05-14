@@ -165,7 +165,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
     try {
       await navigator.clipboard.writeText(referralCode);
       setCodeCopied(true);
-      toast({ title: 'Zkopírováno', description: 'Referral kód byl zkopírován do schránky.' });
+      toast({ title: 'Zkopírováno', description: 'Doporučovací kód byl zkopírován do schránky.' });
       setTimeout(() => setCodeCopied(false), 2000);
     } catch {
       toast({ title: 'Chyba', description: 'Nepodařilo se zkopírovat kód.', variant: 'destructive' });
@@ -177,7 +177,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
     try {
       await navigator.clipboard.writeText(referralLink);
       setLinkCopied(true);
-      toast({ title: 'Zkopírováno', description: 'Referral odkaz byl zkopírován do schránky.' });
+      toast({ title: 'Zkopírováno', description: 'Doporučovací odkaz byl zkopírován do schránky.' });
       setTimeout(() => setLinkCopied(false), 2000);
     } catch {
       toast({ title: 'Chyba', description: 'Nepodařilo se zkopírovat odkaz.', variant: 'destructive' });
@@ -206,7 +206,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
   const handleSubmitCode = async () => {
     const code = inputCode.trim();
     if (!code) {
-      toast({ title: 'Chyba', description: 'Zadejte referral kód.', variant: 'destructive' });
+      toast({ title: 'Chyba', description: 'Zadejte doporučovací kód.', variant: 'destructive' });
       return;
     }
 
@@ -222,14 +222,14 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
       const result = data as string;
 
       if (result === 'accepted') {
-        toast({ title: 'Úspěch', description: 'Referral kód byl úspěšně aktivován!' });
+        toast({ title: 'Úspěch', description: 'Doporučovací kód byl úspěšně aktivován!' });
         setInputCode('');
         setAlreadyHasReferrer(true);
       } else if (result === 'rejected:already_has_referrer') {
         toast({ title: 'Upozornění', description: 'Již máte přiřazeného doporučitele.', variant: 'destructive' });
         setAlreadyHasReferrer(true);
       } else if (result === 'rejected:invalid_code') {
-        toast({ title: 'Chyba', description: 'Neplatný referral kód.', variant: 'destructive' });
+        toast({ title: 'Chyba', description: 'Neplatný doporučovací kód.', variant: 'destructive' });
       } else if (result === 'rejected:self_referral') {
         toast({ title: 'Chyba', description: 'Nemůžete použít vlastní kód.', variant: 'destructive' });
       } else if (result === 'rejected:email_not_verified') {
@@ -362,7 +362,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
         <div className="space-y-4 mb-6">
           {/* Code */}
           <div className="p-5 rounded-2xl bg-gradient-to-br from-primary/8 via-transparent to-primary/5 border border-primary/15 hover:border-primary/30 transition-all duration-500 hover:shadow-lg hover:shadow-primary/5">
-            <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2">Váš referral kód</p>
+            <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2">Váš doporučovací kód</p>
             <div className="flex items-center gap-3">
               <code className="flex-1 text-xl font-bold text-foreground tracking-widest select-all">
                 {referralCode || '—'}
@@ -381,7 +381,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
 
           {/* Link */}
           <div className="p-5 rounded-2xl bg-gradient-to-br from-primary/8 via-transparent to-primary/5 border border-primary/15 hover:border-primary/30 transition-all duration-500 hover:shadow-lg hover:shadow-primary/5">
-            <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2">Referral odkaz</p>
+            <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2">Doporučovací odkaz</p>
             <div className="flex items-center gap-3">
               <p className="flex-1 text-sm text-muted-foreground truncate select-all">{referralLink || '—'}</p>
               <Button
@@ -439,7 +439,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
         {!alreadyHasReferrer && (
           <div className="mb-6 p-5 rounded-2xl bg-gradient-to-br from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15">
             <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-3">
-              Mám referral kód
+              Mám doporučovací kód
             </p>
             <div className="flex gap-3">
               <Input

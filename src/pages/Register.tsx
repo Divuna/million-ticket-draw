@@ -131,7 +131,7 @@ const Register: React.FC = () => {
               });
               sessionStorage.removeItem(PENDING_REFERRAL_STORAGE_KEY);
               if (result === 'accepted') {
-                toast({ title: 'Úspěch', description: 'Referral kód byl aktivován. Děkujeme!' });
+                toast({ title: 'Úspěch', description: 'Doporučovací kód byl aktivován. Děkujeme!' });
               }
             }
           } catch {
