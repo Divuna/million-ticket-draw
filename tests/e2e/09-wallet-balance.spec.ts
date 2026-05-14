@@ -101,8 +101,10 @@ test.describe('Wallet Balance — Post-Purchase Decrease', () => {
     // If only top-up button appears, staging wallet balance is insufficient.
     // The staging workflow resets wallet to 5 000 MC before every run — if we
     // reach this branch the reset step must have failed.
+    // .first() avoids strict-mode violation when both buttons are present simultaneously
+    // (ContestDetail renders buy + top-up side-by-side when balance is sufficient).
     await expect(
-      buyButton.or(topUpButton),
+      buyButton.or(topUpButton).first(),
       'Expected buy button or top-up button to be visible',
     ).toBeVisible({ timeout: 15_000 });
 
