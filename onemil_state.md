@@ -1280,3 +1280,26 @@ Invariant:
 - Nebyl proveden deploy.
 - Nebyly spuštěny migrace.
 - V rámci tohoto dokumentačního záznamu nebyla dotčena Supabase data, Stripe, wallet, payments, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
+
+---
+
+## Affiliate program wording merge (14. 05. 2026)
+
+PR #7 `Rename influencer UI to Affiliate program` byl sloučen do `main`.
+
+Změna:
+- Viditelné UI/admin označení `Influencer` bylo přejmenováno na `Affiliate program` / `Affiliate partner`.
+- `/influencer` routes zůstávají beze změny kvůli bezpečnosti a kompatibilitě.
+- Interní DB názvy `influencer_*` zůstávají beze změny.
+- Nebyly změněny provize, tracking, login/routing, DB ani business logika.
+
+Ověření:
+- Smoke E2E prošel na PR #7.
+- Playwright Staging Full E2E prošel na větvi `fix/affiliate-program-wording`.
+- Po merge do `main` prošel Smoke E2E: run `25859772102`.
+- Po merge do `main` prošel Playwright Staging Full E2E: run `25859844919`.
+
+Invariant:
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyla dotčena Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers, commissions, tracking, routes, login behavior ani `buy_ticket_atomic`.
