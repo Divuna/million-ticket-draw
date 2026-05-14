@@ -224,7 +224,7 @@ const AdminInfluencers = () => {
       setInfluencers(enriched);
     } catch (error) {
       console.error("Error fetching influencers:", error);
-      toast.error("Nepodařilo se načíst influencery");
+      toast.error("Nepodařilo se načíst Affiliate partnery");
     } finally {
       setLoading(false);
     }
@@ -310,8 +310,8 @@ const AdminInfluencers = () => {
 
       toast.success(
         newStatus === "approved"
-          ? "Influencer byl schválen"
-          : "Influencer byl zamítnut"
+          ? "Affiliate partner byl schválen"
+          : "Affiliate partner byl zamítnut"
       );
 
       // Update detail dialog if open
@@ -321,7 +321,7 @@ const AdminInfluencers = () => {
     } catch (error) {
       console.error("Error updating influencer status:", error);
       setInfluencers(previousInfluencers);
-      toast.error("Nepodařilo se aktualizovat stav influencera");
+      toast.error("Nepodařilo se aktualizovat stav Affiliate partnera");
     } finally {
       setActionLoading(null);
     }
@@ -367,9 +367,9 @@ const AdminInfluencers = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Správa influencerů</h1>
+            <h1 className="text-2xl font-bold text-foreground">Affiliate partneři</h1>
             <p className="text-sm text-muted-foreground">
-              Influencer referral (influencer → uživatelé) – přehled, provize, výkon
+              Affiliate partneři → uživatelé – přehled, provize, výkon
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={fetchInfluencers} disabled={loading}>
@@ -420,13 +420,13 @@ const AdminInfluencers = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Influenceři ({influencers.length})
+              Affiliate partneři ({influencers.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             {influencers.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
-                Zatím žádní influenceři.
+                Zatím žádní Affiliate partneři.
               </p>
             ) : (
               <div className="overflow-x-auto">
@@ -619,7 +619,7 @@ const AdminInfluencers = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Detail influencera
+              Detail Affiliate partnera
             </DialogTitle>
           </DialogHeader>
 
@@ -635,7 +635,7 @@ const AdminInfluencers = () => {
                     {statusLabels[selectedInfluencer.status as InfluencerStatus] || selectedInfluencer.status}
                   </Badge>
                   <Badge variant={selectedInfluencer.payout_ready ? "success" : "outline"} className="text-xs">
-                    Payout: {selectedInfluencer.payout_ready ? "Ano" : "Ne"}
+                    Výplata: {selectedInfluencer.payout_ready ? "Ano" : "Ne"}
                   </Badge>
                 </div>
                 <div className="flex gap-1 flex-wrap">
@@ -690,11 +690,11 @@ const AdminInfluencers = () => {
                 <p className="text-xs font-semibold text-foreground">Přehled výkonu</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
-                    <p className="text-xs text-muted-foreground">Validní referraly</p>
+                    <p className="text-xs text-muted-foreground">Platná doporučení</p>
                     <p className="text-lg font-bold tabular-nums text-foreground">{selectedInfluencer.valid_referrals}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Platící referraly</p>
+                    <p className="text-xs text-muted-foreground">Platící doporučení</p>
                     <p className="text-lg font-bold tabular-nums text-foreground">{selectedInfluencer.paid_referrals}</p>
                   </div>
                   <div>
@@ -752,7 +752,7 @@ const AdminInfluencers = () => {
                     {/* Influencer profile from notes */}
                     {parsed && (parsed.follower_range || parsed.content_category) && (
                       <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
-                        <p className="text-xs font-semibold text-foreground uppercase tracking-wider">Profil influencera</p>
+                        <p className="text-xs font-semibold text-foreground uppercase tracking-wider">Profil Affiliate partnera</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {parsed.follower_range && readOnlyField("Rozsah sledujících", parsed.follower_range)}
                           {parsed.content_category && readOnlyField("Kategorie obsahu", parsed.content_category)}
@@ -829,7 +829,7 @@ const AdminInfluencers = () => {
                 <TabsList className="w-full">
                   <TabsTrigger value="referrals" className="flex-1 gap-1.5">
                     <UserCheck className="w-3.5 h-3.5" />
-                    Referraly
+                    Doporučení
                   </TabsTrigger>
                   <TabsTrigger value="commissions" className="flex-1 gap-1.5">
                     <Banknote className="w-3.5 h-3.5" />
@@ -898,7 +898,7 @@ const AdminInfluencers = () => {
                           </Table>
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">Žádné validní referraly.</p>
+                        <p className="text-sm text-muted-foreground text-center py-4">Žádná platná doporučení.</p>
                       )}
                     </TabsContent>
 
