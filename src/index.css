@@ -229,6 +229,11 @@
 
     .customer-layout {
       padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+      /* Ensure customer-layout fills the full viewport on mobile so there is
+         zero rubber-band scroll space below the shell. Without this, iOS Safari
+         can bouncy-scroll the whole page (including the fixed bottom nav)
+         whenever the inner messages list scroll reaches its end. */
+      min-height: 100dvh;
     }
 
     .ios-pwa-bottom-nav {
