@@ -1349,3 +1349,51 @@ Invariant:
 - Nebyl proveden deploy.
 - Nebyly spuštěny migrace.
 - Nebyla dotčena Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers, commissions, tracking, routes, login behavior ani `buy_ticket_atomic`.
+
+---
+
+## E2E COVERAGE — WALLET BALANCE (14. 05. 2026)
+
+### PR #10 — Add wallet balance E2E coverage — mergnut do `main`
+
+- Zdrojová větev: `test/e2e-wallet-balance`; cílová větev: `main`.
+- Merge commit: `6e32ec7e6df079eb1594e7335ec735c41a2bab47`.
+- Přidán nový spec soubor: `tests/e2e/09-wallet-balance.spec.ts`
+
+### Co test ověřuje
+
+- Peněženka (wallet balance) se sníží přesně o hodnotu `ticket_price` MC po nákupu jednoho tiketu.
+- Balance je čitelná z `/contest/:id` UI před nákupem.
+- Snížení se odráží ve stejném UI bez reload stránky (ověřeno pomocí interceptu `loadUserBalance()` GET `/rest/v1/wallets`).
+- Test čeká na `TicketResultModal` (dialog scoped přes `[role="dialog"]:has(button[aria-label="Zavřít"])`) a zavírá ho Escape.
+
+### Ochranné guards
+
+- Test se přeskočí, pokud `E2E_TEST_EMAIL` nebo `E2E_TEST_PASSWORD` nejsou nastaveny.
+- Test se přeskočí, pokud `E2E_CONTEST_ID` není nastaven — **production CI tuto secret nemá, test proto NIKDY neběží na produkci**.
+- Production Smoke je hard-coded na specs 01+02 — spec 09 tam nefiguruje.
+
+### Regrese zachycené testem
+
+- `buy_ticket_atomic` přestane strhávat wallet.
+- UI přestane obnovovat balance po nákupu (odebrání `loadUserBalance`).
+- Ticket price se změní bez aktualizace wallet dedukce.
+- Czech locale formátování balance se rozbije (`toLocaleString("cs-CZ")` non-breaking space).
+
+### Opravený bug v selektoru (před mergem)
+
+- První staging run selhal: Playwright strict mode violation — `.or()` lokátor vyřešil na 2 elementy, protože ContestDetail zobrazuje buy button i top-up button současně.
+- Fix: přidáno `.first()` do `.or()` lokátoru (commit `672d241`).
+
+### Výsledky CI (po mergi do `main`)
+
+- Post-merge Smoke E2E: ✅ 1m13s — run `25864204537`.
+- Post-merge Playwright Staging Full E2E: ✅ 2m44s — run `25864280989`, ALL PASSED, Telegram OK.
+
+### Invariant
+
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyla dotčena Supabase data, Stripe, wallet logika, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
+- Staging Full E2E nyní ověřuje: wallet balance klesne přesně o `ticket_price` po nákupu tiketu.
+- Production Smoke zůstává lightweight a non-mutating (pouze specs 01+02).

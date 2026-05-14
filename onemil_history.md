@@ -14,6 +14,23 @@
 
 ---
 
+## 2026-05-14 — PR #10 wallet balance E2E coverage merged into main
+
+### Co bylo provedeno
+- PR #10 **Add wallet balance E2E coverage** byl mergnut do `main`.
+- Zdrojová větev: `test/e2e-wallet-balance`; cílová větev: `main`.
+- Merge commit: `6e32ec7e6df079eb1594e7335ec735c41a2bab47`.
+- Přidán soubor `tests/e2e/09-wallet-balance.spec.ts` — nový Staging Full E2E test.
+- Test ověřuje, že wallet balance klesne přesně o `ticket_price` MC po nákupu jednoho tiketu na `/contest/:id`.
+- Test je staging-only a přeskočí se automaticky pokud `E2E_CONTEST_ID` není nastaven (production CI ho nemá) — production dat se nedotýká.
+- Během vývoje na feature větvi byl identifikován a opraven Playwright strict mode violation (`.or()` lokátor vyřešil na 2 elementy — ContestDetail zobrazuje buy i top-up button současně). Fix: `.first()` přidáno ke kombinovanému lokátoru (commit `672d241`).
+- Před mergem prošel PR smoke E2E (specs 01+02, 1m18s) i Playwright Staging Full E2E (2m38s, ALL PASSED).
+- Po mergi do `main` prošel production smoke (run `25864204537`, 1m13s) i Playwright Staging Full E2E (run `25864280989`, 2m44s, ALL PASSED, Telegram OK).
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
+- Nebyly změněny Supabase, Stripe, wallet logika, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
+
+---
+
 ## 2026-05-13 — Store policy copy cleanup PR #2 merged and post-merge validation passed
 
 ### Co bylo provedeno
