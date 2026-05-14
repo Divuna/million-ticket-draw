@@ -65,6 +65,13 @@ function parseCzechInt(raw: string): number {
 
 test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
   test('balance decreases by voucher price after a single voucher purchase', async ({ page }) => {
+    // This test does: login → goto contest → read balance → goto vouchers →
+    // find specific card → buy voucher → check Zakoupené tab → goto contest →
+    // verify balance decrease. Budget: ~15s for setup, ~5s for purchase flow,
+    // ~20s for Zakoupené assertion, ~15s for balance re-check = ~55s minimum.
+    // Default Playwright timeout is 30 s — override to 60 s for this test only.
+    test.setTimeout(60_000);
+
     // ── Guards ────────────────────────────────────────────────────────────────
     if (!TEST_EMAIL || !TEST_PASSWORD) {
       test.skip(true, 'E2E_TEST_EMAIL / E2E_TEST_PASSWORD not set — skipping');
