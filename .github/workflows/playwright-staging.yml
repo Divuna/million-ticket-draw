@@ -107,8 +107,8 @@ jobs:
               "redeemed_count": 0,
               "start_date": null,
               "end_date": null,
-              "image_url": null,
-              "banner_url": null
+              "image_url": "https://placehold.co/200x200/1D2128/E7EBF0?text=E2E",
+              "banner_url": "https://placehold.co/400x200/1D2128/E7EBF0?text=E2E+Voucher"
             }')
           echo "Seed voucher response: $RESPONSE"
           VOUCHER_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
