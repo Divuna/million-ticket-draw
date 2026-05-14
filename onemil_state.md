@@ -1397,3 +1397,28 @@ Invariant:
 - Nebyla dotčena Supabase data, Stripe, wallet logika, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
 - Staging Full E2E nyní ověřuje: wallet balance klesne přesně o `ticket_price` po nákupu tiketu.
 - Production Smoke zůstává lightweight a non-mutating (pouze specs 01+02).
+
+---
+
+## Mobile/PWA Messages fixed layout (14. 05. 2026)
+
+PR #12 `Fix mobile PWA messages scroll layout` byl sloučen do `main`.
+
+Změna:
+- Mobile/PWA Messages layout byl upraven tak, aby horní Messages header zůstal stabilní.
+- Spodní message composer zůstává stabilní nad fixed bottom navigation.
+- Scrolluje pouze seznam zpráv mezi headerem a composerem.
+- Bottom navigation zůstává fixed.
+- Layout respektuje iPhone safe area a fixed bottom navigation.
+
+Ověření:
+- Smoke E2E prošel na PR #12.
+- Playwright Staging Full E2E prošel na větvi `fix/mobile-messages-fixed-header-composer`: run `25876737161`.
+- Po merge do `main` prošel Smoke E2E: run `25876891113`.
+- Po merge do `main` prošel Playwright Staging Full E2E: run `25877013278`.
+
+Invariant:
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyla změněna Bob/AI logika ani message sending logika.
+- Nebyly změněny routes, DB, Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers, Affiliate ani `buy_ticket_atomic`.

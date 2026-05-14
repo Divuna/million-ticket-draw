@@ -1260,3 +1260,23 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Ověření po merge do `main`:
   - Smoke E2E prošel: run `25862999591`.
   - Playwright Staging Full E2E prošel: run `25863074687`.
+
+---
+
+## 2026-05-14 - PR #12 mobile/PWA Messages fixed layout
+
+- Sloučen PR #12 `Fix mobile PWA messages scroll layout` do `main`.
+- Merge commit: `afe743f469e9ec0059a3a1f787d8ac2ec6711946`.
+- Mobile/PWA Messages layout byl opraven tak, aby horní Messages header a spodní message composer zůstaly stabilní.
+- Scrolluje pouze seznam zpráv mezi headerem a composerem.
+- Bottom navigation zůstává fixed.
+- Nebyla změněna Bob/AI logika ani message sending logika.
+- Nebyly změněny routes, DB, Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers, Affiliate ani `buy_ticket_atomic`.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Ověření před merge:
+  - Smoke E2E prošel na PR #12.
+  - Playwright Staging Full E2E prošel na větvi `fix/mobile-messages-fixed-header-composer`: run `25876737161`.
+- Ověření po merge do `main`:
+  - Smoke E2E prošel: run `25876891113`.
+  - Playwright Staging Full E2E prošel: run `25877013278`.
