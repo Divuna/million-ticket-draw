@@ -239,6 +239,14 @@
       will-change: transform;
       contain: layout paint;
     }
+
+    .messages-mobile-fixed-shell {
+      height: calc(100dvh - 5.75rem - env(safe-area-inset-bottom, 0px));
+      min-height: calc(100dvh - 5.75rem - env(safe-area-inset-bottom, 0px));
+      margin-bottom: calc(-5.75rem - env(safe-area-inset-bottom, 0px));
+      overflow: hidden;
+      overscroll-behavior: contain;
+    }
   }
 }
 
