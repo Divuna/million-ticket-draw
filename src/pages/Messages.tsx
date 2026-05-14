@@ -936,7 +936,7 @@ export default function MessagesPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[hsl(220,20%,4%)] via-[hsl(220,25%,6%)] to-[hsl(220,20%,4%)] relative overflow-hidden">
+    <div className="messages-mobile-fixed-shell min-h-screen bg-gradient-to-b from-[hsl(220,20%,4%)] via-[hsl(220,25%,6%)] to-[hsl(220,20%,4%)] relative overflow-hidden">
       {/* Premium floating particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {backgroundParticles.map((p) => (
@@ -964,9 +964,9 @@ export default function MessagesPage() {
         }}
       />
 
-      <div className="relative z-10 flex flex-col h-[calc(100vh-80px)] max-w-4xl mx-auto">
+      <div className="relative z-10 flex h-full flex-col md:h-[calc(100vh-80px)] max-w-4xl mx-auto">
         {/* Premium Header */}
-        <div className="p-6 pb-4">
+        <div className="shrink-0 p-6 pb-4">
           <div 
             className="relative overflow-hidden rounded-2xl p-6"
             style={{
@@ -1109,7 +1109,7 @@ export default function MessagesPage() {
         </div>
 
         {/* Premium Input Bar */}
-        <div className="p-6 pt-4">
+        <div className="shrink-0 p-6 pt-4">
           <div 
             className="relative overflow-hidden rounded-2xl p-4"
             style={{
