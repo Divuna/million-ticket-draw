@@ -1123,3 +1123,20 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Ověření po merge do `main`:
   - Smoke E2E prošel: run `25845908864`.
   - Playwright Staging Full E2E prošel: run `25845971759`.
+
+---
+
+## 2026-05-14 - get_admin_summary_dashboard follow-up audit
+
+- Po PR #6 hlavní admin reporting správně odděluje `Tržba Kč` a `Připsané MioCoiny`.
+- Read-only audit potvrdil, že DB funkce `get_admin_summary_dashboard` stále ve legacy `payments_summary` formátuje `payments.amount` jako Kč.
+- `payments.amount` zůstává připsaný počet MioCoinů, ne zaplacená Kč částka.
+- Funkce je v živém kódu používána pouze v `AdminValidationWorkflows` / admin validation tabu.
+- Hlavní admin revenue reporting po PR #6 na tuto legacy hodnotu nespoléhá.
+- Toto není Web/PWA launch blocker.
+- Technický dluh po launchi:
+  - buď přestat ve frontend validačním tabu zobrazovat raw `payments_summary`,
+  - nebo později upravit DB funkci přes samostatně schválenou migraci.
+- Během auditu nebyly změněny soubory, app kód, data ani schema.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.

@@ -1202,3 +1202,25 @@ Invariant:
 - Nebyly spuštěny migrace.
 - Nebyla měněna databázová funkce `get_admin_summary_dashboard`.
 - Nebyla měněna Supabase data, Stripe, webhook, wallet, contests, tickets, winners, Partner Offers, Sofinity, OneSignal ani `buy_ticket_atomic`.
+
+---
+
+## get_admin_summary_dashboard follow-up audit (14. 05. 2026)
+
+Po PR #6 hlavní admin reporting správně odděluje `Tržba Kč` a `Připsané MioCoiny`.
+
+Read-only follow-up audit ověřil:
+- DB funkce `get_admin_summary_dashboard` stále ve legacy `payments_summary` formátuje `payments.amount` jako Kč.
+- `payments.amount` přitom zůstává připsaný počet MioCoinů, ne zaplacená Kč částka.
+- Funkce je v živém kódu používána pouze v `AdminValidationWorkflows` / admin validation tabu.
+- Hlavní admin revenue reporting po PR #6 na tuto legacy hodnotu nespoléhá.
+- Toto není Web/PWA launch blocker.
+
+Technický dluh po launchi:
+- Buď přestat ve frontend validačním tabu zobrazovat raw `payments_summary`,
+- nebo později upravit DB funkci přes samostatně schválenou migraci.
+
+Invariant:
+- Během auditu nebyly změněny soubory, app kód, data ani schema.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
