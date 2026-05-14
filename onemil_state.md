@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 14. 05. 2026 (PR #13 mergnut; PR #11 uzavřeno; PR #14 čistý test-only PR otevřen — čeká na merge; staging RLS user_vouchers manuálně opraveno)
+**Aktualizováno:** 14. 05. 2026 (PR #13 mergnut; PR #11 uzavřeno; PR #14 mergnut do main @ 4cba4b0; staging RLS user_vouchers manuálně opraveno)
 
 ---
 
@@ -268,9 +268,10 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (14. 05. 2026)
 
-### PR #14 čistý test-only — Voucher purchase E2E (spec 10) — OTEVŘEN (14. 05. 2026)
+### PR #14 čistý test-only — Voucher purchase E2E (spec 10) — MERGNUT (14. 05. 2026)
 
-- **Branch:** `test/e2e-voucher-purchase-balance-clean` → `main` (čeká na merge)
+- **Branch:** `test/e2e-voucher-purchase-balance-clean` → `main`
+- **Merge commit:** `4cba4b0`
 - **Přidané soubory (pouze 4):**
   - `tests/e2e/10-voucher-purchase-balance.spec.ts` — nový Staging Full E2E test
   - `.github/workflows/playwright-staging.yml` — přidány 3 seed/reset kroky
@@ -281,7 +282,9 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 - **Collision prevention:** E2E Spec10 Voucher seeded s `created_at: "2020-01-01"` (last in list); spec03 používá `.first()` (newest = E2E Spec03 Voucher) — žádná kolize
 - **App code nedotčen** — `useUserVouchers.ts` fix je již na main (PR #13)
 - **PR #11 uzavřeno bez merge** (bylo smíšené)
-- **Staging Full E2E:** run `25882067121` ✅ **15 passed, 3 skipped, 0 failed** (3m40s) — spec10 prošel 16.9s
+- **Pre-merge Staging Full E2E:** run `25882844526` ✅ **16 passed, 3 skipped, 0 failed** (2m0s)
+- **Post-merge production smoke:** run `25883126324` ✅ **5 passed (21.7s)** — Telegram OK
+- **Post-merge Staging Full E2E na main:** run `25883434451` ✅ **16 passed, 3 skipped, 0 failed** (2m12s) — spec10 prošel 16.5s, Telegram OK
 - **Žádná migrace není součástí PR #14** — RLS fix byl proveden manuálně (viz sekce níže)
 
 ### Staging user_vouchers RLS — MANUÁLNĚ OPRAVENO (14. 05. 2026)

@@ -31,8 +31,11 @@
 - **Produkce:** měla správně všechny 4 policies (`user_owns_voucher` SELECT, `user_vouchers_insert_own` INSERT, `user_vouchers_delete_own` DELETE, `admin_all_voucher_access_secure` ALL).
 - **Oprava:** 3 chybějící policies přidány manuálně na staging via Supabase MCP. Produkce nedotčena.
 - **Žádná migrace nebyla commitnuta** v PR #14 — jde o staging infrastrukturní maintenance.
-- **Staging Full E2E po opravě:** run `25882067121` ✅ **15 passed, 3 skipped, 0 failed** (3m40s) — spec10 prošel v 16.9s.
-- Nebyl proveden deploy ani zásah do produkčních dat.
+- **Pre-merge Staging Full E2E:** run `25882844526` ✅ **16 passed, 3 skipped, 0 failed** (2m0s).
+- **PR #14 mergnut** do `main`, merge commit `4cba4b0`.
+- **Post-merge production smoke:** run `25883126324` ✅ **5 passed (21.7s)** — Telegram `OneMil PROD smoke OK` doručen.
+- **Post-merge Staging Full E2E na main:** run `25883434451` ✅ **16 passed, 3 skipped, 0 failed** (2m12s) — spec10 prošel 16.5s — Telegram `OneMil STAGING full E2E OK` doručen.
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
 
 ---
 
