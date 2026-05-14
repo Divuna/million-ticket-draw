@@ -75,6 +75,52 @@ jobs:
           SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
           SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
 
+      - name: Reset test user vouchers
+        # Delete all user_vouchers rows for the E2E test user so that seeded
+        # vouchers appear as "available" again on /vouchers (the UI filters out
+        # vouchers already in the user's collection).
+        run: |
+          curl -s -X DELETE \
+            "${SUPABASE_URL}/rest/v1/user_vouchers?user_id=eq.7822a82e-f1d3-45ee-827b-679640ce6b65" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Prefer: return=minimal"
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Seed E2E test voucher
+        # Insert a fresh public unlimited voucher before each run so spec 10
+        # always has at least one voucher available to purchase.
+        # max_quantity: null = unlimited (never exhausted across runs).
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            "${SUPABASE_URL}/rest/v1/vouchers" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{
+              "name": "E2E Test Voucher",
+              "is_public": true,
+              "max_quantity": null,
+              "redeemed_count": 0,
+              "start_date": null,
+              "end_date": null,
+              "image_url": null,
+              "banner_url": null
+            }')
+          echo "Seed voucher response: $RESPONSE"
+          VOUCHER_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
+          if [ -z "$VOUCHER_ID" ] || [ "$VOUCHER_ID" = "null" ]; then
+            echo "WARNING: voucher seed failed — spec 10 may skip. Response: $RESPONSE" >&2
+          else
+            echo "Seeded E2E test voucher: $VOUCHER_ID"
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
       - name: Run full E2E suite
         id: e2e_tests
         run: npm run test:smoke
