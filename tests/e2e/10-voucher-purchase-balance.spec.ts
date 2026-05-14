@@ -93,14 +93,33 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
     const balanceBefore = parseCzechInt(balanceBeforeRaw);
 
     // ── 2. Navigate to /vouchers ──────────────────────────────────────────────
+    // Arm the user_vouchers interceptor BEFORE navigation so we catch the
+    // mount-time GET from useUserVouchers. The page renders truelyAvailableVouchers
+    // = availableVouchers.filter(v => !isInUserVouchers(v.id)).
+    // useHomepageVouchers (public vouchers) typically resolves BEFORE
+    // useUserVouchers (owned vouchers). If we look for a buy button before
+    // useUserVouchers completes, we may see a voucher spec 03 already bought
+    // (still shown because the owned-voucher filter hasn't landed yet) and
+    // buy_voucher_atomic returns "Voucher již zakoupen".
+    // Waiting for the user_vouchers GET response guarantees the filter is up-to-date.
+    const userVouchersPageLoad = page.waitForResponse(
+      (res) =>
+        res.url().includes('/rest/v1/user_vouchers') &&
+        res.request().method() === 'GET',
+      { timeout: 15_000 },
+    );
+
     await page.goto('/vouchers');
     await expect(
       page.getByRole('heading', { name: 'Vouchery' }),
     ).toBeVisible({ timeout: 10_000 });
+    await userVouchersPageLoad;
 
     // ── 3. Wait for available vouchers to render ──────────────────────────────
-    // Default tab is "Dostupné". Wait for either a buy button or the empty-state
-    // heading so we know the Supabase query has completed.
+    // Default tab is "Dostupné". useUserVouchers has completed (interceptor
+    // resolved above), so truelyAvailableVouchers correctly excludes vouchers
+    // spec 03 already bought. Wait for either a buy button or the empty-state
+    // heading as confirmation that useHomepageVouchers has also settled.
     const buyButton   = page.getByRole('button', { name: /KOUPIT ZA/i }).first();
     const emptyHeading = page.getByRole('heading', { name: 'Žádné dostupné vouchery' });
 
