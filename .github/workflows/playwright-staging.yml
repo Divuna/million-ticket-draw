@@ -101,7 +101,7 @@ jobs:
             -H "Content-Type: application/json" \
             -H "Prefer: return=representation" \
             -d '{
-              "name": "E2E Test Voucher",
+              "name": "E2E Spec10 Voucher",
               "is_public": true,
               "max_quantity": null,
               "redeemed_count": 0,

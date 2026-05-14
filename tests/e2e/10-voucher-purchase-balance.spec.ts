@@ -93,50 +93,59 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
     const balanceBefore = parseCzechInt(balanceBeforeRaw);
 
     // ── 2. Navigate to /vouchers ──────────────────────────────────────────────
-    // Arm the user_vouchers interceptor BEFORE navigation so we catch the
-    // mount-time GET from useUserVouchers. The page renders truelyAvailableVouchers
-    // = availableVouchers.filter(v => !isInUserVouchers(v.id)).
-    // useHomepageVouchers (public vouchers) typically resolves BEFORE
-    // useUserVouchers (owned vouchers). If we look for a buy button before
-    // useUserVouchers completes, we may see a voucher spec 03 already bought
-    // (still shown because the owned-voucher filter hasn't landed yet) and
-    // buy_voucher_atomic returns "Voucher již zakoupen".
-    // Waiting for the user_vouchers GET response guarantees the filter is up-to-date.
-    const userVouchersPageLoad = page.waitForResponse(
-      (res) =>
-        res.url().includes('/rest/v1/user_vouchers') &&
-        res.request().method() === 'GET',
-      { timeout: 15_000 },
-    );
-
     await page.goto('/vouchers');
     await expect(
       page.getByRole('heading', { name: 'Vouchery' }),
     ).toBeVisible({ timeout: 10_000 });
-    await userVouchersPageLoad;
 
-    // ── 3. Wait for available vouchers to render ──────────────────────────────
-    // Default tab is "Dostupné". useUserVouchers has completed (interceptor
-    // resolved above), so truelyAvailableVouchers correctly excludes vouchers
-    // spec 03 already bought. Wait for either a buy button or the empty-state
-    // heading as confirmation that useHomepageVouchers has also settled.
-    const buyButton   = page.getByRole('button', { name: /KOUPIT ZA/i }).first();
+    // ── 3. Find the dedicated spec 10 voucher card ────────────────────────────
+    // The staging workflow seeds a voucher named "E2E Spec10 Voucher" before
+    // each run. By targeting the buy button WITHIN that specific card (scoped
+    // by card class + hasText filter), we avoid two sources of flakiness:
+    //
+    //   a) Race: useHomepageVouchers resolves before useUserVouchers, so
+    //      truelyAvailableVouchers may include a voucher spec 03 already bought.
+    //      Scoping to a unique name means we never accidentally pick spec 03's
+    //      voucher regardless of loading order.
+    //
+    //   b) Naming conflict: both specs use /KOUPIT ZA/i + .first(); without
+    //      scoping they target the same voucher; buy_voucher_atomic then returns
+    //      "Voucher již zakoupen" when spec 10 runs second.
+    //
+    // voucher-card-glow is the CSS class on every voucher Card in the Dostupné tab.
+    const spec10Card = page
+      .locator('.voucher-card-glow')
+      .filter({ hasText: 'E2E Spec10 Voucher' });
+
     const emptyHeading = page.getByRole('heading', { name: 'Žádné dostupné vouchery' });
 
     await expect(
-      buyButton.or(emptyHeading),
-      'Expected voucher buy button or empty-state heading to be visible',
+      spec10Card.or(emptyHeading),
+      'Expected "E2E Spec10 Voucher" card or empty-state heading to be visible',
     ).toBeVisible({ timeout: 15_000 });
 
     if (await emptyHeading.isVisible()) {
       throw new Error(
         'No available vouchers on staging. ' +
-        'Staging DB must have at least one voucher with remaining_count > 0. ' +
-        'Check the staging voucher seed data.',
+        'The "Seed E2E test voucher" workflow step must create "E2E Spec10 Voucher". ' +
+        'Check the staging seed step logs.',
+      );
+    }
+
+    if (!(await spec10Card.isVisible())) {
+      throw new Error(
+        '"E2E Spec10 Voucher" card not found in Dostupné tab. ' +
+        'Either the seed step failed, the voucher is already purchased (Reset test user ' +
+        'vouchers step should have deleted it), or the UI filter hid it. ' +
+        'Check staging workflow logs.',
       );
     }
 
     // ── 4. Parse voucher price from buy button label ───────────────────────────
+    // Buy button is scoped to the spec 10 card to avoid picking spec 03's voucher.
+    const buyButton = spec10Card.getByRole('button', { name: /KOUPIT ZA/i });
+    await expect(buyButton).toBeVisible({ timeout: 5_000 });
+
     // Button label: "KOUPIT ZA 5 MC"
     const buttonText = (await buyButton.textContent()) ?? '';
     const priceMatch = buttonText.match(/KOUPIT ZA\s+([\d\s ]+)\s*MC/i);
