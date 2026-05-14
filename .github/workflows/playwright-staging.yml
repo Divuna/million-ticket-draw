@@ -89,10 +89,45 @@ jobs:
           SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
           SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
 
-      - name: Seed E2E test voucher
-        # Insert a fresh public unlimited voucher before each run so spec 10
-        # always has at least one voucher available to purchase.
-        # max_quantity: null = unlimited (never exhausted across runs).
+      - name: Seed E2E Spec03 voucher
+        # Seed a fresh voucher for spec 03 so it always has a dedicated
+        # voucher to buy. Uses default created_at (now) so it appears FIRST
+        # in the Dostupné list (sorted created_at DESC) — spec 03 uses .first()
+        # and will always pick this one, never spec 10's voucher.
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            "${SUPABASE_URL}/rest/v1/vouchers" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{
+              "name": "E2E Spec03 Voucher",
+              "is_public": true,
+              "max_quantity": null,
+              "redeemed_count": 0,
+              "start_date": null,
+              "end_date": null,
+              "image_url": "https://placehold.co/200x200/1D2128/E7EBF0?text=E2E03",
+              "banner_url": "https://placehold.co/400x200/1D2128/E7EBF0?text=E2E+Spec03"
+            }')
+          echo "Seed spec03 voucher response: $RESPONSE"
+          VOUCHER_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
+          if [ -z "$VOUCHER_ID" ] || [ "$VOUCHER_ID" = "null" ]; then
+            echo "WARNING: spec03 voucher seed failed. Response: $RESPONSE" >&2
+          else
+            echo "Seeded E2E Spec03 voucher: $VOUCHER_ID"
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Seed E2E Spec10 voucher
+        # Seed a dedicated voucher for spec 10 with a past created_at so it
+        # appears LAST in the Dostupné list. Spec 03 uses .first() and always
+        # picks the newest entry (E2E Spec03 Voucher seeded above). Spec 10
+        # finds this card by name via scoped locator — never conflicts with spec 03.
+        # max_quantity: null = unlimited (can be bought again after user_vouchers reset).
         run: |
           RESPONSE=$(curl -s -X POST \
             "${SUPABASE_URL}/rest/v1/vouchers" \
@@ -107,15 +142,16 @@ jobs:
               "redeemed_count": 0,
               "start_date": null,
               "end_date": null,
-              "image_url": "https://placehold.co/200x200/1D2128/E7EBF0?text=E2E",
-              "banner_url": "https://placehold.co/400x200/1D2128/E7EBF0?text=E2E+Voucher"
+              "created_at": "2020-01-01T00:00:00Z",
+              "image_url": "https://placehold.co/200x200/1D2128/E7EBF0?text=E2E10",
+              "banner_url": "https://placehold.co/400x200/1D2128/E7EBF0?text=E2E+Spec10"
             }')
-          echo "Seed voucher response: $RESPONSE"
+          echo "Seed spec10 voucher response: $RESPONSE"
           VOUCHER_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
           if [ -z "$VOUCHER_ID" ] || [ "$VOUCHER_ID" = "null" ]; then
-            echo "WARNING: voucher seed failed — spec 10 may skip. Response: $RESPONSE" >&2
+            echo "WARNING: spec10 voucher seed failed — spec 10 may skip. Response: $RESPONSE" >&2
           else
-            echo "Seeded E2E test voucher: $VOUCHER_ID"
+            echo "Seeded E2E Spec10 voucher: $VOUCHER_ID"
           fi
         env:
           SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
