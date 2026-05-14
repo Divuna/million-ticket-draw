@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 14. 05. 2026 (PR #13 mergnut; PR #11 uzavřeno; PR #14 mergnut do main @ 4cba4b0; staging RLS user_vouchers manuálně opraveno)
+**Aktualizováno:** 15. 05. 2026 (PR #17 mergnut do main @ 42a06f6 — Messages composer fix)
 
 ---
 
@@ -266,7 +266,21 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ---
 
-## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (14. 05. 2026)
+## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (15. 05. 2026)
+
+### PR #17 — Messages composer fix — MERGNUT (15. 05. 2026)
+
+- **Branch:** `fix/messages-composer-above-bottom-nav` → `main`
+- **Merge commit:** `42a06f6`
+- **Změněný soubor:** `src/pages/Messages.tsx` — 1 řádek
+- **Fix:** Odstraněna třída `min-h-screen` z vnějšího wrapperu Messages stránky. `index.css` již definuje `.messages-mobile-fixed-shell` s `height: calc(100dvh - 5.75rem - env(safe-area-inset-bottom, 0px))` na mobilu — výška viewportu minus spodní navigace. Tailwindový `min-h-screen` (`min-height: 100vh`) tuto hodnotu přebíjel, čímž vstupní pole skončilo za spodní navigací na iPhone/PWA.
+- **Výsledek:** Psací pole je celé viditelné těsně nad spodní navigací; zprávy scrollují ve svém kontejneru; spodní lišta zůstává fixní.
+- **Bob, odesílání zpráv, routy, DB, Supabase, Stripe, wallet, soutěže, tikety, výhry, Partner Offers, `buy_ticket_atomic` — nedotčeny.**
+- **PR smoke:** run `25887802417` ✅ 5 passed (1m10s)
+- **Pre-merge Staging Full E2E:** run `25887887248` ✅ 17 passed, 3 skipped, 0 failed (2m6s)
+- **Post-merge production smoke:** run `25888181338` ✅ 5 passed (18.8s) — Telegram OK
+- **Post-merge Staging Full E2E na main:** run `25888244060` ✅ 17 passed, 3 skipped, 0 failed (2m21s) — Telegram OK
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat ✅
 
 ### PR #14 čistý test-only — Voucher purchase E2E (spec 10) — MERGNUT (14. 05. 2026)
 

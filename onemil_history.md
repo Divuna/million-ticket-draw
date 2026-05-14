@@ -14,6 +14,24 @@
 
 ---
 
+## 2026-05-15 — PR #17 Messages composer fix merged into main
+
+### Co bylo provedeno
+- PR #17 **fix: keep messages composer above bottom nav** byl mergnut do `main`.
+- Zdrojová větev: `fix/messages-composer-above-bottom-nav`; cílová větev: `main`.
+- Merge commit: `42a06f6`.
+- Změněn jediný soubor: `src/pages/Messages.tsx` (1 řádek — odstraněna třída `min-h-screen`).
+- **Root cause:** `index.css` definuje `.messages-mobile-fixed-shell` pro `@media (max-width: 768px)` s `height: calc(100dvh - 5.75rem - env(safe-area-inset-bottom, 0px))`. Tailwindová třída `min-h-screen` (`min-height: 100vh`) tuto hodnotu přebíjela přes CSS cascade — shell narůstal na plnou výšku viewportu, vstupní pole skončilo za pevnou spodní navigací na iPhone/PWA.
+- **Fix:** Odstraněna třída `min-h-screen`. CSS třída `.messages-mobile-fixed-shell` nyní funguje bez konfliktu — shell má na mobilu správnou výšku, zprávy scrollují uvnitř svého kontejneru, vstupní pole je celé viditelné nad spodní navigací.
+- Bob, odesílání zpráv, routy, DB, Supabase, Stripe, wallet, soutěže, tikety, výhry, Partner Offers, `buy_ticket_atomic` — nedotčeny.
+- PR smoke: run `25887802417` ✅ 5 passed.
+- Pre-merge Staging Full E2E: run `25887887248` ✅ 17 passed, 3 skipped, 0 failed.
+- Post-merge production smoke: run `25888181338` ✅ 5 passed — Telegram `OneMil PROD smoke OK` doručen.
+- Post-merge Staging Full E2E na main: run `25888244060` ✅ 17 passed, 3 skipped, 0 failed — Telegram `OneMil STAGING full E2E OK` doručen.
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
+
+---
+
 ## 2026-05-14 — Voucher purchase E2E spec 10 — čistý test-only PR #14 + staging RLS fix
 
 ### Co bylo provedeno
