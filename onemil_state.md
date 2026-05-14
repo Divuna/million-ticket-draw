@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 14. 05. 2026 (PR #13 mergnut; PR #11 uzavřeno; nový čistý PR test/e2e-voucher-purchase-balance-clean připraven)
+**Aktualizováno:** 14. 05. 2026 (PR #13 mergnut; PR #11 uzavřeno; PR #14 čistý test-only PR otevřen — čeká na merge; staging RLS user_vouchers manuálně opraveno)
 
 ---
 
@@ -268,17 +268,34 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (14. 05. 2026)
 
-### PR čistý test-only — Voucher purchase E2E (spec 10) — OTEVŘEN (14. 05. 2026)
+### PR #14 čistý test-only — Voucher purchase E2E (spec 10) — OTEVŘEN (14. 05. 2026)
 
 - **Branch:** `test/e2e-voucher-purchase-balance-clean` → `main` (čeká na merge)
-- **Přidané soubory:**
+- **Přidané soubory (pouze 4):**
   - `tests/e2e/10-voucher-purchase-balance.spec.ts` — nový Staging Full E2E test
   - `.github/workflows/playwright-staging.yml` — přidány 3 seed/reset kroky
+  - `onemil_state.md` — dokumentace
+  - `onemil_history.md` — dokumentace
 - **Test ověřuje:** login → /contest/:id balance read → /vouchers buy E2E Spec10 Voucher → Zakoupené tab "Uplatnit voucher" → balance decrease o přesně voucherPrice MC
 - **Guard:** test.skip pokud `E2E_CONTEST_ID` není nastaven (produkční CI ho nemá)
 - **Collision prevention:** E2E Spec10 Voucher seeded s `created_at: "2020-01-01"` (last in list); spec03 používá `.first()` (newest = E2E Spec03 Voucher) — žádná kolize
 - **App code nedotčen** — `useUserVouchers.ts` fix je již na main (PR #13)
 - **PR #11 uzavřeno bez merge** (bylo smíšené)
+- **Staging Full E2E:** run `25882067121` ✅ **15 passed, 3 skipped, 0 failed** (3m40s) — spec10 prošel 16.9s
+- **Žádná migrace není součástí PR #14** — RLS fix byl proveden manuálně (viz sekce níže)
+
+### Staging user_vouchers RLS — MANUÁLNĚ OPRAVENO (14. 05. 2026)
+
+**Nález:** Stagingový baseline dump vynechal tři RLS policies na tabulce `user_vouchers`. Produkce (`xkzhjldrojjlrkezorey`) měla všechny 4 správné policies. Staging (`dxmowysntemfqfnanxua`) měl pouze `admin_all_voucher_access_secure` (ALL).
+
+**Chybějící policies na stagingu:**
+- `user_owns_voucher` (SELECT, `user_id = auth.uid()`) — **kritická** — bez ní `fetchUserVouchers()` vracelo `[]` pro všechny běžné uživatele (PostgREST vrací prázdné pole, ne chybu); tab Zakoupené byl vždy prázdný
+- `user_vouchers_insert_own` (INSERT) — chybělo pro přidávání oblíbených přes frontend
+- `user_vouchers_delete_own` (DELETE) — chybělo pro odebírání oblíbených přes frontend
+
+**Fix:** Tři policies přidány manuálně na staging přes Supabase MCP. Produkce nedotčena.
+
+**Žádná migrace nebyla commitnuta** v PR #14. Tato oprava je staging infrastrukturní maintenance — není to app kód ani produkční schémová změna.
 
 ### PR #13 — useUserVouchers PostgREST embedded join fix — MERGNUT (14. 05. 2026)
 

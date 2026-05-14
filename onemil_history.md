@@ -14,16 +14,25 @@
 
 ---
 
-## 2026-05-14 — Voucher purchase E2E spec 10 — čistý test-only PR otevřen
+## 2026-05-14 — Voucher purchase E2E spec 10 — čistý test-only PR #14 + staging RLS fix
 
 ### Co bylo provedeno
 - PR #11 (`test/e2e-voucher-purchase-balance`) byl uzavřen bez merge — obsahoval smíšené změny (app hook, CSS, testy, workflow seed).
 - Appový bugfix extrahován a mergnut odděleně jako PR #13 (`fix/user-vouchers-fetch`, merge commit `f9719101`).
-- Otevřen nový čistý test-only PR z větve `test/e2e-voucher-purchase-balance-clean` (base: `main` @ `c9d8123`).
-- Přidán soubor `tests/e2e/10-voucher-purchase-balance.spec.ts` — staging-only spec ověřující voucher purchase flow a wallet balance decrease.
-- Upraven `.github/workflows/playwright-staging.yml` — přidány 3 kroky: Reset test user vouchers, Seed E2E Spec03 voucher, Seed E2E Spec10 voucher.
+- Otevřen nový čistý test-only PR #14 z větve `test/e2e-voucher-purchase-balance-clean` (base: `main` @ `c9d8123`).
+- PR #14 obsahuje pouze 4 soubory: `tests/e2e/10-voucher-purchase-balance.spec.ts`, `.github/workflows/playwright-staging.yml`, `onemil_state.md`, `onemil_history.md`.
+- Spec 10 ověřuje: login → balance read → voucher purchase → Zakoupené tab → balance decrease o přesně voucherPrice MC.
+- Workflow rozšířen o 3 seed/reset kroky: Reset test user vouchers, Seed E2E Spec03 voucher, Seed E2E Spec10 voucher.
 - Žádný app kód nebyl změněn. `useUserVouchers.ts` fix je na main od PR #13.
-- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
+
+### Staging RLS nález a manuální oprava
+- **Nález:** spec 10 selhával na „Uplatnit voucher" — tab Zakoupené byl vždy prázdný i po úspěšném nákupu.
+- **Root cause:** Stagingový baseline dump vynechal `user_owns_voucher` SELECT policy na `user_vouchers`. PostgREST vracel `[]` (žádná chyba) → `fetchUserVouchers()` vracelo prázdné pole → `purchasedVouchers = []`.
+- **Produkce:** měla správně všechny 4 policies (`user_owns_voucher` SELECT, `user_vouchers_insert_own` INSERT, `user_vouchers_delete_own` DELETE, `admin_all_voucher_access_secure` ALL).
+- **Oprava:** 3 chybějící policies přidány manuálně na staging via Supabase MCP. Produkce nedotčena.
+- **Žádná migrace nebyla commitnuta** v PR #14 — jde o staging infrastrukturní maintenance.
+- **Staging Full E2E po opravě:** run `25882067121` ✅ **15 passed, 3 skipped, 0 failed** (3m40s) — spec10 prošel v 16.9s.
+- Nebyl proveden deploy ani zásah do produkčních dat.
 
 ---
 
