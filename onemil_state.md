@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 15. 05. 2026 (PR #17 mergnut do main @ 42a06f6 — Messages composer fix)
+**Aktualizováno:** 15. 05. 2026 (PR #18 mergnut do main @ dc94f61 — Messages bottom nav stability fix)
 
 ---
 

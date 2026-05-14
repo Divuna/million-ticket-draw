@@ -14,6 +14,24 @@
 
 ---
 
+## 2026-05-15 — PR #18 Messages bottom nav stability fix merged into main
+
+### Co bylo provedeno
+- PR #18 **fix: keep bottom nav stable on messages page** byl mergnut do `main`.
+- Zdrojová větev: `fix/bottom-nav-stable-messages`; cílová větev: `main`.
+- Merge commit: `dc94f61`.
+- Změněn jediný soubor: `src/index.css` (5 řádků — přidán `min-height: 100dvh` k `.customer-layout` v `@media (max-width: 768px)`).
+- **Root cause:** Po PR #17 (odstraněna třída `min-h-screen`) byla `.customer-layout` kratší než viewport (`100dvh − 5.75rem − safeArea`). iOS Safari rubber-band-scrolluje celou stránku — včetně `position: fixed` elementů — kdykoli se vnitřní scroll messages listu dostane na konec a dokument je kratší než viewport. Spodní navigace se tak vizuálně hýbala při scrollu.
+- **Fix:** Přidán `min-height: 100dvh` k `.customer-layout` pro mobil. Customer-layout nyní vždy vyplňuje celý viewport → nulový prostor pro rubber-band scroll → spodní navigace zůstává pevně dole. Oprava kompozitoru z PR #17 zůstává zachována.
+- Bob, odesílání zpráv, routy, DB, Supabase, Stripe, wallet, soutěže, tikety, výhry, Partner Offers, `buy_ticket_atomic` — nedotčeny.
+- PR branch smoke: run `25889262610` ✅ SUCCESS.
+- Pre-merge Staging Full E2E na PR větvi: run `25889352492` ✅ ALL PASSED (3m21s).
+- Post-merge production smoke: run `25889554142` ✅ SUCCESS — Telegram `OneMil PROD smoke OK` doručen.
+- Post-merge Staging Full E2E na main: run `25889587366` ✅ ALL PASSED — Telegram `OneMil STAGING full E2E OK` doručen.
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
+
+---
+
 ## 2026-05-15 — PR #17 Messages composer fix merged into main
 
 ### Co bylo provedeno
