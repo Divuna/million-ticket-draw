@@ -936,7 +936,7 @@ export default function MessagesPage() {
   );
 
   return (
-    <div className="messages-mobile-fixed-shell min-h-screen bg-gradient-to-b from-[hsl(220,20%,4%)] via-[hsl(220,25%,6%)] to-[hsl(220,20%,4%)] relative overflow-hidden">
+    <div className="messages-mobile-fixed-shell bg-gradient-to-b from-[hsl(220,20%,4%)] via-[hsl(220,25%,6%)] to-[hsl(220,20%,4%)] relative overflow-hidden">
       {/* Premium floating particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {backgroundParticles.map((p) => (
