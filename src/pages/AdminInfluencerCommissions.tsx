@@ -354,9 +354,9 @@ export default function AdminInfluencerCommissions() {
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Výplaty influencerů</h1>
+        <h1 className="text-2xl font-bold text-foreground">Výplaty Affiliate partnerů</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Přehled automaticky vypočtených provizí influencerů
+          Přehled automaticky vypočtených Affiliate provizí
         </p>
       </div>
 
@@ -510,7 +510,7 @@ export default function AdminInfluencerCommissions() {
                         aria-label="Vybrat vše"
                       />
                     </TableHead>
-                    <TableHead>Influencer</TableHead>
+                    <TableHead>Affiliate partner</TableHead>
                     <TableHead>Období</TableHead>
                     <TableHead className="text-right">Částka (CZK)</TableHead>
                     <TableHead>Stav</TableHead>
@@ -595,7 +595,7 @@ export default function AdminInfluencerCommissions() {
                   <span className="font-semibold">
                     {Number(confirmTarget.amount_czk).toLocaleString("cs-CZ")} Kč
                   </span>{" "}
-                  pro influencera{" "}
+                  pro Affiliate partnera{" "}
                   <span className="font-semibold">{confirmTarget.partner_name}</span>{" "}
                   za období{" "}
                   <span className="font-semibold">

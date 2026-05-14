@@ -123,9 +123,9 @@ const USERS_NAV = {
   partnersPortal: { path: "/admin/partners-portal", label: "Partneři portál", icon: Handshake },
   partnerOffers: { path: "/admin/partner-offers", label: "Nabídky ke schválení", icon: Tag },
   invoices: { path: "/admin/invoices", label: "Faktury", icon: Receipt },
-  influencers: { path: "/admin/influencers", label: "Influenceři", icon: Megaphone },
-  campaigns: { path: "/admin/influencer-campaigns", label: "Kampaně", icon: CalendarDays },
-  commissions: { path: "/admin/influencer-commissions", label: "Výplaty", icon: Banknote },
+  influencers: { path: "/admin/influencers", label: "Affiliate partneři", icon: Megaphone },
+  campaigns: { path: "/admin/influencer-campaigns", label: "Affiliate kampaně", icon: CalendarDays },
+  commissions: { path: "/admin/influencer-commissions", label: "Affiliate výplaty", icon: Banknote },
   legal: { path: "/admin/legal-acceptances", label: "Souhlasy", icon: FileText },
   auditLogs: { path: "/admin/audit-logs", label: "Audit", icon: FileText },
   auditRepair: { path: "/admin/audit-repair", label: "Audit repair", icon: Wrench },
@@ -221,12 +221,12 @@ export const ADMIN_NAV_SECTIONS: readonly AdminNavSectionDefinition[] = [
   },
   {
     id: "vouchers",
-    sectionTitle: "Vouchery a referral",
+    sectionTitle: "Vouchery a doporučení",
     mainNav: { label: "Vouchery", icon: Gift, to: "/admin/vouchers" },
     subNavEntries: [
       { kind: "link", item: { path: "/admin/vouchers", label: "Vouchery", icon: Gift } },
-      { kind: "link", item: { path: "/admin/referrals", label: "Referral (hráči)", icon: Link2 } },
-      { kind: "link", item: { path: "/admin/referral-dashboard", label: "Ref. Dashboard", icon: BarChart3 } },
+      { kind: "link", item: { path: "/admin/referrals", label: "Doporučení hráčů", icon: Link2 } },
+      { kind: "link", item: { path: "/admin/referral-dashboard", label: "Přehled doporučení", icon: BarChart3 } },
     ],
   },
   {
@@ -244,7 +244,7 @@ export const ADMIN_NAV_SECTIONS: readonly AdminNavSectionDefinition[] = [
         icon: MoreHorizontal,
         sections: [
           { label: "Partneři", items: [USERS_NAV.partnersPortal, USERS_NAV.partnerOffers] },
-          { label: "Influencer", items: [USERS_NAV.campaigns, USERS_NAV.commissions] },
+          { label: "Affiliate", items: [USERS_NAV.campaigns, USERS_NAV.commissions] },
           {
             label: "Audit a compliance",
             items: [USERS_NAV.legal, USERS_NAV.auditLogs, USERS_NAV.auditRepair, USERS_NAV.onemilAudit],

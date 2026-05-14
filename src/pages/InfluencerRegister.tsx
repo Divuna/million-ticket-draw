@@ -168,7 +168,7 @@ const InfluencerRegister = () => {
             <CardTitle className="text-heading-gold text-2xl font-bold">Čeká se na schválení administrátorem</CardTitle>
             <CardDescription className="text-base">
               Vaše registrace byla úspěšně odeslána. Náš tým ji prověří a po schválení
-              získáte přístup k influencer dashboardu a materiálům.
+              získáte přístup k Affiliate dashboardu a materiálům.
             </CardDescription>
             <CardDescription className="text-sm">
               O schválení vás budeme informovat e-mailem na adresu, kterou jste zadali.
@@ -199,19 +199,19 @@ const InfluencerRegister = () => {
               <Star className="w-8 h-8 text-[hsl(40_60%_55%)]" />
             </div>
           </div>
-          <CardTitle className="text-heading-gold text-2xl font-bold">Registrace influencera</CardTitle>
-          <CardDescription>Vyplňte své údaje a začněte spolupracovat s OneMil</CardDescription>
+          <CardTitle className="text-heading-gold text-2xl font-bold">Registrace Affiliate partnera</CardTitle>
+          <CardDescription>Affiliate partner doporučuje OneMil a získává provize za přivedené uživatele.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Name */}
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="name">Jméno / Přezdívka *</Label>
+                <Label htmlFor="name">Jméno / název / přezdívka *</Label>
                 <Input
                   id="name"
                   name="name"
-                  placeholder="Váš influencer nick nebo jméno"
+                  placeholder="Vaše jméno, značka nebo název"
                   value={formData.name}
                   onChange={handleChange}
                   disabled={loading}
@@ -248,11 +248,11 @@ const InfluencerRegister = () => {
 
               {/* Main platform URL */}
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="mainPlatformUrl">Hlavní profil na sociální síti *</Label>
+                <Label htmlFor="mainPlatformUrl">Hlavní kanál / web / profil *</Label>
                 <Input
                   id="mainPlatformUrl"
                   name="mainPlatformUrl"
-                  placeholder="https://instagram.com/vas-profil"
+                  placeholder="https://vas-web-nebo-profil.cz"
                   value={formData.mainPlatformUrl}
                   onChange={handleChange}
                   disabled={loading}
@@ -310,7 +310,7 @@ const InfluencerRegister = () => {
 
               {/* Follower count */}
               <div className="space-y-2">
-                <Label>Počet sledujících</Label>
+                <Label>Velikost publika / dosah</Label>
                 <Select
                   value={formData.followerRange}
                   onValueChange={(val) => setFormData({ ...formData, followerRange: val })}
@@ -396,7 +396,7 @@ const InfluencerRegister = () => {
               className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
             >
               <ArrowLeft className="mr-1 h-4 w-4" />
-              Zpět na Pro influencery
+              Zpět na Affiliate program
             </Link>
           </div>
         </CardContent>
