@@ -1166,3 +1166,20 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Nebyl proveden deploy.
 - Nebyly spuštěny migrace.
 - Nebyla dotčena Supabase data, Stripe, wallet, payments, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
+
+---
+
+## 2026-05-14 - Production contest status cleanup
+
+- Poslední aktivní testovací soutěž `bmw` byla přesunuta ze stavu `active` do `draft`.
+- Finální produkční stav soutěží:
+  - `active = 0`
+  - `closed = 19`
+  - `draft = 76`
+- Žádné soutěže nebyly smazány.
+- Tento stav je správný, protože OneMil ještě není oficiálně veřejně spuštěný.
+- Public launch bude vyžadovat vytvoření nebo aktivaci pouze reálných soutěží s dokončenými PDF pravidly.
+- Nebyl měněn app kód.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- V rámci tohoto dokumentačního záznamu nebyla dotčena Supabase data, Stripe, wallet, payments, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.

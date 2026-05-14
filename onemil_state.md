@@ -1256,3 +1256,27 @@ Invariant:
 - Nebyl proveden deploy.
 - Nebyly spuštěny migrace.
 - Nebyla dotčena Supabase data, Stripe, wallet, payments, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
+
+---
+
+## Production contest status cleanup (14. 05. 2026)
+
+Produkční contest status cleanup byl dokončen před veřejným Web/PWA launchem.
+
+Zaznamenaný stav:
+- Poslední aktivní testovací soutěž `bmw` byla přesunuta ze stavu `active` do `draft`.
+- Finální produkční stav soutěží:
+  - `active = 0`
+  - `closed = 19`
+  - `draft = 76`
+
+Výklad:
+- Žádné soutěže nebyly smazány.
+- Tento stav je správný, protože OneMil ještě není oficiálně veřejně spuštěný.
+- Public launch bude vyžadovat vytvoření nebo aktivaci pouze reálných soutěží s dokončenými PDF pravidly.
+
+Invariant:
+- Nebyl měněn app kód.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- V rámci tohoto dokumentačního záznamu nebyla dotčena Supabase data, Stripe, wallet, payments, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
