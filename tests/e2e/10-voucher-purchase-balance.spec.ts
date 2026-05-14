@@ -113,26 +113,33 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
     //      "Voucher již zakoupen" when spec 10 runs second.
     //
     // voucher-card-glow is the CSS class on every voucher Card in the Dostupné tab.
+    // Multiple "E2E Spec10 Voucher" cards may exist (one seeded per run accumulates);
+    // use .first() so the locator is always single-element (no strict-mode violation).
     const spec10Card = page
       .locator('.voucher-card-glow')
-      .filter({ hasText: 'E2E Spec10 Voucher' });
+      .filter({ hasText: 'E2E Spec10 Voucher' })
+      .first();
 
+    // Wait until either the spec10 card OR the empty-state heading is present.
+    // Poll spec10Card.count() > 0 rather than using .or() to avoid strict-mode
+    // issues when the ".or" locator itself would match 2+ elements.
     const emptyHeading = page.getByRole('heading', { name: 'Žádné dostupné vouchery' });
 
-    await expect(
-      spec10Card.or(emptyHeading),
-      'Expected "E2E Spec10 Voucher" card or empty-state heading to be visible',
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(async () => {
+      const hasSpec10 = (await page.locator('.voucher-card-glow').filter({ hasText: 'E2E Spec10 Voucher' }).count()) > 0;
+      const hasEmpty  = await emptyHeading.isVisible();
+      if (!hasSpec10 && !hasEmpty) throw new Error('Neither spec10 card nor empty-state visible yet');
+    }, 'Expected "E2E Spec10 Voucher" card or empty-state heading to appear').toPass({ timeout: 15_000 });
 
     if (await emptyHeading.isVisible()) {
       throw new Error(
         'No available vouchers on staging. ' +
-        'The "Seed E2E test voucher" workflow step must create "E2E Spec10 Voucher". ' +
+        'The "Seed E2E Spec10 voucher" workflow step must create "E2E Spec10 Voucher". ' +
         'Check the staging seed step logs.',
       );
     }
 
-    if (!(await spec10Card.isVisible())) {
+    if ((await page.locator('.voucher-card-glow').filter({ hasText: 'E2E Spec10 Voucher' }).count()) === 0) {
       throw new Error(
         '"E2E Spec10 Voucher" card not found in Dostupné tab. ' +
         'Either the seed step failed, the voucher is already purchased (Reset test user ' +
