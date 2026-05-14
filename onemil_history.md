@@ -1140,3 +1140,29 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Během auditu nebyly změněny soubory, app kód, data ani schema.
 - Nebyl proveden deploy.
 - Nebyly spuštěny migrace.
+
+---
+
+## 2026-05-14 - MioCoin top-up package verification
+
+- MioCoin top-up package mapping bylo ověřeno read-only.
+- Potvrzené mapování:
+  - 50 Kč -> 50 MioCoinů
+  - 300 Kč -> 310 MioCoinů
+  - 500 Kč -> 525 MioCoinů
+  - 1200 Kč -> 1280 MioCoinů
+- Ověřené plochy:
+  - Homepage top-up balíčky,
+  - Profile top-up balíčky,
+  - PaymentSuccess analytické mapování,
+  - `paymentReporting` admin reporting helper,
+  - `create-stripe-checkout` serverové mapování ceny na MioCoiny,
+  - `stripe-webhook` mapování zaplacené Kč částky na připsané MioCoiny,
+  - admin reporting po PR #6.
+- Homepage, Profile, PaymentSuccess, `paymentReporting`, `create-stripe-checkout`, `stripe-webhook` a admin reporting mapping jsou sladěné.
+- Nebyla nalezena žádná neshoda.
+- Toto není Web/PWA launch blocker.
+- Během auditu nebyly změněny soubory, app kód, data ani schema.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyla dotčena Supabase data, Stripe, wallet, payments, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
