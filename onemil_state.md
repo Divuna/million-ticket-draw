@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 13. 05. 2026 (Stripe Test Mode top-up ověřen; staging schema baseline stále platí; db push se nepoužívá)
+**Aktualizováno:** 14. 05. 2026 (PR #13 useUserVouchers fix mergnut; PR #11 zůstává otevřeno)
 
 ---
 
@@ -266,7 +266,21 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ---
 
-## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (10. 05. 2026)
+## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (14. 05. 2026)
+
+### PR #13 — useUserVouchers PostgREST embedded join fix — MERGNUT (14. 05. 2026)
+
+- **Branch:** `fix/user-vouchers-fetch` → `main`
+- **Merge commit:** `f9719101cf98d6063aaf009f7b50acd2e833c33c`
+- **Změněný soubor:** `src/hooks/useUserVouchers.ts` pouze
+- **Fix:** dva explicitní dotazy místo `voucher:vouchers!user_vouchers_voucher_id_fkey(...)` — PostgREST embedded join vracel HTTP 400 na stagingu (FK constraint name neshoda), tiše zachycený → `setVouchers([])` → prázdný tab Zakoupené
+- **PR smoke:** run `25878064722` ✅ success
+- **Post-merge production smoke:** run `25878209886` ✅ success
+- **Post-merge Staging Full E2E na main:** run `25878303521` ✅ 15 passed, 3 skipped (spec 10 není na main — je na PR #11)
+- **PR #11** (`test/e2e-voucher-purchase-balance`) zůstává OPEN a nemergnuto
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat ✅
+
+---
 
 ### Staging full E2E — ZELENÝ (10. 05. 2026, run `25625184545`)
 

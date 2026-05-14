@@ -14,6 +14,24 @@
 
 ---
 
+## 2026-05-14 — PR #13 useUserVouchers PostgREST embedded join fix merged into main
+
+### Co bylo provedeno
+- PR #13 **fix: replace PostgREST embedded join in useUserVouchers with two explicit queries** byl mergnut do `main`.
+- Zdrojová větev: `fix/user-vouchers-fetch`; cílová větev: `main`.
+- Merge commit: `f9719101cf98d6063aaf009f7b50acd2e833c33c`.
+- Změněn jediný soubor: `src/hooks/useUserVouchers.ts` (+62 / -21 řádků).
+- **Root cause opravené chyby:** `fetchUserVouchers()` používal PostgREST embedded join s explicitním FK hintem `!user_vouchers_voucher_id_fkey`. Na stagingové DB (obnovené z produkčního dumpu) PostgREST vrátil HTTP 400, který byl tiše zachycen blokem `try/catch` → `setVouchers([])` → tab Zakoupené zobrazoval prázdný stav i když `user_vouchers` řádky v DB existovaly.
+- **Fix:** dva explicitní dotazy místo embedded joinu — (1) `user_vouchers` bez joinu, (2) `vouchers` dle batche ID; výsledky spojeny v Map na frontendu. Pole `voucher` přidáno jako `| null` — bezpečné, protože `expiration.isExpired` v `Vouchers.tsx` závisí jen na `created_at` z `user_vouchers`.
+- Před mergem prošel PR smoke E2E (run `25878064722`, 15 passed, success).
+- Po mergi do `main` prošel production smoke (run `25878209886`, success).
+- Po mergi spuštěn Playwright Staging Full E2E na `main` (run `25878303521`, 15 passed + 3 skipped, success, Telegram OK). Spec 10 (`10-voucher-purchase-balance`) není v `main` — zůstává na PR #11 (`test/e2e-voucher-purchase-balance`).
+- PR #11 zůstává OPEN a nemergnuto.
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
+- Nebyly změněny Supabase, Stripe, wallet logika, contests, tickets, winners, Partner Offers, schéma, RLS ani `buy_ticket_atomic`.
+
+---
+
 ## 2026-05-14 — PR #10 wallet balance E2E coverage merged into main
 
 ### Co bylo provedeno
