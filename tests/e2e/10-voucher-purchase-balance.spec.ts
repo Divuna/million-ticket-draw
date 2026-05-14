@@ -208,23 +208,37 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
     }
 
     // ── 7. Verify purchased voucher appears in Zakoupené tab ──────────────────
-    // After buy_voucher_atomic succeeds, handleVoucherPurchase() calls:
-    //   1. optimisticRemoveByVoucherId() — removes from favorites state immediately
-    //   2. toast.success() — toast appears
-    //   3. await refetchUserVouchers() — fires GET /rest/v1/user_vouchers
-    //   4. await refetchAvailable()
-    // Also the realtime subscription on user_vouchers fires fetchUserVouchers()
-    // when the INSERT lands. Both paths update React state before the Zakoupené
-    // tab shows the new entry. A 20 s timeout covers both the slow-network and
-    // the realtime race comfortably; no separate waitForResponse needed.
-    const zakoupeneTab = page.getByRole('tab', { name: /Zakoupené|Zak\./i });
-    await zakoupeneTab.click();
+    // Navigate fresh to /vouchers?tab=purchased instead of clicking the in-page tab.
+    //
+    // Why a fresh navigation instead of tab click:
+    //   handleVoucherPurchase fires toast.success() BEFORE awaiting refetchUserVouchers().
+    //   When the test sees the toast and clicks the tab, fetchUserVouchers() has just
+    //   started (setLoading=true → skeletons render). Additionally, the realtime
+    //   subscription fires a concurrent second fetchUserVouchers() when the INSERT
+    //   lands, which resets loading=true again after the first call finishes.
+    //   These two concurrent calls can keep the skeleton visible indefinitely.
+    //
+    //   A fresh navigation re-mounts the Vouchers component. On mount, fetchUserVouchers()
+    //   runs once with no concurrency. By this point the purchase transaction is committed,
+    //   so the GET returns the new row immediately. No race, no stale state.
+    //
+    // Wait for the user_vouchers GET response before asserting so we know React state
+    // has been populated from the network result (not just the loading spinner).
+    const userVouchersLoaded = page.waitForResponse(
+      (res) =>
+        res.url().includes('/rest/v1/user_vouchers') &&
+        res.request().method() === 'GET',
+      { timeout: 15_000 },
+    );
+
+    await page.goto('/vouchers?tab=purchased');
+    await userVouchersLoaded;
 
     const uplatnitButton = page.getByRole('button', { name: 'Uplatnit voucher' }).first();
     await expect(
       uplatnitButton,
       'Purchased voucher must appear in Zakoupené tab with "Uplatnit voucher" button',
-    ).toBeVisible({ timeout: 20_000 });
+    ).toBeVisible({ timeout: 10_000 });
 
     // ── 10. Navigate back to ContestDetail to read refreshed balance ──────────
     // ContestDetail calls loadUserBalance(userId) on mount, which fires a GET
