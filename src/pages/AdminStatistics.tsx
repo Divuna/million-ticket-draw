@@ -7,6 +7,11 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { BarChart3, Users, CreditCard, Trophy, Gift, Ticket, UserX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { NavigateToLogin } from '@/components/NavigateToLogin';
+import {
+  formatCreditedMiocoins,
+  formatPaymentReportingTotal,
+  summarizePaymentReporting,
+} from '@/lib/paymentReporting';
 
 interface Statistics {
   totalUsers: number;
@@ -15,7 +20,9 @@ interface Statistics {
   totalPayments: number;
   totalVouchers: number;
   totalBonusPrizes: number;
-  revenueThisMonth: number;
+  creditedMiocoinsThisMonth: number;
+  paidCzkThisMonth: number;
+  hasUnknownPaidCzkThisMonth: boolean;
   activeContests: number;
   incompleteOnboarding: number;
 }
@@ -31,7 +38,9 @@ const AdminStatistics: React.FC = () => {
     totalPayments: 0,
     totalVouchers: 0,
     totalBonusPrizes: 0,
-    revenueThisMonth: 0,
+    creditedMiocoinsThisMonth: 0,
+    paidCzkThisMonth: 0,
+    hasUnknownPaidCzkThisMonth: false,
     activeContests: 0,
     incompleteOnboarding: 0
   });
@@ -75,7 +84,7 @@ const AdminStatistics: React.FC = () => {
           .is('date_of_birth', null)
       ]);
 
-      const revenueThisMonth = revenueData?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
+      const paymentSummaryThisMonth = summarizePaymentReporting(revenueData);
 
       setStats({
         totalUsers: usersCount || 0,
@@ -84,7 +93,9 @@ const AdminStatistics: React.FC = () => {
         totalPayments: paymentsCount || 0,
         totalVouchers: vouchersCount || 0,
         totalBonusPrizes: bonusPrizesCount || 0,
-        revenueThisMonth,
+        creditedMiocoinsThisMonth: paymentSummaryThisMonth.creditedMiocoins,
+        paidCzkThisMonth: paymentSummaryThisMonth.paidCzk,
+        hasUnknownPaidCzkThisMonth: paymentSummaryThisMonth.hasUnknownPaidCzk,
         activeContests: activeContestsCount || 0,
         incompleteOnboarding: incompleteOnboardingCount || 0
       });
@@ -156,10 +167,19 @@ const AdminStatistics: React.FC = () => {
       description: "Celkový počet plateb"
     },
     {
-      title: "Příjmy tento měsíc",
-      value: `${stats.revenueThisMonth} Kč`,
+      title: "Tržba tento měsíc",
+      value: formatPaymentReportingTotal({
+        paidCzk: stats.paidCzkThisMonth,
+        hasUnknownPaidCzk: stats.hasUnknownPaidCzkThisMonth,
+      }),
       icon: CreditCard,
-      description: "Dokončené platby"
+      description: "Odvozeno ze známých MioCoin balíčků"
+    },
+    {
+      title: "Připsané MioCoiny",
+      value: formatCreditedMiocoins(stats.creditedMiocoinsThisMonth),
+      icon: CreditCard,
+      description: "Dokončené platby tento měsíc"
     },
     {
       title: "Nedokončený onboarding",

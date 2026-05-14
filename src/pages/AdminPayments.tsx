@@ -11,6 +11,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Search, CreditCard, RefreshCw, AlertTriangle } from 'lucide-react';
+import {
+  formatCreditedMiocoins,
+  formatDerivedPaidCzk,
+  formatPaymentReportingTotal,
+  summarizePaymentReporting,
+} from '@/lib/paymentReporting';
 
 interface Payment {
   id: string;
@@ -137,11 +143,11 @@ const AdminPayments: React.FC = () => {
     }
   };
 
-  const getTotalAmount = () => {
-    return filteredPayments
-      .filter(p => p.status === 'completed')
-      .reduce((sum, p) => sum + p.amount, 0);
+  const getCompletedPaymentSummary = () => {
+    return summarizePaymentReporting(filteredPayments.filter(p => p.status === 'completed'));
   };
+
+  const completedPaymentSummary = getCompletedPaymentSummary();
 
   if (roleLoading) {
     return <div className="flex items-center justify-center min-h-screen">Načítání...</div>;
@@ -160,11 +166,25 @@ const AdminPayments: React.FC = () => {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Celkové příjmy</CardTitle>
+              <CardTitle className="text-sm font-medium">Tržba Kč</CardTitle>
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{getTotalAmount()} Kč</div>
+              <div className="text-2xl font-bold">
+                {formatPaymentReportingTotal(completedPaymentSummary)}
+              </div>
+              <p className="text-xs text-muted-foreground">Odvozeno ze známých balíčků</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Připsané MioCoiny</CardTitle>
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {formatCreditedMiocoins(completedPaymentSummary.creditedMiocoins)}
+              </div>
             </CardContent>
           </Card>
           <Card>
@@ -222,7 +242,8 @@ const AdminPayments: React.FC = () => {
                     <TableRow>
                       <TableHead>ID platby</TableHead>
                       <TableHead>Uživatel</TableHead>
-                      <TableHead>Částka</TableHead>
+                      <TableHead>Tržba Kč</TableHead>
+                      <TableHead>Připsané MioCoiny</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Metoda</TableHead>
                       <TableHead>Datum</TableHead>
@@ -236,7 +257,8 @@ const AdminPayments: React.FC = () => {
                           {payment.id.substring(0, 8)}...
                         </TableCell>
                         <TableCell>{payment.users?.email}</TableCell>
-                        <TableCell className="font-medium">{payment.amount} Kč</TableCell>
+                        <TableCell className="font-medium">{formatDerivedPaidCzk(payment.amount)}</TableCell>
+                        <TableCell>{formatCreditedMiocoins(payment.amount)}</TableCell>
                         <TableCell>{getStatusBadge(payment.status)}</TableCell>
                         <TableCell>{payment.method}</TableCell>
                         <TableCell>
