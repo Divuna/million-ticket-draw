@@ -14,6 +14,19 @@
 
 ---
 
+## 2026-05-14 — Voucher purchase E2E spec 10 — čistý test-only PR otevřen
+
+### Co bylo provedeno
+- PR #11 (`test/e2e-voucher-purchase-balance`) byl uzavřen bez merge — obsahoval smíšené změny (app hook, CSS, testy, workflow seed).
+- Appový bugfix extrahován a mergnut odděleně jako PR #13 (`fix/user-vouchers-fetch`, merge commit `f9719101`).
+- Otevřen nový čistý test-only PR z větve `test/e2e-voucher-purchase-balance-clean` (base: `main` @ `c9d8123`).
+- Přidán soubor `tests/e2e/10-voucher-purchase-balance.spec.ts` — staging-only spec ověřující voucher purchase flow a wallet balance decrease.
+- Upraven `.github/workflows/playwright-staging.yml` — přidány 3 kroky: Reset test user vouchers, Seed E2E Spec03 voucher, Seed E2E Spec10 voucher.
+- Žádný app kód nebyl změněn. `useUserVouchers.ts` fix je na main od PR #13.
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
+
+---
+
 ## 2026-05-14 — PR #13 useUserVouchers PostgREST embedded join fix merged into main
 
 ### Co bylo provedeno

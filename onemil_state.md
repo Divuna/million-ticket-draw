@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 14. 05. 2026 (PR #13 useUserVouchers fix mergnut; PR #11 zůstává otevřeno)
+**Aktualizováno:** 14. 05. 2026 (PR #13 mergnut; PR #11 uzavřeno; nový čistý PR test/e2e-voucher-purchase-balance-clean připraven)
 
 ---
 
@@ -268,6 +268,18 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (14. 05. 2026)
 
+### PR čistý test-only — Voucher purchase E2E (spec 10) — OTEVŘEN (14. 05. 2026)
+
+- **Branch:** `test/e2e-voucher-purchase-balance-clean` → `main` (čeká na merge)
+- **Přidané soubory:**
+  - `tests/e2e/10-voucher-purchase-balance.spec.ts` — nový Staging Full E2E test
+  - `.github/workflows/playwright-staging.yml` — přidány 3 seed/reset kroky
+- **Test ověřuje:** login → /contest/:id balance read → /vouchers buy E2E Spec10 Voucher → Zakoupené tab "Uplatnit voucher" → balance decrease o přesně voucherPrice MC
+- **Guard:** test.skip pokud `E2E_CONTEST_ID` není nastaven (produkční CI ho nemá)
+- **Collision prevention:** E2E Spec10 Voucher seeded s `created_at: "2020-01-01"` (last in list); spec03 používá `.first()` (newest = E2E Spec03 Voucher) — žádná kolize
+- **App code nedotčen** — `useUserVouchers.ts` fix je již na main (PR #13)
+- **PR #11 uzavřeno bez merge** (bylo smíšené)
+
 ### PR #13 — useUserVouchers PostgREST embedded join fix — MERGNUT (14. 05. 2026)
 
 - **Branch:** `fix/user-vouchers-fetch` → `main`
@@ -276,8 +288,8 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 - **Fix:** dva explicitní dotazy místo `voucher:vouchers!user_vouchers_voucher_id_fkey(...)` — PostgREST embedded join vracel HTTP 400 na stagingu (FK constraint name neshoda), tiše zachycený → `setVouchers([])` → prázdný tab Zakoupené
 - **PR smoke:** run `25878064722` ✅ success
 - **Post-merge production smoke:** run `25878209886` ✅ success
-- **Post-merge Staging Full E2E na main:** run `25878303521` ✅ 15 passed, 3 skipped (spec 10 není na main — je na PR #11)
-- **PR #11** (`test/e2e-voucher-purchase-balance`) zůstává OPEN a nemergnuto
+- **Post-merge Staging Full E2E na main:** run `25878303521` ✅ 15 passed, 3 skipped
+- **PR #11 uzavřeno bez merge** (smíšené změny — app kód + testy + CSS)
 - Nebyl proveden deploy, migrace ani zásah do produkčních dat ✅
 
 ---
