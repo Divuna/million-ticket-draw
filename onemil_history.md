@@ -1096,3 +1096,30 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Nebyly spuštěny migrace.
 - Nebyl měněn app kód.
 - Nebyly měněny Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers ani `buy_ticket_atomic`.
+
+---
+
+## 2026-05-14 - PR #6 admin revenue reporting fix
+
+- Sloučen PR #6 `Separate admin revenue from credited MioCoins` do `main`.
+- Merge commit: `c32325eef3a4511d8283dca74c27d050b8e5d287`.
+- Admin reporting už nezobrazuje `payments.amount` jako Kč tržbu.
+- `payments.amount` zůstává evidováno jako připsané MioCoiny.
+- `Tržba Kč` je ve frontendu odvozena ze známé mapy MioCoin balíčků:
+  - 50 MC -> 50 Kč
+  - 310 MC -> 300 Kč
+  - 525 MC -> 500 Kč
+  - 1280 MC -> 1200 Kč
+- Připsané MioCoiny jsou v adminu zobrazeny samostatně.
+- Neznámé částky mimo známé balíčky se v Kč tržbě zobrazují jako `neznámé`.
+- Nebyla změněna business logika.
+- Nebyla měněna databázová funkce `get_admin_summary_dashboard`.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyly měněny Supabase data, Stripe, webhook, wallet, contests, tickets, winners, Partner Offers, Sofinity, OneSignal ani `buy_ticket_atomic`.
+- Ověření před merge:
+  - Smoke E2E prošel na PR #6.
+  - Playwright Staging Full E2E prošel na větvi `fix/admin-revenue-miocoin-reporting`.
+- Ověření po merge do `main`:
+  - Smoke E2E prošel: run `25845908864`.
+  - Playwright Staging Full E2E prošel: run `25845971759`.
