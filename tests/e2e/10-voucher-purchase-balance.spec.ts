@@ -133,10 +133,23 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
       `Check the staging wallet reset step — wallet should start at 5 000 MC.`,
     ).toBeGreaterThan(voucherPrice);
 
-    // ── 5. Purchase the voucher ────────────────────────────────────────────────
+    // ── 5. Arm user-vouchers refresh interceptor before clicking ─────────────
+    // After buy_voucher_atomic succeeds, handleVoucherPurchase() calls
+    // refetchUserVouchers() which fires a GET to /rest/v1/user_vouchers.
+    // We arm the interceptor BEFORE clicking so we can wait for the refresh
+    // response before asserting the Zakoupené tab — avoids a race where the
+    // test clicks the tab before the query has completed and sees empty state.
+    const userVouchersRefreshResponse = page.waitForResponse(
+      (res) =>
+        res.url().includes('/rest/v1/user_vouchers') &&
+        res.request().method() === 'GET',
+      { timeout: 15_000 },
+    );
+
+    // ── 6. Purchase the voucher ────────────────────────────────────────────────
     await buyButton.click();
 
-    // ── 6. Assert success toast ────────────────────────────────────────────────
+    // ── 7. Assert success toast ────────────────────────────────────────────────
     // Success: "Voucher úspěšně zakoupen za 5 MioCoinů!"
     // Error:   "Nepodařilo se zakoupit voucher"
     // Both render as [data-sonner-toast] via Sonner.
@@ -156,9 +169,15 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
       );
     }
 
-    // ── 7. Verify purchased voucher appears in Zakoupené tab ──────────────────
-    // After buy_voucher_atomic succeeds, refetchUserVouchers() fires and the
-    // voucher renders in the Zakoupené tab with an "Uplatnit voucher" button.
+    // ── 8. Wait for user_vouchers refetch to complete ─────────────────────────
+    // refetchUserVouchers() fires after toast — we must wait for the DB round-
+    // trip before switching to the Zakoupené tab, otherwise the tab renders
+    // empty state (race between test navigation and async React state update).
+    await userVouchersRefreshResponse;
+
+    // ── 9. Verify purchased voucher appears in Zakoupené tab ──────────────────
+    // After refetchUserVouchers() completes, the voucher (redeemed=true) renders
+    // in the Zakoupené tab with an "Uplatnit voucher" button.
     const zakoupeneTab = page.getByRole('tab', { name: /Zakoupené|Zak\./i });
     await zakoupeneTab.click();
 
@@ -168,7 +187,7 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
       'Purchased voucher must appear in Zakoupené tab with "Uplatnit voucher" button',
     ).toBeVisible({ timeout: 10_000 });
 
-    // ── 8. Navigate back to ContestDetail to read refreshed balance ───────────
+    // ── 10. Navigate back to ContestDetail to read refreshed balance ──────────
     // ContestDetail calls loadUserBalance(userId) on mount, which fires a GET
     // to /rest/v1/wallets. Arm the interceptor before navigating so we wait for
     // the fresh DB read before asserting the balance value.
@@ -189,7 +208,7 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
     // Poll until the UI reflects the post-purchase value (React state update).
     await expect(balanceParagraphAfter).not.toContainText(balanceBeforeRaw, { timeout: 8_000 });
 
-    // ── 9. Assert exact balance decrease ──────────────────────────────────────
+    // ── 11. Assert exact balance decrease ─────────────────────────────────────
     const balanceAfterRaw = (await balanceParagraphAfter.textContent())?.trim() ?? '';
     const balanceAfter    = parseCzechInt(balanceAfterRaw);
     const expectedBalance = balanceBefore - voucherPrice;
