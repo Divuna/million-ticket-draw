@@ -208,37 +208,37 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
     }
 
     // ── 7. Verify purchased voucher appears in Zakoupené tab ──────────────────
-    // Navigate fresh to /vouchers?tab=purchased instead of clicking the in-page tab.
+    // Navigate fresh to /vouchers?tab=purchased (full page reload, not a SPA pushState).
     //
-    // Why a fresh navigation instead of tab click:
+    // Why a fresh navigation instead of clicking the in-page tab:
     //   handleVoucherPurchase fires toast.success() BEFORE awaiting refetchUserVouchers().
-    //   When the test sees the toast and clicks the tab, fetchUserVouchers() has just
-    //   started (setLoading=true → skeletons render). Additionally, the realtime
-    //   subscription fires a concurrent second fetchUserVouchers() when the INSERT
-    //   lands, which resets loading=true again after the first call finishes.
-    //   These two concurrent calls can keep the skeleton visible indefinitely.
+    //   When the test clicks the in-page tab, Radix Tabs switches content but
+    //   fetchUserVouchers() may still be loading (setLoading=true → skeletons shown).
+    //   The concurrent realtime subscription can also reset loading=true after the
+    //   first refetch finishes, keeping skeletons alive indefinitely.
     //
-    //   A fresh navigation re-mounts the Vouchers component. On mount, fetchUserVouchers()
-    //   runs once with no concurrency. By this point the purchase transaction is committed,
-    //   so the GET returns the new row immediately. No race, no stale state.
+    //   A fresh page.goto('/vouchers?tab=purchased') causes a full browser navigation:
+    //   - React mounts from scratch (no stale state)
+    //   - Tabs defaultValue="purchased" activates the Zakoupené tab immediately
+    //   - fetchUserVouchers() fires on mount once auth is restored
+    //   - By then the purchase is committed → row returns in the GET response
     //
-    // Wait for the user_vouchers GET response before asserting so we know React state
-    // has been populated from the network result (not just the loading spinner).
-    const userVouchersLoaded = page.waitForResponse(
-      (res) =>
-        res.url().includes('/rest/v1/user_vouchers') &&
-        res.request().method() === 'GET',
-      { timeout: 15_000 },
-    );
-
+    // Why no waitForResponse:
+    //   Arming the interceptor before page.goto can accidentally catch the old-page's
+    //   in-flight refetch (from handleVoucherPurchase), which completes during the
+    //   navigation before the new page even loads. This causes waitForResponse to
+    //   resolve early while the new page is still initialising.
+    //
+    // Instead: use toBeVisible(20s) to poll, which covers:
+    //   full page load (~2s) + auth session restore (~2s) + network GET (~1s) +
+    //   React re-render (~0.1s) with ≥14 s headroom.
     await page.goto('/vouchers?tab=purchased');
-    await userVouchersLoaded;
 
     const uplatnitButton = page.getByRole('button', { name: 'Uplatnit voucher' }).first();
     await expect(
       uplatnitButton,
       'Purchased voucher must appear in Zakoupené tab with "Uplatnit voucher" button',
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible({ timeout: 20_000 });
 
     // ── 10. Navigate back to ContestDetail to read refreshed balance ──────────
     // ContestDetail calls loadUserBalance(userId) on mount, which fires a GET
