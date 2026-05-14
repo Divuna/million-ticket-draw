@@ -1303,3 +1303,25 @@ Invariant:
 - Nebyl proveden deploy.
 - Nebyly spuštěny migrace.
 - Nebyla dotčena Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers, commissions, tracking, routes, login behavior ani `buy_ticket_atomic`.
+
+---
+
+## Footer Affiliate wording fix (14. 05. 2026)
+
+PR #8 `Update footer Affiliate wording` byl sloučen do `main`.
+
+Změna:
+- Zbývající viditelné footer texty `Pro influencery`, `Registrace influencera` a `Přihlášení influencera` byly nahrazeny wordingem `Affiliate program` / `Affiliate partner`.
+- Existující URL/routes zůstaly beze změny.
+- Nebyly změněny DB, logika, provize, tracking ani login/routing.
+
+Ověření:
+- Smoke E2E prošel na PR #8.
+- Playwright Staging Full E2E prošel na větvi `fix/footer-affiliate-wording`.
+- Po merge do `main` prošel Smoke E2E: run `25861584394`.
+- Po merge do `main` prošel Playwright Staging Full E2E: run `25861663913`.
+
+Invariant:
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyla dotčena Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers, commissions, tracking, routes, login behavior ani `buy_ticket_atomic`.

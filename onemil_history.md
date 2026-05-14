@@ -1203,3 +1203,22 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Ověření po merge do `main`:
   - Smoke E2E prošel: run `25859772102`.
   - Playwright Staging Full E2E prošel: run `25859844919`.
+
+---
+
+## 2026-05-14 - PR #8 Footer Affiliate wording fix
+
+- Sloučen PR #8 `Update footer Affiliate wording` do `main`.
+- Merge commit: `003a54dc874568f90f263543d8b1b1f54d41dfd5`.
+- Zbývající viditelné footer texty `Pro influencery`, `Registrace influencera` a `Přihlášení influencera` byly nahrazeny wordingem `Affiliate program` / `Affiliate partner`.
+- Existující URL/routes zůstaly beze změny.
+- Nebyly změněny DB, logika, provize, tracking ani login/routing.
+- Nebyl proveden deploy.
+- Nebyly spuštěny migrace.
+- Nebyla dotčena Supabase data, Stripe, wallet, contests, tickets, winners, Partner Offers, commissions, tracking, routes, login behavior ani `buy_ticket_atomic`.
+- Ověření před merge:
+  - Smoke E2E prošel na PR #8.
+  - Playwright Staging Full E2E prošel na větvi `fix/footer-affiliate-wording`.
+- Ověření po merge do `main`:
+  - Smoke E2E prošel: run `25861584394`.
+  - Playwright Staging Full E2E prošel: run `25861663913`.
