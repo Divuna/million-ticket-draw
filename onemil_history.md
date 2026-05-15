@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-05-15 — PR #24 + PR #25 Admin Affiliate pages smoke test přidán a aktivován (spec 15)
+
+### Co bylo provedeno
+- Staging admin E2E účet vytvořen: `admin-e2e@onemil.cz`, id `3960e47f-b583-4ef9-a48f-786bfe432bbd`, `public.user_roles.role=admin` (staging only, produkce nedotčena).
+- GitHub Secrets přidány: `STAGING_E2E_ADMIN_EMAIL`, `STAGING_E2E_ADMIN_PASSWORD`.
+- PR #24 `test/e2e-admin-affiliate-pages-smoke` → `main` (merge commit `8a8ba05`): přidán `tests/e2e/15-admin-affiliate-pages-smoke.spec.ts` — read-only smoke pro 3 admin Affiliate stránky.
+- PR #25 `test/wire-admin-e2e-secrets` → `main` (merge commit `024fd92`): 2 řádky v `playwright-staging.yml` — `E2E_ADMIN_EMAIL` + `E2E_ADMIN_PASSWORD`.
+- Post-merge Staging Full E2E run `25942146994` ✅ — **23 passed, 3 skipped, 0 failed** — spec 15 RUNS (ne skip) a prošel za 10.5s. Telegram OK.
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
+
 ## 2026-05-15 — PR #23 Affiliate E2E secrets zapojeny do staging workflow, spec 14 aktivován
 
 ### Co bylo provedeno

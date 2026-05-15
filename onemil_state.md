@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 15. 05. 2026 (PR #23 mergnut do main @ ecf7abf — Affiliate E2E secrets zapojeny, spec 14 zelený)
+**Aktualizováno:** 15. 05. 2026 (PR #24 + #25 mergnuty — admin Affiliate E2E smoke test přidán, spec 15 zelený)
 
 ---
 
@@ -267,6 +267,21 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 ---
 
 ## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (15. 05. 2026)
+
+### PR #24 + PR #25 — Admin Affiliate pages smoke test (spec 15) — MERGNUTY (15. 05. 2026)
+
+- **PR #24** — `test/e2e-admin-affiliate-pages-smoke` → `main`, merge commit `8a8ba05`
+  - Přidán: `tests/e2e/15-admin-affiliate-pages-smoke.spec.ts` (80 řádků, read-only)
+  - Ověřuje 3 admin Affiliate stránky bez mutací: `/admin/influencers`, `/admin/influencer-commissions`, `/admin/influencer-campaigns`
+  - `test.skip` pokud `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` chybí
+- **PR #25** — `test/wire-admin-e2e-secrets` → `main`, merge commit `024fd92`
+  - 2 řádky přidány do `playwright-staging.yml`: `E2E_ADMIN_EMAIL` + `E2E_ADMIN_PASSWORD`
+- **Staging admin E2E účet (staging only):**
+  - `admin-e2e@onemil.cz`, id `3960e47f-b583-4ef9-a48f-786bfe432bbd`, `public.user_roles.role=admin` ✅
+  - Produkce nedotčena ✅
+- **GitHub Secrets přidány:** `STAGING_E2E_ADMIN_EMAIL`, `STAGING_E2E_ADMIN_PASSWORD`
+- **Spec 15 nyní RUNS:** run `25942146994` ✅ — **23 passed, 3 skipped, 0 failed** — spec 15 ✅ (10.5s) — Telegram OK
+- App kód nedotčen — žádné migrace, žádný deploy, žádná produkce ✅
 
 ### PR #23 — Affiliate E2E secrets zapojeny do staging workflow — MERGNUT (15. 05. 2026)
 
