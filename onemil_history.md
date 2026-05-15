@@ -14,6 +14,19 @@
 
 ---
 
+## 2026-05-15 — PR #23 Affiliate E2E secrets zapojeny do staging workflow, spec 14 aktivován
+
+### Co bylo provedeno
+- PR #23 **ci: wire Affiliate E2E secrets into staging workflow (spec 14)** byl mergnut do `main` (merge commit `ecf7abf`).
+- Zdrojová větev: `test/wire-affiliate-e2e-secrets`; cílová větev: `main`.
+- Změna: 2 řádky přidány do `.github/workflows/playwright-staging.yml` — `E2E_AFFILIATE_EMAIL` a `E2E_AFFILIATE_PASSWORD` namapovány ze `STAGING_E2E_AFFILIATE_EMAIL` / `STAGING_E2E_AFFILIATE_PASSWORD` secrets.
+- Staging Affiliate E2E účet vytvořen v staging DB (`dxmowysntemfqfnanxua`, pouze staging):
+  - `auth.users`: `affiliate-e2e@onemil.cz`, id `8975593e-cc27-4f6b-ba23-c7077c914f38`, e-mail potvrzen.
+  - `public.partners`: `status=approved`, `notes={"type":"influencer"}`, `auth_user_id` propojen.
+- GitHub Secrets přidány: `STAGING_E2E_AFFILIATE_EMAIL`, `STAGING_E2E_AFFILIATE_PASSWORD`.
+- Post-merge Staging Full E2E run `25941172937` ✅ — **22 passed, 3 skipped, 0 failed** — spec 14 RUNS (ne skip) a prošel za 4.9s. Telegram OK.
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
+
 ## 2026-05-15 — PR #22 spec 10 flaky E2E test opraven a mergnut do main
 
 ### Co bylo provedeno

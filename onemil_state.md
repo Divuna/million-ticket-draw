@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 15. 05. 2026 (PR #22 mergnut do main @ 3d645d7 — spec 10 flaky test opraven)
+**Aktualizováno:** 15. 05. 2026 (PR #23 mergnut do main @ ecf7abf — Affiliate E2E secrets zapojeny, spec 14 zelený)
 
 ---
 
@@ -268,6 +268,19 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (15. 05. 2026)
 
+### PR #23 — Affiliate E2E secrets zapojeny do staging workflow — MERGNUT (15. 05. 2026)
+
+- **Branch:** `test/wire-affiliate-e2e-secrets` → `main`
+- **Merge commit:** `ecf7abf`
+- **Změna:** 2 řádky přidány do `.github/workflows/playwright-staging.yml` — `E2E_AFFILIATE_EMAIL` a `E2E_AFFILIATE_PASSWORD` předávány ze `STAGING_E2E_AFFILIATE_EMAIL` / `STAGING_E2E_AFFILIATE_PASSWORD` secrets.
+- **Staging Affiliate E2E účet vytvořen (staging only):**
+  - `affiliate-e2e@onemil.cz` vložen do staging `auth.users` (e-mail potvrzen), `auth.identities` vytvořen.
+  - `public.partners` row: `status=approved`, `approved_at=now()`, `notes={"type":"influencer"}`, `auth_user_id=8975593e-cc27-4f6b-ba23-c7077c914f38`, `contact_email=affiliate-e2e@onemil.cz`.
+  - Produkce nedotčena ✅
+- **GitHub Secrets přidány:** `STAGING_E2E_AFFILIATE_EMAIL`, `STAGING_E2E_AFFILIATE_PASSWORD` (Divuna/million-ticket-draw).
+- **Spec 14 nyní RUNS (ne skip):** run `25941172937` ✅ — **22 passed, 3 skipped, 0 failed** — spec 14 `Affiliate Dashboard — Login Smoke` ✅ (4.9s) — Telegram OK.
+- App kód nedotčen — žádné migrace, žádný deploy, žádný zásah do produkce ✅
+
 ### PR #22 — spec 10 flaky E2E test opraven — MERGNUT (15. 05. 2026)
 
 - **Branch:** `fix/e2e-voucher-balance-before-read` → `main`
@@ -290,7 +303,7 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 - **Co test ověřuje:** `/partner/login` form → přihlášení schváleného Affiliate partnera → redirect na `/influencer/dashboard` → „Aktivní Affiliate partner" badge → H1 „Vydělávejte s OneMil" → „Váš Affiliate odkaz" sekce → `input[readonly]` obsahuje `/?ref=` pattern.
 - **Guard:** `test.skip` pokud `E2E_AFFILIATE_EMAIL` / `E2E_AFFILIATE_PASSWORD` chybí — skipuje čistě v production smoke i staging full E2E bez secrets.
 - **Read-only:** bez Supabase write, bez vytváření uživatelů, bez form submission dat.
-- **Chybějící staging secrets** (follow-up potřebný): `STAGING_E2E_AFFILIATE_EMAIL` a `STAGING_E2E_AFFILIATE_PASSWORD` zatím nejsou v GitHub Secrets. Spec 14 bude skipovat, dokud nejsou přidány a zapojeny do `playwright-staging.yml`.
+- **Staging secrets doplněny v PR #23:** `STAGING_E2E_AFFILIATE_EMAIL` a `STAGING_E2E_AFFILIATE_PASSWORD` přidány do GitHub Secrets a zapojeny do `playwright-staging.yml`. Spec 14 nyní běží a je zelený ✅
 - **Production smoke (větev):** run `25937181131` ✅ SUCCESS
 - **Pre-merge branch Staging Full E2E:** run `25937679308` ✅ 21 passed, 4 skipped (spec 14 skip ✅)
 - **Post-merge production smoke:** run `25937888356` ✅ SUCCESS — Telegram OK
