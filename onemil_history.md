@@ -14,6 +14,28 @@
 
 ---
 
+## 2026-05-15 — PR #20 Affiliate public pages E2E regression guard merged into main
+
+### Co bylo provedeno
+- PR #20 **test: E2E regression guard for public Affiliate program pages** byl mergnut do `main`.
+- Zdrojová větev: `test/e2e-affiliate-landing`; cílová větev: `main`.
+- Merge commit: `0f5f864`.
+- Přidán jediný soubor: `tests/e2e/13-affiliate-landing.spec.ts` (159 řádků, 3 testy).
+- **Co test ověřuje (3 read-only testy, bez auth):**
+  - `/influencer` — „Affiliate program OneMil" chip, H1, CTA tlačítko + href `/influencer/register`, „Jak to funguje" link + href `/influencer/how-to-earn`.
+  - `/influencer/how-to-earn` — H1, „Sdílejte Affiliate odkaz" (krok 1), zpětný odkaz `/influencer`, dolní CTA.
+  - `/influencer/register` — CardTitle „Registrace Affiliate partnera", vstupy name/email/password/mainPlatformUrl, zpětný odkaz; formulář **neodesílán**.
+- **Read-only:** bez auth, bez form submission, bez Supabase write. Bez env proměnných — plně veřejné stránky.
+- Chytí regresi při návratu „Influencer" wordingu nebo rozbití navigace / formuláře.
+- Lokální Windows `spawn UNKNOWN` je pre-existující problém identický pro spece 01–13; CI (Ubuntu) prochází.
+- Bob, odesílání zpráv, routy, DB, Supabase, Stripe, wallet, soutěže, tikety, výhry, Partner Offers, Affiliate tracking, `buy_ticket_atomic` — nedotčeny.
+- PR branch Staging Full E2E: run `25936217257` ✅ ALL PASSED.
+- Post-merge production smoke: run `25936393035` ✅ SUCCESS — Telegram `OneMil PROD smoke OK` doručen.
+- Post-merge Staging Full E2E na main: run `25936408552` ✅ ALL PASSED — Telegram `OneMil STAGING full E2E OK` doručen.
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
+
+---
+
 ## 2026-05-15 — PR #19 Mobile Messages layout E2E regression guard merged into main
 
 ### Co bylo provedeno

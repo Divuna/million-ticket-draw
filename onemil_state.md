@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 15. 05. 2026 (PR #19 mergnut do main @ c27a103 — Mobile Messages layout E2E regression guard)
+**Aktualizováno:** 15. 05. 2026 (PR #20 mergnut do main @ 0f5f864 — Affiliate public pages E2E regression guard)
 
 ---
 
