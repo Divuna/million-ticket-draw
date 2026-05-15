@@ -87,9 +87,24 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
     // ── 1. Read balance before purchase from ContestDetail ────────────────────
     // /vouchers does not display wallet balance. ContestDetail is the reliable
     // UI surface that shows it via loadUserBalance() on mount.
+    //
+    // Arm the wallet GET interceptor BEFORE navigating so we wait for the fresh
+    // DB read before reading the "before" value. Without this guard, the test
+    // can read the UI before loadUserBalance() resolves — or capture a value
+    // that was settled by a prior spec's async side-effect — producing a stale
+    // "before" that doesn't match what the DB actually held at that moment.
+    // This mirrors the same waitForResponse pattern used for the "after" read.
+    const beforeWalletResponse = page.waitForResponse(
+      (res) =>
+        res.url().includes('/rest/v1/wallets') &&
+        res.request().method() === 'GET',
+      { timeout: 15_000 },
+    );
     await page.goto(`/contest/${TEST_CONTEST_ID}`);
+    await beforeWalletResponse;
+
     const balanceLabel = page.getByText('Tvůj stav MioCoinů', { exact: true });
-    await expect(balanceLabel).toBeVisible({ timeout: 15_000 });
+    await expect(balanceLabel).toBeVisible({ timeout: 10_000 });
 
     const balanceParagraph = balanceLabel.locator('xpath=following-sibling::p[1]');
     await expect(balanceParagraph).toBeVisible({ timeout: 5_000 });
