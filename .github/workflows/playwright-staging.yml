@@ -222,6 +222,8 @@ jobs:
           E2E_WIN_CONTEST_ID: ${{ steps.seed-win-contest.outputs.win_contest_id }}
           E2E_AFFILIATE_EMAIL: ${{ secrets.STAGING_E2E_AFFILIATE_EMAIL }}
           E2E_AFFILIATE_PASSWORD: ${{ secrets.STAGING_E2E_AFFILIATE_PASSWORD }}
+          E2E_ADMIN_EMAIL: ${{ secrets.STAGING_E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.STAGING_E2E_ADMIN_PASSWORD }}
 
       - name: E2E status — OK
         if: success()
