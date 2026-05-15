@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 15. 05. 2026 (PR #20 mergnut do main @ 0f5f864 — Affiliate public pages E2E regression guard)
+**Aktualizováno:** 15. 05. 2026 (PR #22 mergnut do main @ 3d645d7 — spec 10 flaky test opraven)
 
 ---
 
@@ -267,6 +267,35 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 ---
 
 ## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (15. 05. 2026)
+
+### PR #22 — spec 10 flaky E2E test opraven — MERGNUT (15. 05. 2026)
+
+- **Branch:** `fix/e2e-voucher-balance-before-read` → `main`
+- **Merge commit:** `3d645d7b98f5650c0a0f29c86f24f8ac87ff85cf`
+- **Změněný soubor:** `tests/e2e/10-voucher-purchase-balance.spec.ts` — pouze (+16 / −1)
+- **Root cause:** „before" zůstatek peněženky byl čten bez `waitForResponse(GET /rest/v1/wallets)`. „After" čtení již tento guard mělo. Při dvou staging bězích spuštěných v rozmezí 7 minut mohla async operace z předchozího spece (spec 09 `buy_ticket_atomic`) doběhnout právě v okně spec 10, čímž test naměřil 15 MC pokles místo očekávaných 5 MC.
+- **Fix:** Přidán `waitForResponse(GET /rest/v1/wallets)` armovaný **před** `page.goto()` a awaited před čtením `balanceParagraph.textContent()` — symetrizuje „before" čtení s již existujícím guardem na „after" čtení.
+- **PR #21 nebyl příčinou:** spec 14 v obou failing i passing runech skipoval čistě (bez secrets). Selhání bylo pre-existing flakiness v spec 10, odhalené těsným spuštěním dvou E2E runů.
+- **App kód nedotčen** — žádná wallet logika, voucher logika, Stripe, soutěže, tikety, výhry, Partner Offers, Affiliate, `buy_ticket_atomic` — vše beze změny.
+- **Pre-merge branch Staging Full E2E:** run `25939178932` ✅ 21 passed, 4 skipped, 0 failed — spec 10 ✅ (17.0s)
+- **Post-merge production smoke:** run `25939417571` ✅ 5 passed (20.7s) — Telegram OK
+- **Post-merge Staging Full E2E na main:** run `25939483233` ✅ **21 passed, 4 skipped, 0 failed** — spec 10 ✅ (13.4s) — Telegram OK
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat ✅
+
+### PR #21 — Affiliate dashboard login smoke test — MERGNUT (15. 05. 2026)
+
+- **Branch:** `test/e2e-affiliate-dashboard-smoke` → `main`
+- **Merge commit:** `b868aaf183ceeee71544832c43e23758cf46d809`
+- **Přidaný soubor:** `tests/e2e/14-affiliate-dashboard-smoke.spec.ts` (115 řádků)
+- **Co test ověřuje:** `/partner/login` form → přihlášení schváleného Affiliate partnera → redirect na `/influencer/dashboard` → „Aktivní Affiliate partner" badge → H1 „Vydělávejte s OneMil" → „Váš Affiliate odkaz" sekce → `input[readonly]` obsahuje `/?ref=` pattern.
+- **Guard:** `test.skip` pokud `E2E_AFFILIATE_EMAIL` / `E2E_AFFILIATE_PASSWORD` chybí — skipuje čistě v production smoke i staging full E2E bez secrets.
+- **Read-only:** bez Supabase write, bez vytváření uživatelů, bez form submission dat.
+- **Chybějící staging secrets** (follow-up potřebný): `STAGING_E2E_AFFILIATE_EMAIL` a `STAGING_E2E_AFFILIATE_PASSWORD` zatím nejsou v GitHub Secrets. Spec 14 bude skipovat, dokud nejsou přidány a zapojeny do `playwright-staging.yml`.
+- **Production smoke (větev):** run `25937181131` ✅ SUCCESS
+- **Pre-merge branch Staging Full E2E:** run `25937679308` ✅ 21 passed, 4 skipped (spec 14 skip ✅)
+- **Post-merge production smoke:** run `25937888356` ✅ SUCCESS — Telegram OK
+- **Post-merge Staging Full E2E na main:** run `25937949756` ❌ FAILED — spec 10 flaky (15 MC místo 5 MC) — příčina: 2 runs v 7 minutách, async timing. **Spec 14 nesouvisí — skippoval čistě.** Opraveno v PR #22 (viz výše).
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat ✅
 
 ### PR #17 — Messages composer fix — MERGNUT (15. 05. 2026)
 

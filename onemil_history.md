@@ -14,6 +14,49 @@
 
 ---
 
+## 2026-05-15 — PR #22 spec 10 flaky E2E test opraven a mergnut do main
+
+### Co bylo provedeno
+- PR #22 **fix: stabilize voucher balance E2E test (spec 10)** byl mergnut do `main`.
+- Zdrojová větev: `fix/e2e-voucher-balance-before-read`; cílová větev: `main`.
+- Merge commit: `3d645d7b98f5650c0a0f29c86f24f8ac87ff85cf`.
+- Změněn jediný soubor: `tests/e2e/10-voucher-purchase-balance.spec.ts` (+16 / −1).
+
+### Root cause flaky testu
+- Spec 10 číst „before" zůstatek peněženky bez `waitForResponse` — UI mohlo zobrazit hodnotu před doběhnutím `loadUserBalance()` nebo zachytit hodnotu ovlivněnou async vedlejším efektem z předchozího spec 09.
+- „After" čtení již `waitForResponse(GET /rest/v1/wallets)` mělo. Asymetrie způsobila nestabilitu při těsném spouštění dvou staging runů (PR #21 branch run + PR #21 post-merge run).
+- Naměřeno: 15 MC pokles místo očekávaných 5 MC → assertion selhala.
+
+### Oprava
+- Přidán `waitForResponse(GET /rest/v1/wallets)` armovaný před `page.goto()` a awaited před čtením hodnoty — symetrizuje „before" a „after" čtení.
+
+### PR #21 nebyl příčinou
+- Spec 14 (přidaný v PR #21) v obou runech skipoval čistě. Selhání bylo pre-existing flakiness spec 10.
+
+### CI výsledky
+- Pre-merge branch Staging Full E2E: run `25939178932` ✅ 21 passed, 4 skipped, spec 10 ✅ (17.0s)
+- Post-merge production smoke: run `25939417571` ✅ 5 passed (20.7s) — Telegram OK
+- Post-merge Staging Full E2E na main: run `25939483233` ✅ **21 passed, 4 skipped, 0 failed**, spec 10 ✅ (13.4s) — Telegram OK
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
+
+---
+
+## 2026-05-15 — PR #21 Affiliate dashboard login smoke test mergnut do main
+
+### Co bylo provedeno
+- PR #21 **test: Affiliate dashboard login smoke (spec 14)** byl mergnut do `main`.
+- Zdrojová větev: `test/e2e-affiliate-dashboard-smoke`; cílová větev: `main`.
+- Merge commit: `b868aaf183ceeee71544832c43e23758cf46d809`.
+- Přidán jediný soubor: `tests/e2e/14-affiliate-dashboard-smoke.spec.ts` (115 řádků).
+- **Co test ověřuje:** přihlášení schváleného Affiliate partnera přes `/partner/login` → redirect `/influencer/dashboard` → badge „Aktivní Affiliate partner" → H1 → sekce „Váš Affiliate odkaz" → `input[readonly]` s `/?ref=` vzorem.
+- **Guard:** `test.skip` pokud `E2E_AFFILIATE_EMAIL` / `E2E_AFFILIATE_PASSWORD` chybí — spec 14 skipuje čistě v production smoke i staging full E2E bez secrets.
+- Read-only test — bez Supabase write, bez form submission dat, bez vytváření uživatelů.
+- Chybějící follow-up: staging secrets `STAGING_E2E_AFFILIATE_EMAIL` + `STAGING_E2E_AFFILIATE_PASSWORD` nutné pro aktivaci spec 14 v CI.
+- Post-merge staging full E2E selhal na spec 10 (flaky timing — nesouvisí). Opraveno v PR #22.
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
+
+---
+
 ## 2026-05-15 — PR #20 Affiliate public pages E2E regression guard merged into main
 
 ### Co bylo provedeno
