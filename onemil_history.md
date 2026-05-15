@@ -14,6 +14,29 @@
 
 ---
 
+## 2026-05-15 — PR #19 Mobile Messages layout E2E regression guard merged into main
+
+### Co bylo provedeno
+- PR #19 **test: E2E regression guard for mobile Messages layout** byl mergnut do `main`.
+- Zdrojová větev: `test/e2e-mobile-messages-layout`; cílová větev: `main`.
+- Merge commit: `c27a103`.
+- Přidán jediný soubor: `tests/e2e/12-mobile-messages-layout.spec.ts` (152 řádků).
+- **Co test ověřuje (iPhone 14 viewport 390×844):**
+  - Spodní navigace (`role="navigation" aria-label="Hlavní menu"`) je visible na `/messages`.
+  - Spodní hrana navigace dosahuje viewport dna (`position: fixed` funguje).
+  - Composer input (`placeholder="Napište zprávu..."`) je viditelný a jeho spodní hrana je nad horní hranou navigace.
+  - Po scrollu messages listu se Y pozice navigace nezmění (≤ 2px tolerance) — hlídá regresi PR #17/18.
+  - Po scrollu je composer stále viditelný nad navigací.
+- **Read-only:** žádná zpráva neodeslána, žádná data nemutována, žádný Supabase write.
+- Lokální Windows `spawn UNKNOWN` je pre-existující problém identický pro všechny spece 01–11; CI (Ubuntu) projde.
+- Bob, odesílání zpráv, routy, DB, Supabase, Stripe, wallet, soutěže, tikety, výhry, Partner Offers, `buy_ticket_atomic` — nedotčeny.
+- PR branch Staging Full E2E: run `25935324024` ✅ ALL PASSED (3m02s).
+- Post-merge production smoke: run `25935503396` ✅ SUCCESS — Telegram `OneMil PROD smoke OK` doručen.
+- Post-merge Staging Full E2E na main: run `25935550724` ✅ ALL PASSED — Telegram `OneMil STAGING full E2E OK` doručen.
+- Nebyl proveden deploy, migrace ani zásah do produkčních dat.
+
+---
+
 ## 2026-05-15 — PR #18 Messages bottom nav stability fix merged into main
 
 ### Co bylo provedeno
