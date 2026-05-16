@@ -1670,6 +1670,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       breakEvenTickets > form.ticket_count &&
       "Bod zvratu je vyšší než počet dostupných ticketů.",
   ].filter(Boolean) as string[];
+  const hasEconomyWarning = estimatedProfit < 0 || marginPercent < economyAssumptions.targetMarginPercent;
+  const economySummaryClass = hasEconomyWarning
+    ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-100"
+    : "border-emerald-500/20 bg-emerald-500/10 text-emerald-50";
 
   // Validation logic for each tab
   const hasMainImage = !!(form.main_image_file || form.main_image_url || (isEditing && editingContest?.main_image));
@@ -1713,7 +1717,24 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 px-6">
-          <div className="shrink-0 overflow-x-auto py-4">
+          <div className="shrink-0 overflow-x-auto py-4 space-y-3">
+            <div className={`grid min-w-max grid-cols-5 gap-2 rounded-lg border p-3 ${economySummaryClass}`}>
+              {[
+                ["Počet ticketů", `${Math.max(0, form.ticket_count || 0).toLocaleString("cs-CZ")}`],
+                ["Celkové odhadované náklady", formatCzk(totalEstimatedCost)],
+                [
+                  "Doporučená cena ticketu",
+                  `${recommendedTicketPrice.toLocaleString("cs-CZ", { maximumFractionDigits: 2 })} Kč`,
+                ],
+                ["Odhadovaný čistý zisk", formatCzk(estimatedProfit)],
+                ["Marže", formatPercent(marginPercent)],
+              ].map(([label, value]) => (
+                <div key={label} className="min-w-[9.5rem]">
+                  <div className="text-[11px] uppercase tracking-wide opacity-70">{label}</div>
+                  <div className="mt-1 text-sm font-semibold text-foreground">{value}</div>
+                </div>
+              ))}
+            </div>
             <TabsList className="inline-flex w-max gap-1">
               <TabsTrigger value="basic" className="flex items-center">
                 Základní údaje
