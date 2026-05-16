@@ -97,6 +97,10 @@ interface PhysicalPrize {
   ticket_position: number;
   description: string;
   detailed_description?: string;
+  supplier_name?: string;
+  unit_cost_czk?: number;
+  vat_rate?: number;
+  handling_override_czk?: number | null;
   image_url?: string | null;
   image_file?: File | null;
   ai_image_url?: string | null;
@@ -206,6 +210,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     ticket_position: 1,
     description: "",
     detailed_description: "",
+    supplier_name: "",
+    unit_cost_czk: 0,
+    vat_rate: 21,
+    handling_override_czk: null,
     image_file: null,
   });
 
@@ -572,6 +580,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           ticket_position: bonus.ticket_position,
           description: bonus.description || "",
           detailed_description: bonus.detailed_description || "",
+          supplier_name: "",
+          unit_cost_czk: 0,
+          vat_rate: 21,
+          handling_override_czk: null,
           image_url: bonus.image_url,
         });
       }
@@ -1069,7 +1081,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     
     // Add prize directly without AI processing
     setPhysicalPrizes((prev) => [...prev, prizeToAdd]);
-    setNewPhysicalPrize({ ticket_position: 1, description: "", detailed_description: "", image_file: null });
+    setNewPhysicalPrize({
+      ticket_position: 1,
+      description: "",
+      detailed_description: "",
+      supplier_name: "",
+      unit_cost_czk: 0,
+      vat_rate: 21,
+      handling_override_czk: null,
+      image_file: null,
+    });
     toast({ title: "Výhra přidána", description: "Věcná výhra byla přidána." });
   };
 
@@ -1575,14 +1596,27 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   const isEditing = !!editingContest;
   const totalMioCoins = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
+  const getHandlingCostForPrize = (prize: PhysicalPrize) =>
+    prize.handling_override_czk != null
+      ? Math.max(0, prize.handling_override_czk)
+      : Math.max(0, economyAssumptions.handlingCostPerPhysicalPrize || 0);
+  const getPhysicalPrizeCostIncludingVat = (prize: PhysicalPrize) => {
+    const unitCostWithoutVat = Math.max(0, prize.unit_cost_czk || 0);
+    const prizeVatRate = Math.max(0, prize.vat_rate ?? 21);
+    return unitCostWithoutVat * (1 + prizeVatRate / 100);
+  };
+  const physicalPrizeBaseCost = physicalPrizes.reduce((sum, prize) => sum + getPhysicalPrizeCostIncludingVat(prize), 0);
   const grossRevenue = Math.max(0, form.ticket_count || 0) * Math.max(0, form.ticket_price || 0);
   const vatRate = Math.max(0, economyAssumptions.vatRate || 0);
   const vatFromRevenue = grossRevenue > 0 ? (grossRevenue * vatRate) / (100 + vatRate) : 0;
   const netRevenue = grossRevenue - vatFromRevenue;
   const netTicketRevenue = Math.max(0, form.ticket_price || 0) - ((Math.max(0, form.ticket_price || 0) * vatRate) / (100 + vatRate));
   const marketingCost = grossRevenue * Math.max(0, economyAssumptions.marketingPercent || 0) / 100;
-  const physicalBonusEstimatedCost = 0;
-  const handlingCostTotal = physicalPrizes.length * Math.max(0, economyAssumptions.handlingCostPerPhysicalPrize || 0);
+  const physicalBonusEstimatedCost = physicalPrizeBaseCost;
+  const handlingCostTotal = physicalPrizes.reduce(
+    (sum, prize) => sum + getHandlingCostForPrize(prize),
+    0
+  );
   const totalEstimatedCost =
     Math.max(0, economyAssumptions.mainPrizeRealCost || 0) +
     Math.max(0, economyAssumptions.mioCoinRealCost || 0) +
@@ -1925,6 +1959,61 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   />
                 </div>
 
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label>Dodavatel</Label>
+                    <Input
+                      value={newPhysicalPrize.supplier_name || ""}
+                      onChange={(e) => setNewPhysicalPrize((prev) => ({ ...prev, supplier_name: e.target.value }))}
+                      placeholder="Např. Apple Premium Reseller"
+                    />
+                  </div>
+                  <div>
+                    <Label>Nákupní cena bez DPH v Kč</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={newPhysicalPrize.unit_cost_czk ?? 0}
+                      onChange={(e) =>
+                        setNewPhysicalPrize((prev) => ({ ...prev, unit_cost_czk: Number(e.target.value || 0) }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label>DPH v %</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.1"
+                      value={newPhysicalPrize.vat_rate ?? 21}
+                      onChange={(e) =>
+                        setNewPhysicalPrize((prev) => ({ ...prev, vat_rate: Number(e.target.value || 0) }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Balné / pošta / práce (override v Kč)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={newPhysicalPrize.handling_override_czk ?? ""}
+                      onChange={(e) =>
+                        setNewPhysicalPrize((prev) => ({
+                          ...prev,
+                          handling_override_czk: e.target.value === "" ? null : Number(e.target.value),
+                        }))
+                      }
+                      placeholder={`Jinak se použije ${Math.max(0, economyAssumptions.handlingCostPerPhysicalPrize || 0).toLocaleString("cs-CZ")} Kč`}
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <Label>Pozice tiketu</Label>
                   <Input
@@ -1946,6 +2035,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                       setNewPhysicalPrize((prev) => ({ ...prev, image_file: e.target.files?.[0] || null }))
                     }
                   />
+                </div>
+
+                <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-muted-foreground">
+                  Tyto nákladové údaje slouží zatím jen pro ekonomický preview. Nákupní cena se zadává bez DPH a do nákladů se zde počítá včetně DPH. Do Supabase se v této fázi neukládají.
                 </div>
 
                 <Button onClick={addPhysicalPrize} className="w-full">
@@ -1977,6 +2070,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                             <div>
                               <span className="font-medium">{prize.description}</span>
                               <span className="text-muted-foreground ml-2">Pozice #{prize.ticket_position}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Dodavatel: {prize.supplier_name?.trim() || "neuvedený"} · Nákupní cena bez DPH:{" "}
+                              {formatCzk(prize.unit_cost_czk || 0)} · DPH: {(prize.vat_rate ?? 21).toLocaleString("cs-CZ")} % ·
+                              {" "}Náklad včetně DPH: {formatCzk(getPhysicalPrizeCostIncludingVat(prize))} ·
+                              {" "}Balné: {formatCzk(getHandlingCostForPrize(prize))}
+                              {prize.handling_override_czk != null ? " (override)" : " (globální default)"}
                             </div>
                           </div>
                         </div>

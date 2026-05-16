@@ -76,10 +76,13 @@ Do not execute these without explicit user instruction:
 - PR #26 added a frontend-only read-only **Ekonomika** tab to `src/components/AdminContestManagement.tsx`.
 - PR #27 added a compact read-only live economy summary bar above the admin contest modal tabs.
 - PR #30 changed the admin final save path so MioCoin bonuses are persisted using the exact previewed positions from frontend state instead of being re-randomized through `distribute-bonus-prizes`.
+- Phase 3A adds frontend-only physical prize cost preview fields in `src/components/AdminContestManagement.tsx`: supplier name, unit cost CZK, VAT rate, and optional per-prize handling override.
 - The panel is an orientation preview during contest creation/editing. It calculates gross revenue, VAT, net revenue, main prize cost, MioCoin cost, handling cost, setup cost, marketing cost, total estimated cost, profit, margin, break-even ticket count, and recommended ticket price.
 - The summary bar shows ticket count, total estimated costs, recommended ticket price, estimated net profit, and margin using the same frontend-only calculations as the **Ekonomika** tab.
 - Economy assumptions are local frontend state only and reset when the modal context changes.
 - The panel and summary bar do not save economy assumptions to Supabase.
+- Physical prize cost preview is also frontend-only; supplier/cost/VAT/handling preview fields are not persisted to Supabase yet.
+- Physical prize preview cost is now included in total estimated cost, profit, margin, break-even, and recommended ticket price. Handling uses per-prize override when set, otherwise the global default.
 - Final contest save now validates bonus positions before persisting MioCoin rows: integer positions, range `1..ticket_count`, duplicate MioCoin positions, physical/MioCoin collisions, and final-ticket collisions.
 - Editing existing contest bonus positions is blocked when tickets already exist.
 - No changes were made to `buy_ticket_atomic`, ticket purchase logic, winner logic, Partner Offers, `bonus_prizes` schema, main prize final-ticket logic, migrations, or production smoke scope.
