@@ -1077,6 +1077,52 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     setPhysicalPrizes((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const validateBonusPositions = (ticketCount: number): string | null => {
+    const physicalPositions = new Set<number>();
+
+    for (const prize of physicalPrizes) {
+      if (!Number.isInteger(prize.ticket_position)) {
+        return "Pozice věcných bonusových výher musí být celá čísla.";
+      }
+      if (prize.ticket_position < 1 || prize.ticket_position > ticketCount) {
+        return `Pozice věcné bonusové výhry #${prize.ticket_position} musí být v rozsahu 1 až ${ticketCount}.`;
+      }
+      if (prize.ticket_position === ticketCount) {
+        return "Bonusová výhra nesmí být na posledním ticketu, který je vyhrazen pro hlavní výhru.";
+      }
+      if (physicalPositions.has(prize.ticket_position)) {
+        return `Pozice #${prize.ticket_position} je duplicitní mezi věcnými bonusovými výhrami.`;
+      }
+      physicalPositions.add(prize.ticket_position);
+    }
+
+    const mioCoinPositions = new Set<number>();
+
+    for (const bonus of mioCoinBonuses) {
+      if (!Number.isInteger(bonus.ticket_position)) {
+        return "Pozice MioCoin bonusů musí být celá čísla.";
+      }
+      if (bonus.ticket_position < 1 || bonus.ticket_position > ticketCount) {
+        return `Pozice MioCoin bonusu #${bonus.ticket_position} musí být v rozsahu 1 až ${ticketCount}.`;
+      }
+      if (bonus.ticket_position === ticketCount) {
+        return "MioCoin bonus nesmí být na posledním ticketu, který je vyhrazen pro hlavní výhru.";
+      }
+      if (mioCoinPositions.has(bonus.ticket_position)) {
+        return `Pozice #${bonus.ticket_position} je duplicitní mezi MioCoin bonusy.`;
+      }
+      if (physicalPositions.has(bonus.ticket_position)) {
+        return `Pozice #${bonus.ticket_position} je už obsazena věcnou bonusovou výhrou.`;
+      }
+      if (!Number.isFinite(bonus.amount) || bonus.amount <= 0) {
+        return "Hodnota MioCoin bonusu musí být větší než 0.";
+      }
+      mioCoinPositions.add(bonus.ticket_position);
+    }
+
+    return null;
+  };
+
   const handleSave = async () => {
     if (!form.title || !form.main_prize || !form.ticket_count || !form.ticket_price) {
       toast({
@@ -1118,6 +1164,45 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       return;
     }
 
+    const bonusValidationError = validateBonusPositions(normalizedTicketCount);
+    if (bonusValidationError) {
+      toast({
+        title: "Chyba v bonusových pozicích",
+        description: bonusValidationError,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const isEditingContest = !!editingContest;
+
+    if (isEditingContest) {
+      const { count: soldTicketsCount, error: soldTicketsError } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("contest_id", editingContest.contest_id);
+
+      if (soldTicketsError) {
+        console.error("Error checking sold tickets before bonus rewrite:", soldTicketsError);
+        toast({
+          title: "Chyba kontroly ticketů",
+          description: "Nepodařilo se ověřit, zda soutěž už má otevřené tickety. Uložení bylo zastaveno.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if ((soldTicketsCount ?? 0) > 0) {
+        toast({
+          title: "Bonusové pozice nelze přepsat",
+          description:
+            "Tato soutěž už má otevřené tickety, proto nelze bezpečně přepisovat bonusové pozice. Vytvořte novou verzi soutěže nebo použijte schválený servisní postup.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setSaving(true);
 
     try {
@@ -1129,8 +1214,6 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       } else if (form.main_image_file) {
         imagePath = await handleImageUpload(form.main_image_file);
       }
-
-      const isEditingContest = !!editingContest;
 
       const { data: contestResult, error } = await supabase.rpc("admin_manage_contest", {
         p_contest_id: isEditingContest ? editingContest.contest_id : null,
@@ -1401,67 +1484,24 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           }
         }
 
-        // Generate MioCoin bonuses via edge function (excludes already-occupied physical positions)
+        // Persist MioCoin bonuses exactly as previewed in frontend state.
         if (mioCoinBonuses.length > 0) {
-          const totalMioCoinCount = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
-          const distributeBody = {
-            contest_id: contestId,
-            bonus_type: "MioCoin",
-            total_value: totalMioCoinCount,
-            amount_per_unit: 1,
-            distribution_rule: "random",
-            batch_size: 500,
-          };
-          console.log("[DEBUG BONUS PAYLOAD]", {
-            contest_id: contestId,
-            ticketCount: form.ticket_count,
-            newBonusesLength: mioCoinBonuses.length,
-            newBonuses: mioCoinBonuses,
-          });
-          mioCoinBonuses.forEach((b, idx) => {
-            console.log("[DEBUG BONUS PAYLOAD] row", idx, {
-              ticket_position: b.ticket_position,
-              amount: b.amount,
+          for (const bonus of mioCoinBonuses) {
+            const { data: insertData, error: insertError } = await supabase.rpc("admin_manage_bonus_prize", {
+              p_contest_id: contestId,
+              p_ticket_position: bonus.ticket_position,
+              p_amount: bonus.amount,
+              p_description: `${bonus.amount} MioCoinů`,
+              p_status: "pending",
+              p_operation: "create",
             });
-          });
 
-          try {
-            const { data: distributionResult, error: distributionError } =
-              await supabase.functions.invoke("distribute-bonus-prizes", {
-                body: distributeBody,
-              });
-
-            if (distributionError) {
-              console.error("[AdminContestManagement] distribute-bonus-prizes invoke error", {
-                message: distributionError.message,
-                details: (distributionError as { details?: string }).details,
-                code: (distributionError as { code?: string }).code,
-                raw: distributionError,
-              });
-              throw new Error(`Chyba při generování MioCoin bonusů: ${distributionError.message}`);
+            if (insertError) {
+              throw new Error(`Chyba při ukládání MioCoin bonusu: ${insertError.message}`);
             }
-
-            console.log("[AdminContestManagement] distribute-bonus-prizes after invoke", {
-              success: distributionResult?.success,
-              result: distributionResult,
-            });
-
-            if (!distributionResult?.success) {
-              console.error("[AdminContestManagement] distribute-bonus-prizes logical failure", {
-                distributionResult,
-              });
-              throw new Error(
-                distributionResult?.error || "Nepodařilo se vygenerovat MioCoin bonusy"
-              );
+            if (insertData && (insertData as any).success === false) {
+              throw new Error(`Chyba při ukládání MioCoin bonusu: ${(insertData as any).message}`);
             }
-          } catch (distErr: unknown) {
-            const e = distErr as { message?: string; details?: string; code?: string };
-            console.error("[AdminContestManagement] distribute-bonus-prizes catch", distErr, {
-              message: e?.message,
-              details: e?.details,
-              code: e?.code,
-            });
-            throw distErr;
           }
 
           // Explicitly set total_miocoin_bonus in contests table
