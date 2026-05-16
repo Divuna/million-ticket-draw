@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 15. 05. 2026 (PR #24 + #25 mergnuty — admin Affiliate E2E smoke test přidán, spec 15 zelený)
+**Aktualizováno:** 16. 05. 2026 (PR #26 mergnut — read-only admin ekonomika soutěže)
 
 ---
 
@@ -80,6 +80,22 @@ Tento soubor je hlavní zdroj pravdy pro pochopení toho, co OneMil je, jak fung
 
 Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje jsou v souboru:
 **`COMPANY_CONTEXT.md`** — zdroj pravdy pro všechny asistenty a nástroje.
+
+---
+
+## ADMIN CONTEST ECONOMY PANEL — READ-ONLY PHASE 1 (16. 05. 2026)
+
+### Stav
+- PR #26 **feat: add read-only contest economy panel** byl mergnut do `main` (merge commit `5f5eb28b17c0cab2b8eaa47e360d75b34252ba59`).
+- `src/components/AdminContestManagement.tsx` má nový read-only tab **„Ekonomika"** v admin modalu pro vytvoření/editaci soutěže.
+- Panel slouží jako orientační ekonomický náhled během přípravy soutěže.
+- Panel počítá: hrubou tržbu, DPH, čistou tržbu, náklad na hlavní výhru, náklad na MioCoin bonusy, balné/poštu/práci, jednorázový setup/distribuční náklad, marketingový náklad, celkové odhadované náklady, odhadovaný zisk, marži, bod zvratu v počtu ticketů a doporučenou minimální cenu ticketu.
+- Ekonomické předpoklady jsou zatím pouze frontend state; po změně modal kontextu se resetují na výchozí hodnoty.
+- Panel zatím nic neukládá do Supabase a nemá databázovou persistenci.
+
+### Invariant
+- Nebyl změněn `buy_ticket_atomic`, ticket purchase logic, winner logic, Partner Offers, `bonus_prizes` schema, `distribute-bonus-prizes`, `admin_manage_bonus_prize`, migrace ani finální save behavior soutěže.
+- Fyzické nákupní ceny věcných bonusů zatím nejsou modelované; panel je označuje jako budoucí fázi / 0 Kč.
 
 ---
 

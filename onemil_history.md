@@ -14,6 +14,22 @@
 
 ---
 
+## 2026-05-16 — PR #26 read-only admin ekonomika soutěže mergnuta
+
+### Co bylo provedeno
+- PR #26 **feat: add read-only contest economy panel** byl mergnut do `main`.
+- Zdrojová větev: `feature/read-only-contest-economy-panel`; cílová větev: `main`.
+- Merge commit: `5f5eb28b17c0cab2b8eaa47e360d75b34252ba59`.
+- Změněn jediný soubor: `src/components/AdminContestManagement.tsx`.
+- Admin modal pro vytvoření/editaci soutěže má nový read-only tab **„Ekonomika"**.
+- Panel počítá hrubou tržbu, DPH, čistou tržbu, náklad na hlavní výhru, náklad na MioCoin bonusy, balné/poštu/práci, jednorázový setup/distribuční náklad, marketingový náklad, celkové odhadované náklady, odhadovaný zisk, marži, bod zvratu v počtu ticketů a doporučenou minimální cenu ticketu.
+- Ekonomické předpoklady se resetují při změně modal kontextu, aby se nepřenášely mezi novou soutěží, editací a znovuotevřením modalu.
+- Panel je frontend-only a zatím nic neukládá do Supabase.
+- Nebyl změněn `buy_ticket_atomic`, `bonus_prizes` schema, Partner Offers, winner logic, ticket purchase logic, migrace ani finální save behavior.
+- PR smoke check prošel. Nebyl proveden manuální deploy.
+
+---
+
 ## 2026-05-15 — PR #24 + PR #25 Admin Affiliate pages smoke test přidán a aktivován (spec 15)
 
 ### Co bylo provedeno
