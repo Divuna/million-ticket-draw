@@ -1690,7 +1690,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) attemptClose(); }}>
       <DialogContent
-        className="max-w-4xl w-[95vw] h-[90vh] flex flex-col p-0"
+        className="max-w-[95vw] h-[90vh] flex flex-col p-0"
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
@@ -1700,8 +1700,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 px-6">
-          <div className="shrink-0 overflow-x-auto py-4 space-y-3">
-            <div className={`grid min-w-max grid-cols-5 gap-2 rounded-lg border p-3 ${economySummaryClass}`}>
+          <div className="shrink-0 py-4 space-y-3">
+            <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 rounded-lg border p-3 ${economySummaryClass}`}>
               {[
                 ["Počet ticketů", `${Math.max(0, form.ticket_count || 0).toLocaleString("cs-CZ")}`],
                 ["Celkové odhadované náklady", formatCzk(totalEstimatedCost)],
@@ -1712,13 +1712,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 ["Odhadovaný čistý zisk", formatCzk(estimatedProfit)],
                 ["Marže", formatPercent(marginPercent)],
               ].map(([label, value]) => (
-                <div key={label} className="min-w-[9.5rem]">
+                <div key={label}>
                   <div className="text-[11px] uppercase tracking-wide opacity-70">{label}</div>
                   <div className="mt-1 text-sm font-semibold text-foreground">{value}</div>
                 </div>
               ))}
             </div>
-            <TabsList className="inline-flex w-max gap-1">
+            <TabsList className="flex flex-wrap h-auto w-full gap-1">
               <TabsTrigger value="basic" className="flex items-center">
                 Základní údaje
                 <TabIndicator isValid={validation.basic.isValid} />
