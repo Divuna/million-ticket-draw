@@ -960,7 +960,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   // Computed number of positions
   const computedPositionCount = stepValue > 0 ? Math.floor(totalMioCoinsInput / stepValue) : 0;
 
-  // MioCoin bonus generation - saves immediately to DB when editing existing contest
+  // MioCoin bonus generation - frontend preview only; rows are persisted by the final save flow.
   const generateMioCoinBonuses = async () => {
     if (totalMioCoinsInput <= 0 || stepValue <= 0) {
       toast({
@@ -1027,101 +1027,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       });
     }
 
-    // If editing existing contest, save immediately to DB
-    if (editingContest?.contest_id) {
-      try {
-        const contestId = editingContest.contest_id;
-        
-        // Delete existing MioCoin bonuses (only those with amount > 0)
-        // Delete existing MioCoin bonuses (only those with amount > 0) via RPC
-        // First fetch existing MioCoin bonus IDs to delete them via RPC
-        const { data: existingMcBonuses } = await supabase
-          .from("bonus_prizes")
-          .select("id")
-          .eq("contest_id", contestId)
-          .gt("amount", 0);
-
-        if (existingMcBonuses && existingMcBonuses.length > 0) {
-          for (const bonus of existingMcBonuses) {
-            await supabase.rpc("admin_manage_bonus_prize", {
-              p_prize_id: bonus.id,
-              p_contest_id: contestId,
-              p_status: "deleted",
-              p_operation: "update",
-            });
-          }
-        }
-
-        // Insert new MioCoin bonuses via RPC (writes to bonus_prizes)
-        console.log(
-          "[AdminContestManagement] MioCoin bonus RPC batch length:",
-          newBonuses.length
-        );
-        for (const bonus of newBonuses) {
-          console.log("[AdminContestManagement] MioCoin bonus RPC before insert", {
-            contest_id: contestId,
-            ticket_position: bonus.ticket_position,
-            amount: bonus.amount,
-          });
-          try {
-            const { error: rpcError } = await supabase.rpc("admin_manage_bonus_prize", {
-              p_contest_id: contestId,
-              p_ticket_position: bonus.ticket_position,
-              p_amount: bonus.amount,
-              p_description: `${bonus.amount} MioCoinů`,
-              p_status: "pending",
-              p_operation: "create",
-            });
-            if (rpcError) {
-              console.error("[AdminContestManagement] MioCoin bonus RPC failed", {
-                message: rpcError.message,
-                details: rpcError.details,
-                code: rpcError.code,
-              });
-            } else {
-              console.log("[AdminContestManagement] MioCoin bonus RPC success", {
-                contest_id: contestId,
-                ticket_position: bonus.ticket_position,
-                amount: bonus.amount,
-              });
-            }
-          } catch (rpcErr: unknown) {
-            const err = rpcErr as { message?: string; details?: string; code?: string };
-            console.error("[AdminContestManagement] MioCoin bonus RPC exception", rpcErr, {
-              message: err?.message,
-              details: err?.details,
-              code: err?.code,
-            });
-            throw rpcErr;
-          }
-        }
-
-        // Note: total_miocoin_bonus is updated automatically by database trigger trg_sync_total_miocoin_bonus
-        const totalMioCoins = newBonuses.reduce((sum, b) => sum + b.amount, 0);
-        
-        toast({
-          title: "MioCoiny uloženy",
-          description: `${newBonuses.length} MioCoin bonusů (celkem ${totalMioCoins}) bylo uloženo do databáze.`,
-        });
-      } catch (err: unknown) {
-        const e = err as { message?: string; details?: string; code?: string };
-        console.error("Error saving MioCoin bonuses:", err, {
-          message: e?.message,
-          details: e?.details,
-          code: e?.code,
-        });
-        toast({
-          title: "Chyba při ukládání",
-          description: "MioCoiny byly vygenerovány, ale nepodařilo se je uložit.",
-          variant: "destructive",
-        });
-      }
-    } else {
-      toast({
-        title: "MioCoiny vygenerovány",
-        description: `Přidáno ${newBonuses.length} MioCoin bonusů. Budou uloženy po vytvoření soutěže.`,
-      });
-    }
+    toast({
+      title: "MioCoiny připraveny",
+      description: `Připraveno ${newBonuses.length} MioCoin bonusů. Do soutěže se uloží až při finálním uložení.`,
+    });
 
     setMioCoinBonuses((prev) => [...prev, ...newBonuses]);
   };
