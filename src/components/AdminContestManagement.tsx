@@ -1600,10 +1600,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     prize.handling_override_czk != null
       ? Math.max(0, prize.handling_override_czk)
       : Math.max(0, economyAssumptions.handlingCostPerPhysicalPrize || 0);
-  const physicalPrizeBaseCost = physicalPrizes.reduce(
-    (sum, prize) => sum + Math.max(0, prize.unit_cost_czk || 0),
-    0
-  );
+  const getPhysicalPrizeCostIncludingVat = (prize: PhysicalPrize) => {
+    const unitCostWithoutVat = Math.max(0, prize.unit_cost_czk || 0);
+    const prizeVatRate = Math.max(0, prize.vat_rate ?? 21);
+    return unitCostWithoutVat * (1 + prizeVatRate / 100);
+  };
+  const physicalPrizeBaseCost = physicalPrizes.reduce((sum, prize) => sum + getPhysicalPrizeCostIncludingVat(prize), 0);
   const grossRevenue = Math.max(0, form.ticket_count || 0) * Math.max(0, form.ticket_price || 0);
   const vatRate = Math.max(0, economyAssumptions.vatRate || 0);
   const vatFromRevenue = grossRevenue > 0 ? (grossRevenue * vatRate) / (100 + vatRate) : 0;
@@ -1967,7 +1969,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                     />
                   </div>
                   <div>
-                    <Label>Nákupní cena v Kč</Label>
+                    <Label>Nákupní cena bez DPH v Kč</Label>
                     <Input
                       type="number"
                       min={0}
@@ -2036,7 +2038,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 </div>
 
                 <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-muted-foreground">
-                  Tyto nákladové údaje slouží zatím jen pro ekonomický preview. Do Supabase se v této fázi neukládají.
+                  Tyto nákladové údaje slouží zatím jen pro ekonomický preview. Nákupní cena se zadává bez DPH a do nákladů se zde počítá včetně DPH. Do Supabase se v této fázi neukládají.
                 </div>
 
                 <Button onClick={addPhysicalPrize} className="w-full">
@@ -2070,8 +2072,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                               <span className="text-muted-foreground ml-2">Pozice #{prize.ticket_position}</span>
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              Dodavatel: {prize.supplier_name?.trim() || "neuvedený"} · Nákupní cena:{" "}
+                              Dodavatel: {prize.supplier_name?.trim() || "neuvedený"} · Nákupní cena bez DPH:{" "}
                               {formatCzk(prize.unit_cost_czk || 0)} · DPH: {(prize.vat_rate ?? 21).toLocaleString("cs-CZ")} % ·
+                              {" "}Náklad včetně DPH: {formatCzk(getPhysicalPrizeCostIncludingVat(prize))} ·
                               {" "}Balné: {formatCzk(getHandlingCostForPrize(prize))}
                               {prize.handling_override_czk != null ? " (override)" : " (globální default)"}
                             </div>
