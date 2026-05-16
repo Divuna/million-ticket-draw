@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 16. 05. 2026 (PR #26 mergnut — read-only admin ekonomika soutěže)
+**Aktualizováno:** 16. 05. 2026 (PR #27 mergnut — admin economy summary bar)
 
 ---
 
@@ -87,9 +87,13 @@ Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje 
 
 ### Stav
 - PR #26 **feat: add read-only contest economy panel** byl mergnut do `main` (merge commit `5f5eb28b17c0cab2b8eaa47e360d75b34252ba59`).
+- PR #27 **feat: add admin economy summary bar** byl mergnut do `main` (merge commit `9ea63c81c218ba91422005e8c09ab457800ef395`).
 - `src/components/AdminContestManagement.tsx` má nový read-only tab **„Ekonomika"** v admin modalu pro vytvoření/editaci soutěže.
+- Nad taby admin contest modalu je kompaktní read-only live economy summary bar.
+- Summary bar ukazuje počet ticketů, celkové odhadované náklady, doporučenou cenu ticketu, odhadovaný čistý zisk a marži.
 - Panel slouží jako orientační ekonomický náhled během přípravy soutěže.
 - Panel počítá: hrubou tržbu, DPH, čistou tržbu, náklad na hlavní výhru, náklad na MioCoin bonusy, balné/poštu/práci, jednorázový setup/distribuční náklad, marketingový náklad, celkové odhadované náklady, odhadovaný zisk, marži, bod zvratu v počtu ticketů a doporučenou minimální cenu ticketu.
+- Summary bar používá stejné frontend-only výpočty jako tab „Ekonomika".
 - Ekonomické předpoklady jsou zatím pouze frontend state; po změně modal kontextu se resetují na výchozí hodnoty.
 - Panel zatím nic neukládá do Supabase a nemá databázovou persistenci.
 

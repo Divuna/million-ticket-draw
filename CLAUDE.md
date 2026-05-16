@@ -74,9 +74,11 @@ Do not execute these without explicit user instruction:
 ## Admin Contest Economy Panel
 
 - PR #26 added a frontend-only read-only **Ekonomika** tab to `src/components/AdminContestManagement.tsx`.
+- PR #27 added a compact read-only live economy summary bar above the admin contest modal tabs.
 - The panel is an orientation preview during contest creation/editing. It calculates gross revenue, VAT, net revenue, main prize cost, MioCoin cost, handling cost, setup cost, marketing cost, total estimated cost, profit, margin, break-even ticket count, and recommended ticket price.
+- The summary bar shows ticket count, total estimated costs, recommended ticket price, estimated net profit, and margin using the same frontend-only calculations as the **Ekonomika** tab.
 - Economy assumptions are local frontend state only and reset when the modal context changes.
-- The panel does not save anything to Supabase yet.
+- The panel and summary bar do not save anything to Supabase yet.
 - Do not connect this panel to persistence, `bonus_prizes`, `distribute-bonus-prizes`, `admin_manage_bonus_prize`, final save behavior, ticket purchase, winner logic, Partner Offers, or `buy_ticket_atomic` without explicit approval.
 
 ## Store Policy / Launch Copy Rules

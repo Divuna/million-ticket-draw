@@ -14,6 +14,22 @@
 
 ---
 
+## 2026-05-16 — PR #27 admin economy summary bar mergnut
+
+### Co bylo provedeno
+- PR #27 **feat: add admin economy summary bar** byl mergnut do `main`.
+- Zdrojová větev: `feature/admin-economy-summary-bar`; cílová větev: `main`.
+- Merge commit: `9ea63c81c218ba91422005e8c09ab457800ef395`.
+- Změněn jediný soubor: `src/components/AdminContestManagement.tsx`.
+- Nad taby admin contest modalu přibyl kompaktní read-only live economy summary bar.
+- Summary bar ukazuje počet ticketů, celkové odhadované náklady, doporučenou cenu ticketu, odhadovaný čistý zisk a marži.
+- Používá stejné frontend-only výpočty jako tab **„Ekonomika"**.
+- Nic neukládá do Supabase.
+- Nebyl změněn `buy_ticket_atomic`, `bonus_prizes` schema, Partner Offers, winner logic, ticket purchase logic, migrace ani finální save behavior.
+- PR smoke check prošel. Nebyl proveden manuální deploy.
+
+---
+
 ## 2026-05-16 — PR #26 read-only admin ekonomika soutěže mergnuta
 
 ### Co bylo provedeno
