@@ -130,6 +130,16 @@ const STATUS_OPTIONS = [
 
 const SELECTABLE_STATUS_OPTIONS = STATUS_OPTIONS.filter((opt) => opt.value !== "closed");
 
+const DEFAULT_ECONOMY_ASSUMPTIONS: EconomyAssumptions = {
+  mainPrizeRealCost: 0,
+  mioCoinRealCost: 0,
+  vatRate: 21,
+  setupCost: 7000,
+  marketingPercent: 15,
+  handlingCostPerPhysicalPrize: 75,
+  targetMarginPercent: 20,
+};
+
 const getStatusBadgeClass = (status: string) => {
   const option = STATUS_OPTIONS.find((opt) => opt.value === status);
   return option?.color || "bg-gray-500/20 text-gray-300 border-gray-500/30";
@@ -187,15 +197,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   const [totalMioCoinsInput, setTotalMioCoinsInput] = useState<number>(0);
   const [stepValue, setStepValue] = useState<number>(0);
   const [distributionType, setDistributionType] = useState<"even" | "random">("even");
-  const [economyAssumptions, setEconomyAssumptions] = useState<EconomyAssumptions>({
-    mainPrizeRealCost: 0,
-    mioCoinRealCost: 0,
-    vatRate: 21,
-    setupCost: 7000,
-    marketingPercent: 15,
-    handlingCostPerPhysicalPrize: 75,
-    targetMarginPercent: 20,
-  });
+  const [economyAssumptions, setEconomyAssumptions] =
+    useState<EconomyAssumptions>(DEFAULT_ECONOMY_ASSUMPTIONS);
 
   // Physical prize state
   const [physicalPrizes, setPhysicalPrizes] = useState<PhysicalPrize[]>([]);
@@ -259,6 +262,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setStepValue(0);
       setDistributionType("even");
     }
+    setEconomyAssumptions(DEFAULT_ECONOMY_ASSUMPTIONS);
     setActiveTab("basic");
   }, [editingContest, open]);
 
