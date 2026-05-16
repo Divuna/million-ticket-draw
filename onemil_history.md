@@ -14,6 +14,22 @@
 
 ---
 
+## 2026-05-17 — Phase 3A physical prize cost preview připraven v adminu
+
+### Co bylo provedeno
+- `src/components/AdminContestManagement.tsx` rozšířen o frontend-only cost preview pro věcné bonusové výhry.
+- Do lokálního `PhysicalPrize` state přidána pole `supplier_name`, `unit_cost_czk`, `vat_rate` a `handling_override_czk`.
+- Formulář věcné bonusové výhry nově umožňuje zadat dodavatele, nákupní cenu v Kč, DPH a volitelný override balného / pošty / práce.
+- Seznam přidaných věcných výher zobrazuje i cost preview metadata.
+- Ekonomika tab a horní economy summary bar nově započítávají preview náklady věcných výher do celkových nákladů, zisku, marže, bodu zvratu a doporučené ceny ticketu.
+- Balné používá per-prize override, pokud je vyplněný; jinak globální default.
+- Nákladové údaje věcných výher jsou v této fázi pouze frontend preview a neukládají se do Supabase.
+- Nebyl změněn `buy_ticket_atomic`, ticket purchase logic, winner logic, Partner Offers, `bonus_prizes` schema, `admin_manage_bonus_prize`, `distribute-bonus-prizes` ani migrace.
+- Testy nebyly v této fázi rozšířeny; follow-up má přidat bezpečný staging-only admin test pro live economy preview bez finálního create.
+- `npm run build` prošel.
+
+---
+
 ## 2026-05-16 — PR #30 exact MioCoin positions save mergnut
 
 ### Co bylo provedeno

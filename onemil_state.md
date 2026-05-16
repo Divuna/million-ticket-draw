@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 17. 05. 2026 (PR #30 mergnut — exact MioCoin position save)
+**Aktualizováno:** 17. 05. 2026 (Phase 3A — physical prize cost preview)
 
 ---
 
@@ -101,10 +101,15 @@ Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje 
 - Admin save path už pro MioCoin bonusy nere-randomizuje pozice přes `distribute-bonus-prizes`.
 - Před uložením se validují bonusové pozice: celá čísla, rozsah `1..ticket_count`, duplicitní MioCoin pozice, kolize MioCoin/věcné výhry a kolize s posledním ticketem.
 - Editace bonusových pozic existující soutěže je blokována, pokud už pro soutěž existují tikety.
+- Phase 3A rozšiřuje frontend-only `PhysicalPrize` preview o lokální ekonomická pole: dodavatel, nákupní cena v Kč, DPH a volitelný override balného / pošty / práce.
+- Formulář věcné bonusové výhry zobrazuje tato pole česky a seznam přidaných výher ukazuje i cost preview metadata.
+- Ekonomika tab i horní economy summary bar nově započítávají preview nákladů věcných bonusových výher do celkových odhadovaných nákladů, zisku, marže, bodu zvratu a doporučené ceny ticketu.
+- Balné používá per-prize override, pokud je zadaný; jinak používá globální default z ekonomických předpokladů.
+- Nákladové údaje věcných výher jsou v této fázi pouze frontend preview a neukládají se do Supabase.
 
 ### Invariant
 - Nebyl změněn `buy_ticket_atomic`, ticket purchase logic, winner logic, Partner Offers, `bonus_prizes` schema, `distribute-bonus-prizes`, `admin_manage_bonus_prize`, main prize final-ticket logic, migrace ani production smoke scope.
-- Fyzické nákupní ceny věcných bonusů zatím nejsou modelované; panel je označuje jako budoucí fázi / 0 Kč.
+- Preview fyzických nákladů zatím nemá databázovou persistenci a nemění finální save behavior bonusů.
 
 ---
 
