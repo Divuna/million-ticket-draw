@@ -103,6 +103,16 @@ interface PhysicalPrize {
   ai_generating?: boolean;
 }
 
+interface EconomyAssumptions {
+  mainPrizeRealCost: number;
+  mioCoinRealCost: number;
+  vatRate: number;
+  setupCost: number;
+  marketingPercent: number;
+  handlingCostPerPhysicalPrize: number;
+  targetMarginPercent: number;
+}
+
 interface ContestModalProps {
   open: boolean;
   onClose: () => void;
@@ -119,6 +129,16 @@ const STATUS_OPTIONS = [
 ];
 
 const SELECTABLE_STATUS_OPTIONS = STATUS_OPTIONS.filter((opt) => opt.value !== "closed");
+
+const DEFAULT_ECONOMY_ASSUMPTIONS: EconomyAssumptions = {
+  mainPrizeRealCost: 0,
+  mioCoinRealCost: 0,
+  vatRate: 21,
+  setupCost: 7000,
+  marketingPercent: 15,
+  handlingCostPerPhysicalPrize: 75,
+  targetMarginPercent: 20,
+};
 
 const getStatusBadgeClass = (status: string) => {
   const option = STATUS_OPTIONS.find((opt) => opt.value === status);
@@ -177,6 +197,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   const [totalMioCoinsInput, setTotalMioCoinsInput] = useState<number>(0);
   const [stepValue, setStepValue] = useState<number>(0);
   const [distributionType, setDistributionType] = useState<"even" | "random">("even");
+  const [economyAssumptions, setEconomyAssumptions] =
+    useState<EconomyAssumptions>(DEFAULT_ECONOMY_ASSUMPTIONS);
 
   // Physical prize state
   const [physicalPrizes, setPhysicalPrizes] = useState<PhysicalPrize[]>([]);
@@ -240,6 +262,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setStepValue(0);
       setDistributionType("even");
     }
+    setEconomyAssumptions(DEFAULT_ECONOMY_ASSUMPTIONS);
     setActiveTab("basic");
   }, [editingContest, open]);
 
@@ -1603,6 +1626,50 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   const isEditing = !!editingContest;
   const totalMioCoins = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
+  const grossRevenue = Math.max(0, form.ticket_count || 0) * Math.max(0, form.ticket_price || 0);
+  const vatRate = Math.max(0, economyAssumptions.vatRate || 0);
+  const vatFromRevenue = grossRevenue > 0 ? (grossRevenue * vatRate) / (100 + vatRate) : 0;
+  const netRevenue = grossRevenue - vatFromRevenue;
+  const netTicketRevenue = Math.max(0, form.ticket_price || 0) - ((Math.max(0, form.ticket_price || 0) * vatRate) / (100 + vatRate));
+  const marketingCost = grossRevenue * Math.max(0, economyAssumptions.marketingPercent || 0) / 100;
+  const physicalBonusEstimatedCost = 0;
+  const handlingCostTotal = physicalPrizes.length * Math.max(0, economyAssumptions.handlingCostPerPhysicalPrize || 0);
+  const totalEstimatedCost =
+    Math.max(0, economyAssumptions.mainPrizeRealCost || 0) +
+    Math.max(0, economyAssumptions.mioCoinRealCost || 0) +
+    physicalBonusEstimatedCost +
+    handlingCostTotal +
+    Math.max(0, economyAssumptions.setupCost || 0) +
+    marketingCost;
+  const estimatedProfit = netRevenue - totalEstimatedCost;
+  const marginPercent = netRevenue > 0 ? (estimatedProfit / netRevenue) * 100 : 0;
+  const breakEvenTickets = netTicketRevenue > 0 ? Math.ceil(totalEstimatedCost / netTicketRevenue) : 0;
+  const targetMarginRatio = Math.min(Math.max(economyAssumptions.targetMarginPercent || 0, 0), 95) / 100;
+  const requiredNetRevenueForTarget = form.ticket_count > 0 ? totalEstimatedCost / (1 - targetMarginRatio) : 0;
+  const recommendedTicketPrice =
+    form.ticket_count > 0
+      ? (requiredNetRevenueForTarget / form.ticket_count) * (1 + vatRate / 100)
+      : 0;
+  const formatCzk = (value: number) =>
+    `${Math.round(value).toLocaleString("cs-CZ")} Kč`;
+  const formatPercent = (value: number) =>
+    `${value.toLocaleString("cs-CZ", { maximumFractionDigits: 1 })} %`;
+  const updateEconomyAssumption =
+    (field: keyof EconomyAssumptions) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setEconomyAssumptions((prev) => ({
+        ...prev,
+        [field]: Number(e.target.value || 0),
+      }));
+    };
+  const economyWarnings = [
+    estimatedProfit < 0 && "Marže je záporná. Odhadované náklady jsou vyšší než čistá tržba.",
+    estimatedProfit >= 0 &&
+      marginPercent < economyAssumptions.targetMarginPercent &&
+      "Marže je nižší než cílová marže.",
+    form.ticket_count > 0 &&
+      breakEvenTickets > form.ticket_count &&
+      "Bod zvratu je vyšší než počet dostupných ticketů.",
+  ].filter(Boolean) as string[];
 
   // Validation logic for each tab
   const hasMainImage = !!(form.main_image_file || form.main_image_url || (isEditing && editingContest?.main_image));
@@ -1654,6 +1721,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               </TabsTrigger>
               <TabsTrigger value="bonus-coins">Bonusy – MioCoins</TabsTrigger>
               <TabsTrigger value="bonus-physical">Bonusy – věcné</TabsTrigger>
+              <TabsTrigger value="economy">Ekonomika</TabsTrigger>
               <TabsTrigger value="graphics" className="flex items-center">
                 Grafika
                 <TabIndicator isValid={validation.graphics.isValid} />
@@ -1952,6 +2020,133 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Tab 4: Ekonomika */}
+            <TabsContent value="economy" className="space-y-4 mt-0">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="h-5 w-5 text-emerald-400" />
+                <span className="font-medium">Ekonomika soutěže</span>
+                <Badge variant="secondary" className="ml-auto">
+                  Pouze náhled
+                </Badge>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-sm text-muted-foreground">
+                Výpočet je orientační a neukládá se. Používá aktuální počet ticketů, cenu ticketu a níže uvedené
+                plánovací předpoklady.
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Náklad na hlavní výhru v Kč</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={economyAssumptions.mainPrizeRealCost}
+                    onChange={updateEconomyAssumption("mainPrizeRealCost")}
+                  />
+                </div>
+                <div>
+                  <Label>Reálný náklad na MioCoin bonusy v Kč</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={economyAssumptions.mioCoinRealCost}
+                    onChange={updateEconomyAssumption("mioCoinRealCost")}
+                  />
+                </div>
+                <div>
+                  <Label>Sazba DPH v %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={economyAssumptions.vatRate}
+                    onChange={updateEconomyAssumption("vatRate")}
+                  />
+                </div>
+                <div>
+                  <Label>Jednorázový náklad soutěže v Kč</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={economyAssumptions.setupCost}
+                    onChange={updateEconomyAssumption("setupCost")}
+                  />
+                </div>
+                <div>
+                  <Label>Marketingový náklad v %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={economyAssumptions.marketingPercent}
+                    onChange={updateEconomyAssumption("marketingPercent")}
+                  />
+                </div>
+                <div>
+                  <Label>Balné / pošta / práce na věcnou výhru v Kč</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={economyAssumptions.handlingCostPerPhysicalPrize}
+                    onChange={updateEconomyAssumption("handlingCostPerPhysicalPrize")}
+                  />
+                </div>
+                <div>
+                  <Label>Cílová marže v %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={95}
+                    value={economyAssumptions.targetMarginPercent}
+                    onChange={updateEconomyAssumption("targetMarginPercent")}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {[
+                  ["Hrubá tržba včetně DPH", formatCzk(grossRevenue)],
+                  ["DPH z tržby", formatCzk(vatFromRevenue)],
+                  ["Čistá tržba bez DPH", formatCzk(netRevenue)],
+                  ["Náklad na hlavní výhru", formatCzk(economyAssumptions.mainPrizeRealCost)],
+                  ["Náklad na MioCoin bonusy", formatCzk(economyAssumptions.mioCoinRealCost)],
+                  ["Odhad nákladů na věcné bonusové výhry", formatCzk(physicalBonusEstimatedCost)],
+                  ["Balné / pošta / práce", formatCzk(handlingCostTotal)],
+                  ["Jednorázový náklad soutěže", formatCzk(economyAssumptions.setupCost)],
+                  ["Marketingový náklad", formatCzk(marketingCost)],
+                  ["Celkové odhadované náklady", formatCzk(totalEstimatedCost)],
+                  ["Odhadovaný zisk", formatCzk(estimatedProfit)],
+                  ["Marže", formatPercent(marginPercent)],
+                  ["Bod zvratu v počtu ticketů", `${breakEvenTickets.toLocaleString("cs-CZ")} ticketů`],
+                  ["Doporučená minimální cena ticketu", `${recommendedTicketPrice.toLocaleString("cs-CZ", { maximumFractionDigits: 2 })} Kč`],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-sm text-muted-foreground">{label}</span>
+                    <span className="text-sm font-semibold text-foreground text-right">{value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-muted/20 p-3 text-sm text-muted-foreground">
+                Věcné bonusové výhry: {physicalPrizes.length.toLocaleString("cs-CZ")} položek. MioCoin bonusy:{" "}
+                {totalMioCoins.toLocaleString("cs-CZ")} MC na {mioCoinBonuses.length.toLocaleString("cs-CZ")} pozicích.
+                Nákupní ceny věcných výher zatím nejsou v této fázi modelované.
+              </div>
+
+              {economyWarnings.length > 0 && (
+                <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3">
+                  <div className="mb-2 flex items-center gap-2 text-sm font-medium text-yellow-300">
+                    <AlertCircle className="h-4 w-4" />
+                    Varování ekonomiky
+                  </div>
+                  <ul className="ml-5 list-disc space-y-1 text-sm text-yellow-100/90">
+                    {economyWarnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </TabsContent>
