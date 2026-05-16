@@ -137,17 +137,20 @@ Technical:
 
 ---
 
-## CURRENT SYSTEM STATUS (10. 05. 2026)
+## CURRENT SYSTEM STATUS (17. 05. 2026)
 
+- **PR #36 mergnut (17. 05. 2026):** admin contest create/edit modal je nyní wider (`max-w-[95vw]`), economy summary bar se zalamuje responsivně, záložky se zalamují — žádný vnitřní horizontální scrollbar. Změněn pouze `src/components/AdminContestManagement.tsx` (layout CSS). Žádná logika nezměněna.
+- **PR #34 mergnut (17. 05. 2026):** přidán `tests/e2e/16-admin-economy-preview.spec.ts` — staging-only, read-only smoke test admin economy preview. Ověřuje, že věcná výhra aktualizuje economy summary bar a záložku Ekonomika bez finálního uložení. Selektory jsou stabilní (inputByLabel helper, summaryValue přes div.uppercase.opacity-70). Skip guard pokud chybí admin secrets.
+- **Playwright testy: 16 spec souborů** (01–15 + 16); staging full E2E obsahuje všechny spec soubory
 - CI pipeline stabilní: dva oddělené workflow (commit `82f979f`):
   - `.github/workflows/playwright.yml` — **production smoke**: pouze `01-registration` + `02-login`; spouští se 3× denně + push/PR na `main`
-  - `.github/workflows/playwright-staging.yml` — **staging full E2E**: všech 9 spec souborů; pouze `workflow_dispatch` (manuálně)
-- **Produkce nemůže spouštět** testy 03–08 (ticket purchase, voucher, wallet, win-flow, Partner Offers) — hard-coded file paths v `playwright.yml`
+  - `.github/workflows/playwright-staging.yml` — **staging full E2E**: všech 16 spec souborů; pouze `workflow_dispatch` (manuálně) + schedule 3× denně
+- **Produkce nemůže spouštět** testy 03–16 (ticket purchase, voucher, wallet, win-flow, Partner Offers, admin) — hard-coded file paths v `playwright.yml`
 - Telegram zprávy rozlišují: `✅ OneMil PROD smoke OK` / `❌ OneMil PROD smoke FAILED` vs `✅ OneMil STAGING full E2E OK` / `❌ OneMil STAGING full E2E FAILED`
 - **Production smoke manuálně ověřen** (run `25618763318`): 6 passed, 1m 22s, Telegram doručen, specs 03–08 neběžely ✅
 - Payment pipeline ověřen: Stripe webhook vrací 500 na selhání (retry), idempotency funguje, wallet credit přes trigger
 - Registrace + login plně otestovány v Playwright (Chromium, CI)
-- Playwright testy: **9 spec souborů** (01–08, dva soubory s prefixem 03); staging testy 03–08 čekají na GitHub Secrets:
+- Playwright testy: **16 spec souborů**; staging testy 03–16 čekají na GitHub Secrets (set):
   - `STAGING_E2E_TEST_EMAIL` → `e2e@onemil.cz`, `STAGING_E2E_TEST_PASSWORD`, `STAGING_E2E_CONTEST_ID` → `3fa56db0-4007-4fb7-aa2f-e460173070d8`, `STAGING_E2E_WIN_CONTEST_ID` → `7ff58a8e-c691-46e1-9e0c-ca6cddeb8abb`
 - **Staging seed ověřen** (10. 05. 2026): test user `e2e@onemil.cz`, wallet 5000 MioCoin, general contest + win contest active, partner offer approved a připojena — detaily v `onemil_state.md`
 - **Staging full E2E ZELENÝ + wallet reset ověřen** (run `25625184545`, 10. 05. 2026): ✅ ALL PASSED — 13 passed, 4 skipped, 0 failed, 2m 33s

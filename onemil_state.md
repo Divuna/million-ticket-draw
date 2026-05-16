@@ -296,7 +296,39 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ---
 
-## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (15. 05. 2026)
+## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (17. 05. 2026)
+
+### PR #36 — Admin contest modal layout cleanup — MERGNUT (17. 05. 2026)
+
+- **Branch:** `fix/admin-modal-layout-issue-35` → `main`
+- **Merge commit:** `f6a28ca51ebf7783a3529e70fd36745fe77a95cc`
+- **Změněný soubor:** `src/components/AdminContestManagement.tsx` (pouze layout CSS třídy, 5 řádků)
+- **Co se změnilo:**
+  - `max-w-4xl` cap odstraněn → modal je nyní `max-w-[95vw]` — podstatně širší na desktopu
+  - `overflow-x-auto` odstraněn z wrapperu economy summary baru → žádný vnitřní horizontální scrollbar
+  - Economy bar grid: `min-w-max grid-cols-5` → `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5` (responsivní wrap)
+  - `min-w-[9.5rem]` odstraněn z items (grid řídí šířku)
+  - TabsList: `inline-flex w-max` → `flex flex-wrap h-auto w-full` (záložky se zalamují)
+- Žádné kalkulace, validace, save behavior, Supabase volání, testy, migrace ani business logika nezměněny ✅
+- `npm run build` prošel ✅
+
+### PR #34 — Admin economy preview E2E smoke test (spec 16) — MERGNUT (17. 05. 2026)
+
+- **Branch:** `codex/issue-33-admin-economy-preview` → `main`
+- **Merge commit:** `ff45f2ad37bcf7ca4178c96277bb300aec52dd6c`
+- **Přidaný soubor:** `tests/e2e/16-admin-economy-preview.spec.ts` (staging-only, read-only)
+- **Co test ověřuje:**
+  - Admin otevře modal „Vytvořit novou soutěž", vyplní preview pole věcné výhry (dodavatel, cena, DPH, balné, pozice)
+  - Klikne „Přidat věcnou výhru" — bez finálního uložení soutěže
+  - Ověří, že horní economy summary bar zobrazuje správné hodnoty (celkové náklady, doporučená cena, zisk, marže)
+  - Ověří záložku Ekonomika — zobrazuje cost breakdown věcné výhry
+- **Opravené selektory (Codex review feedback):**
+  - `getByLabel()` nahrazen `inputByLabel()` helper: `label[hasText] → .. → input` (stabilní bez htmlFor/id)
+  - `summaryValue()` přepsán: `div.uppercase.opacity-70[hasText] → xpath=following-sibling::div[1]` (přesně jeden element)
+- Test se přeskakuje (`test.skip`) pokud chybí `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` ✅
+- PR také přinesl Phase 3A: `AdminContestManagement.tsx` rozšířen o frontend-only cost preview pole pro věcné výhry
+- Žádný app kód mimo formulář fyzických výher nezměněn; žádné migrace; žádná produkce ✅
+- `npm run build` prošel ✅
 
 ### PR #24 + PR #25 — Admin Affiliate pages smoke test (spec 15) — MERGNUTY (15. 05. 2026)
 

@@ -14,6 +14,39 @@
 
 ---
 
+## 2026-05-17 — PR #36 admin modal layout cleanup mergnut
+
+### Co bylo provedeno
+- PR #36 **fix: widen admin contest modal and remove horizontal scrollbars** mergnut do `main`.
+- Merge commit: `f6a28ca51ebf7783a3529e70fd36745fe77a95cc`.
+- Zdrojová větev: `fix/admin-modal-layout-issue-35`; cílová větev: `main`.
+- Změněn jediný soubor: `src/components/AdminContestManagement.tsx` (pouze layout CSS třídy).
+- `max-w-4xl` cap odstraněn — modal nyní používá `max-w-[95vw]` a je podstatně širší na desktopu.
+- `overflow-x-auto` odstraněn z wrapperu horního economy summary baru — žádný vnitřní horizontální scrollbar.
+- Economy summary bar grid změněn z `min-w-max grid-cols-5` na `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5` — responsivní zalamování na menších obrazovkách.
+- `min-w-[9.5rem]` odstraněn z položek summary baru (grid řídí šířku).
+- TabsList změněn z `inline-flex w-max` na `flex flex-wrap h-auto w-full` — záložky se zalamují místo přetékání.
+- Nebyl změněn žádný výpočet, validace, save behavior, Supabase volání, testy, migrace ani business logika.
+- `npm run build` prošel.
+
+---
+
+## 2026-05-17 — PR #34 admin economy preview E2E test mergnut
+
+### Co bylo provedeno
+- PR #34 **feat: Phase 3A physical prize cost preview + spec 16 admin economy smoke** mergnut do `main`.
+- Merge commit: `ff45f2ad37bcf7ca4178c96277bb300aec52dd6c`.
+- Zdrojová větev: `codex/issue-33-admin-economy-preview`; cílová větev: `main`.
+- Přidán nový spec: `tests/e2e/16-admin-economy-preview.spec.ts` (staging-only, read-only).
+- Test ověřuje: otevření create modal adminem, vyplnění preview polí věcné výhry, zaktualizování horního economy summary baru a záložky Ekonomika — bez kliknutí finálního uložení soutěže.
+- Selektory opraveny po Codex review: `getByLabel()` nahrazen helper funkcí `inputByLabel()` (label → parent div → input); `summaryValue()` přepsán na `div.uppercase.opacity-70` + `xpath=following-sibling::div[1]`.
+- Test se přeskakuje (`test.skip`), pokud chybí `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`.
+- PR také přinesl Phase 3A rozšíření `AdminContestManagement.tsx` o frontend-only cost preview pro věcné výhry.
+- Nebyl změněn `buy_ticket_atomic`, ticket purchase logic, winner logic, Partner Offers, `bonus_prizes` schema, migrace ani produkce.
+- `npm run build` prošel.
+
+---
+
 ## 2026-05-17 — Phase 3A physical prize cost preview připraven v adminu
 
 ### Co bylo provedeno
