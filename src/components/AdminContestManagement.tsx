@@ -1963,11 +1963,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                     <Input
                       value={newPhysicalPrize.supplier_name || ""}
                       onChange={(e) => setNewPhysicalPrize((prev) => ({ ...prev, supplier_name: e.target.value }))}
-                      placeholder="NapĹ™. Apple Premium Reseller"
+                      placeholder="Např. Apple Premium Reseller"
                     />
                   </div>
                   <div>
-                    <Label>NĂˇkupnĂ­ cena v KÄŤ</Label>
+                    <Label>Nákupní cena v Kč</Label>
                     <Input
                       type="number"
                       min={0}
@@ -1995,7 +1995,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                     />
                   </div>
                   <div>
-                    <Label>BalnĂ© / poĹˇta / prĂˇce (override v KÄŤ)</Label>
+                    <Label>Balné / pošta / práce (override v Kč)</Label>
                     <Input
                       type="number"
                       min={0}
@@ -2007,7 +2007,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                           handling_override_czk: e.target.value === "" ? null : Number(e.target.value),
                         }))
                       }
-                      placeholder={`Jinak se pouĹľije ${Math.max(0, economyAssumptions.handlingCostPerPhysicalPrize || 0).toLocaleString("cs-CZ")} KÄŤ`}
+                      placeholder={`Jinak se použije ${Math.max(0, economyAssumptions.handlingCostPerPhysicalPrize || 0).toLocaleString("cs-CZ")} Kč`}
                     />
                   </div>
                 </div>
@@ -2036,7 +2036,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 </div>
 
                 <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-muted-foreground">
-                  Tyto nĂˇkladovĂ© Ăşdaje slouĹľĂ­ zatĂ­m jen pro ekonomickĂ˝ preview. Do Supabase se v tĂ©to fĂˇzi neuklĂˇdajĂ­.
+                  Tyto nákladové údaje slouží zatím jen pro ekonomický preview. Do Supabase se v této fázi neukládají.
                 </div>
 
                 <Button onClick={addPhysicalPrize} className="w-full">
@@ -2070,10 +2070,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                               <span className="text-muted-foreground ml-2">Pozice #{prize.ticket_position}</span>
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              Dodavatel: {prize.supplier_name?.trim() || "neuvedenĂ˝"} · NĂˇkupnĂ­ cena:{" "}
+                              Dodavatel: {prize.supplier_name?.trim() || "neuvedený"} · Nákupní cena:{" "}
                               {formatCzk(prize.unit_cost_czk || 0)} · DPH: {(prize.vat_rate ?? 21).toLocaleString("cs-CZ")} % ·
-                              {" "}BalnĂ©: {formatCzk(getHandlingCostForPrize(prize))}
-                              {prize.handling_override_czk != null ? " (override)" : " (globĂˇlnĂ­ default)"}
+                              {" "}Balné: {formatCzk(getHandlingCostForPrize(prize))}
+                              {prize.handling_override_czk != null ? " (override)" : " (globální default)"}
                             </div>
                           </div>
                         </div>
