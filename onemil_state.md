@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 16. 05. 2026 (PR #27 mergnut — admin economy summary bar)
+**Aktualizováno:** 17. 05. 2026 (PR #30 mergnut — exact MioCoin position save)
 
 ---
 
@@ -88,6 +88,7 @@ Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje 
 ### Stav
 - PR #26 **feat: add read-only contest economy panel** byl mergnut do `main` (merge commit `5f5eb28b17c0cab2b8eaa47e360d75b34252ba59`).
 - PR #27 **feat: add admin economy summary bar** byl mergnut do `main` (merge commit `9ea63c81c218ba91422005e8c09ab457800ef395`).
+- PR #30 **Fix MioCoin final save to use previewed positions** byl mergnut do `main` (merge commit `7b50b30d2413ad6d839f8e4100c2a9c7a806710d`).
 - `src/components/AdminContestManagement.tsx` má nový read-only tab **„Ekonomika"** v admin modalu pro vytvoření/editaci soutěže.
 - Nad taby admin contest modalu je kompaktní read-only live economy summary bar.
 - Summary bar ukazuje počet ticketů, celkové odhadované náklady, doporučenou cenu ticketu, odhadovaný čistý zisk a marži.
@@ -96,9 +97,13 @@ Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje 
 - Summary bar používá stejné frontend-only výpočty jako tab „Ekonomika".
 - Ekonomické předpoklady jsou zatím pouze frontend state; po změně modal kontextu se resetují na výchozí hodnoty.
 - Panel zatím nic neukládá do Supabase a nemá databázovou persistenci.
+- Phase 2B opravila finální MioCoin save behavior v `AdminContestManagement`: finální uložení soutěže nyní persistuje MioCoin bonusy podle přesně previewovaných pozic z frontend state `mioCoinBonuses`.
+- Admin save path už pro MioCoin bonusy nere-randomizuje pozice přes `distribute-bonus-prizes`.
+- Před uložením se validují bonusové pozice: celá čísla, rozsah `1..ticket_count`, duplicitní MioCoin pozice, kolize MioCoin/věcné výhry a kolize s posledním ticketem.
+- Editace bonusových pozic existující soutěže je blokována, pokud už pro soutěž existují tikety.
 
 ### Invariant
-- Nebyl změněn `buy_ticket_atomic`, ticket purchase logic, winner logic, Partner Offers, `bonus_prizes` schema, `distribute-bonus-prizes`, `admin_manage_bonus_prize`, migrace ani finální save behavior soutěže.
+- Nebyl změněn `buy_ticket_atomic`, ticket purchase logic, winner logic, Partner Offers, `bonus_prizes` schema, `distribute-bonus-prizes`, `admin_manage_bonus_prize`, main prize final-ticket logic, migrace ani production smoke scope.
 - Fyzické nákupní ceny věcných bonusů zatím nejsou modelované; panel je označuje jako budoucí fázi / 0 Kč.
 
 ---

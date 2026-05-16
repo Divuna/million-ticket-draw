@@ -14,6 +14,23 @@
 
 ---
 
+## 2026-05-16 — PR #30 exact MioCoin positions save mergnut
+
+### Co bylo provedeno
+- PR #30 **Fix MioCoin final save to use previewed positions** byl mergnut do `main`.
+- Zdrojová větev: `fix/save-previewed-miocoin-positions`; cílová větev: `main`.
+- Merge commit: `7b50b30d2413ad6d839f8e4100c2a9c7a806710d`.
+- Změněn jediný soubor: `src/components/AdminContestManagement.tsx`.
+- Phase 2B opravila finální save MioCoin bonusů v `AdminContestManagement`.
+- Finální uložení soutěže nyní persistuje MioCoin bonusy podle přesně previewovaných pozic z frontend state `mioCoinBonuses`.
+- Admin save path už nere-randomizuje MioCoin pozice přes `distribute-bonus-prizes`.
+- Před uložením se validují bonusové pozice: celá čísla, rozsah `1..ticket_count`, duplicitní MioCoin pozice, kolize MioCoin/věcné výhry a kolize s posledním ticketem.
+- Editace bonusových pozic existující soutěže je blokována, pokud už pro soutěž existují tikety.
+- Nebyl změněn `buy_ticket_atomic`, ticket purchase logic, winner logic, Partner Offers, `bonus_prizes` schema, main prize final-ticket logic, migrace ani production smoke scope.
+- PR smoke check prošel. Nebyl proveden manuální deploy.
+
+---
+
 ## 2026-05-16 — PR #27 admin economy summary bar mergnut
 
 ### Co bylo provedeno
