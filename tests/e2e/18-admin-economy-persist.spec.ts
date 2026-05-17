@@ -102,9 +102,15 @@ test.describe('Admin — Economy Persist', () => {
     await inputByLabel(dialog, 'Jednorázový').fill('8888');
     await inputByLabel(dialog, 'Cílová marže').fill('33');
 
-    // ── Step 5: Save the contest ─────────────────────────────────────────────
+    // ── Step 5: Navigate to the summary tab, then save ──────────────────────
+    // The save button ("Uložit změny") lives exclusively inside
+    // TabsContent value="create" (the "Vytvořit soutěž" summary tab).
+    // It is not rendered when any other tab is active — so we must switch
+    // to that tab before asserting or clicking the button.
+    await dialog.getByRole('tab', { name: /Vytvořit soutěž/i }).click();
+
     // Save button is enabled because the seeded contest has main_image set.
-    const saveBtn = dialog.getByRole('button', { name: /Uložit|Vytvořit/i });
+    const saveBtn = dialog.getByRole('button', { name: /Uložit změny|Vytvořit soutěž/i });
     await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
     await saveBtn.click();
 
