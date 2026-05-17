@@ -208,6 +208,44 @@ jobs:
           SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
           SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
 
+      - name: Seed E2E Spec18 economy test contest
+        # Seed a fresh draft contest for spec 18 (admin economy persist).
+        # Uses status=pending so it appears in the "Aktivní soutěže" admin tab.
+        # rules_pdf_url is pre-set to a placeholder so save validation passes
+        # without requiring a real PDF upload during the test.
+        # WARNING-only: if the contest_economy table does not yet exist (migration
+        # not applied), spec 18 will skip rather than fail the whole suite.
+        id: seed-spec18-contest
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            "${SUPABASE_URL}/rest/v1/contests" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{
+              "title": "E2E Spec18 Economy Persist",
+              "main_prize": "E2E economy test prize",
+              "ticket_count": 100,
+              "ticket_price": 10,
+              "status": "pending",
+              "next_ticket_number": 1,
+              "fast_game": false,
+              "rules_pdf_url": "https://example.com/e2e-test-rules.pdf"
+            }')
+          echo "Seed spec18 contest response: $RESPONSE"
+          SPEC18_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
+          if [ -z "$SPEC18_ID" ] || [ "$SPEC18_ID" = "null" ]; then
+            echo "WARNING: spec18 contest seed failed — spec 18 will skip. Response: $RESPONSE" >&2
+            SPEC18_ID=""
+          else
+            echo "Seeded spec18 economy contest: $SPEC18_ID"
+          fi
+          echo "spec18_contest_id=$SPEC18_ID" >> $GITHUB_OUTPUT
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
       - name: Run full E2E suite
         id: e2e_tests
         run: npm run test:smoke
@@ -220,6 +258,7 @@ jobs:
           E2E_TEST_PASSWORD: ${{ secrets.STAGING_E2E_TEST_PASSWORD }}
           E2E_CONTEST_ID: ${{ secrets.STAGING_E2E_CONTEST_ID }}
           E2E_WIN_CONTEST_ID: ${{ steps.seed-win-contest.outputs.win_contest_id }}
+          E2E_SPEC18_CONTEST_ID: ${{ steps.seed-spec18-contest.outputs.spec18_contest_id }}
           E2E_AFFILIATE_EMAIL: ${{ secrets.STAGING_E2E_AFFILIATE_EMAIL }}
           E2E_AFFILIATE_PASSWORD: ${{ secrets.STAGING_E2E_AFFILIATE_PASSWORD }}
           E2E_ADMIN_EMAIL: ${{ secrets.STAGING_E2E_ADMIN_EMAIL }}
