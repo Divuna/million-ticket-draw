@@ -116,14 +116,19 @@ test.describe('Admin — Economy Preview Smoke', () => {
     await expect(summaryValue(dialog, 'Marže')).toContainText(/31,3 %/);
 
     // ── Ekonomika tab — verify cost breakdown reflects the added prize ────────
+    // Scope all assertions to the active tab panel so they never match the
+    // always-visible summary bar above the tabs. The summary bar also shows
+    // "Celkové odhadované náklady" and the same total value, which would
+    // produce strict mode violations when using dialog.getByText() directly.
     await dialog.getByRole('tab', { name: 'Ekonomika', exact: true }).click();
 
-    await expect(dialog.getByText('Ekonomika soutěže', { exact: true })).toBeVisible();
-    await expect(dialog.getByText(/Odhad nákladů na věcné bonusové výhry/)).toBeVisible();
-    await expect(dialog.getByText(/1\s*210 Kč/)).toBeVisible();
-    await expect(dialog.getByText('Balné / pošta / práce', { exact: true })).toBeVisible();
-    await expect(dialog.getByText(/150 Kč/)).toBeVisible();
-    await expect(dialog.getByText(/Celkové odhadované náklady/)).toBeVisible();
-    await expect(dialog.getByText(/11\s*360 Kč/)).toBeVisible();
+    const econPanel = dialog.locator('[role="tabpanel"][data-state="active"]');
+    await expect(econPanel.getByText('Ekonomika soutěže', { exact: true })).toBeVisible();
+    await expect(econPanel.getByText(/Odhad nákladů na věcné bonusové výhry/)).toBeVisible();
+    await expect(econPanel.getByText(/1\s*210 Kč/)).toBeVisible();
+    await expect(econPanel.getByText('Balné / pošta / práce', { exact: true })).toBeVisible();
+    await expect(econPanel.getByText(/150 Kč/)).toBeVisible();
+    await expect(econPanel.getByText(/Celkové odhadované náklady/)).toBeVisible();
+    await expect(econPanel.getByText(/11\s*360 Kč/)).toBeVisible();
   });
 });
