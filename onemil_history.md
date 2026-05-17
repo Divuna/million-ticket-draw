@@ -14,6 +14,41 @@
 
 ---
 
+## 2026-05-17 — Staging Full E2E zelený po PR #38 (run 25994857704)
+
+### Co bylo provedeno
+- Staging Full E2E run `25994857704` proběhl po mergi PR #38 — **24 passed, 3 skipped, 0 failed** (2m 36s).
+- Spec 16 (`Admin — Economy Preview Smoke`) ✅ prošel poprvé čistě (5.3s).
+- Telegram notifikace `✅ OneMil STAGING full E2E OK — all specs passed` doručena.
+
+---
+
+## 2026-05-17 — PR #38 spec 16 Ekonomika tab scope fix mergnut
+
+### Co bylo provedeno
+- PR #38 **fix(spec-16): scope Ekonomika tab assertions to active tab panel** mergnut do `main`.
+- Merge commit: `214248d40b95956636315ca7c7f9b60abd56fcc3`.
+- Zdrojová větev: `fix/spec16-ekon-tab-scope`.
+- Změněn jediný soubor: `tests/e2e/16-admin-economy-preview.spec.ts`.
+- Root cause: economy summary bar (vždy viditelný nad záložkami) obsahoval stejné texty jako Ekonomika tab — `dialog.getByText(/Celkové odhadované náklady/)` a `/11\s*360 Kč/` matchovaly 2 elementy, strict mode odmítl.
+- Fix: přidán `const econPanel = dialog.locator('[role="tabpanel"][data-state="active"]')` po kliknutí na záložku Ekonomika; všech 7 assertions v sekci přesunuto z `dialog` na `econPanel`.
+- Žádný app kód, migrace, workflow soubory ani business logika nezměněna.
+
+---
+
+## 2026-05-17 — PR #37 spec 16 Balné strict mode fix mergnut
+
+### Co bylo provedeno
+- PR #37 **fix(spec-16): resolve strict mode violation on Balné assertion** mergnut do `main`.
+- Merge commit: `cd5a497cb4bc7b4d7dd994d620af3e3f93e33c99`.
+- Zdrojová větev: `fix/spec16-strict-mode-balne`.
+- Změněn jediný soubor: `tests/e2e/16-admin-economy-preview.spec.ts` (1 řádek).
+- Root cause: regex `/Balné \/ pošta \/ práce/` matchoval 2 elementy — `<label>Balné / pošta / práce na věcnou výhru v Kč</label>` (věcné tab, hidden v DOM) a `<span>Balné / pošta / práce</span>` (Ekonomika tab).
+- Fix: `dialog.getByText(/Balné.../)` → `dialog.getByText('Balné / pošta / práce', { exact: true })`.
+- Žádný app kód, migrace ani business logika nezměněna.
+
+---
+
 ## 2026-05-17 — PR #36 admin modal layout cleanup mergnut
 
 ### Co bylo provedeno

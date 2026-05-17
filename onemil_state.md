@@ -298,6 +298,28 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (17. 05. 2026)
 
+### Staging Full E2E — ZELENÝ po PR #38 (17. 05. 2026)
+
+- **Run:** `25994857704` — ✅ **24 passed, 3 skipped, 0 failed** (2m 36s)
+- **Spec 16** ✅ `Admin — Economy Preview Smoke` prošel poprvé čistě (5.3s)
+- **Telegram:** `✅ OneMil STAGING full E2E OK — all specs passed` doručeno ✅
+
+### PR #38 — spec 16 Ekonomika tab scope fix — MERGNUT (17. 05. 2026)
+
+- **Branch:** `fix/spec16-ekon-tab-scope` → `main`
+- **Merge commit:** `214248d40b95956636315ca7c7f9b60abd56fcc3`
+- **Změněný soubor:** `tests/e2e/16-admin-economy-preview.spec.ts` (1 soubor)
+- **Fix:** Všech 7 assertions v Ekonomika tab sekci přesunuto na `econPanel = dialog.locator('[role="tabpanel"][data-state="active"]')` — summary bar (vždy viditelný nad záložkami) obsahoval stejné texty (`Celkové odhadované náklady`, celková hodnota), strict mode odmítal 2 shody
+- Žádný app kód, migrace, workflow soubory ani business logika nezměněna ✅
+
+### PR #37 — spec 16 Balné strict mode fix — MERGNUT (17. 05. 2026)
+
+- **Branch:** `fix/spec16-strict-mode-balne` → `main`
+- **Merge commit:** `cd5a497cb4bc7b4d7dd994d620af3e3f93e33c99`
+- **Změněný soubor:** `tests/e2e/16-admin-economy-preview.spec.ts` (1 řádek)
+- **Fix:** `/Balné \/ pošta \/ práce/` regex → `'Balné / pošta / práce', { exact: true }` — regex matchoval label z věcného formuláře (hidden v DOM) i span v Ekonomika tabu
+- Žádný app kód, migrace ani business logika nezměněna ✅
+
 ### PR #36 — Admin contest modal layout cleanup — MERGNUT (17. 05. 2026)
 
 - **Branch:** `fix/admin-modal-layout-issue-35` → `main`
