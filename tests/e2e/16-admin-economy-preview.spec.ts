@@ -121,7 +121,7 @@ test.describe('Admin — Economy Preview Smoke', () => {
     await expect(dialog.getByText('Ekonomika soutěže', { exact: true })).toBeVisible();
     await expect(dialog.getByText(/Odhad nákladů na věcné bonusové výhry/)).toBeVisible();
     await expect(dialog.getByText(/1\s*210 Kč/)).toBeVisible();
-    await expect(dialog.getByText(/Balné \/ pošta \/ práce/)).toBeVisible();
+    await expect(dialog.getByText('Balné / pošta / práce', { exact: true })).toBeVisible();
     await expect(dialog.getByText(/150 Kč/)).toBeVisible();
     await expect(dialog.getByText(/Celkové odhadované náklady/)).toBeVisible();
     await expect(dialog.getByText(/11\s*360 Kč/)).toBeVisible();
