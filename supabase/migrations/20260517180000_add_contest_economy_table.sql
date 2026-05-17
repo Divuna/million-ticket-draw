@@ -35,21 +35,20 @@ COMMENT ON TABLE public.contest_economy IS
 ALTER TABLE public.contest_economy ENABLE ROW LEVEL SECURITY;
 
 -- Admins and superadmins can read and write all rows.
+-- Uses the canonical has_role() helper backed by public.user_roles
+-- (public.users.role is deprecated since migration 20251115203228_).
 CREATE POLICY "contest_economy_admin_all"
   ON public.contest_economy
   FOR ALL
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.users
-      WHERE id = auth.uid()
-        AND role IN ('admin', 'superadmin')
-    )
+    public.has_role(auth.uid(), 'admin'::app_role)
+    OR public.has_role(auth.uid(), 'superadmin'::app_role)
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.users
-      WHERE id = auth.uid()
-        AND role IN ('admin', 'superadmin')
-    )
+    public.has_role(auth.uid(), 'admin'::app_role)
+    OR public.has_role(auth.uid(), 'superadmin'::app_role)
   );
+
+-- Grant DML to authenticated so RLS policies can run.
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.contest_economy TO authenticated;

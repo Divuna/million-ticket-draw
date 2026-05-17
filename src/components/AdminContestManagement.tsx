@@ -1515,6 +1515,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         if (econSaveError) {
           console.error("Error saving economy assumptions:", econSaveError);
           // Non-fatal: economy data is planning-only; does not block contest save.
+          toast({
+            title: "Soutěž uložena",
+            description: "Ekonomická data se nepodařilo uložit. Zkontrolujte konzoli a zkuste znovu.",
+            variant: "destructive",
+          });
         }
       }
 
@@ -1575,6 +1580,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               .eq("id", savedPrizeId);
             if (econPrizeError) {
               console.error("Error saving physical prize economy data:", econPrizeError);
+              toast({
+                title: "Soutěž uložena",
+                description: "Ekonomická data fyzické výhry se nepodařilo uložit. Zkontrolujte konzoli a zkuste znovu.",
+                variant: "destructive",
+              });
             }
           }
         }
