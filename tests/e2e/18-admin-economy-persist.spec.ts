@@ -57,7 +57,7 @@ test.describe('Admin — Economy Persist', () => {
 
     // ── Step 1: Login as admin ───────────────────────────────────────────────
     await loginViaUI(page, ADMIN_EMAIL, ADMIN_PASSWORD);
-    await page.goto('/admin/contests');
+    await page.goto('/admin?tab=management');
     await page.waitForLoadState('networkidle');
 
     // ── Step 2: Switch to "Archiv test" tab ──────────────────────────────────
