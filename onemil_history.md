@@ -14,6 +14,30 @@
 
 ---
 
+## 2026-05-17 — Staging Full E2E zelený po PR #16 (run 25995782004)
+
+### Co bylo provedeno
+- Staging Full E2E run `25995782004` proběhl po mergi PR #16 — **25 passed, 3 skipped, 0 failed** (3m 36s).
+- Spec 17 (`Profile Smoke`) ✅ prošel poprvé (5.7s) — nový test přidaný v PR #16.
+- Spec 16 (`Admin — Economy Preview Smoke`) ✅ prošel (6.0s).
+- Telegram notifikace `✅ OneMil STAGING full E2E OK — all specs passed` doručena.
+
+---
+
+## 2026-05-17 — PR #16 profile smoke E2E test mergnut
+
+### Co bylo provedeno
+- PR #16 **Add profile smoke E2E coverage** mergnut do `main`.
+- Merge commit: `7fd9766972b4a84c9ee33b11357f42ad46c38854`.
+- Zdrojová větev: `test/e2e-profile-smoke`; cílová větev: `main`.
+- Přidán nový spec: `tests/e2e/17-profile-smoke.spec.ts` (54 řádků, staging-only, read-only).
+- Původní název `12-profile-smoke.spec.ts` přejmenován na `17-` aby nedošlo ke kolizi s existujícím `12-mobile-messages-layout.spec.ts`.
+- Test ověřuje: login jako E2E user → `/profile` → identita (e-mail), sekce Peněženka/MioCoiny/Váš MioCoin účet, Účet heading, Přihlašovací údaje, Osobní údaje — bez redirectu na login/onboarding.
+- Guard: `test.skip` pokud chybí `E2E_TEST_EMAIL` / `E2E_TEST_PASSWORD`; staging-only.
+- Žádný app kód, DB schéma, migrace, workflow soubory, Supabase volání, platby, soutěže, tikety, výhry, vouchery, Partner Offers ani `buy_ticket_atomic` nezměněny.
+
+---
+
 ## 2026-05-17 — Staging Full E2E zelený po PR #38 (run 25994857704)
 
 ### Co bylo provedeno

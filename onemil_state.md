@@ -298,6 +298,24 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (17. 05. 2026)
 
+### Staging Full E2E — ZELENÝ po PR #16 (17. 05. 2026)
+
+- **Run:** `25995782004` — ✅ **25 passed, 3 skipped, 0 failed** (3m 36s)
+- **Spec 17** ✅ `Profile Smoke` — `17-profile-smoke.spec.ts` prošel (5.7s)
+- **Spec 16** ✅ `Admin — Economy Preview Smoke` prošel (6.0s)
+- **Telegram:** `✅ OneMil STAGING full E2E OK — all specs passed` doručeno ✅
+
+### PR #16 — Profile smoke E2E test — MERGNUT (17. 05. 2026)
+
+- **Branch:** `test/e2e-profile-smoke` → `main`
+- **Merge commit:** `7fd9766972b4a84c9ee33b11357f42ad46c38854`
+- **Přidaný soubor:** `tests/e2e/17-profile-smoke.spec.ts` (54 řádků, staging-only, read-only)
+- **Co test ověřuje:** login jako E2E user → přechod na `/profile` → ověří identitu (e-mail), sekci peněženky (Peněženka, MioCoiny, Váš MioCoin účet), Účet heading, Přihlašovací údaje a Osobní údaje heading — bez redirectu na login/onboarding.
+- **Přejmenování:** původně `12-profile-smoke.spec.ts` — přejmenováno na `17-` aby nedošlo ke kolizi s existujícím `12-mobile-messages-layout.spec.ts`.
+- **Guard:** `test.skip` pokud chybí `E2E_TEST_EMAIL` / `E2E_TEST_PASSWORD`; staging-only (přeskakuje bez `E2E_CONTEST_ID`).
+- Žádný app kód, DB schéma, migrace, workflow soubory, Supabase volání, platby, soutěže, tikety, výhry, vouchery, Partner Offers ani `buy_ticket_atomic` nezměněny ✅
+- `npm run build` prošel ✅
+
 ### Staging Full E2E — ZELENÝ po PR #38 (17. 05. 2026)
 
 - **Run:** `25994857704` — ✅ **24 passed, 3 skipped, 0 failed** (2m 36s)
