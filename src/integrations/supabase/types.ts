@@ -328,11 +328,15 @@ export type Database = {
           description: string
           detailed_description: string | null
           guardian_required: boolean
+          handling_override_czk: number | null
           id: string
           image_url: string | null
           status: string
+          supplier_name: string | null
           ticket_position: number
           title: string | null
+          unit_cost_czk: number | null
+          vat_rate_percent: number | null
         }
         Insert: {
           admin_notes?: string | null
@@ -342,11 +346,15 @@ export type Database = {
           description: string
           detailed_description?: string | null
           guardian_required?: boolean
+          handling_override_czk?: number | null
           id?: string
           image_url?: string | null
           status?: string
+          supplier_name?: string | null
           ticket_position: number
           title?: string | null
+          unit_cost_czk?: number | null
+          vat_rate_percent?: number | null
         }
         Update: {
           admin_notes?: string | null
@@ -356,11 +364,15 @@ export type Database = {
           description?: string
           detailed_description?: string | null
           guardian_required?: boolean
+          handling_override_czk?: number | null
           id?: string
           image_url?: string | null
           status?: string
+          supplier_name?: string | null
           ticket_position?: number
           title?: string | null
+          unit_cost_czk?: number | null
+          vat_rate_percent?: number | null
         }
         Relationships: [
           {
@@ -640,6 +652,53 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      contest_economy: {
+        Row: {
+          contest_id: string
+          created_at: string
+          default_handling_czk: number
+          main_prize_cost_czk: number
+          marketing_percent: number
+          miocoin_real_cost_czk: number
+          setup_cost_czk: number
+          target_margin_percent: number
+          updated_at: string
+          vat_rate_percent: number
+        }
+        Insert: {
+          contest_id: string
+          created_at?: string
+          default_handling_czk?: number
+          main_prize_cost_czk?: number
+          marketing_percent?: number
+          miocoin_real_cost_czk?: number
+          setup_cost_czk?: number
+          target_margin_percent?: number
+          updated_at?: string
+          vat_rate_percent?: number
+        }
+        Update: {
+          contest_id?: string
+          created_at?: string
+          default_handling_czk?: number
+          main_prize_cost_czk?: number
+          marketing_percent?: number
+          miocoin_real_cost_czk?: number
+          setup_cost_czk?: number
+          target_margin_percent?: number
+          updated_at?: string
+          vat_rate_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contest_economy_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: true
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cookie_consents: {
         Row: {

@@ -241,6 +241,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       // Load existing bonuses and gallery for editing
       loadExistingBonuses(editingContest.contest_id);
       loadGalleryMedia(editingContest.contest_id);
+      loadEconomyAssumptions(editingContest.contest_id);
     } else {
       setForm({
         title: "",
@@ -269,8 +270,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setTotalMioCoinsInput(0);
       setStepValue(0);
       setDistributionType("even");
+      // New contest starts with fresh economy defaults.
+      setEconomyAssumptions(DEFAULT_ECONOMY_ASSUMPTIONS);
     }
-    setEconomyAssumptions(DEFAULT_ECONOMY_ASSUMPTIONS);
     setActiveTab("basic");
   }, [editingContest, open]);
 
@@ -391,6 +393,34 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setGalleryMedia(data || []);
     }
     setLoadingMedia(false);
+  };
+
+  // Load persisted economy assumptions for an existing contest.
+  // Falls back to DEFAULT_ECONOMY_ASSUMPTIONS if no row exists yet.
+  const loadEconomyAssumptions = async (contestId: string) => {
+    try {
+      const { data } = await supabase
+        .from("contest_economy")
+        .select("*")
+        .eq("contest_id", contestId)
+        .maybeSingle();
+      if (data) {
+        setEconomyAssumptions({
+          mainPrizeRealCost: data.main_prize_cost_czk ?? DEFAULT_ECONOMY_ASSUMPTIONS.mainPrizeRealCost,
+          mioCoinRealCost: data.miocoin_real_cost_czk ?? DEFAULT_ECONOMY_ASSUMPTIONS.mioCoinRealCost,
+          vatRate: data.vat_rate_percent ?? DEFAULT_ECONOMY_ASSUMPTIONS.vatRate,
+          setupCost: data.setup_cost_czk ?? DEFAULT_ECONOMY_ASSUMPTIONS.setupCost,
+          marketingPercent: data.marketing_percent ?? DEFAULT_ECONOMY_ASSUMPTIONS.marketingPercent,
+          handlingCostPerPhysicalPrize: data.default_handling_czk ?? DEFAULT_ECONOMY_ASSUMPTIONS.handlingCostPerPhysicalPrize,
+          targetMarginPercent: data.target_margin_percent ?? DEFAULT_ECONOMY_ASSUMPTIONS.targetMarginPercent,
+        });
+      } else {
+        setEconomyAssumptions(DEFAULT_ECONOMY_ASSUMPTIONS);
+      }
+    } catch (e) {
+      console.warn("Failed to load contest economy assumptions:", e);
+      setEconomyAssumptions(DEFAULT_ECONOMY_ASSUMPTIONS);
+    }
   };
 
   const handleAddMedia = async () => {
@@ -580,10 +610,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           ticket_position: bonus.ticket_position,
           description: bonus.description || "",
           detailed_description: bonus.detailed_description || "",
-          supplier_name: "",
-          unit_cost_czk: 0,
-          vat_rate: 21,
-          handling_override_czk: null,
+          // Load persisted economy metadata (Phase 4); null → frontend default.
+          supplier_name: bonus.supplier_name || "",
+          unit_cost_czk: bonus.unit_cost_czk ?? 0,
+          vat_rate: bonus.vat_rate_percent ?? 21,
+          handling_override_czk: bonus.handling_override_czk ?? null,
           image_url: bonus.image_url,
         });
       }
@@ -1462,6 +1493,31 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         }
       }
 
+      // Persist contest economy assumptions (Phase 4).
+      // This is non-blocking: a failure logs a warning but does not abort the save.
+      if (contestId) {
+        const { error: econSaveError } = await supabase
+          .from("contest_economy")
+          .upsert(
+            {
+              contest_id: contestId,
+              main_prize_cost_czk: economyAssumptions.mainPrizeRealCost,
+              miocoin_real_cost_czk: economyAssumptions.mioCoinRealCost,
+              vat_rate_percent: economyAssumptions.vatRate,
+              setup_cost_czk: economyAssumptions.setupCost,
+              marketing_percent: economyAssumptions.marketingPercent,
+              default_handling_czk: economyAssumptions.handlingCostPerPhysicalPrize,
+              target_margin_percent: economyAssumptions.targetMarginPercent,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "contest_id" }
+          );
+        if (econSaveError) {
+          console.error("Error saving economy assumptions:", econSaveError);
+          // Non-fatal: economy data is planning-only; does not block contest save.
+        }
+      }
+
       // Save bonuses if we have a contest ID
       if (contestId) {
         // Delete existing bonuses for this contest
@@ -1502,6 +1558,24 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           // RPC catches exceptions internally and returns {success:false, message:...}
           if (insertData && (insertData as any).success === false) {
             throw new Error(`Chyba při ukládání výhry: ${(insertData as any).message}`);
+          }
+
+          // Persist economy metadata for this physical prize (Phase 4).
+          // Non-blocking: a failure is logged but does not abort the save.
+          const savedPrizeId = (insertData as any)?.prize_id as string | undefined;
+          if (savedPrizeId) {
+            const { error: econPrizeError } = await supabase
+              .from("bonus_prizes")
+              .update({
+                supplier_name: prize.supplier_name ?? null,
+                unit_cost_czk: prize.unit_cost_czk ?? null,
+                vat_rate_percent: prize.vat_rate ?? null,
+                handling_override_czk: prize.handling_override_czk ?? null,
+              })
+              .eq("id", savedPrizeId);
+            if (econPrizeError) {
+              console.error("Error saving physical prize economy data:", econPrizeError);
+            }
           }
         }
 
