@@ -55,6 +55,19 @@ test.describe('Admin — Economy Persist', () => {
       );
     }
 
+    // Pre-seed cookie consent so the CookieConsentBanner (fixed bottom-0 z-[100])
+    // never appears and never intercepts pointer events on table-row buttons.
+    // The banner reads localStorage key 'cookie_consent' on mount; if present,
+    // it stays hidden. addInitScript runs before every page load in this context.
+    await page.addInitScript(() => {
+      localStorage.setItem('cookie_consent', JSON.stringify({
+        essential: true,
+        analytics: false,
+        marketing: false,
+        timestamp: new Date().toISOString(),
+      }));
+    });
+
     // ── Step 1: Login as admin ───────────────────────────────────────────────
     await loginViaUI(page, ADMIN_EMAIL, ADMIN_PASSWORD);
     await page.goto('/admin?tab=management');
