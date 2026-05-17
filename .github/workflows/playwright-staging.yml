@@ -210,7 +210,12 @@ jobs:
 
       - name: Seed E2E Spec18 economy test contest
         # Seed a fresh draft contest for spec 18 (admin economy persist).
-        # Uses status=pending so it appears in the "Aktivní soutěže" admin tab.
+        # Uses status=draft so it appears in the "Archiv test" admin tab.
+        # "Archiv test" has far fewer rows than "Aktivní soutěže", making the
+        # row reliably findable. The spec locates the row by SPEC18_CONTEST_ID
+        # (rendered as "ID: <uuid>" in each row) — unique per run, no title collisions.
+        # main_image is set to a placeholder so the graphics validation passes
+        # and the Save button is enabled (isFormValid = basic.isValid && hasMainImage).
         # rules_pdf_url is pre-set to a placeholder so save validation passes
         # without requiring a real PDF upload during the test.
         # WARNING-only: if the contest_economy table does not yet exist (migration
@@ -228,9 +233,10 @@ jobs:
               "main_prize": "E2E economy test prize",
               "ticket_count": 100,
               "ticket_price": 10,
-              "status": "pending",
+              "status": "draft",
               "next_ticket_number": 1,
               "fast_game": false,
+              "main_image": "https://placehold.co/800x600/1D2128/E7EBF0?text=E2E+Spec18",
               "rules_pdf_url": "https://example.com/e2e-test-rules.pdf"
             }')
           echo "Seed spec18 contest response: $RESPONSE"

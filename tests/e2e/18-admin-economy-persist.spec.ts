@@ -13,7 +13,14 @@
  * ║  Requires staging CI env vars:                                             ║
  * ║    E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD                                    ║
  * ║    E2E_SPEC18_CONTEST_ID  (seeded fresh by workflow each run)              ║
- * ║    VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY                              ║
+ * ║                                                                            ║
+ * ║  Row location strategy: the admin table renders each contest row with      ║
+ * ║  "ID: <uuid>" visible text, so SPEC18_CONTEST_ID is used as a unique       ║
+ * ║  locator — avoids false matches when multiple old E2E18 contests exist.    ║
+ * ║                                                                            ║
+ * ║  Seed requirements (enforced in playwright-staging.yml):                  ║
+ * ║    status: "draft"  → appears in "Archiv test" tab (fewer rows, stable)   ║
+ * ║    main_image set   → satisfies graphics validation so save btn is enabled ║
  * ║                                                                            ║
  * ║  Skipped cleanly when any required env var is absent.                      ║
  * ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -25,8 +32,6 @@ import { loginViaUI } from './helpers/auth';
 const ADMIN_EMAIL       = process.env.E2E_ADMIN_EMAIL       ?? '';
 const ADMIN_PASSWORD    = process.env.E2E_ADMIN_PASSWORD    ?? '';
 const SPEC18_CONTEST_ID = process.env.E2E_SPEC18_CONTEST_ID ?? '';
-const SUPABASE_URL      = process.env.VITE_SUPABASE_URL     ?? '';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY ?? '';
 
 /**
  * Locate an <input> by the visible <label> text that precedes it.
@@ -50,46 +55,30 @@ test.describe('Admin — Economy Persist', () => {
       );
     }
 
-    // ── Step 1: Resolve contest title via public API ─────────────────────────
-    // We need the title to locate the row in the admin contest table.
-    const titleRes = await page.request.get(
-      `${SUPABASE_URL}/rest/v1/contests?id=eq.${SPEC18_CONTEST_ID}&select=title,status`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      }
-    );
-    const titleJson = await titleRes.json();
-    const contestTitle  = (titleJson[0]?.title  as string | undefined) ?? '';
-    const contestStatus = (titleJson[0]?.status as string | undefined) ?? '';
-
-    if (!contestTitle) {
-      test.skip(true, 'Could not fetch spec-18 contest title from staging API');
-    }
-
-    // ── Step 2: Login as admin ───────────────────────────────────────────────
+    // ── Step 1: Login as admin ───────────────────────────────────────────────
     await loginViaUI(page, ADMIN_EMAIL, ADMIN_PASSWORD);
     await page.goto('/admin/contests');
     await page.waitForLoadState('networkidle');
 
-    // ── Step 3: Switch to the correct tab based on contest status ────────────
-    // draft → "Archiv test" tab; pending/active/paused → "Aktivní soutěže" tab
-    if (contestStatus === 'draft') {
-      await page.getByRole('tab', { name: /Archiv test/i }).click();
-      await page.waitForTimeout(500);
-    }
+    // ── Step 2: Switch to "Archiv test" tab ──────────────────────────────────
+    // The seeded contest always has status="draft" so it lives in "Archiv test".
+    // The admin tabs are <button> elements (not ARIA role="tab"), so we use
+    // getByRole('button') rather than getByRole('tab').
+    await page.getByRole('button', { name: /Archiv test/i }).click();
+    await page.waitForTimeout(500);
 
-    // ── Step 4: Find the spec-18 contest row and open edit modal ─────────────
-    const contestRow = page.locator('tr', { hasText: contestTitle });
+    // ── Step 3: Find the spec-18 contest row and open edit modal ─────────────
+    // Locate by SPEC18_CONTEST_ID — the admin table renders "ID: <uuid>" in
+    // every row, making the UUID a unique, run-specific locator that avoids
+    // collisions with old E2E18 contests from previous staging runs.
+    const contestRow = page.locator('tr', { hasText: SPEC18_CONTEST_ID });
     await expect(contestRow).toBeVisible({ timeout: 15_000 });
     await contestRow.getByRole('button', { name: /Upravit/i }).click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 10_000 });
 
-    // ── Step 5: Navigate to Ekonomika tab and set distinctive economy values ──
+    // ── Step 4: Navigate to Ekonomika tab and set distinctive economy values ──
     await dialog.getByRole('tab', { name: 'Ekonomika' }).click();
     const econPanel = dialog.locator('[role="tabpanel"][data-state="active"]');
     await expect(econPanel.getByText('Ekonomika soutěže', { exact: true })).toBeVisible();
@@ -100,7 +89,8 @@ test.describe('Admin — Economy Persist', () => {
     await inputByLabel(dialog, 'Jednorázový').fill('8888');
     await inputByLabel(dialog, 'Cílová marže').fill('33');
 
-    // ── Step 6: Save the contest ─────────────────────────────────────────────
+    // ── Step 5: Save the contest ─────────────────────────────────────────────
+    // Save button is enabled because the seeded contest has main_image set.
     const saveBtn = dialog.getByRole('button', { name: /Uložit|Vytvořit/i });
     await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
     await saveBtn.click();
@@ -113,21 +103,19 @@ test.describe('Admin — Economy Persist', () => {
     // Modal auto-closes after successful save (onSaved → setIsModalOpen(false))
     await expect(dialog).not.toBeVisible({ timeout: 15_000 });
 
-    // ── Step 7: Reopen the same contest ──────────────────────────────────────
-    // Admin list reloads after save; switch tab again if needed.
-    if (contestStatus === 'draft') {
-      await page.getByRole('tab', { name: /Archiv test/i }).click();
-      await page.waitForTimeout(500);
-    }
+    // ── Step 6: Reopen the same contest ──────────────────────────────────────
+    // Admin list reloads after save; switch back to "Archiv test" tab.
+    await page.getByRole('button', { name: /Archiv test/i }).click();
+    await page.waitForTimeout(500);
 
-    const contestRowAfter = page.locator('tr', { hasText: contestTitle });
+    const contestRowAfter = page.locator('tr', { hasText: SPEC18_CONTEST_ID });
     await expect(contestRowAfter).toBeVisible({ timeout: 15_000 });
     await contestRowAfter.getByRole('button', { name: /Upravit/i }).click();
 
     const dialog2 = page.getByRole('dialog');
     await expect(dialog2).toBeVisible({ timeout: 10_000 });
 
-    // ── Step 8: Verify economy values persisted ───────────────────────────────
+    // ── Step 7: Verify economy values persisted ───────────────────────────────
     await dialog2.getByRole('tab', { name: 'Ekonomika' }).click();
     const econPanel2 = dialog2.locator('[role="tabpanel"][data-state="active"]');
     await expect(econPanel2.getByText('Ekonomika soutěže', { exact: true })).toBeVisible();
