@@ -99,7 +99,9 @@ Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje 
 - **Staging Full E2E ZELENÝ po spec 18:** run `26026329321` — **26 passed, 3 skipped, 0 failed** (2m 50s). Spec 18 prošel v 10.7s. Telegram OK doručen.
 - PRs #39–#49 (test-only fixes): cookie consent, tab navigation, timeouts, toast strict mode, networkidle removal, cleanup hang fix.
   - Root cause cleanup hagu: `[aria-label="Close"]` selector nenašel žádný element; bez `actionTimeout` čekal donekonečna; fix: `{ timeout: 1000 }` aby `.catch()` zachytil throw (PR #49, merge commit `a0a2b494ef398c74b1cee591b1554d4610daac00`).
-- Fyzické nákladové údaje věcných výher (supplier_name, unit_cost_czk, vat_rate_percent, handling_override_czk) jsou na `bonus_prizes` jako nullable sloupce; frontend preview zatím neukládá tyto hodnoty.
+- **E2E spec 19** (`tests/e2e/19-admin-physical-prize-economy-persist.spec.ts`) ověřuje celý cyklus fyzických nákladových údajů: vyplnit dodavatel / nákupní cena / DPH / balné → přidat výhru → uložit → znovu otevřít → ověřit persistenci (PR #50, merge commit `1b937efba87cbda9118a2d8e532d2da6fdc46d44`).
+- **Playwright testy: 19 spec souborů** (01–19); staging full E2E obsahuje všechny spec soubory
+- Fyzické nákladové údaje věcných výher (supplier_name, unit_cost_czk, vat_rate_percent, handling_override_czk) jsou na `bonus_prizes` jako nullable sloupce a nyní jsou persistovány + E2E ověřeny (spec 19).
 
 ---
 
@@ -318,6 +320,12 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 
 ## CI & PLAYWRIGHT — AKTUÁLNÍ STAV (18. 05. 2026)
 
+### Staging Full E2E — spuštěno po PR #50 (18. 05. 2026)
+
+- **Run:** `26029330415` — ⏳ probíhá (spuštěno po mergi PR #50 — spec 19 physical prize economy persist)
+- **Spec 19** `Admin — Physical Prize Economy Persist` — `19-admin-physical-prize-economy-persist.spec.ts` — čeká na výsledek
+- **Playwright testy: 19 spec souborů** (01–19); staging full E2E obsahuje všechny spec soubory
+
 ### Staging Full E2E — ZELENÝ po PR #49 (18. 05. 2026)
 
 - **Run:** `26026329321` — ✅ **26 passed, 3 skipped, 0 failed** (2m 50s)
@@ -325,7 +333,6 @@ V admin UI bylo možné u soutěží se statusem `closed` (Ukončeno) znovu změ
 - **Spec 17** ✅ `Profile Smoke` prošel
 - **Spec 16** ✅ `Admin — Economy Preview Smoke` prošel
 - **Telegram:** `✅ OneMil STAGING full E2E OK — all specs passed` doručeno ✅
-- **Playwright testy: 18 spec souborů** (01–18); staging full E2E obsahuje všechny spec soubory
 
 ### Staging Full E2E — ZELENÝ po PR #16 (17. 05. 2026)
 

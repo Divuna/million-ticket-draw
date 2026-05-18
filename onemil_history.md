@@ -1695,3 +1695,29 @@ Spec 18 (`tests/e2e/18-admin-economy-persist.spec.ts`) byl přidán jako staging
 - Telegram: `✅ OneMil PROD smoke OK — registration + login passed` doručen (message_id 446).
 - Žádná regrese. `buy_ticket_atomic`, winner logic, Partner Offers, Stripe, wallet ani žádná produkční data nedotčeny.
 - Phase 4 je kompletně nasazena na staging i produkci a ověřena E2E.
+
+---
+
+## 2026-05-18 — Spec 19: Physical Prize Economy Persist E2E
+
+### Kontext
+Po kompletním dokončení Phase 4 Economy Persistence bylo zjištěno, že fyzické nákladové údaje věcných výher (supplier_name, unit_cost_czk, vat_rate_percent, handling_override_czk) jsou sice persistovány na `bonus_prizes` a při načtení modalu správně hydratovány do frontend state, ale E2E pokrytí chybělo.
+
+### Implementace
+- Analýza (`AdminContestManagement.tsx`) potvrdila, že `PhysicalPrize` interface, form, save a load kód pro ekonomická pole fyzických výher jsou již plně implementovány — žádná app kód změna nebyla potřeba.
+- Vytvořen `tests/e2e/19-admin-physical-prize-economy-persist.spec.ts` (173 řádků, staging-only):
+  - Sdílí `E2E_SPEC18_CONTEST_ID` se spec 18 (clean slate: spec 18 vždy uloží 0 fyzických výher → bonus_prizes prázdný pro spec 19)
+  - Scope helper `inputByLabel(container, label)` — scoped na aktivní tab panel, zabraňuje kolizím s `"DPH v %"` vs `"Sazba DPH v %"` v inactive panelech (Shadcn tabs zůstávají v DOM)
+  - Vyplní: Popis výhry, Pozice tiketu, Dodavatel, Nákupní cena bez DPH v Kč, DPH v %, Balné / pošta / práce (88 Kč → override)
+  - Ověří persistenci (po reopenu): `E2E Dodavatel s.r.o.`, `/1[^\d]000/` (Czech tisíce sep), `/DPH:.*15/`, `/Balné:.*88/`, `(override)`
+  - Cleanup best-effort: `{ timeout: 1000 }.catch(() => {})` + Escape (stejný pattern jako spec 18)
+
+### PR #50
+- Merge commit: `1b937efba87cbda9118a2d8e532d2da6fdc46d44`
+- Pouze `tests/e2e/19-admin-physical-prize-economy-persist.spec.ts` (+173 řádků, 0 mazání, ADDED)
+- Smoke E2E (Chromium): ✅ PASS (1m 9s)
+- Branch `test/spec19-physical-prize-economy-persist` smazána
+
+### Staging Full E2E po PR #50
+- **Run:** `26029330415` — spuštěno, výsledek čeká
+- **Playwright testy: 19 spec souborů** (01–19)
