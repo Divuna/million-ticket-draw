@@ -216,6 +216,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     handling_override_czk: null,
     image_file: null,
   });
+  // Bulk quantity and distribution type (form-only, not persisted per row)
+  const [physicalPrizeQuantity, setPhysicalPrizeQuantity] = useState<number>(1);
+  const [physicalPrizeDistribution, setPhysicalPrizeDistribution] = useState<"even" | "random">("even");
 
   // Reset form when modal opens or editingContest changes
   useEffect(() => {
@@ -1084,45 +1087,146 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   };
 
   // Physical prize management
-  const addPhysicalPrize = async () => {
-    if (!newPhysicalPrize.description || newPhysicalPrize.ticket_position < 1) {
+
+  /**
+   * Pick `count` positions from the `available` pool.
+   * "even"   – evenly spaced indices across the pool (deterministic, easy to audit).
+   * "random" – Fisher-Yates shuffle, first count results, returned sorted.
+   */
+  const pickPositions = (
+    strategy: "even" | "random",
+    count: number,
+    available: number[]
+  ): number[] => {
+    if (count === 1) {
+      // Single prize: return the middle of the pool so it sits roughly in the middle.
+      return [available[Math.floor(available.length / 2)]];
+    }
+    if (strategy === "even") {
+      const step = (available.length - 1) / (count - 1);
+      return Array.from({ length: count }, (_, i) => available[Math.round(i * step)]);
+    }
+    // random
+    const shuffled = [...available];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled.slice(0, count).sort((a, b) => a - b);
+  };
+
+  const addPhysicalPrize = () => {
+    if (!newPhysicalPrize.description) {
       toast({
         title: "Chyba",
-        description: "Vyplň popis a platnou pozici tiketu.",
+        description: "Vyplň popis výhry.",
         variant: "destructive",
       });
       return;
     }
 
-    const usedPositions = new Set([
+    const qty = physicalPrizeQuantity;
+
+    // ── Single prize: keep original manual-position behaviour ──────────────
+    if (qty === 1) {
+      if (newPhysicalPrize.ticket_position < 1) {
+        toast({
+          title: "Chyba",
+          description: "Vyplň platnou pozici tiketu.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const usedPositions = new Set([
+        ...mioCoinBonuses.map((b) => b.ticket_position),
+        ...physicalPrizes.map((p) => p.ticket_position),
+      ]);
+
+      if (usedPositions.has(newPhysicalPrize.ticket_position)) {
+        toast({
+          title: "Chyba",
+          description: `Pozice #${newPhysicalPrize.ticket_position} je již obsazena jinou výhrou.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setPhysicalPrizes((prev) => [...prev, { ...newPhysicalPrize }]);
+      setNewPhysicalPrize({
+        ticket_position: 1,
+        description: "",
+        detailed_description: "",
+        supplier_name: "",
+        unit_cost_czk: 0,
+        vat_rate: 21,
+        handling_override_czk: null,
+        image_file: null,
+      });
+      setPhysicalPrizeQuantity(1);
+      toast({ title: "Výhra přidána", description: "Věcná výhra byla přidána." });
+      return;
+    }
+
+    // ── Bulk (qty > 1): auto-distribute positions ──────────────────────────
+    const ticketCount = form.ticket_count;
+    if (!ticketCount || ticketCount < 2) {
+      toast({
+        title: "Chyba",
+        description: "Nejprve nastav počet tiketů soutěže na záložce Základní info.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const occupied = new Set([
       ...mioCoinBonuses.map((b) => b.ticket_position),
       ...physicalPrizes.map((p) => p.ticket_position),
     ]);
 
-    if (usedPositions.has(newPhysicalPrize.ticket_position)) {
+    // Available = 1..(ticketCount-1) excluding occupied
+    const available: number[] = [];
+    for (let pos = 1; pos < ticketCount; pos++) {
+      if (!occupied.has(pos)) available.push(pos);
+    }
+
+    if (available.length < qty) {
       toast({
-        title: "Chyba",
-        description: `Pozice #${newPhysicalPrize.ticket_position} je již obsazena jinou výhrou.`,
+        title: "Nedostatek volných pozic",
+        description: `V rozsahu 1–${ticketCount - 1} je pouze ${available.length} volných pozic. Snižte počet kusů nebo zkontrolujte obsazené pozice.`,
         variant: "destructive",
       });
       return;
     }
 
-    const prizeToAdd = { ...newPhysicalPrize };
-    
-    // Add prize directly without AI processing
-    setPhysicalPrizes((prev) => [...prev, prizeToAdd]);
+    const positions = pickPositions(physicalPrizeDistribution, qty, available);
+    const base = { ...newPhysicalPrize };
+    const newPrizes: PhysicalPrize[] = positions.map((pos) => ({
+      ...base,
+      ticket_position: pos,
+    }));
+
+    setPhysicalPrizes((prev) => [...prev, ...newPrizes]);
+
+    // Reset description/image; keep economy fields so admin can add another product quickly.
     setNewPhysicalPrize({
       ticket_position: 1,
       description: "",
       detailed_description: "",
-      supplier_name: "",
-      unit_cost_czk: 0,
-      vat_rate: 21,
-      handling_override_czk: null,
+      supplier_name: base.supplier_name,
+      unit_cost_czk: base.unit_cost_czk,
+      vat_rate: base.vat_rate,
+      handling_override_czk: base.handling_override_czk,
       image_file: null,
     });
-    toast({ title: "Výhra přidána", description: "Věcná výhra byla přidána." });
+    setPhysicalPrizeQuantity(1);
+
+    const previewPositions = positions.slice(0, 5).map((p) => `#${p}`).join(", ");
+    const suffix = positions.length > 5 ? ` … +${positions.length - 5} dalších` : "";
+    toast({
+      title: `Přidáno ${qty} výher`,
+      description: `Pozice: ${previewPositions}${suffix}`,
+    });
   };
 
   const removePhysicalPrize = (index: number) => {
@@ -2098,17 +2202,77 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   </div>
                 </div>
 
-                <div>
-                  <Label>Pozice tiketu</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={newPhysicalPrize.ticket_position}
-                    onChange={(e) =>
-                      setNewPhysicalPrize((prev) => ({ ...prev, ticket_position: Number(e.target.value) }))
-                    }
-                  />
+                {/* Počet kusů + distribution — always visible */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label>Počet kusů</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={physicalPrizeQuantity}
+                      onChange={(e) =>
+                        setPhysicalPrizeQuantity(Math.max(1, Math.floor(Number(e.target.value) || 1)))
+                      }
+                      placeholder="1"
+                    />
+                  </div>
+                  {physicalPrizeQuantity > 1 && (
+                    <div>
+                      <Label>Rozmístění pozic</Label>
+                      <div className="flex gap-4 mt-2">
+                        <label className="flex items-center gap-2 cursor-pointer text-sm">
+                          <input
+                            type="radio"
+                            name="physicalDistribution"
+                            value="even"
+                            checked={physicalPrizeDistribution === "even"}
+                            onChange={() => setPhysicalPrizeDistribution("even")}
+                          />
+                          Rovnoměrně
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-sm">
+                          <input
+                            type="radio"
+                            name="physicalDistribution"
+                            value="random"
+                            checked={physicalPrizeDistribution === "random"}
+                            onChange={() => setPhysicalPrizeDistribution("random")}
+                          />
+                          Náhodně
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Pozice tiketu — only for single prize */}
+                {physicalPrizeQuantity === 1 && (
+                  <div>
+                    <Label>Pozice tiketu</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={newPhysicalPrize.ticket_position}
+                      onChange={(e) =>
+                        setNewPhysicalPrize((prev) => ({ ...prev, ticket_position: Number(e.target.value) }))
+                      }
+                    />
+                  </div>
+                )}
+
+                {physicalPrizeQuantity > 1 && form.ticket_count > 1 && (
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-muted-foreground">
+                    Pozice budou automaticky přiřazeny z {form.ticket_count - 1} tiketů (1–{form.ticket_count - 1}),
+                    s vyloučením již obsazených pozic. Volných pozic:{" "}
+                    {Math.max(
+                      0,
+                      (form.ticket_count - 1) -
+                        physicalPrizes.length -
+                        mioCoinBonuses.length
+                    ).toLocaleString("cs-CZ")}.
+                  </div>
+                )}
 
                 <div>
                   <Label>Obrázek výhry (volitelné)</Label>
@@ -2122,12 +2286,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 </div>
 
                 <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-muted-foreground">
-                  Tyto nákladové údaje slouží zatím jen pro ekonomický preview. Nákupní cena se zadává bez DPH a do nákladů se zde počítá včetně DPH. Do Supabase se v této fázi neukládají.
+                  Nákupní cena se zadává bez DPH; do nákladů se počítá včetně DPH. Ekonomická metadata se ukládají do Supabase při uložení soutěže.
                 </div>
 
                 <Button onClick={addPhysicalPrize} className="w-full">
                   <Plus className="mr-2 h-4 w-4" />
-                  Přidat věcnou výhru
+                  {physicalPrizeQuantity > 1
+                    ? `Přidat ${physicalPrizeQuantity} věcných výher`
+                    : "Přidat věcnou výhru"}
                 </Button>
               </div>
 
