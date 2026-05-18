@@ -71,7 +71,11 @@ test.describe('Admin — Economy Persist', () => {
     // ── Step 1: Login as admin ───────────────────────────────────────────────
     await loginViaUI(page, ADMIN_EMAIL, ADMIN_PASSWORD);
     await page.goto('/admin?tab=management');
-    await page.waitForLoadState('networkidle');
+    // Do NOT use waitForLoadState('networkidle') — Supabase Realtime holds a
+    // persistent WebSocket that prevents networkidle from ever resolving,
+    // causing an indefinite hang that consumes the full 180s test budget.
+    // Instead wait for a concrete element that proves the admin UI is ready.
+    await expect(page.getByRole('button', { name: /Archiv test/i })).toBeVisible({ timeout: 15_000 });
 
     // ── Step 2: Switch to "Archiv test" tab ──────────────────────────────────
     // The seeded contest always has status="draft" so it lives in "Archiv test".
@@ -114,16 +118,11 @@ test.describe('Admin — Economy Persist', () => {
     await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
     await saveBtn.click();
 
-    // Wait for the success toast.
-    // Shadcn/Radix Toast renders text in both the visible toast element and an
-    // aria-live region, so the locator always resolves to ≥2 elements. .first()
-    // picks the visible toast node and sidesteps the strict-mode violation.
-    await expect(
-      page.getByText(/Soutěž (aktualizována|vytvořena)/i).first()
-    ).toBeVisible({ timeout: 20_000 });
-
-    // Modal auto-closes after successful save (onSaved → setIsModalOpen(false))
-    await expect(dialog).not.toBeVisible({ timeout: 15_000 });
+    // Do not assert the toast text — Shadcn/Radix Toast duplicates content in a
+    // hidden aria-live region; .first() can pick the invisible node and stall.
+    // The dialog closing is the authoritative success signal: onSaved() only
+    // fires after a successful RPC response, which closes the modal.
+    await expect(dialog).not.toBeVisible({ timeout: 20_000 });
 
     // ── Step 6: Reopen the same contest ──────────────────────────────────────
     // Admin list reloads after save; switch back to "Archiv test" tab.
