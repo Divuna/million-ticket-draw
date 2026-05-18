@@ -115,11 +115,11 @@ test.describe('Admin — Economy Persist', () => {
     await saveBtn.click();
 
     // Wait for the success toast.
-    // Use the full title string so the locator resolves to exactly one element
-    // (toast title only) and avoids a strict-mode violation when the short word
-    // also appears elsewhere on the page.
+    // Shadcn/Radix Toast renders text in both the visible toast element and an
+    // aria-live region, so the locator always resolves to ≥2 elements. .first()
+    // picks the visible toast node and sidesteps the strict-mode violation.
     await expect(
-      page.getByText(/Soutěž (aktualizována|vytvořena)/i)
+      page.getByText(/Soutěž (aktualizována|vytvořena)/i).first()
     ).toBeVisible({ timeout: 20_000 });
 
     // Modal auto-closes after successful save (onSaved → setIsModalOpen(false))
