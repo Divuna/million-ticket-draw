@@ -87,6 +87,8 @@ Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje 
 
 ### Phase 4 — Economy Persistence (18. 05. 2026) ✅ HOTOVO — PRODUKCE + STAGING OVĚŘENY
 
+- **PR #52 mergnut (18. 05. 2026):** bulk quantity distribution pro věcné bonusové výhry. Merge commit: `e43cda76c4f187bd4a8e9ae00ec3396626a73e19`. Změněn pouze `src/components/AdminContestManagement.tsx`. Nová UI pole: Počet kusů (default 1, min 1), Rozmístění pozic (Rovnoměrně / Náhodně, default Rovnoměrně). Při qty > 1 app automaticky generuje N `PhysicalPrize` objektů s bezkolizními pozicemi přes `pickPositions` helper (Fisher-Yates nebo rovnoměrné indexy). Kolizní pravidla: vylučuje MioCoin pozice, existující věcné výhry, final-ticket pozici a pozice mimo rozsah 1..(ticket_count-1). Toast ukazuje prvních 5 pozic. Economy pole (dodavatel/cena/DPH/balné) se zachovávají po bulk add pro rychlé zadání dalšího produktu. Opraven stale helper text. Žádné migrace, žádný RPC, žádné workflow changes.
+- **Staging Full E2E ZELENÝ po PR #52:** run `26053065266` — **27 passed, 0 failed, 3 skipped** (3m 56s). Spec 18 ✅ (9.8s), spec 19 ✅ (10.0s). Telegram OK doručen. Žádná regrese.
 - **Staging Full E2E ZELENÝ — Phase 4 kompletní:** run `26046436837` — **27 passed, 0 failed, 3 skipped** (4m 28s). Spec 18 ✅ (11.9s), spec 19 ✅ (11.2s, první pokus). Telegram OK doručen. Toto je finální zelený stav po všech staging SQL opravách.
 - **Staging SQL opravy aplikovány manuálně (18. 05. 2026) na `dxmowysntemfqfnanxua`:**
   1. `ALTER TABLE bonus_prizes ADD COLUMN IF NOT EXISTS supplier_name TEXT, unit_cost_czk NUMERIC, vat_rate_percent NUMERIC, handling_override_czk NUMERIC;` — Phase 4 economy sloupce (ekvivalent migrace `20260517180100`).

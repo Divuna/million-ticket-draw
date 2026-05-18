@@ -14,6 +14,21 @@
 
 ---
 
+## 2026-05-18 — PR #52 mergnut + Staging Full E2E zelený (run 26053065266)
+
+### Co bylo provedeno
+- PR #52 **feat: add bulk quantity distribution for physical bonus prizes** mergnut do `main`.
+- Merge commit: `e43cda76c4f187bd4a8e9ae00ec3396626a73e19`.
+- Změněn pouze `src/components/AdminContestManagement.tsx` (+194 / −28). Žádné migrace, žádný RPC, žádný workflow change.
+- Přidána nová UI pole v záložce „Bonusy – věcné": **Počet kusů** (default 1, min 1) a **Rozmístění pozic** (Rovnoměrně / Náhodně, viditelné pouze při qty > 1).
+- Při qty = 1: stávající chování (manuální Pozice tiketu) zachováno beze změny.
+- Při qty > 1: `pickPositions` helper generuje N bezkolizních pozic — rovnoměrně (evenly spaced indices) nebo náhodně (Fisher-Yates shuffle, výsledek seřazen). Kolizní pravidla: vylučuje MioCoin pozice, existující věcné výhry, final-ticket pozici (ticket_count), pozice mimo rozsah 1..(ticket_count-1). Pokud pool < qty → česky chybový toast, přidání blokováno.
+- Po bulk add: description + image se resetují, economy pole (dodavatel/cena/DPH/balné) se zachovávají, Počet kusů se resetuje na 1. Toast ukazuje prvních 5 přidělených pozic.
+- Opraven stale helper text: `"Do Supabase se v této fázi neukládají."` nahrazen přesným popisem o persistenci ekonomických metadat při uložení soutěže.
+- Staging Full E2E run `26053065266` spuštěn po mergi — **27 passed, 0 failed, 3 skipped** (3m 56s). Spec 18 ✅ (9.8s), spec 19 ✅ (10.0s). Telegram `✅ OneMil STAGING full E2E OK` doručen (message_id 462). Žádná regrese.
+
+---
+
 ## 2026-05-18 — Staging Full E2E zelený po staging SQL fix (run 26046436837)
 
 ### Co bylo provedeno
