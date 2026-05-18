@@ -114,9 +114,12 @@ test.describe('Admin — Economy Persist', () => {
     await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
     await saveBtn.click();
 
-    // Wait for the success toast
+    // Wait for the success toast.
+    // Use the full title string so the locator resolves to exactly one element
+    // (toast title only) and avoids a strict-mode violation when the short word
+    // also appears elsewhere on the page.
     await expect(
-      page.getByText(/aktualizována|vytvořena/i)
+      page.getByText(/Soutěž (aktualizována|vytvořena)/i)
     ).toBeVisible({ timeout: 20_000 });
 
     // Modal auto-closes after successful save (onSaved → setIsModalOpen(false))
