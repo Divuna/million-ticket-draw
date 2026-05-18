@@ -137,15 +137,17 @@ Technical:
 
 ---
 
-## CURRENT SYSTEM STATUS (17. 05. 2026)
+## CURRENT SYSTEM STATUS (18. 05. 2026)
 
-- **Staging Full E2E ZELENÝ (17. 05. 2026):** run `25995782004` — 25 passed, 3 skipped, 0 failed. Spec 17 (profile smoke) prošel (5.7s). Spec 16 prošel (6.0s). Telegram OK doručen.
+- **Staging Full E2E ZELENÝ (18. 05. 2026):** run `26026329321` — 26 passed, 3 skipped, 0 failed. Spec 18 (economy persist) prošel (10.7s). Spec 17 prošel. Spec 16 prošel. Telegram OK doručen.
+- **PR #49 mergnut (18. 05. 2026):** fix spec 18 cleanup hang — přidán `{ timeout: 1000 }` do close button click; selector `[aria-label="Close"]` nenacházel element, bez `actionTimeout` čekal donekonečna. Merge commit: `a0a2b494ef398c74b1cee591b1554d4610daac00`. Pouze `tests/e2e/18-admin-economy-persist.spec.ts`.
+- **Phase 4 — Economy Persistence DOKONČENA (18. 05. 2026):** `contest_economy` tabulka aplikována na staging; `AdminContestManagement.tsx` persistuje ekonomické předpoklady při save a načítá při reopen; spec 18 ověřuje celý cyklus a je zelený.
 - **PR #16 mergnut (17. 05. 2026):** přidán `tests/e2e/17-profile-smoke.spec.ts` — staging-only, read-only profile smoke test. Ověřuje `/profile` rendering pro E2E uživatele: identita, peněženka/MioCoin sekce, Účet heading, Přihlašovací údaje, Osobní údaje. Přejmenováno z `12-` na `17-` (kolize s `12-mobile-messages-layout.spec.ts`). Merge commit: `7fd9766972b4a84c9ee33b11357f42ad46c38854`. Žádný app kód, migrace ani business logika nezměněna.
 - **PR #38 mergnut (17. 05. 2026):** spec 16 Ekonomika tab assertions přesunuty na `econPanel = dialog.locator('[role="tabpanel"][data-state="active"]')` — zamezuje strict mode violations z always-visible summary baru. Pouze `tests/e2e/16-admin-economy-preview.spec.ts`.
 - **PR #37 mergnut (17. 05. 2026):** spec 16 `Balné` assertion opraven na `{ exact: true }` — regex matchoval 2 elementy. Pouze `tests/e2e/16-admin-economy-preview.spec.ts` (1 řádek).
 - **PR #36 mergnut (17. 05. 2026):** admin contest create/edit modal je nyní wider (`max-w-[95vw]`), economy summary bar se zalamuje responsivně, záložky se zalamují — žádný vnitřní horizontální scrollbar. Změněn pouze `src/components/AdminContestManagement.tsx` (layout CSS). Žádná logika nezměněna.
 - **PR #34 mergnut (17. 05. 2026):** přidán `tests/e2e/16-admin-economy-preview.spec.ts` — staging-only, read-only smoke test admin economy preview. Ověřuje, že věcná výhra aktualizuje economy summary bar a záložku Ekonomika bez finálního uložení. Selektory jsou stabilní (inputByLabel helper, summaryValue přes div.uppercase.opacity-70). Skip guard pokud chybí admin secrets.
-- **Playwright testy: 17 spec souborů** (01–17); staging full E2E obsahuje všechny spec soubory
+- **Playwright testy: 18 spec souborů** (01–18); staging full E2E obsahuje všechny spec soubory
 - CI pipeline stabilní: dva oddělené workflow (commit `82f979f`):
   - `.github/workflows/playwright.yml` — **production smoke**: pouze `01-registration` + `02-login`; spouští se 3× denně + push/PR na `main`
   - `.github/workflows/playwright-staging.yml` — **staging full E2E**: všech 17 spec souborů; pouze `workflow_dispatch` (manuálně) + schedule 3× denně

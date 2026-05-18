@@ -1649,3 +1649,38 @@ Byly vytvořeny a commitnuty tyto soubory:
 - Overeni po merge do `main`:
   - Smoke E2E prosel: run `25885049877`.
   - Playwright Staging Full E2E prosel: run `25885285280`.
+
+---
+
+## 2026-05-18 — Phase 4: Economy Persistence + Spec 18 E2E zelený
+
+### Přehled
+Phase 4 dokončena: admin contest economy předpoklady jsou nyní persistovány do Supabase tabulky `contest_economy` a při znovuotevření editačního modalu se korektně načítají. Celý cyklus je ověřen stagingem E2E (spec 18).
+
+### Migrace (staging)
+- `20260517180000_add_contest_economy_table.sql` — nová tabulka `public.contest_economy` (1:1 s `contests`, `ON DELETE CASCADE`, admin-only RLS via `has_role()`)
+- `20260517180100_add_bonus_prize_economy_columns.sql` — 4 nullable sloupce na `public.bonus_prizes`: `supplier_name`, `unit_cost_czk`, `vat_rate_percent`, `handling_override_czk`
+
+### Spec 18 — cesta k zelenému (PRs #39–#49)
+Spec 18 (`tests/e2e/18-admin-economy-persist.spec.ts`) byl přidán jako staging-only test ověřující persistenci ekonomických předpokladů. Opravy probíhaly iterativně na základě artefaktů z neúspěšných runů:
+
+| PR | Fix |
+|----|-----|
+| #43 | Cookie consent pre-seed — `CookieConsentBanner` (fixed bottom-0 z-[100]) blokoval klikání |
+| #44 | Navigate to "Vytvořit soutěž" tab před save — tlačítko save existuje pouze v tomto TabsContent |
+| #45 | `test.setTimeout(180_000)` + `.catch(() => {})` na cleanup |
+| #46 | Plný toast titulek `/Soutěž (aktualizována|vytvořena)/i` — příliš krátký regex matchoval více elementů |
+| #47 | `.first()` na toast — Shadcn/Radix duplikuje obsah v hidden `aria-live` regionu |
+| #48 | Odstraněn `waitForLoadState('networkidle')` (Supabase Realtime WebSocket — nikdy nezavírá); odstraněna toast assertion |
+| #49 | `{ timeout: 1000 }` na cleanup click — `[aria-label="Close"]` nenacházel element; bez `actionTimeout` čekal donekonečna; `.catch(() => {})` zachytí až throw, ne visící Promise |
+
+### Finální výsledek
+- **Run:** `26026329321` — ✅ **26 passed, 3 skipped, 0 failed** (2m 50s)
+- **Spec 18:** ✅ prošel v 10.7s
+- **Telegram:** `✅ OneMil STAGING full E2E OK — all specs passed` (message_id 443)
+- **Merge commit PR #49:** `a0a2b494ef398c74b1cee591b1554d4610daac00`
+
+### Invariant
+- Nebyl změněn `buy_ticket_atomic`, ticket purchase logic, winner logic, Partner Offers, platební pipeline, Stripe, wallet ani produkce.
+- Fyzické nákladové sloupce na `bonus_prizes` jsou nullable a admin-only; žádná existující logika nebyla dotčena.
+- Production schema nedotčen — migrace aplikovány pouze na staging.
