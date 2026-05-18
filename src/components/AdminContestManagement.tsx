@@ -382,6 +382,35 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     onClose();
   };
 
+  /**
+   * Sanitize a raw file name so it is safe for Supabase Storage keys.
+   * Supabase Storage rejects keys containing spaces, Czech diacritics,
+   * parentheses, or other non-ASCII characters ("Invalid key" error).
+   *
+   * Steps:
+   *  1. Separate base name from extension (lowercased).
+   *  2. Normalise Unicode (NFD) and strip combining diacritical marks.
+   *  3. Replace spaces with hyphens.
+   *  4. Strip any character that is not a-z, A-Z, 0-9, dot, underscore, or hyphen.
+   *  5. Collapse repeated hyphens.
+   *  6. Fall back to "file" if the result is empty.
+   */
+  const sanitizeStorageFileName = (fileName: string): string => {
+    const lastDot = fileName.lastIndexOf(".");
+    const rawBase = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
+    const ext = lastDot > 0 ? fileName.slice(lastDot + 1).toLowerCase() : "";
+
+    const safeBase = rawBase
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")   // strip combining diacritical marks
+      .replace(/\s+/g, "-")              // spaces → hyphens
+      .replace(/[^a-zA-Z0-9._-]/g, "")  // remove remaining special chars
+      .replace(/-{2,}/g, "-")            // collapse repeated hyphens
+      || "file";                          // fallback
+
+    return ext ? `${safeBase}.${ext}` : safeBase;
+  };
+
   const loadGalleryMedia = async (contestId: string) => {
     setLoadingMedia(true);
     const { data, error } = await supabase
@@ -445,12 +474,17 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         finalUrl = URL.createObjectURL(newMediaFile);
       } else {
         setAddingMedia(true);
-        const filePath = `contests/${contestId}/gallery/${Date.now()}-${newMediaFile.name}`;
+        const safeImageName = sanitizeStorageFileName(newMediaFile.name);
+        const filePath = `contests/${contestId}/gallery/${Date.now()}-${crypto.randomUUID()}-${safeImageName}`;
         const { error: uploadError } = await supabase.storage
           .from("contest-images")
           .upload(filePath, newMediaFile);
         if (uploadError) {
-          toast({ title: "Chyba uploadu", description: uploadError.message, variant: "destructive" });
+          toast({
+            title: "Chyba uploadu",
+            description: "Galerii se nepodařilo nahrát. Zkuste soubor přejmenovat bez speciálních znaků.",
+            variant: "destructive",
+          });
           setAddingMedia(false);
           return;
         }
@@ -467,12 +501,17 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         finalUrl = URL.createObjectURL(newMediaFile);
       } else {
         setAddingMedia(true);
-        const filePath = `contests/${contestId}/gallery/${Date.now()}-${newMediaFile.name}`;
+        const safeBgName = sanitizeStorageFileName(newMediaFile.name);
+        const filePath = `contests/${contestId}/gallery/${Date.now()}-${crypto.randomUUID()}-${safeBgName}`;
         const { error: uploadError } = await supabase.storage
           .from("contest-images")
           .upload(filePath, newMediaFile);
         if (uploadError) {
-          toast({ title: "Chyba uploadu", description: uploadError.message, variant: "destructive" });
+          toast({
+            title: "Chyba uploadu",
+            description: "Galerii se nepodařilo nahrát. Zkuste soubor přejmenovat bez speciálních znaků.",
+            variant: "destructive",
+          });
           setAddingMedia(false);
           return;
         }
@@ -1563,11 +1602,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               let url = item.url;
               const file = effectivePendingFiles[item.id];
               if (file) {
-                const filePath = `contests/${contestId}/gallery/${Date.now()}-${file.name}`;
+                const safePendingName = sanitizeStorageFileName(file.name);
+                const filePath = `contests/${contestId}/gallery/${Date.now()}-${crypto.randomUUID()}-${safePendingName}`;
                 const { error: uploadError } = await supabase.storage
                   .from("contest-images")
                   .upload(filePath, file);
-                if (uploadError) throw uploadError;
+                if (uploadError) throw new Error("Galerii se nepodařilo nahrát. Zkuste soubor přejmenovat bez speciálních znaků.");
                 const { data: pub } = supabase.storage.from("contest-images").getPublicUrl(filePath);
                 url = pub.publicUrl;
               }
