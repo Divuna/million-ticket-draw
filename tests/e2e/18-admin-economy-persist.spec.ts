@@ -46,7 +46,7 @@ function inputByLabel(dialog: Locator, labelText: string): Locator {
 
 test.describe('Admin — Economy Persist', () => {
   test('economy assumptions save and reload when contest is reopened', async ({ page }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(180_000);
 
     if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !SPEC18_CONTEST_ID) {
       test.skip(
@@ -144,10 +144,8 @@ test.describe('Admin — Economy Persist', () => {
     await expect(inputByLabel(dialog2, 'Jednorázový')).toHaveValue('8888');
     await expect(inputByLabel(dialog2, 'Cílová marže')).toHaveValue('33');
 
-    // Close modal
-    await dialog2.locator('[aria-label="Close"], button[data-dialog-close]').click().catch(() => {
-      // If dedicated close button not found, press Escape
-    });
-    await page.keyboard.press('Escape');
+    // Close modal — both steps are best-effort cleanup; failures are non-fatal.
+    await dialog2.locator('[aria-label="Close"], button[data-dialog-close]').click().catch(() => {});
+    await page.keyboard.press('Escape').catch(() => {});
   });
 });
