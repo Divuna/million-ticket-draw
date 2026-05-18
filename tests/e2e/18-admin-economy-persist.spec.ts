@@ -146,8 +146,11 @@ test.describe('Admin — Economy Persist', () => {
     await expect(inputByLabel(dialog2, 'Jednorázový')).toHaveValue('8888');
     await expect(inputByLabel(dialog2, 'Cílová marže')).toHaveValue('33');
 
-    // Close modal — both steps are best-effort cleanup; failures are non-fatal.
-    await dialog2.locator('[aria-label="Close"], button[data-dialog-close]').click().catch(() => {});
+    // Close modal — best-effort cleanup; failures are non-fatal.
+    // Use { timeout: 1000 } so the action throws quickly if the selector doesn't match
+    // (the Shadcn close button has accessible name "Zavřít"/"Close", not aria-label="Close");
+    // .catch(() => {}) then handles the timeout throw and Escape closes any residual dialog.
+    await dialog2.locator('[aria-label="Close"], button[data-dialog-close]').click({ timeout: 1000 }).catch(() => {});
     await page.keyboard.press('Escape').catch(() => {});
   });
 });
