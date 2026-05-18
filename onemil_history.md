@@ -14,7 +14,45 @@
 
 ---
 
-## 2026-05-17 — Staging Full E2E zelený po PR #16 (run 25995782004)
+## 2026-05-18 — Staging Full E2E zelený po staging SQL fix (run 26046436837)
+
+### Co bylo provedeno
+- Staging Full E2E run `26046436837` proběhl po aplikaci staging SQL oprav — **27 passed, 0 failed, 3 skipped** (4m 28s).
+- Spec 18 (`Admin — Economy Persist`) ✅ prošel (11.9s).
+- Spec 19 (`Admin — Physical Prize Economy Persist`) ✅ prošel poprvé (11.2s, bez retry) — první plně zelený průchod spec 19.
+- Telegram notifikace `✅ OneMil STAGING full E2E OK` doručena.
+- 3 skipy jsou záměrné pre-existující skipy: spec 01 new-user registration (nepoužívá se na staging), spec 07 partner offer open, spec 08 partner offer persistence.
+- Toto je finální potvrzení, že Phase 4 Economy Persistence je kompletní a plně zelená na staging i produkci.
+
+---
+
+## 2026-05-18 — Staging SQL opravy: bonus_prizes columns + write RLS policy
+
+### Co bylo provedeno
+- Na staging projektu `dxmowysntemfqfnanxua` aplikovány manuálně dvě SQL opravy přes Supabase SQL Editor:
+  1. **Phase 4 economy sloupce na bonus_prizes:** `ALTER TABLE public.bonus_prizes ADD COLUMN IF NOT EXISTS supplier_name TEXT, unit_cost_czk NUMERIC, vat_rate_percent NUMERIC, handling_override_czk NUMERIC;` — ekvivalent migrace `20260517180100_add_bonus_prize_economy_columns.sql`, která byla aplikována na produkci ale chyběla na staging.
+  2. **Write RLS policy na bonus_prizes:** `CREATE POLICY "Allow admin full access to bonus prizes" ON public.bonus_prizes FOR ALL USING (has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'superadmin'::app_role)) WITH CHECK (...);` — staging měl pouze dvě SELECT policies, žádnou write policy. Bez ní přímé client-side `.update()` / `.delete()` z admin UI tichce selhávaly (PostgREST vrátil 200/204, 0 řádků dotčeno). SECURITY DEFINER RPC INSERT fungoval (obchází RLS), čímž se maskoval problém — bonus prize se vytvořil na pozici 42, ale economy metadata se neuložila.
+- Root cause spec 19 failures (run 26040307928 a 26042798457): chybějící write policy způsobila, že `.update({supplier_name, unit_cost_czk, vat_rate_percent, handling_override_czk})` po RPC tiše neuložil žádná data; na reload se zobrazovaly výchozí hodnoty.
+- Žádné soubory v repozitáři nezměněny; opravy jsou čistě DB-side na staging projektu.
+
+---
+
+## 2026-05-18 — PR #51 workflow admin E2E seed step mergnut
+
+### Co bylo provedeno
+- PR #51 **fix: ensure staging admin E2E user has admin role before E2E suite** mergnut do `main`.
+- Merge commit: `97797662d19cafe53062a04fb73449545ef98780`.
+- Zdrojová větev: `fix/spec19-admin-staging-seed`; cílová větev: `main`.
+- Změněn jediný soubor: `.github/workflows/playwright-staging.yml`.
+- Přidán nový workflow krok "Ensure staging admin E2E user has admin role" vložený před "Run full E2E suite".
+- Krok používá Supabase Admin API k nalezení nebo vytvoření `admin-e2e@onemil.cz` v auth.users; poté upsertuje public.users (role=admin), user_roles (role=admin), profiles, wallets. Idempotentní — bezpečný při každém spuštění.
+- Root cause spec 19 selhání (run 26029330415): `admin_manage_bonus_prize` RPC kontroluje `SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin','superadmin')` — admin E2E user chyběl v public.users na staging, RPC vrátil `{success:false, "Pouze administrátoři..."}`, dialog se nezavřel.
+- Proč spec 15/16/17/18 procházely: spec 15/17 jsou read-only; spec 16 volá jen `admin_manage_contest` (jiný exception handler — re-raise, ne catch-and-return); spec 18 nepřidává fyzické výhry → `admin_manage_bonus_prize` se nevolá.
+- Žádný app kód, testy, migrace ani business logika nezměněny.
+
+---
+
+## 2026-05-18 — Staging Full E2E zelený po PR #16 (run 25995782004)
 
 ### Co bylo provedeno
 - Staging Full E2E run `25995782004` proběhl po mergi PR #16 — **25 passed, 3 skipped, 0 failed** (3m 36s).

@@ -85,23 +85,23 @@ Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje 
 
 ## ADMIN CONTEST ECONOMY PANEL — PHASE 4: PERSISTENCE DOKONČENA (18. 05. 2026)
 
-### Phase 4 — Economy Persistence (18. 05. 2026) ✅ HOTOVO — PRODUKCE OVĚŘENA
+### Phase 4 — Economy Persistence (18. 05. 2026) ✅ HOTOVO — PRODUKCE + STAGING OVĚŘENY
 
-- **Migrace aplikovány na staging** (před tímto session):
-  - `supabase/migrations/20260517180000_add_contest_economy_table.sql` — nová tabulka `public.contest_economy` (1:1 s `contests`, ON DELETE CASCADE, RLS via `has_role()`)
-  - `supabase/migrations/20260517180100_add_bonus_prize_economy_columns.sql` — 4 nullable sloupce na `bonus_prizes` pro cost tracking fyzických výher
+- **Staging Full E2E ZELENÝ — Phase 4 kompletní:** run `26046436837` — **27 passed, 0 failed, 3 skipped** (4m 28s). Spec 18 ✅ (11.9s), spec 19 ✅ (11.2s, první pokus). Telegram OK doručen. Toto je finální zelený stav po všech staging SQL opravách.
+- **Staging SQL opravy aplikovány manuálně (18. 05. 2026) na `dxmowysntemfqfnanxua`:**
+  1. `ALTER TABLE bonus_prizes ADD COLUMN IF NOT EXISTS supplier_name TEXT, unit_cost_czk NUMERIC, vat_rate_percent NUMERIC, handling_override_czk NUMERIC;` — Phase 4 economy sloupce (ekvivalent migrace `20260517180100`).
+  2. `CREATE POLICY "Allow admin full access to bonus prizes" ON public.bonus_prizes FOR ALL USING (has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'superadmin'::app_role)) WITH CHECK (...);` — chybějící write policy; bez ní direct client UPDATE/DELETE na bonus_prizes tichce selhal (RLS blokoval 0 řádků bez chyby), ale SECURITY DEFINER RPC INSERT fungoval, čímž se maskoval problém.
+- **PR #51 mergnut (18. 05. 2026):** workflow seed step "Ensure staging admin E2E user has admin role" přidán do `playwright-staging.yml`. Zajišťuje existenci `admin-e2e@onemil.cz` v auth.users, public.users (role=admin), user_roles, profiles, wallets před E2E suite. Idempotentní. Merge commit: `97797662d19cafe53062a04fb73449545ef98780`.
 - **Migrace aplikovány na produkci (18. 05. 2026):**
   - `public.contest_economy` tabulka existuje na produkci ✅
   - `public.bonus_prizes` sloupce `supplier_name`, `unit_cost_czk`, `vat_rate_percent`, `handling_override_czk` existují na produkci ✅
-  - **Production smoke po migraci:** run `26027726603` — ✅ **5 passed, 0 failed, 0 skipped** (22s). Telegram: `✅ OneMil PROD smoke OK — registration + login passed` doručen.
-- **Frontend** (`AdminContestManagement.tsx`) nyní při finálním uložení soutěže persistuje ekonomické předpoklady do `contest_economy` (upsert). Při znovuotevření editačního modalu se data načítají zpět.
-- **E2E spec 18** (`tests/e2e/18-admin-economy-persist.spec.ts`) ověřuje celý cyklus: vyplnit hodnoty → uložit → zavřít → znovu otevřít → ověřit persistenci.
-- **Staging Full E2E ZELENÝ po spec 18:** run `26026329321` — **26 passed, 3 skipped, 0 failed** (2m 50s). Spec 18 prošel v 10.7s. Telegram OK doručen.
-- PRs #39–#49 (test-only fixes): cookie consent, tab navigation, timeouts, toast strict mode, networkidle removal, cleanup hang fix.
-  - Root cause cleanup hagu: `[aria-label="Close"]` selector nenašel žádný element; bez `actionTimeout` čekal donekonečna; fix: `{ timeout: 1000 }` aby `.catch()` zachytil throw (PR #49, merge commit `a0a2b494ef398c74b1cee591b1554d4610daac00`).
-- **E2E spec 19** (`tests/e2e/19-admin-physical-prize-economy-persist.spec.ts`) ověřuje celý cyklus fyzických nákladových údajů: vyplnit dodavatel / nákupní cena / DPH / balné → přidat výhru → uložit → znovu otevřít → ověřit persistenci (PR #50, merge commit `1b937efba87cbda9118a2d8e532d2da6fdc46d44`).
-- **Playwright testy: 19 spec souborů** (01–19); staging full E2E obsahuje všechny spec soubory
-- Fyzické nákladové údaje věcných výher (supplier_name, unit_cost_czk, vat_rate_percent, handling_override_czk) jsou na `bonus_prizes` jako nullable sloupce a nyní jsou persistovány + E2E ověřeny (spec 19).
+  - `bonus_prizes` write policy na produkci existuje ✅ (aplikována dříve jako součást baseline)
+  - **Production smoke po migraci:** run `26027726603` — ✅ **5 passed, 0 failed, 0 skipped** (22s). Telegram: `✅ OneMil PROD smoke OK` doručen.
+- **Frontend** (`AdminContestManagement.tsx`) nyní při finálním uložení soutěže persistuje ekonomické předpoklady do `contest_economy` (upsert) a economy metadata věcných výher do `bonus_prizes` (update po RPC). Při znovuotevření editačního modalu se data načítají zpět.
+- **E2E spec 18** (`tests/e2e/18-admin-economy-persist.spec.ts`) ověřuje celý cyklus economy assumptions: vyplnit → uložit → zavřít → znovu otevřít → ověřit perzistenci.
+- **E2E spec 19** (`tests/e2e/19-admin-physical-prize-economy-persist.spec.ts`) ověřuje celý cyklus fyzických nákladových údajů: dodavatel / nákupní cena / DPH / balné → přidat výhru → uložit → znovu otevřít → ověřit perzistenci (PR #50, merge commit `1b937efba87cbda9118a2d8e532d2da6fdc46d44`).
+- **Playwright testy: 19 spec souborů** (01–19); staging full E2E obsahuje všechny spec soubory; všechny zelené.
+- Fyzické nákladové údaje věcných výher (supplier_name, unit_cost_czk, vat_rate_percent, handling_override_czk) jsou na `bonus_prizes` jako nullable sloupce — persistovány a E2E ověřeny (spec 19).
 
 ---
 
