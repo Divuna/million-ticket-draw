@@ -1534,8 +1534,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 : `Pravidla soutěže a obrázky se neuložily: ${errMsg}`,
               variant: "destructive",
             });
-            setSaving(false);
-            return;
+            if (isEditingContest) {
+              // Edit mode: stay open so admin can retry extras
+              setSaving(false);
+              return;
+            }
+            // Create mode: contest was persisted by the SECURITY DEFINER RPC — the direct
+            // client UPDATE may be blocked by RLS on the freshly-created row.
+            // Fall through to onSaved()/onClose() so the modal closes and the contest
+            // appears in the list. Admin can reopen and fix extras.
           }
         }
 

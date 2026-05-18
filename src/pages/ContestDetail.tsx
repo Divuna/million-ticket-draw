@@ -613,6 +613,38 @@ export default function ContestDetail() {
   const displayGallery = useMemo(() => galleryMedia.filter((m) => m.type !== 'background'), [galleryMedia]);
   const activeMedia = useMemo(() => displayGallery[activeGalleryIndex] ?? null, [displayGallery, activeGalleryIndex]);
 
+  // Group identical physical bonus prizes so one product with quantity N shows as one
+  // card with a "N× v soutěži" badge instead of N duplicate cards.
+  // Key: description + detailed_description + resolved image URL.
+  // MioCoin bonuses (amount > 0) each get their own group key so they remain individual.
+  const groupedBonusPrizes = useMemo(() => {
+    const groups = new Map<string, { prize: BonusPrize; ids: string[]; imageUrl: string | null }>();
+    for (const b of bonusPrizes) {
+      const isMioCoin = (b.amount ?? 0) > 0;
+      // MioCoin entries are unique per ticket position — use id as group key
+      const key = isMioCoin
+        ? b.id
+        : `${b.description ?? ''}||${b.detailed_description ?? ''}||${b.image_url ?? b.image ?? ''}`;
+
+      if (groups.has(key)) {
+        groups.get(key)!.ids.push(b.id);
+      } else {
+        let imgUrl: string | null = null;
+        if (b.image) {
+          imgUrl = b.image.startsWith('http')
+            ? b.image
+            : supabase.storage.from('contest-images').getPublicUrl(b.image).data.publicUrl;
+        } else if (b.image_url) {
+          imgUrl = b.image_url.startsWith('http')
+            ? b.image_url
+            : supabase.storage.from('contest-images').getPublicUrl(b.image_url).data.publicUrl;
+        }
+        groups.set(key, { prize: b, ids: [b.id], imageUrl: imgUrl });
+      }
+    }
+    return Array.from(groups.values());
+  }, [bonusPrizes]);
+
   if (loading) {
     return (
       <div className="p-6">
@@ -1005,22 +1037,13 @@ export default function ContestDetail() {
       <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[hsl(40_50%_45%/0.3)]">
         <h2 className="text-white font-semibold text-sm md:text-base mb-4">Bonusové věcné výhry</h2>
 
-        {bonusPrizes.length === 0 ? (
+        {groupedBonusPrizes.length === 0 ? (
           <p className="text-gray-500 text-sm py-4 text-center">Zatím nebyly přidány žádné věcné bonusové výhry.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {bonusPrizes.map((b) => {
-              let bonusImageUrl: string | null = null;
-
-              if (b.image) {
-                bonusImageUrl = b.image.startsWith('http')
-                  ? b.image
-                  : supabase.storage.from('contest-images').getPublicUrl(b.image).data.publicUrl;
-              } else if (b.image_url) {
-                bonusImageUrl = b.image_url.startsWith('http')
-                  ? b.image_url
-                  : supabase.storage.from('contest-images').getPublicUrl(b.image_url).data.publicUrl;
-              }
+            {groupedBonusPrizes.map(({ prize: b, ids, imageUrl: bonusImageUrl }) => {
+              const count = ids.length;
+              const isMyWin = myWins.some((w) => ids.includes(w.bonus_prize_id ?? ''));
 
               return (
                 <button
@@ -1038,6 +1061,11 @@ export default function ContestDetail() {
                     backgroundColor: starryBackgroundUrl ? undefined : 'rgba(0,0,0,0.3)'
                   }}
                 >
+                  {count > 1 && (
+                    <span className="absolute top-2 right-2 text-xs font-semibold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-2 py-0.5 rounded-full">
+                      {count}× v soutěži
+                    </span>
+                  )}
                   {bonusImageUrl && (
                     <div className="aspect-[4/3] mb-2 rounded-lg overflow-hidden bg-black/20">
                       <img
@@ -1049,7 +1077,7 @@ export default function ContestDetail() {
                     </div>
                   )}
                   <p className="text-white text-sm font-medium">{b.description || "Bonusová výhra"}</p>
-                  {myWins.some((w) => w.bonus_prize_id === b.id) && (
+                  {isMyWin && (
                     <span className="inline-block mt-2 text-green-400 text-xs bg-green-500/10 px-2 py-0.5 rounded">
                       Moje výhra
                     </span>
