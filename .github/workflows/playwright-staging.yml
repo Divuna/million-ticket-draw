@@ -252,6 +252,120 @@ jobs:
           SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
           SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
 
+      - name: Ensure staging admin E2E user has admin role
+        # ── Why this step exists ──────────────────────────────────────────────
+        # Specs 15, 16, 18, 19 log in as the admin E2E account.
+        # admin_manage_bonus_prize (called by spec 19) checks:
+        #   SELECT 1 FROM public.users WHERE id = auth.uid()
+        #                               AND role IN ('admin','superadmin')
+        # If the account is missing from public.users, or its role column is
+        # wrong, the RPC returns {success:false} and the dialog stays open.
+        #
+        # This step is idempotent — safe to run on every workflow trigger.
+        # It uses the Supabase Admin API to find (or create) the auth user,
+        # then upserts public.users, user_roles, profiles, and wallets rows.
+        #
+        # Credential safety: ADMIN_EMAIL and ADMIN_PASSWORD flow only through
+        # env vars and jq --arg interpolation. They are never echoed or
+        # interpolated into curl URLs. GitHub Actions masks all secret-backed
+        # env vars in log output automatically.
+        run: |
+          ADMIN_API="${SUPABASE_URL}/auth/v1/admin/users"
+          REST_API="${SUPABASE_URL}/rest/v1"
+
+          # ── 1. Find admin E2E user in auth.users ────────────────────────────
+          # List all users and filter by email with jq --arg — email never
+          # appears in a curl URL or in an echo statement.
+          LIST=$(curl -sf \
+            "${ADMIN_API}?page=1&per_page=1000" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}")
+
+          ADMIN_UUID=$(echo "$LIST" | jq -r \
+            --arg e "${ADMIN_EMAIL}" \
+            '.users[]? | select(.email == $e) | .id' | head -1)
+
+          if [ -z "$ADMIN_UUID" ] || [ "$ADMIN_UUID" = "null" ]; then
+            # ── 2a. User missing — create via Admin API ──────────────────────
+            echo "Admin E2E user not found in staging auth.users — creating (credentials masked)"
+            PAYLOAD=$(jq -n \
+              --arg em "${ADMIN_EMAIL}" \
+              --arg pw "${ADMIN_PASSWORD}" \
+              '{email: $em, password: $pw, email_confirm: true}')
+            CREATE=$(curl -sf -X POST "${ADMIN_API}" \
+              -H "apikey: ${SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+              -H "Content-Type: application/json" \
+              -d "${PAYLOAD}")
+            ADMIN_UUID=$(echo "$CREATE" | jq -r '.id // empty')
+            if [ -z "$ADMIN_UUID" ]; then
+              echo "ERROR: failed to create admin E2E user." \
+                   "Verify STAGING_E2E_ADMIN_EMAIL and STAGING_E2E_ADMIN_PASSWORD are set." >&2
+              exit 1
+            fi
+            echo "Admin E2E user created in auth.users (UUID masked)"
+          else
+            echo "Admin E2E user found in auth.users (UUID masked)"
+          fi
+
+          # ── 2b. UPSERT public.users with role=admin ──────────────────────────
+          # merge-duplicates = ON CONFLICT (id) DO UPDATE SET ...
+          # Overwrites any stale role value ('user') with 'admin'.
+          PU=$(jq -n \
+            --arg id "$ADMIN_UUID" \
+            --arg em "${ADMIN_EMAIL}" \
+            '{id: $id, email: $em, name: "Admin E2E", role: "admin"}')
+          PU_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${REST_API}/users" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates,return=minimal" \
+            -d "${PU}")
+          if [ "$PU_STATUS" -lt 200 ] || [ "$PU_STATUS" -ge 300 ]; then
+            echo "ERROR: public.users upsert failed (HTTP ${PU_STATUS})" >&2
+            exit 1
+          fi
+          echo "public.users: role=admin ensured (HTTP ${PU_STATUS})"
+
+          # ── 3. Ensure user_roles row exists ────────────────────────────────
+          # ignore-duplicates = ON CONFLICT DO NOTHING — safe for UNIQUE(user_id,role).
+          UR=$(jq -n --arg uid "$ADMIN_UUID" '{user_id: $uid, role: "admin"}')
+          UR_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${REST_API}/user_roles" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=ignore-duplicates,return=minimal" \
+            -d "${UR}")
+          echo "user_roles: admin row ensured (HTTP ${UR_STATUS})"
+
+          # ── 4. Ensure profiles row exists ──────────────────────────────────
+          PR=$(jq -n --arg id "$ADMIN_UUID" '{id: $id, full_name: "Admin E2E"}')
+          PR_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${REST_API}/profiles" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=ignore-duplicates,return=minimal" \
+            -d "${PR}")
+          echo "profiles: row ensured (HTTP ${PR_STATUS})"
+
+          # ── 5. Ensure wallets row exists ───────────────────────────────────
+          WA=$(jq -n --arg uid "$ADMIN_UUID" \
+            '{user_id: $uid, balance_coins: 0, bonus_balance_coins: 0}')
+          WA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${REST_API}/wallets" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=ignore-duplicates,return=minimal" \
+            -d "${WA}")
+          echo "wallets: row ensured (HTTP ${WA_STATUS})"
+
+          echo "Admin E2E user seed complete"
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          ADMIN_EMAIL: ${{ secrets.STAGING_E2E_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.STAGING_E2E_ADMIN_PASSWORD }}
+
       - name: Run full E2E suite
         id: e2e_tests
         run: npm run test:smoke
