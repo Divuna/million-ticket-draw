@@ -1684,3 +1684,14 @@ Spec 18 (`tests/e2e/18-admin-economy-persist.spec.ts`) byl přidán jako staging
 - Nebyl změněn `buy_ticket_atomic`, ticket purchase logic, winner logic, Partner Offers, platební pipeline, Stripe, wallet ani produkce.
 - Fyzické nákladové sloupce na `bonus_prizes` jsou nullable a admin-only; žádná existující logika nebyla dotčena.
 - Production schema nedotčen — migrace aplikovány pouze na staging.
+
+---
+
+## 2026-05-18 — Phase 4: Production rollout ověřen
+
+- Migrace `add_contest_economy_table` a `add_bonus_prize_economy_columns` aplikovány manuálně na produkci (`xkzhjldrojjlrkezorey`).
+- Ověření: `public.contest_economy` tabulka existuje, sloupce `supplier_name`, `unit_cost_czk`, `vat_rate_percent`, `handling_override_czk` na `public.bonus_prizes` existují.
+- **Production smoke po migraci:** run `26027726603` — ✅ **5 passed, 0 failed, 0 skipped** (22s).
+- Telegram: `✅ OneMil PROD smoke OK — registration + login passed` doručen (message_id 446).
+- Žádná regrese. `buy_ticket_atomic`, winner logic, Partner Offers, Stripe, wallet ani žádná produkční data nedotčeny.
+- Phase 4 je kompletně nasazena na staging i produkci a ověřena E2E.

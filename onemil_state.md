@@ -85,11 +85,15 @@ Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje 
 
 ## ADMIN CONTEST ECONOMY PANEL — PHASE 4: PERSISTENCE DOKONČENA (18. 05. 2026)
 
-### Phase 4 — Economy Persistence (18. 05. 2026) ✅ HOTOVO
+### Phase 4 — Economy Persistence (18. 05. 2026) ✅ HOTOVO — PRODUKCE OVĚŘENA
 
 - **Migrace aplikovány na staging** (před tímto session):
   - `supabase/migrations/20260517180000_add_contest_economy_table.sql` — nová tabulka `public.contest_economy` (1:1 s `contests`, ON DELETE CASCADE, RLS via `has_role()`)
   - `supabase/migrations/20260517180100_add_bonus_prize_economy_columns.sql` — 4 nullable sloupce na `bonus_prizes` pro cost tracking fyzických výher
+- **Migrace aplikovány na produkci (18. 05. 2026):**
+  - `public.contest_economy` tabulka existuje na produkci ✅
+  - `public.bonus_prizes` sloupce `supplier_name`, `unit_cost_czk`, `vat_rate_percent`, `handling_override_czk` existují na produkci ✅
+  - **Production smoke po migraci:** run `26027726603` — ✅ **5 passed, 0 failed, 0 skipped** (22s). Telegram: `✅ OneMil PROD smoke OK — registration + login passed` doručen.
 - **Frontend** (`AdminContestManagement.tsx`) nyní při finálním uložení soutěže persistuje ekonomické předpoklady do `contest_economy` (upsert). Při znovuotevření editačního modalu se data načítají zpět.
 - **E2E spec 18** (`tests/e2e/18-admin-economy-persist.spec.ts`) ověřuje celý cyklus: vyplnit hodnoty → uložit → zavřít → znovu otevřít → ověřit persistenci.
 - **Staging Full E2E ZELENÝ po spec 18:** run `26026329321` — **26 passed, 3 skipped, 0 failed** (2m 50s). Spec 18 prošel v 10.7s. Telegram OK doručen.
