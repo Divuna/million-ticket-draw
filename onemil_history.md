@@ -14,6 +14,22 @@
 
 ---
 
+## 2026-05-19 — PR #55 mergnut + Staging Full E2E zelený (run 26059677757)
+
+### Co bylo provedeno
+- **PR #55** fix: group duplicate physical bonus prize cards on ContestDetail + close create-contest modal — mergnut do `main`. Merge commit: `9808f83d13e4ff09516dc2f352abcc3c28274ab8`. Změněny 2 soubory: `src/pages/ContestDetail.tsx` (+56 / −16), `src/components/AdminContestManagement.tsx` (+11 / −2).
+  - **Part A root cause:** `ContestDetail.tsx` renderoval `bonusPrizes.map((b) => ...)` přímo nad všemi DB řádky. Jeden fyzický produkt s qty=25 → 25 řádků v `bonus_prizes` → 25 identických karet na veřejné stránce soutěže.
+  - **Part A fix:** přidán `groupedBonusPrizes` useMemo; fyzické výhry se seskupují podle klíče `description + detailed_description + image_url/image`. Každá skupina → jedna karta se zlatou badge `N× v soutěži` (pokud N > 1). MioCoin bonusy zůstávají individuální (každý má vlastní skupinový klíč = id). myWins check pokrývá všechna IDs ve skupině.
+  - **Part B root cause:** `additionalUpdates.rules = form.rules.trim() ? form.rules : null` (řádek 1468) vždy přidával klíč `rules` → přímý client `.update()` vždy proběhl → pokud vrátil 0 řádků (RLS blokuje update čerstvě vytvořeného řádku, SECURITY DEFINER RPC ho vytvořil, ale klient-side UPDATE nemá práva), `setSaving(false); return` se spustil před `onSaved()`/`onClose()` → modal zůstal otevřený i po úspěšném vytvoření soutěže.
+  - **Part B fix:** pro CREATE mód: při `updatedRows.length === 0` se zobrazí error toast ale kód pokračuje (nevrací `return`) → modal se zavře. Pro EDIT mód: původní chování (`return`) zachováno.
+  - Žádné migrace, žádný RPC, žádné workflow changes, žádná schémata.
+- **Staging Full E2E run `26059677757`** spuštěn po mergi — **27 passed, 0 failed, 3 skipped** (4m 14s).
+  - Spec 18 ✅ passed (10.8s, první pokus).
+  - Spec 19 ✅ passed (10.9s).
+  - Telegram `✅ OneMil STAGING full E2E OK` doručen (message_id 475).
+
+---
+
 ## 2026-05-18 — PR #53 + PR #54 mergnuty + Staging Full E2E zelený (run 26057380995)
 
 ### Co bylo provedeno
