@@ -615,7 +615,10 @@ export default function ContestDetail() {
 
   // Group identical physical bonus prizes so one product with quantity N shows as one
   // card with a "N× v soutěži" badge instead of N duplicate cards.
-  // Key: description + detailed_description + resolved image URL.
+  // Key: description + detailed_description ONLY — image_url is intentionally excluded
+  // because bulk prizes (qty > 1) are each uploaded with a unique UUID storage path,
+  // making their image_url values differ even though they represent the same product.
+  // The first row in each group is used as the representative card/image/modal data.
   // MioCoin bonuses (amount > 0) each get their own group key so they remain individual.
   const groupedBonusPrizes = useMemo(() => {
     const groups = new Map<string, { prize: BonusPrize; ids: string[]; imageUrl: string | null }>();
@@ -624,7 +627,7 @@ export default function ContestDetail() {
       // MioCoin entries are unique per ticket position — use id as group key
       const key = isMioCoin
         ? b.id
-        : `${b.description ?? ''}||${b.detailed_description ?? ''}||${b.image_url ?? b.image ?? ''}`;
+        : `${b.description ?? ''}||${b.detailed_description ?? ''}`;
 
       if (groups.has(key)) {
         groups.get(key)!.ids.push(b.id);
