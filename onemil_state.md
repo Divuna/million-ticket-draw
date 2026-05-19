@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 19. 05. 2026 (PR #59 spec 18 fix — staging E2E zelený)
+**Aktualizováno:** 19. 05. 2026 (PR #60 fix create modal PDF upload — staging E2E zelený)
 
 ---
 
@@ -87,7 +87,9 @@ Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje 
 
 ### Phase 4 — Economy Persistence (18. 05. 2026) ✅ HOTOVO — PRODUKCE + STAGING OVĚŘENY
 
-- **Staging Full E2E ZELENÝ po PR #59 (19. 05. 2026):** run `26106988469` — **27 passed, 0 failed, 3 skipped** (3m 6s). Spec 18 ✅ (11.3s, první pokus). Spec 19 ✅. Telegram OK (message_id 492). Toto je aktuální finální zelený stav.
+- **Staging Full E2E ZELENÝ po PR #60 (19. 05. 2026):** run `26113679217` — **26 passed, 0 failed, 3 skipped** (spec 18 prošel na retry — transient staging latence; spec 19 ✅). Telegram OK (message_id 497). Toto je aktuální finální zelený stav.
+- **PR #60 mergnut (19. 05. 2026):** fix create modal not closing when rules PDF upload fails after contest creation. Merge commit: `a25a7d71d986485d60cab92f153db30746e09019`. Změněn pouze `src/components/AdminContestManagement.tsx`. Root cause: contest je vytvořen SECURITY DEFINER RPC `admin_manage_contest` před PDF uploadem; pokud upload selhal, `return` v error branch zavřel modal… ne — naopak nechal modal otevřený. Fix: mirrors PR #55 pattern — v CREATE módu při chybě PDF upload kód falls through k `onSaved()/onClose()` místo `return`; v EDIT módu původní chování (setSaving + return) zachováno. Žádné migrace, žádný RPC, žádné workflow changes.
+- **Staging Full E2E ZELENÝ po PR #59 (19. 05. 2026):** run `26106988469` — **27 passed, 0 failed, 3 skipped** (3m 6s). Spec 18 ✅ (11.3s, první pokus). Spec 19 ✅. Telegram OK (message_id 492).
 - **PR #59 mergnut (19. 05. 2026):** fix spec 18 pro PRs #56/#57 economy UI changes. Merge commit: `ab9e37f`. Změněn pouze `tests/e2e/18-admin-economy-persist.spec.ts`. Step 4a: `Náklad na hlavní výhru` přesunuto do Basic tabu (PR #57) — fill tam. Step 4b: `Náklad na MioCoin bonusy` je vždy read-only (PR #56/#57) — fill odstraněn. Verifikace (Step 7) odpovídajícím způsobem upravena. Žádný app kód, workflow, schéma nezměněno.
 - **PR #58 mergnut (19. 05. 2026):** fix physical prize grouping key — image_url vyloučeno z klíče. Merge commit: `3ca06bf`. Změněn pouze `src/pages/ContestDetail.tsx`. Bulk výhry každá s unikátní UUID storage cestou → při groupování podle description+image_url vznikla N karet místo 1. Fix: klíč nyní `${description}||${detailed_description}` bez image_url — bulk výhry se správně seskupí.
 - **PR #57 mergnut (19. 05. 2026):** Economy input cleanup. Merge commit v main. Změněn pouze `src/components/AdminContestManagement.tsx`. `Náklad na hlavní výhru` přesunut z Economy tabu do Basic tabu (vedle `Hlavní výhra`). `Reálný náklad na MioCoin bonusy` vždy read-only (auto-odvozeno z bonus state přes `effectiveMioCoinCost`). Popisné texty aktualizovány.

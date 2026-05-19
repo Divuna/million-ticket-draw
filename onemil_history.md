@@ -14,6 +14,20 @@
 
 ---
 
+## 2026-05-19 — PR #60 mergnut + Staging Full E2E zelený (run 26113679217)
+
+### Co bylo provedeno
+- **PR #60** fix: create contest modal not closing when rules PDF upload fails after contest creation — mergnut do `main`. Merge commit: `a25a7d71d986485d60cab92f153db30746e09019`. Změněn pouze `src/components/AdminContestManagement.tsx` (+10 / −2). Žádné migrace, žádný RPC, žádné workflow changes.
+  - Root cause: audit confirmed contest is already created by SECURITY DEFINER RPC `admin_manage_contest` before rules PDF upload runs. In the PDF upload error branch, `setSaving(false); return` ran regardless of mode — leaving the modal open even though the contest existed in the DB.
+  - Fix: mirrors PR #55 pattern. In CREATE mode: on PDF upload error, display error toast but fall through to `onSaved()/onClose()` so the modal closes and the contest appears in the list (admin can reopen to re-upload the PDF). In EDIT mode: `setSaving(false); return` preserved — modal stays open so admin can retry the upload.
+  - Guard: `if (isEditingContest) { setSaving(false); return; }` inserted after the toast call in the upload error branch.
+- **Staging Full E2E run `26113679217`** spuštěn po mergi PR #60 — **26 passed, 0 failed, 3 skipped**.
+  - Spec 18 ✅ passed — first attempt failed transiently (toHaveValue timeout, 18.8s), retry #1 passed (17.6s). Identified as transient staging latency, not a PR #60 regression.
+  - Spec 19 ✅ passed.
+  - Telegram `✅ OneMil STAGING full E2E OK` doručen (message_id 497).
+
+---
+
 ## 2026-05-19 — PRs #56–#59 mergnuty + Staging Full E2E zelený (run 26106988469)
 
 ### Co bylo provedeno
