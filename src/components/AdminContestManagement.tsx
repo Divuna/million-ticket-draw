@@ -1483,8 +1483,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               description: `Nepodařilo se nahrát PDF s pravidly: ${uploadError.message}`,
               variant: "destructive",
             });
-            setSaving(false);
-            return;
+            if (isEditingContest) {
+              // Edit mode: keep modal open so admin can retry the PDF upload.
+              setSaving(false);
+              return;
+            }
+            // Create mode: the contest was already created by the SECURITY DEFINER RPC.
+            // Fall through to onSaved()/onClose() so the modal closes and the contest
+            // appears in the list. Admin can reopen the contest and re-upload the PDF rules.
           }
           const { data: pub } = supabase.storage.from("contest-rules").getPublicUrl(filePath);
           // Cache-bust so the new file is fetched immediately
