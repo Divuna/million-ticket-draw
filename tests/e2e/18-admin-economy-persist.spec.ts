@@ -95,16 +95,32 @@ test.describe('Admin — Economy Persist', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 10_000 });
 
-    // ── Step 4: Navigate to Ekonomika tab and set distinctive economy values ──
+    // ── Step 4a: Set "Náklad na hlavní výhru" in Basic tab ──────────────────
+    // PR #57 moved this field from the Ekonomika tab to the Základní (Basic) tab,
+    // next to "Hlavní výhra". Fill it there before switching to Ekonomika.
+    await dialog.getByRole('tab', { name: /Vytvořit soutěž|Základní/i }).click().catch(async () => {
+      // Tab label may vary — try the first tab (basic info)
+      await dialog.getByRole('tab').first().click();
+    });
+    // Navigate explicitly to the Basic tab (value="basic")
+    await dialog.locator('[role="tab"][data-value="basic"], [role="tab"]:has-text("Základní")').click().catch(async () => {
+      // Fallback: click the tab whose panel contains "Hlavní výhra"
+      await dialog.getByRole('tab').nth(0).click();
+    });
+    const basicPanel = dialog.locator('[role="tabpanel"][data-state="active"]');
+    await expect(basicPanel.getByText('Hlavní výhra', { exact: true })).toBeVisible({ timeout: 5_000 });
+    await inputByLabel(basicPanel, 'Náklad na hlavní výhru').fill('4242');
+
+    // ── Step 4b: Navigate to Ekonomika tab and set remaining economy values ──
     await dialog.getByRole('tab', { name: 'Ekonomika' }).click();
     const econPanel = dialog.locator('[role="tabpanel"][data-state="active"]');
     await expect(econPanel.getByText('Ekonomika soutěže', { exact: true })).toBeVisible();
 
     // Fill non-default values that are easy to assert on reload.
-    await inputByLabel(dialog, 'Náklad na hlavní výhru').fill('4242');
-    await inputByLabel(dialog, 'Náklad na MioCoin bonusy').fill('777');
-    await inputByLabel(dialog, 'Jednorázový').fill('8888');
-    await inputByLabel(dialog, 'Cílová marže').fill('33');
+    // Note: "Náklad na MioCoin bonusy" is now always read-only (auto-derived from
+    // MioCoin bonus setup in PR #56/#57) — it cannot be filled manually.
+    await inputByLabel(econPanel, 'Jednorázový').fill('8888');
+    await inputByLabel(econPanel, 'Cílová marže').fill('33');
 
     // ── Step 5: Navigate to the summary tab, then save ──────────────────────
     // The save button ("Uložit změny") lives exclusively inside
@@ -137,14 +153,22 @@ test.describe('Admin — Economy Persist', () => {
     await expect(dialog2).toBeVisible({ timeout: 10_000 });
 
     // ── Step 7: Verify economy values persisted ───────────────────────────────
+    // "Náklad na hlavní výhru" lives in the Basic tab since PR #57 — verify there.
+    await dialog2.locator('[role="tab"][data-value="basic"], [role="tab"]:has-text("Základní")').click().catch(async () => {
+      await dialog2.getByRole('tab').nth(0).click();
+    });
+    const basicPanel2 = dialog2.locator('[role="tabpanel"][data-state="active"]');
+    await expect(basicPanel2.getByText('Hlavní výhra', { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(inputByLabel(basicPanel2, 'Náklad na hlavní výhru')).toHaveValue('4242', { timeout: 8_000 });
+
+    // Remaining economy fields are in the Ekonomika tab.
+    // "Náklad na MioCoin bonusy" is read-only (auto-derived) — not asserted here.
     await dialog2.getByRole('tab', { name: 'Ekonomika' }).click();
     const econPanel2 = dialog2.locator('[role="tabpanel"][data-state="active"]');
     await expect(econPanel2.getByText('Ekonomika soutěže', { exact: true })).toBeVisible();
 
-    await expect(inputByLabel(dialog2, 'Náklad na hlavní výhru')).toHaveValue('4242', { timeout: 8_000 });
-    await expect(inputByLabel(dialog2, 'Náklad na MioCoin bonusy')).toHaveValue('777');
-    await expect(inputByLabel(dialog2, 'Jednorázový')).toHaveValue('8888');
-    await expect(inputByLabel(dialog2, 'Cílová marže')).toHaveValue('33');
+    await expect(inputByLabel(econPanel2, 'Jednorázový')).toHaveValue('8888');
+    await expect(inputByLabel(econPanel2, 'Cílová marže')).toHaveValue('33');
 
     // Close modal — best-effort cleanup; failures are non-fatal.
     // Use { timeout: 1000 } so the action throws quickly if the selector doesn't match
