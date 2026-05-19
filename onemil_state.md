@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 17. 05. 2026 (Phase 3A — physical prize cost preview)
+**Aktualizováno:** 19. 05. 2026 (PR #59 spec 18 fix — staging E2E zelený)
 
 ---
 
@@ -87,7 +87,12 @@ Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje 
 
 ### Phase 4 — Economy Persistence (18. 05. 2026) ✅ HOTOVO — PRODUKCE + STAGING OVĚŘENY
 
-- **Staging Full E2E ZELENÝ po PR #55 (19. 05. 2026):** run `26059677757` — **27 passed, 0 failed, 3 skipped** (4m 14s). Spec 18 ✅ (10.8s, první pokus). Spec 19 ✅ (10.9s). Telegram OK (message_id 475). Toto je aktuální finální zelený stav.
+- **Staging Full E2E ZELENÝ po PR #59 (19. 05. 2026):** run `26106988469` — **27 passed, 0 failed, 3 skipped** (3m 6s). Spec 18 ✅ (11.3s, první pokus). Spec 19 ✅. Telegram OK (message_id 492). Toto je aktuální finální zelený stav.
+- **PR #59 mergnut (19. 05. 2026):** fix spec 18 pro PRs #56/#57 economy UI changes. Merge commit: `ab9e37f`. Změněn pouze `tests/e2e/18-admin-economy-persist.spec.ts`. Step 4a: `Náklad na hlavní výhru` přesunuto do Basic tabu (PR #57) — fill tam. Step 4b: `Náklad na MioCoin bonusy` je vždy read-only (PR #56/#57) — fill odstraněn. Verifikace (Step 7) odpovídajícím způsobem upravena. Žádný app kód, workflow, schéma nezměněno.
+- **PR #58 mergnut (19. 05. 2026):** fix physical prize grouping key — image_url vyloučeno z klíče. Merge commit: `3ca06bf`. Změněn pouze `src/pages/ContestDetail.tsx`. Bulk výhry každá s unikátní UUID storage cestou → při groupování podle description+image_url vznikla N karet místo 1. Fix: klíč nyní `${description}||${detailed_description}` bez image_url — bulk výhry se správně seskupí.
+- **PR #57 mergnut (19. 05. 2026):** Economy input cleanup. Merge commit v main. Změněn pouze `src/components/AdminContestManagement.tsx`. `Náklad na hlavní výhru` přesunut z Economy tabu do Basic tabu (vedle `Hlavní výhra`). `Reálný náklad na MioCoin bonusy` vždy read-only (auto-odvozeno z bonus state přes `effectiveMioCoinCost`). Popisné texty aktualizovány.
+- **PR #56 mergnut (19. 05. 2026):** fix MioCoin bonus save RPC overload + auto-sync economy. Merge commit v main. Změněn pouze `src/components/AdminContestManagement.tsx`. Part A: `admin_manage_bonus_prize` RPC volán s explicitními `p_image_url: null, p_detailed_description: null` — eliminuje "could not choose best candidate function" chybu při 5-arg vs 9-arg overload. Part B: `effectiveMioCoinCost` = skutečné MioCoin bonusy pokud existují, jinak ruční input, jinak předpoklad — auto-synchronizuje ekonomiku se skutečnými bonusy.
+- **Staging Full E2E ZELENÝ po PR #55 (19. 05. 2026):** run `26059677757` — **27 passed, 0 failed, 3 skipped** (4m 14s). Spec 18 ✅ (10.8s, první pokus). Spec 19 ✅ (10.9s). Telegram OK (message_id 475).
 - **PR #55 mergnut (19. 05. 2026):** fix duplicate physical prize cards + create modal close. Merge commit: `9808f83d13e4ff09516dc2f352abcc3c28274ab8`. Změněny: `src/pages/ContestDetail.tsx`, `src/components/AdminContestManagement.tsx`. Part A: `groupedBonusPrizes` useMemo seskupuje identické fyzické výhry (description+detailed_description+image) do jedné karty s badge `N× v soutěži`. Part B: pro CREATE mód, při `updatedRows.length === 0` (RLS blokuje client-side UPDATE čerstvého řádku vytvořeného SECURITY DEFINER RPC) kód nyní pokračuje k `onSaved()/onClose()` místo `return`; pro EDIT mód původní chování zachováno. Žádné migrace, žádný RPC, žádné workflow changes.
 - **Staging Full E2E ZELENÝ po PR #53 + #54 (18. 05. 2026):** run `26057380995` — **26 passed, 0 failed, 3 skipped** (4m 0s). Spec 08 ✅ skipped (PR #54 fix), spec 18 ✅ passed (retry #1 — transient staging latence), spec 19 ✅. Telegram OK (message_id 471).
 - **PR #54 mergnut (18. 05. 2026):** fix flaky skip guard spec 08. Merge commit: `819cb77819bfc37598a621b46821a1995c17d2c9`. Změněn pouze `tests/e2e/08-partner-offer-persistence.spec.ts`. Nahrazen `waitForTimeout(2_000) + okamžité isVisible()` za `Promise.race` (mirror spec 07): wait up to 10s pro offer card nebo empty state, poté skip guard + `!firstCard.isVisible()` fallback skip. Root cause: na pomalejším staging loadu se empty-state text nevykreslil do 2s → `isVisible()` vrátilo false → skip se nespustil → test selhal. Žádný app kód ani workflow nezměněn.

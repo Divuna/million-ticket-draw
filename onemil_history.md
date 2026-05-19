@@ -14,6 +14,28 @@
 
 ---
 
+## 2026-05-19 — PRs #56–#59 mergnuty + Staging Full E2E zelený (run 26106988469)
+
+### Co bylo provedeno
+- **PR #56** fix: MioCoin bonus save RPC overload + auto-sync economy — mergnut do `main`. Změněn pouze `src/components/AdminContestManagement.tsx`.
+  - Part A: `admin_manage_bonus_prize` RPC volán s explicitními `p_image_url: null, p_detailed_description: null` — eliminuje Postgres "could not choose best candidate function" chybu při ambiguitě 5-arg vs 9-arg overloadu.
+  - Part B: `effectiveMioCoinCost` = `mioCoinBonuses.length > 0 ? totalMioCoins : totalMioCoinsInput > 0 ? totalMioCoinsInput : economyAssumptions.mioCoinRealCost` — auto-synchronizuje economy kalkulace se skutečnými MioCoin bonusy.
+- **PR #57** fix: Economy input cleanup — mergnut do `main`. Změněn pouze `src/components/AdminContestManagement.tsx`.
+  - `Náklad na hlavní výhru` přesunut z Economy tabu do Basic tabu (vedle `Hlavní výhra`).
+  - `Reálný náklad na MioCoin bonusy` vždy read-only (auto-odvozeno z `effectiveMioCoinCost`).
+- **PR #58** fix: physical prize grouping key excludes image_url — mergnut do `main`. Změněn pouze `src/pages/ContestDetail.tsx`.
+  - Root cause: bulk výhry mají unikátní UUID storage cestu → grouping key s `image_url` → každý řádek vlastní karta → N duplicitních karet.
+  - Fix: klíč pouze `${description}||${detailed_description}` — bulk výhry se správně seskupí do jedné karty.
+- **PR #59** fix: update spec 18 for PRs #56/#57 economy UI changes — mergnut do `main`. Změněn pouze `tests/e2e/18-admin-economy-persist.spec.ts`. Merge commit: `ab9e37f`.
+  - Root cause: staging run `26105990009` selhal na spec 18 (timeout 180s): spec se pokoušel fill `Náklad na hlavní výhru` v Economy tabu (pole přesunuto PR #57 do Basic tabu) a fill read-only `Náklad na MioCoin bonusy` (vždy read-only od PR #56/#57).
+  - Fix: Step 4a naviguje do Basic tabu a vyplňuje `Náklad na hlavní výhru` tam. Step 4b v Economy tabu vyplňuje jen `Jednorázový` a `Cílová marže`. `Náklad na MioCoin bonusy` fill + assertion odstraněny.
+- **Staging Full E2E run `26106988469`** spuštěn po mergi PR #59 — **27 passed, 0 failed, 3 skipped** (3m 6s).
+  - Spec 18 ✅ passed (11.3s, první pokus).
+  - Spec 19 ✅ passed.
+  - Telegram `✅ OneMil STAGING full E2E OK` doručen (message_id 492).
+
+---
+
 ## 2026-05-19 — PR #55 mergnut + Staging Full E2E zelený (run 26059677757)
 
 ### Co bylo provedeno
