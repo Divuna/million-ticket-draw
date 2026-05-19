@@ -1653,7 +1653,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             {
               contest_id: contestId,
               main_prize_cost_czk: economyAssumptions.mainPrizeRealCost,
-              miocoin_real_cost_czk: economyAssumptions.mioCoinRealCost,
+              miocoin_real_cost_czk: effectiveMioCoinCost,
               vat_rate_percent: economyAssumptions.vatRate,
               setup_cost_czk: economyAssumptions.setupCost,
               marketing_percent: economyAssumptions.marketingPercent,
@@ -1750,6 +1750,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               p_description: `${bonus.amount} MioCoinů`,
               p_status: "pending",
               p_operation: "create",
+              // Explicitly pass nulls so Postgres resolves the 9-arg overload unambiguously
+              // (omitting these causes "could not choose best candidate function" when both
+              // the 7-arg and 9-arg overloads of admin_manage_bonus_prize exist in the DB).
+              p_image_url: null,
+              p_detailed_description: null,
             });
 
             if (insertError) {
@@ -1831,6 +1836,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   const isEditing = !!editingContest;
   const totalMioCoins = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
+  // Effective MioCoin cost for Economy calculations:
+  //   1. If MioCoin bonuses are configured → use their actual total (totalMioCoins)
+  //   2. Else if the bulk MioCoin input field has a value → use that
+  //   3. Else fall back to the manually entered economy assumption
+  const effectiveMioCoinCost =
+    mioCoinBonuses.length > 0
+      ? totalMioCoins
+      : totalMioCoinsInput > 0
+        ? totalMioCoinsInput
+        : economyAssumptions.mioCoinRealCost;
   const getHandlingCostForPrize = (prize: PhysicalPrize) =>
     prize.handling_override_czk != null
       ? Math.max(0, prize.handling_override_czk)
@@ -1854,7 +1869,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   );
   const totalEstimatedCost =
     Math.max(0, economyAssumptions.mainPrizeRealCost || 0) +
-    Math.max(0, economyAssumptions.mioCoinRealCost || 0) +
+    Math.max(0, effectiveMioCoinCost || 0) +
     physicalBonusEstimatedCost +
     handlingCostTotal +
     Math.max(0, economyAssumptions.setupCost || 0) +
@@ -2418,12 +2433,27 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 </div>
                 <div>
                   <Label>Reálný náklad na MioCoin bonusy v Kč</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={economyAssumptions.mioCoinRealCost}
-                    onChange={updateEconomyAssumption("mioCoinRealCost")}
-                  />
+                  {(mioCoinBonuses.length > 0 || totalMioCoinsInput > 0) ? (
+                    <>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={effectiveMioCoinCost}
+                        readOnly
+                        className="opacity-70 cursor-not-allowed"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Náklad se automaticky bere z nastavení MioCoin bonusů.
+                      </p>
+                    </>
+                  ) : (
+                    <Input
+                      type="number"
+                      min={0}
+                      value={economyAssumptions.mioCoinRealCost}
+                      onChange={updateEconomyAssumption("mioCoinRealCost")}
+                    />
+                  )}
                 </div>
                 <div>
                   <Label>Sazba DPH v %</Label>
@@ -2479,7 +2509,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   ["DPH z tržby", formatCzk(vatFromRevenue)],
                   ["Čistá tržba bez DPH", formatCzk(netRevenue)],
                   ["Náklad na hlavní výhru", formatCzk(economyAssumptions.mainPrizeRealCost)],
-                  ["Náklad na MioCoin bonusy", formatCzk(economyAssumptions.mioCoinRealCost)],
+                  ["Náklad na MioCoin bonusy", formatCzk(effectiveMioCoinCost)],
                   ["Odhad nákladů na věcné bonusové výhry", formatCzk(physicalBonusEstimatedCost)],
                   ["Balné / pošta / práce", formatCzk(handlingCostTotal)],
                   ["Jednorázový náklad soutěže", formatCzk(economyAssumptions.setupCost)],
