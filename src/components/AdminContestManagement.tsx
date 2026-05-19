@@ -1746,45 +1746,27 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           }
         }
 
-        // Persist MioCoin bonuses exactly as previewed in frontend state.
+        // Persist MioCoin bonuses via a single bulk RPC call.
+        // Replaces the previous sequential per-row loop (N HTTP calls → 1 HTTP call).
+        // The RPC deletes existing MioCoin rows for this contest and inserts all
+        // new rows atomically inside Postgres — no partial-save risk.
         if (mioCoinBonuses.length > 0) {
-          for (const bonus of mioCoinBonuses) {
-            const { data: insertData, error: insertError } = await supabase.rpc("admin_manage_bonus_prize", {
+          const bonusPayload = mioCoinBonuses.map(({ ticket_position, amount }) => ({
+            ticket_position,
+            amount,
+          }));
+          const { data: bulkData, error: bulkError } = await supabase.rpc(
+            "admin_bulk_insert_miocoin_bonuses",
+            {
               p_contest_id: contestId,
-              p_ticket_position: bonus.ticket_position,
-              p_amount: bonus.amount,
-              p_description: `${bonus.amount} MioCoinů`,
-              p_status: "pending",
-              p_operation: "create",
-              // Explicitly pass nulls so Postgres resolves the 9-arg overload unambiguously
-              // (omitting these causes "could not choose best candidate function" when both
-              // the 7-arg and 9-arg overloads of admin_manage_bonus_prize exist in the DB).
-              p_image_url: null,
-              p_detailed_description: null,
-            });
-
-            if (insertError) {
-              throw new Error(`Chyba při ukládání MioCoin bonusu: ${insertError.message}`);
+              p_bonuses: bonusPayload,
             }
-            if (insertData && (insertData as any).success === false) {
-              throw new Error(`Chyba při ukládání MioCoin bonusu: ${(insertData as any).message}`);
-            }
+          );
+          if (bulkError) {
+            throw new Error(`Chyba při ukládání MioCoin bonusů: ${bulkError.message}`);
           }
-
-          // Explicitly set total_miocoin_bonus in contests table
-          // Update total_miocoin_bonus via admin_manage_contest RPC
-          const { error: updateMioCoinError } = await supabase.rpc("admin_manage_contest", {
-            p_operation: "update",
-            p_contest_id: contestId,
-            p_title: null,
-            p_description: null,
-            p_main_prize: null,
-            p_main_image: null,
-            p_status: null,
-          });
-
-          if (updateMioCoinError) {
-            console.error("Error updating total_miocoin_bonus:", updateMioCoinError);
+          if (bulkData && (bulkData as any).success === false) {
+            throw new Error(`Chyba při ukládání MioCoin bonusů: ${(bulkData as any).message}`);
           }
         }
       }
