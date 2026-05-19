@@ -1998,6 +1998,18 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 <p className="text-xs text-muted-foreground mt-1">Automaticky předvyplněno z názvu soutěže</p>
               </div>
 
+              <div>
+                <Label>Náklad na hlavní výhru v Kč</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={economyAssumptions.mainPrizeRealCost}
+                  onChange={updateEconomyAssumption("mainPrizeRealCost")}
+                  placeholder="0"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Pořizovací náklad hlavní výhry — použije se v ekonomické kalkulaci.</p>
+              </div>
+
               {/* Popis soutěže */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -2423,37 +2435,17 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <Label>Náklad na hlavní výhru v Kč</Label>
+                  <Label>Reálný náklad na MioCoin bonusy v Kč</Label>
                   <Input
                     type="number"
                     min={0}
-                    value={economyAssumptions.mainPrizeRealCost}
-                    onChange={updateEconomyAssumption("mainPrizeRealCost")}
+                    value={effectiveMioCoinCost}
+                    readOnly
+                    className="opacity-70 cursor-not-allowed"
                   />
-                </div>
-                <div>
-                  <Label>Reálný náklad na MioCoin bonusy v Kč</Label>
-                  {(mioCoinBonuses.length > 0 || totalMioCoinsInput > 0) ? (
-                    <>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={effectiveMioCoinCost}
-                        readOnly
-                        className="opacity-70 cursor-not-allowed"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Náklad se automaticky bere z nastavení MioCoin bonusů.
-                      </p>
-                    </>
-                  ) : (
-                    <Input
-                      type="number"
-                      min={0}
-                      value={economyAssumptions.mioCoinRealCost}
-                      onChange={updateEconomyAssumption("mioCoinRealCost")}
-                    />
-                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Počítá se automaticky podle záložky Bonusy – MioCoins.
+                  </p>
                 </div>
                 <div>
                   <Label>Sazba DPH v %</Label>
