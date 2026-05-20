@@ -201,6 +201,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   const [totalMioCoinsInput, setTotalMioCoinsInput] = useState<number>(0);
   const [stepValue, setStepValue] = useState<number>(0);
   const [distributionType, setDistributionType] = useState<"even" | "random">("even");
+  const [mioCoinGeneratorTouched, setMioCoinGeneratorTouched] = useState(false);
   const [economyAssumptions, setEconomyAssumptions] =
     useState<EconomyAssumptions>(DEFAULT_ECONOMY_ASSUMPTIONS);
 
@@ -273,11 +274,24 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setTotalMioCoinsInput(0);
       setStepValue(0);
       setDistributionType("even");
+      setMioCoinGeneratorTouched(false);
       // New contest starts with fresh economy defaults.
       setEconomyAssumptions(DEFAULT_ECONOMY_ASSUMPTIONS);
     }
     setActiveTab("basic");
   }, [editingContest, open]);
+
+  useEffect(() => {
+    if (
+      totalMioCoinsInput === 0 &&
+      stepValue === 0 &&
+      distributionType === "even" &&
+      mioCoinBonuses.length === 0 &&
+      mioCoinGeneratorTouched
+    ) {
+      setMioCoinGeneratorTouched(false);
+    }
+  }, [distributionType, mioCoinBonuses.length, mioCoinGeneratorTouched, stepValue, totalMioCoinsInput]);
 
   // ---- Draft persistence (only for new contests, not editing) ----
   const DRAFT_KEY = "draft_new_contest";
@@ -668,6 +682,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     // the admin actively types, not stale defaults left over between contests.
     setTotalMioCoinsInput(0);
     setStepValue(0);
+    setDistributionType("even");
+    setMioCoinGeneratorTouched(false);
   };
 
   const handleChange =
@@ -1693,15 +1709,18 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
       // Guard: generator inputs filled but "Vygenerovat MioCoiny" never clicked.
       // Saving in this state would silently persist 0 MioCoin rows — block and warn.
-      if (mioCoinBonuses.length === 0 && totalMioCoinsInput > 0 && stepValue > 0) {
+      const mioCoinGeneratorHasInput =
+        totalMioCoinsInput > 0 || stepValue > 0 || distributionType !== "even";
+
+      if (mioCoinBonuses.length === 0 && (mioCoinGeneratorTouched || mioCoinGeneratorHasInput)) {
         console.warn(
-          "[AdminContestManagement] MioCoin save guard triggered — generator inputs filled but bonuses not generated.",
-          { totalMioCoinsInput, stepValue, computedPositionCount }
+          "[AdminContestManagement] MioCoin save guard triggered — generator touched/filled but bonuses not generated.",
+          { totalMioCoinsInput, stepValue, distributionType, computedPositionCount, mioCoinGeneratorTouched }
         );
         toast({
           title: "MioCoin bonusy nejsou vygenerované",
           description:
-            "Vyplnil(a) jste MioCoin bonusy, ale nejsou vygenerované. Klikněte nejdřív na 'Vygenerovat MioCoiny' a potom soutěž uložte.",
+            "Upravil(a) jste nastavení MioCoin bonusů, ale preview pozice nejsou vygenerované. Klikněte nejdřív na 'Vygenerovat MioCoiny' a potom soutěž uložte.",
           variant: "destructive",
         });
         setSaving(false);
@@ -1834,6 +1853,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         setTotalMioCoinsInput(0);
         setStepValue(0);
         setDistributionType("even");
+        setMioCoinGeneratorTouched(false);
       }
 
       onSaved();
@@ -2159,7 +2179,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                       type="number"
                       min={1}
                       value={totalMioCoinsInput}
-                      onChange={(e) => setTotalMioCoinsInput(Number(e.target.value))}
+                      onChange={(e) => {
+                        setMioCoinGeneratorTouched(true);
+                        setTotalMioCoinsInput(Number(e.target.value));
+                      }}
                     />
                   </div>
                   <div className="flex-1">
@@ -2168,7 +2191,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                       type="number"
                       min={1}
                       value={stepValue}
-                      onChange={(e) => setStepValue(Number(e.target.value))}
+                      onChange={(e) => {
+                        setMioCoinGeneratorTouched(true);
+                        setStepValue(Number(e.target.value));
+                      }}
                     />
                   </div>
                 </div>
@@ -2189,7 +2215,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                         name="distributionType"
                         value="even"
                         checked={distributionType === "even"}
-                        onChange={() => setDistributionType("even")}
+                        onChange={() => {
+                          setMioCoinGeneratorTouched(true);
+                          setDistributionType("even");
+                        }}
                         className="w-4 h-4 accent-primary"
                       />
                       <span>Rovnoměrně</span>
@@ -2200,7 +2229,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                         name="distributionType"
                         value="random"
                         checked={distributionType === "random"}
-                        onChange={() => setDistributionType("random")}
+                        onChange={() => {
+                          setMioCoinGeneratorTouched(true);
+                          setDistributionType("random");
+                        }}
                         className="w-4 h-4 accent-primary"
                       />
                       <span>Náhodně</span>
