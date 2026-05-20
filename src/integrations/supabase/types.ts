@@ -3066,6 +3066,7 @@ export type Database = {
           google_id: string | null
           id: string
           last_name: string | null
+          last_seen_at: string | null
           name: string | null
           nickname: string | null
           onesignal_player_id: string | null
@@ -3082,6 +3083,7 @@ export type Database = {
           google_id?: string | null
           id: string
           last_name?: string | null
+          last_seen_at?: string | null
           name?: string | null
           nickname?: string | null
           onesignal_player_id?: string | null
@@ -3098,6 +3100,7 @@ export type Database = {
           google_id?: string | null
           id?: string
           last_name?: string | null
+          last_seen_at?: string | null
           name?: string | null
           nickname?: string | null
           onesignal_player_id?: string | null
@@ -4173,6 +4176,7 @@ export type Database = {
         Returns: string
       }
       build_isdoc_payload: { Args: { p_invoice_id: string }; Returns: Json }
+      bump_user_last_seen: { Args: never; Returns: undefined }
       buy_ticket_atomic: {
         Args: { p_contest_id: string; p_user_id: string }
         Returns: Json
@@ -4335,6 +4339,10 @@ export type Database = {
           total_activations: number
           unbilled_activations: number
         }[]
+      }
+      get_admin_online_users: {
+        Args: { p_active_window_seconds?: number }
+        Returns: Json
       }
       get_admin_summary_dashboard: {
         Args: never
