@@ -112,7 +112,7 @@ test.describe('Admin — Online Teď (registered users)', () => {
       // public.users when onlineUsers changes. The normal E2E user's email
       // must appear in the popover list.
       await expect(
-        adminPage.getByText(E2E_TEST_EMAIL, { exact: false }),
+        adminPage.getByText(E2E_TEST_EMAIL, { exact: true }),
       ).toBeVisible({ timeout: 12_000 });
 
       // ── Step C: No anonymous section ──────────────────────────────────────
