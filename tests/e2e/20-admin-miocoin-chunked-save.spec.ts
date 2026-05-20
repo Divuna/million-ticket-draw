@@ -112,9 +112,12 @@ test.describe('Admin — MioCoin Chunked Save (issue #71)', () => {
 
     // ── Step 4: Generate positions, assert UI count ──────────────────────────
     await coinPanel.getByRole('button', { name: /Vygenerovat MioCoiny/i }).click();
-    // Badge text: "Celkem: 6 000 MC (600 pozic)" — Czech locale uses NBSP as
-    // thousands separator. Match the position count only, which is unambiguous.
-    await expect(coinPanel.getByText(/600 pozic/i)).toBeVisible({ timeout: 10_000 });
+    // Two elements render the "600 pozic" text after generation:
+    //   1) header badge:   "Celkem: 6 000 MC (600 pozic)"
+    //   2) summary line:   "Vygenerováno 600 pozic s celkovou hodnotou …"
+    // Match only the badge by anchoring on its "Celkem:" prefix to keep the
+    // assertion under Playwright strict mode.
+    await expect(coinPanel.getByText(/^Celkem:.*600 pozic/i)).toBeVisible({ timeout: 10_000 });
 
     // ── Step 5: Switch to the summary tab and save ───────────────────────────
     await dialog.getByRole('tab', { name: /Vytvořit soutěž/i }).click();
