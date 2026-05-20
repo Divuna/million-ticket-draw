@@ -1839,34 +1839,31 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           }
         }
 
-        // Persist MioCoin bonuses via a single bulk RPC call.
-        // Replaces the previous sequential per-row loop (N HTTP calls → 1 HTTP call).
-        // The RPC deletes existing MioCoin rows for this contest and inserts all
-        // new rows atomically inside Postgres — no partial-save risk.
+        // Persist MioCoin bonuses via admin_bulk_insert_miocoin_bonuses SQL RPC.
+        // The RPC (optimized in PRs #65/#66) materializes the JSON payload once into
+        // a TEMP TABLE, uses set-based SQL validation, deletes existing MioCoin rows,
+        // inserts all new rows in a single INSERT…SELECT, and syncs
+        // contests.total_miocoin_bonus — all atomically inside Postgres.
+        // This replaces the previous distribute-bonus-prizes Edge Function path, which
+        // was killed by the Deno wall-clock timeout for very large payloads (~98k rows).
         if (mioCoinBonuses.length > 0 && !hasImmutablePersistedMioCoinBonuses) {
           const bonusPayload = mioCoinBonuses.map(({ ticket_position, amount }) => ({
             ticket_position,
             amount,
           }));
-          const totalMioCoinValue = bonusPayload.reduce((sum, bonus) => sum + bonus.amount, 0);
-          const { data: distributionResult, error: distributionError } =
-            await supabase.functions.invoke("distribute-bonus-prizes", {
-              body: {
-                contest_id: contestId,
-                bonus_type: "MioCoin",
-                total_value: totalMioCoinValue,
-                amount_per_unit: 1,
-                distribution_rule: distributionType === "even" ? "step_interval" : "random",
-                batch_size: 500,
-                explicit_bonuses: bonusPayload,
-              },
-            });
-          if (distributionError) {
-            throw new Error(`Chyba při ukládání MioCoin bonusů: ${distributionError.message}`);
+          const { data: bulkResult, error: bulkError } = await supabase.rpc(
+            "admin_bulk_insert_miocoin_bonuses",
+            {
+              p_contest_id: contestId,
+              p_bonuses: bonusPayload,
+            }
+          );
+          if (bulkError) {
+            throw new Error(`Chyba při ukládání MioCoin bonusů: ${bulkError.message}`);
           }
-          if (!distributionResult?.success) {
+          if (!bulkResult?.success) {
             throw new Error(
-              `Chyba při ukládání MioCoin bonusů: ${distributionResult?.error || distributionResult?.message || "Nepodařilo se uložit MioCoin bonusy"}`
+              `Chyba při ukládání MioCoin bonusů: ${bulkResult?.message || "Nepodařilo se uložit MioCoin bonusy"}`
             );
           }
         }
