@@ -198,6 +198,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   // MioCoin bonus state
   const [mioCoinBonuses, setMioCoinBonuses] = useState<MioCoinBonus[]>([]);
+  const [hasPersistedMioCoinBonuses, setHasPersistedMioCoinBonuses] = useState(false);
   const [totalMioCoinsInput, setTotalMioCoinsInput] = useState<number>(0);
   const [stepValue, setStepValue] = useState<number>(0);
   const [distributionType, setDistributionType] = useState<"even" | "random">("even");
@@ -266,6 +267,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         fast_game: false,
       });
       setMioCoinBonuses([]);
+      setHasPersistedMioCoinBonuses(false);
       setPhysicalPrizes([]);
       setGalleryMedia([]);
       setPendingMediaFiles({});
@@ -677,6 +679,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     });
 
     setMioCoinBonuses(mioCoins);
+    setHasPersistedMioCoinBonuses(mioCoins.length > 0);
     setPhysicalPrizes(physical);
     // Reset generator inputs so the "Počet pozic" preview reflects only what
     // the admin actively types, not stale defaults left over between contests.
@@ -1063,6 +1066,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   // MioCoin bonus generation - frontend preview only; rows are persisted by the final save flow.
   const generateMioCoinBonuses = async () => {
+    if (editingContest && hasPersistedMioCoinBonuses) {
+      toast({
+        title: "MioCoin pozice nelze změnit",
+        description:
+          "Vygenerované MioCoin bonusové pozice už byly pro tuto soutěž vytvořeny. Po vytvoření je nelze v editaci přegenerovat ani přepsat.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (totalMioCoinsInput <= 0 || stepValue <= 0) {
       toast({
         title: "Chyba",
@@ -1137,6 +1150,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   };
 
   const clearMioCoinBonuses = () => {
+    if (editingContest && hasPersistedMioCoinBonuses) {
+      toast({
+        title: "MioCoin pozice nelze změnit",
+        description:
+          "Vygenerované MioCoin bonusové pozice už byly pro tuto soutěž vytvořeny. Po vytvoření je nelze v editaci smazat ani nahradit.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setMioCoinBonuses([]);
     toast({ title: "MioCoiny smazány", description: "Všechny MioCoin bonusy byly odstraněny." });
   };
@@ -1412,6 +1435,20 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         });
         return;
       }
+    }
+
+    const hasImmutablePersistedMioCoinBonuses = isEditingContest && hasPersistedMioCoinBonuses;
+    const mioCoinGeneratorHasInput =
+      totalMioCoinsInput > 0 || stepValue > 0 || distributionType !== "even";
+
+    if (hasImmutablePersistedMioCoinBonuses && (mioCoinGeneratorTouched || mioCoinGeneratorHasInput)) {
+      toast({
+        title: "MioCoin pozice nelze změnit",
+        description:
+          "Tato soutěž už má vygenerované MioCoin bonusové pozice. Po vytvoření je nelze v editaci přegenerovat ani přepsat.",
+        variant: "destructive",
+      });
+      return;
     }
 
     setSaving(true);
@@ -1729,8 +1766,17 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
       // Save bonuses if we have a contest ID
       if (contestId) {
-        // Delete existing bonuses for this contest
-        await supabase.from("bonus_prizes").delete().eq("contest_id", contestId);
+        // Delete existing bonuses for this contest.
+        // Edit mode keeps already-materialized MioCoin rows immutable.
+        if (hasImmutablePersistedMioCoinBonuses) {
+          await supabase
+            .from("bonus_prizes")
+            .delete()
+            .eq("contest_id", contestId)
+            .or("amount.is.null,amount.eq.0");
+        } else {
+          await supabase.from("bonus_prizes").delete().eq("contest_id", contestId);
+        }
 
         // Insert physical prizes FIRST so MioCoin generation excludes their positions
         for (const prize of physicalPrizes) {
@@ -1797,23 +1843,31 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         // Replaces the previous sequential per-row loop (N HTTP calls → 1 HTTP call).
         // The RPC deletes existing MioCoin rows for this contest and inserts all
         // new rows atomically inside Postgres — no partial-save risk.
-        if (mioCoinBonuses.length > 0) {
+        if (mioCoinBonuses.length > 0 && !hasImmutablePersistedMioCoinBonuses) {
           const bonusPayload = mioCoinBonuses.map(({ ticket_position, amount }) => ({
             ticket_position,
             amount,
           }));
-          const { data: bulkData, error: bulkError } = await supabase.rpc(
-            "admin_bulk_insert_miocoin_bonuses",
-            {
-              p_contest_id: contestId,
-              p_bonuses: bonusPayload,
-            }
-          );
-          if (bulkError) {
-            throw new Error(`Chyba při ukládání MioCoin bonusů: ${bulkError.message}`);
+          const totalMioCoinValue = bonusPayload.reduce((sum, bonus) => sum + bonus.amount, 0);
+          const { data: distributionResult, error: distributionError } =
+            await supabase.functions.invoke("distribute-bonus-prizes", {
+              body: {
+                contest_id: contestId,
+                bonus_type: "MioCoin",
+                total_value: totalMioCoinValue,
+                amount_per_unit: 1,
+                distribution_rule: distributionType === "even" ? "step_interval" : "random",
+                batch_size: 500,
+                explicit_bonuses: bonusPayload,
+              },
+            });
+          if (distributionError) {
+            throw new Error(`Chyba při ukládání MioCoin bonusů: ${distributionError.message}`);
           }
-          if (bulkData && (bulkData as any).success === false) {
-            throw new Error(`Chyba při ukládání MioCoin bonusů: ${(bulkData as any).message}`);
+          if (!distributionResult?.success) {
+            throw new Error(
+              `Chyba při ukládání MioCoin bonusů: ${distributionResult?.error || distributionResult?.message || "Nepodařilo se uložit MioCoin bonusy"}`
+            );
           }
         }
       }
