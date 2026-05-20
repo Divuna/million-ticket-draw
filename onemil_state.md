@@ -4,6 +4,44 @@
 
 ---
 
+## ADMIN „ONLINE TEĎ" — REGISTERED USERS LIVE (20. 05. 2026)
+
+Admin top bar "Online teď" badge nyní zobrazuje skutečný počet přihlášených uživatelů.
+
+### Architektura
+
+- **`public.users.last_seen_at`** (timestamptz, nullable) — nový sloupec, index `idx_users_last_seen_at`
+- **`public.bump_user_last_seen()`** — SECURITY DEFINER RPC; updatuje pouze `auth.uid()` řádek; volán frontendem každých 60 s
+- **`public.get_admin_online_users(p_active_window_seconds int DEFAULT 300)`** — SECURITY DEFINER RPC; vrací uživatele aktivní v posledních 5 minutách; pouze admin/superadmin
+- **`src/hooks/useHeartbeat(userId)`** — nový hook; no-op pokud `userId` je undefined; ihned po přihlášení + každých 60 s
+- **`src/hooks/useAdminOnlineIndicator`** — přepsán; polluje `get_admin_online_users` každých 30 s; `statusLabel` a `lastUpdatedAt` jsou živé
+- **`src/App.tsx`** — `useHeartbeat(user?.id)` namountován vedle `useOneSignal` / `useApplyPendingReferral` / `useRetentionTriggers`
+
+### Co se nesleduje
+
+- Anonymní návštěvníci nejsou v OneMil sledováni — zůstávají v Google Analytics
+- Historie stránek, URL, telefonní čísla — nic z toho se neukládá
+
+### Migrace + verifikace
+
+- Migrace `20260520_registered_user_presence.sql` aplikována na **staging** (`dxmowysntemfqfnanxua`) i **produkci** (`xkzhjldrojjlrkezorey`) ✅
+- Staging RPC verifikace: `bump_user_last_seen=exists`, `get_admin_online_users=exists`, `last_seen_at_column=exists` ✅
+- Produkce RPC verifikace: všechny tři checks `exists` ✅
+- End-to-end test na staging (simulate via SQL): bump zapsal `last_seen_at`, admin RPC vrátil uživatele, non-admin dostal `success: false` ✅
+- Commit `0732738` — feat, commit `ab5cb25` — fix runtime crash
+
+### Runtime crash fix (commit ab5cb25)
+
+`supabase.rpc(...).catch is not a function` — Supabase RPC vrací thenable, ne plný Promise; `.catch()` na něm neexistuje. Opraveno přepsáním `bump()` na `async/await` + `try/catch`.
+
+### Invarianty
+
+- `useHeartbeat` nikdy nesmí vyhodit výjimku — heartbeat je best-effort
+- `getAdminOnlineUsers` vrací `success: false` pro non-admin bez leakage dat
+- `AdminSoundIndicator.tsx` UI nedotčen — popover zobrazuje reálná data automaticky
+
+---
+
 ## ISSUE #71 — FINÁLNĚ VYŘEŠEN A ZAMČEN PROTI REGRESI (20. 05. 2026)
 
 Velké MioCoin bonusové save (~95 000 pozic) nyní fungují na produkci.

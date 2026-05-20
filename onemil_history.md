@@ -14,6 +14,40 @@
 
 ---
 
+## 2026-05-20 — Admin „Online teď" pro přihlášené uživatele: live na produkci (commit 0732738, ab5cb25)
+
+### Co bylo provedeno
+
+- **Migrace `20260520_registered_user_presence.sql`** — přidán sloupec `public.users.last_seen_at timestamptz`, index `idx_users_last_seen_at`, SECURITY DEFINER RPC `bump_user_last_seen()` (updatuje pouze `auth.uid()` řádek), SECURITY DEFINER RPC `get_admin_online_users(p_active_window_seconds int DEFAULT 300)` (admin/superadmin only). Migrace idempotentní (`IF NOT EXISTS` / `CREATE OR REPLACE`).
+- **`src/hooks/useHeartbeat.ts`** (nový soubor) — volá `bump_user_last_seen` ihned po přihlášení a pak každých 60 s. No-op pokud `userId === undefined`. Crash-safe: `async/await` + `try/catch`.
+- **`src/hooks/useAdminOnlineIndicator.ts`** (přepsán ze stubu) — polluje `get_admin_online_users` každých 30 s. Vrací reálné `onlineCount`, `onlineUsers`, `statusLabel`, `lastUpdatedAt`. `onUserJoin` zachován jako no-op pro interface kompatibilitu.
+- **`src/App.tsx`** (+2 řádky) — import `useHeartbeat` + `useHeartbeat(user?.id)` namountován vedle ostatních globálních hooků.
+- `AdminSoundIndicator.tsx` nedotčen.
+
+### Commit 0732738 — feat (push přes rebase na main)
+
+### Runtime crash fix — commit ab5cb25
+
+`supabase.rpc('bump_user_last_seen').catch(...)` způsobovalo `TypeError: .catch is not a function`. Supabase RPC vrací thenable (`PostgrestFilterBuilder`), ne plný Promise — `.catch()` na něm neexistuje. Opraveno přepsáním `bump` na `async function` s `await` + `try/catch`.
+
+### Migrace aplikovány
+
+- **Staging** `dxmowysntemfqfnanxua` — aplikováno přes Supabase MCP `apply_migration` ✅
+- **Produkce** `xkzhjldrojjlrkezorey` — aplikováno přes Supabase MCP `apply_migration` ✅
+- Verifikace na obou projektech: `last_seen_at_column=exists`, `bump_user_last_seen_function=exists`, `get_admin_online_users_function=exists` ✅
+
+### End-to-end validace na staging (SQL simulace)
+
+1. `set_config('request.jwt.claims', '{"sub":"<e2e-user-id>"}')` + `bump_user_last_seen()` → `last_seen_at` zapsán do DB ✅
+2. `get_admin_online_users` jako admin → vrátil e2e uživatele s `userId` + `onlineAt` ✅
+3. `get_admin_online_users` jako non-admin → `{"success":false,"message":"Pouze administrátoři..."}` ✅
+
+### Co se nesleduje
+
+Anonymní návštěvníci nejsou v OneMil sledováni — zůstávají v Google Analytics.
+
+---
+
 ## 2026-05-20 — Issue #71 ZAMČEN PROTI REGRESI: staging E2E spec 20 zelený (PRs #79/#80/#81)
 
 ### Co bylo provedeno
