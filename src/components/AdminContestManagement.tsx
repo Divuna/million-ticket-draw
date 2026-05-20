@@ -3063,8 +3063,40 @@ export const AdminContestManagement: React.FC = () => {
         setLinkedContestIds(new Set());
       }
 
-      // total_miocoin_bonus is maintained by DB trigger trg_sync_total_miocoin_bonus
-      // — already loaded from contests table above, no extra queries needed
+      // Fix: contests.total_miocoin_bonus is NOT kept in sync by any trigger in production
+      // (the referenced trg_sync_total_miocoin_bonus does not exist). When MioCoins are
+      // generated via the legacy distribute-bonus-prizes Edge Function (triggered on
+      // contest insert) instead of admin_bulk_insert_miocoin_bonuses, the column stays at 0
+      // even though bonus_prizes contains tens of thousands of MioCoin rows.
+      // Compute the real sum from bonus_prizes and override the displayed value.
+      if (contestIds.length > 0) {
+        try {
+          const { data: bonusSumRows, error: bonusSumError } = await supabase
+            .from("bonus_prizes")
+            .select("contest_id, amount.sum()")
+            .gt("amount", 0)
+            .in("contest_id", contestIds);
+
+          if (bonusSumError) {
+            console.error("Error fetching real MioCoin bonus sums:", bonusSumError);
+          } else if (bonusSumRows) {
+            const sumMap = new Map<string, number>();
+            for (const row of bonusSumRows as any[]) {
+              const cid = row.contest_id as string;
+              const sum = Number(row.sum ?? 0);
+              if (cid) sumMap.set(cid, sum);
+            }
+            for (const c of contestsData) {
+              const real = sumMap.get(c.contest_id);
+              if (real !== undefined && real > 0) {
+                c.total_miocoin_bonus = real;
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Unexpected error computing real MioCoin bonus sums:", e);
+        }
+      }
 
       setContests(contestsData);
     } catch (error: any) {
