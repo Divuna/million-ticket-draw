@@ -159,10 +159,10 @@ test.describe('Admin — MioCoin Chunked Save (issue #71)', () => {
     // 6c. Audit rows for this contest
     const { data: actions, error: actionsErr } = await supabase
       .from('admin_actions')
-      .select('action_type, metadata, created_at')
+      .select('action_type, metadata, timestamp')
       .eq('target_id', SPEC20_CONTEST_ID)
       .in('action_type', ['miocoin_save_begin', 'miocoin_bulk_create'])
-      .order('created_at', { ascending: true });
+      .order('timestamp', { ascending: true });
     expect(actionsErr, 'admin_actions read').toBeNull();
     const types = (actions ?? []).map((a) => a.action_type);
     expect(types).toContain('miocoin_save_begin');
