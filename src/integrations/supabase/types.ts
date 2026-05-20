@@ -4066,12 +4066,24 @@ export type Database = {
         Args: { p_api_key: string; p_partner_id: string; p_reward_code: string }
         Returns: Json
       }
+      admin_append_miocoin_chunk: {
+        Args: { p_bonuses: Json; p_contest_id: string }
+        Returns: Json
+      }
+      admin_begin_miocoin_save: {
+        Args: { p_contest_id: string; p_expected_count: number }
+        Returns: Json
+      }
       admin_block_referrer: {
         Args: { p_blocked: boolean; p_reason?: string; p_user_id: string }
         Returns: undefined
       }
       admin_bulk_insert_miocoin_bonuses: {
         Args: { p_bonuses: Json; p_contest_id: string }
+        Returns: Json
+      }
+      admin_finalize_miocoin_save: {
+        Args: { p_contest_id: string; p_expected_count: number }
         Returns: Json
       }
       admin_manage_bonus_prize:
