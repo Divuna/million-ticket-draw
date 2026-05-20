@@ -1400,6 +1400,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
     setSaving(true);
 
+    // Tracks whether admin_manage_contest already persisted a NEW contest in CREATE mode.
+    // If a later save step throws, the outer catch uses this to force-close the modal so a
+    // retry click cannot create a duplicate contest (the contest already exists in DB).
+    let createdContestIdInCreateMode: string | null = null;
+
     try {
       let imagePath: string | null = editingContest?.main_image || null;
 
@@ -1458,6 +1463,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         toast({ title: "Chyba", description: "Nepodařilo se získat ID soutěže", variant: "destructive" });
         setSaving(false);
         return;
+      }
+
+      // Contest is now persisted in DB. In CREATE mode, any subsequent throw must NOT
+      // leave the modal open as CREATE — otherwise a retry click would create a duplicate.
+      if (!isEditingContest) {
+        createdContestIdInCreateMode = contestId;
       }
 
       // Update images directly in contests table (manual uploads only)
@@ -1829,11 +1840,26 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       onClose();
     } catch (err: any) {
       console.error("Error saving contest:", err);
-      toast({
-        title: "Chyba",
-        description: err?.message || "Nepodařilo se uložit soutěž. Zkus to prosím znovu.",
-        variant: "destructive",
-      });
+      // If a contest was already persisted in CREATE mode and a later step threw,
+      // force-close the modal so a retry click cannot create a duplicate contest.
+      // The admin must reopen the contest in EDIT mode (Archiv test) to fix missing data.
+      if (createdContestIdInCreateMode) {
+        toast({
+          title: "Soutěž byla vytvořena, ale ne vše se uložilo",
+          description:
+            (err?.message ? err.message + " " : "") +
+            "Otevřete soutěž v Archivu test a doplňte chybějící údaje (např. MioCoin bonusy).",
+          variant: "destructive",
+        });
+        onSaved();
+        onClose();
+      } else {
+        toast({
+          title: "Chyba",
+          description: err?.message || "Nepodařilo se uložit soutěž. Zkus to prosím znovu.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setSaving(false);
     }
