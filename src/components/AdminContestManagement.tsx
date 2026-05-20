@@ -1101,31 +1101,34 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
     const newBonuses: MioCoinBonus[] = [];
     const ticketCount = form.ticket_count || 1000000;
+    // MioCoin positions must never land on the final ticket (ticket_count).
+    // That position is reserved for the main prize.
+    const maxMioCoinPosition = ticketCount - 1;
 
     if (distributionType === "even") {
-      // Evenly spaced positions (spacing must be >= 1 so ticket_position is never 0)
-      const rawSpacing = Math.floor(ticketCount / (computedPositionCount + 1));
+      // Evenly spaced positions within [1, maxMioCoinPosition]
+      const rawSpacing = Math.floor(maxMioCoinPosition / (computedPositionCount + 1));
       const spacing = rawSpacing < 1 ? 1 : rawSpacing;
       for (let i = 1; i <= computedPositionCount; i++) {
         let position = spacing * i;
         if (position < 1) position = 1;
-        if (position > ticketCount) continue;
+        if (position > maxMioCoinPosition) continue;
         // Adjust if position is already used
-        while (usedPositions.has(position) && position <= ticketCount) {
+        while (usedPositions.has(position) && position <= maxMioCoinPosition) {
           position++;
         }
-        if (position <= ticketCount && !usedPositions.has(position)) {
+        if (position <= maxMioCoinPosition && !usedPositions.has(position)) {
           usedPositions.add(position);
           newBonuses.push({ ticket_position: position, amount: stepValue });
         }
       }
     } else {
-      // Random positions
+      // Random positions within [1, maxMioCoinPosition]
       let attempts = 0;
       const maxAttempts = computedPositionCount * 10;
 
       while (newBonuses.length < computedPositionCount && attempts < maxAttempts) {
-        const position = Math.floor(Math.random() * ticketCount) + 1;
+        const position = Math.floor(Math.random() * maxMioCoinPosition) + 1;
         if (!usedPositions.has(position)) {
           usedPositions.add(position);
           newBonuses.push({ ticket_position: position, amount: stepValue });
