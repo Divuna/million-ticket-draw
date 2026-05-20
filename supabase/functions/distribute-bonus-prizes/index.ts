@@ -39,6 +39,19 @@ interface DistributeBonusRequest {
   batch_size?: number
   step_min?: number
   step_max?: number
+  explicit_bonuses?: Array<{
+    ticket_position: number
+    amount: number
+  }>
+}
+
+type BonusInsertRow = {
+  contest_id: string
+  title: string
+  description: string
+  ticket_position: number
+  status: 'pending'
+  amount: number
 }
 
 // Efficient random position generator using Set for collision detection
@@ -111,21 +124,10 @@ function generateStepPositions(count: number, maxPosition: number, excludeSet: S
 async function processBonusBatchWithRetry(
   supabaseService: any,
   contestId: string,
-  positions: number[],
-  bonusType: string,
-  amountPerUnit: number,
+  bonusesToInsert: BonusInsertRow[],
   batchNumber: number,
   maxRetries: number = 3
 ): Promise<any[]> {
-  const bonusesToInsert = positions.map(position => ({
-    contest_id: contestId,
-    title: bonusType,
-    description: `${bonusType} - ${amountPerUnit}${bonusType === 'MioCoin' ? ' MioCoins' : ' ks'}`,
-    ticket_position: position,
-    status: 'pending' as const,
-    amount: bonusType === 'MioCoin' ? amountPerUnit : 1
-  }))
-
   const first10Rows = bonusesToInsert.slice(0, 10).map((r) => ({
     ticket_position: r.ticket_position,
     amount: r.amount,
@@ -268,14 +270,17 @@ serve(async (req) => {
       distribution_rule, 
       batch_size = 500, // Reduced from 3000 to prevent timeouts
       step_min = 3, 
-      step_max = 5 
+      step_max = 5,
+      explicit_bonuses = [],
     } = request
 
-    if (!contest_id || !bonus_type || !total_value || !amount_per_unit || !distribution_rule) {
+    const hasExplicitBonuses = Array.isArray(explicit_bonuses) && explicit_bonuses.length > 0
+
+    if (!contest_id || !bonus_type || (!hasExplicitBonuses && (!total_value || !amount_per_unit || !distribution_rule))) {
       return jsonFailure(
         'validate_request',
         'All required fields must be provided',
-        { contest_id, bonus_type, total_value, amount_per_unit, distribution_rule },
+        { contest_id, bonus_type, total_value, amount_per_unit, distribution_rule, hasExplicitBonuses },
         0,
         Date.now() - startTime,
         undefined,
@@ -308,8 +313,6 @@ serve(async (req) => {
       )
     }
 
-    const maxBonuses = Math.floor(total_value / amount_per_unit)
-    
     const { data: existingBonuses } = await supabaseAdmin
       .from('bonus_prizes')
       .select('ticket_position')
@@ -317,55 +320,143 @@ serve(async (req) => {
 
     const existingPositions = new Set(existingBonuses?.map((b: any) => b.ticket_position) || [])
     const availablePositions = contest.ticket_count - existingPositions.size
-    
-    const numberOfBonuses = Math.min(maxBonuses, availablePositions)
-    
-    if (numberOfBonuses === 0) {
-      return jsonFailure(
-        'capacity',
-        'No bonuses can be created. Contest may be full or insufficient budget.',
-        {
-          maxBonuses,
-          availablePositions,
-          contest_ticket_count: contest.ticket_count,
-          existing_positions_count: existingPositions.size,
-        },
-        0,
-        Date.now() - startTime,
-        undefined,
-      )
-    }
 
-    if (numberOfBonuses < maxBonuses) {
-      warnings.push(`Reduced from ${maxBonuses} to ${numberOfBonuses} bonuses due to insufficient available positions`)
-    }
+    let totalRequested = 0
+    let allRowsToInsert: BonusInsertRow[] = []
 
-    console.log(`Processing ${numberOfBonuses} bonuses for contest ${contest_id} using ${distribution_rule} distribution`)
+    if (hasExplicitBonuses) {
+      const seenPositions = new Set<number>()
 
-    let allPositions: number[] = []
-    
-    try {
-      if (distribution_rule === 'random') {
-        allPositions = generateRandomPositions(numberOfBonuses, contest.ticket_count, existingPositions)
-      } else {
-        allPositions = generateStepPositions(numberOfBonuses, contest.ticket_count, existingPositions, step_min, step_max)
+      for (const bonus of explicit_bonuses) {
+        if (!Number.isInteger(bonus?.ticket_position)) {
+          return jsonFailure(
+            'validate_explicit_bonuses',
+            'Každý explicitní bonus musí mít celočíselnou ticket_position.',
+            bonus,
+            explicit_bonuses.length,
+            Date.now() - startTime,
+            warnings.length > 0 ? warnings : undefined,
+          )
+        }
+
+        if (!Number.isFinite(bonus?.amount) || bonus.amount <= 0) {
+          return jsonFailure(
+            'validate_explicit_bonuses',
+            'Každý explicitní bonus musí mít amount větší než 0.',
+            bonus,
+            explicit_bonuses.length,
+            Date.now() - startTime,
+            warnings.length > 0 ? warnings : undefined,
+          )
+        }
+
+        if (bonus.ticket_position < 1 || bonus.ticket_position > contest.ticket_count) {
+          return jsonFailure(
+            'validate_explicit_bonuses',
+            `Pozice ${bonus.ticket_position} je mimo rozsah 1 až ${contest.ticket_count}.`,
+            bonus,
+            explicit_bonuses.length,
+            Date.now() - startTime,
+            warnings.length > 0 ? warnings : undefined,
+          )
+        }
+
+        if (seenPositions.has(bonus.ticket_position)) {
+          return jsonFailure(
+            'validate_explicit_bonuses',
+            `Duplicitní explicitní pozice ${bonus.ticket_position}.`,
+            bonus,
+            explicit_bonuses.length,
+            Date.now() - startTime,
+            warnings.length > 0 ? warnings : undefined,
+          )
+        }
+
+        if (existingPositions.has(bonus.ticket_position)) {
+          return jsonFailure(
+            'validate_explicit_bonuses',
+            `Pozice ${bonus.ticket_position} je už obsazena jinou výhrou.`,
+            bonus,
+            explicit_bonuses.length,
+            Date.now() - startTime,
+            warnings.length > 0 ? warnings : undefined,
+          )
+        }
+
+        seenPositions.add(bonus.ticket_position)
       }
-    } catch (genErr) {
-      return jsonFailure(
-        'generate_positions',
-        genErr instanceof Error ? genErr.message : 'Position generation failed',
-        genErr instanceof Error ? { name: genErr.name, stack: genErr.stack } : String(genErr),
-        0,
-        Date.now() - startTime,
-        warnings.length > 0 ? warnings : undefined,
-      )
+
+      allRowsToInsert = explicit_bonuses.map((bonus) => ({
+        contest_id,
+        title: bonus_type,
+        description: `${bonus.amount} MioCoinů`,
+        ticket_position: bonus.ticket_position,
+        status: 'pending',
+        amount: bonus.amount,
+      }))
+      totalRequested = allRowsToInsert.length
+      console.log(`Processing ${totalRequested} explicit bonuses for contest ${contest_id}`)
+    } else {
+      const maxBonuses = Math.floor(total_value / amount_per_unit)
+      const numberOfBonuses = Math.min(maxBonuses, availablePositions)
+
+      if (numberOfBonuses === 0) {
+        return jsonFailure(
+          'capacity',
+          'No bonuses can be created. Contest may be full or insufficient budget.',
+          {
+            maxBonuses,
+            availablePositions,
+            contest_ticket_count: contest.ticket_count,
+            existing_positions_count: existingPositions.size,
+          },
+          0,
+          Date.now() - startTime,
+          undefined,
+        )
+      }
+
+      if (numberOfBonuses < maxBonuses) {
+        warnings.push(`Reduced from ${maxBonuses} to ${numberOfBonuses} bonuses due to insufficient available positions`)
+      }
+
+      console.log(`Processing ${numberOfBonuses} bonuses for contest ${contest_id} using ${distribution_rule} distribution`)
+
+      let allPositions: number[] = []
+
+      try {
+        if (distribution_rule === 'random') {
+          allPositions = generateRandomPositions(numberOfBonuses, contest.ticket_count, existingPositions)
+        } else {
+          allPositions = generateStepPositions(numberOfBonuses, contest.ticket_count, existingPositions, step_min, step_max)
+        }
+      } catch (genErr) {
+        return jsonFailure(
+          'generate_positions',
+          genErr instanceof Error ? genErr.message : 'Position generation failed',
+          genErr instanceof Error ? { name: genErr.name, stack: genErr.stack } : String(genErr),
+          0,
+          Date.now() - startTime,
+          warnings.length > 0 ? warnings : undefined,
+        )
+      }
+
+      if (allPositions.length < numberOfBonuses) {
+        warnings.push(`Could only generate ${allPositions.length} positions out of ${numberOfBonuses} requested`)
+      }
+
+      allRowsToInsert = allPositions.map((position) => ({
+        contest_id,
+        title: bonus_type,
+        description: `${bonus_type} - ${amount_per_unit}${bonus_type === 'MioCoin' ? ' MioCoins' : ' ks'}`,
+        ticket_position: position,
+        status: 'pending',
+        amount: bonus_type === 'MioCoin' ? amount_per_unit : 1,
+      }))
+      totalRequested = numberOfBonuses
     }
 
-    if (allPositions.length < numberOfBonuses) {
-      warnings.push(`Could only generate ${allPositions.length} positions out of ${numberOfBonuses} requested`)
-    }
-
-    const totalBatches = Math.ceil(allPositions.length / effectiveBatchSize)
+    const totalBatches = Math.ceil(allRowsToInsert.length / effectiveBatchSize)
     let totalCreated = 0
     let successfulBatches = 0
     let failedBatches = 0
@@ -375,22 +466,20 @@ serve(async (req) => {
       postgres: { message: string; details: string | null; hint: string | null; code: string | null } | null
     } | null = null
 
-    console.log(`Processing ${allPositions.length} positions in ${totalBatches} batches of size ${effectiveBatchSize}`)
+    console.log(`Processing ${allRowsToInsert.length} positions in ${totalBatches} batches of size ${effectiveBatchSize}`)
 
     for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
       const startIdx = batchIndex * effectiveBatchSize
-      const endIdx = Math.min(startIdx + effectiveBatchSize, allPositions.length)
-      const batchPositions = allPositions.slice(startIdx, endIdx)
+      const endIdx = Math.min(startIdx + effectiveBatchSize, allRowsToInsert.length)
+      const batchRows = allRowsToInsert.slice(startIdx, endIdx)
       
-      console.log(`Processing batch ${batchIndex + 1}/${totalBatches} with ${batchPositions.length} positions`)
+      console.log(`Processing batch ${batchIndex + 1}/${totalBatches} with ${batchRows.length} positions`)
 
       try {
         const batchBonuses = await processBonusBatchWithRetry(
           supabaseAdmin,
           contest_id,
-          batchPositions,
-          bonus_type,
-          amount_per_unit,
+          batchRows,
           batchIndex + 1,
           3 // Max retries
         )
@@ -423,6 +512,29 @@ serve(async (req) => {
       }
     }
 
+    if (hasExplicitBonuses && failedBatches > 0) {
+      const { error: cleanupError } = await supabaseAdmin
+        .from('bonus_prizes')
+        .delete()
+        .eq('contest_id', contest_id)
+        .gt('amount', 0)
+
+      if (cleanupError) {
+        console.error('Failed to clean up partial explicit MioCoin rows:', cleanupError)
+        warnings.push(`Partial explicit MioCoin cleanup failed: ${cleanupError.message}`)
+      }
+
+      const { error: resetTotalError } = await supabaseAdmin
+        .from('contests')
+        .update({ total_miocoin_bonus: 0 })
+        .eq('id', contest_id)
+
+      if (resetTotalError) {
+        console.error('Failed to reset total_miocoin_bonus after partial explicit failure:', resetTotalError)
+        warnings.push(`Failed to reset total_miocoin_bonus: ${resetTotalError.message}`)
+      }
+    }
+
     // Send summary Sofinity event
     try {
       await supabaseAdmin.functions.invoke('send_event_to_sofinity', {
@@ -446,12 +558,63 @@ serve(async (req) => {
     }
 
     const elapsedMs = Date.now() - startTime
+
+    if (bonus_type === 'MioCoin' && hasExplicitBonuses && failedBatches === 0) {
+      const { error: syncTotalError } = await supabaseAdmin
+        .from('contests')
+        .update({
+          total_miocoin_bonus: allRowsToInsert.reduce((sum, row) => sum + row.amount, 0),
+        })
+        .eq('id', contest_id)
+
+      if (syncTotalError) {
+        console.error('Failed to sync contests.total_miocoin_bonus:', syncTotalError)
+        warnings.push(`Failed to sync total_miocoin_bonus: ${syncTotalError.message}`)
+      }
+    }
     
-    console.log(`Completed: ${totalCreated}/${allPositions.length} bonuses created in ${elapsedMs}ms (${successfulBatches} successful, ${failedBatches} failed batches)`)
+    console.log(`Completed: ${totalCreated}/${allRowsToInsert.length} bonuses created in ${elapsedMs}ms (${successfulBatches} successful, ${failedBatches} failed batches)`)
 
-    const samplePositions = allPositions.slice(0, Math.min(10, allPositions.length))
+    const samplePositions = allRowsToInsert
+      .slice(0, Math.min(10, allRowsToInsert.length))
+      .map((row) => row.ticket_position)
 
-    if (totalCreated === 0 && allPositions.length > 0) {
+    if (hasExplicitBonuses && failedBatches > 0) {
+      const msg = lastBatchFailure?.message ?? 'Explicit bonus batch insert failed'
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: msg,
+          step: 'insert_explicit_bonus_prizes',
+          message: msg,
+          details: {
+            contest_id,
+            last_batch: lastBatchFailure?.batch ?? null,
+            postgres: lastBatchFailure?.postgres ?? null,
+            total_batches: totalBatches,
+            failed_batches: failedBatches,
+            positions_attempted: allRowsToInsert.length,
+            cleaned_up_partial_rows: true,
+          },
+          received_rows_count: allRowsToInsert.length,
+          created_bonuses: totalCreated,
+          total_requested: totalRequested,
+          positions_count: allRowsToInsert.length,
+          sample_positions: samplePositions,
+          batches_processed: totalBatches,
+          successful_batches: successfulBatches,
+          failed_batches: failedBatches,
+          elapsed_ms: elapsedMs,
+          warnings: warnings.length > 0 ? warnings : undefined,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        },
+      )
+    }
+
+    if (totalCreated === 0 && allRowsToInsert.length > 0) {
       const msg =
         lastBatchFailure?.message ??
         'All insert batches failed'
@@ -467,12 +630,12 @@ serve(async (req) => {
             postgres: lastBatchFailure?.postgres ?? null,
             total_batches: totalBatches,
             failed_batches: failedBatches,
-            positions_attempted: allPositions.length,
+            positions_attempted: allRowsToInsert.length,
           },
-          received_rows_count: allPositions.length,
+          received_rows_count: allRowsToInsert.length,
           created_bonuses: 0,
-          total_requested: numberOfBonuses,
-          positions_count: allPositions.length,
+          total_requested: totalRequested,
+          positions_count: allRowsToInsert.length,
           sample_positions: samplePositions,
           batches_processed: totalBatches,
           successful_batches: successfulBatches,
@@ -491,8 +654,8 @@ serve(async (req) => {
       JSON.stringify({ 
         success: totalCreated > 0,
         created_bonuses: totalCreated,
-        total_requested: numberOfBonuses,
-        positions_count: allPositions.length,
+        total_requested: totalRequested,
+        positions_count: allRowsToInsert.length,
         sample_positions: samplePositions,
         batches_processed: totalBatches,
         successful_batches: successfulBatches,

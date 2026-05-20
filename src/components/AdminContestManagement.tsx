@@ -1802,18 +1802,26 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             ticket_position,
             amount,
           }));
-          const { data: bulkData, error: bulkError } = await supabase.rpc(
-            "admin_bulk_insert_miocoin_bonuses",
-            {
-              p_contest_id: contestId,
-              p_bonuses: bonusPayload,
-            }
-          );
-          if (bulkError) {
-            throw new Error(`Chyba při ukládání MioCoin bonusů: ${bulkError.message}`);
+          const totalMioCoinValue = bonusPayload.reduce((sum, bonus) => sum + bonus.amount, 0);
+          const { data: distributionResult, error: distributionError } =
+            await supabase.functions.invoke("distribute-bonus-prizes", {
+              body: {
+                contest_id: contestId,
+                bonus_type: "MioCoin",
+                total_value: totalMioCoinValue,
+                amount_per_unit: 1,
+                distribution_rule: distributionType === "even" ? "step_interval" : "random",
+                batch_size: 500,
+                explicit_bonuses: bonusPayload,
+              },
+            });
+          if (distributionError) {
+            throw new Error(`Chyba při ukládání MioCoin bonusů: ${distributionError.message}`);
           }
-          if (bulkData && (bulkData as any).success === false) {
-            throw new Error(`Chyba při ukládání MioCoin bonusů: ${(bulkData as any).message}`);
+          if (!distributionResult?.success) {
+            throw new Error(
+              `Chyba při ukládání MioCoin bonusů: ${distributionResult?.error || distributionResult?.message || "Nepodařilo se uložit MioCoin bonusy"}`
+            );
           }
         }
       }
