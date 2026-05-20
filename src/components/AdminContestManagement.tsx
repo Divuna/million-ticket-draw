@@ -1842,31 +1842,84 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           }
         }
 
-        // Persist MioCoin bonuses via admin_bulk_insert_miocoin_bonuses SQL RPC.
-        // The RPC (optimized in PRs #65/#66) materializes the JSON payload once into
-        // a TEMP TABLE, uses set-based SQL validation, deletes existing MioCoin rows,
-        // inserts all new rows in a single INSERT…SELECT, and syncs
-        // contests.total_miocoin_bonus — all atomically inside Postgres.
-        // This replaces the previous distribute-bonus-prizes Edge Function path, which
-        // was killed by the Deno wall-clock timeout for very large payloads (~98k rows).
+        // Persist MioCoin bonuses via the chunked three-call SQL RPC pattern.
+        //
+        // Issue #71: A single synchronous RPC carrying ~95k positions could not
+        // finish under the Supabase API gateway HTTP timeout (~60s), even after
+        // PRs #65/#66/#68/#76 optimised the underlying function. The chunked
+        // pattern splits the save so each call finishes well under the gateway
+        // budget:
+        //   1. admin_begin_miocoin_save     — wipe stale rows, reset total
+        //   2. admin_append_miocoin_chunk   — insert one chunk (~5 000 rows)
+        //   3. admin_finalize_miocoin_save  — verify count, sync total, write log
+        //
+        // The legacy admin_bulk_insert_miocoin_bonuses remains in place untouched
+        // for any other callers; only this save path migrates to the chunked flow.
         if (mioCoinBonuses.length > 0 && !hasImmutablePersistedMioCoinBonuses) {
           const bonusPayload = mioCoinBonuses.map(({ ticket_position, amount }) => ({
             ticket_position,
             amount,
           }));
-          const { data: bulkResult, error: bulkError } = await supabase.rpc(
-            "admin_bulk_insert_miocoin_bonuses",
+          const expectedCount = bonusPayload.length;
+          const CHUNK_SIZE = 5000;
+
+          // 1) Begin: wipe stale rows + reset total + audit row
+          const { data: beginResult, error: beginError } = await supabase.rpc(
+            "admin_begin_miocoin_save",
             {
               p_contest_id: contestId,
-              p_bonuses: bonusPayload,
+              p_expected_count: expectedCount,
             }
           );
-          if (bulkError) {
-            throw new Error(`Chyba při ukládání MioCoin bonusů: ${bulkError.message}`);
+          if (beginError) {
+            throw new Error(`Chyba při ukládání MioCoin bonusů (begin): ${beginError.message}`);
           }
-          if (!bulkResult?.success) {
+          if (!beginResult?.success) {
             throw new Error(
-              `Chyba při ukládání MioCoin bonusů: ${bulkResult?.message || "Nepodařilo se uložit MioCoin bonusy"}`
+              `Chyba při ukládání MioCoin bonusů (begin): ${beginResult?.message || "Nepodařilo se zahájit ukládání MioCoin bonusů"}`
+            );
+          }
+
+          // 2) Append chunks sequentially
+          for (let i = 0; i < bonusPayload.length; i += CHUNK_SIZE) {
+            const chunk = bonusPayload.slice(i, i + CHUNK_SIZE);
+            const chunkIndex = Math.floor(i / CHUNK_SIZE) + 1;
+            const totalChunks = Math.ceil(bonusPayload.length / CHUNK_SIZE);
+
+            const { data: chunkResult, error: chunkError } = await supabase.rpc(
+              "admin_append_miocoin_chunk",
+              {
+                p_contest_id: contestId,
+                p_bonuses: chunk,
+              }
+            );
+            if (chunkError) {
+              throw new Error(
+                `Chyba při ukládání MioCoin bonusů (chunk ${chunkIndex}/${totalChunks}): ${chunkError.message}`
+              );
+            }
+            if (!chunkResult?.success) {
+              throw new Error(
+                `Chyba při ukládání MioCoin bonusů (chunk ${chunkIndex}/${totalChunks}): ${chunkResult?.message || "Nepodařilo se uložit chunk MioCoin bonusů"}`
+              );
+            }
+          }
+
+          // 3) Finalize: verify exact count, sync total, write final audit row.
+          //    Save is only considered successful if finalize returns success.
+          const { data: finalizeResult, error: finalizeError } = await supabase.rpc(
+            "admin_finalize_miocoin_save",
+            {
+              p_contest_id: contestId,
+              p_expected_count: expectedCount,
+            }
+          );
+          if (finalizeError) {
+            throw new Error(`Chyba při ukládání MioCoin bonusů (finalize): ${finalizeError.message}`);
+          }
+          if (!finalizeResult?.success) {
+            throw new Error(
+              `Chyba při ukládání MioCoin bonusů (finalize): ${finalizeResult?.message || "Finalizace MioCoin save selhala"}`
             );
           }
         }
