@@ -14,6 +14,27 @@
 
 ---
 
+## 2026-05-20 — PRs #61–#66: bulk MioCoin timeout fix + produkce zelená
+
+### Co bylo provedeno
+
+- **PR #61** — nová SECURITY DEFINER funkce `admin_bulk_insert_miocoin_bonuses(p_contest_id uuid, p_bonuses jsonb)`. Migrace `20260519_bulk_miocoin_bonuses.sql`. Nahrazuje N sequential RPC callů jedním bulk DELETE+INSERT. RLS policy "Allow admin full access to bonus prizes" přidána idempotentně. Root cause: 95 000 pozic × 430ms/call ≈ 11 hodin, vždy selhávalo v půlce. Aplikováno na staging i produkci.
+- **PR #62** — guard v `handleSave` (`AdminContestManagement.tsx`): pokud admin vyplnil MioCoin inputy ale neklikl Vygenerovat, uložení se zablokuje s destructive toastem místo tiché prázdné persistence.
+- **PR #63** — fix `contests.total_miocoin_bonus` vždy 0. Migrace `20260520_sync_total_miocoin_bonus_after_bulk.sql`. Root cause: trigger `sync_total_miocoin_bonus` neexistuje na produkci. Fix: UPDATE contests.total_miocoin_bonus po každém bulk INSERT + backfill + zero-fill. Aplikováno na staging i produkci.
+- **PR #64** — fix duplicate contest creation při partial failure v CREATE módu. `createdContestIdInCreateMode` tracking variable v `handleSave`; outer catch zavře modal + zobrazí informativní toast místo tiché smyčky umožňující druhé uložení. Merge commit: `72b74bc64dad27abd04a2c64214c77dc1e3a533c`.
+- **PR #65** — perf: set-based SQL validace v `admin_bulk_insert_miocoin_bonuses`. Migrace `20260520_optimize_bulk_miocoin_bonuses.sql`. Odstraněna O(N²) PL/pgSQL smyčka s `array_append` a N individual EXISTS queries. Nahrazeno: `COUNT(*)` pro NULL/invalid check, `GROUP BY HAVING COUNT(*) > 1` pro duplicity, jeden `JOIN bonus_prizes` pro fyzické kolize. Merge commit: `e809bd0`. Aplikováno na staging i produkci.
+- **PR #66** — perf: materialize JSON payload once. Migrace `20260520_materialize_bulk_miocoin_payload.sql`. Root cause: PR #65 odstranil smyčku ale `jsonb_array_elements(p_bonuses)` stále voláno 5× (validation, duplicate, collision, INSERT, SUM) → 5 re-parsů 56 000-řádkového JSONu → stále timeout. Fix: `CREATE TEMP TABLE tmp_miocoin_bonuses ON COMMIT DROP` + `INSERT INTO tmp` z jednoho `jsonb_array_elements` + index na `ticket_position` + `idx_bonus_prizes_contest_position ON bonus_prizes(contest_id, ticket_position)`. Merge commit: `59b2efe`. Aplikováno na staging i produkci. Toto je finální stav.
+
+### Staging E2E výsledky
+- Po PR #61: run `26113679217` — 26/0/3 ✅
+- Po PR #62: run `26135981706` — 27/0/3 ✅
+- Po PR #63: run `26147052xxx` — 27/0/3 ✅ (flaky spec 18 retry)
+- Po PR #64: run `26152507277` — 27/0/3 ✅
+- Po PR #65: run `26153556353` — 27/0/3 ✅ (spec 18 10.0s, spec 19 10.0s)
+- Po PR #66: run `26156907020` — 27/0/3 ✅ (spec 18 11.3s, spec 19 10.4s, Telegram message_id 521)
+
+---
+
 ## 2026-05-19 — PR #60 mergnut + Staging Full E2E zelený (run 26113679217)
 
 ### Co bylo provedeno
