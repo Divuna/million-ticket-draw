@@ -1,56 +1,56 @@
+## Problém
+
+V admin přehledu soutěží (sloupec **„BONUSOVÉ MIOCOINY"**) ukazuje u řady soutěží **0 MC**, přestože v `bonus_prizes` reálně existují tisíce vygenerovaných MioCoin pozic.
+
+Konkrétní příklady z DB:
+- `Corvette c8` (`1abf28cd…`) — v `bonus_prizes` je **83 000** MioCoin řádků (SUM = 83 000), ale `contests.total_miocoin_bonus = 0`.
+- `Corvette c8` (`f3748342…`) — **94 500** MioCoin řádků, ale `contests.total_miocoin_bonus = 0`.
+
 ## Root cause
 
-The contest is created/updated via `admin_manage_contest` RPC (security definer, bypasses RLS). The RPC does **not** accept `rules` or `rules_pdf_url` parameters, so `AdminContestManagement.tsx` (lines 1253–1327) does a follow-up direct `supabase.from("contests").update({ rules_pdf_url, rules, ... })`.
+1. Admin UI (`AdminContestManagement.tsx`, řádek 3712) zobrazuje sloupec přímo z `contests.total_miocoin_bonus`, nikoli z reálného součtu v `bonus_prizes`.
+2. V kódu je komentář:
+   > `total_miocoin_bonus is maintained by DB trigger trg_sync_total_miocoin_bonus`
+   ale tento trigger v produkční DB **neexistuje**. V `pg_trigger` jsou pouze `trg_generate_miocoin_on_contest_insert` (volá legacy Edge Function `distribute-bonus-prizes`) a `trg_bonus_to_wallet` na `winners`.
+3. `total_miocoin_bonus` se proto aktualizuje **jen** v jedné cestě — uvnitř RPC `admin_bulk_insert_miocoin_bonuses` (PR #63). Když MioCoiny vznikají jinak (např. asynchronně přes `trg_generate_miocoin_on_contest_insert` → `distribute-bonus-prizes`), sloupec zůstává na hodnotě, se kterou byla soutěž vložena (typicky 0, protože `admin_manage_contest` ho v INSERT nevyplňuje).
+4. Důsledek: data v `bonus_prizes` jsou správně, ale agregovaný sloupec na soutěži, který admin UI zobrazuje, je zastaralý / nulový → admin „nevidí" vygenerované MioCoiny.
 
-DB check confirms `public.contests` has only these RLS policies:
-- SELECT (public visible + admin select-all)
-- DELETE (admin)
-- **No INSERT, no UPDATE policy exists.**
+## Návrh řešení
 
-So the direct UPDATE matches **zero rows** under RLS. The PDF uploads to the `contest-rules` bucket successfully (bucket is public), but the URL is never persisted. Contest `93dc5cdc-…` confirms: `rules_pdf_url = NULL`.
+Dvě části, obě **bez** změny ticket/contest/wallet logiky, bez změny `buy_ticket_atomic`, bez změny Partner Offers, bez změny RLS.
 
-The frontend already detects 0 rows and shows the Czech toast `"Chyba ukládání pravidel / obrázků"` — so the existing error UX is correct, but the write itself is blocked.
+### A) Frontend (`src/components/AdminContestManagement.tsx`) — preferovaná oprava UI
 
-## Fix
+V loaderu (`fetchContests`, kolem řádků 2985–3069) k seznamu soutěží dopočítat reálný součet MioCoin bonusů z `bonus_prizes` a v UI ho použít místo zastaralého `contests.total_miocoin_bonus`:
 
-### 1. Add admin UPDATE policy on `public.contests` (migration)
+- Po načtení seznamu soutěží spustit dotaz typu:
+  `select contest_id, sum(amount) from bonus_prizes where contest_id in (...) and amount > 0 group by contest_id`
+- V state si držet mapu `contestId → realMioCoinSum`.
+- Na řádku 3712 vykreslit tento dopočítaný součet (s fallbackem na `contest.total_miocoin_bonus` jen pokud mapa nemá záznam).
+- Stejné pravidlo aplikovat i v summary kartě **„Bonusové MioCoiny"** nad tabulkou, pokud čte stejnou hodnotu.
 
-This mirrors the existing `contests_admin_delete` / `contests_admin_select_all` pattern. No schema change, no function change, no policy weakening — purely an additive policy that matches workspace rules ("add additional RLS policy ONLY if explicitly requested").
+Tím admin uvidí skutečné MioCoiny bez ohledu na to, jakou cestou vznikly. Žádná změna DB.
 
-```sql
-CREATE POLICY "contests_admin_update"
-ON public.contests
-FOR UPDATE
-TO authenticated
-USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'superadmin'))
-WITH CHECK (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'superadmin'));
-```
+### B) (Volitelně, jen na schválení) DB sync trigger
 
-This unblocks the existing follow-up UPDATE for `rules_pdf_url`, `rules`, `main_prize_secondary_image`, `banner_image`. No other code paths gain new abilities (non-admins still can't update — `has_role` check enforces it).
+Pokud chceme dlouhodobě udržet `contests.total_miocoin_bonus` v synchronu i pro budoucí cesty zápisu (mimo `admin_bulk_insert_miocoin_bonuses`), přidat AFTER INSERT/UPDATE/DELETE trigger na `bonus_prizes`, který přepočítá `SUM(amount) FILTER (WHERE amount > 0)` do `contests.total_miocoin_bonus` pro dotčené `contest_id`.
 
-### 2. `src/components/AdminContestManagement.tsx` — keep the current flow, tighten the error message
+**Tato část se neimplementuje bez výslovného schválení** — `CLAUDE.md` zakazuje DB/RLS změny bez instrukce. Lze jen navrhnout migraci do `supabase/migrations/` k pozdějšímu manuálnímu spuštění v SQL Editoru.
 
-The existing flow at lines 1261–1327 is already correct:
-- Upload PDF to `contest-rules` bucket
-- Get public URL → `additionalUpdates.rules_pdf_url`
-- `update(...).eq("id", contestId).select("id")` → if 0 rows or error, show Czech destructive toast and `return` (modal stays open, no success toast)
+## Co se NEbude měnit
 
-Only adjust the toast title/description for the rules-PDF specific case to match the requested Czech wording, e.g. `"Nepodařilo se uložit pravidla soutěže. Zkuste to prosím znovu."` when `rules_pdf_url` was part of the failed update. Keep the modal open, do not call the success toast or close logic.
+- `buy_ticket_atomic`, `admin_bulk_insert_miocoin_bonuses`, `admin_manage_contest`
+- `distribute-bonus-prizes` Edge Function a její trigger
+- Schéma `bonus_prizes` / `contests`
+- RLS policies
+- Žádné mazání / přepis existujících `bonus_prizes` ani „backfill" `total_miocoin_bonus` v rámci tohoto fixu (lze udělat samostatně pod schválením)
 
-### 3. `src/pages/ContestDetail.tsx` — no change
+## Rozsah změn
 
-Lines 1035–1048 already render the "📄 Zobrazit pravidla soutěže" link conditionally on `contest.rules_pdf_url`. Once the column saves, the link appears automatically.
+- 1 soubor: `src/components/AdminContestManagement.tsx` (loader + render bonusového sloupce)
+- Žádné migrace, žádné Edge Functions, žádné testy nutné měnit
+- Build a existující Playwright suite zůstávají platné
 
-## Out of scope (untouched)
+## Otázka k potvrzení
 
-- `admin_manage_contest` RPC signature
-- `buy_ticket_atomic`, winner logic, Partner Offers, `partner_offer_contests`
-- Storage bucket config (`contest-rules` already public)
-- Public contest cards, routes, ContestDetail layout
-- `contests` table schema, columns, types
-
-## Verification after apply
-
-1. Edit contest `93dc5cdc-8bd2-4906-92b4-948d5eba1e60` in admin, upload a PDF, save.
-2. Confirm: success toast, modal closes, `SELECT rules_pdf_url FROM contests WHERE id='93dc5cdc-…'` returns the public URL with `?t=` cache-bust.
-3. Open `/contest/93dc5cdc-…` as a customer → "📄 Zobrazit pravidla soutěže" link visible and opens the PDF.
+Mám pokračovat pouze s částí **A (frontend dopočet)**, nebo zároveň připravit i migraci pro část **B (DB sync trigger)** k manuálnímu nasazení?
