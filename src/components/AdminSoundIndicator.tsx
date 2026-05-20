@@ -123,31 +123,42 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
   }, [onlineUsers]);
 
   // Fetch admin stats (online count is not tracked here)
+  //
+  // Direct reads against public.tickets and public.payments are blocked by
+  // RLS for everything except the admin's own rows. The aggregate is now
+  // computed by the SECURITY DEFINER RPC get_admin_top_bar_stats which uses
+  // Prague-local midnight as the day boundary. The raw payment amounts are
+  // returned so summarizePaymentReporting() remains the single source of
+  // truth for the CZK derivation and "neznámé" detection.
   useEffect(() => {
     const fetchStats = async () => {
-      const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-
       try {
-        // Games today: count of tickets created today
-        const { count: gamesToday } = await supabase
-          .from('tickets')
-          .select('*', { count: 'exact', head: true })
-          .gte('created_at', todayStart);
+        const { data, error } = await supabase.rpc('get_admin_top_bar_stats');
+        if (error) {
+          console.error('[AdminStats] RPC error:', error);
+          return;
+        }
+        const payload = data as
+          | {
+              success?: boolean;
+              games_today?: number;
+              payments_today?: number;
+              payment_amounts?: number[];
+              message?: string;
+            }
+          | null;
+        if (!payload?.success) {
+          console.error('[AdminStats] RPC returned non-success:', payload?.message ?? payload);
+          return;
+        }
 
-        // Payments today: count and sum of completed payments today
-        const { data: paymentsData } = await supabase
-          .from('payments')
-          .select('amount')
-          .gte('created_at', todayStart)
-          .eq('status', 'completed');
-
-        const paymentsToday = paymentsData?.length || 0;
-        const paymentSummary = summarizePaymentReporting(paymentsData);
+        const amountsForSummary =
+          (payload.payment_amounts ?? []).map((amount) => ({ amount }));
+        const paymentSummary = summarizePaymentReporting(amountsForSummary);
 
         setStats({
-          gamesToday: gamesToday || 0,
-          paymentsToday,
+          gamesToday: payload.games_today ?? 0,
+          paymentsToday: payload.payments_today ?? 0,
           creditedMiocoinsToday: paymentSummary.creditedMiocoins,
           paidCzkToday: paymentSummary.paidCzk,
           hasUnknownPaidCzkToday: paymentSummary.hasUnknownPaidCzk,
