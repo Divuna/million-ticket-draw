@@ -4347,6 +4347,7 @@ export type Database = {
           vouchers_summary: string
         }[]
       }
+      get_admin_top_bar_stats: { Args: never; Returns: Json }
       get_available_vouchers: {
         Args: { p_user_id?: string }
         Returns: {
