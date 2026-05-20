@@ -92,6 +92,7 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useApplyPendingReferral } from "@/hooks/useApplyPendingReferral";
 import { useRetentionTriggers } from "@/hooks/useRetentionTriggers";
+import { useHeartbeat } from "@/hooks/useHeartbeat";
 import { GlobalMusicPlayer } from "@/components/GlobalMusicPlayer";
 
 // Partner Header Component (inline to avoid new files)
@@ -371,6 +372,7 @@ function AppContent() {
   useOneSignal();
   useApplyPendingReferral(user?.id);
   useRetentionTriggers(user?.id);
+  useHeartbeat(user?.id);
 
   // Hard-block: Redirect accounts away from unauthorized routes
   React.useEffect(() => {
