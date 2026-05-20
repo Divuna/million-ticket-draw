@@ -48,6 +48,33 @@ Anonymní návštěvníci nejsou v OneMil sledováni — zůstávají v Google A
 
 ---
 
+## 2026-05-20 — Admin „Online teď" ZAMČEN PROTI REGRESI: staging E2E spec 21 zelený (commits b70beba, b2129ac)
+
+### Co bylo provedeno
+
+- **`tests/e2e/21-admin-online-registered-users.spec.ts`** (nový soubor, 130 řádků) — staging-only spec, dva browser contexts. Commit `b70beba`.
+  - Normální E2E uživatel se přihlásí → čeká 6 s na heartbeat RPC
+  - Admin kontext otevře `/admin`, ověří badge count ≥ 1 (`span.font-medium` regex `/^[1-9][0-9]*$/`)
+  - Klikne na badge, ověří `<h4>Online uživatelé</h4>` v popoveru
+  - Ověří, že e-mail normálního E2E uživatele je viditelný v popoveru
+  - Ověří, že sekce „Anonymní návštěvníci" NENÍ přítomna
+  - Skip guard: test se přeskočí pokud `E2E_TEST_EMAIL / E2E_TEST_PASSWORD / E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD` nejsou nastaveny
+- **Fix strict-mode violation** — commit `b2129ac`: `getByText(E2E_TEST_EMAIL, { exact: false })` způsobovalo strict-mode violation, protože `e2e@onemil.cz` je substring `admin-e2e@onemil.cz`. Oba uživatelé jsou přihlášeni → oba e-maily viditelné v popoveru → Playwright odmítl nejednoznačný locator. Opraveno na `{ exact: true }`.
+
+### První staging run selhal (run 26188535209)
+
+- Spec 21 selhal na řádku 116: `strict mode violation: getByText('***') resolved to 2 elements`
+- Obě `<p class="text-xs text-muted-foreground truncate">` obsahovaly příslušné e-maily (normální uživatel i admin)
+- Opraveno v commitu `b2129ac`
+
+### Staging Full E2E run 26189017692 ✅
+
+- **29 passed, 0 failed, 3 skipped** (4m 35s)
+- Spec 21 prošel za 16.8s
+- Admin Online teď pro přihlášené uživatele je nyní chráněn každým staging CI během
+
+---
+
 ## 2026-05-20 — Issue #71 ZAMČEN PROTI REGRESI: staging E2E spec 20 zelený (PRs #79/#80/#81)
 
 ### Co bylo provedeno

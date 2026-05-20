@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 20. 05. 2026 (Issue #71 ZAMČEN proti regresi — staging E2E spec 20 zelený, run 26180130657)
+**Aktualizováno:** 20. 05. 2026 (Admin Online teď ZAMČEN proti regresi — staging E2E spec 21 zelený, run 26189017692)
 
 ---
 
@@ -34,11 +34,20 @@ Admin top bar "Online teď" badge nyní zobrazuje skutečný počet přihlášen
 
 `supabase.rpc(...).catch is not a function` — Supabase RPC vrací thenable, ne plný Promise; `.catch()` na něm neexistuje. Opraveno přepsáním `bump()` na `async/await` + `try/catch`.
 
+### CI lock — spec 21 (20. 05. 2026)
+
+- **`tests/e2e/21-admin-online-registered-users.spec.ts`** — staging-only, dva browser contexts (normální E2E uživatel + admin)
+- Commit `b70beba` — přidán spec 21
+- Commit `b2129ac` — fix: `exact: false` → `exact: true` pro email assertion (strict-mode violation: `e2e@onemil.cz` bylo substring `admin-e2e@onemil.cz`)
+- **Staging Full E2E run `26189017692` ✅ — 29 passed, 0 failed, 3 skipped** (4m 35s)
+- Spec 21 prošel za 16.8s: badge count ≥ 1 ✅, popover zobrazuje e-mail E2E uživatele ✅, žádná sekce „Anonymní návštěvníci" ✅
+
 ### Invarianty
 
 - `useHeartbeat` nikdy nesmí vyhodit výjimku — heartbeat je best-effort
 - `getAdminOnlineUsers` vrací `success: false` pro non-admin bez leakage dat
 - `AdminSoundIndicator.tsx` UI nedotčen — popover zobrazuje reálná data automaticky
+- Anonymní návštěvníci nejsou v OneMil sledováni — zůstávají pouze v Google Analytics
 
 ---
 
