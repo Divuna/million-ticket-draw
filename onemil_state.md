@@ -1,12 +1,23 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 20. 05. 2026 (Issue #71 finálně VYŘEŠEN — PRs #74/#75/#77/#78 — chunked MioCoin save na produkci funguje)
+**Aktualizováno:** 20. 05. 2026 (Issue #71 ZAMČEN proti regresi — staging E2E spec 20 zelený, run 26180130657)
 
 ---
 
-## ISSUE #71 — FINÁLNĚ VYŘEŠEN (20. 05. 2026)
+## ISSUE #71 — FINÁLNĚ VYŘEŠEN A ZAMČEN PROTI REGRESI (20. 05. 2026)
 
 Velké MioCoin bonusové save (~95 000 pozic) nyní fungují na produkci.
+**Chunked save flow je od 20. 05. 2026 chráněn každým staging CI během** přes
+`tests/e2e/20-admin-miocoin-chunked-save.spec.ts` (run `26180130657` — 28/0/3 ✅).
+
+### CI lock (PRs #79/#80/#81)
+- **PR #79** přidal spec 20 (staging-only, non-destructive)
+- **PR #80** přidal `seed-spec20-contest` step do `playwright-staging.yml` (status=draft, ticket_count=1000)
+- **PR #81** opravil locator strict-mode kolizi (`/^Celkem:.*600 pozic/i`)
+- Run `26180130657` ✅ — spec 20 prošel za 9.7 s, ověřil: 600 pozic vygenerováno, 2 chunky (`CHUNK_SIZE=500`), `bonus_prizes` count = 600, `total_miocoin_bonus` = 6 000, `admin_actions` obsahuje `miocoin_save_begin` + `miocoin_bulk_create` s `metadata.chunked = true`
+- Telegram `✅ OneMil STAGING full E2E OK — all specs passed` doručen (message_id 560)
+
+
 
 ### Final invariant
 Large MioCoin bonus saves **musí** používat chunked flow:

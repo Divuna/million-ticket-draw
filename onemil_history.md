@@ -14,6 +14,32 @@
 
 ---
 
+## 2026-05-20 — Issue #71 ZAMČEN PROTI REGRESI: staging E2E spec 20 zelený (PRs #79/#80/#81)
+
+### Co bylo provedeno
+
+- **PR #79** — `tests/e2e/20-admin-miocoin-chunked-save.spec.ts` (staging-only, non-destructive, 183 řádků). Drží frontend na chunked flow + DB read-back přes `@supabase/supabase-js` (anon + admin sign-in). Druhý commit v PR opravil `admin_actions.timestamp` (ne `created_at`). Merge commit: `6573144`.
+- **PR #80** — `.github/workflows/playwright-staging.yml` seed step `seed-spec20-contest` (status=draft, ticket_count=1000, ticket_price=1, main_image set) + `E2E_SPEC20_CONTEST_ID` v test env. Production workflow nedotčen. Merge commit: `cbd51f9`.
+- **PR #81** — locator strict-mode fix v spec 20: regex změněn na `/^Celkem:.*600 pozic/i` aby matchoval pouze badge, ne summary řádek. Merge commit: `ef01011`.
+
+### Staging Full E2E run 26180130657 ✅
+- **28 passed, 0 failed, 3 skipped** (2m 54s)
+- Spec 20 prošel za 9.7s
+- Seed contest `3537f6bd-7b70-4bf5-96d0-c8770e75d935` (ticket_count=1000, status=draft)
+- 600 MioCoin pozic vygenerováno, save úspěšný (žádný statement_timeout)
+- DB read-back ✅: `bonus_prizes` count = 600, `contests.total_miocoin_bonus` = 6 000, `admin_actions` obsahuje `miocoin_save_begin` + `miocoin_bulk_create` s `metadata.chunked = true`
+- Telegram `✅ OneMil STAGING full E2E OK — all specs passed` doručen (message_id 560)
+
+### První staging run po PR #80 selhal (run 26179272175)
+- Spec 20 narazil na Playwright strict-mode violation: regex `/600 pozic/i` matchoval 2 elementy (badge + summary řádek)
+- Test selhal **před** kliknutím na Save → chunked save samotný nebyl ověřen v tomto běhu
+- PR #81 opravil locator a další run prošel
+
+### Status issue #71
+**Resolved + chráněn každým staging CI během.** Frontend, DB funkce i CI lock jsou na místě.
+
+---
+
 ## 2026-05-20 — Issue #71 FINÁLNĚ VYŘEŠEN: chunked MioCoin save (PRs #74/#75/#77/#78)
 
 ### Co bylo provedeno
