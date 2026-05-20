@@ -14,6 +14,35 @@
 
 ---
 
+## 2026-05-20 — Issue #71 FINÁLNĚ VYŘEŠEN: chunked MioCoin save (PRs #74/#75/#77/#78)
+
+### Co bylo provedeno
+
+- **PR #74** — switch explicit MioCoin save z Edge Function (`distribute-bonus-prizes` s `explicit_bonuses`) na SQL RPC (`admin_bulk_insert_miocoin_bonuses`). Merge commit: `3a46ede`. Pouze `src/components/AdminContestManagement.tsx` (+18 / −21). Eliminace Deno wall-clock timeoutu pro explicitní save. `distribute-bonus-prizes` ponechán pro non-explicit (random/step_interval) cestu.
+- **PR #75** — exclude final ticket from MioCoin bonus position generator. Merge commit: `42c1017`. Pouze `src/components/AdminContestManagement.tsx` (+10 / −7). Zavedena konstanta `maxMioCoinPosition = ticketCount - 1` v obou distribučních cestách (even + random). Pozice = `ticket_count` rezervována pro hlavní výhru.
+- **PR #76** — pokus o `set_config('statement_timeout', '300000', true)` uvnitř `admin_bulk_insert_miocoin_bonuses` + idempotentní `DROP TABLE IF EXISTS tmp_miocoin_bonuses`. Migrace `20260520_admin_bulk_miocoin_statement_timeout.sql`. Aplikováno na produkci, verifikace `contains_drop_tmp=true`, `contains_statement_timeout=true`. **Neúčinné** — test22 stále selhal s `canceling statement due to statement timeout`. Root cause: PL/pgSQL `set_config` LOCAL nezasahuje běžící outer PostgREST statement; navíc Supabase API gateway má vlastní HTTP timeout (~60s). Architektonická slepá ulička.
+- **PR #77** — chunked MioCoin save. Migrace `20260520_miocoin_chunked_save_functions.sql` + frontend úprava. Merge commit: `3ecd892`. Tři nové SECURITY DEFINER funkce:
+  - `admin_begin_miocoin_save(p_contest_id, p_expected_count)` — admin role check, wipe stale `amount > 0` rows, reset `total_miocoin_bonus = 0`, audit `miocoin_save_begin`
+  - `admin_append_miocoin_chunk(p_contest_id, p_bonuses)` — admin role check, set-based chunk validation, single `INSERT … SELECT FROM jsonb_array_elements()`. Žádný DELETE. Vrací `inserted_count`.
+  - `admin_finalize_miocoin_save(p_contest_id, p_expected_count)` — admin role check, COUNT(*) + SUM(amount), `success=false` pokud `real_count ≠ expected`, sync `total_miocoin_bonus`, audit `miocoin_bulk_create`
+  - Frontend `handleSave` orchestruje begin → for-loop append × N → finalize. Save success vyžaduje finalize success. Legacy `admin_bulk_insert_miocoin_bonuses` ponechán beze změny.
+- **PR #78** — `CHUNK_SIZE = 5000 → 500`. Merge commit: `301a778`. Pouze `src/components/AdminContestManagement.tsx` (+4 / −1). Production test23 ukázal že 5000 stále hitne gateway timeout na chunk 1/9. 500 prochází komfortně — 95 000 pozic = ~190 malých chunků.
+
+### Production verification
+- Migrace `20260520_miocoin_chunked_save_functions.sql` aplikována na produkci (`xkzhjldrojjlrkezorey`) přes Supabase MCP `apply_migration`. Verifikace: `admin_begin_miocoin_save=exists`, `admin_append_miocoin_chunk=exists`, `admin_finalize_miocoin_save=exists` ✅
+- Lovable frontend publikován ✅
+- Final manual test na produkci: MioCoin bonus creation works, admin totals display correctly ✅
+
+### Selhané architekturní cesty (zaznamenané pro budoucí referenci)
+1. ❌ Jeden velký Edge Function request s `explicit_bonuses` (Deno wall-clock timeout)
+2. ❌ Jeden velký SQL RPC (`admin_bulk_insert_miocoin_bonuses`) — PostgREST/Kong gateway HTTP timeout
+3. ❌ Chunked save s `CHUNK_SIZE = 5000` — chunk 1/9 stále hitnul gateway timeout
+
+### Final invariant
+Large MioCoin bonus saves musí používat chunked flow s `CHUNK_SIZE = 500`.
+
+---
+
 ## 2026-05-20 — PRs #61–#66: bulk MioCoin timeout fix + produkce zelená
 
 ### Co bylo provedeno

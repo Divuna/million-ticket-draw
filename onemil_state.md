@@ -1,6 +1,46 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 20. 05. 2026 (PRs #61–#66 — bulk MioCoin timeout fix — produkce zelená)
+**Aktualizováno:** 20. 05. 2026 (Issue #71 finálně VYŘEŠEN — PRs #74/#75/#77/#78 — chunked MioCoin save na produkci funguje)
+
+---
+
+## ISSUE #71 — FINÁLNĚ VYŘEŠEN (20. 05. 2026)
+
+Velké MioCoin bonusové save (~95 000 pozic) nyní fungují na produkci.
+
+### Final invariant
+Large MioCoin bonus saves **musí** používat chunked flow:
+```
+admin_begin_miocoin_save(contest_id, expected_count)
+  → admin_append_miocoin_chunk(contest_id, chunk_payload) × N
+  → admin_finalize_miocoin_save(contest_id, expected_count)
+```
+Konstanta ve frontendu: **`CHUNK_SIZE = 500`** (v `src/components/AdminContestManagement.tsx`, `handleSave`).
+
+### Cesta k řešení (chronologicky)
+1. **PR #74** — frontend switch z Edge Function (`distribute-bonus-prizes`) na SQL RPC (`admin_bulk_insert_miocoin_bonuses`). ✅ vyřešilo Deno wall-clock timeout, ale narazilo na nový limit.
+2. **PR #75** — generator nikdy nevygeneruje pozici = `ticket_count` (rezervováno pro hlavní výhru). ✅ data integrity fix.
+3. **PR #76** — pokus o `set_config('statement_timeout', '300000', true)` uvnitř funkce. ❌ NEÚČINNÉ (PL/pgSQL `set_config` LOCAL nezasahuje běžící outer statement; Supabase API gateway má vlastní HTTP timeout).
+4. **PR #77** — chunked flow: tři SECURITY DEFINER funkce + frontend orchestrace begin → append × N → finalize. ✅ základ architektury správný.
+5. **PR #78** — `CHUNK_SIZE = 5000 → 500`. ✅ test23 ukázal že 5000 stále hitá gateway timeout; 500 prochází komfortně.
+
+### Production verification
+- Migrace `20260520_miocoin_chunked_save_functions.sql` aplikována na produkci ✅
+- Verifikace: `admin_begin_miocoin_save=exists`, `admin_append_miocoin_chunk=exists`, `admin_finalize_miocoin_save=exists` ✅
+- Lovable frontend publikován ✅
+- Final manual test na produkci: MioCoin bonus creation works, admin totals display correctly ✅
+
+### Předchozí selhané cesty (neopakovat)
+1. ❌ Jeden velký Edge Function request s `explicit_bonuses` (Deno wall-clock timeout ~150s)
+2. ❌ Jeden velký SQL RPC (`admin_bulk_insert_miocoin_bonuses`) — PostgREST/Kong gateway HTTP timeout ~60s
+3. ❌ Chunked save s `CHUNK_SIZE = 5000` — chunk 1/9 stále hitnul gateway timeout
+
+### Co se NESMÍ udělat
+- Vracet se k jednomu monolitickému RPC volání pro large saves
+- Spoléhat se na `set_config('statement_timeout', ...)` uvnitř funkce volané z PostgREST
+- Zvýšit `CHUNK_SIZE` nad 500 bez explicitního důkazu že gateway HTTP timeout to unese
+- Měnit kontrakt tří funkcí (`admin_begin_miocoin_save` / `admin_append_miocoin_chunk` / `admin_finalize_miocoin_save`) bez ověřené architektonické náhrady
+- Smazat legacy `admin_bulk_insert_miocoin_bonuses` — ponechán beze změny pro backward compatibility / malé saves
 
 ---
 
@@ -134,6 +174,7 @@ Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje 
 - PR #26 **feat: add read-only contest economy panel** byl mergnut do `main` (merge commit `5f5eb28b17c0cab2b8eaa47e360d75b34252ba59`).
 - PR #27 **feat: add admin economy summary bar** byl mergnut do `main` (merge commit `9ea63c81c218ba91422005e8c09ab457800ef395`).
 - PR #30 **Fix MioCoin final save to use previewed positions** byl mergnut do `main` (merge commit `7b50b30d2413ad6d839f8e4100c2a9c7a806710d`).
+- PR #72 byl mergnut do `main` (merge commit `7dfa9ffc29bd0dddb6253f9a68ef1d10758a8636`).
 - `src/components/AdminContestManagement.tsx` má nový read-only tab **„Ekonomika"** v admin modalu pro vytvoření/editaci soutěže.
 - Nad taby admin contest modalu je kompaktní read-only live economy summary bar.
 - Summary bar ukazuje počet ticketů, celkové odhadované náklady, doporučenou cenu ticketu, odhadovaný čistý zisk a marži.
@@ -143,9 +184,14 @@ Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje 
 - Ekonomické předpoklady jsou zatím pouze frontend state; po změně modal kontextu se resetují na výchozí hodnoty.
 - Panel zatím nic neukládá do Supabase a nemá databázovou persistenci.
 - Phase 2B opravila finální MioCoin save behavior v `AdminContestManagement`: finální uložení soutěže nyní persistuje MioCoin bonusy podle přesně previewovaných pozic z frontend state `mioCoinBonuses`.
-- Admin save path už pro MioCoin bonusy nere-randomizuje pozice přes `distribute-bonus-prizes`.
+- Finální architektura pro velké MioCoin bonusy je nyní: batched Edge Function `distribute-bonus-prizes` s `explicit_bonuses`.
+- Velké vytvoření MioCoin bonusů nyní funguje i pro desítky tisíc pozic bez monolitického timeoutujícího RPC insertu.
+- Admin save path pro MioCoin bonusy zachovává přesně previewované pozice a ukládá je přes batched explicit path.
 - Před uložením se validují bonusové pozice: celá čísla, rozsah `1..ticket_count`, duplicitní MioCoin pozice, kolize MioCoin/věcné výhry a kolize s posledním ticketem.
 - Editace bonusových pozic existující soutěže je blokována, pokud už pro soutěž existují tikety.
+- Vygenerované / materializované MioCoin bonusové pozice jsou po vytvoření soutěže neměnné. V editaci je nelze přegenerovat, přepsat ani nahradit.
+- Edge Function `distribute-bonus-prizes` byla po PR #72 nasazena i do produkce.
+- Ověření `test7`: `admin_total=63000`, `real_total=63000`, `miocoin_rows=63000`.
 - Phase 3A rozšiřuje frontend-only `PhysicalPrize` preview o lokální ekonomická pole: dodavatel, nákupní cena v Kč, DPH a volitelný override balného / pošty / práce.
 - Formulář věcné bonusové výhry zobrazuje tato pole česky a seznam přidaných výher ukazuje i cost preview metadata.
 - Ekonomika tab i horní economy summary bar nově započítávají preview nákladů věcných bonusových výher do celkových odhadovaných nákladů, zisku, marže, bodu zvratu a doporučené ceny ticketu.
@@ -153,7 +199,7 @@ Aktuální firemní identita, kontakty, e-mailový podpis a fakturační údaje 
 - Nákladové údaje věcných výher jsou v této fázi pouze frontend preview a neukládají se do Supabase.
 
 ### Invariant
-- Nebyl změněn `buy_ticket_atomic`, ticket purchase logic, winner logic, Partner Offers, `bonus_prizes` schema, `distribute-bonus-prizes`, `admin_manage_bonus_prize`, main prize final-ticket logic, migrace ani production smoke scope.
+- Nebyl změněn `buy_ticket_atomic`, ticket purchase logic, winner logic, Partner Offers, `bonus_prizes` schema, `admin_manage_bonus_prize`, main prize final-ticket logic, migrace ani production smoke scope.
 - Preview fyzických nákladů zatím nemá databázovou persistenci a nemění finální save behavior bonusů.
 
 ---
