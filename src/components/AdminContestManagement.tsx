@@ -695,6 +695,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setForm((prev) => ({ ...prev, [field]: value as any }));
     };
 
+  // When the user focuses a numeric input whose stored value is 0 (the common
+  // default), select all text so typing replaces "0" instead of producing a
+  // leading-zero value like "065000". Stored numeric values stay correct.
+  const handleNumericFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (Number(e.target.value) === 0) {
+      e.target.select();
+    }
+  };
+
   const handleStatusChange = (value: string) => {
     setForm((prev) => ({ ...prev, status: value }));
   };
@@ -2166,6 +2175,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   min={0}
                   value={economyAssumptions.mainPrizeRealCost}
                   onChange={updateEconomyAssumption("mainPrizeRealCost")}
+                  onFocus={handleNumericFocus}
                   placeholder="0"
                 />
                 <p className="text-xs text-muted-foreground mt-1">Pořizovací náklad hlavní výhry — použije se v ekonomické kalkulaci.</p>
@@ -2232,11 +2242,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               <div className="flex gap-4">
                 <div className="flex-1">
                   <Label>Počet tiketů</Label>
-                  <Input type="number" min={1} value={form.ticket_count} onChange={handleChange("ticket_count")} />
+                  <Input type="number" min={1} value={form.ticket_count} onChange={handleChange("ticket_count")} onFocus={handleNumericFocus} />
                 </div>
                 <div className="flex-1">
                   <Label>Cena tiketu (MioCoins)</Label>
-                  <Input type="number" min={1} value={form.ticket_price} onChange={handleChange("ticket_price")} />
+                  <Input type="number" min={1} value={form.ticket_price} onChange={handleChange("ticket_price")} onFocus={handleNumericFocus} />
                 </div>
               </div>
 
@@ -2293,6 +2303,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                         setMioCoinGeneratorTouched(true);
                         setTotalMioCoinsInput(Number(e.target.value));
                       }}
+                      onFocus={handleNumericFocus}
                     />
                   </div>
                   <div className="flex-1">
@@ -2305,6 +2316,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                         setMioCoinGeneratorTouched(true);
                         setStepValue(Number(e.target.value));
                       }}
+                      onFocus={handleNumericFocus}
                     />
                   </div>
                 </div>
@@ -2413,6 +2425,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                       onChange={(e) =>
                         setNewPhysicalPrize((prev) => ({ ...prev, unit_cost_czk: Number(e.target.value || 0) }))
                       }
+                      onFocus={handleNumericFocus}
                     />
                   </div>
                 </div>
@@ -2429,6 +2442,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                       onChange={(e) =>
                         setNewPhysicalPrize((prev) => ({ ...prev, vat_rate: Number(e.target.value || 0) }))
                       }
+                      onFocus={handleNumericFocus}
                     />
                   </div>
                   <div>
@@ -2444,6 +2458,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                           handling_override_czk: e.target.value === "" ? null : Number(e.target.value),
                         }))
                       }
+                      onFocus={handleNumericFocus}
                       placeholder={`Jinak se použije ${Math.max(0, economyAssumptions.handlingCostPerPhysicalPrize || 0).toLocaleString("cs-CZ")} Kč`}
                     />
                   </div>
@@ -2461,6 +2476,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                       onChange={(e) =>
                         setPhysicalPrizeQuantity(Math.max(1, Math.floor(Number(e.target.value) || 1)))
                       }
+                      onFocus={handleNumericFocus}
                       placeholder="1"
                     />
                   </div>
@@ -2504,6 +2520,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                       onChange={(e) =>
                         setNewPhysicalPrize((prev) => ({ ...prev, ticket_position: Number(e.target.value) }))
                       }
+                      onFocus={handleNumericFocus}
                     />
                   </div>
                 )}
@@ -2627,6 +2644,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                     min={0}
                     value={economyAssumptions.vatRate}
                     onChange={updateEconomyAssumption("vatRate")}
+                    onFocus={handleNumericFocus}
                   />
                 </div>
                 <div>
@@ -2636,6 +2654,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                     min={0}
                     value={economyAssumptions.setupCost}
                     onChange={updateEconomyAssumption("setupCost")}
+                    onFocus={handleNumericFocus}
                   />
                 </div>
                 <div>
@@ -2645,6 +2664,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                     min={0}
                     value={economyAssumptions.marketingPercent}
                     onChange={updateEconomyAssumption("marketingPercent")}
+                    onFocus={handleNumericFocus}
                   />
                 </div>
                 <div>
@@ -2654,6 +2674,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                     min={0}
                     value={economyAssumptions.handlingCostPerPhysicalPrize}
                     onChange={updateEconomyAssumption("handlingCostPerPhysicalPrize")}
+                    onFocus={handleNumericFocus}
                   />
                 </div>
                 <div>
@@ -2664,6 +2685,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                     max={95}
                     value={economyAssumptions.targetMarginPercent}
                     onChange={updateEconomyAssumption("targetMarginPercent")}
+                    onFocus={handleNumericFocus}
                   />
                 </div>
               </div>
@@ -2863,6 +2885,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                             min={0}
                             value={newMediaSortOrder}
                             onChange={(e) => setNewMediaSortOrder(Number(e.target.value))}
+                            onFocus={handleNumericFocus}
                             className="h-9"
                           />
                         </div>
