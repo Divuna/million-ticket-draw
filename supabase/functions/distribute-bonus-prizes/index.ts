@@ -535,7 +535,59 @@ serve(async (req) => {
       }
     }
 
-    // Send summary Sofinity event
+    // ── Sync contests.total_miocoin_bonus from real DB sum ───────────────────
+    // Must run BEFORE non-critical external calls (Sofinity).
+    // Query the DB as source of truth — do NOT rely on local request data.
+    // If sync fails, return success=false so the caller knows the column is stale.
+    if (bonus_type === 'MioCoin' && hasExplicitBonuses && failedBatches === 0) {
+      // Fetch all bonus_prizes rows for this contest where amount > 0.
+      // .limit(200_000) sets Range header to allow up to 200k rows — well above
+      // any realistic contest size and avoids the default PostgREST 1 000-row cap.
+      const { data: dbRows, error: dbSumError } = await supabaseAdmin
+        .from('bonus_prizes')
+        .select('amount')
+        .eq('contest_id', contest_id)
+        .gt('amount', 0)
+        .limit(200000)
+
+      if (dbSumError) {
+        return jsonFailure(
+          'sync_total_query',
+          `Failed to query bonus_prizes for total_miocoin_bonus sync: ${dbSumError.message}`,
+          dbSumError,
+          totalCreated,
+          Date.now() - startTime,
+          warnings.length > 0 ? warnings : undefined,
+        )
+      }
+
+      const realDbTotal = (dbRows ?? []).reduce(
+        (s: number, r: { amount: number }) => s + (Number(r.amount) || 0),
+        0,
+      )
+
+      const { error: syncTotalError } = await supabaseAdmin
+        .from('contests')
+        .update({ total_miocoin_bonus: realDbTotal })
+        .eq('id', contest_id)
+
+      if (syncTotalError) {
+        return jsonFailure(
+          'sync_total_update',
+          `Failed to sync contests.total_miocoin_bonus: ${syncTotalError.message}`,
+          syncTotalError,
+          totalCreated,
+          Date.now() - startTime,
+          warnings.length > 0 ? warnings : undefined,
+        )
+      }
+
+      console.log(
+        `[distribute-bonus-prizes] synced total_miocoin_bonus = ${realDbTotal} for contest ${contest_id}`,
+      )
+    }
+
+    // Send summary Sofinity event (non-critical — runs after DB sync)
     try {
       await supabaseAdmin.functions.invoke('send_event_to_sofinity', {
         body: {
@@ -558,20 +610,6 @@ serve(async (req) => {
     }
 
     const elapsedMs = Date.now() - startTime
-
-    if (bonus_type === 'MioCoin' && hasExplicitBonuses && failedBatches === 0) {
-      const { error: syncTotalError } = await supabaseAdmin
-        .from('contests')
-        .update({
-          total_miocoin_bonus: allRowsToInsert.reduce((sum, row) => sum + row.amount, 0),
-        })
-        .eq('id', contest_id)
-
-      if (syncTotalError) {
-        console.error('Failed to sync contests.total_miocoin_bonus:', syncTotalError)
-        warnings.push(`Failed to sync total_miocoin_bonus: ${syncTotalError.message}`)
-      }
-    }
     
     console.log(`Completed: ${totalCreated}/${allRowsToInsert.length} bonuses created in ${elapsedMs}ms (${successfulBatches} successful, ${failedBatches} failed batches)`)
 
