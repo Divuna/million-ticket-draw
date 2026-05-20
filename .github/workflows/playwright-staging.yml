@@ -252,6 +252,48 @@ jobs:
           SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
           SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
 
+      - name: Seed E2E Spec20 chunked MioCoin save test contest
+        # Seed a fresh draft contest for spec 20 (admin MioCoin chunked save).
+        # ticket_count = 1000 (≥ 601 required so 600 MioCoin positions fit;
+        # SPEC18 contest cannot be reused because its ticket_count = 100).
+        # ticket_price = 1, status = draft, main_image + rules_pdf_url set
+        # so save validation passes without UI file uploads.
+        # Spec 20 generates 600 MioCoin bonuses on this contest — fresh per
+        # run, so no stale MioCoin rows accumulate.
+        # WARNING-only: if seed fails, spec 20 skips rather than failing the suite.
+        id: seed-spec20-contest
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            "${SUPABASE_URL}/rest/v1/contests" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{
+              "title": "E2E Spec20 MioCoin Chunked Save",
+              "description": "Staging-only contest used by spec 20 to lock the chunked MioCoin save flow (issue #71).",
+              "main_prize": "E2E chunked-save test prize",
+              "ticket_count": 1000,
+              "ticket_price": 1,
+              "status": "draft",
+              "next_ticket_number": 1,
+              "fast_game": false,
+              "main_image": "https://placehold.co/800x600/1D2128/E7EBF0?text=E2E+Spec20",
+              "rules_pdf_url": "https://example.com/e2e-test-rules.pdf"
+            }')
+          echo "Seed spec20 contest response: $RESPONSE"
+          SPEC20_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
+          if [ -z "$SPEC20_ID" ] || [ "$SPEC20_ID" = "null" ]; then
+            echo "WARNING: spec20 contest seed failed — spec 20 will skip. Response: $RESPONSE" >&2
+            SPEC20_ID=""
+          else
+            echo "Seeded spec20 chunked-save contest: $SPEC20_ID"
+          fi
+          echo "spec20_contest_id=$SPEC20_ID" >> $GITHUB_OUTPUT
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
       - name: Ensure staging admin E2E user has admin role
         # ── Why this step exists ──────────────────────────────────────────────
         # Specs 15, 16, 18, 19 log in as the admin E2E account.
@@ -379,6 +421,7 @@ jobs:
           E2E_CONTEST_ID: ${{ secrets.STAGING_E2E_CONTEST_ID }}
           E2E_WIN_CONTEST_ID: ${{ steps.seed-win-contest.outputs.win_contest_id }}
           E2E_SPEC18_CONTEST_ID: ${{ steps.seed-spec18-contest.outputs.spec18_contest_id }}
+          E2E_SPEC20_CONTEST_ID: ${{ steps.seed-spec20-contest.outputs.spec20_contest_id }}
           E2E_AFFILIATE_EMAIL: ${{ secrets.STAGING_E2E_AFFILIATE_EMAIL }}
           E2E_AFFILIATE_PASSWORD: ${{ secrets.STAGING_E2E_AFFILIATE_PASSWORD }}
           E2E_ADMIN_EMAIL: ${{ secrets.STAGING_E2E_ADMIN_EMAIL }}
