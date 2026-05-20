@@ -1680,6 +1680,23 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         }
       }
 
+      // Guard: generator inputs filled but "Vygenerovat MioCoiny" never clicked.
+      // Saving in this state would silently persist 0 MioCoin rows — block and warn.
+      if (mioCoinBonuses.length === 0 && totalMioCoinsInput > 0 && stepValue > 0) {
+        console.warn(
+          "[AdminContestManagement] MioCoin save guard triggered — generator inputs filled but bonuses not generated.",
+          { totalMioCoinsInput, stepValue, computedPositionCount }
+        );
+        toast({
+          title: "MioCoin bonusy nejsou vygenerované",
+          description:
+            "Vyplnil(a) jste MioCoin bonusy, ale nejsou vygenerované. Klikněte nejdřív na 'Vygenerovat MioCoiny' a potom soutěž uložte.",
+          variant: "destructive",
+        });
+        setSaving(false);
+        return;
+      }
+
       // Save bonuses if we have a contest ID
       if (contestId) {
         // Delete existing bonuses for this contest
