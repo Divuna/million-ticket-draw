@@ -1861,7 +1861,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             amount,
           }));
           const expectedCount = bonusPayload.length;
-          const CHUNK_SIZE = 5000;
+          // CHUNK_SIZE = 500: production test23 with 5 000 still hit the Supabase
+          // API gateway HTTP timeout on chunk 1/9. Lowered to 500 so each
+          // append RPC finishes comfortably under the gateway budget.
+          const CHUNK_SIZE = 500;
 
           // 1) Begin: wipe stale rows + reset total + audit row
           const { data: beginResult, error: beginError } = await supabase.rpc(
