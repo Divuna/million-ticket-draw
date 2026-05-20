@@ -16,10 +16,13 @@ export function useHeartbeat(userId: string | undefined): void {
   useEffect(() => {
     if (!userId) return;
 
-    const bump = () => {
-      supabase
-        .rpc('bump_user_last_seen')
-        .catch((err) => console.error('[useHeartbeat] bump error:', err));
+    const bump = async () => {
+      try {
+        const { error } = await supabase.rpc('bump_user_last_seen');
+        if (error) console.error('[useHeartbeat] bump error:', error);
+      } catch (err) {
+        console.error('[useHeartbeat] bump error:', err);
+      }
     };
 
     bump(); // fire immediately so admin sees user within seconds of sign-in
