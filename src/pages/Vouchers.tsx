@@ -659,13 +659,13 @@ const Vouchers: React.FC = () => {
                           className="absolute inset-0 z-[1] opacity-60"
                           style={{
                             background: `
-                              radial-gradient(1.5px 1.5px at 15% 25%, hsl(45 80% 65% / 0.6) 50%, transparent 100%),
-                              radial-gradient(1px 1px at 30% 60%, hsl(45 70% 55% / 0.4) 50%, transparent 100%),
-                              radial-gradient(1.2px 1.2px at 55% 20%, hsl(40 75% 60% / 0.5) 50%, transparent 100%),
-                              radial-gradient(0.8px 0.8px at 70% 45%, hsl(45 80% 70% / 0.35) 50%, transparent 100%),
-                              radial-gradient(1px 1px at 85% 75%, hsl(45 70% 60% / 0.45) 50%, transparent 100%),
-                              radial-gradient(1.3px 1.3px at 10% 80%, hsl(40 80% 55% / 0.4) 50%, transparent 100%),
-                              radial-gradient(0.9px 0.9px at 45% 85%, hsl(45 75% 65% / 0.3) 50%, transparent 100%)
+                              radial-gradient(1.5px 1.5px at 15% 25%, rgba(255,181,71,0.6) 50%, transparent 100%),
+                              radial-gradient(1px 1px at 30% 60%, rgba(255,138,0,0.4) 50%, transparent 100%),
+                              radial-gradient(1.2px 1.2px at 55% 20%, rgba(255,181,71,0.5) 50%, transparent 100%),
+                              radial-gradient(0.8px 0.8px at 70% 45%, rgba(255,181,71,0.35) 50%, transparent 100%),
+                              radial-gradient(1px 1px at 85% 75%, rgba(255,138,0,0.45) 50%, transparent 100%),
+                              radial-gradient(1.3px 1.3px at 10% 80%, rgba(255,138,0,0.4) 50%, transparent 100%),
+                              radial-gradient(0.9px 0.9px at 45% 85%, rgba(255,181,71,0.3) 50%, transparent 100%)
                             `
                           }}
                         />
@@ -731,7 +731,7 @@ const Vouchers: React.FC = () => {
                             />
                           ) : (
                             <div className="w-full h-full bg-[hsl(220_30%_10%)] flex items-center justify-center">
-                              <Gift className={`w-12 h-12 ${expiration.isExpired ? 'text-muted-foreground/30' : 'text-[hsl(45_60%_40%/0.4)]'}`} />
+                              <Gift className={`w-12 h-12 ${expiration.isExpired ? 'text-muted-foreground/30' : 'text-[rgba(255,138,0,0.4)]'}`} />
                             </div>
                           )}
                         </div>

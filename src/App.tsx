@@ -337,7 +337,7 @@ function GlobalWinnersRealtimeFeed() {
             description: <div className="winner-toast-shimmer" />,
             style: {
               background: 'linear-gradient(135deg, hsl(222, 47%, 11%), hsl(222, 40%, 16%))',
-              border: '1px solid hsl(43, 70%, 45%, 0.3)',
+              border: '1px solid rgba(255,138,0,0.3)',
               borderRadius: '0.75rem',
               boxShadow: '0 8px 24px hsl(222, 50%, 3%, 0.5)',
               backdropFilter: 'blur(8px)',
