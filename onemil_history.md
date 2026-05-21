@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-05-21 — Brand Wins + WinDetailModal step 12: sjednoceny (PR #96, merge commit e18d40ab)
+
+### Co bylo provedeno
+
+- **`src/pages/Wins.tsx`** — "Odesláno" filter button blue → brand orange; Tag ikona `text-blue-400/30` → `rgba(255,138,0,0.3)`
+- **`src/components/WinDetailModal.tsx`** — status badges yellow/blue → `rgba(255,138,0,...)` / `#FFB547`; Trophy ikona `text-yellow-400` → `#FFB547`
+- Logika, layout, data — beze změny; PR #96; Smoke Tests ✅
+
+---
+
 ## 2026-05-21 — Brand CustomerContestView step 11: sjednocena (PR #94, merge commit 3f42152)
 
 ### Co bylo provedeno

@@ -1,6 +1,29 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand CustomerContestView step 11 — PR #94 mergnut do main)
+**Aktualizováno:** 21. 05. 2026 (Brand Wins + WinDetailModal step 12 — PR #96 mergnut do main)
+
+---
+
+## BRAND WINS + WINDETAILMODAL — STEP 12 DOKONČEN (21. 05. 2026)
+
+Wins.tsx a WinDetailModal.tsx sjednoceny podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/pages/Wins.tsx`** (5 ins / 5 del):
+  - "Odesláno" filter button: `from-blue-500 to-blue-600` + `rgba(59,130,246,0.3)` + `bg-blue-500/10 text-blue-400 border-blue-500/30` → Energy Orange brand
+  - Tag ikona v empty offers state: `text-blue-400/30` → `text-[rgba(255,138,0,0.3)]`
+- **`src/components/WinDetailModal.tsx`** (4 ins / 4 del):
+  - Status badge `pending`: `bg-yellow-500/20 text-yellow-400 border-yellow-500/30` → `rgba(255,138,0,0.2)` / `#FFB547`
+  - Status badge `připraveno k odeslání`: `bg-blue-500/20 text-blue-400 border-blue-500/30` → `rgba(255,138,0,0.2)` / `#FFB547`
+  - Status badge `default`: `bg-yellow-500/20 text-yellow-400 border-yellow-500/30` → `rgba(255,138,0,0.2)` / `#FFB547`
+  - Trophy ikona v type badge: `text-yellow-400` → `text-[#FFB547]`
+
+### Merge + testy
+
+- **PR #96** mergnut do `main` — merge commit `e18d40ab`
+- **Playwright Smoke Tests (branch)**: SUCCESS ✅ (run `26247530336`)
+- **Playwright Smoke Tests (post-merge main)**: SUCCESS ✅ (run `26247612549`)
 
 ---
 
