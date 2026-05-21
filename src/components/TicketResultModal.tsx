@@ -1081,7 +1081,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                   </div>
                   <div className="flex w-full flex-col items-center gap-2 text-center">
                     {result.partner_offer.partner_name && (
-                      <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                      <p className="text-xs font-semibold text-[#FFB547] uppercase tracking-wider">
                         {result.partner_offer.partner_name}
                       </p>
                     )}
@@ -1095,9 +1095,9 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                       </p>
                     )}
                   </div>
-                  <p className="win-moment-cta-hint text-center text-[11px] font-semibold uppercase text-blue-200/75 sm:text-xs">
+                  <p className="win-moment-cta-hint text-center text-[11px] font-semibold uppercase text-[rgba(255,181,71,0.75)] sm:text-xs">
                     Nabídka je uložena v tvých{' '}
-                    <span className="text-blue-100">výhrách → Nabídky</span>
+                    <span className="text-[#FFB547]">výhrách → Nabídky</span>
                   </p>
                   <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
                     <Button
@@ -1111,7 +1111,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                       type="button"
                       variant="outline"
                       onClick={handleGoToWins}
-                      className="w-full font-semibold border-blue-500/40"
+                      className="w-full font-semibold border-[rgba(255,138,0,0.4)]"
                     >
                       Zobrazit nabídku
                     </Button>
