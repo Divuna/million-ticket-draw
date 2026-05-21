@@ -113,7 +113,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             <div className="absolute top-4 left-4">
               <Badge className="bg-background/80 text-foreground border-0 backdrop-blur-sm">
-                <Tag className="h-4 w-4 text-blue-400 mr-1" />
+                <Tag className="h-4 w-4 text-[#FFB547] mr-1" />
                 Nabídka partnera
               </Badge>
             </div>
@@ -125,7 +125,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
           {/* Header */}
           <DialogHeader className="space-y-1">
             {partnerName && (
-              <p className="text-sm text-blue-400 font-medium uppercase tracking-wide">
+              <p className="text-sm text-[#FFB547] font-medium uppercase tracking-wide">
                 {partnerName}
               </p>
             )}
