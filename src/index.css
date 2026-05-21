@@ -69,7 +69,7 @@
     --sidebar-ring: 33 100% 50%;
 
     /* Brand-aligned accent colors */
-    --neon-blue: 220 80% 45%;
+    --neon-blue: 33 100% 50%;
     --neon-gold: 38 100% 64%;
     --neon-red: 0 72% 51%;
     --neon-purple: 270 50% 60%;
@@ -84,9 +84,9 @@
     --package-green: 160 55% 50%;
 
     /* Premium Typography Colors */
-    --heading-gold: 43 55% 66%;
-    --heading-gold-soft: 43 45% 58%;
-    --heading-gold-muted: 43 38% 48%;
+    --heading-gold: 38 100% 64%;
+    --heading-gold-soft: 38 85% 55%;
+    --heading-gold-muted: 38 65% 42%;
     --text-silver: 210 18% 78%;
     --text-muted-gray: 212 12% 55%;
 
@@ -298,12 +298,10 @@
   .text-heading-gold {
     background: linear-gradient(
       180deg,
-      hsl(50 95% 85%) 0%,
-      hsl(48 90% 78%) 8%,
-      hsl(45 85% 68%) 30%,
-      hsl(43 80% 55%) 55%,
-      hsl(40 75% 48%) 80%,
-      hsl(35 70% 40%) 100%
+      #FFB547 0%,
+      #FF8A00 40%,
+      #FFB547 80%,
+      #FF8A00 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
