@@ -14,6 +14,25 @@
 
 ---
 
+## 2026-05-21 — Brand homepage step 5: stránka Homepage sjednocena (PR #88, merge commit 02d7f4c)
+
+### Co bylo provedeno
+
+- **`src/pages/Homepage.tsx`** — yellow/gold/amber HSL a Tailwind → Energy Orange/Amber brand kit: zlaté separátory (5×, outer glow + ostrá linka + shimmer), banner horní separátor + horizontální light gradient, hvězdné částice „Poslední výherci", okraje sekcí (`border-amber-300/20`), „Probíhající soutěže" action box (border + hover + Trophy icon), admin „Pouze čtení" badge, empty state „Žádné aktivní soutěže" (navy bg, `#FFB547` titulek), inline voucher karta, partner karty, 3× coming-soon karty (navy + orange border)
+- Logika aplikace, soutěže, tikety, wallet, vouchery, routing, UI texty — beze změny
+- Žádné Supabase dotazy, Stripe, migrace nezměněny
+
+### Větev a PR
+
+- Větev: `style/brand-homepage-step-5`
+- PR #88 mergnut do `main` — merge commit `02d7f4c6c9de054910e5ecd075307fd0c820b6ff`
+
+### Testy
+
+- **Playwright Smoke Tests**: SUCCESS po mergi do main (run `26229779258`, 1m 11s) ✅
+
+---
+
 ## 2026-05-21 — Brand vouchers step 4: stránka Vouchery sjednocena (PR #87, merge commit 6dab7c3)
 
 ### Co bylo provedeno

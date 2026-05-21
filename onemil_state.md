@@ -1,6 +1,42 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand vouchers step 4 — PR #87 mergnut do main)
+**Aktualizováno:** 21. 05. 2026 (Brand homepage step 5 — PR #88 mergnut do main)
+
+---
+
+## BRAND HOMEPAGE — STEP 5 DOKONČEN (21. 05. 2026)
+
+Stránka Homepage sjednocena podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/pages/Homepage.tsx`** — všechny yellow/gold/amber HSL a Tailwind hodnoty nahrazeny brand hodnotami:
+  - **Zlaté separátory (5×)**: vnější glow `hsla(45, 80%, 50%, 0.15…0.25…0.30)` → `rgba(255,138,0,0.1…0.18…0.22)` ; ostrá linka `hsla(45, 75%, 50%, 0.6) → hsla(50, 95%, 70%, 1.0)` → `rgba(255,138,0,0.45) → rgba(255,181,71,0.95)` ; shimmer `hsla(50, 100%, 90%, 0.4)` → `rgba(255,220,150,0.3)`
+  - **Banner horní separátor + horizontální light gradient**: gold → orange/amber brand při zachovaných průhlednostech
+  - **Hvězdné částice „Poslední výherci"** (15-line blok): `hsla(45, 80%, 70%, 0.8)` → `rgba(255,181,71,0.55)`, `hsla(45, 60%, 65%, 0.6)` → `rgba(255,138,0,0.45)` atd.
+  - **Okraje sekcí (2×)**: `border-amber-300/20` → `border-[rgba(255,138,0,0.2)]`
+  - **"Probíhající soutěže" action box**: `border-amber-400/30` → `border-[rgba(255,138,0,0.3)]`, hover border → `rgba(255,138,0,0.5)`, inset glow → orange, Trophy icon `text-amber-400` → `text-[#FF8A00]`
+  - **Admin "Pouze čtení" badge**: `bg-amber-100/10 border-amber-400/30 text-amber-400` → `bg-[rgba(255,138,0,0.08)] border-[rgba(255,138,0,0.3)] text-[#FF8A00]`
+  - **Empty state „Žádné aktivní soutěže"**: `border-amber-400` + `from-amber-50 to-yellow-50` → `border-[rgba(255,138,0,0.4)]` + deep navy gradient `from-[hsl(220_35%_8%)] to-[hsl(220_30%_5%)]`; titulek `text-amber-800 dark:text-amber-400` → `text-[#FFB547]`; text → `text-muted-foreground`
+  - **Inline voucher karta**: `from-[hsl(40_20%_14%)] … border-[hsl(40_30%_35%)]` → deep navy + `border-[rgba(255,138,0,0.35)]`, hover border/shadow → orange brand
+  - **Partner karty**: stejný vzor jako voucher karta
+  - **3× coming-soon karty**: `from-[hsl(40_20%_14%)] … border-[hsl(45_80%_45%)]` → navy + `border-[rgba(255,138,0,0.4)]`
+
+### Co se nezměnilo
+
+- Žádná logika aplikace — soutěže, tikety, wallet, vouchery, partner karty, routování
+- Žádné Supabase dotazy, Stripe, backend, migrace
+- Žádné UI texty
+
+### Merge + testy
+
+- **PR #88** mergnut do `main` — merge commit `02d7f4c6c9de054910e5ecd075307fd0c820b6ff`
+- Změněn pouze 1 soubor: `src/pages/Homepage.tsx` (48 ins / 48 del)
+- **Playwright Smoke Tests**: SUCCESS — run `26229779258` (1m 11s), `completed / success`
+
+### Další krok
+
+Step 6: `src/pages/Profile.tsx` — 115 výskytů yellow/gold; VIPCard varianty, plovoucí částice, avatar ring (conic-gradient), MioCoin balance display, form vstupy, CTA tlačítka.
 
 ---
 
