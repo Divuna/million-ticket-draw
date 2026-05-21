@@ -44,7 +44,7 @@ export const BonusPrizeDetailModal: React.FC<BonusPrizeDetailModalProps> = ({
           <div className="absolute inset-0 bg-background/80 pointer-events-none" />
         )}
         <DialogHeader className="relative z-10">
-          <DialogTitle className="text-xl font-bold text-yellow-400">
+          <DialogTitle className="text-xl font-bold text-[#FFB547]">
             {prize?.description || 'Bonusová výhra'}
           </DialogTitle>
         </DialogHeader>

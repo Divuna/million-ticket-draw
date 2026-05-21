@@ -164,7 +164,7 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
         return 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400';
       case 'delivered':
       case 'claimed':
-        return 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-400';
+        return 'bg-[rgba(255,138,0,0.08)] border-[rgba(255,138,0,0.3)] text-[#FF8A00] dark:bg-[rgba(255,138,0,0.1)] dark:border-[rgba(255,138,0,0.3)] dark:text-[#FFB547]';
       case 'won':
         return 'bg-purple-50 border-purple-200 text-purple-800 dark:bg-purple-900/20 dark:border-purple-700 dark:text-purple-400';
       default:

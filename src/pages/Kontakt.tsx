@@ -18,7 +18,7 @@ const Kontakt: React.FC = () => {
         <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/40 backdrop-blur-sm shadow-[0_8px_32px_hsl(222_50%_3%/0.4)]">
           {/* Header Section */}
           <header className="px-8 md:px-12 pt-10 md:pt-14 pb-8">
-            <h1 className="text-3xl md:text-4xl font-heading font-bold bg-gradient-to-r from-[hsl(var(--heading-gold))] via-[hsl(45_85%_60%)] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent leading-tight">
+            <h1 className="text-3xl md:text-4xl font-heading font-bold bg-gradient-to-r from-[hsl(var(--heading-gold))] via-[#FFB547] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent leading-tight">
               Kontakt
             </h1>
             <p className="mt-3 text-muted-foreground/80 text-[15px] md:text-base leading-relaxed">

@@ -76,16 +76,16 @@ const SupportForm: React.FC = () => {
 
   return (
     <div className="mt-12 pt-8 border-t border-border/20">
-      <h2 className="text-xl md:text-2xl font-heading mb-6 bg-gradient-to-r from-[hsl(var(--heading-gold))] via-[hsl(45_85%_60%)] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent">
+      <h2 className="text-xl md:text-2xl font-heading mb-6 bg-gradient-to-r from-[hsl(var(--heading-gold))] via-[#FFB547] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent">
         Formulář pro nahlášení problému
       </h2>
       
       {/* Status Messages */}
       {submitStatus === 'success' && (
-        <div className="mb-6 p-4 rounded-lg border border-[hsl(45_80%_50%/0.3)] bg-[hsl(45_80%_50%/0.08)]">
+        <div className="mb-6 p-4 rounded-lg border border-[rgba(255,138,0,0.3)] bg-[rgba(255,138,0,0.08)]">
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="h-5 w-5 text-[hsl(45_85%_50%)] flex-shrink-0 mt-0.5" />
-            <p className="text-[hsl(45_85%_70%)] text-sm leading-relaxed">
+            <CheckCircle2 className="h-5 w-5 text-[#FF8A00] flex-shrink-0 mt-0.5" />
+            <p className="text-[#FFB547] text-sm leading-relaxed">
               {statusMessage}
             </p>
           </div>

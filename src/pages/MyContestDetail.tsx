@@ -190,7 +190,7 @@ const MyContestDetail: React.FC = () => {
     switch (status) {
       case 'active': return 'bg-green-500';
       case 'closed': return 'bg-gray-500';
-      case 'draft': return 'bg-yellow-500';
+      case 'draft': return 'bg-[#FF8A00]';
       default: return 'bg-gray-500';
     }
   };
