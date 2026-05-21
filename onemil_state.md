@@ -1,6 +1,38 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand BottomNavigation step 7 — PR #90 mergnut do main)
+**Aktualizováno:** 21. 05. 2026 (Brand token cleanup step 8 — PR #91 mergnut do main)
+
+---
+
+## BRAND TOKEN CLEANUP — STEP 8 DOKONČEN (21. 05. 2026)
+
+CSS tokeny a stránka Games sjednoceny podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/index.css`** — staré tokeny přesměrovány na brand hodnoty (názvy zachovány pro zpětnou kompatibilitu):
+  - `--neon-blue: 220 80% 45%` → `33 100% 50%` (Energy Orange) — propaguje přes `--glow-blue`, `--gradient-primary/hero/mystery`, keyframes (`luxury-pulse`, `luxury-glow`, `title-glow`), `.neon-ticket`, `.ticket-profile`, `.hero-title`, `.story-link`
+  - `--heading-gold: 43 55% 66%` → `38 100% 64%` (Warm Amber) — propaguje do `h1`, `h2` base stylů
+  - `--heading-gold-soft: 43 45% 58%` → `38 85% 55%`
+  - `--heading-gold-muted: 43 38% 48%` → `38 65% 42%`
+  - `.text-heading-gold` gradient: staré warm-yellow HSL stops → `#FFB547 / #FF8A00` brand stops
+- **`src/pages/Games.tsx`** — nadpis „Soutěže": `text-heading-gold` → `text-[#FFB547]` (přímá brand hodnota)
+
+### Co se nezměnilo
+
+- Žádný layout, logika aplikace, routing, UI texty
+- Žádné Supabase dotazy, wallet, Stripe, migrace
+- Žádné nové soubory, žádné smazané tokeny
+
+### Merge + testy
+
+- **PR #91** mergnut do `main` — merge commit `4a27bb04bc4518167b8e5dbaa8a6689f5300803a`
+- Změněny 2 soubory: `src/index.css` (8 ins / 10 del), `src/pages/Games.tsx` (1 ins / 1 del)
+- **Playwright Smoke Tests**: SUCCESS — run `26235203208` ✅
+
+### Další krok
+
+Finální vizuální audit po krocích 1–8 a rozhodnutí, zda řešit logo / PWA ikony.
 
 ---
 

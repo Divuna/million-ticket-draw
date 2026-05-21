@@ -14,6 +14,26 @@
 
 ---
 
+## 2026-05-21 — Brand token cleanup step 8: CSS tokeny + Games nadpis sjednoceny (PR #91, merge commit 4a27bb0)
+
+### Co bylo provedeno
+
+- **`src/index.css`** — `--neon-blue` → Energy Orange `33 100% 50%`; `--heading-gold/soft/muted` → Warm Amber (38° hue); `.text-heading-gold` gradient → `#FFB547/#FF8A00`; názvy tokenů zachovány pro zpětnou kompatibilitu
+- **`src/pages/Games.tsx`** — `text-heading-gold` → `text-[#FFB547]` (přímá brand hodnota)
+- Layout, logika, routing, UI texty, Supabase, migrace — beze změny
+- Žádné nové soubory
+
+### Větev a PR
+
+- Větev: `style/brand-token-cleanup-step-8`
+- PR #91 mergnut do `main` — merge commit `4a27bb04bc4518167b8e5dbaa8a6689f5300803a`
+
+### Testy
+
+- **Playwright Smoke Tests**: SUCCESS po mergi do main (run `26235203208`) ✅
+
+---
+
 ## 2026-05-21 — Brand BottomNavigation step 7: spodní navigace sjednocena (PR #90, merge commit 2f01e1a)
 
 ### Co bylo provedeno
