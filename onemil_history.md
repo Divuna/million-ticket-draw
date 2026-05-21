@@ -14,6 +14,26 @@
 
 ---
 
+## 2026-05-21 — Brand contest cards step 2: soutěžní karty a CTA sjednoceny (PR #85, commit 9a508d5)
+
+### Co bylo provedeno
+
+- **`src/components/ContestCard.css`** — border sweep: žlutá/zlatá → Energy Orange/Amber; animace zpomalena pro premium pocit; vnitřní glow orange-tinted; CSS třídy zachovány
+- **`src/components/ContestCard.tsx`** — CTA: outlined orange → gradient `#FF8A00→#FFB547`, tmavý text, glow; Detail/Login: silver border + orange hover
+- **`src/components/ui/button.tsx`** — varianta `premium`: gold → Energy Orange `#FF8A00`
+- Žádná logika, migrace, stránky ani texty UI nezměněny
+
+### Větev a PR
+
+- Větev: `style/brand-contest-cards-step-2`
+- PR #85 mergnut do `main` — commit `9a508d5` (rebase merge)
+
+### Testy
+
+- **Playwright Smoke Tests**: SUCCESS na PR checku i po mergi do main (run `26226461672`) ✅
+
+---
+
 ## 2026-05-21 — Brand token reset step 1: sjednoceny základní CSS tokeny (PR #84, merge commit 4de961b)
 
 ### Co bylo provedeno
