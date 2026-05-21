@@ -1,6 +1,29 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand Wins + WinDetailModal step 12 — PR #96 mergnut do main)
+**Aktualizováno:** 21. 05. 2026 (Brand ReferralSection step 13 — PR #97 mergnut do main)
+
+---
+
+## BRAND REFERRALSECTION — STEP 13 DOKONČEN (21. 05. 2026)
+
+Komponenta ReferralSection sjednocena podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/components/ReferralSection.tsx`** (8 ins / 8 del):
+  - Outer card shadow: `hsl(43_90%_55%/0.15)` → `rgba(255,138,0,0.15)`
+  - Shimmer overlay gradient: `hsl(43 90% 55% / 0.03/0.05)` → `rgba(255,138,0,...)`
+  - Coins stat card bg/border: `yellow-500/10 yellow-500/5 yellow-500/20` → brand orange
+  - Coins ikona + číslo: `text-yellow-500` → `text-[#FFB547]`
+  - Enter-code box bg/border: `yellow-500/8 yellow-500/5 yellow-500/15` → brand orange
+  - Code Input: `bg-yellow-500/5 border-yellow-500/20 focus:...` → brand orange
+  - Submit button: `from-yellow-500 to-yellow-600` → `from-[#FF8A00] to-[#FFB547]`
+
+### Merge + testy
+
+- **PR #97** mergnut do `main` — merge commit `5fc4bad3`
+- **Playwright Smoke Tests (branch)**: SUCCESS ✅ (run `26247928785`)
+- **Playwright Smoke Tests (post-merge main)**: SUCCESS ✅ (run `26248006157`)
 
 ---
 

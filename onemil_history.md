@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-05-21 — Brand ReferralSection step 13: sjednocena (PR #97, merge commit 5fc4bad3)
+
+### Co bylo provedeno
+
+- **`src/components/ReferralSection.tsx`** — card shadow, shimmer, Coins stat, enter-code box, Input, submit button yellow/hsl → Energy Orange/Amber brand
+- Logika, layout, data — beze změny; PR #97; Smoke Tests ✅
+
+---
+
 ## 2026-05-21 — Brand Wins + WinDetailModal step 12: sjednoceny (PR #96, merge commit e18d40ab)
 
 ### Co bylo provedeno
