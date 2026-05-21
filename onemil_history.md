@@ -14,6 +14,25 @@
 
 ---
 
+## 2026-05-21 — Brand profile step 6: stránka Profile sjednocena (PR #89, merge commit 9ece582)
+
+### Co bylo provedeno
+
+- **`src/pages/Profile.tsx`** — yellow/gold HSL a Tailwind → Energy Orange/Amber brand kit: VIPCard gold varianta (border + bg + shimmer), floating particles, CSS keyframes (avatar-ring-glow, premium-input focus, header gradient), avatar ring (conic-gradient → `#FFB547/#FF8A00`), crown badge, profile name heading (Platinum → Amber → Orange), VIP badge, Peněženka sekce (icon + heading + coin glow + balance číslo), "Dobít MioCoiny" CTA, edit formuláře (labely + inputy + focus), profile view řádky (5×), win sound toggle, marketing sekce, top-up modal
+- Logika aplikace, Supabase dotazy, wallet, Stripe, routing, UI texty — beze změny
+- Žádné migrace, žádné nové soubory
+
+### Větev a PR
+
+- Větev: `style/brand-profile-step-6`
+- PR #89 mergnut do `main` — merge commit `9ece5828958103afd6c8d389225ffc314fa7fd04`
+
+### Testy
+
+- **Playwright Smoke Tests**: SUCCESS po mergi do main (run `26233223586`, 1m 9s) ✅
+
+---
+
 ## 2026-05-21 — Brand homepage step 5: stránka Homepage sjednocena (PR #88, merge commit 02d7f4c)
 
 ### Co bylo provedeno

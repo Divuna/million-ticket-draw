@@ -1,6 +1,43 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand homepage step 5 — PR #88 mergnut do main)
+**Aktualizováno:** 21. 05. 2026 (Brand profile step 6 — PR #89 mergnut do main)
+
+---
+
+## BRAND PROFILE — STEP 6 DOKONČEN (21. 05. 2026)
+
+Stránka Profile sjednocena podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/pages/Profile.tsx`** — všechny yellow/gold HSL a Tailwind hodnoty nahrazeny brand hodnotami:
+  - **VIPCard gold varianta**: `border-yellow-500/25`, `from-yellow-500/5` → `rgba(255,138,0,0.2)`, navy bg; shimmer overlay → orange rgba; floating particles `bg-yellow-500/20` → `rgba(255,138,0,0.15)`
+  - **CSS efekty**: `avatar-ring-glow` keyframe, `premium-input` focus shadow, `vip-header-container::before`, `avatar-hover-shimmer` → orange rgba brand hodnoty
+  - **Avatar ring**: conic-gradient `hsl(48 95% 65%), hsl(43 90% 55%), hsl(38 85% 48%)` → `#FFB547, #FF8A00, #e07800`; avatar border + fallback bg → orange brand
+  - **Crown badge**: `from-yellow-400 via-yellow-500 to-yellow-600` → `from-[#FFB547] via-[#FF8A00] to-[#e07800]`; glow shadow → orange
+  - **Profile name heading**: multi-stop zlatý gradient → Platinum `#E7EBF0` → Amber `#FFB547` → Orange `#FF8A00`; VIP badge border + bg + ikony → orange
+  - **Peněženka sekce**: Wallet icon, "Peněženka" heading, coin glow + ikona, MioCoin balance číslo (`from-yellow-300 via-yellow-400 to-yellow-500` → `from-[#FFB547] via-[#FF8A00] to-[#FFB547]`), "Dobít MioCoiny" CTA → orange brand
+  - **Formuláře (edit mód)**: labely `text-yellow-500/70`, inputy a textarea `bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40` → orange rgba; "Uložit změny" CTA → `#FF8A00→#FFB547`
+  - **Profile view řádky (5×)**: border, bg gradient, hover border → orange rgba; labely → `rgba(255,138,0,0.55)`
+  - **Win sound toggle**: sekce bg, ikona Volume2, Switch → `#FF8A00`
+  - **Marketing sekce**: ikona Mail, heading gradient, inactive status bg, Loader2, subscribe borders, "Přihlásit marketing" CTA → orange brand
+  - **Top-up modal**: DialogContent border/bg, Coins ikona, package selected state, hover border, pay button → orange brand
+
+### Co se nezměnilo
+
+- Žádná logika aplikace — nákup MioCoinů, přenos bonusů, formulář profilu, avatar upload, notifikace, marketing
+- Žádné Supabase dotazy, wallet, Stripe, routing, migrace
+- Žádné UI texty ani nové soubory
+
+### Merge + testy
+
+- **PR #89** mergnut do `main` — merge commit `9ece5828958103afd6c8d389225ffc314fa7fd04`
+- Změněn pouze 1 soubor: `src/pages/Profile.tsx` (116 ins / 116 del)
+- **Playwright Smoke Tests**: SUCCESS — run `26233223586` (1m 9s) ✅
+
+### Další krok
+
+Vizuální audit po krocích 1–6 a rozhodnutí, jestli pokračovat: Header, BottomNavigation, logo a případné zbývající soubory.
 
 ---
 
