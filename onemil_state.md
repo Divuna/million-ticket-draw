@@ -1,6 +1,36 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand profile step 6 — PR #89 mergnut do main)
+**Aktualizováno:** 21. 05. 2026 (Brand BottomNavigation step 7 — PR #90 mergnut do main)
+
+---
+
+## BRAND BOTTOM NAVIGATION — STEP 7 DOKONČEN (21. 05. 2026)
+
+Spodní navigace sjednocena podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/components/BottomNavigation.tsx`** — aktivní stav nav tlačítka sjednocen:
+  - **Blue ring**: `ring-blue-400/80` → `ring-[rgba(255,181,71,0.8)]` (Warm Amber)
+  - **Blue shadow outline**: `rgba(96,165,250,0.45)` → `rgba(255,138,0,0.45)` (Energy Orange)
+  - **Blue glow**: `rgba(59,130,246,0.18)` → `rgba(255,138,0,0.18)` (Energy Orange)
+  - Layout, ikony, routing, badge counts, texty a logika beze změny
+
+### Co se nezměnilo
+
+- Žádná logika aplikace — routing, badge counts, unread messages, unseen wins, admin guard
+- Žádné Supabase dotazy, wallet, Stripe, migrace
+- Žádné UI texty ani nové soubory
+
+### Merge + testy
+
+- **PR #90** mergnut do `main` — merge commit `2f01e1acf7489a56723dc0c17e8100b4ecb898c3`
+- Změněn pouze 1 soubor: `src/components/BottomNavigation.tsx` (1 ins / 1 del)
+- **Playwright Smoke Tests**: SUCCESS — run `26234450223` ✅
+
+### Další krok
+
+Step 8: `src/index.css` token cleanup (`--heading-gold`, `--neon-gold`, `--neon-blue` → brand hodnoty) + `src/pages/Games.tsx` class cleanup (`text-heading-gold` → brand třída).
 
 ---
 

@@ -14,6 +14,25 @@
 
 ---
 
+## 2026-05-21 — Brand BottomNavigation step 7: spodní navigace sjednocena (PR #90, merge commit 2f01e1a)
+
+### Co bylo provedeno
+
+- **`src/components/BottomNavigation.tsx`** — aktivní stav nav tlačítka: blue ring/shadow → Energy Orange / Warm Amber brand hodnoty (`ring-blue-400/80` → `ring-[rgba(255,181,71,0.8)]`, `rgba(96,165,250,0.45)` → `rgba(255,138,0,0.45)`, `rgba(59,130,246,0.18)` → `rgba(255,138,0,0.18)`)
+- Layout, ikony, routing, badge counts, texty a logika aplikace — beze změny
+- Žádné migrace, žádné nové soubory
+
+### Větev a PR
+
+- Větev: `style/brand-bottom-navigation-step-7`
+- PR #90 mergnut do `main` — merge commit `2f01e1acf7489a56723dc0c17e8100b4ecb898c3`
+
+### Testy
+
+- **Playwright Smoke Tests**: SUCCESS po mergi do main (run `26234450223`) ✅
+
+---
+
 ## 2026-05-21 — Brand profile step 6: stránka Profile sjednocena (PR #89, merge commit 9ece582)
 
 ### Co bylo provedeno
