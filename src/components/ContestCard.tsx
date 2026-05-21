@@ -136,7 +136,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         contest-card-glow
         relative overflow-hidden
         rounded-[20px]
-        border-[3px] border-[hsl(32_100%_50%/0.6)]
+        border-[3px] border-[rgba(255,138,0,0.45)]
         transition-all duration-300 ease-out
         hover:scale-[1.02]
         ${className}
@@ -156,7 +156,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           />
         ) : (
           <div className="w-full h-full bg-[hsl(220_25%_10%)] flex items-center justify-center">
-            <Trophy className="w-16 h-16 text-[hsl(45_80%_55%/0.2)]" />
+            <Trophy className="w-16 h-16 text-[rgba(255,138,0,0.2)]" />
           </div>
         )}
       </div>
@@ -264,13 +264,13 @@ export const ContestCard: React.FC<ContestCardProps> = ({
                   flex-1 flex items-center justify-center gap-2
                   h-11 px-5
                   whitespace-nowrap
-                  bg-[rgba(0,0,0,0.4)]
-                  backdrop-blur-sm
-                  text-[hsl(32_100%_50%)] font-semibold text-sm
+                  bg-gradient-to-r from-[#FF8A00] to-[#FFB547]
+                  text-[#111] font-bold text-sm
                   rounded-full
-                  border-2 border-[hsl(32_100%_50%/0.6)]
-                  hover:bg-[rgba(0,0,0,0.5)]
-                  hover:text-[hsl(38_100%_64%)]
+                  border border-[rgba(255,181,71,0.65)]
+                  shadow-[0_0_16px_rgba(255,138,0,0.25)]
+                  hover:shadow-[0_0_24px_rgba(255,138,0,0.35)]
+                  hover:brightness-105
                   active:scale-[0.98]
                   transition-all duration-200
                   disabled:opacity-40 disabled:cursor-not-allowed
@@ -299,13 +299,13 @@ export const ContestCard: React.FC<ContestCardProps> = ({
               <button
                 className="
                   h-11 px-4
-                  bg-[rgba(0,0,0,0.4)]
+                  bg-[rgba(0,0,0,0.35)]
                   backdrop-blur-sm
-                  text-white/80 font-medium text-sm
+                  text-[#E7EBF0]/80 font-medium text-sm
                   rounded-full
-                  border border-white/20
-                  hover:bg-[rgba(0,0,0,0.5)]
-                  hover:text-white
+                  border border-[rgba(191,198,207,0.25)]
+                  hover:border-[rgba(255,138,0,0.4)]
+                  hover:text-[#E7EBF0]
                   active:scale-[0.98]
                   transition-all duration-200
                 "
@@ -322,13 +322,13 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             <button
               className="
                 w-full py-3 px-5
-                bg-[rgba(0,0,0,0.4)]
+                bg-[rgba(0,0,0,0.35)]
                 backdrop-blur-sm
-                text-white/80 font-medium text-sm
+                text-[#E7EBF0]/80 font-medium text-sm
                 rounded-full
-                border border-white/20
-                hover:bg-[rgba(0,0,0,0.5)]
-                hover:text-white
+                border border-[rgba(191,198,207,0.25)]
+                hover:border-[rgba(255,138,0,0.4)]
+                hover:text-[#E7EBF0]
                 active:scale-[0.98]
                 transition-all duration-200
               "
