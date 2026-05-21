@@ -761,7 +761,7 @@ export default function ContestDetail() {
 
 
       {/* 1. HERO SECTION */}
-      <section className="contest-card-glow w-full rounded-[20px] relative overflow-hidden bg-gradient-to-br from-[hsl(220_25%_8%)] to-[hsl(220_20%_12%)] border-[3px] border-[hsl(32_100%_50%/0.6)]">
+      <section className="contest-card-glow w-full rounded-[20px] relative overflow-hidden bg-gradient-to-br from-[hsl(220_25%_8%)] to-[hsl(220_20%_12%)] border-[3px] border-[rgba(255,138,0,0.45)]">
         {/* Fast game badge - corner placement */}
         {contest.fast_game && (
           <Badge className="absolute top-3 left-3 z-20 bg-amber-500/90 text-white text-xs md:text-sm px-3 py-1 shadow-lg">
@@ -771,18 +771,18 @@ export default function ContestDetail() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-6 md:p-8">
           {/* Text content */}
           <div className="flex-1 min-w-0 md:max-w-[50%] space-y-4 z-10">
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-yellow-400 leading-tight break-all">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#E7EBF0] leading-tight break-all">
               {contest.title}
             </h1>
             {contest.main_prize && (
-              <p className="text-lg md:text-xl font-semibold text-gray-200 break-words">
+              <p className="text-lg md:text-xl font-semibold text-[#BFC6CF] break-words">
                 Hlavní výhra: {contest.main_prize}
               </p>
             )}
             {contest.description && (
               <div className="space-y-2">
                 <p
-                  className={`text-gray-300 text-sm md:text-base leading-relaxed whitespace-pre-line break-words ${
+                  className={`text-[#BFC6CF] text-sm md:text-base leading-relaxed whitespace-pre-line break-words ${
                     descExpanded ? '' : 'line-clamp-6 md:line-clamp-8 overflow-hidden'
                   }`}
                 >
@@ -792,7 +792,7 @@ export default function ContestDetail() {
                   <button
                     type="button"
                     onClick={() => setDescExpanded((v) => !v)}
-                    className="text-xs md:text-sm font-medium text-yellow-400 hover:text-yellow-300 transition-colors"
+                    className="text-xs md:text-sm font-medium text-[#FF8A00] hover:text-[#FFB547] transition-colors"
                   >
                     {descExpanded ? 'Zobrazit méně' : 'Zobrazit více'}
                   </button>
@@ -803,7 +803,7 @@ export default function ContestDetail() {
 
           {/* Media: main image/video + secondary thumbnails — merged into hero */}
           <div className="md:w-[360px] md:flex-none w-full flex flex-col gap-3">
-            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black/40 border border-[hsl(40_50%_45%/0.25)]">
+            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black/40 border border-[rgba(255,138,0,0.2)]">
               {activeMedia ? (
                 activeMedia.type === 'video' ? (
                   <div
@@ -847,11 +847,11 @@ export default function ContestDetail() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Box 1: Stav MioCoinů + akce */}
-        <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/80 backdrop-blur rounded-[20px] p-5 border-[2px] border-[hsl(40_50%_45%/0.5)] flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+        <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/80 backdrop-blur rounded-[20px] p-5 border-[2px] border-[rgba(255,138,0,0.35)] flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <div className="flex items-center h-full gap-4">
             <img
               src={MIOCOIN_IMAGE_URL}
-              className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 drop-shadow-[0_0_16px_rgba(234,179,8,0.3)]"
+              className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 drop-shadow-[0_0_16px_rgba(255,138,0,0.25)]"
               alt="MioCoin"
             />
             <div className="flex-1 flex flex-col justify-center">
@@ -879,7 +879,7 @@ export default function ContestDetail() {
               <span
                 className="h-[1px] w-full mt-0.5"
                 style={{
-                  background: 'linear-gradient(90deg, transparent 0%, hsl(45,80%,55%) 50%, transparent 100%)',
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,0.9) 50%, transparent 100%)',
                   backgroundSize: '200% 100%',
                   animation: 'liveShimmer 8s ease-in-out infinite',
                 }}
@@ -937,7 +937,7 @@ export default function ContestDetail() {
                     })
                   }
                   variant="outline"
-                  className="flex-1 h-11 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-semibold px-5 rounded-full transition-colors"
+                  className="flex-1 h-11 bg-[rgba(255,138,0,0.08)] hover:bg-[rgba(255,138,0,0.15)] text-[#FF8A00] border-[rgba(255,138,0,0.3)] font-semibold px-5 rounded-full transition-colors"
                 >
                   Dobít MioCoiny
                 </Button>
@@ -947,11 +947,11 @@ export default function ContestDetail() {
         </section>
 
         {/* Box 2: Bonusové MioCoiny v soutěži */}
-        <section className="voucher-card-glow bg-gradient-to-br from-[hsl(45_60%_50%/0.1)] to-[hsl(45_60%_40%/0.05)] rounded-[20px] p-5 border-[2px] border-[hsl(40_60%_50%/0.3)] flex items-center gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        <section className="voucher-card-glow bg-gradient-to-br from-[rgba(255,138,0,0.08)] to-[rgba(255,181,71,0.04)] rounded-[20px] p-5 border-[2px] border-[rgba(255,138,0,0.25)] flex items-center gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
           <div className="flex-1 flex flex-col justify-center">
             <p className="text-sm text-gray-200 leading-relaxed">
               Do této soutěže jsme navíc přidali{" "}
-              <span className="text-yellow-400 font-bold text-2xl md:text-3xl">{miocoinBonusPoolTotal.toLocaleString("cs-CZ")}</span>{" "}
+              <span className="text-[#FFB547] font-bold text-2xl md:text-3xl">{miocoinBonusPoolTotal.toLocaleString("cs-CZ")}</span>{" "}
               MioCoinů jako bonusové výhry, které můžete během soutěže získat.
             </p>
           </div>
@@ -960,7 +960,7 @@ export default function ContestDetail() {
               <TooltipTrigger asChild>
                 <img
                   src={MIOCOIN_IMAGE_URL}
-                  className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 hover:scale-110 transition-transform cursor-pointer drop-shadow-[0_0_24px_rgba(234,179,8,0.4)]"
+                  className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 hover:scale-110 transition-transform cursor-pointer drop-shadow-[0_0_24px_rgba(255,138,0,0.3)]"
                   alt="MioCoin"
                 />
               </TooltipTrigger>
@@ -973,7 +973,7 @@ export default function ContestDetail() {
       </div>
 
       {/* 4. CESTA K VÝHERNÍMU TICKETU */}
-      <section className="relative overflow-hidden rounded-[20px] p-5 md:p-7 border border-[hsl(40_60%_50%/0.25)] bg-gradient-to-br from-[hsl(220_30%_7%)]/95 via-[hsl(220_28%_9%)]/85 to-[hsl(220_25%_6%)]/95 shadow-[0_18px_50px_rgba(0,0,0,0.45)]">
+      <section className="relative overflow-hidden rounded-[20px] p-5 md:p-7 border border-[rgba(255,138,0,0.2)] bg-gradient-to-br from-[hsl(220_30%_7%)]/95 via-[hsl(220_28%_9%)]/85 to-[hsl(220_25%_6%)]/95 shadow-[0_18px_50px_rgba(0,0,0,0.45)]">
         {/* Ambient glow */}
         <div aria-hidden className="pointer-events-none absolute -top-24 -right-16 w-72 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #FF8A00 0%, transparent 70%)' }} />
         <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-16 w-72 h-72 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, #FFB547 0%, transparent 70%)' }} />
@@ -1037,7 +1037,7 @@ export default function ContestDetail() {
       </section>
 
       {/* 5. BONUSOVÉ VĚCNÉ VÝHRY */}
-      <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[hsl(40_50%_45%/0.3)]">
+      <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[rgba(255,138,0,0.25)]">
         <h2 className="text-white font-semibold text-sm md:text-base mb-4">Bonusové věcné výhry</h2>
 
         {groupedBonusPrizes.length === 0 ? (
@@ -1056,7 +1056,7 @@ export default function ContestDetail() {
                     console.log('[DEBUG ContestDetail] setSelectedBonusPrize:', b.id);
                     setSelectedBonusPrize({ ...b, image_url: bonusImageUrl });
                   }}
-                  className="p-3 rounded-xl border border-white/5 hover:border-yellow-500/30 transition-colors text-left cursor-pointer relative overflow-hidden"
+                  className="p-3 rounded-xl border border-white/5 hover:border-[rgba(255,138,0,0.35)] transition-colors text-left cursor-pointer relative overflow-hidden"
                   style={{
                     backgroundImage: starryBackgroundUrl ? `url(${starryBackgroundUrl})` : undefined,
                     backgroundSize: 'cover',
@@ -1065,7 +1065,7 @@ export default function ContestDetail() {
                   }}
                 >
                   {count > 1 && (
-                    <span className="absolute top-2 right-2 text-xs font-semibold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-2 py-0.5 rounded-full">
+                    <span className="absolute top-2 right-2 text-xs font-semibold bg-[rgba(255,138,0,0.15)] text-[#FFB547] border border-[rgba(255,138,0,0.3)] px-2 py-0.5 rounded-full">
                       {count}× v soutěži
                     </span>
                   )}
@@ -1104,7 +1104,7 @@ export default function ContestDetail() {
                 href={contest.rules_pdf_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 px-5 py-2.5 text-sm font-semibold text-black shadow-lg hover:from-amber-400 hover:to-yellow-300 transition mb-4"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#FF8A00] to-[#FFB547] px-5 py-2.5 text-sm font-semibold text-[#111] shadow-lg hover:brightness-105 transition mb-4"
               >
                 📄 Zobrazit pravidla soutěže
               </a>
