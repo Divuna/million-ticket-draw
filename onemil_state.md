@@ -1,6 +1,34 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand token reset step 1 — PR #84 mergnut do main)
+**Aktualizováno:** 21. 05. 2026 (Brand contest cards step 2 — PR #85 mergnut do main)
+
+---
+
+## BRAND CONTEST CARDS — STEP 2 DOKONČEN (21. 05. 2026)
+
+Soutěžní karty a CTA tlačítka sjednoceny podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/components/ContestCard.css`** — border sweep animace: jasná žlutá/zlatá → Energy Orange `rgba(255,138,0)` / Warm Amber `rgba(255,181,71)`; animace zpomalena (2.5s → 4s / 5s) pro premium pocit; vnitřní glow přesměrován na oranžový nádech; CSS třídy zachovány, pouze hodnoty změněny
+- **`src/components/ContestCard.tsx`** — hlavní CTA: outlined orange → plný gradient `#FF8A00 → #FFB547`, tmavý text `#111`, amber border, orange glow; Detail/Login tlačítka: silver border `rgba(191,198,207,0.25)` s orange hover; karta: border přesměrován na přímý brand hex
+- **`src/components/ui/button.tsx`** — varianta `premium`: gold `hsl(45 93% 60%)` → Energy Orange `#FF8A00`
+
+### Co se nezměnilo
+
+- Žádná logika aplikace, databáze, platby, wallet, soutěže, tikety, Partner Offers ani backend
+- Žádné stránky, routing ani texty UI
+- Žádné migrace
+
+### Merge + testy
+
+- **PR #85** mergnut do `main` — commit na main `9a508d5` (rebase merge)
+- Změněny pouze 3 soubory: `ContestCard.css`, `ContestCard.tsx`, `ui/button.tsx`
+- **Playwright Smoke Tests**: SUCCESS před mergem (PR check) i po mergi (main, run `26226461672`)
+
+### Další krok
+
+Vizuálně sjednotit detail soutěže nebo vouchery.
 
 ---
 
