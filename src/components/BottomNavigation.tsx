@@ -52,7 +52,7 @@ export const BottomNavigation = () => {
             className={`relative flex flex-col items-center justify-center gap-0.5 px-2.5 py-1.5 min-w-[3.75rem] rounded-2xl text-[11px] font-medium tracking-wide transition-all duration-200 ease-out
               ${
                 isActive
-                  ? "text-white bg-white/[0.14] shadow-[0_0_0_1px_rgba(96,165,250,0.45),0_8px_24px_rgba(59,130,246,0.18)] ring-2 ring-blue-400/80 ring-offset-2 ring-offset-[#0B0F19]"
+                  ? "text-white bg-white/[0.14] shadow-[0_0_0_1px_rgba(255,138,0,0.45),0_8px_24px_rgba(255,138,0,0.18)] ring-2 ring-[rgba(255,181,71,0.8)] ring-offset-2 ring-offset-[#0B0F19]"
                   : "text-white/55 hover:text-white/92 hover:bg-white/[0.06] active:scale-[0.98]"
               }`}
           >
