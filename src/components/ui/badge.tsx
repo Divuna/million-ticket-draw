@@ -23,7 +23,7 @@ const badgeVariants = cva(
         pending:
           "border-sky-500/35 bg-sky-500/[0.1] text-sky-100 hover:bg-sky-500/[0.16] dark:text-sky-50",
         /** Informační stav */
-        info: "border-blue-500/35 bg-blue-500/[0.1] text-blue-100 hover:bg-blue-500/[0.16] dark:text-blue-50",
+        info: "border-[rgba(255,138,0,0.35)] bg-[rgba(255,138,0,0.1)] text-[#FFB547] hover:bg-[rgba(255,138,0,0.16)] dark:text-[#FFB547]",
       },
     },
     defaultVariants: {
