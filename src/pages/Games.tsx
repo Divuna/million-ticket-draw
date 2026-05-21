@@ -419,7 +419,7 @@ if (loading) {
         {/* Page Header - matching homepage typography */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-center md:text-left flex-1">
-            <h1 className="text-2xl md:text-3xl font-bold text-heading-gold flex items-center gap-3 justify-center md:justify-start">
+            <h1 className="text-2xl md:text-3xl font-bold text-[#FFB547] flex items-center gap-3 justify-center md:justify-start">
               <Trophy className="w-7 h-7 md:w-8 md:h-8" />
               Soutěže
             </h1>
