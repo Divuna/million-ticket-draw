@@ -14,6 +14,19 @@
 
 ---
 
+## 2026-05-21 — Brand customer-facing cleanup steps 15–19 dokončeny (PRy #98–#102)
+
+### Co bylo provedeno
+
+- **Step 15** — `src/components/OfferCard.tsx` + `OfferDetailModal.tsx`: hover border/shadow, Tag ikona, "Nová" badge, partner name `blue-*` → brand orange/amber; PR #98, merge commit `7faea2b9`
+- **Step 16** — `src/components/TicketProgressBar.tsx`: progress fill, legend dot, Clock ikona `blue-*`, TrendingUp `yellow-400` → brand; PR #99, merge commit `88e73dc0`
+- **Step 17** — `src/components/TicketResultModal.tsx`: partner name, CTA hint, "Zobrazit nabídku" button `blue-*` → brand; PR #100
+- **Step 18** — `src/components/WinCard.tsx`: "Připraveno k odeslání" badge `blue-500/90 text-white` → `rgba(255,138,0,0.9) text-black`; PR #101, merge commit `f429adbd`
+- **Step 19** — `src/pages/Wins.tsx`: 24 inline `hsl(45/35,...)` JS styles + Tailwind classes → brand rgba/hex; PR #102, merge commit `02b3f2a3`
+- Všechny Playwright Smoke Tests ✅; žádné admin, influencer ani logické změny
+
+---
+
 ## 2026-05-21 — Brand ReferralSection step 13: sjednocena (PR #97, merge commit 5fc4bad3)
 
 ### Co bylo provedeno

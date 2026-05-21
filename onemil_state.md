@@ -1,6 +1,65 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand ReferralSection step 13 — PR #97 mergnut do main)
+**Aktualizováno:** 21. 05. 2026 (Brand customer-facing cleanup steps 15–19 dokončeny)
+
+---
+
+## BRAND CUSTOMER-FACING CLEANUP — STEPS 15–19 DOKONČENY (21. 05. 2026)
+
+Finální customer-facing brand cleanup — 5 PRů, 5 souborů, žádné admin ani influencer změny.
+
+### Step 15 — OfferCard + OfferDetailModal (PR #98, merge commit `7faea2b9`)
+- **`src/components/OfferCard.tsx`** (4 ins / 4 del):
+  - hover border/shadow: `hover:border-blue-400/40 hover:shadow-blue-500/10` → brand orange
+  - Tag ikona: `text-blue-400/30` → `text-[rgba(255,138,0,0.3)]`
+  - "Nová" badge: `bg-blue-500/90 text-white` → `bg-[rgba(255,138,0,0.9)] text-black`
+  - Partner name: `text-blue-400` → `text-[#FFB547]`
+- **`src/components/OfferDetailModal.tsx`** (2 ins / 2 del):
+  - Tag ikona: `text-blue-400` → `text-[#FFB547]`
+  - Partner name: `text-blue-400` → `text-[#FFB547]`
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge main): SUCCESS ✅
+
+### Step 16 — TicketProgressBar (PR #99, merge commit `88e73dc0`)
+- **`src/components/TicketProgressBar.tsx`** (4 ins / 4 del):
+  - Progress fill: `from-blue-700 to-blue-500` → `from-[#FF8A00] to-[#FFB547]`
+  - Legend dot: `bg-blue-500` → `bg-[#FF8A00]`
+  - Clock ikona: `text-blue-400` → `text-[#FFB547]`
+  - TrendingUp ikona: `text-yellow-400` → `text-[#FFB547]`
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge main): SUCCESS ✅
+
+### Step 17 — TicketResultModal blue hints (PR #100, merge commit `f429adbd` area)
+- **`src/components/TicketResultModal.tsx`** (4 ins / 4 del):
+  - Partner name v offer result: `text-blue-400` → `text-[#FFB547]`
+  - CTA hint: `text-blue-200/75` → `text-[rgba(255,181,71,0.75)]`
+  - CTA hint span: `text-blue-100` → `text-[#FFB547]`
+  - "Zobrazit nabídku" button: `border-blue-500/40` → `border-[rgba(255,138,0,0.4)]`
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge main): SUCCESS ✅
+
+### Step 18 — WinCard badge (PR #101, merge commit `f429adbd`)
+- **`src/components/WinCard.tsx`** (1 ins / 1 del):
+  - "Připraveno k odeslání" badge: `bg-blue-500/90 text-white` → `bg-[rgba(255,138,0,0.9)] text-black`
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge main): SUCCESS ✅
+
+### Step 19 — Wins.tsx inline hsl cleanup (PR #102, merge commit `02b3f2a3`)
+- **`src/pages/Wins.tsx`** (24 ins / 24 del):
+  - Particles: `hsl(45, 93%, X%)` → `rgba(255,181,71,1)`
+  - Shimmer: `hsl(45, 93%, 60%)` → `rgba(255,181,71,1)`
+  - Header card border: `hsl(45, 70%, 40%, 0.2)` → `rgba(255,138,0,0.2)`
+  - Header shadow inset: `hsl(45, 70%, 50%, 0.1)` → `rgba(255,138,0,0.1)`
+  - Trophy icon box gradient: `hsl(45,80%,45%) → hsl(35,90%,35%)` → `#FF8A00 → #c86000`
+  - Trophy box shadow: `hsl(45, 80%, 40%, 0.3)` → `rgba(255,138,0,0.3)`
+  - Title gradient: `hsl(45,93%,65%) → hsl(35,90%,55%)` → `#FFB547 → #FF8A00`
+  - Win count badge bg/border: `hsl(45,80%,45%)/10 hsl(45,70%,50%)/20` → `rgba(255,138,0,...)`
+  - Crown ikona: `text-[hsl(45,80%,55%)]` → `text-[#FF8A00]`
+  - Count span: `text-[hsl(45,80%,60%)]` → `text-[#FFB547]`
+  - Tab/filter active (replace_all): `from-[hsl(45,80%,45%)] to-[hsl(35,90%,35%)]` → `from-[#FF8A00] to-[#c86000]`
+  - "Nabídky" tab active: `from-blue-600 to-blue-700 text-white` → `from-[#FF8A00] to-[#c86000] text-black`
+  - Sort button hover border (replace_all): → `hover:border-[rgba(255,138,0,0.3)]`
+  - Arrow ikony (replace_all): `text-[hsl(45,70%,50%)]` → `text-[#FF8A00]`
+  - Empty state borders: `hsl(45, 70%, 40%, 0.15/0.1)` → `rgba(255,138,0,0.15/0.1)`
+  - Trophy empty ikona (replace_all): → `text-[#FF8A00]/30`
+  - Empty title gradient: `hsl(45,93%,65%) → hsl(35,90%,55%)` → `#FFB547 → #FF8A00`
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge main): SUCCESS ✅
 
 ---
 
