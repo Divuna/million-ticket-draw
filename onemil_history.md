@@ -14,6 +14,25 @@
 
 ---
 
+## 2026-05-21 — Brand MioCoin step 9: MioCoin coin ikona sjednocena (PR #92, merge commit baa61ab)
+
+### Co bylo provedeno
+
+- **`src/components/MioCoin.tsx`** — okrajový gradient + glow: `from-yellow-500/40 via-yellow-400/10 rgba(234,179,8,0.35)` → `rgba(255,138,0,0.4) / rgba(255,181,71,0.1) / rgba(255,138,0,0.35)`
+- Komponenta se zobrazuje na všech stránkách s peněženkou/nákupem tiketu — vysoká viditelnost
+- Logika, props, layout, importy — beze změny
+
+### Větev a PR
+
+- Větev: `style/brand-miocoin-step-9`
+- PR #92 mergnut do `main` — merge commit `baa61ab30dac4a2703774d35722a2b770b5e3961`
+
+### Testy
+
+- **Playwright Smoke Tests**: SUCCESS (run `26244784903`) ✅
+
+---
+
 ## 2026-05-21 — Brand token cleanup step 8: CSS tokeny + Games nadpis sjednoceny (PR #91, merge commit 4a27bb0)
 
 ### Co bylo provedeno

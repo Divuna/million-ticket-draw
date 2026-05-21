@@ -1,6 +1,34 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand token cleanup step 8 — PR #91 mergnut do main)
+**Aktualizováno:** 21. 05. 2026 (Brand MioCoin step 9 — PR #92 mergnut do main)
+
+---
+
+## BRAND MIOCOIN — STEP 9 DOKONČEN (21. 05. 2026)
+
+Komponenta MioCoin sjednocena podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/components/MioCoin.tsx`** — okrajový gradient a glow shadow coin ikony:
+  - `from-yellow-500/40` → `from-[rgba(255,138,0,0.4)]` (Energy Orange)
+  - `via-yellow-400/10` → `via-[rgba(255,181,71,0.1)]` (Warm Amber)
+  - `rgba(234,179,8,0.35)` → `rgba(255,138,0,0.35)` (Energy Orange)
+  - Velikost, layout, props, importy a logika beze změny
+
+### Co se nezměnilo
+
+- Žádná logika aplikace, Supabase, wallet, Stripe, migrace
+
+### Merge + testy
+
+- **PR #92** mergnut do `main` — merge commit `baa61ab30dac4a2703774d35722a2b770b5e3961`
+- Změněn pouze 1 soubor: `src/components/MioCoin.tsx` (1 ins / 1 del)
+- **Playwright Smoke Tests**: SUCCESS — run `26244784903` ✅
+
+### Další krok
+
+Step 10: `src/components/TicketResultModal.tsx` — sjednotit yellow/gold/amber HSL hodnoty ve win modalu na Energy Orange / Warm Amber.
 
 ---
 
