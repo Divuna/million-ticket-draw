@@ -40,7 +40,7 @@
 - **`src/pages/NotFound.tsx`** (1 ins/1 del): link `text-blue-500` → brand orange
 - **`src/pages/MyContestDetail.tsx`** (1 ins/1 del): draft status dot `bg-yellow-500` → `bg-[#FF8A00]`
 - **`src/components/MessageForm.tsx`** (1 ins/1 del): submit button `bg-blue-600` → brand orange
-- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge): pending
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge): SUCCESS ✅ run `26251107153`
 
 ---
 
