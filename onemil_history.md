@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-05-21 — NotFound dark background opraven (PR #111, merge commit `33cbeeb7`)
+
+- `src/pages/NotFound.tsx`: `bg-gray-100` → `bg-background`
+- Nález z finálního vizuálního smoke auditu — 404 stránka jako jediná zákaznická stránka měla světlé pozadí
+- Playwright Smoke Tests: branch `26253920880` ✅, post-merge `26253998050` ✅
+
+---
+
 ## 2026-05-21 — Font audit dokončen (read-only, bez PR)
 
 - Google Fonts import: Inter 300–700 + Poppins 500–800 v `src/index.css:1`

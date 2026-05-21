@@ -1,6 +1,16 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Font audit dokončen)
+**Aktualizováno:** 21. 05. 2026 (NotFound dark background opraveno — PR #111)
+
+---
+
+## NOTFOUND DARK BACKGROUND — OPRAVENO (21. 05. 2026)
+
+### PR #111 — style: fix NotFound page light background to dark brand (merge commit `33cbeeb7`)
+- **`src/pages/NotFound.tsx`** (1 ins/1 del): `bg-gray-100` → `bg-background`
+- Nález z finálního vizuálního smoke auditu: 404 stránka byla jedinou zákaznickou stránkou se světlým pozadím (`rgb(243,244,246)`) — nesoulad s dark premium brandem
+- Vizuálně ověřeno v preview: Midnight Black pozadí, "404" amber, "Return to Home" oranžový link ✅
+- Playwright Smoke Tests (branch `26253920880` ✅, post-merge `26253998050` ✅)
 
 ---
 
