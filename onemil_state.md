@@ -1,6 +1,46 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand customer-facing cleanup steps 15–19 dokončeny)
+**Aktualizováno:** 21. 05. 2026 (Brand customer-facing cleanup steps 21–26 dokončeny)
+
+---
+
+## BRAND CUSTOMER-FACING CLEANUP — STEPS 21–26 DOKONČENY (21. 05. 2026)
+
+Šest dalších customer-facing brand PRů po step 20 auditu. Žádné admin/influencer/partner změny.
+
+### Step 21 — TicketResultModal.css + index.css (PR #103, merge commit `bd3d107b`)
+- **`src/components/TicketResultModal.css`** (6 ins/6 del): `win-moment-cta-pulse` keyframe box-shadows `hsl(43/48)` → `rgba(255,138,0/255,181,71,...)`; reduced-motion fallback shadow → brand; `.win-moment-value-shimmer` gradient `hsl(43/48/35)` → brand rgba
+- **`src/index.css`** (3 ins/3 del): winner-shimmer bar `hsl(43 90% 55%)` → `rgba(255,138,0,...)`
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge): SUCCESS ✅
+
+### Step 22 — CookieConsentBanner.tsx (PR #104, merge commit `c8b61546`)
+- **`src/components/CookieConsentBanner.tsx`** (9 ins/9 del): banner + dialog borders, 3× section item borders, 2× outline button hover, 2× CTA "Souhlasím" button gradient + shadow → brand orange/amber
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge): SUCCESS ✅
+
+### Step 23 — Login.tsx + Register.tsx (PR #105, merge commit `64c2cb16`)
+- **`src/pages/Login.tsx`** (5 ins/5 del): card border, submit CTA gradient + shadow, 3× OAuth outline button → brand
+- **`src/pages/Register.tsx`** (5 ins/5 del): same pattern
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge): SUCCESS ✅
+
+### Step 24 — VoucherCarousel.tsx (PR #106, merge commit `e1cecdf9`)
+- **`src/components/VoucherCarousel.tsx`** (3 ins/3 del): card border + hover, image border, CTA button gradient + shadow → brand
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge): SUCCESS ✅
+
+### Step 25 — Messages.tsx (PR #107, merge commit `1145ca2e`)
+- **`src/pages/Messages.tsx`** (35 ins/35 del): all 35 inline `hsl(45/35)` → brand rgba/hex (system bubble border, Sparkles icon, label gradient, CTA bubble button, send button surface, particles, shimmer overlays, header border/shadow/shimmer/icon/title/count-badge, scrollbar, empty state, jump button, input bar border/shadow/shimmer/focus, flying message, sparkle icon)
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge): SUCCESS ✅
+
+### Step 26 — Misc customer-facing (PR #108, merge commit `16d1637d`)
+- **`src/components/ContactForm.tsx`** (4 ins/4 del): heading gradient, success box border/bg/icon/text → brand
+- **`src/components/SupportForm.tsx`** (4 ins/4 del): same 4-change pattern
+- **`src/pages/Kontakt.tsx`** (1 ins/1 del): heading gradient `via-[hsl(45_85%_60%)]` → `via-[#FFB547]`
+- **`src/components/BonusPrizeDetailModal.tsx`** (1 ins/1 del): dialog title `text-yellow-400` → `text-[#FFB547]`
+- **`src/components/BonusPrizeOverlay.tsx`** (1 ins/1 del): delivered/claimed badge `blue-*` → brand orange
+- **`src/pages/Homepage.tsx`** (1 ins/1 del): login chip `bg-blue-100/10 text-blue-400` → brand
+- **`src/pages/NotFound.tsx`** (1 ins/1 del): link `text-blue-500` → brand orange
+- **`src/pages/MyContestDetail.tsx`** (1 ins/1 del): draft status dot `bg-yellow-500` → `bg-[#FF8A00]`
+- **`src/components/MessageForm.tsx`** (1 ins/1 del): submit button `bg-blue-600` → brand orange
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge): pending
 
 ---
 

@@ -14,6 +14,20 @@
 
 ---
 
+## 2026-05-21 — Brand customer-facing cleanup steps 21–26 dokončeny (PRy #103–#108)
+
+### Co bylo provedeno
+
+- **Step 21** — `TicketResultModal.css` + `index.css`: win-moment CSS animation glows `hsl(43/48/35)` → brand rgba; PR #103, merge commit `bd3d107b`
+- **Step 22** — `CookieConsentBanner.tsx`: bannerové/dialogové bordery, outline buttony, CTA "Souhlasím" gradienty `hsl(45/40/35)` → brand; PR #104, merge commit `c8b61546`
+- **Step 23** — `Login.tsx` + `Register.tsx`: card bordery, CTA submit gradienty, OAuth outline buttony → brand; PR #105, merge commit `64c2cb16`
+- **Step 24** — `VoucherCarousel.tsx`: card bordery, image border, CTA buy button → brand; PR #106, merge commit `e1cecdf9`
+- **Step 25** — `Messages.tsx`: 35 inline `hsl(45/35)` → brand rgba/hex (particles, shimmer, header, send button, input bar, flying message); PR #107, merge commit `1145ca2e`
+- **Step 26** — 9 různých souborů: ContactForm + SupportForm + Kontakt + BonusPrizeDetailModal + BonusPrizeOverlay + Homepage + NotFound + MyContestDetail + MessageForm; PR #108, merge commit `16d1637d`
+- Všechny Playwright Smoke Tests ✅; žádné admin, influencer, partner ani logické změny
+
+---
+
 ## 2026-05-21 — Brand customer-facing cleanup steps 15–19 dokončeny (PRy #98–#102)
 
 ### Co bylo provedeno
