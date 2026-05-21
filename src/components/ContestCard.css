@@ -3,7 +3,7 @@
   position: relative;
 }
 
-/* Animated light sweep on border */
+/* Animated light sweep on border — Energy Orange / Warm Amber */
 .contest-card-glow::before {
   content: '';
   position: absolute;
@@ -14,19 +14,19 @@
     90deg,
     transparent 0%,
     transparent 20%,
-    hsl(45, 100%, 65%) 35%,
-    hsl(50, 100%, 80%) 50%,
-    hsl(45, 100%, 65%) 65%,
+    rgba(255, 138, 0, 0.55) 35%,
+    rgba(255, 181, 71, 0.75) 50%,
+    rgba(255, 138, 0, 0.55) 65%,
     transparent 80%,
     transparent 100%
   );
   background-size: 250% 100%;
-  animation: borderSweep 2.5s linear infinite;
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  animation: borderSweep 4s linear infinite;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
-  mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -34,15 +34,15 @@
   z-index: 20;
 }
 
-/* Inner gold glow layer */
+/* Inner orange glow layer */
 .contest-card-glow::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 20px;
-  box-shadow: 
-    inset 0 0 20px 0 hsla(40, 80%, 50%, 0.15),
-    inset 0 1px 0 0 hsla(40, 80%, 70%, 0.2);
+  box-shadow:
+    inset 0 0 20px 0 rgba(255, 138, 0, 0.08),
+    inset 0 1px 0 0 rgba(255, 181, 71, 0.12);
   pointer-events: none;
   z-index: 15;
 }
@@ -58,17 +58,17 @@
 
 /* Subtle hover enhancement */
 .contest-card-glow:hover::after {
-  box-shadow: 
-    inset 0 0 30px 0 hsla(40, 80%, 50%, 0.2),
-    inset 0 1px 0 0 hsla(40, 80%, 70%, 0.3);
+  box-shadow:
+    inset 0 0 30px 0 rgba(255, 138, 0, 0.12),
+    inset 0 1px 0 0 rgba(255, 181, 71, 0.20);
 }
 
-/* Voucher card subtle inner glow - muted champagne version */
+/* Voucher card subtle inner glow — muted champagne version */
 .voucher-card-glow {
   position: relative;
 }
 
-/* Animated light sweep on border - slower and more subtle */
+/* Animated light sweep on border — slower and more subtle */
 .voucher-card-glow::before {
   content: '';
   position: absolute;
@@ -87,11 +87,11 @@
   );
   background-size: 250% 100%;
   animation: voucherBorderSweep 4s linear infinite;
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
-  mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -104,7 +104,7 @@
   position: absolute;
   inset: 0;
   border-radius: 17px;
-  box-shadow: 
+  box-shadow:
     inset 0 0 15px 0 hsla(40, 30%, 40%, 0.08),
     inset 0 1px 0 0 hsla(40, 30%, 50%, 0.1);
   pointer-events: none;
@@ -113,7 +113,7 @@
 }
 
 .voucher-card-glow:hover::after {
-  box-shadow: 
+  box-shadow:
     inset 0 0 20px 0 hsla(40, 40%, 45%, 0.12),
     inset 0 1px 0 0 hsla(40, 40%, 55%, 0.15);
 }
@@ -127,12 +127,12 @@
   }
 }
 
-/* Coming Soon card glow - same as contests but 30% thinner border */
+/* Coming Soon card glow — thinner border, softer orange */
 .coming-soon-card-glow {
   position: relative;
 }
 
-/* Animated light sweep on border - thinner version */
+/* Animated light sweep on border — thinner version */
 .coming-soon-card-glow::before {
   content: '';
   position: absolute;
@@ -143,19 +143,19 @@
     90deg,
     transparent 0%,
     transparent 20%,
-    hsl(45, 100%, 65%) 35%,
-    hsl(50, 100%, 80%) 50%,
-    hsl(45, 100%, 65%) 65%,
+    rgba(255, 138, 0, 0.35) 35%,
+    rgba(255, 181, 71, 0.55) 50%,
+    rgba(255, 138, 0, 0.35) 65%,
     transparent 80%,
     transparent 100%
   );
   background-size: 250% 100%;
-  animation: borderSweep 2.5s linear infinite;
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  animation: borderSweep 5s linear infinite;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
-  mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -163,24 +163,24 @@
   z-index: 20;
 }
 
-/* Inner gold glow layer - slightly reduced */
+/* Inner orange glow layer — slightly reduced */
 .coming-soon-card-glow::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 20px;
-  box-shadow: 
-    inset 0 0 15px 0 hsla(40, 80%, 50%, 0.12),
-    inset 0 1px 0 0 hsla(40, 80%, 70%, 0.15);
+  box-shadow:
+    inset 0 0 15px 0 rgba(255, 138, 0, 0.06),
+    inset 0 1px 0 0 rgba(255, 181, 71, 0.08);
   pointer-events: none;
   z-index: 15;
 }
 
 /* Subtle hover enhancement */
 .coming-soon-card-glow:hover::after {
-  box-shadow: 
-    inset 0 0 25px 0 hsla(40, 80%, 50%, 0.18),
-    inset 0 1px 0 0 hsla(40, 80%, 70%, 0.25);
+  box-shadow:
+    inset 0 0 25px 0 rgba(255, 138, 0, 0.10),
+    inset 0 1px 0 0 rgba(255, 181, 71, 0.15);
 }
 
 /* Premium gallery fade+slide transition */
