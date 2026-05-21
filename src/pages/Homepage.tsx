@@ -844,7 +844,7 @@ const Homepage = () => {
                 </div>
               )}
               {!user && (
-                <div className="px-2 py-1 bg-blue-100/10 border border-blue-400/30 rounded text-xs text-blue-400">
+                <div className="px-2 py-1 bg-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FFB547]">
                   Přihlásit pro interakci
                 </div>
               )}
