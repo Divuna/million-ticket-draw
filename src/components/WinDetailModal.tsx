@@ -185,13 +185,13 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
     switch (win.status) {
       case 'pending':
         return (
-          <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+          <Badge className="bg-[rgba(255,138,0,0.2)] text-[#FFB547] border border-[rgba(255,138,0,0.3)]">
             <Clock className="w-3 h-3 mr-1" /> Čeká
           </Badge>
         );
       case 'připraveno k odeslání':
         return (
-          <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30">
+          <Badge className="bg-[rgba(255,138,0,0.2)] text-[#FFB547] border border-[rgba(255,138,0,0.3)]">
             <Package className="w-3 h-3 mr-1" /> Připraveno k odeslání
           </Badge>
         );
@@ -203,7 +203,7 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
         );
       default:
         return (
-          <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+          <Badge className="bg-[rgba(255,138,0,0.2)] text-[#FFB547] border border-[rgba(255,138,0,0.3)]">
             <Clock className="w-3 h-3 mr-1" /> Čeká
           </Badge>
         );
@@ -258,7 +258,7 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
             <div className="absolute top-4 left-4">
               <Badge className="bg-background/80 text-foreground border-0 backdrop-blur-sm">
                 {win.type === 'main' 
-                  ? <><Trophy className="h-4 w-4 text-yellow-400 mr-1" /> Hlavní výhra</>
+                  ? <><Trophy className="h-4 w-4 text-[#FFB547] mr-1" /> Hlavní výhra</>
                   : <><Gift className="h-4 w-4 text-purple-400 mr-1" /> Bonusová výhra</>
                 }
               </Badge>

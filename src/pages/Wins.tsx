@@ -599,8 +599,8 @@ const Wins: React.FC = () => {
                       onClick={() => setFilter('shipped')}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                         filter === 'shipped'
-                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0_4px_16px_rgba(59,130,246,0.3)]'
-                          : 'bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20'
+                          ? 'bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black shadow-[0_4px_16px_rgba(255,138,0,0.3)]'
+                          : 'bg-[rgba(255,138,0,0.1)] text-[#FFB547] border border-[rgba(255,138,0,0.3)] hover:bg-[rgba(255,138,0,0.2)]'
                       }`}
                     >
                       Odesláno ({statusCounts.shipped})
@@ -759,7 +759,7 @@ const Wins: React.FC = () => {
                     border: '1px solid hsl(220, 20%, 20%)',
                   }}
                 >
-                  <Tag className="w-12 h-12 text-blue-400/30" />
+                  <Tag className="w-12 h-12 text-[rgba(255,138,0,0.3)]" />
                 </div>
                 <h3 className="text-2xl font-bold mb-3 text-gray-200">
                   Zatím nemáte žádné nabídky
