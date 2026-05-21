@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-05-21 — Brand logo assets opraveny (PR #110, merge commit `8b94e0df`)
+
+### Co bylo provedeno
+
+- `src/assets/logo-onemil.png` nahrazeno brand kit `primary_logo_trophy_behind_text_transparent_estimated.png` (průhledné pozadí, správné pro tmavý header)
+- `public/favicon.ico` nahrazeno brand kit `favicon.ico` z `03_icons/favicon_app/`
+- `index.html` opraven wrong MIME type `type="image/svg+xml"` → `type="image/x-icon"` na favicon linku
+- PWA ikony (`android-chrome-192x192/512`, `apple-touch-icon`) byly již shodné s brand kitem — beze změny
+- Playwright Smoke Tests: branch `26252667493` ✅, post-merge `26252302107` ✅
+
+---
+
 ## 2026-05-21 — Brand customer-facing cleanup KOMPLETNÍ — final cleanup PR #109
 
 ### Co bylo provedeno

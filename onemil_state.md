@@ -1,6 +1,31 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand customer-facing cleanup KOMPLETNÍ — steps 21–27 + final cleanup PR #109)
+**Aktualizováno:** 21. 05. 2026 (Brand logo assets opraveny — PR #110)
+
+---
+
+## BRAND LOGO ASSETS — OPRAVENO (21. 05. 2026)
+
+### PR #110 — style: replace header logo and favicon with brand kit assets (merge commit `8b94e0df`)
+
+**Nalezené logo soubory před opravou:**
+- `src/assets/logo-onemil.png` — 1.4MB, JINÝ od brand kitu → nahrazeno
+- `public/favicon.ico` — 7.5K, JINÝ od brand kitu → nahrazeno
+- `public/android-chrome-192x192.png` — identický MD5 s brand kitem ✅ beze změny
+- `public/android-chrome-512x512.png` — identický MD5 s brand kitem ✅ beze změny
+- `public/apple-touch-icon.png` — identický MD5 s brand kitem ✅ beze změny
+
+**Nahrazené soubory:**
+- `src/assets/logo-onemil.png` → `primary_logo_trophy_behind_text_transparent_estimated.png` z brand kitu (průhledné pozadí, správné pro tmavý header)
+- `public/favicon.ico` → `favicon.ico` z brand kitu (`03_icons/favicon_app/`)
+- `index.html` — opraven wrong MIME type `type="image/svg+xml"` → `type="image/x-icon"` na favicon linku
+
+**Kde se logo používá v aplikaci:**
+- `src/components/Header.tsx` — `import logo from '@/assets/logo-onemil.png'`, zobrazeno jako `<img>` v sticky headeru
+- `public/manifest.webmanifest` — odkazuje na `android-chrome-192x192.png` a `android-chrome-512x512.png` (PWA ikony, již správné)
+- `index.html` — `<link rel="icon">` → `favicon.ico`, `<link rel="apple-touch-icon">` → `apple-touch-icon.png`
+
+- Playwright Smoke Tests (branch `26252667493` ✅, post-merge `26252302107` ✅)
 
 ---
 
