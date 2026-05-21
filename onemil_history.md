@@ -14,6 +14,27 @@
 
 ---
 
+## 2026-05-21 — Brand token reset step 1: sjednoceny základní CSS tokeny (PR #84, merge commit 4de961b)
+
+### Co bylo provedeno
+
+- **`src/index.css`** — přidány `--om-*` brand tokeny do `:root`; základní Tailwind/ShadCN tokeny (`--background`, `--foreground`, `--card`, `--popover`, `--primary`, `--accent`, `--ring`, `--muted-foreground`, `--neon-gold`, `--heading-gold`, `--text-silver` a další) přesměrovány na OneMil brand kit barvy (Midnight Black, Deep Navy, Graphite, Platinum, Muted Silver, Energy Orange, Warm Amber, Soft Gold)
+- Sidebar primary/ring → Energy Orange
+- `body::before` gradient → brand černé odstíny
+- Žádné komponenty, stránky, migrace ani backend logika nezměněny
+
+### Větev a PR
+
+- Větev: `style/brand-token-reset-step-1`
+- PR #84 mergnut do `main` — merge commit `4de961b7d286c4309b916f5b00edad2e2e15ec7b`
+- Změněn pouze `src/index.css` (+67 / -54)
+
+### Testy
+
+- **Playwright Smoke Tests**: SUCCESS na PR checku i po mergi do main (run `26212014595`) ✅
+
+---
+
 ## 2026-05-20 — Admin „Online teď" pro přihlášené uživatele: live na produkci (commit 0732738, ab5cb25)
 
 ### Co bylo provedeno
