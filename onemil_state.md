@@ -1,6 +1,37 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 20. 05. 2026 (Admin Online teď ZAMČEN proti regresi — staging E2E spec 21 zelený, run 26189017692)
+**Aktualizováno:** 21. 05. 2026 (Brand token reset step 1 — PR #84 mergnut do main)
+
+---
+
+## BRAND TOKEN RESET — STEP 1 DOKONČEN (21. 05. 2026)
+
+Sjednoceny základní CSS brand tokeny v `src/index.css` podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **Přidány `--om-*` brand tokeny** do `:root`: `--om-black`, `--om-navy`, `--om-graphite`, `--om-platinum`, `--om-silver`, `--om-muted-silver`, `--om-orange`, `--om-amber`, `--om-soft-gold`, `--om-font-heading`, `--om-font-body`
+- **Základní tokeny přesměrovány na brand barvy** (`:root` i `.dark`): background → Midnight Black, card/panel → Deep Navy/Graphite, primary/accent/ring → Energy Orange (`33 100% 50%`), secondary → Warm Amber, foreground → Platinum, muted text → Muted Silver
+- **Sidebar tokeny sjednoceny** — `--sidebar-primary` a `--sidebar-ring` → Energy Orange (místo modré)
+- **Zachované ale přesměrované tokeny**: `--neon-gold`, `--package-gold` → Warm Amber; `--heading-gold` → Soft Gold oblast; `--text-silver` → blíže Silver
+- `body::before` gradient přesměrován na brand černé odstíny
+
+### Co se nezměnilo
+
+- Žádná logika aplikace, databáze, platby, wallet, soutěže, tikety, Partner Offers ani backend
+- Žádné komponenty ani stránky
+- Žádné migrace
+
+### Merge + testy
+
+- **PR #84** mergnut do `main` — merge commit `4de961b7d286c4309b916f5b00edad2e2e15ec7b`
+- Změněn pouze `src/index.css` (+67 / -54 řádků)
+- **Playwright Smoke Tests**: SUCCESS před mergem (PR check) i po mergi (main, run `26212014595`)
+- Větev: `style/brand-token-reset-step-1`
+
+### Další krok
+
+Viditelně sjednotit soutěžní karty a CTA tlačítka podle brand kitu (ContestCard, ContestCard.css, primární CTA gradient).
 
 ---
 
