@@ -14,6 +14,25 @@
 
 ---
 
+## 2026-05-21 — Brand vouchers step 4: stránka Vouchery sjednocena (PR #87, merge commit 6dab7c3)
+
+### Co bylo provedeno
+
+- **`src/pages/Vouchers.tsx`** — yellow/gold HSL → Energy Orange/Amber: voucher karty (border, hover, glow), skeleton/empty state pozadí (deep navy), gold particle efekty (3×) → rgba orange/amber, CTA KOUPIT + Uplatnit (gradient `#FF8A00→#FFB547`, text `#111`), cena/voucher kód (`#FFB547`), redeem modal (border + bg + copy button), image separátor, info badge, heart button, gift icon placeholder
+- Layout, taby, nákup voucheru, oblíbené, zakoupené, modaly, kopírování kódu — beze změny
+- Žádná logika, Supabase dotazy, migrace, stránky ani texty UI nezměněny
+
+### Větev a PR
+
+- Větev: `style/brand-vouchers-step-4`
+- PR #87 mergnut do `main` — merge commit `6dab7c3527b11c1e0559220d71228ef485911fad`
+
+### Testy
+
+- **Playwright Smoke Tests**: SUCCESS na PR checku i po mergi do main (run `26228589925`) ✅
+
+---
+
 ## 2026-05-21 — Brand contest detail step 3: detail soutěže sjednocen (PR #86, commit 63ecbcb)
 
 ### Co bylo provedeno

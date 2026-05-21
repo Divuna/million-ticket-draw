@@ -1,6 +1,44 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand contest detail step 3 — PR #86 mergnut do main)
+**Aktualizováno:** 21. 05. 2026 (Brand vouchers step 4 — PR #87 mergnut do main)
+
+---
+
+## BRAND VOUCHERS — STEP 4 DOKONČEN (21. 05. 2026)
+
+Stránka Vouchery sjednocena podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/pages/Vouchers.tsx`** — všechny yellow/gold HSL hodnoty nahrazeny brand hodnotami:
+  - Voucher karty (dostupné, oblíbené, zakoupené): border `hsl(40_30%_30%)` → `rgba(255,138,0,0.35)`, hover border → `rgba(255,138,0,0.55)`, hover glow → orange
+  - Skeleton / empty state karty: `from-[hsl(40_20%_14%)]` gradient → deep navy `from-[hsl(220_35%_8%)]`, border → `rgba(255,138,0,0.3)`
+  - Gold particle efekty (3×): `hsl(45 80% 65%)` → `rgba(255,138,0,...)` / `rgba(255,181,71,...)` při snížené průhlednosti (decentní brand efekt)
+  - CTA tlačítka KOUPIT: `from-[hsl(40_70%_42%)] via-[hsl(42_75%_48%)] to-[hsl(38_70%_42%)]` → gradient `#FF8A00 → #FFB547`, text `#111`
+  - Tlačítko Uplatnit voucher: stejný orange→amber gradient
+  - Cena / voucher kód: `hsl(45_80%_55%)` → Warm Amber `#FFB547`
+  - Redeem modal: border `hsl(40_30%_35%)` → `rgba(255,138,0,0.35)`, pozadí `hsl(40_20%_12%)` → dark navy; kód text → `#FFB547`; Copy button: zlatá → `#FF8A00→#FFB547`
+  - "Zkopírovat kód" outline: border/hover → orange brand hodnoty
+  - Image separátor + info badge: `hsl(40_25%_25%/0.4/0.5)` → `rgba(255,138,0,0.2)`
+  - Heart button border + loader barva → orange
+  - Gift icon placeholder → `rgba(255,138,0,0.35)`
+
+### Co se nezměnilo
+
+- Žádná logika aplikace — nákup voucheru, oblíbené, zakoupené, kopírování kódu, modaly, tabing
+- Žádné Supabase dotazy, wallet, Stripe, soutěže, tikety, Partner Offers ani backend
+- Žádné stránky, routing ani texty UI
+- Žádné migrace
+
+### Merge + testy
+
+- **PR #87** mergnut do `main` — merge commit `6dab7c3527b11c1e0559220d71228ef485911fad`
+- Změněn pouze 1 soubor: `src/pages/Vouchers.tsx` (45 ins / 45 del)
+- **Playwright Smoke Tests**: SUCCESS před mergem (PR check) i po mergi (main, run `26228589925`)
+
+### Další krok
+
+Rozhodnout: pokračovat brand alignmentem dalších stránek (profile, homepage, header), nebo nejdřív provést vizuální audit po všech 4 krocích.
 
 ---
 
