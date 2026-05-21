@@ -62,7 +62,7 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', 
         );
       case 'připraveno k odeslání':
         return (
-          <Badge className={`${baseClasses} bg-blue-500/90 text-white border-0`}>
+          <Badge className={`${baseClasses} bg-[rgba(255,138,0,0.9)] text-black border-0`}>
             <Package className="w-3 h-3 mr-1" /> Připraveno k odeslání
           </Badge>
         );
