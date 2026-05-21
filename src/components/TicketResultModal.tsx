@@ -546,7 +546,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       duration: `${5.5 + (i % 6) * 0.45}s`,
       color:
         i % 4 === 0
-          ? 'hsl(43 95% 62%)'
+          ? '#FFB547'
           : i % 4 === 1
             ? 'hsl(265 82% 68%)'
             : i % 4 === 2
@@ -761,8 +761,8 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         className={cn(
           'data-[state=open]:duration-[280ms] data-[state=closed]:duration-[280ms]',
           shouldCelebrateWin
-            ? 'fixed left-1/2 top-1/2 z-[100] flex max-h-[min(calc(100dvh-2rem),56rem)] w-[min(calc(100vw-2rem),64rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 flex-col gap-0 overflow-hidden rounded-2xl border border-yellow-500/40 bg-[#050810] p-0 shadow-[0_0_100px_rgba(255,190,60,0.25)]'
-            : 'sm:max-w-md rounded-2xl border border-yellow-500/40 bg-gradient-to-b from-[#0b1220] via-[#0f1b33] to-[#0a1428] shadow-[0_0_40px_rgba(255,200,0,0.15)]'
+            ? 'fixed left-1/2 top-1/2 z-[100] flex max-h-[min(calc(100dvh-2rem),56rem)] w-[min(calc(100vw-2rem),64rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 flex-col gap-0 overflow-hidden rounded-2xl border border-[rgba(255,138,0,0.4)] bg-[#050810] p-0 shadow-[0_0_100px_rgba(255,138,0,0.25)]'
+            : 'sm:max-w-md rounded-2xl border border-[rgba(255,138,0,0.4)] bg-gradient-to-b from-[#0b1220] via-[#0f1b33] to-[#0a1428] shadow-[0_0_40px_rgba(255,138,0,0.15)]'
         )}
       >
         {/* Explicit close button — sits above confetti / glow layers so X always works */}
@@ -793,7 +793,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         {shouldCelebrateWin && (
           <div className="relative flex min-h-[min(42vh,380px)] shrink-0 flex-col items-center justify-center overflow-hidden px-0 pb-6 pt-10">
             <div
-              className="win-moment-glow-orb -left-1/4 h-[min(55vw,420px)] w-[min(55vw,420px)] bg-[radial-gradient(circle,hsl(43_90%_55%/0.55)_0%,transparent_70%)]"
+              className="win-moment-glow-orb -left-1/4 h-[min(55vw,420px)] w-[min(55vw,420px)] bg-[radial-gradient(circle,rgba(255,138,0,0.55)_0%,transparent_70%)]"
               style={{ top: '8%' }}
             />
             <div
@@ -823,7 +823,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             <div className="relative z-20 mx-auto max-w-lg px-2 text-center">
               <p
                 id="win-moment-shout"
-                className="win-moment-win-headline mb-3 text-center text-2xl font-black uppercase tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-yellow-300 to-amber-200 drop-shadow-[0_0_28px_rgba(250,210,80,0.55)] md:text-3xl md:tracking-[0.12em]"
+                className="win-moment-win-headline mb-3 text-center text-2xl font-black uppercase tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-r from-[#FFB547] via-[#E7EBF0] to-[#FFB547] drop-shadow-[0_0_28px_rgba(255,138,0,0.45)] md:text-3xl md:tracking-[0.12em]"
               >
                 {isPartnerOffer && !isBonusWin && !isMainPrize ? '🎁 SPECIÁLNÍ NABÍDKA!' : '🎉 VYHRÁL JSI!'}
               </p>
@@ -832,7 +832,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 tabIndex={-1}
                 aria-describedby="win-moment-shout"
                 className={cn(
-                  'win-moment-prize-title text-balance text-3xl font-black leading-tight text-white drop-shadow-[0_0_24px_rgba(250,204,21,0.35)] md:text-4xl',
+                  'win-moment-prize-title text-balance text-3xl font-black leading-tight text-white drop-shadow-[0_0_24px_rgba(255,138,0,0.35)] md:text-4xl',
                   'outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 focus-visible:ring-offset-4 focus-visible:ring-offset-[#050810]'
                 )}
               >
@@ -939,14 +939,14 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                       : result.distance_to_next_bonus
                   );
                   return (
-                    <div className="mx-auto max-w-[360px] rounded-2xl border border-[hsl(43_70%_50%/0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center space-y-1">
+                    <div className="mx-auto max-w-[360px] rounded-2xl border border-[rgba(255,138,0,0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center space-y-1">
                       <p className="text-sm text-amber-100/80">
                         {nextN === 1 ? (
                           <>Další výherní ticket čeká už při dalším tahu.</>
                         ) : (
                           <>
                             Další výherní ticket čeká už za{' '}
-                            <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
+                            <span className="font-bold bg-gradient-to-r from-[#FFB547] to-[#FF8A00] bg-clip-text text-transparent">
                               {nextN.toLocaleString('cs-CZ')}
                             </span>
                             {' '}{tahPlural(nextN)}.
@@ -969,7 +969,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     onClick={handlePlayAgain}
                     className={cn(
                       'win-moment-cta-play-again w-full border-0 font-bold shadow-lg',
-                      'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-400 text-black hover:brightness-110'
+                      'bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00] text-black hover:brightness-110'
                     )}
                   >
                     Hrát znovu
@@ -1011,7 +1011,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 {!shouldCelebrateWin ? (
                   <>
                     <div className="text-6xl">🏆</div>
-                    <p className="text-lg font-semibold text-yellow-600">
+                    <p className="text-lg font-semibold text-[#FF8A00]">
                       Gratulujeme, vyhrál jsi hlavní cenu!
                     </p>
                   </>
@@ -1028,7 +1028,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     onClick={handlePlayAgain}
                     className={cn(
                       'win-moment-cta-play-again w-full border-0 font-bold shadow-lg',
-                      'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-400 text-black hover:brightness-110'
+                      'bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00] text-black hover:brightness-110'
                     )}
                   >
                     Hrát znovu
@@ -1103,7 +1103,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     <Button
                       type="button"
                       onClick={handlePlayAgain}
-                      className="win-moment-cta-play-again w-full border-0 font-bold shadow-lg bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-400 text-black hover:brightness-110"
+                      className="win-moment-cta-play-again w-full border-0 font-bold shadow-lg bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00] text-black hover:brightness-110"
                     >
                       Hrát znovu
                     </Button>
@@ -1145,7 +1145,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               {lossRetentionNudge && (
                 <p className="text-sm font-medium text-amber-200/90">{lossRetentionNudge}</p>
               )}
-              <div className="rounded-2xl p-5 space-y-2 border border-yellow-500/30 bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
+              <div className="rounded-2xl p-5 space-y-2 border border-[rgba(255,138,0,0.3)] bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
                 <p className="text-sm text-amber-100/85 text-center">
                   {nearestPrizeDistance !== null ? (
                     nearestPrizeDistance === 1 ? (
@@ -1153,7 +1153,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     ) : (
                       <>
                         Další výherní ticket čeká už za{' '}
-                        <span className="font-bold bg-gradient-to-r from-[hsl(43_80%_65%)] to-[hsl(35_90%_55%)] bg-clip-text text-transparent">
+                        <span className="font-bold bg-gradient-to-r from-[#FFB547] to-[#FF8A00] bg-clip-text text-transparent">
                           {nearestPrizeDistance.toLocaleString('cs-CZ')}
                         </span>
                         {' '}{tahPlural(nearestPrizeDistance)}.
@@ -1175,7 +1175,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
         {/* Social Sharing Section with Preview — only for real wins */}
         {isWinner && (
-        <div className="border-t border-transparent pt-4 mt-2" style={{ borderImage: 'linear-gradient(to right, transparent, rgba(234,179,8,0.4), transparent) 1' }}>
+        <div className="border-t border-transparent pt-4 mt-2" style={{ borderImage: 'linear-gradient(to right, transparent, rgba(255,138,0,0.4), transparent) 1' }}>
           <p className="text-sm text-muted-foreground text-center mb-3">
             Sdílet výsledek
             {isUploading && <span className="ml-2 text-xs">(nahrávám...)</span>}
