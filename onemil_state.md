@@ -1,6 +1,33 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand MioCoin step 9 — PR #92 mergnut do main)
+**Aktualizováno:** 21. 05. 2026 (Brand TicketResultModal step 10 — PR #93 mergnut do main)
+
+---
+
+## BRAND TICKETRESULTMODAL — STEP 10 DOKONČEN (21. 05. 2026)
+
+Win-moment modal sjednocen podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/components/TicketResultModal.tsx`** — win-moment vizuál sjednocen:
+  - Modal border/shadow: `border-yellow-500/40`, `rgba(255,190,60,...)`, `rgba(255,200,0,...)` → `rgba(255,138,0,...)`
+  - Win glow orb: `hsl(43_90%_55%/0.55)` → `rgba(255,138,0,0.55)`
+  - Win headline gradient: `from-amber-100 via-yellow-300 to-amber-200` → `from-[#FFB547] via-[#E7EBF0] to-[#FFB547]`
+  - Prize title drop-shadow: `rgba(250,204,21,0.35)` → `rgba(255,138,0,0.35)`
+  - Particle barva (warm gold): `hsl(43 95% 62%)` → `#FFB547`
+  - Next-win distance highlight: `hsl(43_80%_65%) hsl(35_90%_55%)` → `#FFB547 #FF8A00` (×2)
+  - "Hrát znovu" CTA (×3): `from-amber-500 via-yellow-500 to-amber-400` → `from-[#FF8A00] via-[#FFB547] to-[#FF8A00]`
+  - Main prize text: `text-yellow-600` → `text-[#FF8A00]`
+  - Loss state border: `border-yellow-500/30` → `border-[rgba(255,138,0,0.3)]`
+  - Share divider: `rgba(234,179,8,0.4)` → `rgba(255,138,0,0.4)`
+  - Emotivní amber/white text třídy a confetti barvy zachovány
+
+### Merge + testy
+
+- **PR #93** mergnut do `main` — merge commit `d88a76a9a1cef323e3b477e683aa3e69442d618a`
+- Změněn pouze 1 soubor: `src/components/TicketResultModal.tsx` (15 ins / 15 del)
+- **Playwright Smoke Tests**: SUCCESS ✅
 
 ---
 

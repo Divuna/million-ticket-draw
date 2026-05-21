@@ -14,6 +14,24 @@
 
 ---
 
+## 2026-05-21 — Brand TicketResultModal step 10: win-modal sjednocen (PR #93, merge commit d88a76a)
+
+### Co bylo provedeno
+
+- **`src/components/TicketResultModal.tsx`** — 15 × old yellow/gold HSL → Energy Orange/Amber brand: modal border, glow orb, win headline, prize drop-shadow, particle, next-win highlight (×2), CTA tlačítka (×3), main prize text, loss border, share divider
+- Confetti barvy a amber/white text třídy zachovány pro emotivní win-moment
+
+### Větev a PR
+
+- Větev: `style/brand-ticket-result-modal-step-10`
+- PR #93 mergnut do `main` — merge commit `d88a76a9a1cef323e3b477e683aa3e69442d618a`
+
+### Testy
+
+- **Playwright Smoke Tests**: SUCCESS ✅
+
+---
+
 ## 2026-05-21 — Brand MioCoin step 9: MioCoin coin ikona sjednocena (PR #92, merge commit baa61ab)
 
 ### Co bylo provedeno
