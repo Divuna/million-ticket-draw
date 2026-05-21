@@ -44,7 +44,7 @@ export const OfferCard: React.FC<OfferCardProps> = ({ offer, onClick }) => {
       onClick={onClick}
       className="group relative rounded-xl overflow-hidden cursor-pointer transition-all duration-300
         bg-card border border-border/50
-        hover:border-blue-400/40 hover:shadow-lg hover:shadow-blue-500/10 hover:scale-[1.01]"
+        hover:border-[rgba(255,138,0,0.4)] hover:shadow-lg hover:shadow-[rgba(255,138,0,0.1)] hover:scale-[1.01]"
       style={{ animation: 'fade-in 0.4s ease-out forwards' }}
     >
       {/* Image / logo section */}
@@ -61,14 +61,14 @@ export const OfferCard: React.FC<OfferCardProps> = ({ offer, onClick }) => {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-muted">
-            <Tag className="w-16 h-16 text-blue-400/30" />
+            <Tag className="w-16 h-16 text-[rgba(255,138,0,0.3)]" />
           </div>
         )}
 
         {/* Badges */}
         <div className="absolute top-3 right-3 flex flex-col gap-1 items-end">
           {isNew && !isExpired && (
-            <Badge className="bg-blue-500/90 text-white border-0 text-xs">Nová</Badge>
+            <Badge className="bg-[rgba(255,138,0,0.9)] text-black border-0 text-xs">Nová</Badge>
           )}
           {isExpired && (
             <Badge className="bg-gray-600/80 text-white border-0 text-xs">Expirovaná</Badge>
@@ -79,7 +79,7 @@ export const OfferCard: React.FC<OfferCardProps> = ({ offer, onClick }) => {
       {/* Content */}
       <div className="p-4 space-y-2">
         {partnerName && (
-          <p className="text-xs text-blue-400 font-medium uppercase tracking-wide truncate">
+          <p className="text-xs text-[#FFB547] font-medium uppercase tracking-wide truncate">
             {partnerName}
           </p>
         )}
