@@ -113,13 +113,13 @@ const VIPCard: React.FC<{
 }> = ({ children, className = '', delay = 0, variant = 'default', glowIntensity = 'low', isLoaded = true }) => {
   const glowStyles = {
     low: 'shadow-[0_0_30px_-8px_hsl(var(--border)/0.3)]',
-    medium: 'shadow-[0_0_40px_-8px_hsl(43_90%_55%/0.15)]',
-    high: 'shadow-[0_0_60px_-12px_hsl(43_90%_55%/0.25),0_0_100px_-20px_hsl(43_90%_55%/0.15)]'
+    medium: 'shadow-[0_0_40px_-8px_rgba(255,138,0,0.12)]',
+    high: 'shadow-[0_0_60px_-12px_rgba(255,138,0,0.2),0_0_100px_-20px_rgba(255,138,0,0.12)]'
   };
 
   const variantStyles = {
     default: 'border-border/30 bg-gradient-to-br from-card/95 via-card/90 to-card/80',
-    gold: 'border-yellow-500/25 bg-gradient-to-br from-yellow-500/5 via-card/95 to-yellow-600/5',
+    gold: 'border-[rgba(255,138,0,0.2)] bg-gradient-to-br from-[rgba(255,138,0,0.04)] via-card/95 to-[rgba(255,138,0,0.03)]',
     accent: 'border-primary/25 bg-gradient-to-br from-primary/5 via-card/95 to-primary/3'
   };
 
@@ -140,7 +140,7 @@ const VIPCard: React.FC<{
       <div 
         className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none"
         style={{
-          background: 'linear-gradient(105deg, transparent 40%, hsl(43 90% 55% / 0.03) 45%, hsl(43 90% 55% / 0.05) 50%, hsl(43 90% 55% / 0.03) 55%, transparent 60%)',
+          background: 'linear-gradient(105deg, transparent 40%, rgba(255,138,0,0.025) 45%, rgba(255,138,0,0.04) 50%, rgba(255,138,0,0.025) 55%, transparent 60%)',
           backgroundSize: '200% 100%',
           animation: 'shimmer 3s ease-in-out infinite'
         }}
@@ -156,7 +156,7 @@ const FloatingParticles: React.FC = () => (
     {[...Array(6)].map((_, i) => (
       <div
         key={i}
-        className="absolute w-1 h-1 rounded-full bg-yellow-500/20"
+        className="absolute w-1 h-1 rounded-full bg-[rgba(255,138,0,0.15)]"
         style={{
           left: `${15 + i * 15}%`,
           top: `${20 + (i % 3) * 25}%`,
@@ -684,8 +684,8 @@ const Profile: React.FC = () => {
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="relative">
-              <div className="w-12 h-12 rounded-full border-2 border-yellow-500/30 border-t-yellow-500 animate-spin" />
-              <Sparkles className="absolute inset-0 m-auto w-5 h-5 text-yellow-500 animate-pulse" />
+              <div className="w-12 h-12 rounded-full border-2 border-[rgba(255,138,0,0.25)] border-t-[#FF8A00] animate-spin" />
+              <Sparkles className="absolute inset-0 m-auto w-5 h-5 text-[#FF8A00] animate-pulse" />
             </div>
           </div>
         </div>
@@ -730,10 +730,10 @@ const Profile: React.FC = () => {
         }
         @keyframes avatar-ring-glow {
           0%, 100% { 
-            box-shadow: 0 0 30px hsl(43 90% 55% / 0.3), 0 0 60px hsl(43 90% 55% / 0.15), inset 0 0 20px hsl(43 90% 55% / 0.1);
+            box-shadow: 0 0 30px rgba(255,138,0,0.25), 0 0 60px rgba(255,138,0,0.12), inset 0 0 20px rgba(255,138,0,0.08);
           }
-          50% { 
-            box-shadow: 0 0 40px hsl(43 90% 55% / 0.45), 0 0 80px hsl(43 90% 55% / 0.2), inset 0 0 25px hsl(43 90% 55% / 0.15);
+          50% {
+            box-shadow: 0 0 40px rgba(255,138,0,0.35), 0 0 80px rgba(255,138,0,0.16), inset 0 0 25px rgba(255,138,0,0.12);
           }
         }
         @keyframes hover-shimmer {
@@ -759,7 +759,7 @@ const Profile: React.FC = () => {
           left: 100%;
         }
         .premium-input:focus {
-          box-shadow: 0 0 0 2px hsl(43 90% 55% / 0.2), 0 0 20px -5px hsl(43 90% 55% / 0.3);
+          box-shadow: 0 0 0 2px rgba(255,138,0,0.18), 0 0 20px -5px rgba(255,138,0,0.25);
         }
         .vip-header-container {
           position: relative;
@@ -768,7 +768,7 @@ const Profile: React.FC = () => {
           content: '';
           position: absolute;
           inset: 0;
-          background: linear-gradient(135deg, hsl(43 90% 55% / 0.03) 0%, transparent 40%, hsl(220 80% 45% / 0.03) 100%);
+          background: linear-gradient(135deg, rgba(255,138,0,0.025) 0%, transparent 40%, hsl(220 80% 45% / 0.025) 100%);
           pointer-events: none;
         }
         .avatar-hover-shimmer::before {
@@ -778,7 +778,7 @@ const Profile: React.FC = () => {
           left: -100%;
           width: 50%;
           height: 100%;
-          background: linear-gradient(90deg, transparent, hsl(43 90% 75% / 0.4), transparent);
+          background: linear-gradient(90deg, transparent, rgba(255,181,71,0.3), transparent);
           pointer-events: none;
           opacity: 0;
           transition: opacity 0.3s ease;
@@ -793,7 +793,7 @@ const Profile: React.FC = () => {
       
       <div className="container mx-auto px-4 py-8 relative">
         {/* Background ambient glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-yellow-500/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[rgba(255,138,0,0.04)] rounded-full blur-[100px] pointer-events-none" />
         
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* VIP HEADER SECTION - Premium Luxury Design */}
@@ -804,16 +804,16 @@ const Profile: React.FC = () => {
           }`}
         >
           {/* Full-width premium header container */}
-          <div className="vip-header-container relative rounded-3xl overflow-hidden border border-yellow-500/10">
+          <div className="vip-header-container relative rounded-3xl overflow-hidden border border-[rgba(255,138,0,0.1)]">
             {/* Multi-layer gradient background */}
             <div className="absolute inset-0 bg-gradient-to-br from-background via-card/95 to-background" />
-            <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/[0.03] via-transparent to-primary/[0.03]" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[rgba(255,138,0,0.025)] via-transparent to-primary/[0.03]" />
             
             {/* Animated ambient light orbs - very subtle */}
             <div 
               className="absolute top-0 left-1/4 w-64 h-64 rounded-full pointer-events-none"
               style={{
-                background: 'radial-gradient(circle, hsl(43 90% 55% / 0.08) 0%, transparent 70%)',
+                background: 'radial-gradient(circle, rgba(255,138,0,0.06) 0%, transparent 70%)',
                 animation: 'ambient-drift 12s ease-in-out infinite'
               }}
             />
@@ -840,7 +840,7 @@ const Profile: React.FC = () => {
                 <div 
                   className="absolute -inset-8 rounded-full opacity-40 pointer-events-none"
                   style={{
-                    background: 'radial-gradient(circle, hsl(43 90% 55% / 0.25) 0%, hsl(43 90% 55% / 0.1) 40%, transparent 70%)',
+                    background: 'radial-gradient(circle, rgba(255,138,0,0.2) 0%, rgba(255,138,0,0.08) 40%, transparent 70%)',
                     animation: 'glow-pulse 4s ease-in-out infinite'
                   }}
                 />
@@ -849,7 +849,7 @@ const Profile: React.FC = () => {
                 <div 
                   className="absolute -inset-[6px] rounded-full"
                   style={{
-                    background: 'conic-gradient(from 0deg, hsl(48 95% 65%), hsl(43 90% 55%), hsl(38 85% 48%), hsl(43 90% 55%), hsl(48 95% 65%))',
+                    background: 'conic-gradient(from 0deg, #FFB547, #FF8A00, #e07800, #FF8A00, #FFB547)',
                     animation: 'rotate-slow 12s linear infinite'
                   }}
                 />
@@ -866,18 +866,18 @@ const Profile: React.FC = () => {
                 />
                 
                 {/* The Avatar itself */}
-                <Avatar className="avatar-hover-shimmer relative h-32 w-32 md:h-36 md:w-36 border-2 border-yellow-500/40 shadow-2xl overflow-hidden">
+                <Avatar className="avatar-hover-shimmer relative h-32 w-32 md:h-36 md:w-36 border-2 border-[rgba(255,138,0,0.4)] shadow-2xl overflow-hidden">
                   <AvatarImage src={profile.avatar_url || undefined} alt="Avatar" className="object-cover" />
-                  <AvatarFallback className="bg-gradient-to-br from-yellow-500/20 via-card to-primary/20 text-4xl font-bold text-yellow-500">
+                  <AvatarFallback className="bg-gradient-to-br from-[rgba(255,138,0,0.15)] via-card to-primary/20 text-4xl font-bold text-[#FF8A00]">
                     {getInitials()}
                   </AvatarFallback>
                 </Avatar>
                 
                 {/* VIP Crown Badge - Larger & More Prominent */}
                 <div 
-                  className="absolute -top-1 -right-1 p-2.5 rounded-full bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 shadow-xl"
+                  className="absolute -top-1 -right-1 p-2.5 rounded-full bg-gradient-to-br from-[#FFB547] via-[#FF8A00] to-[#e07800] shadow-xl"
                   style={{
-                    boxShadow: '0 4px 20px hsl(43 90% 55% / 0.5), 0 0 30px hsl(43 90% 55% / 0.3)'
+                    boxShadow: '0 4px 20px rgba(255,138,0,0.45), 0 0 30px rgba(255,138,0,0.25)'
                   }}
                 >
                   <Crown className="w-5 h-5 text-black" />
@@ -887,12 +887,12 @@ const Profile: React.FC = () => {
                 <button
                   onClick={() => avatarInputRef.current?.click()}
                   disabled={avatarUploading}
-                  className="absolute inset-0 flex items-center justify-center bg-black/75 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer backdrop-blur-sm border-2 border-yellow-500/50"
+                  className="absolute inset-0 flex items-center justify-center bg-black/75 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer backdrop-blur-sm border-2 border-[rgba(255,138,0,0.5)]"
                 >
                   {avatarUploading ? (
-                    <Loader2 className="h-10 w-10 text-yellow-500 animate-spin" />
+                    <Loader2 className="h-10 w-10 text-[#FF8A00] animate-spin" />
                   ) : (
-                    <Camera className="h-10 w-10 text-yellow-500" />
+                    <Camera className="h-10 w-10 text-[#FF8A00]" />
                   )}
                 </button>
                 <input
@@ -910,11 +910,11 @@ const Profile: React.FC = () => {
                   <h1 
                     className="text-4xl md:text-5xl font-bold"
                     style={{
-                      background: 'linear-gradient(135deg, hsl(50 95% 75%) 0%, hsl(45 90% 65%) 25%, hsl(43 85% 55%) 50%, hsl(40 80% 50%) 75%, hsl(38 75% 45%) 100%)',
+                      background: 'linear-gradient(135deg, #E7EBF0 0%, #FFB547 35%, #FF8A00 60%, #E7EBF0 100%)',
                       WebkitBackgroundClip: 'text',
                       backgroundClip: 'text',
                       color: 'transparent',
-                      textShadow: '0 2px 30px hsl(43 90% 55% / 0.3)'
+                      textShadow: '0 2px 30px rgba(255,138,0,0.22)'
                     }}
                   >
                     {profile.nickname || profile.first_name || 'Můj profil'}
@@ -922,14 +922,14 @@ const Profile: React.FC = () => {
                   
                   {/* VIP Badge */}
                   <div 
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-yellow-500/40"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[rgba(255,138,0,0.4)]"
                     style={{
-                      background: 'linear-gradient(135deg, hsl(43 90% 55% / 0.15) 0%, hsl(43 85% 50% / 0.08) 100%)',
-                      boxShadow: '0 0 20px hsl(43 90% 55% / 0.15), inset 0 1px 0 hsl(43 90% 70% / 0.1)'
+                      background: 'linear-gradient(135deg, rgba(255,138,0,0.12) 0%, rgba(255,138,0,0.06) 100%)',
+                      boxShadow: '0 0 20px rgba(255,138,0,0.12), inset 0 1px 0 rgba(255,181,71,0.08)'
                     }}
                   >
-                    <Sparkles className="w-4 h-4 text-yellow-500" />
-                    <span className="text-sm font-bold tracking-wider text-yellow-500">VIP</span>
+                    <Sparkles className="w-4 h-4 text-[#FF8A00]" />
+                    <span className="text-sm font-bold tracking-wider text-[#FF8A00]">VIP</span>
                   </div>
                 </div>
                 
@@ -960,25 +960,25 @@ const Profile: React.FC = () => {
             <FloatingParticles />
             
             {/* Premium corner accents */}
-            <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-yellow-500/20 to-transparent rounded-br-full" />
-            <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-yellow-500/10 to-transparent rounded-tl-full" />
+            <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-[rgba(255,138,0,0.15)] to-transparent rounded-br-full" />
+            <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-[rgba(255,138,0,0.08)] to-transparent rounded-tl-full" />
             
             {/* Background glow orbs */}
-            <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl" />
-            <div className="absolute top-1/4 right-1/4 w-24 h-24 bg-yellow-600/8 rounded-full blur-2xl" />
+            <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-[rgba(255,138,0,0.08)] rounded-full blur-3xl" />
+            <div className="absolute top-1/4 right-1/4 w-24 h-24 bg-[rgba(255,138,0,0.06)] rounded-full blur-2xl" />
             
             <div className="relative p-8">
               {/* Header */}
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-4">
                   <div className="relative">
-                    <div className="absolute inset-0 bg-yellow-500/40 rounded-2xl blur-lg" />
-                    <div className="relative p-3.5 rounded-2xl bg-gradient-to-br from-yellow-500/30 via-yellow-500/20 to-yellow-600/30 border border-yellow-500/40 shadow-inner">
-                      <Wallet className="h-6 w-6 text-yellow-500" />
+                    <div className="absolute inset-0 bg-[rgba(255,138,0,0.3)] rounded-2xl blur-lg" />
+                    <div className="relative p-3.5 rounded-2xl bg-gradient-to-br from-[rgba(255,138,0,0.25)] via-[rgba(255,138,0,0.15)] to-[rgba(255,138,0,0.2)] border border-[rgba(255,138,0,0.35)] shadow-inner">
+                      <Wallet className="h-6 w-6 text-[#FF8A00]" />
                     </div>
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
+                    <h2 className="text-2xl font-bold bg-gradient-to-r from-[#FF8A00] to-[#FFB547] bg-clip-text text-transparent">
                       Peněženka
                     </h2>
                     <p className="text-sm text-muted-foreground">Váš MioCoin účet</p>
@@ -989,7 +989,7 @@ const Profile: React.FC = () => {
                   size="sm" 
                   onClick={handleRefreshBalance} 
                   disabled={refreshing}
-                  className="text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10 transition-all duration-300 hover:scale-105"
+                  className="text-muted-foreground hover:text-[#FF8A00] hover:bg-[rgba(255,138,0,0.08)] transition-all duration-300 hover:scale-105"
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                   {refreshing ? 'Aktualizuji...' : 'Aktualizovat'}
@@ -998,13 +998,13 @@ const Profile: React.FC = () => {
               
               {/* Main Balance Display - Premium Design */}
               <div className="relative mb-8">
-                <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 via-yellow-400/5 to-yellow-500/10 rounded-2xl blur-sm" />
-                <div className="relative rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-yellow-500/5 via-transparent to-yellow-600/5 p-8 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-[rgba(255,138,0,0.08)] via-[rgba(255,138,0,0.04)] to-[rgba(255,138,0,0.08)] rounded-2xl blur-sm" />
+                <div className="relative rounded-2xl border border-[rgba(255,138,0,0.15)] bg-gradient-to-br from-[rgba(255,138,0,0.04)] via-transparent to-[rgba(255,138,0,0.03)] p-8 overflow-hidden">
                   {/* Animated shine effect */}
                   <div 
                     className="absolute inset-0 opacity-50"
                     style={{
-                      background: 'linear-gradient(105deg, transparent 40%, hsl(43 90% 55% / 0.08) 45%, hsl(43 90% 55% / 0.12) 50%, hsl(43 90% 55% / 0.08) 55%, transparent 60%)',
+                      background: 'linear-gradient(105deg, transparent 40%, rgba(255,138,0,0.06) 45%, rgba(255,138,0,0.1) 50%, rgba(255,138,0,0.06) 55%, transparent 60%)',
                       backgroundSize: '200% 100%',
                       animation: 'coin-shine 4s ease-in-out infinite'
                     }}
@@ -1015,21 +1015,21 @@ const Profile: React.FC = () => {
                     <div className="flex items-center gap-5">
                       <div className="relative">
                         {/* Coin glow */}
-                        <div className="absolute inset-0 bg-yellow-500/50 rounded-full blur-xl scale-150" style={{ animation: 'glow-pulse 2s ease-in-out infinite' }} />
-                        <div className="relative p-4 rounded-full bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 shadow-xl shadow-yellow-500/30">
+                        <div className="absolute inset-0 bg-[rgba(255,138,0,0.35)] rounded-full blur-xl scale-150" style={{ animation: 'glow-pulse 2s ease-in-out infinite' }} />
+                        <div className="relative p-4 rounded-full bg-gradient-to-br from-[#FFB547] via-[#FF8A00] to-[#e07800] shadow-xl shadow-[rgba(255,138,0,0.3)]">
                           <Coins className="h-10 w-10 text-black" />
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-yellow-500/80 uppercase tracking-wider mb-1">MioCoiny</p>
-                        <p className="text-5xl lg:text-6xl font-black bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 bg-clip-text text-transparent tabular-nums tracking-tight">
+                        <p className="text-sm font-medium text-[rgba(255,138,0,0.75)] uppercase tracking-wider mb-1">MioCoiny</p>
+                        <p className="text-5xl lg:text-6xl font-black bg-gradient-to-r from-[#FFB547] via-[#FF8A00] to-[#FFB547] bg-clip-text text-transparent tabular-nums tracking-tight">
                           {animatedBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
                         </p>
                       </div>
                     </div>
                     
                     {/* Bonus Balance */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 lg:border-l lg:border-yellow-500/20 lg:pl-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 lg:border-l lg:border-[rgba(255,138,0,0.15)] lg:pl-8">
                       <div className="flex items-center gap-4">
                         <div className="relative">
                           <div className="absolute inset-0 bg-green-500/30 rounded-full blur-lg" />
@@ -1078,7 +1078,7 @@ const Profile: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
                   onClick={() => setShowTopUpModal(true)} 
-                  className="vip-button flex-1 bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-500 hover:from-yellow-400 hover:via-yellow-500 hover:to-yellow-400 text-black font-bold text-lg shadow-xl shadow-yellow-500/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-yellow-500/40 border-0" 
+                  className="vip-button flex-1 bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00] hover:from-[#FFB547] hover:via-[#FF8A00] hover:to-[#FFB547] text-black font-bold text-lg shadow-xl shadow-[rgba(255,138,0,0.2)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[rgba(255,138,0,0.35)] border-0" 
                   size="lg"
                 >
                   <Coins className="h-5 w-5 mr-2" />
@@ -1097,7 +1097,7 @@ const Profile: React.FC = () => {
               </div>
 
               {/* Bonus Transfer History */}
-              <div className="mt-8 pt-6 border-t border-yellow-500/10">
+              <div className="mt-8 pt-6 border-t border-[rgba(255,138,0,0.1)]">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Historie převodů</h3>
                   {bonusTransfers.length > 3 && (
@@ -1105,7 +1105,7 @@ const Profile: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => setHistoryExpanded(!historyExpanded)}
-                      className="text-xs text-muted-foreground hover:text-yellow-500 flex items-center gap-1 transition-all duration-300"
+                      className="text-xs text-muted-foreground hover:text-[#FF8A00] flex items-center gap-1 transition-all duration-300"
                     >
                       {historyExpanded ? 'Skrýt historii' : 'Zobrazit celou historii'}
                       <ChevronDown 
@@ -1270,7 +1270,7 @@ const Profile: React.FC = () => {
               {[...Array(5)].map((_, i) => (
                 <div
                   key={i}
-                  className="absolute w-1 h-1 rounded-full bg-yellow-500/15"
+                  className="absolute w-1 h-1 rounded-full bg-[rgba(255,138,0,0.12)]"
                   style={{
                     left: `${10 + i * 18}%`,
                     top: `${15 + (i % 3) * 30}%`,
@@ -1282,28 +1282,28 @@ const Profile: React.FC = () => {
             </div>
             
             {/* Premium corner accents */}
-            <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-yellow-500/15 to-transparent rounded-br-full pointer-events-none" />
-            <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-yellow-500/10 to-transparent rounded-tl-full pointer-events-none" />
+            <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-[rgba(255,138,0,0.12)] to-transparent rounded-br-full pointer-events-none" />
+            <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-[rgba(255,138,0,0.08)] to-transparent rounded-tl-full pointer-events-none" />
             
             {/* Background glow orbs */}
-            <div className="absolute top-1/3 left-1/3 w-28 h-28 bg-yellow-500/8 rounded-full blur-2xl pointer-events-none" />
-            <div className="absolute bottom-1/4 right-1/4 w-24 h-24 bg-yellow-600/5 rounded-full blur-xl pointer-events-none" />
+            <div className="absolute top-1/3 left-1/3 w-28 h-28 bg-[rgba(255,138,0,0.06)] rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute bottom-1/4 right-1/4 w-24 h-24 bg-[rgba(255,138,0,0.04)] rounded-full blur-xl pointer-events-none" />
             
             <div className="relative z-10 p-8">
               {/* Section Header */}
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-5">
                   <div className="relative">
-                    <div className="absolute inset-0 bg-yellow-500/25 rounded-xl blur-lg pointer-events-none" />
-                    <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-yellow-500/25 to-yellow-600/15 border border-yellow-500/35 shadow-lg shadow-yellow-500/10">
-                      <User className="h-6 w-6 text-yellow-500" />
+                    <div className="absolute inset-0 bg-[rgba(255,138,0,0.2)] rounded-xl blur-lg pointer-events-none" />
+                    <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-[rgba(255,138,0,0.2)] to-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.3)] shadow-lg shadow-[rgba(255,138,0,0.08)]">
+                      <User className="h-6 w-6 text-[#FF8A00]" />
                     </div>
                   </div>
                   <div>
                     <h2 
                       className="text-2xl font-bold"
                       style={{
-                        background: 'linear-gradient(135deg, hsl(50 95% 70%) 0%, hsl(45 90% 60%) 50%, hsl(43 85% 55%) 100%)',
+                        background: 'linear-gradient(135deg, #E7EBF0 0%, #FFB547 50%, #FF8A00 100%)',
                         WebkitBackgroundClip: 'text',
                         backgroundClip: 'text',
                         color: 'transparent'
@@ -1320,7 +1320,7 @@ const Profile: React.FC = () => {
                     size="default" 
                     type="button"
                     onClick={() => setEditMode(true)}
-                    className="relative z-20 vip-button border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 hover:border-yellow-500/50 text-yellow-500 hover:text-yellow-400 transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-yellow-500/10 hover:scale-[1.02]"
+                    className="relative z-20 vip-button border-[rgba(255,138,0,0.3)] bg-[rgba(255,138,0,0.04)] hover:bg-[rgba(255,138,0,0.08)] hover:border-[rgba(255,138,0,0.5)] text-[#FF8A00] hover:text-[#FFB547] transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-[rgba(255,138,0,0.08)] hover:scale-[1.02]"
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
                     Upravit
@@ -1333,7 +1333,7 @@ const Profile: React.FC = () => {
                   {/* Edit Mode - Premium Input Fields */}
                   <div className="relative z-20 grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
                     <div className="space-y-2.5">
-                      <Label htmlFor="nickname" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
+                      <Label htmlFor="nickname" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
                         <Sparkles className="h-3 w-3" />
                         Přezdívka
                       </Label>
@@ -1347,12 +1347,12 @@ const Profile: React.FC = () => {
                           nickname: e.target.value
                         }))} 
                         placeholder="Zadejte přezdívku"
-                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
                     <div className="space-y-2.5">
-                      <Label htmlFor="phone" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
+                      <Label htmlFor="phone" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
                         <Sparkles className="h-3 w-3" />
                         Telefon
                       </Label>
@@ -1366,12 +1366,12 @@ const Profile: React.FC = () => {
                           phone: e.target.value
                         }))} 
                         placeholder="Zadejte telefon"
-                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
                     <div className="space-y-2.5">
-                      <Label htmlFor="first_name" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
+                      <Label htmlFor="first_name" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
                         <Sparkles className="h-3 w-3" />
                         Křestní jméno
                       </Label>
@@ -1385,12 +1385,12 @@ const Profile: React.FC = () => {
                           first_name: e.target.value
                         }))} 
                         placeholder="Zadejte křestní jméno"
-                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
                     <div className="space-y-2.5">
-                      <Label htmlFor="last_name" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
+                      <Label htmlFor="last_name" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
                         <Sparkles className="h-3 w-3" />
                         Příjmení
                       </Label>
@@ -1404,12 +1404,12 @@ const Profile: React.FC = () => {
                           last_name: e.target.value
                         }))} 
                         placeholder="Zadejte příjmení"
-                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
                     <div className="space-y-2.5 md:col-span-2">
-                      <Label htmlFor="address" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
+                      <Label htmlFor="address" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
                         <Sparkles className="h-3 w-3" />
                         Doručovací adresa výhry
                       </Label>
@@ -1423,7 +1423,7 @@ const Profile: React.FC = () => {
                         }))} 
                         placeholder="Zadejte doručovací adresu pro výhry" 
                         rows={3}
-                        className="premium-input pointer-events-auto px-5 py-4 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 resize-none text-lg"
+                        className="premium-input pointer-events-auto px-5 py-4 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 resize-none text-lg"
                       />
                     </div>
                   </div>
@@ -1433,7 +1433,7 @@ const Profile: React.FC = () => {
                     <Button 
                       onClick={handleProfileSave} 
                       disabled={profileSaving}
-                      className="vip-button bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-500 hover:from-yellow-400 hover:via-yellow-500 hover:to-yellow-400 text-black font-bold px-8 h-12 rounded-xl transition-all duration-300 shadow-lg shadow-yellow-500/25 hover:shadow-yellow-500/40 hover:scale-[1.02]"
+                      className="vip-button bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00] hover:from-[#FFB547] hover:via-[#FF8A00] hover:to-[#FFB547] text-black font-bold px-8 h-12 rounded-xl transition-all duration-300 shadow-lg shadow-[rgba(255,138,0,0.2)] hover:shadow-[rgba(255,138,0,0.35)] hover:scale-[1.02]"
                     >
                       {profileSaving ? (
                         <>
@@ -1451,7 +1451,7 @@ const Profile: React.FC = () => {
                       variant="ghost" 
                       onClick={() => setEditMode(false)}
                       disabled={profileSaving}
-                      className="text-muted-foreground hover:text-foreground hover:bg-yellow-500/10 transition-all duration-300 h-12 px-6 rounded-xl border border-transparent hover:border-yellow-500/20"
+                      className="text-muted-foreground hover:text-foreground hover:bg-[rgba(255,138,0,0.08)] transition-all duration-300 h-12 px-6 rounded-xl border border-transparent hover:border-[rgba(255,138,0,0.15)]"
                     >
                       Zrušit
                     </Button>
@@ -1463,8 +1463,8 @@ const Profile: React.FC = () => {
                   {(profile.nickname || profile.phone || profile.first_name || profile.last_name || profile.address || profile.date_of_birth) ? (
                     <div className="space-y-4">
                       {/* Nickname Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
-                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2 flex items-center gap-2">
                           <Sparkles className="h-3 w-3" />
                           Přezdívka
                         </p>
@@ -1474,8 +1474,8 @@ const Profile: React.FC = () => {
                       </div>
                       
                       {/* Full Name Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
-                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2 flex items-center gap-2">
                           <User className="h-3 w-3" />
                           Celé jméno
                         </p>
@@ -1487,16 +1487,16 @@ const Profile: React.FC = () => {
                       </div>
                       
                       {/* Phone Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
-                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2">Telefon</p>
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2">Telefon</p>
                         <p className="text-xl text-foreground font-semibold tracking-tight">
                           {profile.phone || <span className="text-muted-foreground/40 font-normal italic">Nenastaveno</span>}
                         </p>
                       </div>
                       
                       {/* Date of Birth Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
-                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2">Datum narození</p>
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2">Datum narození</p>
                         <p className="text-xl text-foreground font-semibold tracking-tight">
                           {profile.date_of_birth 
                             ? format(new Date(profile.date_of_birth), 'dd. MMMM yyyy', { locale: cs })
@@ -1505,8 +1505,8 @@ const Profile: React.FC = () => {
                       </div>
                       
                       {/* Address Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
-                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2">Doručovací adresa</p>
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2">Doručovací adresa</p>
                         <p className="text-xl text-foreground font-semibold tracking-tight whitespace-pre-wrap leading-relaxed">
                           {profile.address || <span className="text-muted-foreground/40 font-normal italic">Nenastaveno</span>}
                         </p>
@@ -1515,9 +1515,9 @@ const Profile: React.FC = () => {
                   ) : (
                     <div className="text-center py-16 px-8">
                       <div className="relative w-fit mx-auto mb-6">
-                        <div className="absolute inset-0 bg-yellow-500/20 rounded-3xl blur-xl" />
-                        <div className="relative p-6 rounded-3xl bg-gradient-to-br from-yellow-500/15 to-yellow-600/5 border border-yellow-500/20">
-                          <User className="w-12 h-12 text-yellow-500/50" />
+                        <div className="absolute inset-0 bg-[rgba(255,138,0,0.15)] rounded-3xl blur-xl" />
+                        <div className="relative p-6 rounded-3xl bg-gradient-to-br from-[rgba(255,138,0,0.12)] to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.15)]">
+                          <User className="w-12 h-12 text-[rgba(255,138,0,0.4)]" />
                         </div>
                       </div>
                       <p className="text-xl text-foreground font-semibold mb-2">Zatím nemáte vyplněny osobní údaje</p>
@@ -1600,11 +1600,11 @@ const Profile: React.FC = () => {
               </div>
 
               {/* Win sound toggle */}
-              <div className="flex items-center justify-between mb-6 p-5 rounded-xl bg-gradient-to-r from-yellow-500/10 via-transparent to-yellow-500/5 border border-yellow-500/25 hover:border-yellow-500/45 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/10">
+              <div className="flex items-center justify-between mb-6 p-5 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.08)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.2)] hover:border-[rgba(255,138,0,0.38)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.08)]">
                 <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-xl transition-all duration-300 ${winSoundEnabled ? 'bg-yellow-500/25 border border-yellow-500/40 shadow-lg shadow-yellow-500/15' : 'bg-muted/30 border border-border/30'}`}>
+                  <div className={`p-3 rounded-xl transition-all duration-300 ${winSoundEnabled ? 'bg-[rgba(255,138,0,0.2)] border border-[rgba(255,138,0,0.35)] shadow-lg shadow-[rgba(255,138,0,0.12)]' : 'bg-muted/30 border border-border/30'}`}>
                     {winSoundEnabled ? (
-                      <Volume2 className="h-5 w-5 text-yellow-500" />
+                      <Volume2 className="h-5 w-5 text-[#FF8A00]" />
                     ) : (
                       <VolumeX className="h-5 w-5 text-muted-foreground" />
                     )}
@@ -1617,7 +1617,7 @@ const Profile: React.FC = () => {
                 <Switch
                   checked={winSoundEnabled}
                   onCheckedChange={toggleWinSound}
-                  className="data-[state=checked]:bg-yellow-500"
+                  className="data-[state=checked]:bg-[#FF8A00]"
                 />
               </div>
 
@@ -1652,7 +1652,7 @@ const Profile: React.FC = () => {
               {[...Array(3)].map((_, i) => (
                 <div
                   key={i}
-                  className="absolute w-1 h-1 rounded-full bg-yellow-500/15"
+                  className="absolute w-1 h-1 rounded-full bg-[rgba(255,138,0,0.12)]"
                   style={{
                     left: `${15 + i * 30}%`,
                     top: `${20 + (i % 2) * 55}%`,
@@ -1664,26 +1664,26 @@ const Profile: React.FC = () => {
             </div>
             
             {/* Premium corner accents */}
-            <div className="absolute top-0 left-0 w-14 h-14 bg-gradient-to-br from-yellow-500/12 to-transparent rounded-br-full" />
-            <div className="absolute bottom-0 right-0 w-14 h-14 bg-gradient-to-tl from-yellow-500/8 to-transparent rounded-tl-full" />
+            <div className="absolute top-0 left-0 w-14 h-14 bg-gradient-to-br from-[rgba(255,138,0,0.1)] to-transparent rounded-br-full" />
+            <div className="absolute bottom-0 right-0 w-14 h-14 bg-gradient-to-tl from-[rgba(255,138,0,0.06)] to-transparent rounded-tl-full" />
             
             {/* Background glow */}
-            <div className="absolute top-1/3 left-1/3 w-20 h-20 bg-yellow-500/6 rounded-full blur-xl" />
+            <div className="absolute top-1/3 left-1/3 w-20 h-20 bg-[rgba(255,138,0,0.05)] rounded-full blur-xl" />
             
             <div className="relative p-8">
               {/* Section Header */}
               <div className="flex items-center gap-5 mb-8">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-yellow-500/20 rounded-xl blur-lg" />
-                  <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 border border-yellow-500/30 shadow-lg shadow-yellow-500/10">
-                    <Mail className="h-6 w-6 text-yellow-500" />
+                  <div className="absolute inset-0 bg-[rgba(255,138,0,0.15)] rounded-xl blur-lg" />
+                  <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-[rgba(255,138,0,0.15)] to-[rgba(255,138,0,0.08)] border border-[rgba(255,138,0,0.25)] shadow-lg shadow-[rgba(255,138,0,0.08)]">
+                    <Mail className="h-6 w-6 text-[#FF8A00]" />
                   </div>
                 </div>
                 <div>
                   <h2 
                     className="text-2xl font-bold"
                     style={{
-                      background: 'linear-gradient(135deg, hsl(50 95% 70%) 0%, hsl(45 90% 60%) 50%, hsl(43 85% 55%) 100%)',
+                      background: 'linear-gradient(135deg, #E7EBF0 0%, #FFB547 50%, #FF8A00 100%)',
                       WebkitBackgroundClip: 'text',
                       backgroundClip: 'text',
                       color: 'transparent'
@@ -1700,7 +1700,7 @@ const Profile: React.FC = () => {
                 <div className={`flex items-center gap-4 p-5 rounded-xl transition-all duration-500 hover:shadow-lg ${
                   marketingStatus === 'active' 
                     ? 'bg-gradient-to-r from-green-500/15 via-green-500/5 to-transparent border border-green-500/30 hover:border-green-500/50 hover:shadow-green-500/10' 
-                    : 'bg-gradient-to-r from-yellow-500/10 via-transparent to-yellow-500/5 border border-yellow-500/20 hover:border-yellow-500/35 hover:shadow-yellow-500/5'
+                    : 'bg-gradient-to-r from-[rgba(255,138,0,0.08)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.15)] hover:border-[rgba(255,138,0,0.3)] hover:shadow-[rgba(255,138,0,0.04)]'
                 }`}>
                   {marketingStatus === 'active' ? (
                     <>
@@ -1734,7 +1734,7 @@ const Profile: React.FC = () => {
                     </>
                   ) : (
                     <div className="flex items-center gap-3">
-                      <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
+                      <Loader2 className="h-5 w-5 animate-spin text-[#FF8A00]" />
                       <span className="text-muted-foreground">Načítám...</span>
                     </div>
                   )}
@@ -1745,7 +1745,7 @@ const Profile: React.FC = () => {
                 </p>
                 
                 {marketingStatus === 'active' && (
-                  <div className="pt-4 border-t border-yellow-500/10">
+                  <div className="pt-4 border-t border-[rgba(255,138,0,0.08)]">
                     <p className="text-sm text-muted-foreground/60 mb-4">Pokud si již nepřejete dostávat marketingová sdělení, můžete se odhlásit.</p>
                     <Button 
                       variant="outline" 
@@ -1762,10 +1762,10 @@ const Profile: React.FC = () => {
                 )}
 
                 {(marketingStatus === 'revoked' || marketingStatus === 'none') && (
-                  <div className="pt-4 border-t border-yellow-500/10">
+                  <div className="pt-4 border-t border-[rgba(255,138,0,0.08)]">
                     <p className="text-sm text-muted-foreground/60 mb-4">Chcete-li dostávat marketingová sdělení, můžete se přihlásit.</p>
                     <Button 
-                      className="vip-button w-full sm:w-auto bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-500 hover:from-yellow-400 hover:via-yellow-500 hover:to-yellow-400 text-black font-bold transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-yellow-500/25 hover:shadow-yellow-500/40"
+                      className="vip-button w-full sm:w-auto bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00] hover:from-[#FFB547] hover:via-[#FF8A00] hover:to-[#FFB547] text-black font-bold transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-[rgba(255,138,0,0.2)] hover:shadow-[rgba(255,138,0,0.35)]"
                       onClick={() => {
                         setPendingMarketingAction('subscribe');
                         setMarketingDialogOpen(true);
@@ -1799,11 +1799,11 @@ const Profile: React.FC = () => {
 
       {/* Premium Top-up Modal */}
       <Dialog open={showTopUpModal} onOpenChange={setShowTopUpModal}>
-        <DialogContent className="max-w-md border-yellow-500/20 bg-gradient-to-br from-card via-card to-yellow-500/5 backdrop-blur-xl">
+        <DialogContent className="max-w-md border-[rgba(255,138,0,0.15)] bg-gradient-to-br from-card via-card to-[rgba(255,138,0,0.04)] backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-yellow-500/20">
-                <Coins className="h-5 w-5 text-yellow-500" />
+              <div className="p-2 rounded-xl bg-[rgba(255,138,0,0.15)]">
+                <Coins className="h-5 w-5 text-[#FF8A00]" />
               </div>
               Dobít MioCoiny
             </DialogTitle>
@@ -1818,14 +1818,14 @@ const Profile: React.FC = () => {
                   onClick={() => handlePackageSelect(pkg)}
                   className={`p-5 rounded-xl border-2 text-left transition-all duration-300 hover:scale-[1.01] ${
                     selectedPackage?.id === pkg.id
-                      ? 'border-yellow-500/60 bg-gradient-to-r from-yellow-500/15 via-yellow-500/10 to-yellow-500/5 shadow-lg shadow-yellow-500/10'
-                      : 'border-border/40 hover:border-yellow-500/30 bg-muted/10'
+                      ? 'border-[rgba(255,138,0,0.5)] bg-gradient-to-r from-[rgba(255,138,0,0.12)] via-[rgba(255,138,0,0.08)] to-[rgba(255,138,0,0.04)] shadow-lg shadow-[rgba(255,138,0,0.08)]'
+                      : 'border-border/40 hover:border-[rgba(255,138,0,0.25)] bg-muted/10'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className={`p-2.5 rounded-xl transition-all duration-300 ${selectedPackage?.id === pkg.id ? 'bg-yellow-500/25' : 'bg-muted/30'}`}>
-                        <Coins className={`h-5 w-5 transition-colors ${selectedPackage?.id === pkg.id ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                      <div className={`p-2.5 rounded-xl transition-all duration-300 ${selectedPackage?.id === pkg.id ? 'bg-[rgba(255,138,0,0.2)]' : 'bg-muted/30'}`}>
+                        <Coins className={`h-5 w-5 transition-colors ${selectedPackage?.id === pkg.id ? 'text-[#FF8A00]' : 'text-muted-foreground'}`} />
                       </div>
                       <div>
                         <p className="font-bold text-lg">
@@ -1838,7 +1838,7 @@ const Profile: React.FC = () => {
                       </div>
                     </div>
                     {selectedPackage?.id === pkg.id && (
-                      <Check className="h-6 w-6 text-yellow-500" />
+                      <Check className="h-6 w-6 text-[#FF8A00]" />
                     )}
                   </div>
                 </button>
@@ -1854,11 +1854,11 @@ const Profile: React.FC = () => {
                 min="1"
                 value={customAmount}
                 onChange={(e) => handleCustomAmountChange(e.target.value)}
-                className="mt-2 premium-input bg-muted/20 border-border/40 focus:border-yellow-500/50"
+                className="mt-2 premium-input bg-muted/20 border-border/40 focus:border-[rgba(255,138,0,0.45)]"
               />
               {customAmount && parseInt(customAmount) > 0 && (
                 <p className="text-sm text-muted-foreground mt-2">
-                  Obdržíte <span className="text-yellow-500 font-semibold">{parseInt(customAmount).toLocaleString('cs-CZ')} MioCoinů</span> (bez bonusu)
+                  Obdržíte <span className="text-[#FFB547] font-semibold">{parseInt(customAmount).toLocaleString('cs-CZ')} MioCoinů</span> (bez bonusu)
                 </p>
               )}
             </div>
@@ -1880,7 +1880,7 @@ const Profile: React.FC = () => {
             <Button 
               onClick={handleTopUpPurchase} 
               disabled={purchaseLoading || (!selectedPackage && !customAmount)}
-              className="vip-button bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-bold transition-all duration-300 hover:scale-[1.02]"
+              className="vip-button bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold transition-all duration-300 hover:scale-[1.02]"
             >
               {purchaseLoading ? (
                 <>
