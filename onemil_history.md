@@ -14,6 +14,24 @@
 
 ---
 
+## 2026-05-21 — Brand contest detail step 3: detail soutěže sjednocen (PR #86, commit 63ecbcb)
+
+### Co bylo provedeno
+
+- **`src/pages/ContestDetail.tsx`** — yellow/gold → Energy Orange/Amber/Platinum/Silver: hero titulek (Platinum), popis (Silver), border konzistentní s ContestCard, MioCoin boxy (border, glow, live shimmer), bonus pool číslo, věcné výhry (border, hover, badge), PDF tlačítko (orange gradient)
+- Žádná logika, Supabase dotazy, migrace, stránky ani texty UI nezměněny
+
+### Větev a PR
+
+- Větev: `style/brand-contest-detail-step-3`
+- PR #86 mergnut do `main` — commit `63ecbcb` (rebase merge)
+
+### Testy
+
+- **Playwright Smoke Tests**: SUCCESS na PR checku i po mergi do main (run `26227604101`) ✅
+
+---
+
 ## 2026-05-21 — Brand contest cards step 2: soutěžní karty a CTA sjednoceny (PR #85, commit 9a508d5)
 
 ### Co bylo provedeno

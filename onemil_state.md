@@ -1,6 +1,41 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand contest cards step 2 — PR #85 mergnut do main)
+**Aktualizováno:** 21. 05. 2026 (Brand contest detail step 3 — PR #86 mergnut do main)
+
+---
+
+## BRAND CONTEST DETAIL — STEP 3 DOKONČEN (21. 05. 2026)
+
+Detail soutěže sjednocen podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/pages/ContestDetail.tsx`** — všechny yellow/gold hodnoty nahrazeny brand hodnotami:
+  - Hero sekce: h1 titulek `text-yellow-400` → Platinum `#E7EBF0`; popis/výhra → Silver `#BFC6CF`; hero border → `rgba(255,138,0,0.45)` (konzistentní s ContestCard)
+  - "Zobrazit více/méně": `yellow-400/300` → Energy Orange `#FF8A00 / #FFB547`
+  - Gallery media border → `rgba(255,138,0,0.2)`
+  - Box 1 (MioCoin stav): border, MioCoin glow, live shimmer → Energy Orange
+  - "Dobít MioCoiny" outline button: yellow-500 → `rgba(255,138,0,...)`
+  - Box 2 (bonus pool): pozadí, border, číslo `text-yellow-400` → `#FFB547`, MioCoin glow
+  - Sekce 4 (cesta k tiketu): border → `rgba(255,138,0,0.2)`
+  - Sekce 5 (věcné výhry): border, hover, count badge → amber brand
+  - PDF tlačítko: `from-amber-500 to-yellow-400` → `from-[#FF8A00] to-[#FFB547]`
+
+### Co se nezměnilo
+
+- Žádná logika aplikace, Supabase dotazy, nákup tiketu, wallet, contests, winners, Partner Offers ani backend
+- Žádné stránky, routing ani texty UI
+- Žádné migrace
+
+### Merge + testy
+
+- **PR #86** mergnut do `main` — commit `63ecbcb` (rebase merge)
+- Změněn pouze 1 soubor: `src/pages/ContestDetail.tsx` (18 ins / 18 del)
+- **Playwright Smoke Tests**: SUCCESS před mergem (PR check) i po mergi (main, run `26227604101`)
+
+### Další krok
+
+Vizuálně sjednotit vouchery.
 
 ---
 
