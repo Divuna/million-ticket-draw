@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-05-21 — Font audit dokončen (read-only, bez PR)
+
+- Google Fonts import: Inter 300–700 + Poppins 500–800 v `src/index.css:1`
+- `body` → Inter; `h1–h6` → Poppins (globální CSS pravidla v `index.css`)
+- Tailwind: `font-heading` = Poppins, `font-body` = Inter, `font-sans` = Inter (přepsán)
+- Plus Jakarta Sans: 0 výskytů v celém projektu
+- Inline `fontFamily`, arbitrary `font-[...]`, `@font-face`: 0 výskytů
+- `font-mono` pouze oprávněně (UUID tabulky, code bloky, čísla v grafu)
+- Závěr: fontový systém odpovídá brand kitu, další font PR není potřeba
+
+---
+
 ## 2026-05-21 — Brand logo assets opraveny (PR #110, merge commit `8b94e0df`)
 
 ### Co bylo provedeno

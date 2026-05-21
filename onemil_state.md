@@ -1,6 +1,22 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand logo assets opraveny — PR #110)
+**Aktualizováno:** 21. 05. 2026 (Font audit dokončen)
+
+---
+
+## FONT AUDIT — DOKONČEN (21. 05. 2026)
+
+- **Google Fonts import** (`src/index.css:1`): `Inter 300–700` + `Poppins 500–800` — správně ✅
+- **`body`** (`index.css:149`): `font-family: 'Inter', system-ui, sans-serif` ✅
+- **`h1–h6`** (`index.css:159`): `font-family: 'Poppins', system-ui, sans-serif` ✅
+- **Tailwind `font-heading`** (`tailwind.config.ts:17`): `['Poppins', 'system-ui', 'sans-serif']` ✅
+- **Tailwind `font-body` + `font-sans`** (`tailwind.config.ts:18–19`): `['Inter', 'system-ui', 'sans-serif']` ✅
+- **Plus Jakarta Sans**: 0 výskytů v celém projektu ✅
+- **Inline `fontFamily`** v TSX/TS: 0 výskytů ✅
+- **Arbitrary `font-[...]` Tailwind hodnoty**: 0 výskytů ✅
+- **`font-mono`**: použit výhradně oprávněně — UUID/ID v admin tabulkách, `<code>` bloky v CMS prose, numerické hodnoty v grafu ✅
+- **`@font-face`**: 0 výskytů — fonty pouze přes Google Fonts ✅
+- **Závěr**: fontový systém plně odpovídá OneMil brand kitu (Poppins pro nadpisy, Inter pro tělo). Další font PR není potřeba.
 
 ---
 
