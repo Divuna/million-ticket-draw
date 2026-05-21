@@ -336,7 +336,7 @@ const Vouchers: React.FC = () => {
             {availableLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 3 }).map((_, index) => (
-                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)]">
+                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                     <CardContent className="p-5 space-y-4">
                       <div className="h-32 bg-muted/20 rounded-lg animate-pulse" />
                       <div className="h-6 bg-muted/20 rounded animate-pulse w-3/4" />
@@ -347,7 +347,7 @@ const Vouchers: React.FC = () => {
                 ))}
               </div>
             ) : truelyAvailableVouchers.length === 0 ? (
-              <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)]">
+              <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
                   <Gift className="w-12 h-12 mx-auto text-secondary/50" />
                   <h3 className="text-xl font-bold text-heading-gold">Žádné dostupné vouchery</h3>
@@ -365,7 +365,7 @@ const Vouchers: React.FC = () => {
                   const isTogglingFavorite = togglingFavoriteId === voucher.id;
 
                   return (
-                    <Card key={voucher.id} className="voucher-card-glow relative overflow-hidden rounded-[20px] border-[3px] border-[hsl(40_30%_30%)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:border-[hsl(40_40%_40%)] hover:shadow-[0_0_16px_hsl(40_30%_35%/0.25)] hover:scale-[1.02]">
+                    <Card key={voucher.id} className="voucher-card-glow relative overflow-hidden rounded-[20px] border-[3px] border-[rgba(255,138,0,0.35)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_16px_rgba(255,138,0,0.2)] hover:scale-[1.02]">
                       {/* Dark navy/black gradient background with gold particles */}
                       <div 
                         className="absolute inset-0 z-0"
@@ -381,13 +381,13 @@ const Vouchers: React.FC = () => {
                         className="absolute inset-0 z-[1] opacity-60"
                         style={{
                           background: `
-                            radial-gradient(1.5px 1.5px at 15% 25%, hsl(45 80% 65% / 0.6) 50%, transparent 100%),
-                            radial-gradient(1px 1px at 30% 60%, hsl(45 70% 55% / 0.4) 50%, transparent 100%),
-                            radial-gradient(1.2px 1.2px at 55% 20%, hsl(40 75% 60% / 0.5) 50%, transparent 100%),
-                            radial-gradient(0.8px 0.8px at 70% 45%, hsl(45 80% 70% / 0.35) 50%, transparent 100%),
-                            radial-gradient(1px 1px at 85% 75%, hsl(45 70% 60% / 0.45) 50%, transparent 100%),
-                            radial-gradient(1.3px 1.3px at 10% 80%, hsl(40 80% 55% / 0.4) 50%, transparent 100%),
-                            radial-gradient(0.9px 0.9px at 45% 85%, hsl(45 75% 65% / 0.3) 50%, transparent 100%)
+                            radial-gradient(1.5px 1.5px at 15% 25%, rgba(255,138,0,0.45) 50%, transparent 100%),
+                            radial-gradient(1px 1px at 30% 60%, rgba(255,181,71,0.3) 50%, transparent 100%),
+                            radial-gradient(1.2px 1.2px at 55% 20%, rgba(255,138,0,0.35) 50%, transparent 100%),
+                            radial-gradient(0.8px 0.8px at 70% 45%, rgba(255,181,71,0.25) 50%, transparent 100%),
+                            radial-gradient(1px 1px at 85% 75%, rgba(255,138,0,0.3) 50%, transparent 100%),
+                            radial-gradient(1.3px 1.3px at 10% 80%, rgba(255,181,71,0.28) 50%, transparent 100%),
+                            radial-gradient(0.9px 0.9px at 45% 85%, rgba(255,138,0,0.22) 50%, transparent 100%)
                           `
                         }}
                       />
@@ -396,11 +396,11 @@ const Vouchers: React.FC = () => {
                       <button
                         onClick={(e) => handleFavoriteClick(e, voucher.id)}
                         disabled={isTogglingFavorite}
-                        className="absolute top-4 left-4 z-20 p-2 rounded-full bg-[hsl(220_30%_8%/0.8)] backdrop-blur-sm border border-[hsl(40_30%_30%/0.5)] hover:bg-[hsl(220_30%_12%)] transition-all duration-200 disabled:opacity-50"
+                        className="absolute top-4 left-4 z-20 p-2 rounded-full bg-[hsl(220_30%_8%/0.8)] backdrop-blur-sm border border-[rgba(255,138,0,0.3)] hover:bg-[hsl(220_30%_12%)] transition-all duration-200 disabled:opacity-50"
                         aria-label="Přidat do oblíbených"
                       >
                         {isTogglingFavorite ? (
-                          <Loader2 className="w-5 h-5 text-[hsl(45_80%_55%)] animate-spin" />
+                          <Loader2 className="w-5 h-5 text-[#FF8A00] animate-spin" />
                         ) : (
                           <Heart className="w-5 h-5 text-muted-foreground hover:text-destructive transition-colors" />
                         )}
@@ -418,7 +418,7 @@ const Vouchers: React.FC = () => {
                           {/* Voucher name */}
                           <div className="mb-3">
                             <h3 className="text-foreground font-semibold text-base leading-snug mb-1">{voucher.name}</h3>
-                            <div className="text-[hsl(45_80%_55%)] font-bold text-xl">5 MioCoinů</div>
+                            <div className="text-[#FFB547] font-bold text-xl">5 MioCoinů</div>
                           </div>
 
                           {/* Button */}
@@ -426,7 +426,7 @@ const Vouchers: React.FC = () => {
                             <Button
                               onClick={() => handleVoucherPurchase(voucher.id)}
                               disabled={!isAvailable || isPurchasing || isAdmin}
-                              className="w-full h-11 rounded-xl bg-gradient-to-r from-[hsl(40_70%_42%)] via-[hsl(42_75%_48%)] to-[hsl(38_70%_42%)] text-[hsl(220_40%_8%)] font-bold text-sm shadow-[0_2px_8px_hsl(40_60%_30%/0.3)] hover:shadow-[0_3px_12px_hsl(40_60%_35%/0.4)] hover:brightness-105 transition-all duration-200 border-0"
+                              className="w-full h-11 rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-[#111] font-bold text-sm shadow-[0_2px_8px_rgba(255,138,0,0.25)] hover:shadow-[0_3px_12px_rgba(255,138,0,0.35)] hover:brightness-105 transition-all duration-200 border-0"
                             >
                               {isPurchasing ? "Kupuji..." : "KOUPIT ZA 5 MC"}
                             </Button>
@@ -437,7 +437,7 @@ const Vouchers: React.FC = () => {
                         </div>
 
                         {/* Right side - Image */}
-                        <div className="w-28 relative border-l border-dashed border-[hsl(40_25%_25%/0.5)]">
+                        <div className="w-28 relative border-l border-dashed border-[rgba(255,138,0,0.2)]">
                           {voucher.image_url ? (
                             <img
                               src={voucher.image_url}
@@ -453,7 +453,7 @@ const Vouchers: React.FC = () => {
                         </div>
 
                         {/* Remaining count indicator */}
-                        <div className="absolute top-3 right-3 bg-[hsl(220_30%_8%/0.85)] backdrop-blur-sm text-foreground/80 text-xs px-2 py-1 rounded border border-[hsl(40_25%_25%/0.4)]">
+                        <div className="absolute top-3 right-3 bg-[hsl(220_30%_8%/0.85)] backdrop-blur-sm text-foreground/80 text-xs px-2 py-1 rounded border border-[rgba(255,138,0,0.2)]">
                           Zbývá: {remaining}
                         </div>
                         
@@ -476,7 +476,7 @@ const Vouchers: React.FC = () => {
             {userVouchersLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 3 }).map((_, index) => (
-                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)]">
+                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                     <CardContent className="p-5 space-y-4">
                       <div className="aspect-video bg-muted/20 rounded-lg animate-pulse" />
                       <div className="h-6 bg-muted/20 rounded animate-pulse w-3/4" />
@@ -487,7 +487,7 @@ const Vouchers: React.FC = () => {
                 ))}
               </div>
             ) : favoriteVouchers.length === 0 ? (
-              <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)]">
+              <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
                   <Heart className="w-12 h-12 mx-auto text-secondary/50" />
                   <h3 className="text-xl font-bold text-heading-gold">Zatím nemáte žádné oblíbené vouchery</h3>
@@ -503,7 +503,7 @@ const Vouchers: React.FC = () => {
                   const isTogglingFavorite = togglingFavoriteId === userVoucher.voucher_id;
 
                   return (
-                    <Card key={userVoucher.id} className="voucher-card-glow relative overflow-hidden rounded-[20px] border-[3px] border-[hsl(40_30%_30%)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:border-[hsl(40_40%_40%)] hover:shadow-[0_0_16px_hsl(40_30%_35%/0.25)] hover:scale-[1.02]">
+                    <Card key={userVoucher.id} className="voucher-card-glow relative overflow-hidden rounded-[20px] border-[3px] border-[rgba(255,138,0,0.35)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_16px_rgba(255,138,0,0.2)] hover:scale-[1.02]">
                       {/* Dark navy/black gradient background with gold particles */}
                       <div 
                         className="absolute inset-0 z-0"
@@ -519,13 +519,13 @@ const Vouchers: React.FC = () => {
                         className="absolute inset-0 z-[1] opacity-60"
                         style={{
                           background: `
-                            radial-gradient(1.5px 1.5px at 15% 25%, hsl(45 80% 65% / 0.6) 50%, transparent 100%),
-                            radial-gradient(1px 1px at 30% 60%, hsl(45 70% 55% / 0.4) 50%, transparent 100%),
-                            radial-gradient(1.2px 1.2px at 55% 20%, hsl(40 75% 60% / 0.5) 50%, transparent 100%),
-                            radial-gradient(0.8px 0.8px at 70% 45%, hsl(45 80% 70% / 0.35) 50%, transparent 100%),
-                            radial-gradient(1px 1px at 85% 75%, hsl(45 70% 60% / 0.45) 50%, transparent 100%),
-                            radial-gradient(1.3px 1.3px at 10% 80%, hsl(40 80% 55% / 0.4) 50%, transparent 100%),
-                            radial-gradient(0.9px 0.9px at 45% 85%, hsl(45 75% 65% / 0.3) 50%, transparent 100%)
+                            radial-gradient(1.5px 1.5px at 15% 25%, rgba(255,138,0,0.45) 50%, transparent 100%),
+                            radial-gradient(1px 1px at 30% 60%, rgba(255,181,71,0.3) 50%, transparent 100%),
+                            radial-gradient(1.2px 1.2px at 55% 20%, rgba(255,138,0,0.35) 50%, transparent 100%),
+                            radial-gradient(0.8px 0.8px at 70% 45%, rgba(255,181,71,0.25) 50%, transparent 100%),
+                            radial-gradient(1px 1px at 85% 75%, rgba(255,138,0,0.3) 50%, transparent 100%),
+                            radial-gradient(1.3px 1.3px at 10% 80%, rgba(255,181,71,0.28) 50%, transparent 100%),
+                            radial-gradient(0.9px 0.9px at 45% 85%, rgba(255,138,0,0.22) 50%, transparent 100%)
                           `
                         }}
                       />
@@ -534,7 +534,7 @@ const Vouchers: React.FC = () => {
                       <button
                         onClick={(e) => handleFavoriteClick(e, userVoucher.voucher_id)}
                         disabled={isTogglingFavorite}
-                        className="absolute top-4 left-4 z-20 p-2 rounded-full bg-[hsl(220_30%_8%/0.8)] backdrop-blur-sm border border-[hsl(40_30%_30%/0.5)] hover:bg-[hsl(220_30%_12%)] transition-all duration-200 disabled:opacity-50"
+                        className="absolute top-4 left-4 z-20 p-2 rounded-full bg-[hsl(220_30%_8%/0.8)] backdrop-blur-sm border border-[rgba(255,138,0,0.3)] hover:bg-[hsl(220_30%_12%)] transition-all duration-200 disabled:opacity-50"
                         aria-label="Odebrat z oblíbených"
                       >
                         {isTogglingFavorite ? (
@@ -556,7 +556,7 @@ const Vouchers: React.FC = () => {
                           {/* Voucher name */}
                           <div className="mb-3">
                             <h3 className="text-foreground font-semibold text-base leading-snug mb-1">{userVoucher.voucher?.name}</h3>
-                            <div className="text-[hsl(45_80%_55%)] font-bold text-xl">5 MioCoinů</div>
+                            <div className="text-[#FFB547] font-bold text-xl">5 MioCoinů</div>
                           </div>
 
                           {/* Button */}
@@ -564,7 +564,7 @@ const Vouchers: React.FC = () => {
                             <Button
                               onClick={() => handleVoucherPurchase(userVoucher.voucher_id)}
                               disabled={isPurchasing || isAdmin}
-                              className="w-full h-11 rounded-xl bg-gradient-to-r from-[hsl(40_70%_42%)] via-[hsl(42_75%_48%)] to-[hsl(38_70%_42%)] text-[hsl(220_40%_8%)] font-bold text-sm shadow-[0_2px_8px_hsl(40_60%_30%/0.3)] hover:shadow-[0_3px_12px_hsl(40_60%_35%/0.4)] hover:brightness-105 transition-all duration-200 border-0"
+                              className="w-full h-11 rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-[#111] font-bold text-sm shadow-[0_2px_8px_rgba(255,138,0,0.25)] hover:shadow-[0_3px_12px_rgba(255,138,0,0.35)] hover:brightness-105 transition-all duration-200 border-0"
                             >
                               {isPurchasing ? "Kupuji..." : "KOUPIT ZA 5 MC"}
                             </Button>
@@ -575,7 +575,7 @@ const Vouchers: React.FC = () => {
                         </div>
 
                         {/* Right side - Image */}
-                        <div className="w-28 relative border-l border-dashed border-[hsl(40_25%_25%/0.5)]">
+                        <div className="w-28 relative border-l border-dashed border-[rgba(255,138,0,0.2)]">
                           {userVoucher.voucher?.image_url ? (
                             <img
                               src={userVoucher.voucher.image_url}
@@ -585,13 +585,13 @@ const Vouchers: React.FC = () => {
                             />
                           ) : (
                             <div className="w-full h-full bg-[hsl(220_30%_10%)] flex items-center justify-center">
-                              <Gift className="w-12 h-12 text-[hsl(45_60%_40%/0.4)]" />
+                              <Gift className="w-12 h-12 text-[rgba(255,138,0,0.35)]" />
                             </div>
                           )}
                         </div>
 
                         {/* Added date indicator */}
-                        <div className="absolute top-3 right-3 bg-[hsl(220_30%_8%/0.85)] backdrop-blur-sm text-foreground/80 text-xs px-2 py-1 rounded border border-[hsl(40_25%_25%/0.4)]">
+                        <div className="absolute top-3 right-3 bg-[hsl(220_30%_8%/0.85)] backdrop-blur-sm text-foreground/80 text-xs px-2 py-1 rounded border border-[rgba(255,138,0,0.2)]">
                           Přidáno: {new Date(userVoucher.created_at).toLocaleDateString('cs-CZ')}
                         </div>
                       </div>
@@ -607,7 +607,7 @@ const Vouchers: React.FC = () => {
             {userVouchersLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 3 }).map((_, index) => (
-                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)]">
+                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                     <CardContent className="p-5 space-y-4">
                       <div className="aspect-video bg-muted/20 rounded-lg animate-pulse" />
                       <div className="h-6 bg-muted/20 rounded animate-pulse w-3/4" />
@@ -619,7 +619,7 @@ const Vouchers: React.FC = () => {
                 ))}
               </div>
             ) : purchasedVouchers.length === 0 ? (
-              <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)]">
+              <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
                   <ShoppingCart className="w-12 h-12 mx-auto text-secondary/50" />
                   <h3 className="text-xl font-bold text-heading-gold">Zatím nemáte žádné zakoupené vouchery</h3>
@@ -638,8 +638,8 @@ const Vouchers: React.FC = () => {
                       key={userVoucher.id} 
                       className={`voucher-card-glow relative overflow-hidden rounded-[20px] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:scale-[1.02] border-[3px] ${
                         expiration.isExpired 
-                          ? 'border-destructive/40' 
-                          : 'border-[hsl(40_30%_30%)] hover:border-[hsl(40_40%_40%)] hover:shadow-[0_0_16px_hsl(40_30%_35%/0.25)]'
+                          ? 'border-destructive/40'
+                          : 'border-[rgba(255,138,0,0.35)] hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_16px_rgba(255,138,0,0.2)]'
                       }`}
                     >
                       {/* Dark navy/black gradient background with gold particles */}
@@ -684,7 +684,7 @@ const Vouchers: React.FC = () => {
                           <div className="mb-3">
                             <h3 className="text-foreground font-semibold text-base leading-snug mb-1">{userVoucher.voucher?.name}</h3>
                             {!expiration.isExpired && (
-                              <div className="font-mono font-bold text-lg text-[hsl(45_80%_55%)]">{userVoucher.code}</div>
+                              <div className="font-mono font-bold text-lg text-[#FFB547]">{userVoucher.code}</div>
                             )}
                           </div>
 
@@ -693,7 +693,7 @@ const Vouchers: React.FC = () => {
                             {!expiration.isExpired ? (
                               <>
                                 <Button
-                                  className="w-full h-11 rounded-xl bg-gradient-to-r from-[hsl(40_70%_42%)] via-[hsl(42_75%_48%)] to-[hsl(38_70%_42%)] text-[hsl(220_40%_8%)] font-bold text-sm shadow-[0_2px_8px_hsl(40_60%_30%/0.3)] border-0"
+                                  className="w-full h-11 rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-[#111] font-bold text-sm shadow-[0_2px_8px_rgba(255,138,0,0.25)] border-0"
                                   onClick={() => setRedeemModalVoucher({ code: userVoucher.code, name: userVoucher.voucher?.name ?? 'Voucher' })}
                                 >
                                   Uplatnit voucher
@@ -701,7 +701,7 @@ const Vouchers: React.FC = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="w-full h-9 rounded-xl border-[hsl(40_30%_30%)] bg-transparent hover:bg-[hsl(45_80%_50%/0.1)] hover:border-[hsl(45_80%_50%/0.5)] transition-all duration-200"
+                                  className="w-full h-9 rounded-xl border-[rgba(255,138,0,0.3)] bg-transparent hover:bg-[rgba(255,138,0,0.1)] hover:border-[rgba(255,138,0,0.5)] transition-all duration-200"
                                   onClick={() => handleCopyVoucherCode(userVoucher.code)}
                                 >
                                   <Copy className="w-4 h-4 mr-2" />
@@ -721,7 +721,7 @@ const Vouchers: React.FC = () => {
                         </div>
 
                         {/* Right side - Image */}
-                        <div className="w-28 relative border-l border-dashed border-[hsl(40_25%_25%/0.5)]">
+                        <div className="w-28 relative border-l border-dashed border-[rgba(255,138,0,0.2)]">
                           {userVoucher.voucher?.image_url ? (
                             <img
                               src={userVoucher.voucher.image_url}
@@ -737,7 +737,7 @@ const Vouchers: React.FC = () => {
                         </div>
 
                         {/* Purchase date indicator */}
-                        <div className="absolute top-3 right-3 bg-[hsl(220_30%_8%/0.85)] backdrop-blur-sm text-foreground/80 text-xs px-2 py-1 rounded border border-[hsl(40_25%_25%/0.4)]">
+                        <div className="absolute top-3 right-3 bg-[hsl(220_30%_8%/0.85)] backdrop-blur-sm text-foreground/80 text-xs px-2 py-1 rounded border border-[rgba(255,138,0,0.2)]">
                           {new Date(userVoucher.created_at).toLocaleDateString('cs-CZ')}
                         </div>
                       </div>
@@ -771,7 +771,7 @@ const Vouchers: React.FC = () => {
 
       {/* Redeem voucher modal: show code and instructions */}
       <Dialog open={!!redeemModalVoucher} onOpenChange={(open) => !open && setRedeemModalVoucher(null)}>
-        <DialogContent className="sm:max-w-md border-[hsl(40_30%_35%)] bg-gradient-to-b from-[hsl(40_20%_12%)] to-[hsl(40_15%_8%)]">
+        <DialogContent className="sm:max-w-md border-[rgba(255,138,0,0.35)] bg-gradient-to-b from-[hsl(220_30%_8%)] to-[hsl(220_35%_5%)]">
           <DialogHeader>
             <DialogTitle className="text-heading-gold">Uplatnit voucher</DialogTitle>
             <DialogDescription>
@@ -782,13 +782,13 @@ const Vouchers: React.FC = () => {
             <p className="text-sm text-muted-foreground">
               Při platbě u partnera zadejte nebo vložte tento kód:
             </p>
-            <div className="rounded-xl bg-[hsl(220_30%_10%)] border border-[hsl(40_30%_30%)] p-4 text-center">
-              <span className="font-mono text-xl font-bold text-[hsl(45_80%_55%)] tracking-wider">
+            <div className="rounded-xl bg-[hsl(220_30%_10%)] border border-[rgba(255,138,0,0.3)] p-4 text-center">
+              <span className="font-mono text-xl font-bold text-[#FFB547] tracking-wider">
                 {redeemModalVoucher?.code}
               </span>
             </div>
             <Button
-              className="w-full rounded-xl bg-[hsl(40_70%_42%)] text-[hsl(220_40%_8%)] font-bold"
+              className="w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-[#111] font-bold"
               onClick={() => {
                 if (redeemModalVoucher?.code) {
                   handleCopyVoucherCode(redeemModalVoucher.code);
