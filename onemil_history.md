@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-05-21 — Brand CustomerContestView step 11: sjednocena (PR #94, merge commit 3f42152)
+
+### Co bylo provedeno
+
+- **`src/components/CustomerContestView.tsx`** — `text-yellow-400` (×4), title gradient, progress bar fill/glow, milestone dots → Energy Orange/Amber brand
+- Logika, layout, data — beze změny; PR #94; Smoke Tests ✅
+
+---
+
 ## 2026-05-21 — Brand TicketResultModal step 10: win-modal sjednocen (PR #93, merge commit d88a76a)
 
 ### Co bylo provedeno

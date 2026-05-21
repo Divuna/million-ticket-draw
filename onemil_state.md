@@ -1,6 +1,26 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand TicketResultModal step 10 — PR #93 mergnut do main)
+**Aktualizováno:** 21. 05. 2026 (Brand CustomerContestView step 11 — PR #94 mergnut do main)
+
+---
+
+## BRAND CUSTOMERCONTESTVIEW — STEP 11 DOKONČEN (21. 05. 2026)
+
+Komponenta CustomerContestView sjednocena podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/components/CustomerContestView.tsx`** (9 ins / 9 del):
+  - `text-yellow-400` (×4 — Coins/Crown ikony) → `text-[#FFB547]`
+  - Contest title gradient: `#FACC6B/#FBBF24/#FEF3C7` + `rgba(250,204,21,0.45)` → `#FFB547/#FF8A00` brand
+  - Progress bar bg glow: `rgba(250,204,21,0.2)` → `rgba(255,138,0,0.2)`
+  - Progress bar fill: `from-yellow-400/70 via-yellow-300/60` + shadow → Energy Orange brand
+  - Milestone dots: `from-yellow-300 to-yellow-500` + `rgba(250,204,21,0.9)` → `#FFB547/#FF8A00`
+
+### Merge + testy
+
+- **PR #94** mergnut do `main` — merge commit `3f421521b1932600a5e7f6955c15f5e89c641b7d`
+- **Playwright Smoke Tests**: SUCCESS ✅
 
 ---
 
