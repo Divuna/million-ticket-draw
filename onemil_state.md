@@ -1,6 +1,23 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand customer-facing cleanup steps 21–26 dokončeny)
+**Aktualizováno:** 21. 05. 2026 (Brand customer-facing cleanup KOMPLETNÍ — steps 21–27 + final cleanup PR #109)
+
+---
+
+## BRAND CUSTOMER-FACING CLEANUP — FINÁLNĚ DOKONČENO (21. 05. 2026)
+
+### Final low-priority cleanup (PR #109, merge commit `a3e56146`)
+- **`src/pages/Vouchers.tsx`** (8 ins/8 del): 7 sparkle radial-gradient dots `hsl(45/40)` → `rgba(255,181,71/255,138,0,...)`; Gift icon `hsl(45_60%_40%/0.4)` → `rgba(255,138,0,0.4)`
+- **`src/App.tsx`** (1 ins/1 del): winner toast inline border `hsl(43,70%,45%,0.3)` → `rgba(255,138,0,0.3)`
+- **`src/components/cms/CMSPageLayout.tsx`** (1 ins/1 del): CMS heading gradient `via-[hsl(45_85%_60%)]` → `via-[#FFB547]`
+- **`src/components/ui/badge.tsx`** (1 ins/1 del): `info` variant `blue-500` → brand orange/amber `rgba(255,138,0,...) / #FFB547`
+- Playwright Smoke Tests (branch): SUCCESS ✅ run `26252078508` | (post-merge): SUCCESS ✅ run `26252162219`
+
+### Finální grep audit výsledek
+- **Customer-facing accent zbytky: ŽÁDNÉ** — všechny `hsl(43/45/40)` accent hodnoty převedeny
+- `VoucherCarousel.tsx:128` — `hsl(40_20%_14%)` strukturní tmavé pozadí karty (warm-dark tone, záměrně ponecháno)
+- `OneMilAudit.tsx` — admin stránka, odloženo záměrně
+- Admin / Influencer / Partner portal — odloženo záměrně dle instrukce
 
 ---
 

@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-05-21 — Brand customer-facing cleanup KOMPLETNÍ — final cleanup PR #109
+
+### Co bylo provedeno
+
+- **Final low-priority cleanup** — `Vouchers.tsx` (7 sparkle dots + Gift icon), `App.tsx` (winner toast border), `CMSPageLayout.tsx` (heading gradient), `badge.tsx` (info variant blue → brand orange)
+- PR #109, merge commit `a3e56146`
+- Playwright Smoke Tests (branch `26252078508` ✅, post-merge `26252162219` ✅)
+- Finální grep audit: žádné customer-facing `hsl(43/45/40)` accent zbytky — reset kompletní
+- Záměrně ponecháno: strukturní tmavé pozadí karet `hsl(40_20%_14%)` v `VoucherCarousel.tsx` + admin/influencer/partner portal deferred
+
+---
+
 ## 2026-05-21 — Brand customer-facing cleanup steps 21–26 dokončeny (PRy #103–#108)
 
 ### Co bylo provedeno
