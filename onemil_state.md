@@ -1,6 +1,17 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Zákaznická grafika vizuálně schválena Pavlem)
+**Aktualizováno:** 22. 05. 2026 (Staré logo preview odstraněno — PR #112)
+
+---
+
+## STARÉ LOGO PREVIEW ODSTRANĚNO (22. 05. 2026)
+
+### PR #112 — style: remove stale PWA preview showing old pre-brand logo (merge commit `1b9e704f`)
+- **Smazáno:** `docs/brand/onemil-pwa-icon-preview.png` — zastaralý read-only docs snapshot z 13. 05. 2026 obsahující old logo (bílý čtverec + oranžový text "OneMil") v pravém dolním panelu
+- Soubor nebyl importován žádným aplikačním kódem — čistě docs reference
+- **`src/assets/logo-onemil.png`** je od PR #110 správný brand kit asset (MD5-ověřeno shodný s `primary_logo_trophy_behind_text_transparent_estimated.png`) — žádná změna
+- Všech 9 aplikačních importů loga (Header, Login, Register, TicketResultModal, ShareTicket, OnboardingDateOfBirth, PartnerLogin, PartnerRegister, InfluencerRegister) nadále používají správný brand kit asset ✅
+- Playwright Smoke Tests (branch `26286729712` ✅, post-merge `26286806820` ✅)
 
 ---
 

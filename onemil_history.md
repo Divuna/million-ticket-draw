@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-05-22 — Staré logo preview odstraněno (PR #112, merge commit `1b9e704f`)
+
+- Smazán `docs/brand/onemil-pwa-icon-preview.png` — zastaralý docs snapshot zobrazující staré logo (bílý čtverec + "OneMil" text)
+- Soubor nebyl importován aplikací; `src/assets/logo-onemil.png` je správný brand kit asset od PR #110
+- Playwright Smoke Tests: branch `26286729712` ✅, post-merge `26286806820` ✅
+
+---
+
 ## 2026-05-21 — Zákaznická grafika vizuálně schválena Pavlem
 
 - Finální vizuální smoke audit dokončen a grafika schválena Pavlem Divišem
