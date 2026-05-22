@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-05-21 — Zákaznická grafika vizuálně schválena Pavlem
+
+- Finální vizuální smoke audit dokončen a grafika schválena Pavlem Divišem
+- Potvrzeno: barvy brand kit, logo brand kit, favicon/PWA brand kit, fonty Inter/Poppins, 404 dark, zákaznická část bez starých prvků
+- Admin / influencer / partner portál záměrně mimo scope — odloženo
+- Žádný další grafický PR pro zákaznickou část není aktuálně potřeba
+
+---
+
 ## 2026-05-21 — NotFound dark background opraven (PR #111, merge commit `33cbeeb7`)
 
 - `src/pages/NotFound.tsx`: `bg-gray-100` → `bg-background`

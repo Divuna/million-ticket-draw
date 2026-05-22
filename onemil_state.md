@@ -1,6 +1,26 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (NotFound dark background opraveno — PR #111)
+**Aktualizováno:** 21. 05. 2026 (Zákaznická grafika vizuálně schválena Pavlem)
+
+---
+
+## ZÁKAZNICKÁ GRAFIKA — VIZUÁLNĚ SCHVÁLENO (21. 05. 2026)
+
+Zákaznická grafika OneMil vizuálně zkontrolována a schválena Pavlem Divišem po dokončení brand resetu.
+
+**Potvrzeno:**
+- Barvy odpovídají OneMil brand kitu (Energy Orange `#FF8A00`, Warm Amber `#FFB547`, dark backgrounds) ✅
+- Logo v headeru je správné (brand kit `primary_logo_trophy_behind_text_transparent_estimated.png`) ✅
+- Favicon (`/favicon.ico`) a PWA ikony (`android-chrome-192×192/512`, `apple-touch-icon`) jsou z brand kitu ✅
+- Fonty Inter (body) a Poppins (h1–h6, nadpisy) jsou správně nastaveny ✅
+- 404 stránka opravena na dark brand (`bg-background`) ✅
+- Zákaznická část vizuálně působí v pořádku — dark premium tech-luxury styl bez starých modrých/casino prvků ✅
+
+**Scope:**
+- Zákaznické stránky: `/`, `/games`, `/vouchers`, `/wins`, `/messages`, `/login`, `/register`, `/kontakt`, `/profile`, `NotFound`, cookie banner, header, footer
+- Admin, influencer a partner portál: záměrně mimo tento scope, brand reset odložen
+
+**Závěr:** Žádný další grafický PR pro zákaznickou část není aktuálně potřeba.
 
 ---
 
