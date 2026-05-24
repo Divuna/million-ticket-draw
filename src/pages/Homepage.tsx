@@ -355,33 +355,30 @@ const Homepage = () => {
     <div className="min-h-screen bg-background dark pb-20">
       <Header />
 
-      <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Premium main prize banner section */}
-        <section className="w-full">
-          {bannersLoading ? (
-            // Loading placeholder
-            <div className="h-48 md:h-56 bg-muted/30 animate-pulse rounded-lg" />
-          ) : megajackpotBanners.length > 0 ? (
-            // Banner display with carousel for multiple banners
-            <>
-              {/* Top golden line separator - thin, premium */}
-              <div className="relative w-full overflow-hidden">
-                <div 
-                  className="h-[2px] max-w-[1300px] mx-auto"
-                  style={{
-                    background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.5) 5%, rgba(255,138,0,0.8) 20%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.8) 80%, rgba(255,138,0,0.5) 95%, transparent 100%)'
-                  }}
+      {/* Hero banner — full viewport width, outside container */}
+      <section className="w-full">
+        {bannersLoading ? (
+          <div className="h-[240px] md:h-[360px] lg:h-[480px] bg-muted/30 animate-pulse" />
+        ) : megajackpotBanners.length > 0 ? (
+          <>
+            {/* Top golden line separator */}
+            <div className="relative w-full overflow-hidden">
+              <div
+                className="h-[2px]"
+                style={{
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.5) 5%, rgba(255,138,0,0.8) 20%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.8) 80%, rgba(255,138,0,0.5) 95%, transparent 100%)'
+                }}
+              />
+            </div>
+
+            <div className="relative">
+              <div className="w-full h-[240px] md:h-[360px] lg:h-[480px] relative overflow-hidden bg-[hsl(220_30%_6%)]">
+                {/* Banner image - 1920×480px (4:1 ratio) */}
+                <img
+                  src={megajackpotBanners[currentBannerIndex]?.image_url}
+                  alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
+                  className="w-full h-full object-cover object-center"
                 />
-              </div>
-              
-              <div className="relative">
-                <div className="w-full max-w-[1920px] mx-auto aspect-[4/1] min-h-[120px] relative overflow-hidden rounded-lg bg-[hsl(220_30%_6%)]">
-                  {/* Banner image - designed for 1920x480px (4:1 ratio) */}
-                  <img
-                    src={megajackpotBanners[currentBannerIndex]?.image_url}
-                    alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
-                    className="w-full h-full object-contain object-center"
-                  />
                   
                   {/* Horizontal golden light gradient - centered, fading up and down */}
                   <div 
@@ -416,57 +413,59 @@ const Homepage = () => {
                     </Button>
                   </>
                 )}
-                </div>
-
-                {/* Dot indicators for multiple banners */}
-                {megajackpotBanners.length > 1 && (
-                  <div className="flex justify-center gap-2 mt-4">
-                    {megajackpotBanners.map((_, index) => (
-                      <button
-                        key={index}
-                        className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                          index === currentBannerIndex
-                            ? "bg-primary shadow-lg"
-                            : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                        }`}
-                        onClick={() => setCurrentBannerIndex(index)}
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
-              
-              {/* Bottom golden line separator - premium, animated */}
-              <div className="relative w-full overflow-hidden py-3 mt-2">
-                {/* Animated outer glow */}
-                <div 
-                  className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
+
+              {/* Dot indicators for multiple banners */}
+              {megajackpotBanners.length > 1 && (
+                <div className="flex justify-center gap-2 mt-4">
+                  {megajackpotBanners.map((_, index) => (
+                    <button
+                      key={index}
+                      className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                        index === currentBannerIndex
+                          ? "bg-primary shadow-lg"
+                          : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                      }`}
+                      onClick={() => setCurrentBannerIndex(index)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom golden line separator - premium, animated */}
+            <div className="relative w-full overflow-hidden py-3 mt-2">
+              {/* Animated outer glow */}
+              <div
+                className="absolute inset-0 animate-golden-pulse"
+                style={{
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.1) 10%, rgba(255,138,0,0.18) 30%, rgba(255,181,71,0.22) 50%, rgba(255,138,0,0.18) 70%, rgba(255,138,0,0.1) 90%, transparent 100%)',
+                  filter: 'blur(8px)'
+                }}
+              />
+              {/* Sharp line layer with shimmer */}
+              <div
+                className="relative h-[5px] overflow-hidden"
+                style={{
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.45) 3%, rgba(255,138,0,0.75) 15%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.75) 85%, rgba(255,138,0,0.45) 97%, transparent 100%)'
+                }}
+              >
+                {/* Shimmer overlay */}
+                <div
+                  className="absolute inset-0 animate-golden-shimmer"
                   style={{
-                    background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.1) 10%, rgba(255,138,0,0.18) 30%, rgba(255,181,71,0.22) 50%, rgba(255,138,0,0.18) 70%, rgba(255,138,0,0.1) 90%, transparent 100%)',
-                    filter: 'blur(8px)'
+                    background: 'linear-gradient(90deg, transparent 0%, transparent 40%, rgba(255,220,150,0.3) 50%, transparent 60%, transparent 100%)',
+                    backgroundSize: '200% 100%'
                   }}
                 />
-                {/* Sharp line layer with shimmer */}
-                <div 
-                  className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
-                  style={{
-                    background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.45) 3%, rgba(255,138,0,0.75) 15%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.75) 85%, rgba(255,138,0,0.45) 97%, transparent 100%)'
-                  }}
-                >
-                  {/* Shimmer overlay */}
-                  <div 
-                    className="absolute inset-0 animate-golden-shimmer"
-                    style={{
-                      background: 'linear-gradient(90deg, transparent 0%, transparent 40%, rgba(255,220,150,0.3) 50%, transparent 60%, transparent 100%)',
-                      backgroundSize: '200% 100%'
-                    }}
-                  />
-                </div>
               </div>
-            </>
-          ) : null}
-        </section>
+            </div>
+          </>
+        ) : null}
+      </section>
 
+      {/* Page content — constrained container */}
+      <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Coin Top-up Section */}
         <section className="w-full overflow-x-hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Left Column - Dobijte si MioCoiny */}
