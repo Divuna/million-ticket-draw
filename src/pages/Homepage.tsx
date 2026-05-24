@@ -373,11 +373,11 @@ const Homepage = () => {
 
             <div className="relative">
               <div className="w-full aspect-[2/1] sm:aspect-[16/5] max-h-[600px] min-h-[160px] relative overflow-hidden bg-[hsl(220_30%_6%)]">
-                {/* Banner image — 1920×600px (16:5); aspect-ratio scales height with viewport width */}
+                {/* Banner image — 1920×600px (16:5); contain on mobile (no crop), cover on sm+ */}
                 <img
                   src={megajackpotBanners[currentBannerIndex]?.image_url}
                   alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
-                  className="w-full h-full object-cover object-center"
+                  className="w-full h-full object-contain sm:object-cover object-center"
                 />
                   
                   {/* Horizontal golden light gradient - centered, fading up and down */}
