@@ -484,22 +484,11 @@ const Homepage = () => {
                 {/* Coin Packages Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
                   {/* Package 50 Kč → 50 MC */}
-                  <div className="rounded-xl py-3 px-3 w-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-package-blue/30 flex flex-col items-center justify-between shadow-[inset_0_1px_12px_hsl(var(--package-blue)/0.08)] relative overflow-hidden">
-                    {/* BannerLayer */}
-                    <div className="absolute inset-0 z-0 pointer-events-none">
-                      {placementBanners.miocoin_50?.image_url && (
-                        <img
-                          src={placementBanners.miocoin_50.image_url}
-                          alt="MioCoin 50"
-                          className="w-full h-full object-contain object-center"
-                        />
-                      )}
-                    </div>
-
-                    {/* ContentLayer */}
-                    <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
+                  <div className="rounded-xl py-3 px-3 w-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-package-blue/30 flex flex-col items-center shadow-[inset_0_1px_12px_hsl(var(--package-blue)/0.08)] relative overflow-hidden">
+                    {/* Button — always at top in flow */}
+                    <div className="relative z-10 w-full flex-shrink-0">
                       {!placementBanners.miocoin_50?.image_url && (
-                        <div className="text-center">
+                        <div className="text-center mb-2">
                           <div className="text-3xl font-bold text-package-blue drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">50</div>
                           <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
                           <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">50 Kč</div>
@@ -507,34 +496,33 @@ const Homepage = () => {
                       )}
                       <Button
                         size="sm"
-                        className="w-full mt-2 bg-package-blue text-black font-bold shadow-[0_0_10px_hsl(var(--package-blue)/0.3)] hover:brightness-110 transition-all duration-200"
+                        className="w-full bg-package-blue text-black font-bold shadow-[0_0_10px_hsl(var(--package-blue)/0.3)] hover:brightness-110 transition-all duration-200"
                         onClick={() => handleCoinPurchase(50, 50)}
                         disabled={topUpLoading}
                       >
                         {topUpLoading ? "..." : "Dobít"}
                       </Button>
                     </div>
+                    {/* Image — below button in normal flow */}
+                    {placementBanners.miocoin_50?.image_url && (
+                      <div className="w-full flex-1 min-h-0 mt-2">
+                        <img
+                          src={placementBanners.miocoin_50.image_url}
+                          alt="MioCoin 50"
+                          className="w-full h-full object-contain object-center"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Package 300 Kč → 310 MC (+10 Bonus) */}
                   <div className="relative z-20 overflow-visible h-full">
                     <Badge className="absolute -top-2 -right-2 bg-package-gold/90 text-black text-xs font-medium z-50 pointer-events-none">+10 Bonus</Badge>
-                    <div className="rounded-xl py-3 px-3 w-full h-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-package-gold/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(var(--package-gold)/0.08)] overflow-hidden">
-                      {/* BannerLayer */}
-                      <div className="absolute inset-0 z-0 pointer-events-none">
-                        {placementBanners.miocoin_310?.image_url && (
-                          <img
-                            src={placementBanners.miocoin_310.image_url}
-                            alt="MioCoin 310"
-                            className="w-full h-full object-contain object-center"
-                          />
-                        )}
-                      </div>
-
-                      {/* ContentLayer */}
-                      <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
+                    <div className="rounded-xl py-3 px-3 w-full h-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-package-gold/30 flex flex-col items-center relative shadow-[inset_0_1px_12px_hsl(var(--package-gold)/0.08)] overflow-hidden">
+                      {/* Button — always at top in flow */}
+                      <div className="relative z-10 w-full flex-shrink-0">
                         {!placementBanners.miocoin_310?.image_url && (
-                          <div className="text-center">
+                          <div className="text-center mb-2">
                             <div className="text-3xl font-bold text-package-gold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">310</div>
                             <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
                             <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">300 Kč</div>
@@ -542,35 +530,34 @@ const Homepage = () => {
                         )}
                         <Button
                           size="sm"
-                          className="w-full mt-2 bg-package-gold text-black font-bold shadow-[0_0_10px_hsl(var(--package-gold)/0.3)] hover:brightness-110 transition-all duration-200"
+                          className="w-full bg-package-gold text-black font-bold shadow-[0_0_10px_hsl(var(--package-gold)/0.3)] hover:brightness-110 transition-all duration-200"
                           onClick={() => handleCoinPurchase(300, 310)}
                           disabled={topUpLoading}
                         >
                           {topUpLoading ? "..." : "Dobít"}
                         </Button>
                       </div>
+                      {/* Image — below button in normal flow */}
+                      {placementBanners.miocoin_310?.image_url && (
+                        <div className="w-full flex-1 min-h-0 mt-2">
+                          <img
+                            src={placementBanners.miocoin_310.image_url}
+                            alt="MioCoin 310"
+                            className="w-full h-full object-contain object-center"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Package 500 Kč → 525 MC (+25 Bonus) */}
                   <div className="relative z-20 overflow-visible h-full">
                     <Badge className="absolute -top-2 -right-2 bg-package-purple/90 text-white text-xs font-medium z-50 pointer-events-none">+25 Bonus</Badge>
-                    <div className="rounded-xl py-3 px-3 w-full h-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-package-purple/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(var(--package-purple)/0.08)] overflow-hidden">
-                      {/* BannerLayer */}
-                      <div className="absolute inset-0 z-0 pointer-events-none">
-                        {placementBanners.miocoin_525?.image_url && (
-                          <img
-                            src={placementBanners.miocoin_525.image_url}
-                            alt="MioCoin 525"
-                            className="w-full h-full object-contain object-center"
-                          />
-                        )}
-                      </div>
-
-                      {/* ContentLayer */}
-                      <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
+                    <div className="rounded-xl py-3 px-3 w-full h-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-package-purple/30 flex flex-col items-center relative shadow-[inset_0_1px_12px_hsl(var(--package-purple)/0.08)] overflow-hidden">
+                      {/* Button — always at top in flow */}
+                      <div className="relative z-10 w-full flex-shrink-0">
                         {!placementBanners.miocoin_525?.image_url && (
-                          <div className="text-center">
+                          <div className="text-center mb-2">
                             <div className="text-3xl font-bold text-package-purple drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">525</div>
                             <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
                             <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">500 Kč</div>
@@ -578,35 +565,34 @@ const Homepage = () => {
                         )}
                         <Button
                           size="sm"
-                          className="w-full mt-2 bg-package-purple text-white font-bold shadow-[0_0_10px_hsl(var(--package-purple)/0.3)] hover:brightness-110 transition-all duration-200"
+                          className="w-full bg-package-purple text-white font-bold shadow-[0_0_10px_hsl(var(--package-purple)/0.3)] hover:brightness-110 transition-all duration-200"
                           onClick={() => handleCoinPurchase(500, 525)}
                           disabled={topUpLoading}
                         >
                           {topUpLoading ? "..." : "Dobít"}
                         </Button>
                       </div>
+                      {/* Image — below button in normal flow */}
+                      {placementBanners.miocoin_525?.image_url && (
+                        <div className="w-full flex-1 min-h-0 mt-2">
+                          <img
+                            src={placementBanners.miocoin_525.image_url}
+                            alt="MioCoin 525"
+                            className="w-full h-full object-contain object-center"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Package 1200 Kč → 1280 MC (+80 Bonus) */}
                   <div className="relative z-20 overflow-visible h-full">
                     <Badge className="absolute -top-2 -right-2 bg-package-green/90 text-white text-xs font-medium z-50 pointer-events-none">+80 Bonus</Badge>
-                    <div className="rounded-xl py-3 px-3 w-full h-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-package-green/30 flex flex-col items-center justify-between relative shadow-[inset_0_1px_12px_hsl(var(--package-green)/0.08)] overflow-hidden">
-                      {/* BannerLayer */}
-                      <div className="absolute inset-0 z-0 pointer-events-none">
-                        {placementBanners.miocoin_1280?.image_url && (
-                          <img
-                            src={placementBanners.miocoin_1280.image_url}
-                            alt="MioCoin 1280"
-                            className="w-full h-full object-contain object-center"
-                          />
-                        )}
-                      </div>
-
-                      {/* ContentLayer */}
-                      <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
+                    <div className="rounded-xl py-3 px-3 w-full h-full min-h-[140px] bg-[hsl(220_45%_6%)] border-2 border-package-green/30 flex flex-col items-center relative shadow-[inset_0_1px_12px_hsl(var(--package-green)/0.08)] overflow-hidden">
+                      {/* Button — always at top in flow */}
+                      <div className="relative z-10 w-full flex-shrink-0">
                         {!placementBanners.miocoin_1280?.image_url && (
-                          <div className="text-center">
+                          <div className="text-center mb-2">
                             <div className="text-3xl font-bold text-package-green drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">1280</div>
                             <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
                             <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">1200 Kč</div>
@@ -614,13 +600,23 @@ const Homepage = () => {
                         )}
                         <Button
                           size="sm"
-                          className="w-full mt-2 bg-package-green text-white font-bold shadow-[0_0_10px_hsl(var(--package-green)/0.3)] hover:brightness-110 transition-all duration-200"
+                          className="w-full bg-package-green text-white font-bold shadow-[0_0_10px_hsl(var(--package-green)/0.3)] hover:brightness-110 transition-all duration-200"
                           onClick={() => handleCoinPurchase(1200, 1280)}
                           disabled={topUpLoading}
                         >
                           {topUpLoading ? "..." : "Dobít"}
                         </Button>
                       </div>
+                      {/* Image — below button in normal flow */}
+                      {placementBanners.miocoin_1280?.image_url && (
+                        <div className="w-full flex-1 min-h-0 mt-2">
+                          <img
+                            src={placementBanners.miocoin_1280.image_url}
+                            alt="MioCoin 1280"
+                            className="w-full h-full object-contain object-center"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
