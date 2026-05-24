@@ -358,7 +358,7 @@ const Homepage = () => {
       {/* Hero banner — full viewport width, outside container */}
       <section className="w-full">
         {bannersLoading ? (
-          <div className="w-full aspect-[2/1] sm:aspect-[16/5] max-h-[600px] min-h-[160px] bg-muted/30 animate-pulse" />
+          <div className="w-full h-[120px] sm:aspect-[16/5] sm:max-h-[600px] sm:min-h-[160px] sm:h-auto bg-muted/30 animate-pulse" />
         ) : megajackpotBanners.length > 0 ? (
           <>
             {/* Top golden line separator */}
@@ -372,12 +372,12 @@ const Homepage = () => {
             </div>
 
             <div className="relative">
-              <div className="w-full aspect-[2/1] sm:aspect-[16/5] max-h-[600px] min-h-[160px] relative overflow-hidden bg-[hsl(220_30%_6%)]">
-                {/* Banner image — 1920×600px (16:5); contain on mobile (no crop), cover on sm+ */}
+              <div className="w-full sm:aspect-[16/5] sm:max-h-[600px] sm:min-h-[160px] relative overflow-hidden bg-[hsl(220_30%_6%)]">
+                {/* Banner image — mobile: natural height (no bars); sm+: object-cover fills 16:5 frame */}
                 <img
                   src={megajackpotBanners[currentBannerIndex]?.image_url}
                   alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
-                  className="w-full h-full object-contain sm:object-cover object-center"
+                  className="w-full h-auto block sm:h-full sm:object-cover sm:object-center"
                 />
                   
                   {/* Horizontal golden light gradient - centered, fading up and down */}
