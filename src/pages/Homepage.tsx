@@ -358,7 +358,7 @@ const Homepage = () => {
       {/* Hero banner — full viewport width, outside container */}
       <section className="w-full">
         {bannersLoading ? (
-          <div className="w-full aspect-[4/1] bg-muted/30 animate-pulse" />
+          <div className="w-full h-[200px] md:h-[320px] lg:h-[420px] bg-muted/30 animate-pulse" />
         ) : megajackpotBanners.length > 0 ? (
           <>
             {/* Top golden line separator */}
@@ -372,12 +372,12 @@ const Homepage = () => {
             </div>
 
             <div className="relative">
-              <div className="w-full relative bg-[hsl(220_30%_6%)]">
-                {/* Banner image — natural aspect ratio, no cropping */}
+              <div className="w-full h-[200px] md:h-[320px] lg:h-[420px] relative bg-[hsl(220_30%_6%)]">
+                {/* Banner image — object-contain: full image visible, no cropping */}
                 <img
                   src={megajackpotBanners[currentBannerIndex]?.image_url}
                   alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
-                  className="w-full h-auto block"
+                  className="w-full h-full object-contain object-center"
                 />
                   
                   {/* Horizontal golden light gradient - centered, fading up and down */}
