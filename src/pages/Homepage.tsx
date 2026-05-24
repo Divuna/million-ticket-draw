@@ -380,7 +380,7 @@ const Homepage = () => {
                   <img
                     src={megajackpotBanners[currentBannerIndex]?.image_url}
                     alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                   
                   {/* Horizontal golden light gradient - centered, fading up and down */}
