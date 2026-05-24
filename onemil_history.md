@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-05-24 — CI: vyčištění artefaktů GitHub Actions + snížení retention na 3 dny (commit `77e32f3b`)
+
+- GitHub Actions artifact storage byl plný (791 artefaktů nahromaděných od dubna) → upload reportů selhal s chybou `Artifact storage quota has been hit`
+- Všech 791 artefaktů smazáno manuálně přes GitHub API (zbývá: 0)
+- `.github/workflows/playwright.yml` + `.github/workflows/playwright-staging.yml` — `retention-days` sníženo ze 14/7 na **3 dny** u všech `upload-artifact` kroků
+- Samotné testy nebyly dotčeny, výsledky runů se nezměnily
+- Od teď se reporty automaticky mažou po 3 dnech, kvóta se znovu nezaplní
+
+---
+
 ## 2026-05-22 — Staré logo preview odstraněno (PR #112, merge commit `1b9e704f`)
 
 - Smazán `docs/brand/onemil-pwa-icon-preview.png` — zastaralý docs snapshot zobrazující staré logo (bílý čtverec + "OneMil" text)
