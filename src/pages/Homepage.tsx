@@ -629,7 +629,7 @@ const Homepage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   {/* Box 1: Probíhající soutěže */}
                   <div
-                    className="rounded-xl p-4 bg-[hsl(220_45%_6%)] border-2 border-[rgba(255,138,0,0.3)] cursor-pointer hover:border-[rgba(255,138,0,0.5)] transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_rgba(255,138,0,0.05)] relative overflow-hidden"
+                    className="rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-[rgba(255,138,0,0.3)] cursor-pointer hover:border-[rgba(255,138,0,0.5)] transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_rgba(255,138,0,0.05)] relative overflow-hidden"
                     onClick={() => navigate("/games")}
                   >
                     {placementBanners.probihajici_souteze?.image_url && (
@@ -649,7 +649,7 @@ const Homepage = () => {
 
                   {/* Box 2: Koupit voucher se slevou */}
                   <div
-                    className="rounded-xl p-4 bg-[hsl(220_45%_6%)] border-2 border-rose-400/30 cursor-pointer hover:border-rose-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(350_60%_50%/0.06)] relative overflow-hidden"
+                    className="rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-rose-400/30 cursor-pointer hover:border-rose-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(350_60%_50%/0.06)] relative overflow-hidden"
                     onClick={() => navigate("/vouchers")}
                   >
                     {placementBanners.koupit_voucher?.image_url && (
