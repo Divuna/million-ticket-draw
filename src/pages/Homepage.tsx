@@ -628,35 +628,43 @@ const Homepage = () => {
                 {/* Two Boxes Below */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   {/* Box 1: Probíhající soutěže */}
-                  <div 
+                  <div
                     className="rounded-xl p-4 bg-[hsl(220_45%_6%)] border-2 border-[rgba(255,138,0,0.3)] cursor-pointer hover:border-[rgba(255,138,0,0.5)] transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_rgba(255,138,0,0.05)] relative overflow-hidden"
                     onClick={() => navigate("/games")}
                   >
                     {placementBanners.probihajici_souteze?.image_url && (
-                      <img 
-                        src={placementBanners.probihajici_souteze.image_url} 
-                        alt="Probíhající soutěže" 
+                      <img
+                        src={placementBanners.probihajici_souteze.image_url}
+                        alt="Probíhající soutěže"
                         className="absolute inset-0 w-full h-full object-cover"
                       />
                     )}
-                    <Trophy className="w-8 h-8 text-[#FF8A00] mb-2 relative z-10" />
-                    <div className="text-sm font-semibold text-foreground relative z-10">Probíhající soutěže</div>
+                    {!placementBanners.probihajici_souteze?.image_url && (
+                      <>
+                        <Trophy className="w-8 h-8 text-[#FF8A00] mb-2 relative z-10" />
+                        <div className="text-sm font-semibold text-foreground relative z-10">Probíhající soutěže</div>
+                      </>
+                    )}
                   </div>
 
                   {/* Box 2: Koupit voucher se slevou */}
-                  <div 
+                  <div
                     className="rounded-xl p-4 bg-[hsl(220_45%_6%)] border-2 border-rose-400/30 cursor-pointer hover:border-rose-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(350_60%_50%/0.06)] relative overflow-hidden"
                     onClick={() => navigate("/vouchers")}
                   >
                     {placementBanners.koupit_voucher?.image_url && (
-                      <img 
-                        src={placementBanners.koupit_voucher.image_url} 
-                        alt="Koupit voucher se slevou" 
+                      <img
+                        src={placementBanners.koupit_voucher.image_url}
+                        alt="Koupit voucher se slevou"
                         className="absolute inset-0 w-full h-full object-cover"
                       />
                     )}
-                    <Gift className="w-8 h-8 text-rose-400 mb-2 relative z-10" />
-                    <div className="text-sm font-semibold text-foreground relative z-10">Koupit voucher se slevou</div>
+                    {!placementBanners.koupit_voucher?.image_url && (
+                      <>
+                        <Gift className="w-8 h-8 text-rose-400 mb-2 relative z-10" />
+                        <div className="text-sm font-semibold text-foreground relative z-10">Koupit voucher se slevou</div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
