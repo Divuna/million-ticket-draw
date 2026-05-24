@@ -358,7 +358,7 @@ const Homepage = () => {
       {/* Hero banner — full viewport width, outside container */}
       <section className="w-full">
         {bannersLoading ? (
-          <div className="w-full h-[260px] md:h-[420px] lg:h-[600px] bg-muted/30 animate-pulse" />
+          <div className="w-full aspect-[16/5] max-h-[600px] min-h-[240px] bg-muted/30 animate-pulse" />
         ) : megajackpotBanners.length > 0 ? (
           <>
             {/* Top golden line separator */}
@@ -372,8 +372,8 @@ const Homepage = () => {
             </div>
 
             <div className="relative">
-              <div className="w-full h-[260px] md:h-[420px] lg:h-[600px] relative overflow-hidden bg-[hsl(220_30%_6%)]">
-                {/* Banner image — 1920×600px target; object-cover fills frame exactly at that ratio */}
+              <div className="w-full aspect-[16/5] max-h-[600px] min-h-[240px] relative overflow-hidden bg-[hsl(220_30%_6%)]">
+                {/* Banner image — 1920×600px (16:5); aspect-ratio scales height with viewport width */}
                 <img
                   src={megajackpotBanners[currentBannerIndex]?.image_url}
                   alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
