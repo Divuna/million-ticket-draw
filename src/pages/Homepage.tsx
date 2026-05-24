@@ -498,13 +498,15 @@ const Homepage = () => {
 
                     {/* ContentLayer */}
                     <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-package-blue drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">50</div>
-                        <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
-                        <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">50 Kč</div>
-                      </div>
-                      <Button 
-                        size="sm" 
+                      {!placementBanners.miocoin_50?.image_url && (
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-package-blue drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">50</div>
+                          <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
+                          <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">50 Kč</div>
+                        </div>
+                      )}
+                      <Button
+                        size="sm"
                         className="w-full mt-2 bg-package-blue text-black font-bold shadow-[0_0_10px_hsl(var(--package-blue)/0.3)] hover:brightness-110 transition-all duration-200"
                         onClick={() => handleCoinPurchase(50, 50)}
                         disabled={topUpLoading}
@@ -531,13 +533,15 @@ const Homepage = () => {
 
                       {/* ContentLayer */}
                       <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-package-gold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">310</div>
-                          <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
-                          <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">300 Kč</div>
-                        </div>
-                        <Button 
-                          size="sm" 
+                        {!placementBanners.miocoin_310?.image_url && (
+                          <div className="text-center">
+                            <div className="text-3xl font-bold text-package-gold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">310</div>
+                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
+                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">300 Kč</div>
+                          </div>
+                        )}
+                        <Button
+                          size="sm"
                           className="w-full mt-2 bg-package-gold text-black font-bold shadow-[0_0_10px_hsl(var(--package-gold)/0.3)] hover:brightness-110 transition-all duration-200"
                           onClick={() => handleCoinPurchase(300, 310)}
                           disabled={topUpLoading}
@@ -565,13 +569,15 @@ const Homepage = () => {
 
                       {/* ContentLayer */}
                       <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-package-purple drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">525</div>
-                          <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
-                          <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">500 Kč</div>
-                        </div>
-                        <Button 
-                          size="sm" 
+                        {!placementBanners.miocoin_525?.image_url && (
+                          <div className="text-center">
+                            <div className="text-3xl font-bold text-package-purple drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">525</div>
+                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
+                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">500 Kč</div>
+                          </div>
+                        )}
+                        <Button
+                          size="sm"
                           className="w-full mt-2 bg-package-purple text-white font-bold shadow-[0_0_10px_hsl(var(--package-purple)/0.3)] hover:brightness-110 transition-all duration-200"
                           onClick={() => handleCoinPurchase(500, 525)}
                           disabled={topUpLoading}
@@ -599,13 +605,15 @@ const Homepage = () => {
 
                       {/* ContentLayer */}
                       <div className="relative z-10 flex flex-col items-center justify-between w-full h-full">
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-package-green drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">1280</div>
-                          <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
-                          <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">1200 Kč</div>
-                        </div>
-                        <Button 
-                          size="sm" 
+                        {!placementBanners.miocoin_1280?.image_url && (
+                          <div className="text-center">
+                            <div className="text-3xl font-bold text-package-green drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">1280</div>
+                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
+                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">1200 Kč</div>
+                          </div>
+                        )}
+                        <Button
+                          size="sm"
                           className="w-full mt-2 bg-package-green text-white font-bold shadow-[0_0_10px_hsl(var(--package-green)/0.3)] hover:brightness-110 transition-all duration-200"
                           onClick={() => handleCoinPurchase(1200, 1280)}
                           disabled={topUpLoading}
