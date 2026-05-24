@@ -1,6 +1,561 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 21. 05. 2026 (Brand token reset step 1 — PR #84 mergnut do main)
+**Aktualizováno:** 22. 05. 2026 (Staré logo preview odstraněno — PR #112)
+
+---
+
+## STARÉ LOGO PREVIEW ODSTRANĚNO (22. 05. 2026)
+
+### PR #112 — style: remove stale PWA preview showing old pre-brand logo (merge commit `1b9e704f`)
+- **Smazáno:** `docs/brand/onemil-pwa-icon-preview.png` — zastaralý read-only docs snapshot z 13. 05. 2026 obsahující old logo (bílý čtverec + oranžový text "OneMil") v pravém dolním panelu
+- Soubor nebyl importován žádným aplikačním kódem — čistě docs reference
+- **`src/assets/logo-onemil.png`** je od PR #110 správný brand kit asset (MD5-ověřeno shodný s `primary_logo_trophy_behind_text_transparent_estimated.png`) — žádná změna
+- Všech 9 aplikačních importů loga (Header, Login, Register, TicketResultModal, ShareTicket, OnboardingDateOfBirth, PartnerLogin, PartnerRegister, InfluencerRegister) nadále používají správný brand kit asset ✅
+- Playwright Smoke Tests (branch `26286729712` ✅, post-merge `26286806820` ✅)
+
+---
+
+## ZÁKAZNICKÁ GRAFIKA — VIZUÁLNĚ SCHVÁLENO (21. 05. 2026)
+
+Zákaznická grafika OneMil vizuálně zkontrolována a schválena Pavlem Divišem po dokončení brand resetu.
+
+**Potvrzeno:**
+- Barvy odpovídají OneMil brand kitu (Energy Orange `#FF8A00`, Warm Amber `#FFB547`, dark backgrounds) ✅
+- Logo v headeru je správné (brand kit `primary_logo_trophy_behind_text_transparent_estimated.png`) ✅
+- Favicon (`/favicon.ico`) a PWA ikony (`android-chrome-192×192/512`, `apple-touch-icon`) jsou z brand kitu ✅
+- Fonty Inter (body) a Poppins (h1–h6, nadpisy) jsou správně nastaveny ✅
+- 404 stránka opravena na dark brand (`bg-background`) ✅
+- Zákaznická část vizuálně působí v pořádku — dark premium tech-luxury styl bez starých modrých/casino prvků ✅
+
+**Scope:**
+- Zákaznické stránky: `/`, `/games`, `/vouchers`, `/wins`, `/messages`, `/login`, `/register`, `/kontakt`, `/profile`, `NotFound`, cookie banner, header, footer
+- Admin, influencer a partner portál: záměrně mimo tento scope, brand reset odložen
+
+**Závěr:** Žádný další grafický PR pro zákaznickou část není aktuálně potřeba.
+
+---
+
+## NOTFOUND DARK BACKGROUND — OPRAVENO (21. 05. 2026)
+
+### PR #111 — style: fix NotFound page light background to dark brand (merge commit `33cbeeb7`)
+- **`src/pages/NotFound.tsx`** (1 ins/1 del): `bg-gray-100` → `bg-background`
+- Nález z finálního vizuálního smoke auditu: 404 stránka byla jedinou zákaznickou stránkou se světlým pozadím (`rgb(243,244,246)`) — nesoulad s dark premium brandem
+- Vizuálně ověřeno v preview: Midnight Black pozadí, "404" amber, "Return to Home" oranžový link ✅
+- Playwright Smoke Tests (branch `26253920880` ✅, post-merge `26253998050` ✅)
+
+---
+
+## FONT AUDIT — DOKONČEN (21. 05. 2026)
+
+- **Google Fonts import** (`src/index.css:1`): `Inter 300–700` + `Poppins 500–800` — správně ✅
+- **`body`** (`index.css:149`): `font-family: 'Inter', system-ui, sans-serif` ✅
+- **`h1–h6`** (`index.css:159`): `font-family: 'Poppins', system-ui, sans-serif` ✅
+- **Tailwind `font-heading`** (`tailwind.config.ts:17`): `['Poppins', 'system-ui', 'sans-serif']` ✅
+- **Tailwind `font-body` + `font-sans`** (`tailwind.config.ts:18–19`): `['Inter', 'system-ui', 'sans-serif']` ✅
+- **Plus Jakarta Sans**: 0 výskytů v celém projektu ✅
+- **Inline `fontFamily`** v TSX/TS: 0 výskytů ✅
+- **Arbitrary `font-[...]` Tailwind hodnoty**: 0 výskytů ✅
+- **`font-mono`**: použit výhradně oprávněně — UUID/ID v admin tabulkách, `<code>` bloky v CMS prose, numerické hodnoty v grafu ✅
+- **`@font-face`**: 0 výskytů — fonty pouze přes Google Fonts ✅
+- **Závěr**: fontový systém plně odpovídá OneMil brand kitu (Poppins pro nadpisy, Inter pro tělo). Další font PR není potřeba.
+
+---
+
+## BRAND LOGO ASSETS — OPRAVENO (21. 05. 2026)
+
+### PR #110 — style: replace header logo and favicon with brand kit assets (merge commit `8b94e0df`)
+
+**Nalezené logo soubory před opravou:**
+- `src/assets/logo-onemil.png` — 1.4MB, JINÝ od brand kitu → nahrazeno
+- `public/favicon.ico` — 7.5K, JINÝ od brand kitu → nahrazeno
+- `public/android-chrome-192x192.png` — identický MD5 s brand kitem ✅ beze změny
+- `public/android-chrome-512x512.png` — identický MD5 s brand kitem ✅ beze změny
+- `public/apple-touch-icon.png` — identický MD5 s brand kitem ✅ beze změny
+
+**Nahrazené soubory:**
+- `src/assets/logo-onemil.png` → `primary_logo_trophy_behind_text_transparent_estimated.png` z brand kitu (průhledné pozadí, správné pro tmavý header)
+- `public/favicon.ico` → `favicon.ico` z brand kitu (`03_icons/favicon_app/`)
+- `index.html` — opraven wrong MIME type `type="image/svg+xml"` → `type="image/x-icon"` na favicon linku
+
+**Kde se logo používá v aplikaci:**
+- `src/components/Header.tsx` — `import logo from '@/assets/logo-onemil.png'`, zobrazeno jako `<img>` v sticky headeru
+- `public/manifest.webmanifest` — odkazuje na `android-chrome-192x192.png` a `android-chrome-512x512.png` (PWA ikony, již správné)
+- `index.html` — `<link rel="icon">` → `favicon.ico`, `<link rel="apple-touch-icon">` → `apple-touch-icon.png`
+
+- Playwright Smoke Tests (branch `26252667493` ✅, post-merge `26252302107` ✅)
+
+---
+
+## BRAND CUSTOMER-FACING CLEANUP — FINÁLNĚ DOKONČENO (21. 05. 2026)
+
+### Final low-priority cleanup (PR #109, merge commit `a3e56146`)
+- **`src/pages/Vouchers.tsx`** (8 ins/8 del): 7 sparkle radial-gradient dots `hsl(45/40)` → `rgba(255,181,71/255,138,0,...)`; Gift icon `hsl(45_60%_40%/0.4)` → `rgba(255,138,0,0.4)`
+- **`src/App.tsx`** (1 ins/1 del): winner toast inline border `hsl(43,70%,45%,0.3)` → `rgba(255,138,0,0.3)`
+- **`src/components/cms/CMSPageLayout.tsx`** (1 ins/1 del): CMS heading gradient `via-[hsl(45_85%_60%)]` → `via-[#FFB547]`
+- **`src/components/ui/badge.tsx`** (1 ins/1 del): `info` variant `blue-500` → brand orange/amber `rgba(255,138,0,...) / #FFB547`
+- Playwright Smoke Tests (branch): SUCCESS ✅ run `26252078508` | (post-merge): SUCCESS ✅ run `26252162219`
+
+### Finální grep audit výsledek
+- **Customer-facing accent zbytky: ŽÁDNÉ** — všechny `hsl(43/45/40)` accent hodnoty převedeny
+- `VoucherCarousel.tsx:128` — `hsl(40_20%_14%)` strukturní tmavé pozadí karty (warm-dark tone, záměrně ponecháno)
+- `OneMilAudit.tsx` — admin stránka, odloženo záměrně
+- Admin / Influencer / Partner portal — odloženo záměrně dle instrukce
+
+---
+
+## BRAND CUSTOMER-FACING CLEANUP — STEPS 21–26 DOKONČENY (21. 05. 2026)
+
+Šest dalších customer-facing brand PRů po step 20 auditu. Žádné admin/influencer/partner změny.
+
+### Step 21 — TicketResultModal.css + index.css (PR #103, merge commit `bd3d107b`)
+- **`src/components/TicketResultModal.css`** (6 ins/6 del): `win-moment-cta-pulse` keyframe box-shadows `hsl(43/48)` → `rgba(255,138,0/255,181,71,...)`; reduced-motion fallback shadow → brand; `.win-moment-value-shimmer` gradient `hsl(43/48/35)` → brand rgba
+- **`src/index.css`** (3 ins/3 del): winner-shimmer bar `hsl(43 90% 55%)` → `rgba(255,138,0,...)`
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge): SUCCESS ✅
+
+### Step 22 — CookieConsentBanner.tsx (PR #104, merge commit `c8b61546`)
+- **`src/components/CookieConsentBanner.tsx`** (9 ins/9 del): banner + dialog borders, 3× section item borders, 2× outline button hover, 2× CTA "Souhlasím" button gradient + shadow → brand orange/amber
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge): SUCCESS ✅
+
+### Step 23 — Login.tsx + Register.tsx (PR #105, merge commit `64c2cb16`)
+- **`src/pages/Login.tsx`** (5 ins/5 del): card border, submit CTA gradient + shadow, 3× OAuth outline button → brand
+- **`src/pages/Register.tsx`** (5 ins/5 del): same pattern
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge): SUCCESS ✅
+
+### Step 24 — VoucherCarousel.tsx (PR #106, merge commit `e1cecdf9`)
+- **`src/components/VoucherCarousel.tsx`** (3 ins/3 del): card border + hover, image border, CTA button gradient + shadow → brand
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge): SUCCESS ✅
+
+### Step 25 — Messages.tsx (PR #107, merge commit `1145ca2e`)
+- **`src/pages/Messages.tsx`** (35 ins/35 del): all 35 inline `hsl(45/35)` → brand rgba/hex (system bubble border, Sparkles icon, label gradient, CTA bubble button, send button surface, particles, shimmer overlays, header border/shadow/shimmer/icon/title/count-badge, scrollbar, empty state, jump button, input bar border/shadow/shimmer/focus, flying message, sparkle icon)
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge): SUCCESS ✅
+
+### Step 26 — Misc customer-facing (PR #108, merge commit `16d1637d`)
+- **`src/components/ContactForm.tsx`** (4 ins/4 del): heading gradient, success box border/bg/icon/text → brand
+- **`src/components/SupportForm.tsx`** (4 ins/4 del): same 4-change pattern
+- **`src/pages/Kontakt.tsx`** (1 ins/1 del): heading gradient `via-[hsl(45_85%_60%)]` → `via-[#FFB547]`
+- **`src/components/BonusPrizeDetailModal.tsx`** (1 ins/1 del): dialog title `text-yellow-400` → `text-[#FFB547]`
+- **`src/components/BonusPrizeOverlay.tsx`** (1 ins/1 del): delivered/claimed badge `blue-*` → brand orange
+- **`src/pages/Homepage.tsx`** (1 ins/1 del): login chip `bg-blue-100/10 text-blue-400` → brand
+- **`src/pages/NotFound.tsx`** (1 ins/1 del): link `text-blue-500` → brand orange
+- **`src/pages/MyContestDetail.tsx`** (1 ins/1 del): draft status dot `bg-yellow-500` → `bg-[#FF8A00]`
+- **`src/components/MessageForm.tsx`** (1 ins/1 del): submit button `bg-blue-600` → brand orange
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge): SUCCESS ✅ run `26251107153`
+
+---
+
+## BRAND CUSTOMER-FACING CLEANUP — STEPS 15–19 DOKONČENY (21. 05. 2026)
+
+Finální customer-facing brand cleanup — 5 PRů, 5 souborů, žádné admin ani influencer změny.
+
+### Step 15 — OfferCard + OfferDetailModal (PR #98, merge commit `7faea2b9`)
+- **`src/components/OfferCard.tsx`** (4 ins / 4 del):
+  - hover border/shadow: `hover:border-blue-400/40 hover:shadow-blue-500/10` → brand orange
+  - Tag ikona: `text-blue-400/30` → `text-[rgba(255,138,0,0.3)]`
+  - "Nová" badge: `bg-blue-500/90 text-white` → `bg-[rgba(255,138,0,0.9)] text-black`
+  - Partner name: `text-blue-400` → `text-[#FFB547]`
+- **`src/components/OfferDetailModal.tsx`** (2 ins / 2 del):
+  - Tag ikona: `text-blue-400` → `text-[#FFB547]`
+  - Partner name: `text-blue-400` → `text-[#FFB547]`
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge main): SUCCESS ✅
+
+### Step 16 — TicketProgressBar (PR #99, merge commit `88e73dc0`)
+- **`src/components/TicketProgressBar.tsx`** (4 ins / 4 del):
+  - Progress fill: `from-blue-700 to-blue-500` → `from-[#FF8A00] to-[#FFB547]`
+  - Legend dot: `bg-blue-500` → `bg-[#FF8A00]`
+  - Clock ikona: `text-blue-400` → `text-[#FFB547]`
+  - TrendingUp ikona: `text-yellow-400` → `text-[#FFB547]`
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge main): SUCCESS ✅
+
+### Step 17 — TicketResultModal blue hints (PR #100, merge commit `f429adbd` area)
+- **`src/components/TicketResultModal.tsx`** (4 ins / 4 del):
+  - Partner name v offer result: `text-blue-400` → `text-[#FFB547]`
+  - CTA hint: `text-blue-200/75` → `text-[rgba(255,181,71,0.75)]`
+  - CTA hint span: `text-blue-100` → `text-[#FFB547]`
+  - "Zobrazit nabídku" button: `border-blue-500/40` → `border-[rgba(255,138,0,0.4)]`
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge main): SUCCESS ✅
+
+### Step 18 — WinCard badge (PR #101, merge commit `f429adbd`)
+- **`src/components/WinCard.tsx`** (1 ins / 1 del):
+  - "Připraveno k odeslání" badge: `bg-blue-500/90 text-white` → `bg-[rgba(255,138,0,0.9)] text-black`
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge main): SUCCESS ✅
+
+### Step 19 — Wins.tsx inline hsl cleanup (PR #102, merge commit `02b3f2a3`)
+- **`src/pages/Wins.tsx`** (24 ins / 24 del):
+  - Particles: `hsl(45, 93%, X%)` → `rgba(255,181,71,1)`
+  - Shimmer: `hsl(45, 93%, 60%)` → `rgba(255,181,71,1)`
+  - Header card border: `hsl(45, 70%, 40%, 0.2)` → `rgba(255,138,0,0.2)`
+  - Header shadow inset: `hsl(45, 70%, 50%, 0.1)` → `rgba(255,138,0,0.1)`
+  - Trophy icon box gradient: `hsl(45,80%,45%) → hsl(35,90%,35%)` → `#FF8A00 → #c86000`
+  - Trophy box shadow: `hsl(45, 80%, 40%, 0.3)` → `rgba(255,138,0,0.3)`
+  - Title gradient: `hsl(45,93%,65%) → hsl(35,90%,55%)` → `#FFB547 → #FF8A00`
+  - Win count badge bg/border: `hsl(45,80%,45%)/10 hsl(45,70%,50%)/20` → `rgba(255,138,0,...)`
+  - Crown ikona: `text-[hsl(45,80%,55%)]` → `text-[#FF8A00]`
+  - Count span: `text-[hsl(45,80%,60%)]` → `text-[#FFB547]`
+  - Tab/filter active (replace_all): `from-[hsl(45,80%,45%)] to-[hsl(35,90%,35%)]` → `from-[#FF8A00] to-[#c86000]`
+  - "Nabídky" tab active: `from-blue-600 to-blue-700 text-white` → `from-[#FF8A00] to-[#c86000] text-black`
+  - Sort button hover border (replace_all): → `hover:border-[rgba(255,138,0,0.3)]`
+  - Arrow ikony (replace_all): `text-[hsl(45,70%,50%)]` → `text-[#FF8A00]`
+  - Empty state borders: `hsl(45, 70%, 40%, 0.15/0.1)` → `rgba(255,138,0,0.15/0.1)`
+  - Trophy empty ikona (replace_all): → `text-[#FF8A00]/30`
+  - Empty title gradient: `hsl(45,93%,65%) → hsl(35,90%,55%)` → `#FFB547 → #FF8A00`
+- Playwright Smoke Tests (branch): SUCCESS ✅ | (post-merge main): SUCCESS ✅
+
+---
+
+## BRAND REFERRALSECTION — STEP 13 DOKONČEN (21. 05. 2026)
+
+Komponenta ReferralSection sjednocena podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/components/ReferralSection.tsx`** (8 ins / 8 del):
+  - Outer card shadow: `hsl(43_90%_55%/0.15)` → `rgba(255,138,0,0.15)`
+  - Shimmer overlay gradient: `hsl(43 90% 55% / 0.03/0.05)` → `rgba(255,138,0,...)`
+  - Coins stat card bg/border: `yellow-500/10 yellow-500/5 yellow-500/20` → brand orange
+  - Coins ikona + číslo: `text-yellow-500` → `text-[#FFB547]`
+  - Enter-code box bg/border: `yellow-500/8 yellow-500/5 yellow-500/15` → brand orange
+  - Code Input: `bg-yellow-500/5 border-yellow-500/20 focus:...` → brand orange
+  - Submit button: `from-yellow-500 to-yellow-600` → `from-[#FF8A00] to-[#FFB547]`
+
+### Merge + testy
+
+- **PR #97** mergnut do `main` — merge commit `5fc4bad3`
+- **Playwright Smoke Tests (branch)**: SUCCESS ✅ (run `26247928785`)
+- **Playwright Smoke Tests (post-merge main)**: SUCCESS ✅ (run `26248006157`)
+
+---
+
+## BRAND WINS + WINDETAILMODAL — STEP 12 DOKONČEN (21. 05. 2026)
+
+Wins.tsx a WinDetailModal.tsx sjednoceny podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/pages/Wins.tsx`** (5 ins / 5 del):
+  - "Odesláno" filter button: `from-blue-500 to-blue-600` + `rgba(59,130,246,0.3)` + `bg-blue-500/10 text-blue-400 border-blue-500/30` → Energy Orange brand
+  - Tag ikona v empty offers state: `text-blue-400/30` → `text-[rgba(255,138,0,0.3)]`
+- **`src/components/WinDetailModal.tsx`** (4 ins / 4 del):
+  - Status badge `pending`: `bg-yellow-500/20 text-yellow-400 border-yellow-500/30` → `rgba(255,138,0,0.2)` / `#FFB547`
+  - Status badge `připraveno k odeslání`: `bg-blue-500/20 text-blue-400 border-blue-500/30` → `rgba(255,138,0,0.2)` / `#FFB547`
+  - Status badge `default`: `bg-yellow-500/20 text-yellow-400 border-yellow-500/30` → `rgba(255,138,0,0.2)` / `#FFB547`
+  - Trophy ikona v type badge: `text-yellow-400` → `text-[#FFB547]`
+
+### Merge + testy
+
+- **PR #96** mergnut do `main` — merge commit `e18d40ab`
+- **Playwright Smoke Tests (branch)**: SUCCESS ✅ (run `26247530336`)
+- **Playwright Smoke Tests (post-merge main)**: SUCCESS ✅ (run `26247612549`)
+
+---
+
+## BRAND CUSTOMERCONTESTVIEW — STEP 11 DOKONČEN (21. 05. 2026)
+
+Komponenta CustomerContestView sjednocena podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/components/CustomerContestView.tsx`** (9 ins / 9 del):
+  - `text-yellow-400` (×4 — Coins/Crown ikony) → `text-[#FFB547]`
+  - Contest title gradient: `#FACC6B/#FBBF24/#FEF3C7` + `rgba(250,204,21,0.45)` → `#FFB547/#FF8A00` brand
+  - Progress bar bg glow: `rgba(250,204,21,0.2)` → `rgba(255,138,0,0.2)`
+  - Progress bar fill: `from-yellow-400/70 via-yellow-300/60` + shadow → Energy Orange brand
+  - Milestone dots: `from-yellow-300 to-yellow-500` + `rgba(250,204,21,0.9)` → `#FFB547/#FF8A00`
+
+### Merge + testy
+
+- **PR #94** mergnut do `main` — merge commit `3f421521b1932600a5e7f6955c15f5e89c641b7d`
+- **Playwright Smoke Tests**: SUCCESS ✅
+
+---
+
+## BRAND TICKETRESULTMODAL — STEP 10 DOKONČEN (21. 05. 2026)
+
+Win-moment modal sjednocen podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/components/TicketResultModal.tsx`** — win-moment vizuál sjednocen:
+  - Modal border/shadow: `border-yellow-500/40`, `rgba(255,190,60,...)`, `rgba(255,200,0,...)` → `rgba(255,138,0,...)`
+  - Win glow orb: `hsl(43_90%_55%/0.55)` → `rgba(255,138,0,0.55)`
+  - Win headline gradient: `from-amber-100 via-yellow-300 to-amber-200` → `from-[#FFB547] via-[#E7EBF0] to-[#FFB547]`
+  - Prize title drop-shadow: `rgba(250,204,21,0.35)` → `rgba(255,138,0,0.35)`
+  - Particle barva (warm gold): `hsl(43 95% 62%)` → `#FFB547`
+  - Next-win distance highlight: `hsl(43_80%_65%) hsl(35_90%_55%)` → `#FFB547 #FF8A00` (×2)
+  - "Hrát znovu" CTA (×3): `from-amber-500 via-yellow-500 to-amber-400` → `from-[#FF8A00] via-[#FFB547] to-[#FF8A00]`
+  - Main prize text: `text-yellow-600` → `text-[#FF8A00]`
+  - Loss state border: `border-yellow-500/30` → `border-[rgba(255,138,0,0.3)]`
+  - Share divider: `rgba(234,179,8,0.4)` → `rgba(255,138,0,0.4)`
+  - Emotivní amber/white text třídy a confetti barvy zachovány
+
+### Merge + testy
+
+- **PR #93** mergnut do `main` — merge commit `d88a76a9a1cef323e3b477e683aa3e69442d618a`
+- Změněn pouze 1 soubor: `src/components/TicketResultModal.tsx` (15 ins / 15 del)
+- **Playwright Smoke Tests**: SUCCESS ✅
+
+---
+
+## BRAND MIOCOIN — STEP 9 DOKONČEN (21. 05. 2026)
+
+Komponenta MioCoin sjednocena podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/components/MioCoin.tsx`** — okrajový gradient a glow shadow coin ikony:
+  - `from-yellow-500/40` → `from-[rgba(255,138,0,0.4)]` (Energy Orange)
+  - `via-yellow-400/10` → `via-[rgba(255,181,71,0.1)]` (Warm Amber)
+  - `rgba(234,179,8,0.35)` → `rgba(255,138,0,0.35)` (Energy Orange)
+  - Velikost, layout, props, importy a logika beze změny
+
+### Co se nezměnilo
+
+- Žádná logika aplikace, Supabase, wallet, Stripe, migrace
+
+### Merge + testy
+
+- **PR #92** mergnut do `main` — merge commit `baa61ab30dac4a2703774d35722a2b770b5e3961`
+- Změněn pouze 1 soubor: `src/components/MioCoin.tsx` (1 ins / 1 del)
+- **Playwright Smoke Tests**: SUCCESS — run `26244784903` ✅
+
+### Další krok
+
+Step 10: `src/components/TicketResultModal.tsx` — sjednotit yellow/gold/amber HSL hodnoty ve win modalu na Energy Orange / Warm Amber.
+
+---
+
+## BRAND TOKEN CLEANUP — STEP 8 DOKONČEN (21. 05. 2026)
+
+CSS tokeny a stránka Games sjednoceny podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/index.css`** — staré tokeny přesměrovány na brand hodnoty (názvy zachovány pro zpětnou kompatibilitu):
+  - `--neon-blue: 220 80% 45%` → `33 100% 50%` (Energy Orange) — propaguje přes `--glow-blue`, `--gradient-primary/hero/mystery`, keyframes (`luxury-pulse`, `luxury-glow`, `title-glow`), `.neon-ticket`, `.ticket-profile`, `.hero-title`, `.story-link`
+  - `--heading-gold: 43 55% 66%` → `38 100% 64%` (Warm Amber) — propaguje do `h1`, `h2` base stylů
+  - `--heading-gold-soft: 43 45% 58%` → `38 85% 55%`
+  - `--heading-gold-muted: 43 38% 48%` → `38 65% 42%`
+  - `.text-heading-gold` gradient: staré warm-yellow HSL stops → `#FFB547 / #FF8A00` brand stops
+- **`src/pages/Games.tsx`** — nadpis „Soutěže": `text-heading-gold` → `text-[#FFB547]` (přímá brand hodnota)
+
+### Co se nezměnilo
+
+- Žádný layout, logika aplikace, routing, UI texty
+- Žádné Supabase dotazy, wallet, Stripe, migrace
+- Žádné nové soubory, žádné smazané tokeny
+
+### Merge + testy
+
+- **PR #91** mergnut do `main` — merge commit `4a27bb04bc4518167b8e5dbaa8a6689f5300803a`
+- Změněny 2 soubory: `src/index.css` (8 ins / 10 del), `src/pages/Games.tsx` (1 ins / 1 del)
+- **Playwright Smoke Tests**: SUCCESS — run `26235203208` ✅
+
+### Další krok
+
+Finální vizuální audit po krocích 1–8 a rozhodnutí, zda řešit logo / PWA ikony.
+
+---
+
+## BRAND BOTTOM NAVIGATION — STEP 7 DOKONČEN (21. 05. 2026)
+
+Spodní navigace sjednocena podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/components/BottomNavigation.tsx`** — aktivní stav nav tlačítka sjednocen:
+  - **Blue ring**: `ring-blue-400/80` → `ring-[rgba(255,181,71,0.8)]` (Warm Amber)
+  - **Blue shadow outline**: `rgba(96,165,250,0.45)` → `rgba(255,138,0,0.45)` (Energy Orange)
+  - **Blue glow**: `rgba(59,130,246,0.18)` → `rgba(255,138,0,0.18)` (Energy Orange)
+  - Layout, ikony, routing, badge counts, texty a logika beze změny
+
+### Co se nezměnilo
+
+- Žádná logika aplikace — routing, badge counts, unread messages, unseen wins, admin guard
+- Žádné Supabase dotazy, wallet, Stripe, migrace
+- Žádné UI texty ani nové soubory
+
+### Merge + testy
+
+- **PR #90** mergnut do `main` — merge commit `2f01e1acf7489a56723dc0c17e8100b4ecb898c3`
+- Změněn pouze 1 soubor: `src/components/BottomNavigation.tsx` (1 ins / 1 del)
+- **Playwright Smoke Tests**: SUCCESS — run `26234450223` ✅
+
+### Další krok
+
+Step 8: `src/index.css` token cleanup (`--heading-gold`, `--neon-gold`, `--neon-blue` → brand hodnoty) + `src/pages/Games.tsx` class cleanup (`text-heading-gold` → brand třída).
+
+---
+
+## BRAND PROFILE — STEP 6 DOKONČEN (21. 05. 2026)
+
+Stránka Profile sjednocena podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/pages/Profile.tsx`** — všechny yellow/gold HSL a Tailwind hodnoty nahrazeny brand hodnotami:
+  - **VIPCard gold varianta**: `border-yellow-500/25`, `from-yellow-500/5` → `rgba(255,138,0,0.2)`, navy bg; shimmer overlay → orange rgba; floating particles `bg-yellow-500/20` → `rgba(255,138,0,0.15)`
+  - **CSS efekty**: `avatar-ring-glow` keyframe, `premium-input` focus shadow, `vip-header-container::before`, `avatar-hover-shimmer` → orange rgba brand hodnoty
+  - **Avatar ring**: conic-gradient `hsl(48 95% 65%), hsl(43 90% 55%), hsl(38 85% 48%)` → `#FFB547, #FF8A00, #e07800`; avatar border + fallback bg → orange brand
+  - **Crown badge**: `from-yellow-400 via-yellow-500 to-yellow-600` → `from-[#FFB547] via-[#FF8A00] to-[#e07800]`; glow shadow → orange
+  - **Profile name heading**: multi-stop zlatý gradient → Platinum `#E7EBF0` → Amber `#FFB547` → Orange `#FF8A00`; VIP badge border + bg + ikony → orange
+  - **Peněženka sekce**: Wallet icon, "Peněženka" heading, coin glow + ikona, MioCoin balance číslo (`from-yellow-300 via-yellow-400 to-yellow-500` → `from-[#FFB547] via-[#FF8A00] to-[#FFB547]`), "Dobít MioCoiny" CTA → orange brand
+  - **Formuláře (edit mód)**: labely `text-yellow-500/70`, inputy a textarea `bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40` → orange rgba; "Uložit změny" CTA → `#FF8A00→#FFB547`
+  - **Profile view řádky (5×)**: border, bg gradient, hover border → orange rgba; labely → `rgba(255,138,0,0.55)`
+  - **Win sound toggle**: sekce bg, ikona Volume2, Switch → `#FF8A00`
+  - **Marketing sekce**: ikona Mail, heading gradient, inactive status bg, Loader2, subscribe borders, "Přihlásit marketing" CTA → orange brand
+  - **Top-up modal**: DialogContent border/bg, Coins ikona, package selected state, hover border, pay button → orange brand
+
+### Co se nezměnilo
+
+- Žádná logika aplikace — nákup MioCoinů, přenos bonusů, formulář profilu, avatar upload, notifikace, marketing
+- Žádné Supabase dotazy, wallet, Stripe, routing, migrace
+- Žádné UI texty ani nové soubory
+
+### Merge + testy
+
+- **PR #89** mergnut do `main` — merge commit `9ece5828958103afd6c8d389225ffc314fa7fd04`
+- Změněn pouze 1 soubor: `src/pages/Profile.tsx` (116 ins / 116 del)
+- **Playwright Smoke Tests**: SUCCESS — run `26233223586` (1m 9s) ✅
+
+### Další krok
+
+Vizuální audit po krocích 1–6 a rozhodnutí, jestli pokračovat: Header, BottomNavigation, logo a případné zbývající soubory.
+
+---
+
+## BRAND HOMEPAGE — STEP 5 DOKONČEN (21. 05. 2026)
+
+Stránka Homepage sjednocena podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/pages/Homepage.tsx`** — všechny yellow/gold/amber HSL a Tailwind hodnoty nahrazeny brand hodnotami:
+  - **Zlaté separátory (5×)**: vnější glow `hsla(45, 80%, 50%, 0.15…0.25…0.30)` → `rgba(255,138,0,0.1…0.18…0.22)` ; ostrá linka `hsla(45, 75%, 50%, 0.6) → hsla(50, 95%, 70%, 1.0)` → `rgba(255,138,0,0.45) → rgba(255,181,71,0.95)` ; shimmer `hsla(50, 100%, 90%, 0.4)` → `rgba(255,220,150,0.3)`
+  - **Banner horní separátor + horizontální light gradient**: gold → orange/amber brand při zachovaných průhlednostech
+  - **Hvězdné částice „Poslední výherci"** (15-line blok): `hsla(45, 80%, 70%, 0.8)` → `rgba(255,181,71,0.55)`, `hsla(45, 60%, 65%, 0.6)` → `rgba(255,138,0,0.45)` atd.
+  - **Okraje sekcí (2×)**: `border-amber-300/20` → `border-[rgba(255,138,0,0.2)]`
+  - **"Probíhající soutěže" action box**: `border-amber-400/30` → `border-[rgba(255,138,0,0.3)]`, hover border → `rgba(255,138,0,0.5)`, inset glow → orange, Trophy icon `text-amber-400` → `text-[#FF8A00]`
+  - **Admin "Pouze čtení" badge**: `bg-amber-100/10 border-amber-400/30 text-amber-400` → `bg-[rgba(255,138,0,0.08)] border-[rgba(255,138,0,0.3)] text-[#FF8A00]`
+  - **Empty state „Žádné aktivní soutěže"**: `border-amber-400` + `from-amber-50 to-yellow-50` → `border-[rgba(255,138,0,0.4)]` + deep navy gradient `from-[hsl(220_35%_8%)] to-[hsl(220_30%_5%)]`; titulek `text-amber-800 dark:text-amber-400` → `text-[#FFB547]`; text → `text-muted-foreground`
+  - **Inline voucher karta**: `from-[hsl(40_20%_14%)] … border-[hsl(40_30%_35%)]` → deep navy + `border-[rgba(255,138,0,0.35)]`, hover border/shadow → orange brand
+  - **Partner karty**: stejný vzor jako voucher karta
+  - **3× coming-soon karty**: `from-[hsl(40_20%_14%)] … border-[hsl(45_80%_45%)]` → navy + `border-[rgba(255,138,0,0.4)]`
+
+### Co se nezměnilo
+
+- Žádná logika aplikace — soutěže, tikety, wallet, vouchery, partner karty, routování
+- Žádné Supabase dotazy, Stripe, backend, migrace
+- Žádné UI texty
+
+### Merge + testy
+
+- **PR #88** mergnut do `main` — merge commit `02d7f4c6c9de054910e5ecd075307fd0c820b6ff`
+- Změněn pouze 1 soubor: `src/pages/Homepage.tsx` (48 ins / 48 del)
+- **Playwright Smoke Tests**: SUCCESS — run `26229779258` (1m 11s), `completed / success`
+
+### Další krok
+
+Step 6: `src/pages/Profile.tsx` — 115 výskytů yellow/gold; VIPCard varianty, plovoucí částice, avatar ring (conic-gradient), MioCoin balance display, form vstupy, CTA tlačítka.
+
+---
+
+## BRAND VOUCHERS — STEP 4 DOKONČEN (21. 05. 2026)
+
+Stránka Vouchery sjednocena podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/pages/Vouchers.tsx`** — všechny yellow/gold HSL hodnoty nahrazeny brand hodnotami:
+  - Voucher karty (dostupné, oblíbené, zakoupené): border `hsl(40_30%_30%)` → `rgba(255,138,0,0.35)`, hover border → `rgba(255,138,0,0.55)`, hover glow → orange
+  - Skeleton / empty state karty: `from-[hsl(40_20%_14%)]` gradient → deep navy `from-[hsl(220_35%_8%)]`, border → `rgba(255,138,0,0.3)`
+  - Gold particle efekty (3×): `hsl(45 80% 65%)` → `rgba(255,138,0,...)` / `rgba(255,181,71,...)` při snížené průhlednosti (decentní brand efekt)
+  - CTA tlačítka KOUPIT: `from-[hsl(40_70%_42%)] via-[hsl(42_75%_48%)] to-[hsl(38_70%_42%)]` → gradient `#FF8A00 → #FFB547`, text `#111`
+  - Tlačítko Uplatnit voucher: stejný orange→amber gradient
+  - Cena / voucher kód: `hsl(45_80%_55%)` → Warm Amber `#FFB547`
+  - Redeem modal: border `hsl(40_30%_35%)` → `rgba(255,138,0,0.35)`, pozadí `hsl(40_20%_12%)` → dark navy; kód text → `#FFB547`; Copy button: zlatá → `#FF8A00→#FFB547`
+  - "Zkopírovat kód" outline: border/hover → orange brand hodnoty
+  - Image separátor + info badge: `hsl(40_25%_25%/0.4/0.5)` → `rgba(255,138,0,0.2)`
+  - Heart button border + loader barva → orange
+  - Gift icon placeholder → `rgba(255,138,0,0.35)`
+
+### Co se nezměnilo
+
+- Žádná logika aplikace — nákup voucheru, oblíbené, zakoupené, kopírování kódu, modaly, tabing
+- Žádné Supabase dotazy, wallet, Stripe, soutěže, tikety, Partner Offers ani backend
+- Žádné stránky, routing ani texty UI
+- Žádné migrace
+
+### Merge + testy
+
+- **PR #87** mergnut do `main` — merge commit `6dab7c3527b11c1e0559220d71228ef485911fad`
+- Změněn pouze 1 soubor: `src/pages/Vouchers.tsx` (45 ins / 45 del)
+- **Playwright Smoke Tests**: SUCCESS před mergem (PR check) i po mergi (main, run `26228589925`)
+
+### Další krok
+
+Rozhodnout: pokračovat brand alignmentem dalších stránek (profile, homepage, header), nebo nejdřív provést vizuální audit po všech 4 krocích.
+
+---
+
+## BRAND CONTEST DETAIL — STEP 3 DOKONČEN (21. 05. 2026)
+
+Detail soutěže sjednocen podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/pages/ContestDetail.tsx`** — všechny yellow/gold hodnoty nahrazeny brand hodnotami:
+  - Hero sekce: h1 titulek `text-yellow-400` → Platinum `#E7EBF0`; popis/výhra → Silver `#BFC6CF`; hero border → `rgba(255,138,0,0.45)` (konzistentní s ContestCard)
+  - "Zobrazit více/méně": `yellow-400/300` → Energy Orange `#FF8A00 / #FFB547`
+  - Gallery media border → `rgba(255,138,0,0.2)`
+  - Box 1 (MioCoin stav): border, MioCoin glow, live shimmer → Energy Orange
+  - "Dobít MioCoiny" outline button: yellow-500 → `rgba(255,138,0,...)`
+  - Box 2 (bonus pool): pozadí, border, číslo `text-yellow-400` → `#FFB547`, MioCoin glow
+  - Sekce 4 (cesta k tiketu): border → `rgba(255,138,0,0.2)`
+  - Sekce 5 (věcné výhry): border, hover, count badge → amber brand
+  - PDF tlačítko: `from-amber-500 to-yellow-400` → `from-[#FF8A00] to-[#FFB547]`
+
+### Co se nezměnilo
+
+- Žádná logika aplikace, Supabase dotazy, nákup tiketu, wallet, contests, winners, Partner Offers ani backend
+- Žádné stránky, routing ani texty UI
+- Žádné migrace
+
+### Merge + testy
+
+- **PR #86** mergnut do `main` — commit `63ecbcb` (rebase merge)
+- Změněn pouze 1 soubor: `src/pages/ContestDetail.tsx` (18 ins / 18 del)
+- **Playwright Smoke Tests**: SUCCESS před mergem (PR check) i po mergi (main, run `26227604101`)
+
+### Další krok
+
+Vizuálně sjednotit vouchery.
+
+---
+
+## BRAND CONTEST CARDS — STEP 2 DOKONČEN (21. 05. 2026)
+
+Soutěžní karty a CTA tlačítka sjednoceny podle OneMil brand kitu.
+
+### Co bylo provedeno
+
+- **`src/components/ContestCard.css`** — border sweep animace: jasná žlutá/zlatá → Energy Orange `rgba(255,138,0)` / Warm Amber `rgba(255,181,71)`; animace zpomalena (2.5s → 4s / 5s) pro premium pocit; vnitřní glow přesměrován na oranžový nádech; CSS třídy zachovány, pouze hodnoty změněny
+- **`src/components/ContestCard.tsx`** — hlavní CTA: outlined orange → plný gradient `#FF8A00 → #FFB547`, tmavý text `#111`, amber border, orange glow; Detail/Login tlačítka: silver border `rgba(191,198,207,0.25)` s orange hover; karta: border přesměrován na přímý brand hex
+- **`src/components/ui/button.tsx`** — varianta `premium`: gold `hsl(45 93% 60%)` → Energy Orange `#FF8A00`
+
+### Co se nezměnilo
+
+- Žádná logika aplikace, databáze, platby, wallet, soutěže, tikety, Partner Offers ani backend
+- Žádné stránky, routing ani texty UI
+- Žádné migrace
+
+### Merge + testy
+
+- **PR #85** mergnut do `main` — commit na main `9a508d5` (rebase merge)
+- Změněny pouze 3 soubory: `ContestCard.css`, `ContestCard.tsx`, `ui/button.tsx`
+- **Playwright Smoke Tests**: SUCCESS před mergem (PR check) i po mergi (main, run `26226461672`)
+
+### Další krok
+
+Vizuálně sjednotit detail soutěže nebo vouchery.
 
 ---
 

@@ -369,7 +369,7 @@ const Homepage = () => {
                 <div 
                   className="h-[2px] max-w-[1300px] mx-auto"
                   style={{
-                    background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 55%, 0.7) 5%, hsla(48, 85%, 60%, 0.9) 20%, hsla(50, 90%, 65%, 1) 50%, hsla(48, 85%, 60%, 0.9) 80%, hsla(45, 80%, 55%, 0.7) 95%, transparent 100%)'
+                    background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.5) 5%, rgba(255,138,0,0.8) 20%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.8) 80%, rgba(255,138,0,0.5) 95%, transparent 100%)'
                   }}
                 />
               </div>
@@ -387,7 +387,7 @@ const Homepage = () => {
                   <div 
                     className="absolute inset-0 pointer-events-none"
                     style={{
-                      background: 'linear-gradient(to bottom, transparent 0%, transparent 30%, hsla(45, 65%, 60%, 0.25) 42%, hsla(45, 70%, 65%, 0.4) 50%, hsla(45, 65%, 60%, 0.25) 58%, transparent 70%, transparent 100%)'
+                      background: 'linear-gradient(to bottom, transparent 0%, transparent 30%, rgba(255,138,0,0.1) 42%, rgba(255,181,71,0.18) 50%, rgba(255,138,0,0.1) 58%, transparent 70%, transparent 100%)'
                     }}
                   />
 
@@ -442,7 +442,7 @@ const Homepage = () => {
                 <div 
                   className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
                   style={{
-                    background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
+                    background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.1) 10%, rgba(255,138,0,0.18) 30%, rgba(255,181,71,0.22) 50%, rgba(255,138,0,0.18) 70%, rgba(255,138,0,0.1) 90%, transparent 100%)',
                     filter: 'blur(8px)'
                   }}
                 />
@@ -450,14 +450,14 @@ const Homepage = () => {
                 <div 
                   className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
                   style={{
-                    background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
+                    background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.45) 3%, rgba(255,138,0,0.75) 15%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.75) 85%, rgba(255,138,0,0.45) 97%, transparent 100%)'
                   }}
                 >
                   {/* Shimmer overlay */}
                   <div 
                     className="absolute inset-0 animate-golden-shimmer"
                     style={{
-                      background: 'linear-gradient(90deg, transparent 0%, transparent 40%, hsla(50, 100%, 90%, 0.4) 50%, transparent 60%, transparent 100%)',
+                      background: 'linear-gradient(90deg, transparent 0%, transparent 40%, rgba(255,220,150,0.3) 50%, transparent 60%, transparent 100%)',
                       backgroundSize: '200% 100%'
                     }}
                   />
@@ -470,7 +470,7 @@ const Homepage = () => {
         {/* Coin Top-up Section */}
         <section className="w-full overflow-x-hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Left Column - Dobijte si MioCoiny */}
-          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-amber-300/20 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
+          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
             <CardContent className="p-5 h-full flex flex-col">
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
@@ -621,7 +621,7 @@ const Homepage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   {/* Box 1: Probíhající soutěže */}
                   <div 
-                    className="rounded-xl p-4 bg-[hsl(220_45%_6%)] border-2 border-amber-400/30 cursor-pointer hover:border-amber-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(40_60%_50%/0.06)] relative overflow-hidden"
+                    className="rounded-xl p-4 bg-[hsl(220_45%_6%)] border-2 border-[rgba(255,138,0,0.3)] cursor-pointer hover:border-[rgba(255,138,0,0.5)] transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_rgba(255,138,0,0.05)] relative overflow-hidden"
                     onClick={() => navigate("/games")}
                   >
                     {placementBanners.probihajici_souteze?.image_url && (
@@ -631,7 +631,7 @@ const Homepage = () => {
                         className="absolute inset-0 w-full h-full object-cover"
                       />
                     )}
-                    <Trophy className="w-8 h-8 text-amber-400 mb-2 relative z-10" />
+                    <Trophy className="w-8 h-8 text-[#FF8A00] mb-2 relative z-10" />
                     <div className="text-sm font-semibold text-foreground relative z-10">Probíhající soutěže</div>
                   </div>
 
@@ -656,27 +656,27 @@ const Homepage = () => {
           </Card>
 
           {/* Right Column - Poslední výherci */}
-          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-amber-300/20 shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
+          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
             {/* Stars/Particles Background */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
               {/* Star pattern layer */}
               <div className="absolute inset-0" style={{
                 background: `
-                  radial-gradient(1.5px 1.5px at 10% 15%, hsla(45, 80%, 70%, 0.8) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 25% 35%, hsla(45, 70%, 60%, 0.6) 50%, transparent 100%),
-                  radial-gradient(1.5px 1.5px at 45% 10%, hsla(45, 85%, 75%, 0.9) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 60% 45%, hsla(45, 75%, 65%, 0.5) 50%, transparent 100%),
-                  radial-gradient(2px 2px at 75% 20%, hsla(45, 90%, 80%, 1) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 85% 55%, hsla(45, 70%, 60%, 0.6) 50%, transparent 100%),
-                  radial-gradient(1.5px 1.5px at 15% 70%, hsla(45, 80%, 70%, 0.7) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 35% 85%, hsla(45, 75%, 65%, 0.5) 50%, transparent 100%),
-                  radial-gradient(2px 2px at 55% 75%, hsla(45, 90%, 80%, 0.9) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 70% 90%, hsla(45, 70%, 60%, 0.4) 50%, transparent 100%),
-                  radial-gradient(1.5px 1.5px at 90% 70%, hsla(45, 85%, 75%, 0.8) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 5% 50%, hsla(45, 75%, 65%, 0.5) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 95% 40%, hsla(45, 70%, 60%, 0.6) 50%, transparent 100%),
-                  radial-gradient(1.5px 1.5px at 40% 60%, hsla(45, 80%, 70%, 0.7) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 80% 80%, hsla(45, 75%, 65%, 0.5) 50%, transparent 100%)
+                  radial-gradient(1.5px 1.5px at 10% 15%, rgba(255,181,71,0.55) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 25% 35%, rgba(255,138,0,0.45) 50%, transparent 100%),
+                  radial-gradient(1.5px 1.5px at 45% 10%, rgba(255,181,71,0.65) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 60% 45%, rgba(255,138,0,0.38) 50%, transparent 100%),
+                  radial-gradient(2px 2px at 75% 20%, rgba(255,181,71,0.75) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 85% 55%, rgba(255,138,0,0.45) 50%, transparent 100%),
+                  radial-gradient(1.5px 1.5px at 15% 70%, rgba(255,181,71,0.5) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 35% 85%, rgba(255,138,0,0.38) 50%, transparent 100%),
+                  radial-gradient(2px 2px at 55% 75%, rgba(255,181,71,0.65) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 70% 90%, rgba(255,138,0,0.3) 50%, transparent 100%),
+                  radial-gradient(1.5px 1.5px at 90% 70%, rgba(255,181,71,0.55) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 5% 50%, rgba(255,138,0,0.38) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 95% 40%, rgba(255,138,0,0.45) 50%, transparent 100%),
+                  radial-gradient(1.5px 1.5px at 40% 60%, rgba(255,181,71,0.5) 50%, transparent 100%),
+                  radial-gradient(1px 1px at 80% 80%, rgba(255,138,0,0.38) 50%, transparent 100%)
                 `
               }} />
               {/* Subtle golden glow overlay */}
@@ -749,7 +749,7 @@ const Homepage = () => {
           <div 
             className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.1) 10%, rgba(255,138,0,0.18) 30%, rgba(255,181,71,0.22) 50%, rgba(255,138,0,0.18) 70%, rgba(255,138,0,0.1) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
@@ -757,14 +757,14 @@ const Homepage = () => {
           <div 
             className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.45) 3%, rgba(255,138,0,0.75) 15%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.75) 85%, rgba(255,138,0,0.45) 97%, transparent 100%)'
             }}
           >
             {/* Shimmer overlay */}
             <div 
               className="absolute inset-0 animate-golden-shimmer"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, hsla(50, 100%, 90%, 0.4) 50%, transparent 60%, transparent 100%)',
+                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, rgba(255,220,150,0.3) 50%, transparent 60%, transparent 100%)',
                 backgroundSize: '200% 100%'
               }}
             />
@@ -806,7 +806,7 @@ const Homepage = () => {
           <div 
             className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.1) 10%, rgba(255,138,0,0.18) 30%, rgba(255,181,71,0.22) 50%, rgba(255,138,0,0.18) 70%, rgba(255,138,0,0.1) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
@@ -814,14 +814,14 @@ const Homepage = () => {
           <div 
             className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.45) 3%, rgba(255,138,0,0.75) 15%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.75) 85%, rgba(255,138,0,0.45) 97%, transparent 100%)'
             }}
           >
             {/* Shimmer overlay */}
             <div 
               className="absolute inset-0 animate-golden-shimmer"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, hsla(50, 100%, 90%, 0.4) 50%, transparent 60%, transparent 100%)',
+                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, rgba(255,220,150,0.3) 50%, transparent 60%, transparent 100%)',
                 backgroundSize: '200% 100%'
               }}
             />
@@ -839,12 +839,12 @@ const Homepage = () => {
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
               {/* Role indicator */}
               {isAdmin && (
-                <div className="px-2 py-1 bg-amber-100/10 border border-amber-400/30 rounded text-xs text-amber-400">
+                <div className="px-2 py-1 bg-[rgba(255,138,0,0.08)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FF8A00]">
                   Pouze čtení
                 </div>
               )}
               {!user && (
-                <div className="px-2 py-1 bg-blue-100/10 border border-blue-400/30 rounded text-xs text-blue-400">
+                <div className="px-2 py-1 bg-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FFB547]">
                   Přihlásit pro interakci
                 </div>
               )}
@@ -895,16 +895,16 @@ const Homepage = () => {
             ) : contests.length === 0 ? (
               // No contests message
               <div className="flex-none w-72">
-                <Card className="coupon-card border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 relative overflow-hidden h-full">
+                <Card className="coupon-card border-[rgba(255,138,0,0.4)] bg-gradient-to-b from-[hsl(220_35%_8%)] to-[hsl(220_30%_5%)] relative overflow-hidden h-full">
                   <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
                   <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-bold text-amber-800 dark:text-amber-400">
+                    <CardTitle className="text-lg font-bold text-[#FFB547]">
                       Žádné aktivní soutěže
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-sm text-amber-600 dark:text-amber-500">
+                    <div className="text-sm text-muted-foreground">
                       Momentálně nejsou k dispozici žádné aktivní soutěže
                     </div>
                   </CardContent>
@@ -935,7 +935,7 @@ const Homepage = () => {
           <div 
             className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.1) 10%, rgba(255,138,0,0.18) 30%, rgba(255,181,71,0.22) 50%, rgba(255,138,0,0.18) 70%, rgba(255,138,0,0.1) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
@@ -943,14 +943,14 @@ const Homepage = () => {
           <div 
             className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.45) 3%, rgba(255,138,0,0.75) 15%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.75) 85%, rgba(255,138,0,0.45) 97%, transparent 100%)'
             }}
           >
             {/* Shimmer overlay */}
             <div 
               className="absolute inset-0 animate-golden-shimmer"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, hsla(50, 100%, 90%, 0.4) 50%, transparent 60%, transparent 100%)',
+                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, rgba(255,220,150,0.3) 50%, transparent 60%, transparent 100%)',
                 backgroundSize: '200% 100%'
               }}
             />
@@ -1011,7 +1011,7 @@ const Homepage = () => {
             ) : (
               homepageVouchers.map((voucher) => (
                   <div key={voucher.id} className="flex-none w-80 cursor-pointer" onClick={() => navigate("/vouchers?tab=available")}>
-                  <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[hsl(40_40%_45%)] hover:shadow-[0_0_12px_hsl(40_30%_40%/0.2)] hover:scale-[1.02]">
+                  <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.35)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_12px_rgba(255,138,0,0.2)] hover:scale-[1.02]">
                     <div className="flex h-48 relative">
                       {/* Left side - Content */}
                       <div className="flex-1 p-5 flex flex-col justify-between">
@@ -1084,7 +1084,7 @@ const Homepage = () => {
           <div 
             className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.1) 10%, rgba(255,138,0,0.18) 30%, rgba(255,181,71,0.22) 50%, rgba(255,138,0,0.18) 70%, rgba(255,138,0,0.1) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
@@ -1092,14 +1092,14 @@ const Homepage = () => {
           <div 
             className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.45) 3%, rgba(255,138,0,0.75) 15%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.75) 85%, rgba(255,138,0,0.45) 97%, transparent 100%)'
             }}
           >
             {/* Shimmer overlay */}
             <div 
               className="absolute inset-0 animate-golden-shimmer"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, hsla(50, 100%, 90%, 0.4) 50%, transparent 60%, transparent 100%)',
+                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, rgba(255,220,150,0.3) 50%, transparent 60%, transparent 100%)',
                 backgroundSize: '200% 100%'
               }}
             />
@@ -1130,7 +1130,7 @@ const Homepage = () => {
               partners.map((partner) => (
                 <div
                   key={partner.id}
-                  className="voucher-card-glow aspect-square bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)] rounded-[20px] overflow-hidden cursor-pointer transition-all duration-300 hover:border-[hsl(40_40%_45%)] hover:shadow-[0_0_12px_hsl(40_30%_40%/0.2)] hover:scale-[1.02] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] group"
+                  className="voucher-card-glow aspect-square bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.35)] rounded-[20px] overflow-hidden cursor-pointer transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_12px_rgba(255,138,0,0.2)] hover:scale-[1.02] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] group"
                   onClick={() => window.open(partner.website_url, "_blank")}
                 >
                   <div className="w-full h-full p-5 flex items-center justify-center relative">
@@ -1165,7 +1165,7 @@ const Homepage = () => {
           <div 
             className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 80%, 50%, 0.15) 10%, hsla(48, 85%, 55%, 0.25) 30%, hsla(50, 90%, 60%, 0.3) 50%, hsla(48, 85%, 55%, 0.25) 70%, hsla(45, 80%, 50%, 0.15) 90%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.1) 10%, rgba(255,138,0,0.18) 30%, rgba(255,181,71,0.22) 50%, rgba(255,138,0,0.18) 70%, rgba(255,138,0,0.1) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
@@ -1173,14 +1173,14 @@ const Homepage = () => {
           <div 
             className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, hsla(45, 75%, 50%, 0.6) 3%, hsla(48, 85%, 60%, 0.9) 15%, hsla(50, 95%, 70%, 1) 50%, hsla(48, 85%, 60%, 0.9) 85%, hsla(45, 75%, 50%, 0.6) 97%, transparent 100%)'
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.45) 3%, rgba(255,138,0,0.75) 15%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.75) 85%, rgba(255,138,0,0.45) 97%, transparent 100%)'
             }}
           >
             {/* Shimmer overlay */}
             <div 
               className="absolute inset-0 animate-golden-shimmer"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, hsla(50, 100%, 90%, 0.4) 50%, transparent 60%, transparent 100%)',
+                background: 'linear-gradient(90deg, transparent 0%, transparent 40%, rgba(255,220,150,0.3) 50%, transparent 60%, transparent 100%)',
                 backgroundSize: '200% 100%'
               }}
             />
@@ -1199,7 +1199,7 @@ const Homepage = () => {
             {comingSoonLoading ? (
               // Loading placeholder
               Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[2px] border-[hsl(45_80%_45%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
+                <Card key={index} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 animate-pulse" />
                   </CardContent>
@@ -1208,7 +1208,7 @@ const Homepage = () => {
             ) : comingSoonBanners.length === 0 ? (
               // Placeholder cards when empty
               Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[2px] border-[hsl(45_80%_45%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
+                <Card key={index} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 flex items-center justify-center">
                       <div className="text-center text-muted-foreground">
@@ -1220,7 +1220,7 @@ const Homepage = () => {
               ))
             ) : (
               comingSoonBanners.map((banner) => (
-                <Card key={banner.id} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[2px] border-[hsl(45_80%_45%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
+                <Card key={banner.id} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/40">
                       <img
