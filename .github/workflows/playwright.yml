@@ -73,6 +73,7 @@ jobs:
 
       - name: Upload HTML report
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-${{ github.run_id }}
@@ -81,6 +82,7 @@ jobs:
 
       - name: Upload failure screenshots
         if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: screenshots-${{ github.run_id }}
