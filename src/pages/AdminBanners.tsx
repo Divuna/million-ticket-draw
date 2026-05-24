@@ -29,6 +29,7 @@ interface BannerForm {
   videoUrl: string;
   active: boolean;
   targetPage: string;
+  permanent: boolean;
   startDate: Date | undefined;
   endDate: Date | undefined;
 }
@@ -75,6 +76,7 @@ const AdminBanners: React.FC = () => {
     videoUrl: '',
     active: true,
     targetPage: 'homepage_customer',
+    permanent: true,
     startDate: undefined,
     endDate: undefined,
   });
@@ -219,8 +221,8 @@ const AdminBanners: React.FC = () => {
           image_url: imageUrl,
           active: bannerForm.active,
           target_page: bannerForm.targetPage,
-          start_date: bannerForm.startDate?.toISOString().split('T')[0],
-          end_date: bannerForm.endDate?.toISOString().split('T')[0],
+          start_date: bannerForm.permanent ? null : bannerForm.startDate?.toISOString().split('T')[0],
+          end_date: bannerForm.permanent ? null : bannerForm.endDate?.toISOString().split('T')[0],
         })
         .select()
         .single();
@@ -246,6 +248,7 @@ const AdminBanners: React.FC = () => {
       videoUrl: '',
       active: true,
       targetPage: 'homepage_customer',
+      permanent: true,
       startDate: undefined,
       endDate: undefined,
     });
@@ -324,6 +327,7 @@ const AdminBanners: React.FC = () => {
   };
 
   const getValidityText = (banner: Banner) => {
+    if (!banner.start_date && !banner.end_date) return 'Trvale';
     const startDate = banner.start_date ? new Date(banner.start_date).toLocaleDateString('cs-CZ') : 'Neurčeno';
     const endDate = banner.end_date ? new Date(banner.end_date).toLocaleDateString('cs-CZ') : 'Neurčeno';
     return `${startDate} - ${endDate}`;
@@ -354,8 +358,8 @@ const AdminBanners: React.FC = () => {
           image_url: imageUrl,
           active: bannerForm.active,
           target_page: bannerForm.targetPage,
-          start_date: bannerForm.startDate?.toISOString().split('T')[0],
-          end_date: bannerForm.endDate?.toISOString().split('T')[0],
+          start_date: bannerForm.permanent ? null : bannerForm.startDate?.toISOString().split('T')[0],
+          end_date: bannerForm.permanent ? null : bannerForm.endDate?.toISOString().split('T')[0],
         })
         .eq('id', editingBanner.id);
 
@@ -376,12 +380,14 @@ const AdminBanners: React.FC = () => {
 
   const handleEditClick = (banner: Banner) => {
     setEditingBanner(banner);
+    const isPermanent = !banner.start_date && !banner.end_date;
     setBannerForm({
       title: banner.title,
       imageFile: null,
       videoUrl: banner.target_page === 'homepage_video' ? banner.image_url : '',
       active: banner.active,
       targetPage: banner.target_page,
+      permanent: isPermanent,
       startDate: banner.start_date ? new Date(banner.start_date) : undefined,
       endDate: banner.end_date ? new Date(banner.end_date) : undefined,
     });
@@ -554,62 +560,73 @@ const AdminBanners: React.FC = () => {
                   <Label htmlFor="active">Aktivní</Label>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Datum začátku</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn("w-full justify-start text-left font-normal", 
-                            !bannerForm.startDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {bannerForm.startDate ? format(bannerForm.startDate, 'dd.MM.yyyy') : 'Vybrat datum'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={bannerForm.startDate}
-                          onSelect={(date) => setBannerForm({...bannerForm, startDate: date})}
-                          initialFocus
-                          className="p-3"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Datum konce</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn("w-full justify-start text-left font-normal", 
-                            !bannerForm.endDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {bannerForm.endDate ? format(bannerForm.endDate, 'dd.MM.yyyy') : 'Vybrat datum'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={bannerForm.endDate}
-                          onSelect={(date) => setBannerForm({...bannerForm, endDate: date})}
-                          initialFocus
-                          className="p-3"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="permanent"
+                    checked={bannerForm.permanent}
+                    onCheckedChange={(checked) => setBannerForm({...bannerForm, permanent: checked, startDate: checked ? undefined : bannerForm.startDate, endDate: checked ? undefined : bannerForm.endDate})}
+                  />
+                  <Label htmlFor="permanent">Zobrazovat trvale (bez omezení datumem)</Label>
                 </div>
 
+                {!bannerForm.permanent && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Datum začátku</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn("w-full justify-start text-left font-normal",
+                              !bannerForm.startDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {bannerForm.startDate ? format(bannerForm.startDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={bannerForm.startDate}
+                            onSelect={(date) => setBannerForm({...bannerForm, startDate: date})}
+                            initialFocus
+                            className="p-3"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Datum konce</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn("w-full justify-start text-left font-normal",
+                              !bannerForm.endDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {bannerForm.endDate ? format(bannerForm.endDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={bannerForm.endDate}
+                            onSelect={(date) => setBannerForm({...bannerForm, endDate: date})}
+                            initialFocus
+                            className="p-3"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-4 pt-4">
-                  <Button 
+                  <Button
                     onClick={handleCreateBanner}
                     disabled={createLoading}
                     className="flex-1"
@@ -1019,62 +1036,73 @@ const AdminBanners: React.FC = () => {
               <Label htmlFor="edit-active">Aktivní</Label>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Datum začátku</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn("w-full justify-start text-left font-normal", 
-                        !bannerForm.startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {bannerForm.startDate ? format(bannerForm.startDate, 'dd.MM.yyyy') : 'Vybrat datum'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={bannerForm.startDate}
-                      onSelect={(date) => setBannerForm({...bannerForm, startDate: date})}
-                      initialFocus
-                      className="p-3"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Datum konce</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn("w-full justify-start text-left font-normal", 
-                        !bannerForm.endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {bannerForm.endDate ? format(bannerForm.endDate, 'dd.MM.yyyy') : 'Vybrat datum'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={bannerForm.endDate}
-                      onSelect={(date) => setBannerForm({...bannerForm, endDate: date})}
-                      initialFocus
-                      className="p-3"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="edit-permanent"
+                checked={bannerForm.permanent}
+                onCheckedChange={(checked) => setBannerForm({...bannerForm, permanent: checked, startDate: checked ? undefined : bannerForm.startDate, endDate: checked ? undefined : bannerForm.endDate})}
+              />
+              <Label htmlFor="edit-permanent">Zobrazovat trvale (bez omezení datumem)</Label>
             </div>
 
+            {!bannerForm.permanent && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Datum začátku</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn("w-full justify-start text-left font-normal",
+                          !bannerForm.startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {bannerForm.startDate ? format(bannerForm.startDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={bannerForm.startDate}
+                        onSelect={(date) => setBannerForm({...bannerForm, startDate: date})}
+                        initialFocus
+                        className="p-3"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Datum konce</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn("w-full justify-start text-left font-normal",
+                          !bannerForm.endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {bannerForm.endDate ? format(bannerForm.endDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={bannerForm.endDate}
+                        onSelect={(date) => setBannerForm({...bannerForm, endDate: date})}
+                        initialFocus
+                        className="p-3"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-4 pt-4">
-              <Button 
+              <Button
                 onClick={handleUpdateBanner}
                 disabled={editLoading}
                 className="flex-1"
