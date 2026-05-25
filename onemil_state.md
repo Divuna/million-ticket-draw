@@ -1,6 +1,55 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 22. 05. 2026 (Staré logo preview odstraněno — PR #112)
+**Aktualizováno:** 25. 05. 2026
+
+---
+
+## TELEGRAM BOT NASTAVEN (25. 05. 2026)
+
+- Bot: **@Onemilclaudebot** (id: `8969270078`)
+- Token uložen jako Windows env var `TELEGRAM_BOT_TOKEN` (pouze lokálně na PC Pavla, ne v repozitáři)
+- Chat ID Pavla: `6714365501` — uloženo jako Windows env var `TELEGRAM_CHAT_ID`
+- Claude Code může posílat notifikace přes `Invoke-RestMethod` / `curl` na Telegram Bot API
+- Obousměrná komunikace (příjem zpráv od Pavla) zatím neimplementována
+
+---
+
+## CI: ARTIFACT UPLOAD CONTINUE-ON-ERROR (25. 05. 2026)
+
+- Smoke run `26374584373` selhal přestože testy prošly — příčina: kvóta artefaktů ještě nebyla přepočítána po mazání
+- Oprava: `continue-on-error: true` na všech `upload-artifact` krocích v `playwright.yml` i `playwright-staging.yml` (commit `408da958`)
+- Testy jsou nyní autoritativní — plná kvóta workflow neshodí
+
+---
+
+## HOMEPAGE HERO BANNER — FINÁLNÍ STAV (25. 05. 2026)
+
+- Hero banner je plnou šířkou viewportu (mimo `container mx-auto`)
+- **Cílový rozměr obrázku: 1920 × 600 px**
+- Kontejner: `w-full sm:aspect-[16/5] sm:max-h-[600px]`
+- Mobil: `h-auto object-contain` — celý obrázek bez pruhů
+- Tablet+: `object-cover` — plné pokrytí bez ořezu
+- Zlaté oddělovací linky + navigační šipky + tečkové indikátory zachovány
+- Commit: `ecea087c` (finální stav po sérii 7 iterací)
+
+---
+
+## ADMIN BANNERY — TOGGLE „ZOBRAZOVAT TRVALE" (24. 05. 2026)
+
+- `src/pages/AdminBanners.tsx`: přidán Switch „Zobrazovat trvale (bez omezení datumem)"
+- Výchozí stav: zapnuto (nové bannery jsou trvale bez datumu)
+- Když zapnuto: datumová pole skryta, `start_date`/`end_date` = `null`
+- `null` datum = vždy zobrazit (hook to tak již interpretoval — žádná DB změna)
+- Commit: `03271812`
+
+---
+
+## HOMEPAGE PLACEMENT BANNERY — LAYOUT (24. 05. 2026)
+
+- **MioCoin karty (4 balíčky):** fallback text skryt když existuje placement banner obrázek
+- **MioCoin karty — layout:** obrázek nahoře (`flex-1`), tlačítko „Dobít" přišpendleno ke spodku (`flex-shrink-0`)
+- **Lower boxy** (`probihajici_souteze`, `koupit_voucher`): ikona + text skryty při banner obrázku; `min-h` zachovává výšku karty
+- Commity: `f486afa9`, `9e58c386`, `e84ab661`, `e9254494`
 
 ---
 

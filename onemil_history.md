@@ -14,6 +14,56 @@
 
 ---
 
+## 2026-05-25 — CI: continue-on-error na artifact upload krocích (commit `408da958`)
+
+- Smoke run `26374584373` selhal přestože testy prošly — GitHub hlásil `Artifact storage quota has been hit`
+- Příčina: kvóta se přepočítává 6–12h po mazání; run proběhl dříve než se counter aktualizoval
+- Oprava: `continue-on-error: true` přidáno na všechny `upload-artifact` kroky v obou workflowech
+- Výsledek: plná kvóta artefaktů už nemůže způsobit selhání workflow; testy jsou autoritativní
+
+---
+
+## 2026-05-25 — Telegram bot @Onemilclaudebot nastaven
+
+- Vytvořen nový Telegram bot **@Onemilclaudebot** přes BotFather
+- Token uložen jako Windows user env var `TELEGRAM_BOT_TOKEN`
+- Chat ID Pavla Diviše (`6714365501`) uloženo jako Windows user env var `TELEGRAM_CHAT_ID`
+- Claude Code může odesílat Telegram notifikace přes Telegram Bot API
+- Obousměrná komunikace (Pavel → Claude přes Telegram) zatím neimplementována — vyžaduje webhook server
+
+---
+
+## 2026-05-24 — Homepage hero banner — opakované iterace finálního zobrazení (commity `acc82b56` → `ecea087c`)
+
+Iterace při ladění hero banneru na správný rozměr a zobrazení:
+- `acc82b56` — `h-auto block` (přirozená výška) → banner příliš velký
+- `54d603a2` — fixní výška `h-[200px] md:h-[320px] lg:h-[420px]` + `object-contain` → tmavé pruhy po stranách
+- `d163e532` — `object-cover` + `h-420px` → ořez spodku (loga značek neviditelná)
+- `af7dfbfd` — výška zvýšena na `lg:h-[600px]` pro nový 1920×600 banner
+- `0b653040` — přechod na `aspect-[16/5] max-h-[600px]` — responsivní poměr stran bez fixní výšky
+- `bc987b58` — mobil `aspect-[2/1]`, tablet+ `aspect-[16/5]` — menší výška na telefonu
+- `ecea087c` — **finální:** mobil bez fixní výšky (`h-auto`), `object-contain` → žádné pruhy; sm+ `object-cover` + `aspect-[16/5]`
+- Cílový rozměr banneru: **1920 × 600 px**; slot funguje responsivně bez ořezu ani pruhů
+
+---
+
+## 2026-05-24 — Admin bannery: toggle „Zobrazovat trvale" (commit `03271812`)
+
+- `src/pages/AdminBanners.tsx` — přidán Switch „Zobrazovat trvale (bez omezení datumem)" v CREATE i EDIT dialogu
+- Když zapnuto: datumová pole skryta, `start_date` a `end_date` se ukládají jako `null`
+- Supabase hook již `null` datum interpretuje jako „vždy zobrazovat" — žádná DB změna
+- `getValidityText()` vrací `'Trvale'` když obě data null
+
+---
+
+## 2026-05-24 — Homepage MioCoin karty + lower boxy — layout a placement banner (commity `f486afa9` → `e9254494`)
+
+- **MioCoin karty (4 balíčky):** fallback text (číslo, label, cena) skryt když je nastavený placement banner obrázek
+- **Lower boxy** (`probihajici_souteze`, `koupit_voucher`): ikona + text skryty když je banner obrázek; přidáno `min-h-[88px] md:min-h-[96px]` aby výška karty zůstala i bez textu
+- **MioCoin karty — layout přestaven:** obrázek vyplňuje horní část (`flex-1 min-h-0`), tlačítko „Dobít" přišpendleno ke spodku (`flex-shrink-0`) — tlačítko se již nepřekrývá s obrázkem na mobilu
+
+---
+
 ## 2026-05-24 — CI: vyčištění artefaktů GitHub Actions + snížení retention na 3 dny (commit `77e32f3b`)
 
 - GitHub Actions artifact storage byl plný (791 artefaktů nahromaděných od dubna) → upload reportů selhal s chybou `Artifact storage quota has been hit`
