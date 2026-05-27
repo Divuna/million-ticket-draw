@@ -16,7 +16,8 @@
       "Bash(gh run *)",
       "Bash(gh api *)",
       "Bash(git pull *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(xargs grep -l \"coming_soon\")"
     ]
   }
 }

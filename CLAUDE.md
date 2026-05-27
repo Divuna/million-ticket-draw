@@ -142,8 +142,12 @@ Technical:
 
 ---
 
-## CURRENT SYSTEM STATUS (25. 05. 2026)
+## CURRENT SYSTEM STATUS (27. 05. 2026)
 
+- **⚠️ PENDING MIGRACE (27. 05. 2026):** `supabase/migrations/20260527_coming_soon_banners_add_description.sql` commitnutá ale NEAPLIKOVANÁ na DB. Spustit manuálně v Supabase SQL Editoru (staging + produkce): `ALTER TABLE public.coming_soon_banners ADD COLUMN IF NOT EXISTS description TEXT;` — bez toho info popup nefunguje.
+- **WinnerCard redesign (27. 05. 2026):** `src/components/WinnerCard.tsx` přepsán — sjednocen s MioCoin card stylem (dark bg, orange border, Poppins prize gradient, muted labels, h-112px, star šum snížen). Commit `b6776ebe`.
+- **Připravujeme bannery — info popup (27. 05. 2026):** Nový sloupec `description`, admin textarea, homepage pulsující ℹ ikona + dark premium modal. Commit `f11b634f`. (Vyžaduje aplikaci migrace výše.)
+- **Připravujeme bannery — editovatelné tituly (27. 05. 2026):** Admin input + Uložit pro `title`; premium Poppins gradient na homepage i admin preview. Commity `4428b7d0`, `265f2330`.
 - **Telegram bot nastaven (25. 05. 2026):** @Onemilclaudebot (id `8969270078`). Token + chat_id Pavla (`6714365501`) uloženy jako Windows user env vars `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID`. Claude Code může posílat notifikace přes Telegram Bot API. Žádný server/webhook — pouze jednosměrné notifikace (Claude → Pavel).
 - **CI artifact upload — continue-on-error (25. 05. 2026):** `continue-on-error: true` přidáno na všechny `upload-artifact` kroky v `playwright.yml` i `playwright-staging.yml` (commit `408da958`). Plná kvóta artefaktů už nemůže shodit workflow — testy jsou autoritativní.
 - **Homepage hero banner — finální stav (25. 05. 2026):** Cílový rozměr **1920 × 600 px**. Kontejner `w-full sm:aspect-[16/5] sm:max-h-[600px]`. Mobil: `h-auto object-contain` (žádné pruhy, žádný ořez). Tablet+: `sm:object-cover`. Commit `ecea087c`.

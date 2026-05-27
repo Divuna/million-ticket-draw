@@ -14,6 +14,46 @@
 
 ---
 
+## 2026-05-27 — WinnerCard premium redesign (commit `b6776ebe`)
+
+- `src/components/WinnerCard.tsx` přepsán — sjednocen s MioCoin card stylem
+- Pozadí: `hsl(220 45% 6%)`, border `rgba(255,138,0,0.22)`, subtle box-shadow
+- Prize name: Poppins bold, orange→gold gradient text — nejdominantnější prvek
+- Winner name: silver `#E7EBF0`, bez prefixu „Výherce:"
+- Spodní řádek: contest title + ticket# + timeAgo — vše muted, kompaktně
+- Odstraněny labely „Cena:", „Výherce:", „Soutěž:" — jen hodnoty
+- Hvězdičkový star šum v outer homepage card odstraněn; v kartě snížen opacity 0.09–0.14
+- Výška zafixována na `112px`
+
+---
+
+## 2026-05-27 — Připravujeme bannery: info popup feature (commit `f11b634f`)
+
+- Nová migrace: `supabase/migrations/20260527_coming_soon_banners_add_description.sql`
+  (`ALTER TABLE public.coming_soon_banners ADD COLUMN IF NOT EXISTS description TEXT;`)
+- ⚠️ Migrace zatím **NEAPLIKOVÁNA** na staging ani produkci — musí se aplikovat manuálně v Supabase SQL Editoru
+- `src/hooks/useComingSoonBanners.ts` — přidán `description` do interface
+- `src/pages/AdminBanners.tsx` — textarea „Info text" + tlačítko Uložit pro každý ze 3 slotů
+- `src/pages/Homepage.tsx` — pulsující ℹ ikona (orange/gold, `@keyframes info-pulse`) na kartě pokud `description` není prázdný; klik otevře dark premium modal s title + description
+- `src/index.css` — `@keyframes info-pulse` přidán
+
+---
+
+## 2026-05-27 — Připravujeme bannery: premium typography na homepage (commit `265f2330`)
+
+- `src/pages/Homepage.tsx` — title banneru v sekci Připravujeme: Poppins bold, silver→amber→orange gradient (shodný styl s admin preview)
+
+---
+
+## 2026-05-27 — Připravujeme bannery: editovatelný popisek v admin (commit `4428b7d0`)
+
+- `src/pages/AdminBanners.tsx` — každý ze 3 slotů má textové pole „Popisek banneru" + tlačítko Uložit
+- Title se ukládá do `coming_soon_banners.title` (existující sloupec, žádná migrace)
+- Admin preview zobrazuje title jako premium overlay label přes obrázek (Poppins, silver→orange gradient)
+- Při INSERT nového banneru se použije custom title z inputu (ne auto „Připravujeme N")
+
+---
+
 ## 2026-05-25 — CI: continue-on-error na artifact upload krocích (commit `408da958`)
 
 - Smoke run `26374584373` selhal přestože testy prošly — GitHub hlásil `Artifact storage quota has been hit`

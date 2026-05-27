@@ -1,6 +1,52 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 25. 05. 2026
+**Aktualizováno:** 27. 05. 2026
+
+---
+
+## ⚠️ PENDING: MIGRACE NEAPLIKOVÁNA NA DB (27. 05. 2026)
+
+Tato migrace je commitnutá v repozitáři ale **NEBYLA aplikována** na staging ani produkci:
+- `supabase/migrations/20260527_coming_soon_banners_add_description.sql`
+  ```sql
+  ALTER TABLE public.coming_soon_banners ADD COLUMN IF NOT EXISTS description TEXT;
+  ```
+- Bez aplikace nebude info popup feature funkční (admin uložení selže, homepage ikona se nezobrazí)
+- Aplikovat manuálně v Supabase SQL Editoru na staging i produkci
+
+---
+
+## WINNERCARD PREMIUM REDESIGN (27. 05. 2026)
+
+- `src/components/WinnerCard.tsx` přepsán — sjednocen s MioCoin card stylem
+- Styl: `hsl(220 45% 6%)` bg, `rgba(255,138,0,0.22)` border, subtle glow
+- Prize name: Poppins bold orange→gold gradient (nejdominantnější prvek)
+- Winner name: `#E7EBF0` silver, bez prefixu
+- Spodní řádek: contest · ticket# · timeAgo — vše muted `#8E98A6`
+- Odstraněny prefixové labely „Cena:/Výherce:/Soutěž:"
+- Star šum snížen (opacity 0.09–0.14), outer homepage card star background odstraněn
+- Výška: `112px` fixed
+- Commit: `b6776ebe`
+
+---
+
+## PŘIPRAVUJEME BANNERY — INFO POPUP (27. 05. 2026)
+
+- Nový sloupec `description TEXT` v `coming_soon_banners` (migrace `20260527_...` — viz PENDING výše)
+- Admin: každý slot má textarea „Info text" + tlačítko Uložit → ukládá do `description`
+- Homepage: pulsující ℹ ikona (orange/gold, `@keyframes info-pulse`) pokud `description` není prázdný
+- Klik na ikonu → dark premium modal s title (Poppins gradient) + description text
+- Commit: `f11b634f`
+
+---
+
+## PŘIPRAVUJEME BANNERY — EDITOVATELNÉ TITULY + PREMIUM STYL (27. 05. 2026)
+
+- Admin `Připravujeme (3 bannery)`: každý slot má input „Popisek banneru" + Uložit → `coming_soon_banners.title`
+- Admin preview: title jako overlay label (Poppins bold, silver→orange gradient) přes obrázek
+- Homepage Připravujeme title: stejný premium Poppins gradient styl jako v admin preview
+- Žádná nová DB migrace (sloupec `title` existoval)
+- Commity: `4428b7d0` (admin editace), `265f2330` (homepage styl)
 
 ---
 
