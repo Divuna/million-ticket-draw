@@ -4,15 +4,11 @@
 
 ---
 
-## ⚠️ PENDING: MIGRACE NEAPLIKOVÁNA NA DB (27. 05. 2026)
+## MIGRACE APLIKOVÁNA: coming_soon_banners.description (27. 05. 2026)
 
-Tato migrace je commitnutá v repozitáři ale **NEBYLA aplikována** na staging ani produkci:
-- `supabase/migrations/20260527_coming_soon_banners_add_description.sql`
-  ```sql
-  ALTER TABLE public.coming_soon_banners ADD COLUMN IF NOT EXISTS description TEXT;
-  ```
-- Bez aplikace nebude info popup feature funkční (admin uložení selže, homepage ikona se nezobrazí)
-- Aplikovat manuálně v Supabase SQL Editoru na staging i produkci
+- `supabase/migrations/20260527_coming_soon_banners_add_description.sql` aplikována manuálně v Supabase a ověřena
+- Ověřená struktura tabulky: `id uuid, image_url text, title text, created_at timestamp with time zone, description text`
+- Info popup feature (admin textarea + homepage ℹ ikona + modal) je plně funkční
 
 ---
 

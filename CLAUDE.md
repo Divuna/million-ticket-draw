@@ -144,7 +144,7 @@ Technical:
 
 ## CURRENT SYSTEM STATUS (27. 05. 2026)
 
-- **⚠️ PENDING MIGRACE (27. 05. 2026):** `supabase/migrations/20260527_coming_soon_banners_add_description.sql` commitnutá ale NEAPLIKOVANÁ na DB. Spustit manuálně v Supabase SQL Editoru (staging + produkce): `ALTER TABLE public.coming_soon_banners ADD COLUMN IF NOT EXISTS description TEXT;` — bez toho info popup nefunguje.
+- **Migrace coming_soon_banners.description APLIKOVÁNA (27. 05. 2026):** `supabase/migrations/20260527_coming_soon_banners_add_description.sql` aplikována manuálně v Supabase a ověřena. Struktura: `id uuid, image_url text, title text, created_at timestamptz, description text`. Info popup feature je plně funkční.
 - **WinnerCard redesign (27. 05. 2026):** `src/components/WinnerCard.tsx` přepsán — sjednocen s MioCoin card stylem (dark bg, orange border, Poppins prize gradient, muted labels, h-112px, star šum snížen). Commit `b6776ebe`.
 - **Připravujeme bannery — info popup (27. 05. 2026):** Nový sloupec `description`, admin textarea, homepage pulsující ℹ ikona + dark premium modal. Commit `f11b634f`. (Vyžaduje aplikaci migrace výše.)
 - **Připravujeme bannery — editovatelné tituly (27. 05. 2026):** Admin input + Uložit pro `title`; premium Poppins gradient na homepage i admin preview. Commity `4428b7d0`, `265f2330`.

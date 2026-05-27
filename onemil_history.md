@@ -31,7 +31,7 @@
 
 - Nová migrace: `supabase/migrations/20260527_coming_soon_banners_add_description.sql`
   (`ALTER TABLE public.coming_soon_banners ADD COLUMN IF NOT EXISTS description TEXT;`)
-- ⚠️ Migrace zatím **NEAPLIKOVÁNA** na staging ani produkci — musí se aplikovat manuálně v Supabase SQL Editoru
+- Migrace **aplikována manuálně v Supabase a ověřena**: `id uuid, image_url text, title text, created_at timestamptz, description text`
 - `src/hooks/useComingSoonBanners.ts` — přidán `description` do interface
 - `src/pages/AdminBanners.tsx` — textarea „Info text" + tlačítko Uložit pro každý ze 3 slotů
 - `src/pages/Homepage.tsx` — pulsující ℹ ikona (orange/gold, `@keyframes info-pulse`) na kartě pokud `description` není prázdný; klik otevře dark premium modal s title + description
