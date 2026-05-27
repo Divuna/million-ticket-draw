@@ -1,7 +1,6 @@
-import { Trophy, User, Target } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import miocoinImage from '@/assets/miocoin.png';
@@ -19,131 +18,128 @@ interface WinnerCardProps {
   ticketNumber?: number | null;
 }
 
-export const WinnerCard = ({ 
-  userName, 
-  userNickname, 
-  prizeName, 
-  contestTitle, 
+export const WinnerCard = ({
+  userName,
+  userNickname,
+  prizeName,
+  contestTitle,
   createdAt,
-  type,
   prizeImageUrl,
   cardStyleImageUrl,
   userAvatarUrl,
-  ticketNumber
+  ticketNumber,
 }: WinnerCardProps) => {
-  const initials = (userNickname || userName)
+  const displayName = userNickname || userName;
+  const initials = displayName
     .split(' ')
     .map(n => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
 
-  const timeAgo = formatDistanceToNow(new Date(createdAt), { 
+  const timeAgo = formatDistanceToNow(new Date(createdAt), {
     addSuffix: true,
-    locale: cs 
+    locale: cs,
   });
 
   return (
-    <Card className="rounded-xl overflow-hidden bg-[hsl(220_30%_8%)] border border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 cursor-pointer relative h-[120px]">
-      {/* Stars/Particles Background */}
+    <Card
+      className="rounded-xl overflow-hidden hover:-translate-y-0.5 hover:scale-[1.01] transition-all duration-300 cursor-pointer relative"
+      style={{
+        background: 'hsl(220 45% 6%)',
+        border: '1px solid rgba(255,138,0,0.22)',
+        boxShadow: '0 2px 12px hsl(222 50% 3% / 0.6), inset 0 1px 0 rgba(255,181,71,0.06)',
+      }}
+    >
+      {/* Very subtle star background — reduced to not compete with text */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        {/* Star pattern layer */}
         <div className="absolute inset-0" style={{
           background: `
-            radial-gradient(1.5px 1.5px at 8% 20%, hsla(45, 80%, 70%, 0.7) 50%, transparent 100%),
-            radial-gradient(1px 1px at 20% 45%, hsla(45, 70%, 60%, 0.5) 50%, transparent 100%),
-            radial-gradient(1.5px 1.5px at 35% 15%, hsla(45, 85%, 75%, 0.8) 50%, transparent 100%),
-            radial-gradient(1px 1px at 50% 55%, hsla(45, 75%, 65%, 0.4) 50%, transparent 100%),
-            radial-gradient(2px 2px at 65% 25%, hsla(45, 90%, 80%, 0.9) 50%, transparent 100%),
-            radial-gradient(1px 1px at 80% 60%, hsla(45, 70%, 60%, 0.5) 50%, transparent 100%),
-            radial-gradient(1.5px 1.5px at 92% 35%, hsla(45, 80%, 70%, 0.6) 50%, transparent 100%),
-            radial-gradient(1px 1px at 15% 75%, hsla(45, 75%, 65%, 0.4) 50%, transparent 100%),
-            radial-gradient(1px 1px at 45% 85%, hsla(45, 70%, 60%, 0.5) 50%, transparent 100%),
-            radial-gradient(1.5px 1.5px at 70% 80%, hsla(45, 85%, 75%, 0.7) 50%, transparent 100%),
-            radial-gradient(1px 1px at 88% 90%, hsla(45, 75%, 65%, 0.4) 50%, transparent 100%)
+            radial-gradient(1.5px 1.5px at 10% 20%, rgba(255,181,71,0.12) 50%, transparent 100%),
+            radial-gradient(1px 1px at 30% 50%, rgba(255,138,0,0.10) 50%, transparent 100%),
+            radial-gradient(1.5px 1.5px at 55% 15%, rgba(255,181,71,0.14) 50%, transparent 100%),
+            radial-gradient(1px 1px at 75% 60%, rgba(255,138,0,0.10) 50%, transparent 100%),
+            radial-gradient(1.5px 1.5px at 88% 30%, rgba(255,181,71,0.12) 50%, transparent 100%),
+            radial-gradient(1px 1px at 20% 80%, rgba(255,138,0,0.09) 50%, transparent 100%),
+            radial-gradient(1px 1px at 65% 85%, rgba(255,181,71,0.11) 50%, transparent 100%)
           `
         }} />
-        {/* Subtle golden ambient glow */}
-        <div className="absolute inset-0 bg-gradient-to-r from-amber-500/[0.02] via-transparent to-amber-400/[0.02]" />
       </div>
-      
-      {/* Decorative background layer from placement banner (on top of stars if provided) */}
+
+      {/* Placement banner background overlay */}
       {cardStyleImageUrl && (
-        <div 
+        <div
           className="absolute inset-0 pointer-events-none z-[1]"
           style={{
             backgroundImage: `url(${cardStyleImageUrl})`,
             backgroundSize: 'cover',
-            backgroundPosition: 'center'
+            backgroundPosition: 'center',
           }}
         />
       )}
-      
-      <div className="flex relative z-[2] h-full">
-        {/* Prize Image Slot - Left Side (fixed width, full height) */}
-        <div className="w-[100px] flex-shrink-0 bg-muted/50 flex items-center justify-center overflow-hidden">
+
+      <div className="flex relative z-[2] h-[112px]">
+        {/* Prize image — left strip */}
+        <div
+          className="w-[88px] flex-shrink-0 flex items-center justify-center overflow-hidden"
+          style={{ background: 'rgba(255,138,0,0.06)', borderRight: '1px solid rgba(255,138,0,0.12)' }}
+        >
           {prizeImageUrl ? (
-            <img 
-              src={prizeImageUrl} 
-              alt={prizeName} 
-              className="w-full h-full object-contain p-1"
-            />
+            <img src={prizeImageUrl} alt={prizeName} className="w-full h-full object-contain p-1.5" />
           ) : (
-            <img 
-              src={miocoinImage} 
-              alt="MioCoin" 
-              className="w-14 h-14 object-contain animate-coin-pulse"
-            />
+            <img src={miocoinImage} alt="MioCoin" className="w-12 h-12 object-contain animate-coin-pulse" />
           )}
         </div>
 
-        {/* Right Side - Avatar and Info */}
-        <CardContent className="flex-1 p-4 overflow-hidden">
+        {/* Right: info */}
+        <CardContent className="flex-1 px-4 py-3 overflow-hidden">
           <div className="flex gap-3 items-center h-full">
             {/* Avatar */}
-            <Avatar className="w-11 h-11 border-2 border-primary/20 flex-shrink-0">
-              {userAvatarUrl && (
-                <AvatarImage src={userAvatarUrl} alt={userNickname || userName} />
-              )}
-              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold text-sm">
+            <Avatar className="w-10 h-10 flex-shrink-0" style={{ border: '1.5px solid rgba(255,138,0,0.3)' }}>
+              {userAvatarUrl && <AvatarImage src={userAvatarUrl} alt={displayName} />}
+              <AvatarFallback
+                className="text-xs font-bold"
+                style={{ background: 'rgba(255,138,0,0.15)', color: '#FFB547' }}
+              >
                 {initials}
               </AvatarFallback>
             </Avatar>
 
-            {/* Winner Info */}
-            <div className="flex-1 min-w-0 flex flex-col justify-center gap-2">
-              {/* Contest */}
+            {/* Text block */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+              {/* Prize — prominent orange/gold */}
               <div className="flex items-center gap-1.5 min-w-0">
-                <Target className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
-                <span className="text-sm font-medium text-muted-foreground/80 leading-tight truncate">
-                  Soutěž: {contestTitle}
+                <Trophy className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#FF8A00' }} />
+                <span
+                  className="text-sm font-bold tracking-wide truncate"
+                  style={{
+                    fontFamily: "'Poppins', system-ui, sans-serif",
+                    background: 'linear-gradient(90deg, #FFB547 0%, #FF8A00 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  {prizeName}
                 </span>
               </div>
-              {/* Prize */}
-              <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-secondary flex-shrink-0" />
-                <span className="text-base font-semibold text-secondary tracking-wide leading-tight truncate">
-                  Cena: {prizeName}
+
+              {/* Winner name */}
+              <span className="text-sm font-semibold truncate" style={{ color: '#E7EBF0' }}>
+                {displayName}
+              </span>
+
+              {/* Contest + ticket + time row */}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs truncate flex-1" style={{ color: '#8E98A6' }}>
+                  {contestTitle}
+                  {ticketNumber != null && (
+                    <span className="ml-1.5" style={{ color: '#BFC6CF' }}>· #{ticketNumber.toLocaleString('cs-CZ')}</span>
+                  )}
                 </span>
-              </div>
-              {/* Winning ticket */}
-              {ticketNumber != null && (
-                <div className="flex items-center gap-2 text-sm text-foreground/90">
-                  <span className="text-muted-foreground">Výherní tiket:</span>
-                  <span className="font-semibold">#{ticketNumber.toLocaleString('cs-CZ')}</span>
-                </div>
-              )}
-              {/* Winner + time */}
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <User className="w-4 h-4 text-foreground/80 flex-shrink-0" />
-                  <span className="font-bold text-foreground text-sm tracking-tight leading-tight truncate">
-                    Výherce: {userNickname || userName}
-                  </span>
-                </div>
-                <Badge variant="outline" className="text-xs font-medium px-2 py-0.5 text-muted-foreground/70 border-muted-foreground/30 whitespace-nowrap flex-shrink-0">
+                <span className="text-xs whitespace-nowrap flex-shrink-0" style={{ color: '#8E98A6' }}>
                   {timeAgo}
-                </Badge>
+                </span>
               </div>
             </div>
           </div>

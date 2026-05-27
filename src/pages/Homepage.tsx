@@ -665,31 +665,6 @@ const Homepage = () => {
 
           {/* Right Column - Poslední výherci */}
           <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
-            {/* Stars/Particles Background */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-              {/* Star pattern layer */}
-              <div className="absolute inset-0" style={{
-                background: `
-                  radial-gradient(1.5px 1.5px at 10% 15%, rgba(255,181,71,0.55) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 25% 35%, rgba(255,138,0,0.45) 50%, transparent 100%),
-                  radial-gradient(1.5px 1.5px at 45% 10%, rgba(255,181,71,0.65) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 60% 45%, rgba(255,138,0,0.38) 50%, transparent 100%),
-                  radial-gradient(2px 2px at 75% 20%, rgba(255,181,71,0.75) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 85% 55%, rgba(255,138,0,0.45) 50%, transparent 100%),
-                  radial-gradient(1.5px 1.5px at 15% 70%, rgba(255,181,71,0.5) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 35% 85%, rgba(255,138,0,0.38) 50%, transparent 100%),
-                  radial-gradient(2px 2px at 55% 75%, rgba(255,181,71,0.65) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 70% 90%, rgba(255,138,0,0.3) 50%, transparent 100%),
-                  radial-gradient(1.5px 1.5px at 90% 70%, rgba(255,181,71,0.55) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 5% 50%, rgba(255,138,0,0.38) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 95% 40%, rgba(255,138,0,0.45) 50%, transparent 100%),
-                  radial-gradient(1.5px 1.5px at 40% 60%, rgba(255,181,71,0.5) 50%, transparent 100%),
-                  radial-gradient(1px 1px at 80% 80%, rgba(255,138,0,0.38) 50%, transparent 100%)
-                `
-              }} />
-              {/* Subtle golden glow overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/[0.03] via-transparent to-amber-400/[0.02]" />
-            </div>
             <CardContent className="p-5 h-full flex flex-col relative z-10">
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
@@ -704,16 +679,7 @@ const Homepage = () => {
                   {winnersLoading ? (
                     // Loading placeholders
                     Array.from({ length: 3 }).map((_, index) => (
-                      <div key={index} className="rounded-xl overflow-hidden bg-card/60 border border-border/50 p-4">
-                        <div className="flex gap-4">
-                          <div className="w-16 h-16 bg-muted/40 animate-pulse rounded-full flex-shrink-0" />
-                          <div className="flex-1 space-y-2">
-                            <div className="h-4 bg-muted/60 rounded animate-pulse" />
-                            <div className="h-4 bg-muted/40 rounded animate-pulse w-3/4" />
-                            <div className="h-3 bg-muted/30 rounded animate-pulse w-1/2" />
-                          </div>
-                        </div>
-                      </div>
+                      <div key={index} className="rounded-xl h-[112px] animate-pulse" style={{ background: 'hsl(220 45% 6%)', border: '1px solid rgba(255,138,0,0.15)' }} />
                     ))
                   ) : !latestWinners || latestWinners.length === 0 ? (
                     <div className="text-center py-12 space-y-3">
