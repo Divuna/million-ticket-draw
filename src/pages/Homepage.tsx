@@ -1237,8 +1237,20 @@ const Homepage = () => {
                       />
                     </div>
                     {banner.title && (
-                      <div className="p-5">
-                        <h4 className="font-bold text-lg text-foreground text-center">{banner.title}</h4>
+                      <div className="px-5 py-4">
+                        <h4
+                          className="font-bold text-center tracking-wide truncate"
+                          style={{
+                            fontFamily: "'Poppins', system-ui, sans-serif",
+                            fontSize: '1rem',
+                            background: 'linear-gradient(90deg, #E7EBF0 0%, #FFB547 60%, #FF8A00 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                          }}
+                        >
+                          {banner.title}
+                        </h4>
                       </div>
                     )}
                   </CardContent>
