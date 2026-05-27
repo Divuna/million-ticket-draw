@@ -944,3 +944,14 @@
   background-size: 200% 100%;
   animation: winner-shimmer 3s ease-in-out infinite;
 }
+
+@keyframes info-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 138, 0, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 138, 0, 0);
+    transform: scale(1.08);
+  }
+}

@@ -21,7 +21,7 @@ import { usePlacementBanners, PlacementKey } from "@/hooks/usePlacementBanners";
 import { WinnerCard } from "@/components/WinnerCard";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { ContestCard } from "@/components/ContestCard";
-import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink } from "lucide-react";
+import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, Info, X } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { toast } from "sonner";
 import { logMonitoringEvent, logStripeCheckoutClientFailure } from "@/lib/monitoring";
@@ -65,6 +65,7 @@ const Homepage = () => {
   const [loading, setLoading] = useState(true);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [infoPopup, setInfoPopup] = useState<{ title: string | null; description: string } | null>(null);
 
   // Fetch contests from database
   const fetchContests = async () => {
@@ -1229,12 +1230,27 @@ const Homepage = () => {
               comingSoonBanners.map((banner) => (
                 <Card key={banner.id} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
                   <CardContent className="p-0">
-                    <div className="aspect-video rounded-lg overflow-hidden bg-muted/40">
+                    <div className="relative aspect-video rounded-lg overflow-hidden bg-muted/40">
                       <img
                         src={banner.image_url}
                         alt={banner.title || 'Coming soon'}
                         className="w-full h-full object-cover"
                       />
+                      {/* Pulsing info icon — only when description exists */}
+                      {banner.description && (
+                        <button
+                          onClick={() => setInfoPopup({ title: banner.title, description: banner.description! })}
+                          className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full flex items-center justify-center"
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(255,138,0,0.9) 0%, rgba(255,181,71,0.9) 100%)',
+                            boxShadow: '0 0 0 0 rgba(255,138,0,0.7)',
+                            animation: 'info-pulse 2s ease-in-out infinite',
+                          }}
+                          aria-label="Zobrazit info"
+                        >
+                          <Info className="w-4 h-4 text-white" />
+                        </button>
+                      )}
                     </div>
                     {banner.title && (
                       <div className="px-5 py-4">
@@ -1259,6 +1275,59 @@ const Homepage = () => {
             )}
           </div>
         </section>
+
+        {/* Coming Soon Info Modal */}
+        {infoPopup && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(10,11,15,0.85)', backdropFilter: 'blur(6px)' }}
+            onClick={() => setInfoPopup(null)}
+          >
+            <div
+              className="relative w-full max-w-md rounded-2xl p-6 space-y-4"
+              style={{
+                background: 'linear-gradient(160deg, hsl(220 35% 9%) 0%, hsl(220 25% 5%) 100%)',
+                border: '1.5px solid rgba(255,138,0,0.35)',
+                boxShadow: '0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,181,71,0.08)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close button */}
+              <button
+                onClick={() => setInfoPopup(null)}
+                className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                style={{ background: 'rgba(255,255,255,0.06)' }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Title */}
+              {infoPopup.title && (
+                <h3
+                  className="font-bold tracking-wide pr-8"
+                  style={{
+                    fontFamily: "'Poppins', system-ui, sans-serif",
+                    fontSize: '1.15rem',
+                    background: 'linear-gradient(90deg, #E7EBF0 0%, #FFB547 55%, #FF8A00 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  {infoPopup.title}
+                </h3>
+              )}
+
+              {/* Divider */}
+              <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,138,0,0.4), transparent)' }} />
+
+              {/* Description */}
+              <p className="text-sm leading-relaxed" style={{ color: '#BFC6CF' }}>
+                {infoPopup.description}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Instructional Video Section */}
         {!videoLoading && videoUrl && isVideoActive && (

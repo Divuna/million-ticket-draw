@@ -67,10 +67,12 @@ const AdminBanners: React.FC = () => {
   const { videoUrl, isActive: isVideoActive, loading: videoSettingsLoading, updateVideoSettings } = useHomepageVideoSimple();
   
   // Coming soon banners state
-  const [comingSoonBanners, setComingSoonBanners] = useState<Array<{id: string, image_url: string, title: string | null}>>([]);
+  const [comingSoonBanners, setComingSoonBanners] = useState<Array<{id: string, image_url: string, title: string | null, description: string | null}>>([]);
   const [comingSoonUploading, setComingSoonUploading] = useState<{[key: number]: boolean}>({});
   const [comingSoonTitles, setComingSoonTitles] = useState<{[key: number]: string}>({0: '', 1: '', 2: ''});
   const [comingSoonTitleSaving, setComingSoonTitleSaving] = useState<{[key: number]: boolean}>({});
+  const [comingSoonDescriptions, setComingSoonDescriptions] = useState<{[key: number]: string}>({0: '', 1: '', 2: ''});
+  const [comingSoonDescSaving, setComingSoonDescSaving] = useState<{[key: number]: boolean}>({});
   
   const [bannerForm, setBannerForm] = useState<BannerForm>({
     title: '',
@@ -114,12 +116,17 @@ const AdminBanners: React.FC = () => {
     }
   };
 
-  // Sync editable titles when banners load
+  // Sync editable titles + descriptions when banners load
   useEffect(() => {
     setComingSoonTitles({
       0: comingSoonBanners[0]?.title ?? `Připravujeme 1`,
       1: comingSoonBanners[1]?.title ?? `Připravujeme 2`,
       2: comingSoonBanners[2]?.title ?? `Připravujeme 3`,
+    });
+    setComingSoonDescriptions({
+      0: comingSoonBanners[0]?.description ?? '',
+      1: comingSoonBanners[1]?.description ?? '',
+      2: comingSoonBanners[2]?.description ?? '',
     });
   }, [comingSoonBanners]);
 
@@ -146,11 +153,33 @@ const AdminBanners: React.FC = () => {
     }
   };
 
+  const handleComingSoonDescSave = async (slotIndex: number) => {
+    const banner = comingSoonBanners[slotIndex];
+    if (!banner) {
+      toast.info('Nejprve nahrajte obrázek banneru.');
+      return;
+    }
+    setComingSoonDescSaving(prev => ({ ...prev, [slotIndex]: true }));
+    try {
+      const { error } = await supabase
+        .from('coming_soon_banners')
+        .update({ description: comingSoonDescriptions[slotIndex] || null })
+        .eq('id', banner.id);
+      if (error) throw error;
+      toast.success('Info text uložen');
+      fetchComingSoonBanners();
+    } catch {
+      toast.error('Chyba při ukládání info textu');
+    } finally {
+      setComingSoonDescSaving(prev => ({ ...prev, [slotIndex]: false }));
+    }
+  };
+
   const fetchComingSoonBanners = async () => {
     try {
       const { data, error } = await supabase
         .from('coming_soon_banners')
-        .select('id, image_url, title')
+        .select('id, image_url, title, description')
         .order('created_at', { ascending: true })
         .limit(3);
 
@@ -840,6 +869,32 @@ const AdminBanners: React.FC = () => {
                           className="shrink-0 border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.1)] text-xs"
                         >
                           {comingSoonTitleSaving[slotIndex] ? 'Ukládám…' : 'Uložit'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Editable info description */}
+                    <div className="space-y-1">
+                      <Label htmlFor={`coming-soon-desc-${slotIndex}`} className="text-xs text-muted-foreground">
+                        Info text (zobrazí se v popup po kliknutí na ℹ ikonu)
+                      </Label>
+                      <div className="flex gap-2 items-start">
+                        <textarea
+                          id={`coming-soon-desc-${slotIndex}`}
+                          value={comingSoonDescriptions[slotIndex] ?? ''}
+                          onChange={(e) => setComingSoonDescriptions(prev => ({ ...prev, [slotIndex]: e.target.value }))}
+                          placeholder="Volitelný popisný text…"
+                          rows={3}
+                          className="flex-1 text-sm rounded-md border border-input bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleComingSoonDescSave(slotIndex)}
+                          disabled={comingSoonDescSaving[slotIndex]}
+                          className="shrink-0 border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.1)] text-xs mt-0"
+                        >
+                          {comingSoonDescSaving[slotIndex] ? 'Ukládám…' : 'Uložit'}
                         </Button>
                       </div>
                     </div>
