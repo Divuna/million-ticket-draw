@@ -69,6 +69,8 @@ const AdminBanners: React.FC = () => {
   // Coming soon banners state
   const [comingSoonBanners, setComingSoonBanners] = useState<Array<{id: string, image_url: string, title: string | null}>>([]);
   const [comingSoonUploading, setComingSoonUploading] = useState<{[key: number]: boolean}>({});
+  const [comingSoonTitles, setComingSoonTitles] = useState<{[key: number]: string}>({0: '', 1: '', 2: ''});
+  const [comingSoonTitleSaving, setComingSoonTitleSaving] = useState<{[key: number]: boolean}>({});
   
   const [bannerForm, setBannerForm] = useState<BannerForm>({
     title: '',
@@ -112,6 +114,38 @@ const AdminBanners: React.FC = () => {
     }
   };
 
+  // Sync editable titles when banners load
+  useEffect(() => {
+    setComingSoonTitles({
+      0: comingSoonBanners[0]?.title ?? `Připravujeme 1`,
+      1: comingSoonBanners[1]?.title ?? `Připravujeme 2`,
+      2: comingSoonBanners[2]?.title ?? `Připravujeme 3`,
+    });
+  }, [comingSoonBanners]);
+
+  const handleComingSoonTitleSave = async (slotIndex: number) => {
+    const banner = comingSoonBanners[slotIndex];
+    if (!banner) {
+      toast.info('Nejprve nahrajte obrázek banneru, pak popisek bude uložen automaticky.');
+      return;
+    }
+    const newTitle = comingSoonTitles[slotIndex] || `Připravujeme ${slotIndex + 1}`;
+    setComingSoonTitleSaving(prev => ({ ...prev, [slotIndex]: true }));
+    try {
+      const { error } = await supabase
+        .from('coming_soon_banners')
+        .update({ title: newTitle })
+        .eq('id', banner.id);
+      if (error) throw error;
+      toast.success('Popisek uložen');
+      fetchComingSoonBanners();
+    } catch {
+      toast.error('Chyba při ukládání popisku');
+    } finally {
+      setComingSoonTitleSaving(prev => ({ ...prev, [slotIndex]: false }));
+    }
+  };
+
   const fetchComingSoonBanners = async () => {
     try {
       const { data, error } = await supabase
@@ -151,7 +185,7 @@ const AdminBanners: React.FC = () => {
           .from('coming_soon_banners')
           .insert({
             image_url: imageUrl,
-            title: `Připravujeme ${slotIndex + 1}`
+            title: comingSoonTitles[slotIndex] || `Připravujeme ${slotIndex + 1}`
           });
         
         if (error) throw error;
@@ -746,42 +780,96 @@ const AdminBanners: React.FC = () => {
                 const isUploading = comingSoonUploading[slotIndex];
                 
                 return (
-                  <div key={slotIndex} className="space-y-2">
-                    <Label htmlFor={`coming-soon-${slotIndex}`}>
-                      Připravujeme {slotIndex + 1}
-                    </Label>
-                    
-                    {banner?.image_url && (
-                      <div className="relative aspect-video rounded-lg overflow-hidden border">
-                        <img 
-                          src={banner.image_url} 
-                          alt={`Připravujeme ${slotIndex + 1}`}
+                  <div key={slotIndex} className="space-y-3">
+                    {/* Slot heading */}
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Slot {slotIndex + 1}
+                    </p>
+
+                    {/* Image preview with label overlay */}
+                    {banner?.image_url ? (
+                      <div className="relative aspect-video rounded-lg overflow-hidden border border-[rgba(255,138,0,0.25)]">
+                        <img
+                          src={banner.image_url}
+                          alt={banner.title ?? `Připravujeme ${slotIndex + 1}`}
                           className="w-full h-full object-cover"
                         />
+                        {/* Premium label overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/80 to-transparent">
+                          <p
+                            className="font-bold tracking-wide truncate"
+                            style={{
+                              fontFamily: "'Poppins', system-ui, sans-serif",
+                              fontSize: '0.85rem',
+                              background: 'linear-gradient(90deg, #E7EBF0 0%, #FFB547 60%, #FF8A00 100%)',
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              backgroundClip: 'text',
+                              textShadow: 'none',
+                            }}
+                          >
+                            {comingSoonTitles[slotIndex] || `Připravujeme ${slotIndex + 1}`}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="aspect-video rounded-lg border border-dashed border-muted-foreground/30 flex items-center justify-center bg-muted/10">
+                        <p className="text-xs text-muted-foreground">Bez obrázku</p>
                       </div>
                     )}
-                    
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id={`coming-soon-${slotIndex}`}
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleComingSoonUpload(slotIndex, file);
-                        }}
-                        disabled={isUploading}
-                        className="flex-1"
-                      />
-                      <Upload className={cn(
-                        "h-4 w-4",
-                        isUploading ? "animate-pulse text-primary" : "text-muted-foreground"
-                      )} />
+
+                    {/* Editable label */}
+                    <div className="space-y-1">
+                      <Label htmlFor={`coming-soon-title-${slotIndex}`} className="text-xs text-muted-foreground">
+                        Popisek banneru
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id={`coming-soon-title-${slotIndex}`}
+                          type="text"
+                          value={comingSoonTitles[slotIndex] ?? ''}
+                          onChange={(e) => setComingSoonTitles(prev => ({ ...prev, [slotIndex]: e.target.value }))}
+                          placeholder={`Připravujeme ${slotIndex + 1}`}
+                          className="flex-1 text-sm"
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleComingSoonTitleSave(slotIndex)}
+                          disabled={comingSoonTitleSaving[slotIndex]}
+                          className="shrink-0 border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.1)] text-xs"
+                        >
+                          {comingSoonTitleSaving[slotIndex] ? 'Ukládám…' : 'Uložit'}
+                        </Button>
+                      </div>
                     </div>
-                    
-                    {isUploading && (
-                      <p className="text-xs text-primary">Nahrává se...</p>
-                    )}
+
+                    {/* Image upload */}
+                    <div className="space-y-1">
+                      <Label htmlFor={`coming-soon-${slotIndex}`} className="text-xs text-muted-foreground">
+                        Obrázek
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id={`coming-soon-${slotIndex}`}
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleComingSoonUpload(slotIndex, file);
+                          }}
+                          disabled={isUploading}
+                          className="flex-1"
+                        />
+                        <Upload className={cn(
+                          "h-4 w-4",
+                          isUploading ? "animate-pulse text-primary" : "text-muted-foreground"
+                        )} />
+                      </div>
+                      {isUploading && (
+                        <p className="text-xs text-primary">Nahrává se...</p>
+                      )}
+                    </div>
                   </div>
                 );
               })}
