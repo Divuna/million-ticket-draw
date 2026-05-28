@@ -5,6 +5,27 @@ import logoOnemil from '@/assets/logo-onemil.png';
 import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { usePartners } from '@/hooks/usePartners';
 
+// Fixed scatter positions for floating partner logos.
+// Spread around screen edges/corners, avoiding the center card area.
+const FLOAT_POSITIONS = [
+  { left: '6%',  top: '20%' },
+  { left: '80%', top: '16%' },
+  { left: '10%', top: '60%' },
+  { left: '76%', top: '56%' },
+  { left: '48%', top: '7%'  },
+  { left: '22%', top: '80%' },
+  { left: '87%', top: '40%' },
+  { left: '3%',  top: '42%' },
+];
+
+// Four calm drift variants — assigned by index % 4
+const FLOAT_ANIMS = [
+  'partner-float-a',
+  'partner-float-b',
+  'partner-float-c',
+  'partner-float-d',
+];
+
 const ROUTE_MESSAGES: Record<string, string> = {
   '/vouchers':
     'Děkujeme, že používáte OneMil. Těšíme se, až se vrátíte. Připravujeme nové vouchery a partnerské nabídky, které vás potěší.',
@@ -60,6 +81,34 @@ export const LoggedOutScreen = () => {
           `,
         }}
       />
+
+      {/* Floating partner logos — background layer, pointer-events disabled */}
+      {partners.map((partner, i) => {
+        const pos = FLOAT_POSITIONS[i % FLOAT_POSITIONS.length];
+        const anim = FLOAT_ANIMS[i % FLOAT_ANIMS.length];
+        const duration = 22 + (i % 4) * 4; // 22 / 26 / 30 / 34s
+        const delay = -(i * 5);             // stagger start mid-animation
+        return (
+          <img
+            key={partner.id}
+            src={partner.logo_url}
+            alt={partner.name}
+            title={partner.name}
+            className="absolute pointer-events-none select-none object-contain"
+            style={{
+              left: pos.left,
+              top: pos.top,
+              height: '28px',
+              maxWidth: '80px',
+              opacity: 0.13,
+              filter: 'grayscale(1) brightness(1.7) blur(0.4px)',
+              animation: `${anim} ${duration}s ease-in-out infinite`,
+              animationDelay: `${delay}s`,
+              zIndex: 1,
+            }}
+          />
+        );
+      })}
 
       <Header />
 
@@ -128,36 +177,6 @@ export const LoggedOutScreen = () => {
           >
             {message}
           </p>
-
-          {/* Partner logo marquee — only when real approved logos exist */}
-          {partners.length > 0 && (
-            <div className="w-full overflow-hidden" style={{ WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, black 14%, black 86%, transparent 100%)', maskImage: 'linear-gradient(90deg, transparent 0%, black 14%, black 86%, transparent 100%)' }}>
-              <div
-                className="flex items-center gap-8"
-                style={{
-                  animation: 'partner-marquee 38s linear infinite',
-                  width: 'max-content',
-                  willChange: 'transform',
-                }}
-              >
-                {/* Duplicate the list so the loop is seamless */}
-                {[...partners, ...partners].map((partner, i) => (
-                  <img
-                    key={`${partner.id}-${i}`}
-                    src={partner.logo_url}
-                    alt={partner.name}
-                    title={partner.name}
-                    className="h-7 w-auto object-contain flex-shrink-0"
-                    style={{
-                      opacity: 0.35,
-                      filter: 'grayscale(1) brightness(1.6)',
-                      maxWidth: '88px',
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* CTA button */}
           <Button
