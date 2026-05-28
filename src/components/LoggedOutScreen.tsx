@@ -5,17 +5,17 @@ import logoOnemil from '@/assets/logo-onemil.png';
 import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { usePartners } from '@/hooks/usePartners';
 
-// Fixed scatter positions for floating partner logos.
-// Spread around screen edges/corners, avoiding the center card area.
+// Positions near (but not overlapping) the center card area.
+// Framing the card on all four sides so logos are visible without blocking content.
 const FLOAT_POSITIONS = [
-  { left: '6%',  top: '20%' },
-  { left: '80%', top: '16%' },
-  { left: '10%', top: '60%' },
-  { left: '76%', top: '56%' },
-  { left: '48%', top: '7%'  },
-  { left: '22%', top: '80%' },
-  { left: '87%', top: '40%' },
-  { left: '3%',  top: '42%' },
+  { left: '16%', top: '24%' },   // upper-left near card
+  { left: '70%', top: '20%' },   // upper-right near card
+  { left: '14%', top: '62%' },   // lower-left near card
+  { left: '72%', top: '64%' },   // lower-right near card
+  { left: '44%', top: '7%'  },   // top-center above card
+  { left: '18%', top: '44%' },   // left of card mid
+  { left: '74%', top: '44%' },   // right of card mid
+  { left: '43%', top: '84%' },   // below card
 ];
 
 // Four calm drift variants — assigned by index % 4
@@ -25,6 +25,9 @@ const FLOAT_ANIMS = [
   'partner-float-c',
   'partner-float-d',
 ];
+
+// Minimum number of floating instances to show (duplicates same logo when few partners).
+const MIN_FLOATS = 4;
 
 const ROUTE_MESSAGES: Record<string, string> = {
   '/vouchers':
@@ -82,33 +85,49 @@ export const LoggedOutScreen = () => {
         }}
       />
 
-      {/* Floating partner logos — background layer, pointer-events disabled */}
-      {partners.map((partner, i) => {
-        const pos = FLOAT_POSITIONS[i % FLOAT_POSITIONS.length];
-        const anim = FLOAT_ANIMS[i % FLOAT_ANIMS.length];
-        const duration = 22 + (i % 4) * 4; // 22 / 26 / 30 / 34s
-        const delay = -(i * 5);             // stagger start mid-animation
-        return (
-          <img
-            key={partner.id}
-            src={partner.logo_url}
-            alt={partner.name}
-            title={partner.name}
-            className="absolute pointer-events-none select-none object-contain"
-            style={{
-              left: pos.left,
-              top: pos.top,
-              height: '28px',
-              maxWidth: '80px',
-              opacity: 0.13,
-              filter: 'grayscale(1) brightness(1.7) blur(0.4px)',
-              animation: `${anim} ${duration}s ease-in-out infinite`,
-              animationDelay: `${delay}s`,
-              zIndex: 1,
-            }}
-          />
-        );
-      })}
+      {/* Floating partner logos — background layer, pointer-events disabled.
+          When fewer partners than MIN_FLOATS, the same real logo repeats at
+          different positions so the screen is not empty. */}
+      {partners.length > 0 && (() => {
+        const count = Math.max(partners.length, MIN_FLOATS);
+        return Array.from({ length: count }, (_, i) => {
+          const partner = partners[i % partners.length];
+          const pos     = FLOAT_POSITIONS[i % FLOAT_POSITIONS.length];
+          const anim    = FLOAT_ANIMS[i % FLOAT_ANIMS.length];
+          const duration = 22 + (i % 4) * 4;  // 22 / 26 / 30 / 34 s
+          const delay    = -(i * 6);            // stagger so they start mid-cycle
+          return (
+            <div
+              key={`float-${i}`}
+              className="absolute pointer-events-none select-none flex items-center justify-center"
+              style={{
+                left: pos.left,
+                top: pos.top,
+                zIndex: 1,
+                borderRadius: '10px',
+                padding: '8px 14px',
+                background: 'rgba(10,11,15,0.50)',
+                boxShadow: '0 2px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,181,71,0.07), 0 0 0 1px rgba(255,138,0,0.09)',
+                animation: `${anim} ${duration}s ease-in-out infinite`,
+                animationDelay: `${delay}s`,
+              }}
+            >
+              <img
+                src={partner.logo_url}
+                alt={partner.name}
+                title={partner.name}
+                className="object-contain block"
+                style={{
+                  height: '48px',
+                  maxWidth: '108px',
+                  opacity: 0.42,
+                  filter: 'grayscale(0.45) brightness(1.35)',
+                }}
+              />
+            </div>
+          );
+        });
+      })()}
 
       <Header />
 
