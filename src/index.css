@@ -955,3 +955,8 @@
     transform: scale(1.08);
   }
 }
+
+@keyframes partner-marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}

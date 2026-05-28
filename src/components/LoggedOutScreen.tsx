@@ -3,6 +3,7 @@ import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import logoOnemil from '@/assets/logo-onemil.png';
 import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
+import { usePartners } from '@/hooks/usePartners';
 
 const ROUTE_MESSAGES: Record<string, string> = {
   '/vouchers':
@@ -18,6 +19,7 @@ const ROUTE_MESSAGES: Record<string, string> = {
 export const LoggedOutScreen = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { partners } = usePartners();
 
   const message =
     ROUTE_MESSAGES[pathname] ??
@@ -126,6 +128,36 @@ export const LoggedOutScreen = () => {
           >
             {message}
           </p>
+
+          {/* Partner logo marquee — only when real approved logos exist */}
+          {partners.length > 0 && (
+            <div className="w-full overflow-hidden" style={{ WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, black 14%, black 86%, transparent 100%)', maskImage: 'linear-gradient(90deg, transparent 0%, black 14%, black 86%, transparent 100%)' }}>
+              <div
+                className="flex items-center gap-8"
+                style={{
+                  animation: 'partner-marquee 38s linear infinite',
+                  width: 'max-content',
+                  willChange: 'transform',
+                }}
+              >
+                {/* Duplicate the list so the loop is seamless */}
+                {[...partners, ...partners].map((partner, i) => (
+                  <img
+                    key={`${partner.id}-${i}`}
+                    src={partner.logo_url}
+                    alt={partner.name}
+                    title={partner.name}
+                    className="h-7 w-auto object-contain flex-shrink-0"
+                    style={{
+                      opacity: 0.35,
+                      filter: 'grayscale(1) brightness(1.6)',
+                      maxWidth: '88px',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* CTA button */}
           <Button
