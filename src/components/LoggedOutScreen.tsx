@@ -111,10 +111,10 @@ export const LoggedOutScreen = () => {
               title={partner.name}
               className="object-contain block"
               style={{
-                height: '48px',
-                maxWidth: '108px',
-                opacity: 0.42,
-                filter: 'grayscale(0.45) brightness(1.35)',
+                height: '72px',
+                maxWidth: '160px',
+                opacity: 0.62,
+                filter: 'none',
               }}
             />
           </div>
