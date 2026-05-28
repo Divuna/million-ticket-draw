@@ -72,13 +72,25 @@ export const LoggedOutScreen = () => {
               '0 4px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,181,71,0.06)',
           }}
         >
-          {/* Logo */}
-          <img
-            src={logoOnemil}
-            alt="OneMil"
-            className="h-14 w-auto object-contain"
-            style={{ filter: 'drop-shadow(0 0 12px rgba(255,138,0,0.18))' }}
-          />
+          {/* Logo — dark pill backdrop + layered amber glow for contrast */}
+          <div
+            className="flex items-center justify-center rounded-2xl px-8 py-5"
+            style={{
+              background: 'radial-gradient(ellipse 90% 80% at 50% 50%, rgba(255,138,0,0.07) 0%, rgba(10,11,15,0.55) 60%, rgba(10,11,15,0.80) 100%)',
+              boxShadow:
+                '0 0 0 1px rgba(255,138,0,0.10), 0 0 24px 4px rgba(255,138,0,0.08), inset 0 1px 0 rgba(255,181,71,0.08)',
+            }}
+          >
+            <img
+              src={logoOnemil}
+              alt="OneMil"
+              className="h-20 md:h-24 w-auto object-contain"
+              style={{
+                filter:
+                  'drop-shadow(0 0 8px rgba(255,138,0,0.55)) drop-shadow(0 0 22px rgba(255,181,71,0.30)) drop-shadow(0 2px 4px rgba(0,0,0,0.60))',
+              }}
+            />
+          </div>
 
           {/* Divider line */}
           <div
