@@ -26,8 +26,6 @@ const FLOAT_ANIMS = [
   'partner-float-d',
 ];
 
-// Minimum number of floating instances to show (duplicates same logo when few partners).
-const MIN_FLOATS = 4;
 
 const ROUTE_MESSAGES: Record<string, string> = {
   '/vouchers':
@@ -85,49 +83,43 @@ export const LoggedOutScreen = () => {
         }}
       />
 
-      {/* Floating partner logos — background layer, pointer-events disabled.
-          When fewer partners than MIN_FLOATS, the same real logo repeats at
-          different positions so the screen is not empty. */}
-      {partners.length > 0 && (() => {
-        const count = Math.max(partners.length, MIN_FLOATS);
-        return Array.from({ length: count }, (_, i) => {
-          const partner = partners[i % partners.length];
-          const pos     = FLOAT_POSITIONS[i % FLOAT_POSITIONS.length];
-          const anim    = FLOAT_ANIMS[i % FLOAT_ANIMS.length];
-          const duration = 22 + (i % 4) * 4;  // 22 / 26 / 30 / 34 s
-          const delay    = -(i * 6);            // stagger so they start mid-cycle
-          return (
-            <div
-              key={`float-${i}`}
-              className="absolute pointer-events-none select-none flex items-center justify-center"
+      {/* Floating partner logos — each approved partner appears exactly once */}
+      {partners.map((partner, i) => {
+        const pos      = FLOAT_POSITIONS[i % FLOAT_POSITIONS.length];
+        const anim     = FLOAT_ANIMS[i % FLOAT_ANIMS.length];
+        const duration = 22 + (i % 4) * 4;  // 22 / 26 / 30 / 34 s
+        const delay    = -(i * 6);           // stagger start mid-cycle
+        return (
+          <div
+            key={partner.id}
+            className="absolute pointer-events-none select-none flex items-center justify-center"
+            style={{
+              left: pos.left,
+              top: pos.top,
+              zIndex: 1,
+              borderRadius: '10px',
+              padding: '8px 14px',
+              background: 'rgba(10,11,15,0.50)',
+              boxShadow: '0 2px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,181,71,0.07), 0 0 0 1px rgba(255,138,0,0.09)',
+              animation: `${anim} ${duration}s ease-in-out infinite`,
+              animationDelay: `${delay}s`,
+            }}
+          >
+            <img
+              src={partner.logo_url}
+              alt={partner.name}
+              title={partner.name}
+              className="object-contain block"
               style={{
-                left: pos.left,
-                top: pos.top,
-                zIndex: 1,
-                borderRadius: '10px',
-                padding: '8px 14px',
-                background: 'rgba(10,11,15,0.50)',
-                boxShadow: '0 2px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,181,71,0.07), 0 0 0 1px rgba(255,138,0,0.09)',
-                animation: `${anim} ${duration}s ease-in-out infinite`,
-                animationDelay: `${delay}s`,
+                height: '48px',
+                maxWidth: '108px',
+                opacity: 0.42,
+                filter: 'grayscale(0.45) brightness(1.35)',
               }}
-            >
-              <img
-                src={partner.logo_url}
-                alt={partner.name}
-                title={partner.name}
-                className="object-contain block"
-                style={{
-                  height: '48px',
-                  maxWidth: '108px',
-                  opacity: 0.42,
-                  filter: 'grayscale(0.45) brightness(1.35)',
-                }}
-              />
-            </div>
-          );
-        });
-      })()}
+            />
+          </div>
+        );
+      })}
 
       <Header />
 
