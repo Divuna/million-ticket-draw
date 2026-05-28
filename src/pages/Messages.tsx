@@ -6,6 +6,7 @@ import type { CSSProperties } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { LoggedOutScreen } from "@/components/LoggedOutScreen";
 import { useMessages } from "@/hooks/useMessages";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { toast } from "@/hooks/use-toast";
@@ -934,6 +935,10 @@ export default function MessagesPage() {
           },
     [hasDraft],
   );
+
+  if (!user) {
+    return <LoggedOutScreen />;
+  }
 
   return (
     <div className="messages-mobile-fixed-shell bg-gradient-to-b from-[hsl(220,20%,4%)] via-[hsl(220,25%,6%)] to-[hsl(220,20%,4%)] relative overflow-hidden">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
+import { LoggedOutScreen } from '@/components/LoggedOutScreen';
 import { Button } from '@/components/ui/button';
 import { TicketResultModal } from '@/components/TicketResultModal';
 import { ContestCard } from '@/components/ContestCard';
@@ -401,7 +402,11 @@ const Index = () => {
     }
   };
 
-if (loading) {
+  if (!user) {
+    return <LoggedOutScreen />;
+  }
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-background dark">
         <Header />

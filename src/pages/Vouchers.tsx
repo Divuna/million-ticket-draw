@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { LoggedOutScreen } from '@/components/LoggedOutScreen';
 import { useHomepageVouchers } from '@/hooks/useHomepageVouchers';
 import { useUserVouchers } from '@/hooks/useUserVouchers';
 import { Header } from '@/components/Header';
@@ -268,23 +269,7 @@ const Vouchers: React.FC = () => {
   };
 
   if (!user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center p-8">
-          <Gift className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-          <h2 className="text-2xl font-bold mb-4">Přihlaste se</h2>
-          <p className="text-muted-foreground mb-4">Pro zobrazení voucherů se musíte přihlásit</p>
-          <button 
-            onClick={() => {
-              window.location.href = `${window.location.origin}${buildLoginRedirectUrl(window.location.pathname + window.location.search)}`;
-            }}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-          >
-            Přihlásit se
-          </button>
-        </div>
-      </div>
-    );
+    return <LoggedOutScreen />;
   }
 
   // Vouchers not in user's collection (available for purchase/favorite)

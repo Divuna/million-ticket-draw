@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
+import { LoggedOutScreen } from '@/components/LoggedOutScreen';
 import { supabase } from '@/integrations/supabase/client';
 import { Trophy, Filter, ArrowUp, ArrowDown, Gift, Sparkles, Crown, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -373,14 +374,7 @@ const Wins: React.FC = () => {
 
   // ── Not logged in ──────────────────────────────────────────────────────────
   if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-[hsl(220,20%,4%)] via-[hsl(220,25%,6%)] to-[hsl(220,20%,4%)] pb-20">
-        <Header />
-        <main className="container mx-auto px-4 py-6">
-          <p className="text-gray-400 text-center">Pro zobrazení výher se musíte přihlásit.</p>
-        </main>
-      </div>
-    );
+    return <LoggedOutScreen />;
   }
 
   return (
