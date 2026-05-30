@@ -66,16 +66,34 @@ export const WinnerCard = ({
         }} />
       </div>
 
-      {/* Placement banner background overlay */}
+      {/* Placement banner background overlay — reduced opacity */}
       {cardStyleImageUrl && (
-        <div
-          className="absolute inset-0 pointer-events-none z-[1]"
-          style={{
-            backgroundImage: `url(${cardStyleImageUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        />
+        <>
+          <div
+            className="absolute inset-0 pointer-events-none z-[1]"
+            style={{
+              backgroundImage: `url(${cardStyleImageUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.28,
+            }}
+          />
+          {/* Dark gradient to tame left brown block + right decoration */}
+          <div
+            className="absolute inset-0 pointer-events-none z-[1]"
+            style={{
+              background: [
+                'linear-gradient(to right,',
+                '  rgba(10,11,15,0.72) 0px,',
+                '  rgba(10,11,15,0.72) 88px,',
+                '  rgba(10,11,15,0.38) 130px,',
+                '  rgba(10,11,15,0.22) 55%,',
+                '  rgba(10,11,15,0.52) 100%',
+                ')',
+              ].join(' '),
+            }}
+          />
+        </>
       )}
 
       <div className="flex relative z-[2] h-[112px]">
