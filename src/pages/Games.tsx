@@ -19,8 +19,8 @@ import {
   recordTicketPurchaseAttemptForAbuseCheck,
 } from '@/lib/monitoring';
 import { analytics } from '@/lib/analytics';
-import { Heart, Trophy, Medal } from 'lucide-react';
-import trophyIcon from '@/assets/icons/icon-trophy-onemil.svg';
+import { Trophy, Medal } from 'lucide-react';
+import { OneMilHeartIcon, OneMilTrophyIcon } from '@/components/icons/OneMilIcons';
 
 interface Contest {
   id: string;
@@ -429,7 +429,7 @@ const Index = () => {
               className="text-2xl md:text-3xl font-bold text-[#E7EBF0] flex items-center gap-3 justify-center md:justify-start tracking-[-0.02em]"
               style={{ fontFamily: 'var(--om-font-heading)' }}
             >
-              <img src={trophyIcon} alt="" aria-hidden="true" className="w-7 h-7 md:w-8 md:h-8 shrink-0 rounded-lg" />
+              <OneMilTrophyIcon size={28} className="w-7 h-7 md:w-8 md:h-8 shrink-0 text-[#FF8A00]" />
               Soutěže
             </h1>
             <p className="text-sm text-text-silver mt-2">Vyberte si soutěž a otevřete další tiket v pořadí.</p>
@@ -445,7 +445,7 @@ const Index = () => {
                 className="bg-primary hover:brightness-110 text-primary-foreground font-bold px-6 py-3 rounded-xl shadow-[0_0_12px_hsl(var(--primary)/0.35)] transition-all duration-200"
                 onClick={() => navigate('/favorite-games')}
               >
-                <Heart className="w-5 h-5 mr-2" />
+                <OneMilHeartIcon size={20} className="w-5 h-5 mr-2" />
                 Oblíbené ({visibleFavoritesCount})
               </Button>
             );
@@ -476,7 +476,7 @@ const Index = () => {
 
         {contests.length === 0 && (
           <div className="text-center py-16 space-y-4">
-            <img src={trophyIcon} alt="" aria-hidden="true" className="w-16 h-16 mx-auto rounded-2xl opacity-60" />
+            <OneMilTrophyIcon size={64} className="w-16 h-16 mx-auto text-[rgba(255,138,0,0.45)]" />
             <h3 className="text-xl font-bold text-[#E7EBF0]" style={{ fontFamily: 'var(--om-font-heading)' }}>Žádné soutěže</h3>
             <p className="text-sm text-muted-foreground">Momentálně nejsou dostupné žádné soutěže.</p>
           </div>

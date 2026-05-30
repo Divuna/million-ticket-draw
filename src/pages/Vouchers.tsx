@@ -28,7 +28,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Gift, Copy, Heart, Ticket, Clock, ShoppingCart, Loader2 } from 'lucide-react';
+import { Copy, Clock, Loader2 } from 'lucide-react';
+import { OneMilGiftIcon, OneMilHeartIcon, OneMilTicketIcon, OneMilCartIcon } from '@/components/icons/OneMilIcons';
 import { supabase } from '@/integrations/supabase/client';
 import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { toast } from 'sonner';
@@ -283,7 +284,7 @@ const Vouchers: React.FC = () => {
         {/* Premium Header */}
         <div className="text-center space-y-3">
           <div className="inline-flex items-center justify-center gap-3">
-            <Gift className="w-8 h-8 text-secondary" />
+            <OneMilGiftIcon size={32} className="w-8 h-8 text-secondary" />
             <h1 className="text-3xl font-bold text-heading-gold">Vouchery</h1>
           </div>
           <p className="text-muted-foreground text-sm max-w-md mx-auto">
@@ -294,12 +295,12 @@ const Vouchers: React.FC = () => {
         <Tabs defaultValue={defaultTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto bg-card/60 border border-border/40 backdrop-blur-sm rounded-xl p-1">
             <TabsTrigger value="available" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
-              <Ticket className="w-4 h-4" />
+              <OneMilTicketIcon size={16} className="w-4 h-4" />
               <span className="hidden sm:inline">Dostupné</span>
               <span className="sm:hidden">Dost.</span>
             </TabsTrigger>
             <TabsTrigger value="favorites" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
-              <Heart className="w-4 h-4" />
+              <OneMilHeartIcon size={16} className="w-4 h-4" />
               <span className="hidden sm:inline">Oblíbené</span>
               <span className="sm:hidden">Obl.</span>
               {favoriteVouchers.length > 0 && (
@@ -307,7 +308,7 @@ const Vouchers: React.FC = () => {
               )}
             </TabsTrigger>
             <TabsTrigger value="purchased" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
-              <ShoppingCart className="w-4 h-4" />
+              <OneMilCartIcon size={16} className="w-4 h-4" />
               <span className="hidden sm:inline">Zakoupené</span>
               <span className="sm:hidden">Zak.</span>
               {purchasedVouchers.length > 0 && (
@@ -334,7 +335,7 @@ const Vouchers: React.FC = () => {
             ) : truelyAvailableVouchers.length === 0 ? (
               <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
-                  <Gift className="w-12 h-12 mx-auto text-secondary/50" />
+                  <OneMilGiftIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
                   <h3 className="text-xl font-bold text-heading-gold">Žádné dostupné vouchery</h3>
                   <p className="text-sm text-muted-foreground">
                     Momentálně nejsou k dispozici žádné nové vouchery.
@@ -387,7 +388,7 @@ const Vouchers: React.FC = () => {
                         {isTogglingFavorite ? (
                           <Loader2 className="w-5 h-5 text-[#FF8A00] animate-spin" />
                         ) : (
-                          <Heart className="w-5 h-5 text-muted-foreground hover:text-destructive transition-colors" />
+                          <OneMilHeartIcon size={20} className="w-5 h-5 text-muted-foreground hover:text-destructive transition-colors" />
                         )}
                       </button>
 
@@ -474,7 +475,7 @@ const Vouchers: React.FC = () => {
             ) : favoriteVouchers.length === 0 ? (
               <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
-                  <Heart className="w-12 h-12 mx-auto text-secondary/50" />
+                  <OneMilHeartIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
                   <h3 className="text-xl font-bold text-heading-gold">Zatím nemáte žádné oblíbené vouchery</h3>
                   <p className="text-sm text-muted-foreground">
                     Kliknutím na srdíčko přidáte voucher do oblíbených
@@ -525,7 +526,7 @@ const Vouchers: React.FC = () => {
                         {isTogglingFavorite ? (
                           <Loader2 className="w-5 h-5 text-destructive animate-spin" />
                         ) : (
-                          <Heart className="w-5 h-5 fill-destructive text-destructive transition-colors" />
+                          <OneMilHeartIcon size={20} className="w-5 h-5 fill-destructive text-destructive transition-colors" />
                         )}
                       </button>
 
@@ -570,7 +571,7 @@ const Vouchers: React.FC = () => {
                             />
                           ) : (
                             <div className="w-full h-full bg-[hsl(220_30%_10%)] flex items-center justify-center">
-                              <Gift className="w-12 h-12 text-[rgba(255,138,0,0.35)]" />
+                              <OneMilGiftIcon size={48} className="w-12 h-12 text-[rgba(255,138,0,0.35)]" />
                             </div>
                           )}
                         </div>
@@ -606,7 +607,7 @@ const Vouchers: React.FC = () => {
             ) : purchasedVouchers.length === 0 ? (
               <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
-                  <ShoppingCart className="w-12 h-12 mx-auto text-secondary/50" />
+                  <OneMilCartIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
                   <h3 className="text-xl font-bold text-heading-gold">Zatím nemáte žádné zakoupené vouchery</h3>
                   <p className="text-sm text-muted-foreground">
                     Zakupte si voucher v sekci "Dostupné" nebo "Oblíbené"
@@ -716,7 +717,7 @@ const Vouchers: React.FC = () => {
                             />
                           ) : (
                             <div className="w-full h-full bg-[hsl(220_30%_10%)] flex items-center justify-center">
-                              <Gift className={`w-12 h-12 ${expiration.isExpired ? 'text-muted-foreground/30' : 'text-[rgba(255,138,0,0.4)]'}`} />
+                              <OneMilGiftIcon size={48} className={`w-12 h-12 ${expiration.isExpired ? 'text-muted-foreground/30' : 'text-[rgba(255,138,0,0.4)]'}`} />
                             </div>
                           )}
                         </div>

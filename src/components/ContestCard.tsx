@@ -2,9 +2,10 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { Badge } from '@/components/ui/badge';
-import { Heart, Trophy } from 'lucide-react';
+import { OneMilHeartIcon, OneMilTrophyIcon } from '@/components/icons/OneMilIcons';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import trophyIcon from '@/assets/icon-trophy-onemil.png';
 import './ContestCard.css';
 
 interface Contest {
@@ -155,8 +156,13 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             }}
           />
         ) : (
-          <div className="w-full h-full bg-[hsl(220_25%_10%)] flex items-center justify-center">
-            <Trophy className="w-16 h-16 text-[rgba(255,138,0,0.2)]" />
+          <div className="w-full h-full bg-gradient-to-b from-[#101722] to-[#0A0B0F] flex items-center justify-center">
+            <img
+              src={trophyIcon}
+              alt="OneMil"
+              className="w-20 h-20 opacity-40 select-none pointer-events-none"
+              draggable={false}
+            />
           </div>
         )}
       </div>
@@ -186,7 +192,8 @@ export const ContestCard: React.FC<ContestCardProps> = ({
               "
               aria-label={fromPage === 'favorites' ? 'Remove from favorites' : 'Toggle favorite'}
             >
-              <Heart
+              <OneMilHeartIcon
+                size={20}
                 className={`w-5 h-5 transition-colors ${
                   fromPage === 'favorites' || isFavorite
                     ? 'fill-[hsl(0_85%_60%)] text-[hsl(0_85%_60%)]'
@@ -223,7 +230,10 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         <div className="mt-auto space-y-3">
           {/* Title */}
           {!hideTitleAndCount && (
-            <h3 className="font-bold text-xl text-white drop-shadow-md line-clamp-2">
+            <h3
+              className="font-bold text-xl text-[#E7EBF0] drop-shadow-md line-clamp-2 tracking-[-0.02em]"
+              style={{ fontFamily: 'var(--om-font-heading)' }}
+            >
               {contest.title}
             </h3>
           )}
@@ -292,7 +302,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
                 {insufficientFunds ? (
                   <>Dobít MioCoiny</>
                 ) : (
-                  <>🏆 {getPlayButtonText()}</>
+                  <><OneMilTrophyIcon size={16} className="w-4 h-4 shrink-0" />{getPlayButtonText()}</>
                 )}
               </button>
               {/* Detail button */}

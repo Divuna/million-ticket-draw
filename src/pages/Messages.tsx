@@ -18,7 +18,8 @@ import {
   AI_ASSISTANT_TYPING_SUBLINE,
 } from "@/constants/messagesUi";
 import { SUPPORT_REQUEST_MARKER } from "@/constants/supportRequestMarker";
-import { MessageCircle, Send, Sparkles } from "lucide-react";
+import { Send } from "lucide-react";
+import { OneMilMessageIcon, OneMilDiamondIcon } from "@/components/icons/OneMilIcons";
 
 function parseMessageContent(content: string): { text: string; cta?: { label: string; action: string } } {
   try {
@@ -243,7 +244,7 @@ function MessageThreadItem({
 
         {(isSystemSender || (isSystemMessage && !isUserMessage)) && (
           <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-4 h-4 text-[#FF8A00]" />
+            <OneMilDiamondIcon size={16} className="w-4 h-4 text-[#FF8A00]" />
             <span
               className="text-xs font-semibold"
               style={{
@@ -998,7 +999,7 @@ export default function MessagesPage() {
                   boxShadow: '0 4px 20px rgba(255, 138, 0, 0.3)',
                 }}
               >
-                <MessageCircle className="w-7 h-7 text-black" />
+                <OneMilMessageIcon size={28} className="w-7 h-7 text-black" />
               </div>
               
               <div className="flex-1">
@@ -1019,7 +1020,7 @@ export default function MessagesPage() {
               </div>
 
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.2)]">
-                <Sparkles className="w-4 h-4 text-[#FF8A00]" />
+                <OneMilDiamondIcon size={16} className="w-4 h-4 text-[#FF8A00]" />
                 <span className="text-xs font-medium text-[#FFB547]">
                   {messages.length} zpráv
                 </span>
@@ -1051,7 +1052,7 @@ export default function MessagesPage() {
                   border: '1px solid rgba(255, 138, 0, 0.15)',
                 }}
               >
-                <MessageCircle className="w-10 h-10 text-[#FF8A00]/40" />
+                <OneMilMessageIcon size={40} className="w-10 h-10 text-[#FF8A00]/40" />
               </div>
               <p className="text-gray-400 text-lg font-medium">Zatím žádné zprávy</p>
               <p className="text-gray-500 text-sm mt-2">Napište nám vaši první zprávu</p>
@@ -1166,9 +1167,9 @@ export default function MessagesPage() {
                         transform: `translate(${sparkle.x}px, ${sparkle.y}px)`,
                       }}
                     >
-                      <Sparkles 
+                      <OneMilDiamondIcon
                         className="w-full h-full"
-                        style={{ color: '#FFB547' }}
+                        color="#FFB547"
                       />
                     </div>
                   ))}

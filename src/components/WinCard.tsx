@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Gift, CheckCircle, Clock, Package } from 'lucide-react';
-import trophyIcon from '@/assets/icons/icon-trophy-onemil.svg';
+import { CheckCircle, Clock, Package } from 'lucide-react';
+import { OneMilTrophyIcon, OneMilGiftIcon } from '@/components/icons/OneMilIcons';
 import { MIOCOIN_IMAGE_URL } from '@/components/MioCoin';
 import { supabaseUrl } from '@/integrations/supabase/client';
 
@@ -83,9 +83,9 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', 
   };
 
   const getTypeIcon = () => {
-    return isMainPrize 
-      ? <Trophy className="h-4 w-4 text-amber-500" />
-      : <Gift className="h-4 w-4 text-purple-500" />;
+    return isMainPrize
+      ? <OneMilTrophyIcon size={16} className="h-4 w-4 text-amber-500" />
+      : <OneMilGiftIcon size={16} className="h-4 w-4 text-purple-500" />;
   };
 
   const getTypeLabel = () => {
@@ -136,7 +136,7 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', 
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-muted">
             {isMainPrize ? (
-              <img src={trophyIcon} alt="" aria-hidden="true" className="w-16 h-16 rounded-2xl opacity-30" />
+              <OneMilTrophyIcon size={64} className="w-16 h-16 text-amber-400/30" />
             ) : (
               <Gift className="w-16 h-16 text-purple-400/30" />
             )}

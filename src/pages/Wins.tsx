@@ -4,8 +4,8 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
 import { LoggedOutScreen } from '@/components/LoggedOutScreen';
 import { supabase } from '@/integrations/supabase/client';
-import { Trophy, Filter, ArrowUp, ArrowDown, Gift, Sparkles, Crown, Tag } from 'lucide-react';
-import trophyIcon from '@/assets/icons/icon-trophy-onemil.svg';
+import { Trophy, ArrowUp, ArrowDown, Tag } from 'lucide-react';
+import { OneMilFilterIcon, OneMilGiftIcon, OneMilDiamondIcon, OneMilCrownIcon, OneMilTrophyIcon } from '@/components/icons/OneMilIcons';
 import { useNavigate } from 'react-router-dom';
 import { WinCard } from '@/components/WinCard';
 import { WinDetailModal } from '@/components/WinDetailModal';
@@ -460,7 +460,7 @@ const Wins: React.FC = () => {
 
             {wins.length > 0 && (
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.2)]">
-                <Crown className="w-5 h-5 text-[#FF8A00]" />
+                <OneMilCrownIcon size={20} className="w-5 h-5 text-[#FF8A00]" />
                 <span className="text-lg font-bold text-[#FFB547]">{wins.length}</span>
               </div>
             )}
@@ -483,7 +483,7 @@ const Wins: React.FC = () => {
                 : 'text-gray-400 hover:text-gray-200'
             }`}
           >
-            <Trophy className="w-4 h-4" />
+            <OneMilTrophyIcon size={16} className="w-4 h-4" />
             Výhry
             {wins.length > 0 && (
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${
@@ -550,7 +550,7 @@ const Wins: React.FC = () => {
                         : 'bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20'
                     }`}
                   >
-                    <Trophy className="w-4 h-4" />
+                    <OneMilTrophyIcon size={16} className="w-4 h-4" />
                     Hlavní ({typeCounts.main})
                   </button>
                   <button
@@ -561,7 +561,7 @@ const Wins: React.FC = () => {
                         : 'bg-purple-500/10 text-purple-400 border border-purple-500/30 hover:bg-purple-500/20'
                     }`}
                   >
-                    <Gift className="w-4 h-4" />
+                    <OneMilGiftIcon size={16} className="w-4 h-4" />
                     Bonus ({typeCounts.bonus})
                   </button>
                 </div>
@@ -569,7 +569,7 @@ const Wins: React.FC = () => {
                 {/* Status Filter and Sort */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2 border-t border-[hsl(220,20%,15%)]">
                   <div className="flex flex-wrap items-center gap-3">
-                    <Filter className="w-4 h-4 text-gray-500" />
+                    <OneMilFilterIcon size={16} className="w-4 h-4 text-gray-500" />
                     <button
                       onClick={() => setFilter('all')}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
@@ -658,7 +658,7 @@ const Wins: React.FC = () => {
                     border: '1px solid rgba(255,138,0,0.1)',
                   }}
                 >
-                  <img src={trophyIcon} alt="" aria-hidden="true" className="w-12 h-12 rounded-xl opacity-30" />
+                  <OneMilTrophyIcon size={48} className="w-12 h-12 text-[#FF8A00]/30" />
                 </div>
                 <h3
                   className="text-2xl font-bold mb-3"
@@ -681,7 +681,7 @@ const Wins: React.FC = () => {
                   border: '1px solid hsl(220, 20%, 18%)',
                 }}
               >
-                <Filter className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+                <OneMilFilterIcon size={64} className="w-16 h-16 mx-auto mb-4 text-gray-600" />
                 <h3 className="text-xl font-semibold text-gray-300 mb-2">Žádné výhry v této kategorii</h3>
                 <p className="text-gray-500">Zkuste jiný filtr pro zobrazení výher.</p>
               </div>

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Clock, Gift, TrendingUp } from 'lucide-react';
+import { Clock, TrendingUp } from 'lucide-react';
+import { OneMilGiftIcon } from '@/components/icons/OneMilIcons';
 
 export interface TicketProgressBarProps {
   ticketsTotal: number;
@@ -171,7 +172,7 @@ export const TicketProgressBar: React.FC<TicketProgressBarProps> = ({
 
         {bonusPositions.length > 0 && (
           <span className="flex items-center gap-1.5">
-            <Gift className="w-3 h-3 text-orange-400 shrink-0" />
+            <OneMilGiftIcon size={12} className="w-3 h-3 text-orange-400 shrink-0" />
             Bonus pozic:&nbsp;
             <span className="font-medium text-foreground tabular-nums">
               {bonusPositions.length.toLocaleString('cs-CZ')}

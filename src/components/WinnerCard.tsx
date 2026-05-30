@@ -1,4 +1,4 @@
-import { Trophy } from 'lucide-react';
+import { OneMilTrophyIcon } from '@/components/icons/OneMilIcons';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
@@ -109,7 +109,7 @@ export const WinnerCard = ({
             <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
               {/* Prize — prominent orange/gold */}
               <div className="flex items-center gap-1.5 min-w-0">
-                <Trophy className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#FF8A00' }} />
+                <OneMilTrophyIcon size={14} className="w-3.5 h-3.5 flex-shrink-0" color="#FF8A00" />
                 <span
                   className="text-sm font-bold tracking-wide truncate"
                   style={{

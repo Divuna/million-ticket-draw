@@ -4,7 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
-import { Gamepad2, Ticket } from 'lucide-react';
+import { Gamepad2 } from 'lucide-react';
+import { OneMilTicketIcon } from '@/components/icons/OneMilIcons';
 import { NavigateToLogin } from '@/components/NavigateToLogin';
 
 interface UserTicket {
@@ -108,7 +109,7 @@ const MyContests: React.FC = () => {
             <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
               <CardContent className="pt-6">
                 <div className="text-center py-12">
-                  <Ticket className="h-16 w-16 text-primary mx-auto mb-4" />
+                  <OneMilTicketIcon size={64} className="h-16 w-16 text-primary mx-auto mb-4" />
                   <p className="text-muted-foreground">Zatím nemáš žádné tickety.</p>
                 </div>
               </CardContent>

@@ -14,7 +14,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2, ChevronDown, Mail, CheckCircle, XCircle, Info, Crown, Sparkles, Wallet, Shield } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Check, Volume2, VolumeX, Camera, Loader2, ChevronDown, CheckCircle, XCircle } from 'lucide-react';
+import {
+  OneMilBellIcon,
+  OneMilCoinsIcon,
+  OneMilProfileIcon,
+  OneMilEmailIcon,
+  OneMilCrownIcon,
+  OneMilDiamondIcon,
+  OneMilWalletIcon,
+  OneMilShieldIcon,
+  OneMilInfoIcon,
+} from '@/components/icons/OneMilIcons';
 import ReferralSection from '@/components/ReferralSection';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link } from 'react-router-dom';
@@ -685,7 +696,7 @@ const Profile: React.FC = () => {
           <div className="flex items-center justify-center h-64">
             <div className="relative">
               <div className="w-12 h-12 rounded-full border-2 border-[rgba(255,138,0,0.25)] border-t-[#FF8A00] animate-spin" />
-              <Sparkles className="absolute inset-0 m-auto w-5 h-5 text-[#FF8A00] animate-pulse" />
+              <OneMilDiamondIcon size={20} className="absolute inset-0 m-auto w-5 h-5 text-[#FF8A00] animate-pulse" />
             </div>
           </div>
         </div>
@@ -880,7 +891,7 @@ const Profile: React.FC = () => {
                     boxShadow: '0 4px 20px rgba(255,138,0,0.45), 0 0 30px rgba(255,138,0,0.25)'
                   }}
                 >
-                  <Crown className="w-5 h-5 text-black" />
+                  <OneMilCrownIcon size={20} className="w-5 h-5 text-black" />
                 </div>
                 
                 {/* Upload overlay on hover */}
@@ -928,7 +939,7 @@ const Profile: React.FC = () => {
                       boxShadow: '0 0 20px rgba(255,138,0,0.12), inset 0 1px 0 rgba(255,181,71,0.08)'
                     }}
                   >
-                    <Sparkles className="w-4 h-4 text-[#FF8A00]" />
+                    <OneMilDiamondIcon size={16} className="w-4 h-4 text-[#FF8A00]" />
                     <span className="text-sm font-bold tracking-wider text-[#FF8A00]">VIP</span>
                   </div>
                 </div>
@@ -974,7 +985,7 @@ const Profile: React.FC = () => {
                   <div className="relative">
                     <div className="absolute inset-0 bg-[rgba(255,138,0,0.3)] rounded-2xl blur-lg" />
                     <div className="relative p-3.5 rounded-2xl bg-gradient-to-br from-[rgba(255,138,0,0.25)] via-[rgba(255,138,0,0.15)] to-[rgba(255,138,0,0.2)] border border-[rgba(255,138,0,0.35)] shadow-inner">
-                      <Wallet className="h-6 w-6 text-[#FF8A00]" />
+                      <OneMilWalletIcon size={24} className="h-6 w-6 text-[#FF8A00]" />
                     </div>
                   </div>
                   <div>
@@ -1017,7 +1028,7 @@ const Profile: React.FC = () => {
                         {/* Coin glow */}
                         <div className="absolute inset-0 bg-[rgba(255,138,0,0.35)] rounded-full blur-xl scale-150" style={{ animation: 'glow-pulse 2s ease-in-out infinite' }} />
                         <div className="relative p-4 rounded-full bg-gradient-to-br from-[#FFB547] via-[#FF8A00] to-[#e07800] shadow-xl shadow-[rgba(255,138,0,0.3)]">
-                          <Coins className="h-10 w-10 text-black" />
+                          <OneMilCoinsIcon size={40} className="h-10 w-10 text-black" />
                         </div>
                       </div>
                       <div>
@@ -1034,7 +1045,7 @@ const Profile: React.FC = () => {
                         <div className="relative">
                           <div className="absolute inset-0 bg-green-500/30 rounded-full blur-lg" />
                           <div className="relative p-3 rounded-full bg-gradient-to-br from-green-500/30 to-green-600/20 border border-green-500/40">
-                            <Coins className="h-6 w-6 text-green-500" />
+                            <OneMilCoinsIcon size={24} className="h-6 w-6 text-green-500" />
                           </div>
                         </div>
                         <div>
@@ -1043,7 +1054,7 @@ const Profile: React.FC = () => {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-green-500 cursor-help transition-colors" />
+                                  <OneMilInfoIcon size={14} className="h-3.5 w-3.5 text-muted-foreground hover:text-green-500 cursor-help transition-colors" />
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50">
                                   <p className="text-sm">Bonusové MioCoiny získáváte jako odměnu při hraní soutěží. Můžete je převést do hlavní peněženky a použít na otevření tiketů.</p>
@@ -1065,7 +1076,7 @@ const Profile: React.FC = () => {
                         {transferring ? (
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
                         ) : (
-                          <Sparkles className="h-4 w-4 mr-2" />
+                          <OneMilDiamondIcon size={16} className="h-4 w-4 mr-2" />
                         )}
                         Převést bonusové MioCoiny
                       </Button>
@@ -1081,7 +1092,7 @@ const Profile: React.FC = () => {
                   className="vip-button flex-1 bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00] hover:from-[#FFB547] hover:via-[#FF8A00] hover:to-[#FFB547] text-black font-bold text-lg shadow-xl shadow-[rgba(255,138,0,0.2)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[rgba(255,138,0,0.35)] border-0" 
                   size="lg"
                 >
-                  <Coins className="h-5 w-5 mr-2" />
+                  <OneMilCoinsIcon size={20} className="h-5 w-5 mr-2" />
                   Dobít MioCoiny
                 </Button>
                 
@@ -1135,7 +1146,7 @@ const Profile: React.FC = () => {
                       >
                         <div className="flex items-center gap-3">
                           <div className="p-1.5 rounded-lg bg-green-500/15">
-                            <Coins className="h-4 w-4 text-green-500" />
+                            <OneMilCoinsIcon size={16} className="h-4 w-4 text-green-500" />
                           </div>
                           <span className="text-sm text-foreground">Převod bonusových MioCoinů</span>
                         </div>
@@ -1199,7 +1210,7 @@ const Profile: React.FC = () => {
                 <div className="relative">
                   <div className="absolute inset-0 bg-primary/20 rounded-xl blur-lg" />
                   <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-primary/25 to-primary/10 border border-primary/30 shadow-lg shadow-primary/10">
-                    <Shield className="h-6 w-6 text-primary" />
+                    <OneMilShieldIcon size={24} className="h-6 w-6 text-primary" />
                   </div>
                 </div>
                 <div>
@@ -1215,7 +1226,7 @@ const Profile: React.FC = () => {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
                       <div className="p-2.5 rounded-xl bg-primary/15 border border-primary/20">
-                        <Mail className="h-5 w-5 text-primary" />
+                        <OneMilEmailIcon size={20} className="h-5 w-5 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">
@@ -1238,7 +1249,7 @@ const Profile: React.FC = () => {
                   <div className="group relative p-5 rounded-2xl bg-gradient-to-br from-primary/8 via-transparent to-primary/5 border border-primary/15 hover:border-primary/30 transition-all duration-500 hover:shadow-lg hover:shadow-primary/5">
                     <div className="flex items-center gap-4">
                       <div className="p-2.5 rounded-xl bg-primary/15 border border-primary/20">
-                        <User className="h-5 w-5 text-primary" />
+                        <OneMilProfileIcon size={20} className="h-5 w-5 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">
@@ -1296,7 +1307,7 @@ const Profile: React.FC = () => {
                   <div className="relative">
                     <div className="absolute inset-0 bg-[rgba(255,138,0,0.2)] rounded-xl blur-lg pointer-events-none" />
                     <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-[rgba(255,138,0,0.2)] to-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.3)] shadow-lg shadow-[rgba(255,138,0,0.08)]">
-                      <User className="h-6 w-6 text-[#FF8A00]" />
+                      <OneMilProfileIcon size={24} className="h-6 w-6 text-[#FF8A00]" />
                     </div>
                   </div>
                   <div>
@@ -1322,7 +1333,7 @@ const Profile: React.FC = () => {
                     onClick={() => setEditMode(true)}
                     className="relative z-20 vip-button border-[rgba(255,138,0,0.3)] bg-[rgba(255,138,0,0.04)] hover:bg-[rgba(255,138,0,0.08)] hover:border-[rgba(255,138,0,0.5)] text-[#FF8A00] hover:text-[#FFB547] transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-[rgba(255,138,0,0.08)] hover:scale-[1.02]"
                   >
-                    <Sparkles className="h-4 w-4 mr-2" />
+                    <OneMilDiamondIcon size={16} className="h-4 w-4 mr-2" />
                     Upravit
                   </Button>
                 )}
@@ -1334,7 +1345,7 @@ const Profile: React.FC = () => {
                   <div className="relative z-20 grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
                     <div className="space-y-2.5">
                       <Label htmlFor="nickname" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
-                        <Sparkles className="h-3 w-3" />
+                        <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Přezdívka
                       </Label>
                       <Input 
@@ -1353,7 +1364,7 @@ const Profile: React.FC = () => {
                     
                     <div className="space-y-2.5">
                       <Label htmlFor="phone" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
-                        <Sparkles className="h-3 w-3" />
+                        <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Telefon
                       </Label>
                       <Input 
@@ -1372,7 +1383,7 @@ const Profile: React.FC = () => {
                     
                     <div className="space-y-2.5">
                       <Label htmlFor="first_name" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
-                        <Sparkles className="h-3 w-3" />
+                        <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Křestní jméno
                       </Label>
                       <Input 
@@ -1391,7 +1402,7 @@ const Profile: React.FC = () => {
                     
                     <div className="space-y-2.5">
                       <Label htmlFor="last_name" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
-                        <Sparkles className="h-3 w-3" />
+                        <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Příjmení
                       </Label>
                       <Input 
@@ -1410,7 +1421,7 @@ const Profile: React.FC = () => {
                     
                     <div className="space-y-2.5 md:col-span-2">
                       <Label htmlFor="address" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
-                        <Sparkles className="h-3 w-3" />
+                        <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Doručovací adresa výhry
                       </Label>
                       <Textarea 
@@ -1465,7 +1476,7 @@ const Profile: React.FC = () => {
                       {/* Nickname Row */}
                       <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
                         <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2 flex items-center gap-2">
-                          <Sparkles className="h-3 w-3" />
+                          <OneMilDiamondIcon size={12} className="h-3 w-3" />
                           Přezdívka
                         </p>
                         <p className="text-xl text-foreground font-semibold tracking-tight">
@@ -1476,7 +1487,7 @@ const Profile: React.FC = () => {
                       {/* Full Name Row */}
                       <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
                         <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2 flex items-center gap-2">
-                          <User className="h-3 w-3" />
+                          <OneMilProfileIcon size={12} className="h-3 w-3" />
                           Celé jméno
                         </p>
                         <p className="text-xl text-foreground font-semibold tracking-tight">
@@ -1517,7 +1528,7 @@ const Profile: React.FC = () => {
                       <div className="relative w-fit mx-auto mb-6">
                         <div className="absolute inset-0 bg-[rgba(255,138,0,0.15)] rounded-3xl blur-xl" />
                         <div className="relative p-6 rounded-3xl bg-gradient-to-br from-[rgba(255,138,0,0.12)] to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.15)]">
-                          <User className="w-12 h-12 text-[rgba(255,138,0,0.4)]" />
+                          <OneMilProfileIcon size={48} className="w-12 h-12 text-[rgba(255,138,0,0.4)]" />
                         </div>
                       </div>
                       <p className="text-xl text-foreground font-semibold mb-2">Zatím nemáte vyplněny osobní údaje</p>
@@ -1568,7 +1579,7 @@ const Profile: React.FC = () => {
                 <div className="relative">
                   <div className="absolute inset-0 bg-primary/20 rounded-xl blur-lg" />
                   <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-primary/25 to-primary/10 border border-primary/30 shadow-lg shadow-primary/10">
-                    <Bell className="h-6 w-6 text-primary" />
+                    <OneMilBellIcon size={24} className="h-6 w-6 text-primary" />
                   </div>
                 </div>
                 <div>
@@ -1630,7 +1641,7 @@ const Profile: React.FC = () => {
                   disabled={testingNotification}
                   className="vip-button w-full sm:w-auto border-primary/35 bg-primary/5 hover:border-primary/55 hover:bg-primary/15 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/10 font-semibold"
                 >
-                  <Bell className={`h-4 w-4 mr-2 ${testingNotification ? 'animate-pulse' : ''}`} />
+                  <OneMilBellIcon size={16} className={`h-4 w-4 mr-2 ${testingNotification ? 'animate-pulse' : ''}`} />
                   {testingNotification ? 'Odesílám...' : 'Otestovat notifikaci'}
                 </Button>
               </div>
@@ -1676,7 +1687,7 @@ const Profile: React.FC = () => {
                 <div className="relative">
                   <div className="absolute inset-0 bg-[rgba(255,138,0,0.15)] rounded-xl blur-lg" />
                   <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-[rgba(255,138,0,0.15)] to-[rgba(255,138,0,0.08)] border border-[rgba(255,138,0,0.25)] shadow-lg shadow-[rgba(255,138,0,0.08)]">
-                    <Mail className="h-6 w-6 text-[#FF8A00]" />
+                    <OneMilEmailIcon size={24} className="h-6 w-6 text-[#FF8A00]" />
                   </div>
                 </div>
                 <div>
@@ -1755,7 +1766,7 @@ const Profile: React.FC = () => {
                         setMarketingDialogOpen(true);
                       }}
                     >
-                      <Mail className="h-4 w-4 mr-2" />
+                      <OneMilEmailIcon size={16} className="h-4 w-4 mr-2" />
                       Odhlásit marketing
                     </Button>
                   </div>
@@ -1779,7 +1790,7 @@ const Profile: React.FC = () => {
                         </>
                       ) : (
                         <>
-                          <Mail className="h-4 w-4 mr-2" />
+                          <OneMilEmailIcon size={16} className="h-4 w-4 mr-2" />
                           Přihlásit marketing
                         </>
                       )}
@@ -1803,7 +1814,7 @@ const Profile: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-3">
               <div className="p-2 rounded-xl bg-[rgba(255,138,0,0.15)]">
-                <Coins className="h-5 w-5 text-[#FF8A00]" />
+                <OneMilCoinsIcon size={20} className="h-5 w-5 text-[#FF8A00]" />
               </div>
               Dobít MioCoiny
             </DialogTitle>
@@ -1825,7 +1836,7 @@ const Profile: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className={`p-2.5 rounded-xl transition-all duration-300 ${selectedPackage?.id === pkg.id ? 'bg-[rgba(255,138,0,0.2)]' : 'bg-muted/30'}`}>
-                        <Coins className={`h-5 w-5 transition-colors ${selectedPackage?.id === pkg.id ? 'text-[#FF8A00]' : 'text-muted-foreground'}`} />
+                        <OneMilCoinsIcon size={20} className={`h-5 w-5 transition-colors ${selectedPackage?.id === pkg.id ? 'text-[#FF8A00]' : 'text-muted-foreground'}`} />
                       </div>
                       <div>
                         <p className="font-bold text-lg">

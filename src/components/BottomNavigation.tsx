@@ -2,17 +2,22 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { useUnseenWinsCount } from "@/hooks/useUnseenWinsCount";
 import { useUserRole } from "@/hooks/useUserRole";
-import trophyIcon from "@/assets/icons/icon-trophy-onemil.svg";
-
-import { Home, User, Ticket, Trophy, Medal, MessageCircle } from "lucide-react";
+import {
+  OneMilHomeIcon,
+  OneMilTicketIcon,
+  OneMilTrophyIcon,
+  OneMilMedalIcon,
+  OneMilMessageIcon,
+  OneMilProfileIcon,
+} from "@/components/icons/OneMilIcons";
 
 const CUSTOMER_NAV_ITEMS = [
-  { path: "/", label: "Domů", icon: Home },
-  { path: "/vouchers", label: "Vouchery", icon: Ticket },
-  { path: "/games", label: "Soutěže", icon: Trophy },
-  { path: "/wins", label: "Výhry", icon: Medal },
-  { path: "/messages", label: "Zprávy", icon: MessageCircle },
-  { path: "/profile", label: "Můj profil", icon: User },
+  { path: "/", label: "Domů", icon: OneMilHomeIcon },
+  { path: "/vouchers", label: "Vouchery", icon: OneMilTicketIcon },
+  { path: "/games", label: "Soutěže", icon: OneMilTrophyIcon },
+  { path: "/wins", label: "Výhry", icon: OneMilMedalIcon },
+  { path: "/messages", label: "Zprávy", icon: OneMilMessageIcon },
+  { path: "/profile", label: "Můj profil", icon: OneMilProfileIcon },
 ] as const;
 
 export const BottomNavigation = () => {
@@ -58,11 +63,7 @@ export const BottomNavigation = () => {
               }`}
           >
             <div className={`relative ${isActive ? "scale-105" : ""} transition-transform duration-200`}>
-              {item.path === "/games" ? (
-                <img src={trophyIcon} alt="" aria-hidden="true" className="w-[22px] h-[22px] rounded-md" />
-              ) : (
-                <Icon size={22} strokeWidth={isActive ? 2.25 : 2} />
-              )}
+              <Icon size={22} strokeWidth={isActive ? 2.25 : 2} />
 
               {(showMessagesBadge || showWinsBadge) && (
                 <span

@@ -21,8 +21,8 @@ import { usePlacementBanners, PlacementKey } from "@/hooks/usePlacementBanners";
 import { WinnerCard } from "@/components/WinnerCard";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { ContestCard } from "@/components/ContestCard";
-import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, Info, X } from "lucide-react";
-import trophyIcon from "@/assets/icons/icon-trophy-onemil.svg";
+import { Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, X } from "lucide-react";
+import { OneMilGiftIcon, OneMilInfoIcon, OneMilTrophyIcon } from "@/components/icons/OneMilIcons";
 import { Footer } from "@/components/Footer";
 import { toast } from "sonner";
 import { logMonitoringEvent, logStripeCheckoutClientFailure } from "@/lib/monitoring";
@@ -476,7 +476,7 @@ const Homepage = () => {
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
                   <h2 className="text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
-                    <Gift className="w-6 h-6 md:w-7 md:h-7" />
+                    <OneMilGiftIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
                     Dobijte si MioCoiny
                   </h2>
                   <p className="text-sm text-text-silver">Dobíjejte si MioCoiny pro otevření voucherů nebo účasti ve hře.</p>
@@ -634,7 +634,7 @@ const Homepage = () => {
                     )}
                     {!placementBanners.probihajici_souteze?.image_url && (
                       <>
-                        <img src={trophyIcon} alt="" aria-hidden="true" className="w-8 h-8 mb-2 relative z-10 rounded-lg" />
+                        <OneMilTrophyIcon size={32} className="w-8 h-8 mb-2 relative z-10 text-[#FF8A00]" />
                         <div className="text-sm font-semibold text-foreground relative z-10">Probíhající soutěže</div>
                       </>
                     )}
@@ -654,7 +654,7 @@ const Homepage = () => {
                     )}
                     {!placementBanners.koupit_voucher?.image_url && (
                       <>
-                        <Gift className="w-8 h-8 text-rose-400 mb-2 relative z-10" />
+                        <OneMilGiftIcon size={32} className="w-8 h-8 text-rose-400 mb-2 relative z-10" />
                         <div className="text-sm font-semibold text-foreground relative z-10">Koupit voucher se slevou</div>
                       </>
                     )}
@@ -670,7 +670,7 @@ const Homepage = () => {
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
                   <h2 className="text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
-                    <img src={trophyIcon} alt="" aria-hidden="true" className="w-6 h-6 md:w-7 md:h-7 rounded-md" />
+                    <OneMilTrophyIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
                     Poslední výherci
                   </h2>
                   <p className="text-sm text-text-silver">Nejnovější výhry z našich soutěží</p>
@@ -684,7 +684,7 @@ const Homepage = () => {
                     ))
                   ) : !latestWinners || latestWinners.length === 0 ? (
                     <div className="text-center py-12 space-y-3">
-                      <img src={trophyIcon} alt="" aria-hidden="true" className="w-12 h-12 mx-auto rounded-xl opacity-50" />
+                      <OneMilTrophyIcon size={48} className="w-12 h-12 mx-auto text-muted-foreground/50" />
                       <h3 className="text-lg font-bold text-foreground">Zatím žádní výherci</h3>
                       <p className="text-sm text-muted-foreground">Momentálně nejsou k dispozici žádné výhry</p>
                     </div>
@@ -936,7 +936,7 @@ const Homepage = () => {
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
-              <Gift className="w-6 h-6" />
+              <OneMilGiftIcon size={24} className="w-6 h-6" />
               Dostupné vouchery
             </h3>
             <div className="flex items-center gap-2">
@@ -1215,7 +1215,7 @@ const Homepage = () => {
                           }}
                           aria-label="Zobrazit info"
                         >
-                          <Info className="w-4 h-4 text-white" />
+                          <OneMilInfoIcon size={16} className="w-4 h-4 text-white" />
                         </button>
                       )}
                     </div>
