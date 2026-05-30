@@ -19,6 +19,11 @@ import { useLatestWinners } from "@/hooks/useLatestWinners";
 import { useComingSoonBanners } from "@/hooks/useComingSoonBanners";
 import { usePlacementBanners, PlacementKey } from "@/hooks/usePlacementBanners";
 import { WinnerCard } from "@/components/WinnerCard";
+import winnerBgTrophy from "@/assets/winner-backgrounds/winner-card-bg-trophy.png";
+import winnerBgCrown from "@/assets/winner-backgrounds/winner-card-bg-crown.png";
+import winnerBgClean from "@/assets/winner-backgrounds/winner-card-bg-clean.png";
+
+const WINNER_BG_ROTATION = [winnerBgTrophy, winnerBgCrown, winnerBgClean];
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { ContestCard } from "@/components/ContestCard";
 import { Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, X } from "lucide-react";
@@ -691,7 +696,7 @@ const Homepage = () => {
                   ) : (
                     latestWinners
                       .slice(0, 3)
-                      .map((winner) => (
+                      .map((winner, index) => (
                         <WinnerCard
                           key={winner.id}
                           userName={winner.user_name}
@@ -701,7 +706,7 @@ const Homepage = () => {
                           createdAt={winner.created_at}
                           type={winner.type}
                           prizeImageUrl={winner.prize_image_url}
-                          cardStyleImageUrl={placementBanners.vzhled_karta_vyher?.image_url || null}
+                          cardStyleImageUrl={WINNER_BG_ROTATION[index % WINNER_BG_ROTATION.length]}
                           userAvatarUrl={winner.user_avatar_url}
                           ticketNumber={winner.ticket_number}
                         />
