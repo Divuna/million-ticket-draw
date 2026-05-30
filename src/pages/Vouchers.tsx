@@ -29,7 +29,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Copy, Clock, Loader2 } from 'lucide-react';
-import { OneMilGiftIcon, OneMilHeartIcon, OneMilTicketIcon, OneMilCartIcon } from '@/components/icons/OneMilIcons';
+import { OneMilVoucherIcon, OneMilHeartIcon, OneMilTicketIcon, OneMilCartIcon } from '@/components/icons/OneMilIcons';
 import { supabase } from '@/integrations/supabase/client';
 import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { toast } from 'sonner';
@@ -284,7 +284,7 @@ const Vouchers: React.FC = () => {
         {/* Premium Header */}
         <div className="text-center space-y-3">
           <div className="inline-flex items-center justify-center gap-3">
-            <OneMilGiftIcon size={32} className="w-8 h-8 text-secondary" />
+            <OneMilVoucherIcon size={32} className="w-8 h-8 text-secondary" />
             <h1 className="text-3xl font-bold text-heading-gold">Vouchery</h1>
           </div>
           <p className="text-muted-foreground text-sm max-w-md mx-auto">
@@ -335,7 +335,7 @@ const Vouchers: React.FC = () => {
             ) : truelyAvailableVouchers.length === 0 ? (
               <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
-                  <OneMilGiftIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
+                  <OneMilVoucherIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
                   <h3 className="text-xl font-bold text-heading-gold">Žádné dostupné vouchery</h3>
                   <p className="text-sm text-muted-foreground">
                     Momentálně nejsou k dispozici žádné nové vouchery.
@@ -571,7 +571,7 @@ const Vouchers: React.FC = () => {
                             />
                           ) : (
                             <div className="w-full h-full bg-[hsl(220_30%_10%)] flex items-center justify-center">
-                              <OneMilGiftIcon size={48} className="w-12 h-12 text-[rgba(255,138,0,0.35)]" />
+                              <OneMilVoucherIcon size={48} className="w-12 h-12 text-[rgba(255,138,0,0.35)]" />
                             </div>
                           )}
                         </div>
@@ -717,7 +717,7 @@ const Vouchers: React.FC = () => {
                             />
                           ) : (
                             <div className="w-full h-full bg-[hsl(220_30%_10%)] flex items-center justify-center">
-                              <OneMilGiftIcon size={48} className={`w-12 h-12 ${expiration.isExpired ? 'text-muted-foreground/30' : 'text-[rgba(255,138,0,0.4)]'}`} />
+                              <OneMilVoucherIcon size={48} className={`w-12 h-12 ${expiration.isExpired ? 'text-muted-foreground/30' : 'text-[rgba(255,138,0,0.4)]'}`} />
                             </div>
                           )}
                         </div>

@@ -22,7 +22,7 @@ import { WinnerCard } from "@/components/WinnerCard";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { ContestCard } from "@/components/ContestCard";
 import { Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, X } from "lucide-react";
-import { OneMilGiftIcon, OneMilInfoIcon, OneMilTrophyIcon } from "@/components/icons/OneMilIcons";
+import { OneMilMioCoinIcon, OneMilVoucherIcon, OneMilInfoIcon, OneMilTrophyIcon } from "@/components/icons/OneMilIcons";
 import { Footer } from "@/components/Footer";
 import { toast } from "sonner";
 import { logMonitoringEvent, logStripeCheckoutClientFailure } from "@/lib/monitoring";
@@ -476,7 +476,7 @@ const Homepage = () => {
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
                   <h2 className="text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
-                    <OneMilGiftIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
+                    <OneMilMioCoinIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
                     Dobijte si MioCoiny
                   </h2>
                   <p className="text-sm text-text-silver">Dobíjejte si MioCoiny pro otevření voucherů nebo účasti ve hře.</p>
@@ -654,7 +654,7 @@ const Homepage = () => {
                     )}
                     {!placementBanners.koupit_voucher?.image_url && (
                       <>
-                        <OneMilGiftIcon size={32} className="w-8 h-8 text-rose-400 mb-2 relative z-10" />
+                        <OneMilVoucherIcon size={32} className="w-8 h-8 text-rose-400 mb-2 relative z-10" />
                         <div className="text-sm font-semibold text-foreground relative z-10">Koupit voucher se slevou</div>
                       </>
                     )}
@@ -936,7 +936,7 @@ const Homepage = () => {
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
-              <OneMilGiftIcon size={24} className="w-6 h-6" />
+              <OneMilVoucherIcon size={24} className="w-6 h-6" />
               Dostupné vouchery
             </h3>
             <div className="flex items-center gap-2">
