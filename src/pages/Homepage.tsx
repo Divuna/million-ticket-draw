@@ -18,12 +18,11 @@ import { useHomepageVideoSimple } from "@/hooks/useHomepageVideoSimple";
 import { useLatestWinners } from "@/hooks/useLatestWinners";
 import { useComingSoonBanners } from "@/hooks/useComingSoonBanners";
 import { usePlacementBanners, PlacementKey } from "@/hooks/usePlacementBanners";
+import { WinnerCard } from "@/components/WinnerCard";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { ContestCard } from "@/components/ContestCard";
 import { Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, X } from "lucide-react";
-import { OneMilMioCoinIcon, OneMilVoucherIcon, OneMilInfoIcon, OneMilTrophyIcon, OneMilWinIcon } from "@/components/icons/OneMilIcons";
-import { formatDistanceToNow } from "date-fns";
-import { cs } from "date-fns/locale";
+import { OneMilMioCoinIcon, OneMilVoucherIcon, OneMilInfoIcon, OneMilTrophyIcon } from "@/components/icons/OneMilIcons";
 import { Footer } from "@/components/Footer";
 import { toast } from "sonner";
 import { logMonitoringEvent, logStripeCheckoutClientFailure } from "@/lib/monitoring";
@@ -58,7 +57,7 @@ const Homepage = () => {
   const { banners: comingSoonBanners, loading: comingSoonLoading } = useComingSoonBanners();
   
   // Placement banners for MioCoin packages and action boxes
-  const placementKeys: PlacementKey[] = ['miocoin_50', 'miocoin_310', 'miocoin_525', 'miocoin_1280', 'probihajici_souteze', 'koupit_voucher'];
+  const placementKeys: PlacementKey[] = ['miocoin_50', 'miocoin_310', 'miocoin_525', 'miocoin_1280', 'probihajici_souteze', 'koupit_voucher', 'vzhled_karta_vyher'];
   const { banners: placementBanners } = usePlacementBanners(placementKeys);
   const contestsCarouselRef = useRef<HTMLDivElement>(null);
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
@@ -470,8 +469,8 @@ const Homepage = () => {
       {/* Page content — constrained container */}
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Coin Top-up Section */}
-        <section className="w-full overflow-x-hidden">
-          {/* Dobijte si MioCoiny */}
+        <section className="w-full overflow-x-hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Left Column - Dobijte si MioCoiny */}
           <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
             <CardContent className="p-5 h-full flex flex-col">
               <div className="space-y-4 flex-1 flex flex-col">
@@ -665,141 +664,58 @@ const Homepage = () => {
             </CardContent>
           </Card>
 
-        </section>
+          {/* Right Column - Poslední výherci */}
+          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
+            <CardContent className="p-5 h-full flex flex-col relative z-10">
+              <div className="space-y-4 flex-1 flex flex-col">
+                <div className="space-y-2">
+                  <h2 className="text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
+                    <OneMilTrophyIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
+                    Poslední výherci
+                  </h2>
+                  <p className="text-sm text-text-silver">Nejnovější výhry z našich soutěží</p>
+                </div>
 
-        {/* ── Poslední výherci — Premium Showcase ─────────────────────── */}
-        <section className="space-y-5">
-          {/* Section header */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h2
-                className="text-xl md:text-2xl font-bold flex items-center gap-2"
-                style={{ fontFamily: 'var(--om-font-heading)',
-                  background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 55%, #FFB547 100%)',
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
-              >
-                <OneMilWinIcon size={24} className="w-6 h-6 shrink-0 text-[#FF8A00]" style={{ WebkitTextFillColor: 'initial', color: '#FF8A00' }} />
-                Poslední výherci
-              </h2>
-              <p className="text-sm text-[#8E98A6]">Skutečné výhry z posledních soutěží</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-[#8E98A6] hover:text-[#E7EBF0] hover:bg-white/[0.05] shrink-0"
-              onClick={() => navigate("/winners")}
-            >
-              Zobrazit všechny
-              <ChevronRight className="w-3.5 h-3.5" />
-            </Button>
-          </div>
-
-          {/* Winners grid */}
-          {winnersLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-[88px] rounded-2xl animate-pulse" style={{ background: 'hsl(220 30% 8%)', border: '1px solid rgba(255,138,0,0.1)' }} />
-              ))}
-            </div>
-          ) : !latestWinners || latestWinners.length === 0 ? (
-            <div className="text-center py-16 space-y-3">
-              <OneMilWinIcon size={48} className="w-12 h-12 mx-auto text-[rgba(255,138,0,0.3)]" />
-              <p className="text-[#8E98A6] text-sm">Momentálně nejsou k dispozici žádné výhry</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {latestWinners.slice(0, 6).map((winner, idx) => {
-                const displayName = winner.user_nickname || winner.user_name;
-                const initials = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-                const timeAgo = formatDistanceToNow(new Date(winner.created_at), { addSuffix: true, locale: cs });
-                const isNewest = idx === 0;
-                const imageUrl = winner.prize_image_url || winner.user_avatar_url;
-
-                return (
-                  <div
-                    key={winner.id}
-                    className="relative group rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.015]"
-                    style={{
-                      background: 'linear-gradient(135deg, hsl(220, 30%, 8%) 0%, hsl(220, 25%, 5%) 100%)',
-                      border: isNewest ? '1px solid rgba(255,138,0,0.4)' : '1px solid rgba(255,138,0,0.15)',
-                      boxShadow: isNewest
-                        ? '0 0 0 1px rgba(255,181,71,0.12), 0 4px 20px rgba(255,138,0,0.12)'
-                        : '0 2px 12px rgba(0,0,0,0.4)',
-                    }}
-                  >
-                    {/* Newest badge */}
-                    {isNewest && (
-                      <div
-                        className="absolute top-0 left-0 right-0 h-[2px]"
-                        style={{ background: 'linear-gradient(90deg, transparent, #FF8A00, #FFB547, #FF8A00, transparent)' }}
-                      />
-                    )}
-
-                    <div className="flex items-center gap-3 p-3.5">
-                      {/* Circular avatar / prize image */}
-                      <div
-                        className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-sm font-bold"
-                        style={{
-                          border: '1.5px solid rgba(255,138,0,0.3)',
-                          background: imageUrl ? 'transparent' : 'rgba(255,138,0,0.1)',
-                          color: '#FFB547',
-                        }}
-                      >
-                        {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt={displayName}
-                            className="w-full h-full object-cover"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                          />
-                        ) : (
-                          <span style={{ fontFamily: 'var(--om-font-heading)' }}>{initials}</span>
-                        )}
-                      </div>
-
-                      {/* Text content */}
-                      <div className="flex-1 min-w-0">
-                        {/* Prize name */}
-                        <p
-                          className="text-sm font-semibold truncate leading-tight"
-                          style={{
-                            fontFamily: 'var(--om-font-heading)',
-                            background: 'linear-gradient(90deg, #FFB547, #FF8A00)',
-                            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                          }}
-                        >
-                          {winner.prize_name}
-                        </p>
-                        {/* Winner name */}
-                        <p className="text-xs text-[#E7EBF0] truncate mt-0.5">{displayName}</p>
-                        {/* Contest + time */}
-                        <div className="flex items-center gap-1 mt-1">
-                          <OneMilWinIcon size={10} className="shrink-0" style={{ color: 'rgba(255,138,0,0.5)' }} />
-                          <p className="text-[10px] text-[#8E98A6] truncate">{winner.contest_title}</p>
-                        </div>
-                      </div>
-
-                      {/* Time + newest label stacked on right */}
-                      <div className="flex flex-col items-end gap-1 shrink-0">
-                        {isNewest && (
-                          <span
-                            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap"
-                            style={{ background: 'rgba(255,138,0,0.15)', color: '#FFB547', border: '1px solid rgba(255,138,0,0.25)' }}
-                          >
-                            Nejnovější
-                          </span>
-                        )}
-                        <span className="text-[10px] text-[#8E98A6] whitespace-nowrap">{timeAgo}</span>
-                        {winner.ticket_number != null && (
-                          <span className="text-[9px] text-[#8E98A6]/60">#{winner.ticket_number.toLocaleString('cs-CZ')}</span>
-                        )}
-                      </div>
+                <div className="space-y-4 flex-1 overflow-y-auto">
+                  {winnersLoading ? (
+                    // Loading placeholders
+                    Array.from({ length: 3 }).map((_, index) => (
+                      <div key={index} className="rounded-xl h-[112px] animate-pulse" style={{ background: 'hsl(220 45% 6%)', border: '1px solid rgba(255,138,0,0.15)' }} />
+                    ))
+                  ) : !latestWinners || latestWinners.length === 0 ? (
+                    <div className="text-center py-12 space-y-3">
+                      <OneMilTrophyIcon size={48} className="w-12 h-12 mx-auto text-muted-foreground/50" />
+                      <h3 className="text-lg font-bold text-foreground">Zatím žádní výherci</h3>
+                      <p className="text-sm text-muted-foreground">Momentálně nejsou k dispozici žádné výhry</p>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  ) : (
+                    latestWinners
+                      .slice(0, 3)
+                      .map((winner) => (
+                        <WinnerCard
+                          key={winner.id}
+                          userName={winner.user_name}
+                          userNickname={winner.user_nickname}
+                          prizeName={winner.prize_name}
+                          contestTitle={winner.contest_title}
+                          createdAt={winner.created_at}
+                          type={winner.type}
+                          prizeImageUrl={winner.prize_image_url}
+                          cardStyleImageUrl={placementBanners.vzhled_karta_vyher?.image_url || null}
+                          userAvatarUrl={winner.user_avatar_url}
+                          ticketNumber={winner.ticket_number}
+                        />
+                      ))
+                  )}
+                </div>
+
+                <Button variant="ghost" size="lg" className="w-full gap-2 mt-2 text-muted-foreground hover:text-foreground hover:bg-muted/30" onClick={() => navigate("/winners")}>
+                  Zobrazit všechny
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </section>
         
         {/* Golden separator line - premium, animated */}
