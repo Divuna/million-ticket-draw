@@ -4,7 +4,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
 import { LoggedOutScreen } from '@/components/LoggedOutScreen';
 import { supabase } from '@/integrations/supabase/client';
-import { Trophy, ArrowUp, ArrowDown, Tag } from 'lucide-react';
+import { ArrowUp, ArrowDown, Tag } from 'lucide-react';
 import { OneMilFilterIcon, OneMilGiftIcon, OneMilDiamondIcon, OneMilTrophyIcon, OneMilWinIcon } from '@/components/icons/OneMilIcons';
 import { useNavigate } from 'react-router-dom';
 import { WinCard } from '@/components/WinCard';
@@ -439,7 +439,7 @@ const Wins: React.FC = () => {
                   boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
                 }}
               >
-                <Trophy className="w-8 h-8 text-black" />
+                <OneMilWinIcon size={32} className="w-8 h-8 text-black" />
               </div>
 
               <div>

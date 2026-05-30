@@ -422,34 +422,66 @@ const Index = () => {
     <div className="min-h-screen bg-background dark pb-20">
       <Header />
       <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Page Header - matching homepage typography */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="text-center md:text-left flex-1">
-            <h1
-              className="text-2xl md:text-3xl font-bold text-[#E7EBF0] flex items-center gap-3 justify-center md:justify-start tracking-[-0.02em]"
-              style={{ fontFamily: 'var(--om-font-heading)' }}
-            >
-              <OneMilTrophyIcon size={28} className="w-7 h-7 md:w-8 md:h-8 shrink-0 text-[#FF8A00]" />
-              Soutěže
-            </h1>
-            <p className="text-sm text-text-silver mt-2">Vyberte si soutěž a otevřete další tiket v pořadí.</p>
-          </div>
-          
-          {(() => {
-            const visibleFavoritesCount = contests.reduce(
-              (n, c) => n + (favorites.has(c.id) ? 1 : 0),
-              0
-            );
-            return (
-              <Button
-                className="bg-primary hover:brightness-110 text-primary-foreground font-bold px-6 py-3 rounded-xl shadow-[0_0_12px_hsl(var(--primary)/0.35)] transition-all duration-200"
-                onClick={() => navigate('/favorite-games')}
+        {/* Premium Header Card */}
+        <div
+          className="relative overflow-hidden rounded-2xl p-6"
+          style={{
+            background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
+            border: '1px solid rgba(255,138,0,0.2)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.1)',
+          }}
+        >
+          <div
+            className="absolute inset-0 opacity-10 pointer-events-none"
+            style={{
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,1) 50%, transparent 100%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer 4s ease-in-out infinite',
+            }}
+          />
+          <div className="relative flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center shrink-0"
+                style={{
+                  background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
+                  boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
+                }}
               >
-                <OneMilHeartIcon size={20} className="w-5 h-5 mr-2" />
-                Oblíbené ({visibleFavoritesCount})
-              </Button>
-            );
-          })()}
+                <OneMilTrophyIcon size={28} className="w-7 h-7 text-black" />
+              </div>
+              <div>
+                <h1
+                  className="text-2xl md:text-3xl font-bold tracking-tight"
+                  style={{
+                    fontFamily: 'var(--om-font-heading)',
+                    background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  Soutěže
+                </h1>
+                <p className="text-sm text-gray-400 mt-1">Vyberte si soutěž a otevřete další tiket v pořadí.</p>
+              </div>
+            </div>
+            {(() => {
+              const visibleFavoritesCount = contests.reduce(
+                (n, c) => n + (favorites.has(c.id) ? 1 : 0),
+                0
+              );
+              return (
+                <Button
+                  className="bg-primary hover:brightness-110 text-primary-foreground font-bold px-4 py-2 md:px-6 md:py-3 rounded-xl shadow-[0_0_12px_hsl(var(--primary)/0.35)] transition-all duration-200 shrink-0"
+                  onClick={() => navigate('/favorite-games')}
+                >
+                  <OneMilHeartIcon size={20} className="w-5 h-5 mr-2" />
+                  <span className="hidden sm:inline">Oblíbené </span>({visibleFavoritesCount})
+                </Button>
+              );
+            })()}
+          </div>
         </div>
         
         {/* Contests Grid - matching homepage card styling */}

@@ -992,19 +992,19 @@ export default function MessagesPage() {
             />
             
             <div className="relative flex items-center gap-4">
-              <div 
-                className="w-14 h-14 rounded-xl flex items-center justify-center"
+              <div
+                className="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center shrink-0"
                 style={{
                   background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
-                  boxShadow: '0 4px 20px rgba(255, 138, 0, 0.3)',
+                  boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
                 }}
               >
                 <OneMilMessageIcon size={28} className="w-7 h-7 text-black" />
               </div>
-              
+
               <div className="flex-1">
-                <h1 
-                  className="text-2xl font-bold tracking-tight"
+                <h1
+                  className="text-2xl md:text-3xl font-bold tracking-tight"
                   style={{
                     background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
                     WebkitBackgroundClip: 'text',
