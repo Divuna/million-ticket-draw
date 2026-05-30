@@ -728,13 +728,11 @@ const Profile: React.FC = () => {
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto space-y-5">
-
-          {/* ── Top row: Peněženka + Referral (2-col on desktop) ─────────── */}
+        <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
 
-          {/* ── Peněženka ─────────────────────────────────────────────── */}
-          <PremiumCard>
+          {/* ── Peněženka — left col, row 1 ──────────────────────────── */}
+          <PremiumCard className="lg:col-start-1">
             <div className="p-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
@@ -877,16 +875,13 @@ const Profile: React.FC = () => {
             </div>
           </PremiumCard>
 
-          {/* ── Referral (right column on desktop) ──────────────────────── */}
-          <ReferralSection isLoaded={pageLoaded} />
+          {/* ── Referral — right col, row 1 ─────────────────────────────── */}
+          <div className="lg:col-start-2">
+            <ReferralSection isLoaded={pageLoaded} />
+          </div>
 
-          </div>{/* end top grid */}
-
-          {/* ── Settings below ──────────────────────────────────────────── */}
-          <div className="space-y-5">
-
-          {/* ── Účet ──────────────────────────────────────────────────── */}
-          <PremiumCard>
+          {/* ── Účet — right col, row 2 ──────────────────────────────── */}
+          <PremiumCard className="lg:col-start-2">
             <div className="p-6">
               <div className="flex items-center gap-4 mb-5">
                 <SectionTile icon={<OneMilShieldIcon size={24} className="w-6 h-6 text-black" />} />
@@ -926,8 +921,8 @@ const Profile: React.FC = () => {
             </div>
           </PremiumCard>
 
-          {/* ── Osobní údaje ────────────────────────────────────────────── */}
-          <PremiumCard>
+          {/* ── Osobní údaje — left col, row 2 ──────────────────────────── */}
+          <PremiumCard className="lg:col-start-1">
             <div className="p-6">
               {/* Section Header */}
               <div className="flex items-center justify-between mb-6">
@@ -1153,8 +1148,8 @@ const Profile: React.FC = () => {
             </div>
           </PremiumCard>
 
-          {/* ── Notifikace ──────────────────────────────────────────────── */}
-          <PremiumCard>
+          {/* ── Notifikace — right col, row 3 ───────────────────────────── */}
+          <PremiumCard className="lg:col-start-2">
             <div className="p-6">
               <div className="flex items-center gap-4 mb-5">
                 <SectionTile icon={<OneMilBellIcon size={24} className="w-6 h-6 text-black" />} />
@@ -1220,8 +1215,8 @@ const Profile: React.FC = () => {
             </div>
           </PremiumCard>
 
-          {/* ── Marketingová sdělení ─────────────────────────────────────── */}
-          <PremiumCard>
+          {/* ── Marketingová sdělení — right col, row 4 ─────────────────── */}
+          <PremiumCard className="lg:col-start-2">
             <div className="p-6">
               <div className="flex items-center gap-4 mb-5">
                 <SectionTile icon={<OneMilEmailIcon size={24} className="w-6 h-6 text-black" />} />
@@ -1326,7 +1321,7 @@ const Profile: React.FC = () => {
             </div>
           </PremiumCard>
 
-          </div>{/* end settings section */}
+          </div>{/* end grid */}
 
         </div>{/* end max-w-5xl */}
       </div>
