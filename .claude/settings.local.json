@@ -17,7 +17,11 @@
       "Bash(gh api *)",
       "Bash(git pull *)",
       "Bash(git stash *)",
-      "Bash(xargs grep -l \"coming_soon\")"
+      "Bash(xargs grep -l \"coming_soon\")",
+      "Bash(cd \"C:\\\\Users\\\\divis\\\\Desktop\\\\Onemil - Projekt\\\\million-ticket-draw\" && rm -rf .git/rebase-merge && git status --short | head -5)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)",
+      "Bash(git checkout *)"
     ]
   }
 }

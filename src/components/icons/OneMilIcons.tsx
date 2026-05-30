@@ -1,211 +1,344 @@
-/**
- * OneMil Premium Icon System
- * Brand: dark luxury, outline style, Silver/Platinum inactive, Orange active/CTA
- * Usage: <OneMilTrophyIcon size={24} className="text-[#FF8A00]" />
- * All icons accept: size, className, color, strokeWidth
- */
+import type { SVGProps } from 'react';
 
-import React from 'react';
-
-interface IconProps {
+type OneMilIconProps = SVGProps<SVGSVGElement> & {
   size?: number;
-  className?: string;
-  color?: string;
-  strokeWidth?: number;
-  'aria-hidden'?: boolean;
+  active?: boolean;
+};
+
+const SILVER = '#BFC6CF';
+const PLATINUM = '#E7EBF0';
+const ORANGE = '#FF8A00';
+const AMBER = '#FFB547';
+
+function iconColor(active?: boolean, color?: string) {
+  return color ?? (active ? ORANGE : SILVER);
 }
 
-const base = (
-  size: number,
-  className: string,
-  color: string,
-  strokeWidth: number,
-  children: React.ReactNode
-) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={color}
-    strokeWidth={strokeWidth}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-    aria-hidden="true"
-  >
-    {children}
-  </svg>
-);
+function accentColor(active?: boolean) {
+  return active ? AMBER : ORANGE;
+}
 
-// ── Navigation ─────────────────────────────────────────────────────────────
+function BaseIcon({
+  size = 24,
+  active = false,
+  className,
+  children,
+  viewBox = '0 0 24 24',
+  ...props
+}: OneMilIconProps & { children: React.ReactNode }) {
+  const color = iconColor(active, props.color);
 
-export const OneMilHomeIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-  <polyline points="9 22 9 12 15 12 15 22" />
-</>);
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={viewBox}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+      {...props}
+      color={color}
+    >
+      {children}
+    </svg>
+  );
+}
 
-export const OneMilTicketIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <path d="M15 5v2M15 11v2M15 17v2M5 5h14a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H5a2 2 0 01-2-2v-3a2 2 0 000-4V7a2 2 0 012-2z" />
-</>);
+export function OneMilTrophyIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
 
-export const OneMilTrophyIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <path d="M6 9H3l1 5c.4 2.5 2.1 4 4 4h8c1.9 0 3.6-1.5 4-4l1-5h-3" />
-  <path d="M6 9V6" />
-  <path d="M18 9V6" />
-  <path d="M8 13c.5 1.2 1.8 2 4 2s3.5-.8 4-2" />
-  <line x1="12" y1="18" x2="12" y2="21" />
-  <line x1="8" y1="21" x2="16" y2="21" />
-</>);
+  return (
+    <BaseIcon {...props}>
+      <path d="M8 4h8v3.8c0 3.8-1.6 6.3-4 7.2-2.4-.9-4-3.4-4-7.2V4Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M8 6H5.8C4.8 6 4 6.8 4 7.8v.4c0 2.3 1.8 4.2 4.1 4.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M16 6h2.2c1 0 1.8.8 1.8 1.8v.4c0 2.3-1.8 4.2-4.1 4.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M12 15v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M8.5 20h7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M13.6 5.3 10.9 12h2.2l-2.7 5.7" stroke={accent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </BaseIcon>
+  );
+}
 
-export const OneMilMedalIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <circle cx="12" cy="9" r="5" />
-  <path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12" />
-</>);
+export function OneMilWinIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
 
-export const OneMilMessageIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-</>);
+  return (
+    <BaseIcon {...props}>
+      <path d="m12 3.4 2.45 5.05 5.55.8-4.02 3.92.95 5.53L12 16.1 7.07 18.7l.95-5.53L4 9.25l5.55-.8L12 3.4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="m12 8.8.75 1.55 1.7.25-1.22 1.2.29 1.68L12 12.68l-1.52.8.29-1.68-1.22-1.2 1.7-.25L12 8.8Z" stroke={accent} strokeWidth="1.4" strokeLinejoin="round" />
+    </BaseIcon>
+  );
+}
 
-export const OneMilProfileIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-  <circle cx="12" cy="7" r="4" />
-</>);
+export function OneMilVoucherIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
 
-// ── Commerce & Rewards ─────────────────────────────────────────────────────
+  return (
+    <BaseIcon {...props}>
+      <path d="M4.5 7.2h15a1.5 1.5 0 0 1 1.5 1.5v2.1a2.2 2.2 0 0 0 0 4.4v2.1a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.3v-2.1a2.2 2.2 0 0 0 0-4.4V8.7a1.5 1.5 0 0 1 1.5-1.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M12 8.2v7.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeDasharray="2 2" />
+      <path d="M18.2 12h.02" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+    </BaseIcon>
+  );
+}
 
-export const OneMilGiftIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <polyline points="20 12 20 22 4 22 4 12" />
-  <rect x="2" y="7" width="20" height="5" />
-  <line x1="12" y1="22" x2="12" y2="7" />
-  <path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z" />
-  <path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z" />
-</>);
+export function OneMilWalletIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
 
-export const OneMilVoucherIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
-  <line x1="7" y1="7" x2="7.01" y2="7" strokeWidth={3} />
-</>);
+  return (
+    <BaseIcon {...props}>
+      <path d="M4 8.2c0-1.1.9-2 2-2h10.6c1 0 1.8.8 1.8 1.8v1.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M4 8.4h14.6c.8 0 1.4.6 1.4 1.4v7.4c0 .9-.7 1.6-1.6 1.6H6c-1.1 0-2-.9-2-2V8.4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M16.8 12.2H21v3.6h-4.2a1.8 1.8 0 1 1 0-3.6Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M17.1 14h.02" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+    </BaseIcon>
+  );
+}
 
-export const OneMilHeartIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-</>);
+export function OneMilMessageIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
 
-export const OneMilCartIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <circle cx="9" cy="21" r="1" />
-  <circle cx="20" cy="21" r="1" />
-  <path d="M1 1h4l2.68 13.39a2 2 0 001.95 1.61h9.74a2 2 0 001.95-1.61L23 6H6" />
-</>);
+  return (
+    <BaseIcon {...props}>
+      <path d="M5.2 6.2h13.6c1 0 1.8.8 1.8 1.8v7.1c0 1-.8 1.8-1.8 1.8h-7.3l-4.2 3v-3H5.2c-1 0-1.8-.8-1.8-1.8V8c0-1 .8-1.8 1.8-1.8Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M8.4 11.7h.02M12 11.7h.02M15.6 11.7h.02" stroke={accent} strokeWidth="2.6" strokeLinecap="round" />
+    </BaseIcon>
+  );
+}
 
-// ── Finance ────────────────────────────────────────────────────────────────
+export function OneMilProfileIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = active ? ORANGE : PLATINUM;
 
-export const OneMilWalletIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <path d="M21 12V7H5a2 2 0 010-4h14v4" />
-  <path d="M3 5v14a2 2 0 002 2h16v-5" />
-  <path d="M18 12a2 2 0 000 4h4v-4z" />
-</>);
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 12.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Z" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M4.6 20.3c.8-3.6 3.7-5.6 7.4-5.6s6.6 2 7.4 5.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M12 6.1v.01" stroke={accent} strokeWidth="2.4" strokeLinecap="round" />
+    </BaseIcon>
+  );
+}
 
-export const OneMilCoinsIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <circle cx="8" cy="8" r="6" />
-  <path d="M18.09 10.37A6 6 0 1110.34 18" />
-  <path d="M7 6h1v4" />
-  <line x1="16.71" y1="13.88" x2="17.09" y2="14.28" />
-</>);
+export function OneMilHomeIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
 
-/** Alias for MioCoin visual */
-export const OneMilMioCoinIcon = OneMilCoinsIcon;
+  return (
+    <BaseIcon {...props}>
+      <path d="M3.8 11.1 12 4.2l8.2 6.9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6.2 10.8v8.4h11.6v-8.4" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M10.1 19.2v-5h3.8v5" stroke={accent} strokeWidth="1.7" strokeLinejoin="round" />
+    </BaseIcon>
+  );
+}
 
-// ── Security & Trust ───────────────────────────────────────────────────────
+export function OneMilHeartIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = active ? ORANGE : 'currentColor';
 
-export const OneMilShieldIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-</>);
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 20.2S4.2 15.7 4.2 9.4c0-2.5 1.9-4.4 4.2-4.4 1.5 0 2.8.8 3.6 2 .8-1.2 2.1-2 3.6-2 2.3 0 4.2 1.9 4.2 4.4 0 6.3-7.8 10.8-7.8 10.8Z" stroke={accent} strokeWidth="1.7" strokeLinejoin="round" />
+    </BaseIcon>
+  );
+}
 
-// ── Communication ──────────────────────────────────────────────────────────
+export function OneMilGiftIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
 
-export const OneMilBellIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-  <path d="M13.73 21a2 2 0 01-3.46 0" />
-</>);
+  return (
+    <BaseIcon {...props}>
+      <path d="M4 10h16v10H4V10Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M3 7h18v3H3V7Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M12 7v13" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 7c-1.8 0-3.2-.8-3.2-2.1 0-1 .8-1.7 1.8-1.7 1.3 0 2.4 1.4 1.4 3.8Z" stroke={accent} strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M12 7c1.8 0 3.2-.8 3.2-2.1 0-1-.8-1.7-1.8-1.7-1.3 0-2.4 1.4-1.4 3.8Z" stroke={accent} strokeWidth="1.4" strokeLinejoin="round" />
+    </BaseIcon>
+  );
+}
 
-export const OneMilEmailIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-  <polyline points="22,6 12,13 2,6" />
-</>);
+export function OneMilDiamondIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
 
-export const OneMilInfoIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <circle cx="12" cy="12" r="10" />
-  <line x1="12" y1="8" x2="12" y2="12" />
-  <line x1="12" y1="16" x2="12.01" y2="16" strokeWidth={3} />
-</>);
+  return (
+    <BaseIcon {...props}>
+      <path d="M7.2 4.8h9.6l4 5.2L12 20.2 3.2 10l4-5.2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M3.5 10h17" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M8.2 5 12 20M15.8 5 12 20" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M12 5v5" stroke={accent} strokeWidth="1.5" strokeLinecap="round" />
+    </BaseIcon>
+  );
+}
 
-// ── Premium & Status ───────────────────────────────────────────────────────
+export function OneMilZapIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = active ? ORANGE : 'currentColor';
 
-export const OneMilCrownIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7z" />
-  <line x1="2" y1="20" x2="22" y2="20" />
-</>);
+  return (
+    <BaseIcon {...props}>
+      <path d="M13.4 3.7 5.6 13h6l-1 7.3 7.8-9.6h-6l1-7Z" stroke={accent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </BaseIcon>
+  );
+}
 
-export const OneMilDiamondIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <path d="M6 3h12l4 6-10 13L2 9z" />
-  <path d="M2 9h20" />
-  <path d="M6 3l4 6m8-6l-4 6" />
-</>);
+export function OneMilShieldIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
 
-export const OneMilStarIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-</>);
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 3.8 19 6v5.4c0 4.3-2.8 7.5-7 9-4.2-1.5-7-4.7-7-9V6l7-2.2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="m12 8.2.9 1.8 2 .3-1.45 1.42.34 2L12 12.78l-1.79.94.34-2L9.1 10.3l2-.3.9-1.8Z" stroke={accent} strokeWidth="1.3" strokeLinejoin="round" />
+    </BaseIcon>
+  );
+}
 
-// ── UI Actions ─────────────────────────────────────────────────────────────
+export function OneMilInfoIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
 
-export const OneMilFilterIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <line x1="4" y1="6" x2="20" y2="6" />
-  <line x1="7" y1="12" x2="17" y2="12" />
-  <line x1="10" y1="18" x2="14" y2="18" />
-</>);
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 10.4v5" stroke={accent} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M12 7.6h.02" stroke={accent} strokeWidth="2.4" strokeLinecap="round" />
+    </BaseIcon>
+  );
+}
 
-export const OneMilZapIcon: React.FC<IconProps> = ({
-  size = 24, className = '', color = 'currentColor', strokeWidth = 2,
-}) => base(size, className, color, strokeWidth, <>
-  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-</>);
+export function OneMilFilterIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = active ? ORANGE : 'currentColor';
+
+  return (
+    <BaseIcon {...props}>
+      <path d="M4 6h16l-6.4 7.2v4.4l-3.2 1.8v-6.2L4 6Z" stroke={accent} strokeWidth="1.7" strokeLinejoin="round" />
+    </BaseIcon>
+  );
+}
+
+export function OneMilMioCoinIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
+  const main = active ? ORANGE : SILVER;
+
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" stroke={main} strokeWidth="1.7" />
+      <path d="M7.7 15.7V8.3h1.7l2.6 4.2 2.6-4.2h1.7v7.4" stroke={accent} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9.4 8.3v7.4M14.6 8.3v7.4" stroke={accent} strokeWidth="1.2" strokeLinecap="round" />
+    </BaseIcon>
+  );
+}
+
+export function OneMilCoinsIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
+
+  return (
+    <BaseIcon {...props}>
+      <ellipse cx="9" cy="7" rx="4.4" ry="2.2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M4.6 7v4.2c0 1.2 2 2.2 4.4 2.2s4.4-1 4.4-2.2V7" stroke="currentColor" strokeWidth="1.5" />
+      <ellipse cx="15" cy="12.5" rx="4.4" ry="2.2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M10.6 12.5v4.2c0 1.2 2 2.2 4.4 2.2s4.4-1 4.4-2.2v-4.2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M15 12.5h.02" stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
+    </BaseIcon>
+  );
+}
+
+export function OneMilCartIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
+
+  return (
+    <BaseIcon {...props}>
+      <path d="M4 5h2.2l1.4 9.2h9.8l2.1-6.2H7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9.5 19.2h.02M17 19.2h.02" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+    </BaseIcon>
+  );
+}
+
+export function OneMilEmailIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
+
+  return (
+    <BaseIcon {...props}>
+      <path d="M4.5 6.5h15a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 16V8a1.5 1.5 0 0 1 1.5-1.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="m4.2 8 7.8 5.4L19.8 8" stroke={accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </BaseIcon>
+  );
+}
+
+export function OneMilCrownIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
+
+  return (
+    <BaseIcon {...props}>
+      <path d="M3.4 17h17.2l-2-9.5-4.6 4.5L12 5.2l-2 6.8L5.4 7.5 3.4 17Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M3.4 17h17.2" stroke={accent} strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M12 5.2v.01" stroke={accent} strokeWidth="2.4" strokeLinecap="round" />
+    </BaseIcon>
+  );
+}
+
+export function OneMilStarIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
+
+  return (
+    <BaseIcon {...props}>
+      <path d="m12 3.4 2.45 5.05 5.55.8-4.02 3.92.95 5.53L12 16.1 7.07 18.7l.95-5.53L4 9.25l5.55-.8L12 3.4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="m12 8.5.75 1.55 1.7.25-1.23 1.2.29 1.68L12 12.38l-1.51.8.29-1.68-1.23-1.2 1.7-.25L12 8.5Z" stroke={accent} strokeWidth="1.3" strokeLinejoin="round" />
+    </BaseIcon>
+  );
+}
+
+export function OneMilMedalIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
+
+  return (
+    <BaseIcon {...props}>
+      <circle cx="12" cy="9.5" r="5.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8.5 14.2 7 21l5-2.8 5 2.8-1.5-6.8" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M12 7v.01" stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M10.2 9.5h3.6" stroke={accent} strokeWidth="1.5" strokeLinecap="round" />
+    </BaseIcon>
+  );
+}
+
+export function OneMilTicketIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
+
+  return (
+    <BaseIcon {...props}>
+      <path d="M3.5 8.6A1.5 1.5 0 0 1 5 7.1h14A1.5 1.5 0 0 1 20.5 8.6v1.6a2.3 2.3 0 0 0 0 4.6v1.6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 16.4v-1.6a2.3 2.3 0 0 0 0-4.6V8.6Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M15 7v10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeDasharray="2.5 2" />
+      <path d="M8.5 12h4" stroke={accent} strokeWidth="1.8" strokeLinecap="round" />
+    </BaseIcon>
+  );
+}
+
+export function OneMilBellIcon(props: OneMilIconProps) {
+  const active = props.active ?? false;
+  const accent = accentColor(active);
+
+  return (
+    <BaseIcon {...props}>
+      <path d="M18 10.6c0-3.2-2.2-5.5-6-5.5s-6 2.3-6 5.5v4.2l-1.7 2.4h15.4L18 14.8v-4.2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M10 20h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M18 14.7h.02" stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
+    </BaseIcon>
+  );
+}
