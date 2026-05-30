@@ -22,6 +22,7 @@ import { WinnerCard } from "@/components/WinnerCard";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { ContestCard } from "@/components/ContestCard";
 import { Gift, Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, Info, X } from "lucide-react";
+import trophyIcon from "@/assets/icons/icon-trophy-onemil.svg";
 import { Footer } from "@/components/Footer";
 import { toast } from "sonner";
 import { logMonitoringEvent, logStripeCheckoutClientFailure } from "@/lib/monitoring";
@@ -633,7 +634,7 @@ const Homepage = () => {
                     )}
                     {!placementBanners.probihajici_souteze?.image_url && (
                       <>
-                        <Trophy className="w-8 h-8 text-[#FF8A00] mb-2 relative z-10" />
+                        <img src={trophyIcon} alt="" aria-hidden="true" className="w-8 h-8 mb-2 relative z-10 rounded-lg" />
                         <div className="text-sm font-semibold text-foreground relative z-10">Probíhající soutěže</div>
                       </>
                     )}
@@ -669,7 +670,7 @@ const Homepage = () => {
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
                   <h2 className="text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
-                    <Trophy className="w-6 h-6 md:w-7 md:h-7" />
+                    <img src={trophyIcon} alt="" aria-hidden="true" className="w-6 h-6 md:w-7 md:h-7 rounded-md" />
                     Poslední výherci
                   </h2>
                   <p className="text-sm text-text-silver">Nejnovější výhry z našich soutěží</p>
@@ -683,7 +684,7 @@ const Homepage = () => {
                     ))
                   ) : !latestWinners || latestWinners.length === 0 ? (
                     <div className="text-center py-12 space-y-3">
-                      <Trophy className="w-12 h-12 mx-auto text-muted-foreground/50" />
+                      <img src={trophyIcon} alt="" aria-hidden="true" className="w-12 h-12 mx-auto rounded-xl opacity-50" />
                       <h3 className="text-lg font-bold text-foreground">Zatím žádní výherci</h3>
                       <p className="text-sm text-muted-foreground">Momentálně nejsou k dispozici žádné výhry</p>
                     </div>

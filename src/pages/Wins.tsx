@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { LoggedOutScreen } from '@/components/LoggedOutScreen';
 import { supabase } from '@/integrations/supabase/client';
 import { Trophy, Filter, ArrowUp, ArrowDown, Gift, Sparkles, Crown, Tag } from 'lucide-react';
+import trophyIcon from '@/assets/icons/icon-trophy-onemil.svg';
 import { useNavigate } from 'react-router-dom';
 import { WinCard } from '@/components/WinCard';
 import { WinDetailModal } from '@/components/WinDetailModal';
@@ -657,7 +658,7 @@ const Wins: React.FC = () => {
                     border: '1px solid rgba(255,138,0,0.1)',
                   }}
                 >
-                  <Trophy className="w-12 h-12 text-[#FF8A00]/30" />
+                  <img src={trophyIcon} alt="" aria-hidden="true" className="w-12 h-12 rounded-xl opacity-30" />
                 </div>
                 <h3
                   className="text-2xl font-bold mb-3"

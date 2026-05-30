@@ -1,6 +1,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Gift, CheckCircle, Clock, Package } from 'lucide-react';
+import trophyIcon from '@/assets/icons/icon-trophy-onemil.svg';
 import { MIOCOIN_IMAGE_URL } from '@/components/MioCoin';
 import { supabaseUrl } from '@/integrations/supabase/client';
 
@@ -135,7 +136,7 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', 
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-muted">
             {isMainPrize ? (
-              <Trophy className="w-16 h-16 text-amber-400/30" />
+              <img src={trophyIcon} alt="" aria-hidden="true" className="w-16 h-16 rounded-2xl opacity-30" />
             ) : (
               <Gift className="w-16 h-16 text-purple-400/30" />
             )}

@@ -19,7 +19,8 @@ import {
   recordTicketPurchaseAttemptForAbuseCheck,
 } from '@/lib/monitoring';
 import { analytics } from '@/lib/analytics';
-import { Heart, Trophy } from 'lucide-react';
+import { Heart, Trophy, Medal } from 'lucide-react';
+import trophyIcon from '@/assets/icons/icon-trophy-onemil.svg';
 
 interface Contest {
   id: string;
@@ -424,8 +425,11 @@ const Index = () => {
         {/* Page Header - matching homepage typography */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-center md:text-left flex-1">
-            <h1 className="text-2xl md:text-3xl font-bold text-[#FFB547] flex items-center gap-3 justify-center md:justify-start">
-              <Trophy className="w-7 h-7 md:w-8 md:h-8" />
+            <h1
+              className="text-2xl md:text-3xl font-bold text-[#E7EBF0] flex items-center gap-3 justify-center md:justify-start tracking-[-0.02em]"
+              style={{ fontFamily: 'var(--om-font-heading)' }}
+            >
+              <img src={trophyIcon} alt="" aria-hidden="true" className="w-7 h-7 md:w-8 md:h-8 shrink-0 rounded-lg" />
               Soutěže
             </h1>
             <p className="text-sm text-text-silver mt-2">Vyberte si soutěž a otevřete další tiket v pořadí.</p>
@@ -472,8 +476,8 @@ const Index = () => {
 
         {contests.length === 0 && (
           <div className="text-center py-16 space-y-4">
-            <Trophy className="w-16 h-16 mx-auto text-muted-foreground/50" />
-            <h3 className="text-xl font-bold text-foreground">Žádné soutěže</h3>
+            <img src={trophyIcon} alt="" aria-hidden="true" className="w-16 h-16 mx-auto rounded-2xl opacity-60" />
+            <h3 className="text-xl font-bold text-[#E7EBF0]" style={{ fontFamily: 'var(--om-font-heading)' }}>Žádné soutěže</h3>
             <p className="text-sm text-muted-foreground">Momentálně nejsou dostupné žádné soutěže.</p>
           </div>
         )}
