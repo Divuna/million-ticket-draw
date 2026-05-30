@@ -728,9 +728,12 @@ const Profile: React.FC = () => {
           </div>
         </div>
 
-        <div className="max-w-2xl mx-auto space-y-5">
-          
-          {/* ── Peněženka ───────────────────────────────────────────────── */}
+        <div className="max-w-5xl mx-auto space-y-5">
+
+          {/* ── Top row: Peněženka + Referral (2-col on desktop) ─────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+
+          {/* ── Peněženka ─────────────────────────────────────────────── */}
           <PremiumCard>
             <div className="p-6">
               {/* Header */}
@@ -874,7 +877,15 @@ const Profile: React.FC = () => {
             </div>
           </PremiumCard>
 
-          {/* ── Účet ────────────────────────────────────────────────────── */}
+          {/* ── Referral (right column on desktop) ──────────────────────── */}
+          <ReferralSection isLoaded={pageLoaded} />
+
+          </div>{/* end top grid */}
+
+          {/* ── Settings below ──────────────────────────────────────────── */}
+          <div className="space-y-5">
+
+          {/* ── Účet ──────────────────────────────────────────────────── */}
           <PremiumCard>
             <div className="p-6">
               <div className="flex items-center gap-4 mb-5">
@@ -1315,9 +1326,9 @@ const Profile: React.FC = () => {
             </div>
           </PremiumCard>
 
-          {/* ── Doporučení přátel ────────────────────────────────────────── */}
-          <ReferralSection isLoaded={pageLoaded} />
-        </div>
+          </div>{/* end settings section */}
+
+        </div>{/* end max-w-5xl */}
       </div>
 
       {/* Premium Top-up Modal */}
