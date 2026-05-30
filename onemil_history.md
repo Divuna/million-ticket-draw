@@ -14,6 +14,45 @@
 
 ---
 
+## 2026-05-31 — Winners page: unify winner card backgrounds (commit `8197d6ae`)
+
+- `src/pages/Winners.tsx` — přidána `WINNER_BG_ROTATION` (trophy/crown/clean), `.map()` s indexem, `index % 3` pro rotaci
+- Odstraněn `usePlacementBanners` (nebyl potřeba po přechodu na lokální assety)
+- Lucide `Trophy` → `OneMilTrophyIcon` v headingu i empty state
+
+---
+
+## 2026-05-31 — Winner card overlay fine-tune: restore right decoration (commit `9d9c716c`)
+
+- `src/components/WinnerCard.tsx` — background opacity `0.28 → 0.42`, pravý gradient `0.52 → 0.14`
+- Dekorativní trofej/koruna vpravo opět viditelná; levý hnědý blok stále zakryt (`0.78`)
+
+---
+
+## 2026-05-31 — Winner card overlay: soften backgrounds (commit `4b127aef`)
+
+- `src/components/WinnerCard.tsx` — snížena opacity background image `1.0 → 0.28`
+- Přidán dark gradient overlay (z-[1], DOM order nad obrázkem): levý pruh `0.72`, střed `0.22`, pravý `0.52`
+- Výsledek: text čitelný, hnědý blok zakryt, dekorace poněkud skryta (následně opraveno v `9d9c716c`)
+
+---
+
+## 2026-05-31 — Winner card rotating backgrounds — první nasazení (commit `7276c254`)
+
+- Extrakce ZIP do `src/assets/winner-backgrounds/`: trophy, crown, clean, trophy-with-coin-area PNG
+- `src/pages/Homepage.tsx` — importy + `WINNER_BG_ROTATION`, `.map((winner, index) =>`, `index % 3`
+- `cardStyleImageUrl` prop nahrazen rotačním assetem (místo statického admin banneru)
+
+---
+
+## 2026-05-31 — GitHub Actions odblokován — repo změněno na public
+
+- Repo `Divuna/million-ticket-draw` bylo private → Actions minuty vyčerpány → CI padalo za 3–5s s billing errorem
+- Repo změněno na public → Linux Actions minuty zdarma neomezeně
+- Smoke tests ✅ (run `26694708778`, 1m 10s), Staging Full E2E ✅ (run `26694751314`, 3m 39s)
+
+---
+
 ## 2026-05-30 — OneMil premium icon system — icon size fine-tune (commit `87f74083`)
 
 - Header tile ikony: `size={28}` → `size={36}` desktop (`md:w-9 md:h-9`) pro Games, Vouchers, Messages, MyContests; Wins: `size={32}` → `size={36}`

@@ -142,6 +142,11 @@ Technical:
 
 ---
 
+## CURRENT SYSTEM STATUS (31. 05. 2026)
+
+- **Winner card backgrounds KOMPLETNÍ (31. 05. 2026):** Rotující brand pozadí (trophy/crown/clean) na kartách výherců. Assets v `src/assets/winner-backgrounds/`. Konstanta `WINNER_BG_ROTATION` + `index % 3` nasazena na Homepage i Winners stránce. Overlay v `WinnerCard.tsx`: opacity `0.42`, gradient levý `0.78` / střed `0.20` / pravý `0.14`. **Pravidlo:** každá nová stránka se `WinnerCard` musí použít `WINNER_BG_ROTATION[index % 3]` — overlay logika je automatická v komponentě. Commity: `7276c254` → `4b127aef` → `9d9c716c` → `8197d6ae`.
+- **GitHub Actions odblokován (31. 05. 2026):** Repo změněno z private na **public** — Actions minuty jsou nyní zdarma neomezeně. Smoke ✅, Staging Full E2E ✅.
+
 ## CURRENT SYSTEM STATUS (30. 05. 2026)
 
 - **OneMil Premium Icon System KOMPLETNÍ (30. 05. 2026):** `src/components/icons/OneMilIcons.tsx` obsahuje 23 brand ikon. Customer-facing UI kompletně přepnuto z Lucide na OneMil ikony. Sémantická pravidla: `OneMilGiftIcon` = bonusy/dárky; `OneMilVoucherIcon` = vouchery; `OneMilWinIcon` = sekce Výhry; `OneMilTrophyIcon` = Soutěže/hlavní výhra; `OneMilMioCoinIcon` = MioCoin dobití. Všechny hlavní customer stránky mají unifikovaný premium header tile vzor (dark karta + shimmer + 64px orange gradient tile + gradient h1). Bottom nav: size 24px, active scale-110. Commity: `cc490725` → `ee9b7d9c` → `61840ab6` → `94ed004f` → `1d5c5dde` → `87f74083`. Detailní dokumentace v `onemil_state.md`.

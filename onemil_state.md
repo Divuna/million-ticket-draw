@@ -1,6 +1,77 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 30. 05. 2026
+**Aktualizováno:** 31. 05. 2026
+
+---
+
+## WINNER CARD BACKGROUNDS — KOMPLETNÍ (31. 05. 2026)
+
+### Assets
+
+Soubory v `src/assets/winner-backgrounds/`:
+
+| Soubor | Použití v rotaci |
+|--------|-----------------|
+| `winner-card-bg-trophy.png` | index % 3 === 0 (1., 4., 7. … karta) |
+| `winner-card-bg-crown.png` | index % 3 === 1 (2., 5., 8. … karta) |
+| `winner-card-bg-clean.png` | index % 3 === 2 (3., 6., 9. … karta) |
+| `winner-card-bg-trophy-with-coin-area.png` | dostupný, zatím mimo rotaci |
+
+### Rotační konstanta (copy-paste pattern)
+
+```tsx
+import winnerBgTrophy from '@/assets/winner-backgrounds/winner-card-bg-trophy.png';
+import winnerBgCrown from '@/assets/winner-backgrounds/winner-card-bg-crown.png';
+import winnerBgClean from '@/assets/winner-backgrounds/winner-card-bg-clean.png';
+
+const WINNER_BG_ROTATION = [winnerBgTrophy, winnerBgCrown, winnerBgClean];
+
+// v .map():
+cardStyleImageUrl={WINNER_BG_ROTATION[index % WINNER_BG_ROTATION.length]}
+```
+
+### Kde se rotace používá
+
+| Stránka/komponenta | Soubor | Stav |
+|-------------------|--------|------|
+| Homepage „Poslední výherci" | `src/pages/Homepage.tsx` | ✅ rotace |
+| Standalone Winners stránka | `src/pages/Winners.tsx` | ✅ rotace |
+
+### WinnerCard overlay — aktuální CSS (src/components/WinnerCard.tsx)
+
+Dvě vrstvy na `z-[1]` (DOM order — gradient překryje obrázek):
+
+```tsx
+// Vrstva 1 — background image
+opacity: 0.42
+
+// Vrstva 2 — dark gradient overlay
+linear-gradient(to right,
+  rgba(10,11,15, 0.78)  0–88px      // levý pruh: zakrývá hnědý blok
+  rgba(10,11,15, 0.42)  130px       // přechod
+  rgba(10,11,15, 0.20)  55%         // střed: text čitelný
+  rgba(10,11,15, 0.14)  100%        // vpravo: dekorativní tvar viditelný
+)
+```
+
+**Pravidlo:** Pokud přidáváš novou stránku se `WinnerCard`, použij `WINNER_BG_ROTATION` a `index % 3` — overlay logika je v `WinnerCard.tsx` automaticky.
+
+**Nesmí se měnit bez souhlasu:** `cardStyleImageUrl` prop v `WinnerCard` — overlay logika závisí na tom, zda je prop vyplněný.
+
+### Commity
+
+| Commit | Popis |
+|--------|-------|
+| `7276c254` | feat: přidány background assets + rotace na Homepage |
+| `4b127aef` | fix: snížena opacity obrázku (0.28), přidán dark gradient overlay |
+| `9d9c716c` | fix: opacity 0.42, pravý gradient 0.14 (dekorace viditelná) |
+| `8197d6ae` | feat: rotace přidána na Winners stránku, Lucide Trophy → OneMilTrophyIcon |
+
+### GitHub Actions — stav (31. 05. 2026)
+
+- Repo bylo **private** → GitHub Actions minuty se vyčerpaly → CI nefungovalo
+- **Oprava:** repo změněno na **public** → Actions minuty jsou nyní zdarma neomezeně
+- Smoke tests ✅ (1m 10s), Staging Full E2E ✅ (3m 39s) — oba prošly po zveřejnění
 
 ---
 
