@@ -999,7 +999,7 @@ export default function MessagesPage() {
                   boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
                 }}
               >
-                <OneMilMessageIcon size={28} className="w-7 h-7 text-black" />
+                <OneMilMessageIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />
               </div>
 
               <div className="flex-1">

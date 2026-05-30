@@ -439,7 +439,7 @@ const Wins: React.FC = () => {
                   boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
                 }}
               >
-                <OneMilWinIcon size={32} className="w-8 h-8 text-black" />
+                <OneMilWinIcon size={36} className="w-8 h-8 md:w-9 md:h-9 text-black" />
               </div>
 
               <div>

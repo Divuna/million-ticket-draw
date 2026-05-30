@@ -62,8 +62,8 @@ export const BottomNavigation = () => {
                   : "text-white/55 hover:text-white/92 hover:bg-white/[0.06] active:scale-[0.98]"
               }`}
           >
-            <div className={`relative ${isActive ? "scale-105" : ""} transition-transform duration-200`}>
-              <Icon size={22} strokeWidth={isActive ? 2.25 : 2} />
+            <div className={`relative ${isActive ? "scale-110" : ""} transition-transform duration-200`}>
+              <Icon size={24} strokeWidth={isActive ? 2.25 : 2} />
 
               {(showMessagesBadge || showWinsBadge) && (
                 <span

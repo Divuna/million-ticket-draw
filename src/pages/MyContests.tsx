@@ -124,7 +124,7 @@ const MyContests: React.FC = () => {
                   boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
                 }}
               >
-                <OneMilTicketIcon size={28} className="w-7 h-7 text-black" />
+                <OneMilTicketIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />
               </div>
               <div>
                 <h1

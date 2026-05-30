@@ -306,7 +306,7 @@ const Vouchers: React.FC = () => {
                 boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
               }}
             >
-              <OneMilVoucherIcon size={28} className="w-7 h-7 text-black" />
+              <OneMilVoucherIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />
             </div>
             <div>
               <h1
