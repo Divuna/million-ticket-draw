@@ -1,14 +1,16 @@
 import { Header } from '@/components/Header';
 import { WinnerCard } from '@/components/WinnerCard';
 import { useLatestWinners } from '@/hooks/useLatestWinners';
-import { usePlacementBanners } from '@/hooks/usePlacementBanners';
-import { Trophy } from 'lucide-react';
+import { OneMilTrophyIcon } from '@/components/icons/OneMilIcons';
 import { Skeleton } from '@/components/ui/skeleton';
+import winnerBgTrophy from '@/assets/winner-backgrounds/winner-card-bg-trophy.png';
+import winnerBgCrown from '@/assets/winner-backgrounds/winner-card-bg-crown.png';
+import winnerBgClean from '@/assets/winner-backgrounds/winner-card-bg-clean.png';
+
+const WINNER_BG_ROTATION = [winnerBgTrophy, winnerBgCrown, winnerBgClean];
 
 const Winners = () => {
   const { data: winners, isLoading } = useLatestWinners(50);
-  const { banners } = usePlacementBanners(['vzhled_karta_vyher']);
-  const cardStyleImageUrl = banners.vzhled_karta_vyher?.image_url || null;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -19,7 +21,7 @@ const Winners = () => {
           {/* Header */}
           <div className="space-y-2">
             <h1 className="text-3xl md:text-4xl font-bold text-heading-gold flex items-center gap-3">
-              <Trophy className="w-8 h-8" />
+              <OneMilTrophyIcon size={32} className="w-8 h-8" />
               Poslední výherci
             </h1>
             <p className="text-text-silver">
@@ -44,7 +46,7 @@ const Winners = () => {
                 </div>
               ))
             ) : winners && winners.length > 0 ? (
-              winners.map((winner) => (
+              winners.map((winner, index) => (
                 <WinnerCard
                   key={winner.id}
                   userName={winner.user_name}
@@ -54,14 +56,14 @@ const Winners = () => {
                   createdAt={winner.created_at}
                   type={winner.type}
                   prizeImageUrl={winner.prize_image_url}
-                  cardStyleImageUrl={cardStyleImageUrl}
+                  cardStyleImageUrl={WINNER_BG_ROTATION[index % WINNER_BG_ROTATION.length]}
                   userAvatarUrl={winner.user_avatar_url}
                   ticketNumber={winner.ticket_number}
                 />
               ))
             ) : (
               <div className="col-span-full text-center py-12 space-y-3">
-                <Trophy className="w-12 h-12 mx-auto text-muted-foreground/50" />
+                <OneMilTrophyIcon size={48} className="w-12 h-12 mx-auto text-muted-foreground/50" />
                 <p className="text-sm text-muted-foreground">
                   Zatím nebyly vyhlášeny žádné výhry.
                 </p>
