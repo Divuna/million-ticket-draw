@@ -766,7 +766,7 @@ const Profile: React.FC = () => {
                   </div>
 
                   {/* Bonus balance */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 lg:border-l lg:border-[rgba(255,138,0,0.15)] lg:pl-6">
+                  <div className="flex flex-col gap-3 lg:border-l lg:border-[rgba(255,138,0,0.15)] lg:pl-6">
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 rounded-xl bg-green-500/20 border border-green-500/30">
                         <OneMilCoinsIcon size={20} className="h-5 w-5 text-green-500" />
@@ -775,30 +775,30 @@ const Profile: React.FC = () => {
                         <div className="flex items-center gap-2 mb-0.5">
                           <p className="text-xs text-green-500/80 uppercase tracking-wider">Bonusové</p>
                           <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <OneMilInfoIcon size={14} className="h-3.5 w-3.5 text-muted-foreground hover:text-green-500 cursor-help transition-colors" />
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50">
-                                  <p className="text-sm">Bonusové MioCoiny získáváte jako odměnu při hraní soutěží. Můžete je převést do hlavní peněženky a použít na otevření tiketů.</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          <p className="text-2xl font-bold text-green-500 tabular-nums">
-                            {animatedBonusBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
-                          </p>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <OneMilInfoIcon size={14} className="h-3.5 w-3.5 text-muted-foreground hover:text-green-500 cursor-help transition-colors" />
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50">
+                                <p className="text-sm">Bonusové MioCoiny získáváte jako odměnu při hraní soutěží. Můžete je převést do hlavní peněženky a použít na otevření tiketů.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
+                        <p className="text-2xl font-bold text-green-500 tabular-nums">
+                          {animatedBonusBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
+                        </p>
                       </div>
-                      <Button size="sm" onClick={handleTransferBonus}
-                        disabled={transferring || (wallet?.bonus_balance_coins ?? 0) === 0}
-                        className="bg-green-600 hover:bg-green-500 text-white font-semibold shadow-lg shadow-green-500/15 transition-all duration-200">
-                        {transferring ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <OneMilDiamondIcon size={16} className="h-4 w-4 mr-2" />}
-                        Převést bonusové MioCoiny
-                      </Button>
                     </div>
+                    <Button size="sm" onClick={handleTransferBonus}
+                      disabled={transferring || (wallet?.bonus_balance_coins ?? 0) === 0}
+                      className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold shadow-lg shadow-green-500/15 transition-all duration-200">
+                      {transferring ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <OneMilDiamondIcon size={16} className="h-4 w-4 mr-2" />}
+                      Převést bonusové MioCoiny
+                    </Button>
                   </div>
                 </div>
+              </div>
 
               {/* Action buttons */}
               <div className="flex flex-col sm:flex-row gap-3 mb-5">
