@@ -1,5 +1,139 @@
 ﻿# OneMil – aktuální stav projektu
 
+**Aktualizováno:** 30. 05. 2026
+
+---
+
+## ONEMIL PREMIUM ICON SYSTEM — KOMPLETNÍ (30. 05. 2026)
+
+### Soubory
+
+- **`src/components/icons/OneMilIcons.tsx`** — kanonický soubor všech OneMil brand ikon (23 ikon)
+- **`src/assets/icons/icon-trophy-onemil.svg`** — kopie brand kit SVG (512×512, dark bg, silver+orange gradient)
+
+### Exportované ikony (OneMilIcons.tsx)
+
+| Export | Použití |
+|--------|---------|
+| `OneMilTrophyIcon` | Soutěže, hlavní výhra |
+| `OneMilWinIcon` | Výhry sekce, počet výher |
+| `OneMilVoucherIcon` | Vouchery stránka, empty states |
+| `OneMilWalletIcon` | Peněženka, MioCoin balance |
+| `OneMilMessageIcon` | Zprávy sekce |
+| `OneMilProfileIcon` | Profil sekce |
+| `OneMilHomeIcon` | Domů nav |
+| `OneMilHeartIcon` | Oblíbené |
+| `OneMilGiftIcon` | Bonusové výhry, dárky |
+| `OneMilDiamondIcon` | Premium/bonus (náhrada Sparkles) |
+| `OneMilZapIcon` | Fast access |
+| `OneMilShieldIcon` | Bezpečnost, právní |
+| `OneMilInfoIcon` | Info tooltip |
+| `OneMilFilterIcon` | Filtrování |
+| `OneMilMioCoinIcon` / `OneMilCoinsIcon` | MioCoin balance, dobití |
+| `OneMilCartIcon` | Zakoupené, nákup |
+| `OneMilEmailIcon` | E-mail sekce |
+| `OneMilBellIcon` | Notifikace |
+| `OneMilCrownIcon` | VIP/level badge |
+| `OneMilStarIcon` | Hvězdičkové hodnocení |
+| `OneMilMedalIcon` | Ocenění |
+| `OneMilTicketIcon` | Tikety, Moje hry |
+
+### Props pattern
+
+```tsx
+<OneMilXxxIcon
+  size={24}          // SVG width/height atribut
+  className="w-6 h-6 text-[#FF8A00]"  // CSS override + color
+  active={false}     // true = orange/amber, false = silver
+  color="#FF8A00"    // přímý override barvy
+/>
+```
+
+### Sémantická pravidla (závazná)
+
+- `OneMilGiftIcon` — POUZE bonusové výhry a dárky; **NE** pro vouchery ani MioCoin
+- `OneMilVoucherIcon` — stránka Vouchery, záložky, empty states voucherů
+- `OneMilMioCoinIcon` — dobití MioCoinů, balance sekce
+- `OneMilWinIcon` — sekce Výhry (tab, count badge, empty state)
+- `OneMilTrophyIcon` — Soutěže, hlavní výhra v filtrech
+- `OneMilDiamondIcon` — premium/bonus vizuály (náhrada Lucide Sparkles)
+
+### Premium page-header tile vzor (závazný pro všechny hlavní stránky)
+
+```tsx
+<div
+  className="relative overflow-hidden rounded-2xl p-6"
+  style={{
+    background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
+    border: '1px solid rgba(255,138,0,0.2)',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.1)',
+  }}
+>
+  {/* Shimmer */}
+  <div className="absolute inset-0 opacity-10 pointer-events-none" style={{
+    background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,1) 50%, transparent 100%)',
+    backgroundSize: '200% 100%', animation: 'shimmer 4s ease-in-out infinite',
+  }} />
+  <div className="relative flex items-center gap-4">
+    {/* Tile */}
+    <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center shrink-0"
+      style={{ background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)', boxShadow: '0 4px 20px rgba(255,138,0,0.3)' }}>
+      <OneMilXxxIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />
+    </div>
+    {/* Text */}
+    <div>
+      <h1 className="text-2xl md:text-3xl font-bold tracking-tight"
+        style={{ background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+        Název stránky
+      </h1>
+      <p className="text-sm text-gray-400 mt-1">Podtitulek</p>
+    </div>
+  </div>
+</div>
+```
+
+**Tile ikona:** 56×56px mobile / 64×64px desktop · ikona 28px mobile / 36px desktop · barva ikony `text-black`
+
+### Stránky s uniforním header tile vzorem
+
+| Stránka | Ikona | Commity |
+|---------|-------|---------|
+| `/games` | `OneMilTrophyIcon` | `1d5c5dde`, `87f74083` |
+| `/vouchers` | `OneMilVoucherIcon` | `1d5c5dde`, `87f74083` |
+| `/wins` | `OneMilWinIcon` | `1d5c5dde`, `87f74083` |
+| `/messages` | `OneMilMessageIcon` | `1d5c5dde`, `87f74083` |
+| `/my-contests` | `OneMilTicketIcon` | `1d5c5dde`, `87f74083` |
+
+**Profil (`/profile`):** záměrně odlišný — hero layout s avatarem, VIP badge, gradient jméno. Tile vzor sem nepatří.
+
+### Bottom navigation
+
+- Ikony: OneMil brand ikony (všech 6 nav items)
+- Velikost: `size={24}` (navýšeno z 22)
+- Active: `scale-110` (navýšeno z scale-105)
+- Pořadí: Domů, Vouchery, Soutěže, Výhry, Zprávy, Profil
+
+### Kde zůstaly Lucide ikony (záměrně)
+
+- Utility: `Clock`, `ArrowLeft/Up/Down`, `ChevronLeft/Right/Down`, `Check`, `CheckCircle`, `XCircle`, `Loader2`, `Camera`, `Volume2/VolumeX`, `Send`, `Package`, `Tag`, `Target`, `Gamepad2`
+- Social: `Facebook`, `Twitter`, `Instagram`
+- Wins header orange bg tile: Lucide `Trophy text-black` — brand SVG by na orange bg kolidovalo (záměrně ponecháno)
+
+### Kompletní commity icon systému
+
+| Commit | Popis |
+|--------|-------|
+| `cc490725` | feat: první Trophy brand SVG v customer UI |
+| `ee9b7d9c` | feat: add OneMil premium icon system (remote session) |
+| `cfcc6e86` | fix: replace placeholder icons (remote session) |
+| `61840ab6` | feat: full customer-facing icon sweep + Crown/Star/Medal/Ticket |
+| `94ed004f` | fix: sémantické opravy (Voucher/Win/MioCoin) |
+| `1d5c5dde` | feat: unified premium header tiles na všech hlavních stránkách |
+| `87f74083` | fix: fine-tune icon sizes (tile 36px desktop, nav 24px) |
+
+---
+
 **Aktualizováno:** 27. 05. 2026
 
 ---

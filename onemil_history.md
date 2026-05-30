@@ -14,6 +14,51 @@
 
 ---
 
+## 2026-05-30 — OneMil premium icon system — icon size fine-tune (commit `87f74083`)
+
+- Header tile ikony: `size={28}` → `size={36}` desktop (`md:w-9 md:h-9`) pro Games, Vouchers, Messages, MyContests; Wins: `size={32}` → `size={36}`
+- Bottom nav: `size={22}` → `size={24}`, active `scale-105` → `scale-110`
+- Soubory: Games.tsx, Vouchers.tsx, Wins.tsx, Messages.tsx, MyContests.tsx, BottomNavigation.tsx
+
+---
+
+## 2026-05-30 — Unified premium page-header tiles na customer stránkách (commit `1d5c5dde`)
+
+- Všechny hlavní customer stránky mají shodný header vzor: dark gradient karta + shimmer + orange gradient tile (56/64px) + gradient h1 + subtitle
+- Games: inline icon v h1 → tile s `OneMilTrophyIcon`, tlačítko Oblíbené zachováno vpravo
+- Vouchers: centered layout → tile s `OneMilVoucherIcon`
+- Wins: tile již existoval — Lucide `Trophy` nahrazen `OneMilWinIcon`
+- Messages: tile standardizován na `md:w-16 md:h-16`, h1 na `md:text-3xl`
+- MyContests: `Gamepad2` + plain h1 → tile s `OneMilTicketIcon`; přidán subtitle „Přehled vašich tiketů a soutěží"
+- Profile: záměrně přeskočen (hero layout s avatarem)
+
+---
+
+## 2026-05-30 — Sémantické opravy icon mappingu (commit `94ed004f`)
+
+- Vouchers.tsx: `OneMilGiftIcon` (4×) → `OneMilVoucherIcon` (nadpis, empty states, card fallbacky)
+- Wins.tsx: `OneMilTrophyIcon` (tab Výhry, empty state) → `OneMilWinIcon`; `OneMilCrownIcon` (badge počtu) → `OneMilWinIcon`
+- Homepage.tsx: `OneMilGiftIcon` → `OneMilMioCoinIcon` (Dobijte MioCoiny); `OneMilGiftIcon` → `OneMilVoucherIcon` (2× voucher sekce)
+
+---
+
+## 2026-05-30 — Full customer-facing icon sweep (commit `61840ab6`)
+
+- 15 souborů aktualizováno — kompletní sweep Lucide → OneMil v customer UI
+- BottomNavigation: všech 6 nav ikon → OneMil (Home, Ticket, Trophy, Medal, Message, Profile)
+- Homepage, Games, Vouchers, Wins, Messages, Profile, MyContests, MyContestDetail, ContestCard, WinCard, WinnerCard, BonusPrizeOverlay, TicketProgressBar
+- Přidány chybějící exporty: `OneMilCrownIcon`, `OneMilStarIcon`, `OneMilMedalIcon`, `OneMilTicketIcon`
+
+---
+
+## 2026-05-30 — OneMil premium icon system vytvořen (commity `ee9b7d9c`, `cfcc6e86`, `cc490725`)
+
+- `src/components/icons/OneMilIcons.tsx` — 23 brand ikon s `size`, `active`, `color` props; BaseIcon pattern; silver inactive / orange+amber active
+- `src/assets/icons/icon-trophy-onemil.svg` — brand kit SVG (512×512) zkopírován z `docs/brand/`
+- První nasazení: Trophy → OneMilTrophyIcon v BottomNavigation, Homepage, Games, Wins, WinCard
+
+---
+
 ## 2026-05-27 — WinnerCard premium redesign (commit `b6776ebe`)
 
 - `src/components/WinnerCard.tsx` přepsán — sjednocen s MioCoin card stylem

@@ -142,6 +142,11 @@ Technical:
 
 ---
 
+## CURRENT SYSTEM STATUS (30. 05. 2026)
+
+- **OneMil Premium Icon System KOMPLETNÍ (30. 05. 2026):** `src/components/icons/OneMilIcons.tsx` obsahuje 23 brand ikon. Customer-facing UI kompletně přepnuto z Lucide na OneMil ikony. Sémantická pravidla: `OneMilGiftIcon` = bonusy/dárky; `OneMilVoucherIcon` = vouchery; `OneMilWinIcon` = sekce Výhry; `OneMilTrophyIcon` = Soutěže/hlavní výhra; `OneMilMioCoinIcon` = MioCoin dobití. Všechny hlavní customer stránky mají unifikovaný premium header tile vzor (dark karta + shimmer + 64px orange gradient tile + gradient h1). Bottom nav: size 24px, active scale-110. Commity: `cc490725` → `ee9b7d9c` → `61840ab6` → `94ed004f` → `1d5c5dde` → `87f74083`. Detailní dokumentace v `onemil_state.md`.
+- **Icon pravidlo pro budoucí vývoj:** Nové customer-facing stránky MUSÍ používat `OneMilIcons.tsx` a unifikovaný header tile vzor. Lucide ikony zachovat POUZE pro utility (Clock, Arrow, Check, Loader2, Camera, Volume aj.).
+
 ## CURRENT SYSTEM STATUS (27. 05. 2026)
 
 - **Migrace coming_soon_banners.description APLIKOVÁNA (27. 05. 2026):** `supabase/migrations/20260527_coming_soon_banners_add_description.sql` aplikována manuálně v Supabase a ověřena. Struktura: `id uuid, image_url text, title text, created_at timestamptz, description text`. Info popup feature je plně funkční.
