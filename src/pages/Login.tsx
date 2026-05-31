@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/logo-onemil.png";
+import { enabledOAuthProviders, type OAuthProvider } from "@/lib/enabledOAuthProviders";
 
 /** Same-origin path only (open-redirect safe). Lives in this file only. */
 function safeRedirectPath(raw: string | null): string | null {
@@ -101,7 +102,7 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleOAuthSignIn = async (provider: "google" | "apple" | "facebook") => {
+  const handleOAuthSignIn = async (provider: OAuthProvider) => {
     try {
       await signInWithOAuth(provider, redirectRaw);
     } catch (error) {
@@ -165,19 +166,27 @@ const Login: React.FC = () => {
               {loading ? "Přihlašuji..." : "Přihlásit se"}
             </Button>
 
-            <div className="flex flex-col space-y-2 w-full">
-              <Button type="button" variant="outline" className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]" onClick={() => handleOAuthSignIn("google")}>
-                Přihlásit se přes Google
-              </Button>
+            {enabledOAuthProviders.length > 0 && (
+              <div className="flex flex-col space-y-2 w-full">
+                {enabledOAuthProviders.includes("google") && (
+                  <Button type="button" variant="outline" className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]" onClick={() => handleOAuthSignIn("google")}>
+                    Přihlásit se přes Google
+                  </Button>
+                )}
 
-              <Button type="button" variant="outline" className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]" onClick={() => handleOAuthSignIn("apple")}>
-                Přihlásit se přes Apple
-              </Button>
+                {enabledOAuthProviders.includes("apple") && (
+                  <Button type="button" variant="outline" className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]" onClick={() => handleOAuthSignIn("apple")}>
+                    Přihlásit se přes Apple
+                  </Button>
+                )}
 
-              <Button type="button" variant="outline" className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]" onClick={() => handleOAuthSignIn("facebook")}>
-                Přihlásit se přes Facebook
-              </Button>
-            </div>
+                {enabledOAuthProviders.includes("facebook") && (
+                  <Button type="button" variant="outline" className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]" onClick={() => handleOAuthSignIn("facebook")}>
+                    Přihlásit se přes Facebook
+                  </Button>
+                )}
+              </div>
+            )}
 
             <p className="text-sm text-muted-foreground text-center">
               Nemáte účet?{" "}

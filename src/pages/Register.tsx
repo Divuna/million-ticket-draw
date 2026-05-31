@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-onemil.png';
 import { PENDING_REFERRAL_STORAGE_KEY } from '@/hooks/useApplyPendingReferral';
 import { analytics } from '@/lib/analytics';
+import { enabledOAuthProviders, type OAuthProvider } from '@/lib/enabledOAuthProviders';
 
 const Register: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -152,7 +153,7 @@ const Register: React.FC = () => {
     }
   };
 
-  const handleOAuthSignIn = async (provider: 'google' | 'apple' | 'facebook') => {
+  const handleOAuthSignIn = async (provider: OAuthProvider) => {
     try {
       await signInWithOAuth(provider, searchParams.get('redirect'));
     } catch (error) {
@@ -303,34 +304,42 @@ const Register: React.FC = () => {
               {loading ? 'Registruji...' : 'Zaregistrovat se'}
             </Button>
             
-            <div className="flex flex-col space-y-2 w-full">
-              <Button 
-                type="button"
-                variant="outline" 
-                className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]"
-                onClick={() => handleOAuthSignIn('google')}
-              >
-                Registrovat se přes Google
-              </Button>
+            {enabledOAuthProviders.length > 0 && (
+              <div className="flex flex-col space-y-2 w-full">
+                {enabledOAuthProviders.includes('google') && (
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]"
+                    onClick={() => handleOAuthSignIn('google')}
+                  >
+                    Registrovat se přes Google
+                  </Button>
+                )}
               
-              <Button 
-                type="button"
-                variant="outline" 
-                className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]"
-                onClick={() => handleOAuthSignIn('apple')}
-              >
-                Registrovat se přes Apple
-              </Button>
+                {enabledOAuthProviders.includes('apple') && (
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]"
+                    onClick={() => handleOAuthSignIn('apple')}
+                  >
+                    Registrovat se přes Apple
+                  </Button>
+                )}
 
-              <Button 
-                type="button"
-                variant="outline" 
-                className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]"
-                onClick={() => handleOAuthSignIn('facebook')}
-              >
-                Registrovat se přes Facebook
-              </Button>
-            </div>
+                {enabledOAuthProviders.includes('facebook') && (
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]"
+                    onClick={() => handleOAuthSignIn('facebook')}
+                  >
+                    Registrovat se přes Facebook
+                  </Button>
+                )}
+              </div>
+            )}
             
             <p className="text-sm text-muted-foreground text-center">
               Už máte účet?{' '}
