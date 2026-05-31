@@ -530,7 +530,7 @@ Put the conversational part in "text" using natural Czech and visible screen nam
 MioCoin vždy popisuj jako interní OneMil kredit. Není to hotovost, nejde vybrat jako peníze a nejde převést mimo OneMil.
 Nikdy neslibuj jistou výhru ani garantovaný výsledek.
 Nevymýšlej fakta. Když si nejsi jistý, řekni to jasně a nabídni podporu.
-Nepoužívej tato slova v odpovědi: casino, hazard, jackpot, sázení, losování.
+Nepoužívej tato slova v odpovědi: náhodné, náhodně, losování, los, lottery, random, hazard, casino, jackpot, sázení.
 Odpovědi drž krátké, užitečné a přátelské v češtině.
 
 JSON a CTA (povinné pravidlo pro každou odpověď):
@@ -1085,7 +1085,25 @@ function isGuaranteedWinQuestion(userText: string): boolean {
 
 function isWinnerSelectionQuestion(userText: string): boolean {
   const f = foldCs(userText)
-  return (f.includes("jak se vybira") || f.includes("jak vybirate") || f.includes("jak je vybran")) && (f.includes("vitez") || f.includes("vyher"))
+  const mentionsWinner =
+    f.includes("vitez") ||
+    f.includes("vyherce") ||
+    f.includes("vyherci") ||
+    f.includes("vyhraje")
+  return (
+    mentionsWinner &&
+    (
+      f.includes("jak se vybira") ||
+      f.includes("jak vybirate") ||
+      f.includes("jak je vybran") ||
+      f.includes("jak funguje vyber") ||
+      f.includes("jak poznam") ||
+      f.includes("kdo vyhraje") ||
+      f.includes("vybrany nahodne") ||
+      f.includes("vybran nahodne") ||
+      f.includes("nahodne")
+    )
+  )
 }
 
 function isContestEndedQuestion(userText: string): boolean {
@@ -1095,7 +1113,19 @@ function isContestEndedQuestion(userText: string): boolean {
 
 function isForbiddenCategoryQuestion(userText: string): boolean {
   const f = foldCs(userText)
-  return f.includes("hazard") || f.includes("casino") || f.includes("jackpot") || f.includes("sazeni") || f.includes("losovani")
+  return (
+    f.includes("nahodne") ||
+    f.includes("nahodny") ||
+    f.includes("nahodna") ||
+    f.includes("random") ||
+    f.includes("lottery") ||
+    f.includes("hazard") ||
+    f.includes("casino") ||
+    f.includes("jackpot") ||
+    f.includes("sazeni") ||
+    f.includes("losovani") ||
+    f.includes(" los")
+  )
 }
 
 function isMioCoinWithdrawalQuestion(userText: string): boolean {
@@ -1847,6 +1877,27 @@ serve(async (req) => {
       return jsonSuccess(ins.id)
     }
 
+    if (isWinnerSelectionQuestion(userContent)) {
+      const reply =
+        "Vítězný tiket je určen podle pravidel konkrétní soutěže. Detaily najdete vždy v pravidlech soutěže u dané soutěže."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Soutěže", action: "/games" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
     if (isForbiddenCategoryQuestion(userContent)) {
       const reply = "OneMil je soutěžní platforma s předem danými pravidly. MioCoin je interní kredit OneMil, ne hotovost."
       const finalReply = await finalizeBobPayloadNormalized(
@@ -1869,26 +1920,6 @@ serve(async (req) => {
 
     if (isGuaranteedWinQuestion(userContent)) {
       const reply = "Ne, výhru nelze slíbit ani garantovat. Podmínky najdete u konkrétní soutěže."
-      const finalReply = await finalizeBobPayloadNormalized(
-        supabase,
-        userMsg.user_id,
-        messageId,
-        userContent,
-        { text: reply, cta: { label: "Soutěže", action: "/games" } },
-        [],
-      )
-      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
-      if (!ins.ok) {
-        return new Response(JSON.stringify({ error: ins.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
-      }
-      return jsonSuccess(ins.id)
-    }
-
-    if (isWinnerSelectionQuestion(userContent)) {
-      const reply = "Vítězný tiket je pevně určen podle pravidel konkrétní soutěže. Detaily najdete v pravidlech soutěže."
       const finalReply = await finalizeBobPayloadNormalized(
         supabase,
         userMsg.user_id,
