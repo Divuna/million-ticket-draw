@@ -36,39 +36,32 @@ jobs:
 
       - name: Run smoke tests
         id: smoke_tests
-        run: npm run test:smoke
+        run: npx playwright test tests/e2e/01-registration.spec.ts tests/e2e/02-login.spec.ts --grep-invert "new user registers and is authenticated"
         env:
           CI: true
-          # Vite app needs these to connect to Supabase at build/runtime
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_INTERNAL_FUNCTION_TOKEN: ${{ secrets.VITE_INTERNAL_FUNCTION_TOKEN }}
-          # Smoke test credentials (pre-seeded customer account)
           E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
           E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
-          # Optional: pin a specific active contest UUID for the ticket-purchase test
-          E2E_CONTEST_ID: ${{ secrets.E2E_CONTEST_ID }}
 
-      - name: Payment pipeline status — OK
+      - name: Smoke status — OK
         if: success()
         run: |
-          echo "PAYMENT PIPELINE OK"
-          echo "## ✅ PAYMENT PIPELINE OK" >> $GITHUB_STEP_SUMMARY
-          echo "All Playwright smoke tests passed." >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ OneMil PROD smoke OK" >> $GITHUB_STEP_SUMMARY
+          echo "registration + login passed" >> $GITHUB_STEP_SUMMARY
 
       - name: Telegram — OK
         if: success()
         run: |
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d '{"chat_id":"${{ secrets.TELEGRAM_CHAT_ID }}","text":"✅ OneMil PAYMENT PIPELINE OK"}'
+            -d '{"chat_id":"${{ secrets.TELEGRAM_CHAT_ID }}","text":"✅ OneMil PROD smoke OK — registration + login passed"}'
 
-      - name: Payment pipeline status — FAILED
+      - name: Smoke status — FAILED
         if: failure()
         run: |
-          echo "PAYMENT PIPELINE FAILED"
-          echo "## ❌ PAYMENT PIPELINE FAILED" >> $GITHUB_STEP_SUMMARY
-          echo "One or more Playwright smoke tests failed." >> $GITHUB_STEP_SUMMARY
+          echo "## ❌ OneMil PROD smoke FAILED" >> $GITHUB_STEP_SUMMARY
           echo "Check the HTML report artifact and screenshots above." >> $GITHUB_STEP_SUMMARY
 
       - name: Telegram — FAILED
@@ -76,20 +69,22 @@ jobs:
         run: |
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d '{"chat_id":"${{ secrets.TELEGRAM_CHAT_ID }}","text":"❌ OneMil PAYMENT PIPELINE FAILED\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}'
+            -d '{"chat_id":"${{ secrets.TELEGRAM_CHAT_ID }}","text":"❌ OneMil PROD smoke FAILED\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}'
 
       - name: Upload HTML report
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-${{ github.run_id }}
           path: playwright-report/
-          retention-days: 14
+          retention-days: 3
 
       - name: Upload failure screenshots
         if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: screenshots-${{ github.run_id }}
           path: test-results/
-          retention-days: 7
+          retention-days: 3

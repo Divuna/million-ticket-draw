@@ -125,7 +125,7 @@ export const VoucherCarousel: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4">
         {availableVouchers.map((voucher) => (
           <div key={voucher.id}>
-            <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[hsl(40_30%_35%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[hsl(40_40%_45%)] hover:shadow-[0_0_12px_hsl(40_30%_40%/0.2)] hover:scale-[1.02]">
+            <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[3px] border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[rgba(255,138,0,0.4)] hover:shadow-[0_0_12px_rgba(255,138,0,0.2)] hover:scale-[1.02]">
               {voucher.banner_url && (
                 <img
                   src={voucher.banner_url}
@@ -142,7 +142,7 @@ export const VoucherCarousel: React.FC = () => {
                       <img
                         src={voucher.image_url}
                         alt={voucher.name}
-                        className="w-12 h-12 object-cover rounded-lg border border-[hsl(40_30%_35%)]"
+                        className="w-12 h-12 object-cover rounded-lg border border-[rgba(255,138,0,0.2)]"
                         loading="lazy"
                       />
                     </div>
@@ -166,7 +166,7 @@ export const VoucherCarousel: React.FC = () => {
                   <Button
                     onClick={() => redeemVoucher(voucher.id)}
                     disabled={!isVoucherAvailable(voucher)}
-                    className="w-full h-11 text-base font-semibold rounded-xl bg-gradient-to-r from-[hsl(45_80%_45%)] via-[hsl(40_85%_50%)] to-[hsl(35_80%_45%)] text-secondary-foreground shadow-[0_2px_12px_hsl(45_80%_50%/0.25)] hover:shadow-[0_4px_16px_hsl(45_80%_50%/0.35)] hover:brightness-110 transition-all"
+                    className="w-full h-11 text-base font-semibold rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black shadow-[0_2px_12px_rgba(255,138,0,0.25)] hover:shadow-[0_4px_16px_rgba(255,138,0,0.35)] hover:brightness-110 transition-all"
                   >
                     POUŽÍT VOUCHER
                   </Button>

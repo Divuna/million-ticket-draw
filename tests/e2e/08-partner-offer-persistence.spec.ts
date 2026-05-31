@@ -13,20 +13,34 @@ test.describe('Partner Offer Persistence', () => {
     await loginViaUI(page, TEST_EMAIL, TEST_PASSWORD);
     await page.goto('/wins');
     await page.getByRole('button', { name: /Nabídky/ }).click();
-    await page.waitForTimeout(2_000);
 
-    // Skip if no offers available
+    // Mirror the robust skip pattern from spec 07:
+    // Race up to 10 s for either an offer card or the empty-state text to
+    // appear before deciding whether to skip or proceed.
+    // The previous pattern (waitForTimeout(2_000) + immediate isVisible())
+    // was fragile — on slower staging loads the empty-state text hadn't
+    // painted yet, so isVisible() returned false and the test ran without data.
     const emptyState = page.getByText('Zatím nemáte žádné nabídky');
+    const firstCard = page.locator('div.group.cursor-pointer').first();
+
+    await Promise.race([
+      firstCard.waitFor({ state: 'visible', timeout: 10_000 }).catch(() => {}),
+      emptyState.waitFor({ state: 'visible', timeout: 10_000 }).catch(() => {}),
+    ]);
+
     if (await emptyState.isVisible()) {
       test.skip(true, 'No partner offers in DB for this account – skipping');
     }
+    if (!await firstCard.isVisible()) {
+      test.skip(true, 'No offer cards visible in Nabídky tab – skipping');
+    }
 
-    const firstCard = page.locator('div.group.cursor-pointer').first();
     await expect(firstCard).toBeVisible({ timeout: 5_000 });
 
     // Open the offer so opened_at is written to DB
     await firstCard.click();
-    const dialog = page.locator('[role="dialog"]');
+    // Scoped to OfferDetailModal — the only dialog with a "Skrýt nabídku" button
+    const dialog = page.locator('[role="dialog"]:has(button:has-text("Skrýt nabídku"))');
     await expect(dialog).toBeVisible({ timeout: 5_000 });
 
     // Wait for opened_at PATCH to complete before reloading

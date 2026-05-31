@@ -7,7 +7,8 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, Trophy, Gift, Ticket, Star } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { OneMilTrophyIcon } from '@/components/icons/OneMilIcons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NavigateToLogin } from '@/components/NavigateToLogin';
 
@@ -190,7 +191,7 @@ const MyContestDetail: React.FC = () => {
     switch (status) {
       case 'active': return 'bg-green-500';
       case 'closed': return 'bg-gray-500';
-      case 'draft': return 'bg-yellow-500';
+      case 'draft': return 'bg-[#FF8A00]';
       default: return 'bg-gray-500';
     }
   };
@@ -272,8 +273,8 @@ const MyContestDetail: React.FC = () => {
           <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-primary">
-                <Trophy className="h-5 w-5" />
-                Hlavní cena / Megajackpot
+                <OneMilTrophyIcon size={20} className="h-5 w-5" />
+                Hlavní cena / Prémiová hlavní výhra
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -285,7 +286,7 @@ const MyContestDetail: React.FC = () => {
           <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-neon-purple">
-                <Trophy className="h-5 w-5" />
+                <OneMilTrophyIcon size={20} className="h-5 w-5" />
                 Moje výhry
               </CardTitle>
             </CardHeader>

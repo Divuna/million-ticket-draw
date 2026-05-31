@@ -12,6 +12,11 @@ import {
 } from '@/components/ui/popover';
 import { formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import {
+  formatCreditedMiocoins,
+  formatPaymentReportingTotal,
+  summarizePaymentReporting,
+} from '@/lib/paymentReporting';
 
 interface AdminSoundIndicatorProps {
   soundEnabled: boolean;
@@ -23,7 +28,9 @@ interface AdminSoundIndicatorProps {
 interface AdminStats {
   gamesToday: number;
   paymentsToday: number;
-  revenueToday: number;
+  creditedMiocoinsToday: number;
+  paidCzkToday: number;
+  hasUnknownPaidCzkToday: boolean;
 }
 
 interface OnlineUserInfo {
@@ -41,7 +48,13 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
 }) => {
   const navigate = useNavigate();
   const [isPulsing, setIsPulsing] = useState(false);
-  const [stats, setStats] = useState<AdminStats>({ gamesToday: 0, paymentsToday: 0, revenueToday: 0 });
+  const [stats, setStats] = useState<AdminStats>({
+    gamesToday: 0,
+    paymentsToday: 0,
+    creditedMiocoinsToday: 0,
+    paidCzkToday: 0,
+    hasUnknownPaidCzkToday: false,
+  });
   const { onlineCount, onlineUsers, statusLabel, lastUpdatedAt } = useAdminOnlineIndicator();
   const [onlineUserDetails, setOnlineUserDetails] = useState<OnlineUserInfo[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -110,32 +123,45 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
   }, [onlineUsers]);
 
   // Fetch admin stats (online count is not tracked here)
+  //
+  // Direct reads against public.tickets and public.payments are blocked by
+  // RLS for everything except the admin's own rows. The aggregate is now
+  // computed by the SECURITY DEFINER RPC get_admin_top_bar_stats which uses
+  // Prague-local midnight as the day boundary. The raw payment amounts are
+  // returned so summarizePaymentReporting() remains the single source of
+  // truth for the CZK derivation and "neznámé" detection.
   useEffect(() => {
     const fetchStats = async () => {
-      const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-
       try {
-        // Games today: count of tickets created today
-        const { count: gamesToday } = await supabase
-          .from('tickets')
-          .select('*', { count: 'exact', head: true })
-          .gte('created_at', todayStart);
+        const { data, error } = await supabase.rpc('get_admin_top_bar_stats');
+        if (error) {
+          console.error('[AdminStats] RPC error:', error);
+          return;
+        }
+        const payload = data as
+          | {
+              success?: boolean;
+              games_today?: number;
+              payments_today?: number;
+              payment_amounts?: number[];
+              message?: string;
+            }
+          | null;
+        if (!payload?.success) {
+          console.error('[AdminStats] RPC returned non-success:', payload?.message ?? payload);
+          return;
+        }
 
-        // Payments today: count and sum of completed payments today
-        const { data: paymentsData } = await supabase
-          .from('payments')
-          .select('amount')
-          .gte('created_at', todayStart)
-          .eq('status', 'completed');
-
-        const paymentsToday = paymentsData?.length || 0;
-        const revenueToday = paymentsData?.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
+        const amountsForSummary =
+          (payload.payment_amounts ?? []).map((amount) => ({ amount }));
+        const paymentSummary = summarizePaymentReporting(amountsForSummary);
 
         setStats({
-          gamesToday: gamesToday || 0,
-          paymentsToday,
-          revenueToday,
+          gamesToday: payload.games_today ?? 0,
+          paymentsToday: payload.payments_today ?? 0,
+          creditedMiocoinsToday: paymentSummary.creditedMiocoins,
+          paidCzkToday: paymentSummary.paidCzk,
+          hasUnknownPaidCzkToday: paymentSummary.hasUnknownPaidCzk,
         });
       } catch (error) {
         console.error('[AdminStats] Error fetching stats:', error);
@@ -288,11 +314,28 @@ export const AdminSoundIndicator: React.FC<AdminSoundIndicatorProps> = ({
         {/* Tržba dnes */}
         <div 
           className="flex items-center gap-1.5 px-2 py-1 bg-background/50 rounded-md border border-border/50 text-xs"
-          title="Celková tržba z dobití dnes"
+          title="Tržba z dobití dnes odvozená ze známých MioCoin balíčků"
         >
           <Banknote className="h-3 w-3 text-yellow-400" />
           <span className="text-muted-foreground">Tržba dnes:</span>
-          <span className="font-medium text-foreground">{stats.revenueToday.toLocaleString('cs-CZ')} Kč</span>
+          <span className="font-medium text-foreground">
+            {formatPaymentReportingTotal({
+              paidCzk: stats.paidCzkToday,
+              hasUnknownPaidCzk: stats.hasUnknownPaidCzkToday,
+            })}
+          </span>
+        </div>
+
+        {/* Připsané MioCoiny dnes */}
+        <div
+          className="flex items-center gap-1.5 px-2 py-1 bg-background/50 rounded-md border border-border/50 text-xs"
+          title="Součet MioCoinů připsaných do peněženek dnes"
+        >
+          <CreditCard className="h-3 w-3 text-amber-400" />
+          <span className="text-muted-foreground">Připsané MioCoiny:</span>
+          <span className="font-medium text-foreground">
+            {formatCreditedMiocoins(stats.creditedMiocoinsToday)}
+          </span>
         </div>
       </div>
     </div>

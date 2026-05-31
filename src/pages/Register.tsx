@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-onemil.png';
 import { PENDING_REFERRAL_STORAGE_KEY } from '@/hooks/useApplyPendingReferral';
 import { analytics } from '@/lib/analytics';
-import { enabledOAuthProviders, type OAuthProvider } from '@/lib/enabledOAuthProviders';
+import { ENABLED_OAUTH_PROVIDERS, type OAuthProvider } from '@/config/socialAuth';
 
 const Register: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -132,7 +132,7 @@ const Register: React.FC = () => {
               });
               sessionStorage.removeItem(PENDING_REFERRAL_STORAGE_KEY);
               if (result === 'accepted') {
-                toast({ title: 'Úspěch', description: 'Referral kód byl aktivován. Děkujeme!' });
+                toast({ title: 'Úspěch', description: 'Doporučovací kód byl aktivován. Děkujeme!' });
               }
             }
           } catch {
@@ -173,7 +173,7 @@ const Register: React.FC = () => {
           alt="OneMil logo"
           className="h-16 w-auto object-contain mx-auto mb-4 onemil-logo-animated"
         />
-        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[hsl(40_30%_35%/0.5)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
+        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[rgba(255,138,0,0.15)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
         <CardHeader>
           <CardTitle className="text-heading-gold">Registrace</CardTitle>
           <CardDescription>
@@ -298,41 +298,41 @@ const Register: React.FC = () => {
           <CardFooter className="flex flex-col space-y-4">
             <Button 
               type="submit" 
-              className="w-full rounded-xl bg-gradient-to-r from-[hsl(45_80%_45%)] via-[hsl(40_85%_50%)] to-[hsl(35_80%_45%)] text-secondary-foreground shadow-[0_2px_12px_hsl(45_80%_50%/0.25)] hover:shadow-[0_4px_16px_hsl(45_80%_50%/0.35)] hover:brightness-110 transition-all" 
+              className="w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black shadow-[0_2px_12px_rgba(255,138,0,0.25)] hover:shadow-[0_4px_16px_rgba(255,138,0,0.35)] hover:brightness-110 transition-all"
               disabled={loading}
             >
               {loading ? 'Registruji...' : 'Zaregistrovat se'}
             </Button>
             
-            {enabledOAuthProviders.length > 0 && (
+            {ENABLED_OAUTH_PROVIDERS.length > 0 && (
               <div className="flex flex-col space-y-2 w-full">
-                {enabledOAuthProviders.includes('google') && (
+                {ENABLED_OAUTH_PROVIDERS.includes('google') && (
                   <Button 
                     type="button"
                     variant="outline" 
-                    className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]"
+                    className="w-full border-[rgba(255,138,0,0.2)] hover:border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.08)]"
                     onClick={() => handleOAuthSignIn('google')}
                   >
                     Registrovat se přes Google
                   </Button>
                 )}
               
-                {enabledOAuthProviders.includes('apple') && (
+                {ENABLED_OAUTH_PROVIDERS.includes('apple') && (
                   <Button 
                     type="button"
                     variant="outline" 
-                    className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]"
+                    className="w-full border-[rgba(255,138,0,0.2)] hover:border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.08)]"
                     onClick={() => handleOAuthSignIn('apple')}
                   >
                     Registrovat se přes Apple
                   </Button>
                 )}
 
-                {enabledOAuthProviders.includes('facebook') && (
+                {ENABLED_OAUTH_PROVIDERS.includes('facebook') && (
                   <Button 
                     type="button"
                     variant="outline" 
-                    className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]"
+                    className="w-full border-[rgba(255,138,0,0.2)] hover:border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.08)]"
                     onClick={() => handleOAuthSignIn('facebook')}
                   >
                     Registrovat se přes Facebook

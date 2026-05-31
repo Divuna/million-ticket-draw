@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
-import { Gamepad2, Ticket } from 'lucide-react';
+import { OneMilTicketIcon } from '@/components/icons/OneMilIcons';
 import { NavigateToLogin } from '@/components/NavigateToLogin';
 
 interface UserTicket {
@@ -99,16 +99,55 @@ const MyContests: React.FC = () => {
 
       <div className="container mx-auto px-4 py-8 space-y-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <Gamepad2 className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold text-primary">Moje hry</h1>
+          {/* Premium Header Card */}
+          <div
+            className="relative overflow-hidden rounded-2xl p-6 mb-8"
+            style={{
+              background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
+              border: '1px solid rgba(255,138,0,0.2)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.1)',
+            }}
+          >
+            <div
+              className="absolute inset-0 opacity-10 pointer-events-none"
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,1) 50%, transparent 100%)',
+                backgroundSize: '200% 100%',
+                animation: 'shimmer 4s ease-in-out infinite',
+              }}
+            />
+            <div className="relative flex items-center gap-4">
+              <div
+                className="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center shrink-0"
+                style={{
+                  background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
+                  boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
+                }}
+              >
+                <OneMilTicketIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />
+              </div>
+              <div>
+                <h1
+                  className="text-2xl md:text-3xl font-bold tracking-tight"
+                  style={{
+                    background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  Moje hry
+                </h1>
+                <p className="text-sm text-gray-400 mt-1">Přehled vašich tiketů a soutěží</p>
+              </div>
+            </div>
           </div>
 
           {tickets.length === 0 ? (
             <Card className="rounded-2xl overflow-hidden border-primary/20 bg-gradient-to-br from-card/95 to-background/80 backdrop-blur-sm shadow-lg">
               <CardContent className="pt-6">
                 <div className="text-center py-12">
-                  <Ticket className="h-16 w-16 text-primary mx-auto mb-4" />
+                  <OneMilTicketIcon size={64} className="h-16 w-16 text-primary mx-auto mb-4" />
                   <p className="text-muted-foreground">Zatím nemáš žádné tickety.</p>
                 </div>
               </CardContent>

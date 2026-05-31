@@ -9,7 +9,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Gift, Trophy, Star, Sparkles, Crown, Target } from 'lucide-react';
+import { Target } from 'lucide-react';
+import { OneMilGiftIcon, OneMilTrophyIcon, OneMilStarIcon, OneMilDiamondIcon, OneMilCrownIcon } from '@/components/icons/OneMilIcons';
 
 interface BonusPrize {
   id: string;
@@ -148,12 +149,12 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
 
   const getBonusIcon = (description: string) => {
     const lowerDesc = description.toLowerCase();
-    if (lowerDesc.includes('premium') || lowerDesc.includes('vip')) return Crown;
-    if (lowerDesc.includes('special') || lowerDesc.includes('speciální')) return Sparkles;
-    if (lowerDesc.includes('rare') || lowerDesc.includes('vzácný')) return Star;
-    if (lowerDesc.includes('jackpot') || lowerDesc.includes('hlavní')) return Trophy;
+    if (lowerDesc.includes('premium') || lowerDesc.includes('vip')) return OneMilCrownIcon;
+    if (lowerDesc.includes('special') || lowerDesc.includes('speciální')) return OneMilDiamondIcon;
+    if (lowerDesc.includes('rare') || lowerDesc.includes('vzácný')) return OneMilStarIcon;
+    if (lowerDesc.includes('jackpot') || lowerDesc.includes('hlavní')) return OneMilTrophyIcon;
     if (lowerDesc.includes('target') || lowerDesc.includes('cíl')) return Target;
-    return Gift;
+    return OneMilGiftIcon;
   };
 
   const getBonusStyles = (status: string) => {
@@ -164,7 +165,7 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
         return 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400';
       case 'delivered':
       case 'claimed':
-        return 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-400';
+        return 'bg-[rgba(255,138,0,0.08)] border-[rgba(255,138,0,0.3)] text-[#FF8A00] dark:bg-[rgba(255,138,0,0.1)] dark:border-[rgba(255,138,0,0.3)] dark:text-[#FFB547]';
       case 'won':
         return 'bg-purple-50 border-purple-200 text-purple-800 dark:bg-purple-900/20 dark:border-purple-700 dark:text-purple-400';
       default:
@@ -197,7 +198,7 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Gift className="w-5 h-5 text-primary" />
+            <OneMilGiftIcon size={20} className="w-5 h-5 text-primary" />
             Bonusové ceny - {contestTitle}
           </DialogTitle>
           
@@ -216,7 +217,7 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center py-6 text-muted-foreground">
-                  <Gift className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <OneMilGiftIcon size={48} className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>Žádné bonusové ceny nejsou k dispozici.</p>
                 </div>
               </CardContent>

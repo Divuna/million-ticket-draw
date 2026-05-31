@@ -332,7 +332,7 @@ export default function AdminMessages() {
                     <div className="mb-2">
                       <Badge className="bg-[hsl(280,50%,45%)] text-white border-[hsl(280,60%,55%,0.3)] text-[10px] uppercase tracking-wider gap-1">
                         <Star className="w-3 h-3" />
-                        Influencer
+                        Affiliate partner
                       </Badge>
                     </div>
                   )}

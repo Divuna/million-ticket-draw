@@ -153,10 +153,10 @@ export default function ContestDetail() {
   // Live activity rotating messages
   const LIVE_MESSAGES = [
     'Soutěž je aktivní',
-    'Bonusové výhry mohou padnout kdykoliv',
-    'Každý ticket může rozhodnout',
-    'Hraj a vyhraj',
-    'Šance na výhru s každým tiketem',
+    'Bonusové výherní pozice jsou součástí pravidel soutěže',
+    'Každý další tiket posouvá pořadí soutěže',
+    'Otevři další tiket v pořadí',
+    'Výherní pozice jsou předem určeny',
   ];
   const [liveMessageIndex, setLiveMessageIndex] = useState(0);
   const [liveVisible, setLiveVisible] = useState(true);
@@ -412,7 +412,7 @@ export default function ContestDetail() {
           won_prize: result.won_prize ?? null,
           won_type: result.won_type ?? null,
           bonus_prize_id: result.bonus_prize_id ?? null,
-          remaining_tickets: result.remaining_tickets ?? 0,
+          remaining_tickets: result.remaining_tickets ?? undefined,
           partner_offer: partnerOffer,
         };
 
@@ -582,8 +582,8 @@ export default function ContestDetail() {
     if (!modalResult) return undefined;
     return {
       ticket_number: modalResult.ticket_number,
-      next_bonus_position: modalResult.next_bonus_position ?? 0,
-      distance_to_next_bonus: modalResult.distance_to_next_bonus ?? 0,
+      next_bonus_position: modalResult.next_bonus_position ?? null,
+      distance_to_next_bonus: modalResult.distance_to_next_bonus ?? null,
       won_prize: modalResult.won_prize,
       remaining_tickets: modalResult.remaining_tickets,
       won_type: modalResult.won_type,
@@ -612,6 +612,41 @@ export default function ContestDetail() {
 
   const displayGallery = useMemo(() => galleryMedia.filter((m) => m.type !== 'background'), [galleryMedia]);
   const activeMedia = useMemo(() => displayGallery[activeGalleryIndex] ?? null, [displayGallery, activeGalleryIndex]);
+
+  // Group identical physical bonus prizes so one product with quantity N shows as one
+  // card with a "N× v soutěži" badge instead of N duplicate cards.
+  // Key: description + detailed_description ONLY — image_url is intentionally excluded
+  // because bulk prizes (qty > 1) are each uploaded with a unique UUID storage path,
+  // making their image_url values differ even though they represent the same product.
+  // The first row in each group is used as the representative card/image/modal data.
+  // MioCoin bonuses (amount > 0) each get their own group key so they remain individual.
+  const groupedBonusPrizes = useMemo(() => {
+    const groups = new Map<string, { prize: BonusPrize; ids: string[]; imageUrl: string | null }>();
+    for (const b of bonusPrizes) {
+      const isMioCoin = (b.amount ?? 0) > 0;
+      // MioCoin entries are unique per ticket position — use id as group key
+      const key = isMioCoin
+        ? b.id
+        : `${b.description ?? ''}||${b.detailed_description ?? ''}`;
+
+      if (groups.has(key)) {
+        groups.get(key)!.ids.push(b.id);
+      } else {
+        let imgUrl: string | null = null;
+        if (b.image) {
+          imgUrl = b.image.startsWith('http')
+            ? b.image
+            : supabase.storage.from('contest-images').getPublicUrl(b.image).data.publicUrl;
+        } else if (b.image_url) {
+          imgUrl = b.image_url.startsWith('http')
+            ? b.image_url
+            : supabase.storage.from('contest-images').getPublicUrl(b.image_url).data.publicUrl;
+        }
+        groups.set(key, { prize: b, ids: [b.id], imageUrl: imgUrl });
+      }
+    }
+    return Array.from(groups.values());
+  }, [bonusPrizes]);
 
   if (loading) {
     return (
@@ -672,7 +707,7 @@ export default function ContestDetail() {
   const PRIMARY_DOMAIN = "https://onemil.cz";
   const canonicalUrl = `${PRIMARY_DOMAIN}/contest/${contest.id}`;
   const fallbackDescription =
-    "OneMil je prémiová platforma spotřebitelských soutěží o exkluzivní a luxusní věcné ceny. Pro využití voucherů a účast ve spotřebitelských soutěžích slouží MioCoin jako interní digitální kredit.";
+    "OneMil je prémiová platforma spotřebitelských soutěží o exkluzivní a luxusní věcné ceny. Pro využití voucherů a účast ve spotřebitelských soutěžích slouží MioCoin jako interní kredit OneMil.";
   const cleanDescription = (contest.description ?? "").replace(/\s+/g, " ").trim();
   const metaDescription =
     cleanDescription.length > 0 ? (cleanDescription.length > 170 ? `${cleanDescription.slice(0, 167)}…` : cleanDescription) : fallbackDescription;
@@ -726,7 +761,7 @@ export default function ContestDetail() {
 
 
       {/* 1. HERO SECTION */}
-      <section className="contest-card-glow w-full rounded-[20px] relative overflow-hidden bg-gradient-to-br from-[hsl(220_25%_8%)] to-[hsl(220_20%_12%)] border-[3px] border-[hsl(32_100%_50%/0.6)]">
+      <section className="contest-card-glow w-full rounded-[20px] relative overflow-hidden bg-gradient-to-br from-[hsl(220_25%_8%)] to-[hsl(220_20%_12%)] border-[3px] border-[rgba(255,138,0,0.45)]">
         {/* Fast game badge - corner placement */}
         {contest.fast_game && (
           <Badge className="absolute top-3 left-3 z-20 bg-amber-500/90 text-white text-xs md:text-sm px-3 py-1 shadow-lg">
@@ -736,18 +771,18 @@ export default function ContestDetail() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-6 md:p-8">
           {/* Text content */}
           <div className="flex-1 min-w-0 md:max-w-[50%] space-y-4 z-10">
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-yellow-400 leading-tight break-all">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#E7EBF0] leading-tight break-all">
               {contest.title}
             </h1>
             {contest.main_prize && (
-              <p className="text-lg md:text-xl font-semibold text-gray-200 break-words">
+              <p className="text-lg md:text-xl font-semibold text-[#BFC6CF] break-words">
                 Hlavní výhra: {contest.main_prize}
               </p>
             )}
             {contest.description && (
               <div className="space-y-2">
                 <p
-                  className={`text-gray-300 text-sm md:text-base leading-relaxed whitespace-pre-line break-words ${
+                  className={`text-[#BFC6CF] text-sm md:text-base leading-relaxed whitespace-pre-line break-words ${
                     descExpanded ? '' : 'line-clamp-6 md:line-clamp-8 overflow-hidden'
                   }`}
                 >
@@ -757,7 +792,7 @@ export default function ContestDetail() {
                   <button
                     type="button"
                     onClick={() => setDescExpanded((v) => !v)}
-                    className="text-xs md:text-sm font-medium text-yellow-400 hover:text-yellow-300 transition-colors"
+                    className="text-xs md:text-sm font-medium text-[#FF8A00] hover:text-[#FFB547] transition-colors"
                   >
                     {descExpanded ? 'Zobrazit méně' : 'Zobrazit více'}
                   </button>
@@ -766,68 +801,57 @@ export default function ContestDetail() {
             )}
           </div>
 
-          {/* Hero image - fixed slot, won't shrink under long text */}
-          <div className="md:w-[320px] md:flex-none flex justify-center md:justify-end">
-            <img
-              src={heroImage}
-              alt={contest.title}
-              className="w-full max-w-[280px] md:max-w-[320px] max-h-[260px] md:max-h-[300px] object-contain"
-              onError={(e) => (e.currentTarget.src = "/fallback-car.png")}
-            />
+          {/* Media: main image/video + secondary thumbnails — merged into hero */}
+          <div className="md:w-[360px] md:flex-none w-full flex flex-col gap-3">
+            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black/40 border border-[rgba(255,138,0,0.2)]">
+              {activeMedia ? (
+                activeMedia.type === 'video' ? (
+                  <div
+                    key={`video-${activeMedia.id}`}
+                    className="absolute inset-0"
+                    style={{ animation: 'galleryFadeSlide 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
+                  >
+                    <YouTubeEmbed url={activeMedia.url} className="absolute inset-0" />
+                  </div>
+                ) : (
+                  <img
+                    key={`img-${activeMedia.id}`}
+                    src={getMediaUrl(activeMedia.url)}
+                    alt={contest.title}
+                    className="w-full h-full object-contain"
+                    style={{ animation: 'galleryFadeSlide 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' }}
+                  />
+                )
+              ) : (
+                <img
+                  src={heroImage}
+                  alt={contest.title}
+                  className="w-full h-full object-contain"
+                  onError={(e) => (e.currentTarget.src = "/fallback-car.png")}
+                />
+              )}
+            </div>
+
+            {displayGallery.length > 1 && (
+              <GalleryThumbnails
+                items={displayGallery}
+                activeIndex={activeGalleryIndex}
+                onSelect={setActiveGalleryIndex}
+                getYouTubeId={getYouTubeId}
+                getMediaUrl={getMediaUrl}
+              />
+            )}
           </div>
         </div>
       </section>
 
-      {/* GALLERY SECTION */}
-      {displayGallery.length > 0 && (
-        <section className="voucher-card-glow max-w-4xl mx-auto bg-[hsl(220_25%_8%)]/60 backdrop-blur rounded-xl p-3 md:p-4 border-[2px] border-[hsl(40_50%_45%/0.3)] space-y-3 animate-fade-in">
-          {/* Main display – 16:9 capped with premium transitions */}
-          <div className="relative aspect-video max-h-[420px] rounded-xl overflow-hidden bg-black/40 mx-auto">
-            {activeMedia && (
-              activeMedia.type === 'video' ? (
-                <div
-                  key={`video-${activeMedia.id}`}
-                  className="absolute inset-0"
-                  style={{
-                    animation: 'galleryFadeSlide 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
-                  }}
-                >
-                  <YouTubeEmbed url={activeMedia.url} className="absolute inset-0" />
-                </div>
-              ) : (
-                <img
-                  key={`img-${activeMedia.id}`}
-                  src={getMediaUrl(activeMedia.url)}
-                  alt="Gallery"
-                  className="w-full h-full object-contain"
-                  style={{
-                    animation: 'galleryFadeSlide 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
-                  }}
-                />
-              )
-            )}
-          </div>
-
-          {/* Memoized thumbnail strip */}
-          {displayGallery.length > 1 && (
-            <GalleryThumbnails
-              items={displayGallery}
-              activeIndex={activeGalleryIndex}
-              onSelect={setActiveGalleryIndex}
-              getYouTubeId={getYouTubeId}
-              getMediaUrl={getMediaUrl}
-            />
-          )}
-        </section>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Box 1: Stav MioCoinů + akce */}
-        <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/80 backdrop-blur rounded-[20px] p-5 border-[2px] border-[hsl(40_50%_45%/0.5)] flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+        <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/80 backdrop-blur rounded-[20px] p-5 border-[2px] border-[rgba(255,138,0,0.35)] flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <div className="flex items-center h-full gap-4">
             <img
               src={MIOCOIN_IMAGE_URL}
-              className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 drop-shadow-[0_0_16px_rgba(234,179,8,0.3)]"
+              className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 drop-shadow-[0_0_16px_rgba(255,138,0,0.25)]"
               alt="MioCoin"
             />
             <div className="flex-1 flex flex-col justify-center">
@@ -855,7 +879,7 @@ export default function ContestDetail() {
               <span
                 className="h-[1px] w-full mt-0.5"
                 style={{
-                  background: 'linear-gradient(90deg, transparent 0%, hsl(45,80%,55%) 50%, transparent 100%)',
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,0.9) 50%, transparent 100%)',
                   backgroundSize: '200% 100%',
                   animation: 'liveShimmer 8s ease-in-out infinite',
                 }}
@@ -902,7 +926,7 @@ export default function ContestDetail() {
                   {isProcessing ? (
                     <span className="inline-flex items-center gap-2">
                       <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                      Losujeme…
+                      Otevírám…
                     </span>
                   ) : `Uplatnit ${contest.ticket_price} MioCoin`}
                 </Button>
@@ -913,7 +937,7 @@ export default function ContestDetail() {
                     })
                   }
                   variant="outline"
-                  className="flex-1 h-11 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-semibold px-5 rounded-full transition-colors"
+                  className="flex-1 h-11 bg-[rgba(255,138,0,0.08)] hover:bg-[rgba(255,138,0,0.15)] text-[#FF8A00] border-[rgba(255,138,0,0.3)] font-semibold px-5 rounded-full transition-colors"
                 >
                   Dobít MioCoiny
                 </Button>
@@ -923,11 +947,11 @@ export default function ContestDetail() {
         </section>
 
         {/* Box 2: Bonusové MioCoiny v soutěži */}
-        <section className="voucher-card-glow bg-gradient-to-br from-[hsl(45_60%_50%/0.1)] to-[hsl(45_60%_40%/0.05)] rounded-[20px] p-5 border-[2px] border-[hsl(40_60%_50%/0.3)] flex items-center gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        <section className="voucher-card-glow bg-gradient-to-br from-[rgba(255,138,0,0.08)] to-[rgba(255,181,71,0.04)] rounded-[20px] p-5 border-[2px] border-[rgba(255,138,0,0.25)] flex items-center gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
           <div className="flex-1 flex flex-col justify-center">
             <p className="text-sm text-gray-200 leading-relaxed">
               Do této soutěže jsme navíc přidali{" "}
-              <span className="text-yellow-400 font-bold text-2xl md:text-3xl">{miocoinBonusPoolTotal.toLocaleString("cs-CZ")}</span>{" "}
+              <span className="text-[#FFB547] font-bold text-2xl md:text-3xl">{miocoinBonusPoolTotal.toLocaleString("cs-CZ")}</span>{" "}
               MioCoinů jako bonusové výhry, které můžete během soutěže získat.
             </p>
           </div>
@@ -936,61 +960,93 @@ export default function ContestDetail() {
               <TooltipTrigger asChild>
                 <img
                   src={MIOCOIN_IMAGE_URL}
-                  className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 hover:scale-110 transition-transform cursor-pointer drop-shadow-[0_0_24px_rgba(234,179,8,0.4)]"
+                  className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 hover:scale-110 transition-transform cursor-pointer drop-shadow-[0_0_24px_rgba(255,138,0,0.3)]"
                   alt="MioCoin"
                 />
               </TooltipTrigger>
               <TooltipContent>
-                <p>MioCoiny můžeš vyhrát při nákupu tiketů</p>
+                <p>MioCoiny můžeš získat otevřením výherního tiketu</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </section>
       </div>
 
-      {/* 4. CESTA K HLAVNÍ VÝHŘE */}
-      <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[hsl(40_60%_50%/0.2)]">
-        <h2 className="text-white font-semibold text-sm md:text-base mb-4">Cesta k hlavní výhře</h2>
-        <p className="text-yellow-400/90 font-medium text-sm md:text-base mb-2">
-          Celkem {progressTicketsTotal.toLocaleString("cs-CZ")} ticketů
-        </p>
+      {/* 4. CESTA K VÝHERNÍMU TICKETU */}
+      <section className="relative overflow-hidden rounded-[20px] p-5 md:p-7 border border-[rgba(255,138,0,0.2)] bg-gradient-to-br from-[hsl(220_30%_7%)]/95 via-[hsl(220_28%_9%)]/85 to-[hsl(220_25%_6%)]/95 shadow-[0_18px_50px_rgba(0,0,0,0.45)]">
+        {/* Ambient glow */}
+        <div aria-hidden className="pointer-events-none absolute -top-24 -right-16 w-72 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #FF8A00 0%, transparent 70%)' }} />
+        <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-16 w-72 h-72 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, #FFB547 0%, transparent 70%)' }} />
 
-        {/* Progress bar — static fill (no sold/total ratio) */}
-        <div
-          className="w-full h-2.5 rounded-full overflow-hidden bg-white/10"
-          style={{ boxShadow: '0 0 20px rgba(250, 204, 21, 0.2)' }}
-        >
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: "100%",
-              background: 'linear-gradient(to right, #FF8A00, #FFB547)',
-              boxShadow: '0 0 20px rgba(255, 138, 0, 0.4)'
-            }}
-          />
+        <div className="relative">
+          <h2 className="font-heading text-white font-semibold text-lg md:text-xl tracking-tight mb-2">
+            Cesta k výhernímu tiketu
+          </h2>
+          <p className="text-[hsl(0_0%_85%)]/80 text-sm md:text-[15px] leading-relaxed mb-6 max-w-2xl">
+            V této soutěži je připraveno celkem{' '}
+            <span className="text-[#FFB547] font-semibold">{progressTicketsTotal.toLocaleString('cs-CZ')}</span>{' '}
+            tiketů. Tikety se otevírají postupně v pořadí 1, 2, 3 a dále.
+          </p>
+
+          {/* Premium animated path */}
+          <div className="relative pt-2 pb-1">
+            {/* Track */}
+            <div className="relative h-3 rounded-full bg-white/[0.06] border border-white/[0.08] overflow-hidden" style={{ boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5), 0 0 24px rgba(255,138,0,0.08)' }}>
+              {/* Animated fill */}
+              <div
+                className="absolute inset-y-0 left-0 rounded-full"
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(90deg, rgba(255,138,0,0.0) 0%, #FF8A00 35%, #FFB547 70%, #FFD68A 100%)',
+                  boxShadow: '0 0 24px rgba(255,138,0,0.55), 0 0 48px rgba(255,181,71,0.25)',
+                }}
+              />
+              {/* Moving shimmer */}
+              <div
+                aria-hidden
+                className="absolute inset-y-0 w-1/3 animate-[golden-shimmer_4s_ease-in-out_infinite]"
+                style={{
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)',
+                  mixBlendMode: 'overlay',
+                }}
+              />
+            </div>
+
+            {/* Endpoint markers */}
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#FF8A00] shadow-[0_0_12px_#FF8A00]" />
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
+              <div
+                className="relative w-7 h-7 rounded-full flex items-center justify-center text-[13px]"
+                style={{
+                  background: 'linear-gradient(135deg, #FFB547, #FF8A00)',
+                  boxShadow: '0 0 18px rgba(255,138,0,0.7), 0 0 36px rgba(255,181,71,0.4)',
+                  border: '1.5px solid rgba(255,214,138,0.8)',
+                }}
+                aria-label="Hlavní výhra"
+              >
+                🏆
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-4 text-[11px] md:text-xs uppercase tracking-[0.14em]">
+            <span className="text-[hsl(0_0%_70%)]/70">Start</span>
+            <span className="text-[#FFB547] font-semibold">Hlavní výhra</span>
+          </div>
         </div>
       </section>
 
       {/* 5. BONUSOVÉ VĚCNÉ VÝHRY */}
-      <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[hsl(40_50%_45%/0.3)]">
+      <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[rgba(255,138,0,0.25)]">
         <h2 className="text-white font-semibold text-sm md:text-base mb-4">Bonusové věcné výhry</h2>
 
-        {bonusPrizes.length === 0 ? (
+        {groupedBonusPrizes.length === 0 ? (
           <p className="text-gray-500 text-sm py-4 text-center">Zatím nebyly přidány žádné věcné bonusové výhry.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {bonusPrizes.map((b) => {
-              let bonusImageUrl: string | null = null;
-
-              if (b.image) {
-                bonusImageUrl = b.image.startsWith('http')
-                  ? b.image
-                  : supabase.storage.from('contest-images').getPublicUrl(b.image).data.publicUrl;
-              } else if (b.image_url) {
-                bonusImageUrl = b.image_url.startsWith('http')
-                  ? b.image_url
-                  : supabase.storage.from('contest-images').getPublicUrl(b.image_url).data.publicUrl;
-              }
+            {groupedBonusPrizes.map(({ prize: b, ids, imageUrl: bonusImageUrl }) => {
+              const count = ids.length;
+              const isMyWin = myWins.some((w) => ids.includes(w.bonus_prize_id ?? ''));
 
               return (
                 <button
@@ -1000,7 +1056,7 @@ export default function ContestDetail() {
                     console.log('[DEBUG ContestDetail] setSelectedBonusPrize:', b.id);
                     setSelectedBonusPrize({ ...b, image_url: bonusImageUrl });
                   }}
-                  className="p-3 rounded-xl border border-white/5 hover:border-yellow-500/30 transition-colors text-left cursor-pointer relative overflow-hidden"
+                  className="p-3 rounded-xl border border-white/5 hover:border-[rgba(255,138,0,0.35)] transition-colors text-left cursor-pointer relative overflow-hidden"
                   style={{
                     backgroundImage: starryBackgroundUrl ? `url(${starryBackgroundUrl})` : undefined,
                     backgroundSize: 'cover',
@@ -1008,6 +1064,11 @@ export default function ContestDetail() {
                     backgroundColor: starryBackgroundUrl ? undefined : 'rgba(0,0,0,0.3)'
                   }}
                 >
+                  {count > 1 && (
+                    <span className="absolute top-2 right-2 text-xs font-semibold bg-[rgba(255,138,0,0.15)] text-[#FFB547] border border-[rgba(255,138,0,0.3)] px-2 py-0.5 rounded-full">
+                      {count}× v soutěži
+                    </span>
+                  )}
                   {bonusImageUrl && (
                     <div className="aspect-[4/3] mb-2 rounded-lg overflow-hidden bg-black/20">
                       <img
@@ -1019,7 +1080,7 @@ export default function ContestDetail() {
                     </div>
                   )}
                   <p className="text-white text-sm font-medium">{b.description || "Bonusová výhra"}</p>
-                  {myWins.some((w) => w.bonus_prize_id === b.id) && (
+                  {isMyWin && (
                     <span className="inline-block mt-2 text-green-400 text-xs bg-green-500/10 px-2 py-0.5 rounded">
                       Moje výhra
                     </span>
@@ -1043,9 +1104,9 @@ export default function ContestDetail() {
                 href={contest.rules_pdf_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 px-5 py-2.5 text-sm font-semibold text-black shadow-lg hover:from-amber-400 hover:to-yellow-300 transition mb-4"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#FF8A00] to-[#FFB547] px-5 py-2.5 text-sm font-semibold text-[#111] shadow-lg hover:brightness-105 transition mb-4"
               >
-                📄 Stáhnout pravidla soutěže
+                📄 Zobrazit pravidla soutěže
               </a>
             )}
             {contest.rules && contest.rules.trim() && (

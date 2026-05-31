@@ -329,7 +329,7 @@ const AdminInfluencerCampaigns: React.FC = () => {
           </Button>
           <Megaphone className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold text-foreground">
-            Influencer kampaně
+            Affiliate kampaně
           </h1>
         </div>
 
@@ -404,7 +404,7 @@ const AdminInfluencerCampaigns: React.FC = () => {
                               variant="ghost"
                               size="icon"
                               onClick={() => openAssignment(c)}
-                              title="Přiřadit influencery"
+                              title="Přiřadit Affiliate partnery"
                             >
                               <Users className="h-4 w-4" />
                             </Button>
@@ -548,7 +548,7 @@ const AdminInfluencerCampaigns: React.FC = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              Přiřadit influencery — {assignCampaign?.name}
+              Přiřadit Affiliate partnery — {assignCampaign?.name}
             </DialogTitle>
           </DialogHeader>
 
@@ -558,7 +558,7 @@ const AdminInfluencerCampaigns: React.FC = () => {
             </div>
           ) : influencers.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              Žádní schválení influenceři k přiřazení.
+              Žádní schválení Affiliate partneři k přiřazení.
             </div>
           ) : (
             <ScrollArea className="max-h-[50vh]">

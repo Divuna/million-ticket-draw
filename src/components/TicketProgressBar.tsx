@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Clock, Gift, TrendingUp } from 'lucide-react';
+import { Clock, TrendingUp } from 'lucide-react';
+import { OneMilGiftIcon } from '@/components/icons/OneMilIcons';
 
 export interface TicketProgressBarProps {
   ticketsTotal: number;
@@ -64,7 +65,7 @@ export const TicketProgressBar: React.FC<TicketProgressBarProps> = ({
 
         {/* Layer 1 – sold portion (blue fill) */}
         <div
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-700 to-blue-500 transition-[width] duration-500 ease-out"
+          className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] transition-[width] duration-500 ease-out"
           style={{ width: `${filledPct}%` }}
         />
 
@@ -154,7 +155,7 @@ export const TicketProgressBar: React.FC<TicketProgressBarProps> = ({
       {/* ── Legend / stat chips ───────────────────────────────── */}
       <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground pt-0.5">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block w-2.5 h-2.5 rounded-sm bg-blue-500 shrink-0" />
+          <span className="inline-block w-2.5 h-2.5 rounded-sm bg-[#FF8A00] shrink-0" />
           Prodáno:&nbsp;
           <span className="font-medium text-foreground tabular-nums">
             {ticketsSold.toLocaleString('cs-CZ')}
@@ -171,7 +172,7 @@ export const TicketProgressBar: React.FC<TicketProgressBarProps> = ({
 
         {bonusPositions.length > 0 && (
           <span className="flex items-center gap-1.5">
-            <Gift className="w-3 h-3 text-orange-400 shrink-0" />
+            <OneMilGiftIcon size={12} className="w-3 h-3 text-orange-400 shrink-0" />
             Bonus pozic:&nbsp;
             <span className="font-medium text-foreground tabular-nums">
               {bonusPositions.length.toLocaleString('cs-CZ')}
@@ -181,7 +182,7 @@ export const TicketProgressBar: React.FC<TicketProgressBarProps> = ({
 
         {ticketsLast24h > 0 && (
           <span className="flex items-center gap-1.5">
-            <Clock className="w-3 h-3 text-blue-400 shrink-0" />
+            <Clock className="w-3 h-3 text-[#FFB547] shrink-0" />
             Za 24h:&nbsp;
             <span className="font-medium text-foreground tabular-nums">
               +{ticketsLast24h.toLocaleString('cs-CZ')}
@@ -191,7 +192,7 @@ export const TicketProgressBar: React.FC<TicketProgressBarProps> = ({
 
         {estimatedRevenue > 0 && (
           <span className="flex items-center gap-1.5">
-            <TrendingUp className="w-3 h-3 text-yellow-400 shrink-0" />
+            <TrendingUp className="w-3 h-3 text-[#FFB547] shrink-0" />
             Výnos:&nbsp;
             <span className="font-medium text-foreground tabular-nums">
               {estimatedRevenue.toLocaleString('cs-CZ')} MC

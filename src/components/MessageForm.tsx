@@ -40,7 +40,7 @@ export function MessageForm({ onSend, placeholder = "Napište zprávu…", showT
         onChange={(e) => setContent(e.target.value)}
       />
 
-      <button type="submit" className="w-full p-2 rounded bg-blue-600 hover:bg-blue-700">
+      <button type="submit" className="w-full p-2 rounded bg-[#FF8A00] hover:bg-[#FFB547] text-black">
         Odeslat
       </button>
     </form>

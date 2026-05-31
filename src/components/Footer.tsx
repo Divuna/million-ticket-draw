@@ -116,11 +116,11 @@ export const Footer: React.FC = () => {
 
           {/* Influencer Section */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-base text-foreground">Pro influencery</h4>
+            <h4 className="font-semibold text-base text-foreground">Affiliate program</h4>
             <ul className="space-y-2.5 text-sm">
               <li>
                 <Link to="/influencer" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
-                  Pro influencery
+                  Affiliate program
                 </Link>
               </li>
               <li>
@@ -130,12 +130,12 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <Link to="/influencer/register" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
-                  Registrace influencera
+                  Registrace Affiliate partnera
                 </Link>
               </li>
               <li>
                 <Link to="/partner/login" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
-                  Přihlášení influencera
+                  Přihlášení Affiliate partnera
                 </Link>
               </li>
             </ul>

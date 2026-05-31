@@ -29,6 +29,7 @@ interface BannerForm {
   videoUrl: string;
   active: boolean;
   targetPage: string;
+  permanent: boolean;
   startDate: Date | undefined;
   endDate: Date | undefined;
 }
@@ -66,8 +67,12 @@ const AdminBanners: React.FC = () => {
   const { videoUrl, isActive: isVideoActive, loading: videoSettingsLoading, updateVideoSettings } = useHomepageVideoSimple();
   
   // Coming soon banners state
-  const [comingSoonBanners, setComingSoonBanners] = useState<Array<{id: string, image_url: string, title: string | null}>>([]);
+  const [comingSoonBanners, setComingSoonBanners] = useState<Array<{id: string, image_url: string, title: string | null, description: string | null}>>([]);
   const [comingSoonUploading, setComingSoonUploading] = useState<{[key: number]: boolean}>({});
+  const [comingSoonTitles, setComingSoonTitles] = useState<{[key: number]: string}>({0: '', 1: '', 2: ''});
+  const [comingSoonTitleSaving, setComingSoonTitleSaving] = useState<{[key: number]: boolean}>({});
+  const [comingSoonDescriptions, setComingSoonDescriptions] = useState<{[key: number]: string}>({0: '', 1: '', 2: ''});
+  const [comingSoonDescSaving, setComingSoonDescSaving] = useState<{[key: number]: boolean}>({});
   
   const [bannerForm, setBannerForm] = useState<BannerForm>({
     title: '',
@@ -75,6 +80,7 @@ const AdminBanners: React.FC = () => {
     videoUrl: '',
     active: true,
     targetPage: 'homepage_customer',
+    permanent: true,
     startDate: undefined,
     endDate: undefined,
   });
@@ -110,11 +116,70 @@ const AdminBanners: React.FC = () => {
     }
   };
 
+  // Sync editable titles + descriptions when banners load
+  useEffect(() => {
+    setComingSoonTitles({
+      0: comingSoonBanners[0]?.title ?? `Připravujeme 1`,
+      1: comingSoonBanners[1]?.title ?? `Připravujeme 2`,
+      2: comingSoonBanners[2]?.title ?? `Připravujeme 3`,
+    });
+    setComingSoonDescriptions({
+      0: comingSoonBanners[0]?.description ?? '',
+      1: comingSoonBanners[1]?.description ?? '',
+      2: comingSoonBanners[2]?.description ?? '',
+    });
+  }, [comingSoonBanners]);
+
+  const handleComingSoonTitleSave = async (slotIndex: number) => {
+    const banner = comingSoonBanners[slotIndex];
+    if (!banner) {
+      toast.info('Nejprve nahrajte obrázek banneru, pak popisek bude uložen automaticky.');
+      return;
+    }
+    const newTitle = comingSoonTitles[slotIndex] || `Připravujeme ${slotIndex + 1}`;
+    setComingSoonTitleSaving(prev => ({ ...prev, [slotIndex]: true }));
+    try {
+      const { error } = await supabase
+        .from('coming_soon_banners')
+        .update({ title: newTitle })
+        .eq('id', banner.id);
+      if (error) throw error;
+      toast.success('Popisek uložen');
+      fetchComingSoonBanners();
+    } catch {
+      toast.error('Chyba při ukládání popisku');
+    } finally {
+      setComingSoonTitleSaving(prev => ({ ...prev, [slotIndex]: false }));
+    }
+  };
+
+  const handleComingSoonDescSave = async (slotIndex: number) => {
+    const banner = comingSoonBanners[slotIndex];
+    if (!banner) {
+      toast.info('Nejprve nahrajte obrázek banneru.');
+      return;
+    }
+    setComingSoonDescSaving(prev => ({ ...prev, [slotIndex]: true }));
+    try {
+      const { error } = await supabase
+        .from('coming_soon_banners')
+        .update({ description: comingSoonDescriptions[slotIndex] || null })
+        .eq('id', banner.id);
+      if (error) throw error;
+      toast.success('Info text uložen');
+      fetchComingSoonBanners();
+    } catch {
+      toast.error('Chyba při ukládání info textu');
+    } finally {
+      setComingSoonDescSaving(prev => ({ ...prev, [slotIndex]: false }));
+    }
+  };
+
   const fetchComingSoonBanners = async () => {
     try {
       const { data, error } = await supabase
         .from('coming_soon_banners')
-        .select('id, image_url, title')
+        .select('id, image_url, title, description')
         .order('created_at', { ascending: true })
         .limit(3);
 
@@ -149,7 +214,7 @@ const AdminBanners: React.FC = () => {
           .from('coming_soon_banners')
           .insert({
             image_url: imageUrl,
-            title: `Připravujeme ${slotIndex + 1}`
+            title: comingSoonTitles[slotIndex] || `Připravujeme ${slotIndex + 1}`
           });
         
         if (error) throw error;
@@ -219,8 +284,8 @@ const AdminBanners: React.FC = () => {
           image_url: imageUrl,
           active: bannerForm.active,
           target_page: bannerForm.targetPage,
-          start_date: bannerForm.startDate?.toISOString().split('T')[0],
-          end_date: bannerForm.endDate?.toISOString().split('T')[0],
+          start_date: bannerForm.permanent ? null : bannerForm.startDate?.toISOString().split('T')[0],
+          end_date: bannerForm.permanent ? null : bannerForm.endDate?.toISOString().split('T')[0],
         })
         .select()
         .single();
@@ -246,6 +311,7 @@ const AdminBanners: React.FC = () => {
       videoUrl: '',
       active: true,
       targetPage: 'homepage_customer',
+      permanent: true,
       startDate: undefined,
       endDate: undefined,
     });
@@ -324,6 +390,7 @@ const AdminBanners: React.FC = () => {
   };
 
   const getValidityText = (banner: Banner) => {
+    if (!banner.start_date && !banner.end_date) return 'Trvale';
     const startDate = banner.start_date ? new Date(banner.start_date).toLocaleDateString('cs-CZ') : 'Neurčeno';
     const endDate = banner.end_date ? new Date(banner.end_date).toLocaleDateString('cs-CZ') : 'Neurčeno';
     return `${startDate} - ${endDate}`;
@@ -354,8 +421,8 @@ const AdminBanners: React.FC = () => {
           image_url: imageUrl,
           active: bannerForm.active,
           target_page: bannerForm.targetPage,
-          start_date: bannerForm.startDate?.toISOString().split('T')[0],
-          end_date: bannerForm.endDate?.toISOString().split('T')[0],
+          start_date: bannerForm.permanent ? null : bannerForm.startDate?.toISOString().split('T')[0],
+          end_date: bannerForm.permanent ? null : bannerForm.endDate?.toISOString().split('T')[0],
         })
         .eq('id', editingBanner.id);
 
@@ -376,12 +443,14 @@ const AdminBanners: React.FC = () => {
 
   const handleEditClick = (banner: Banner) => {
     setEditingBanner(banner);
+    const isPermanent = !banner.start_date && !banner.end_date;
     setBannerForm({
       title: banner.title,
       imageFile: null,
       videoUrl: banner.target_page === 'homepage_video' ? banner.image_url : '',
       active: banner.active,
       targetPage: banner.target_page,
+      permanent: isPermanent,
       startDate: banner.start_date ? new Date(banner.start_date) : undefined,
       endDate: banner.end_date ? new Date(banner.end_date) : undefined,
     });
@@ -477,7 +546,7 @@ const AdminBanners: React.FC = () => {
                     id="title"
                     value={bannerForm.title}
                     onChange={(e) => setBannerForm({...bannerForm, title: e.target.value})}
-                    placeholder="Např. Mega Jackpot - Vyhrajte až 1 milion!"
+                    placeholder="Např. Prémiová hlavní výhra - vyhrajte až 1 milion!"
                   />
                 </div>
 
@@ -554,62 +623,73 @@ const AdminBanners: React.FC = () => {
                   <Label htmlFor="active">Aktivní</Label>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Datum začátku</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn("w-full justify-start text-left font-normal", 
-                            !bannerForm.startDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {bannerForm.startDate ? format(bannerForm.startDate, 'dd.MM.yyyy') : 'Vybrat datum'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={bannerForm.startDate}
-                          onSelect={(date) => setBannerForm({...bannerForm, startDate: date})}
-                          initialFocus
-                          className="p-3"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Datum konce</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn("w-full justify-start text-left font-normal", 
-                            !bannerForm.endDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {bannerForm.endDate ? format(bannerForm.endDate, 'dd.MM.yyyy') : 'Vybrat datum'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={bannerForm.endDate}
-                          onSelect={(date) => setBannerForm({...bannerForm, endDate: date})}
-                          initialFocus
-                          className="p-3"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="permanent"
+                    checked={bannerForm.permanent}
+                    onCheckedChange={(checked) => setBannerForm({...bannerForm, permanent: checked, startDate: checked ? undefined : bannerForm.startDate, endDate: checked ? undefined : bannerForm.endDate})}
+                  />
+                  <Label htmlFor="permanent">Zobrazovat trvale (bez omezení datumem)</Label>
                 </div>
 
+                {!bannerForm.permanent && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Datum začátku</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn("w-full justify-start text-left font-normal",
+                              !bannerForm.startDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {bannerForm.startDate ? format(bannerForm.startDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={bannerForm.startDate}
+                            onSelect={(date) => setBannerForm({...bannerForm, startDate: date})}
+                            initialFocus
+                            className="p-3"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Datum konce</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn("w-full justify-start text-left font-normal",
+                              !bannerForm.endDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {bannerForm.endDate ? format(bannerForm.endDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={bannerForm.endDate}
+                            onSelect={(date) => setBannerForm({...bannerForm, endDate: date})}
+                            initialFocus
+                            className="p-3"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-4 pt-4">
-                  <Button 
+                  <Button
                     onClick={handleCreateBanner}
                     disabled={createLoading}
                     className="flex-1"
@@ -729,42 +809,122 @@ const AdminBanners: React.FC = () => {
                 const isUploading = comingSoonUploading[slotIndex];
                 
                 return (
-                  <div key={slotIndex} className="space-y-2">
-                    <Label htmlFor={`coming-soon-${slotIndex}`}>
-                      Připravujeme {slotIndex + 1}
-                    </Label>
-                    
-                    {banner?.image_url && (
-                      <div className="relative aspect-video rounded-lg overflow-hidden border">
-                        <img 
-                          src={banner.image_url} 
-                          alt={`Připravujeme ${slotIndex + 1}`}
+                  <div key={slotIndex} className="space-y-3">
+                    {/* Slot heading */}
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Slot {slotIndex + 1}
+                    </p>
+
+                    {/* Image preview with label overlay */}
+                    {banner?.image_url ? (
+                      <div className="relative aspect-video rounded-lg overflow-hidden border border-[rgba(255,138,0,0.25)]">
+                        <img
+                          src={banner.image_url}
+                          alt={banner.title ?? `Připravujeme ${slotIndex + 1}`}
                           className="w-full h-full object-cover"
                         />
+                        {/* Premium label overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/80 to-transparent">
+                          <p
+                            className="font-bold tracking-wide truncate"
+                            style={{
+                              fontFamily: "'Poppins', system-ui, sans-serif",
+                              fontSize: '0.85rem',
+                              background: 'linear-gradient(90deg, #E7EBF0 0%, #FFB547 60%, #FF8A00 100%)',
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              backgroundClip: 'text',
+                              textShadow: 'none',
+                            }}
+                          >
+                            {comingSoonTitles[slotIndex] || `Připravujeme ${slotIndex + 1}`}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="aspect-video rounded-lg border border-dashed border-muted-foreground/30 flex items-center justify-center bg-muted/10">
+                        <p className="text-xs text-muted-foreground">Bez obrázku</p>
                       </div>
                     )}
-                    
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id={`coming-soon-${slotIndex}`}
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleComingSoonUpload(slotIndex, file);
-                        }}
-                        disabled={isUploading}
-                        className="flex-1"
-                      />
-                      <Upload className={cn(
-                        "h-4 w-4",
-                        isUploading ? "animate-pulse text-primary" : "text-muted-foreground"
-                      )} />
+
+                    {/* Editable label */}
+                    <div className="space-y-1">
+                      <Label htmlFor={`coming-soon-title-${slotIndex}`} className="text-xs text-muted-foreground">
+                        Popisek banneru
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id={`coming-soon-title-${slotIndex}`}
+                          type="text"
+                          value={comingSoonTitles[slotIndex] ?? ''}
+                          onChange={(e) => setComingSoonTitles(prev => ({ ...prev, [slotIndex]: e.target.value }))}
+                          placeholder={`Připravujeme ${slotIndex + 1}`}
+                          className="flex-1 text-sm"
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleComingSoonTitleSave(slotIndex)}
+                          disabled={comingSoonTitleSaving[slotIndex]}
+                          className="shrink-0 border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.1)] text-xs"
+                        >
+                          {comingSoonTitleSaving[slotIndex] ? 'Ukládám…' : 'Uložit'}
+                        </Button>
+                      </div>
                     </div>
-                    
-                    {isUploading && (
-                      <p className="text-xs text-primary">Nahrává se...</p>
-                    )}
+
+                    {/* Editable info description */}
+                    <div className="space-y-1">
+                      <Label htmlFor={`coming-soon-desc-${slotIndex}`} className="text-xs text-muted-foreground">
+                        Info text (zobrazí se v popup po kliknutí na ℹ ikonu)
+                      </Label>
+                      <div className="flex gap-2 items-start">
+                        <textarea
+                          id={`coming-soon-desc-${slotIndex}`}
+                          value={comingSoonDescriptions[slotIndex] ?? ''}
+                          onChange={(e) => setComingSoonDescriptions(prev => ({ ...prev, [slotIndex]: e.target.value }))}
+                          placeholder="Volitelný popisný text…"
+                          rows={3}
+                          className="flex-1 text-sm rounded-md border border-input bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleComingSoonDescSave(slotIndex)}
+                          disabled={comingSoonDescSaving[slotIndex]}
+                          className="shrink-0 border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.1)] text-xs mt-0"
+                        >
+                          {comingSoonDescSaving[slotIndex] ? 'Ukládám…' : 'Uložit'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Image upload */}
+                    <div className="space-y-1">
+                      <Label htmlFor={`coming-soon-${slotIndex}`} className="text-xs text-muted-foreground">
+                        Obrázek
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id={`coming-soon-${slotIndex}`}
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleComingSoonUpload(slotIndex, file);
+                          }}
+                          disabled={isUploading}
+                          className="flex-1"
+                        />
+                        <Upload className={cn(
+                          "h-4 w-4",
+                          isUploading ? "animate-pulse text-primary" : "text-muted-foreground"
+                        )} />
+                      </div>
+                      {isUploading && (
+                        <p className="text-xs text-primary">Nahrává se...</p>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -942,7 +1102,7 @@ const AdminBanners: React.FC = () => {
                 id="edit-title"
                 value={bannerForm.title}
                 onChange={(e) => setBannerForm({...bannerForm, title: e.target.value})}
-                placeholder="Např. Mega Jackpot - Vyhrajte až 1 milion!"
+                placeholder="Např. Prémiová hlavní výhra - vyhrajte až 1 milion!"
               />
             </div>
 
@@ -1019,62 +1179,73 @@ const AdminBanners: React.FC = () => {
               <Label htmlFor="edit-active">Aktivní</Label>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Datum začátku</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn("w-full justify-start text-left font-normal", 
-                        !bannerForm.startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {bannerForm.startDate ? format(bannerForm.startDate, 'dd.MM.yyyy') : 'Vybrat datum'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={bannerForm.startDate}
-                      onSelect={(date) => setBannerForm({...bannerForm, startDate: date})}
-                      initialFocus
-                      className="p-3"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Datum konce</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn("w-full justify-start text-left font-normal", 
-                        !bannerForm.endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {bannerForm.endDate ? format(bannerForm.endDate, 'dd.MM.yyyy') : 'Vybrat datum'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={bannerForm.endDate}
-                      onSelect={(date) => setBannerForm({...bannerForm, endDate: date})}
-                      initialFocus
-                      className="p-3"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="edit-permanent"
+                checked={bannerForm.permanent}
+                onCheckedChange={(checked) => setBannerForm({...bannerForm, permanent: checked, startDate: checked ? undefined : bannerForm.startDate, endDate: checked ? undefined : bannerForm.endDate})}
+              />
+              <Label htmlFor="edit-permanent">Zobrazovat trvale (bez omezení datumem)</Label>
             </div>
 
+            {!bannerForm.permanent && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Datum začátku</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn("w-full justify-start text-left font-normal",
+                          !bannerForm.startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {bannerForm.startDate ? format(bannerForm.startDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={bannerForm.startDate}
+                        onSelect={(date) => setBannerForm({...bannerForm, startDate: date})}
+                        initialFocus
+                        className="p-3"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Datum konce</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn("w-full justify-start text-left font-normal",
+                          !bannerForm.endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {bannerForm.endDate ? format(bannerForm.endDate, 'dd.MM.yyyy') : 'Vybrat datum'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={bannerForm.endDate}
+                        onSelect={(date) => setBannerForm({...bannerForm, endDate: date})}
+                        initialFocus
+                        className="p-3"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-4 pt-4">
-              <Button 
+              <Button
                 onClick={handleUpdateBanner}
                 disabled={editLoading}
                 className="flex-1"

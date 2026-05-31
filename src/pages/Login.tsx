@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/logo-onemil.png";
-import { enabledOAuthProviders, type OAuthProvider } from "@/lib/enabledOAuthProviders";
+import { ENABLED_OAUTH_PROVIDERS, type OAuthProvider } from "@/config/socialAuth";
 
 /** Same-origin path only (open-redirect safe). Lives in this file only. */
 function safeRedirectPath(raw: string | null): string | null {
@@ -122,7 +122,7 @@ const Login: React.FC = () => {
           alt="OneMil logo"
           className="h-16 w-auto mx-auto mb-4 object-contain onemil-logo-animated"
         />
-        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[hsl(40_30%_35%/0.5)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
+        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[rgba(255,138,0,0.15)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
         <CardHeader>
           <CardTitle className="text-heading-gold">Přihlášení</CardTitle>
           <CardDescription>Přihlaste se ke svému účtu OneMil</CardDescription>
@@ -162,26 +162,26 @@ const Login: React.FC = () => {
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[hsl(45_80%_45%)] via-[hsl(40_85%_50%)] to-[hsl(35_80%_45%)] text-secondary-foreground shadow-[0_2px_12px_hsl(45_80%_50%/0.25)] hover:shadow-[0_4px_16px_hsl(45_80%_50%/0.35)] hover:brightness-110 transition-all" disabled={loading}>
+            <Button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black shadow-[0_2px_12px_rgba(255,138,0,0.25)] hover:shadow-[0_4px_16px_rgba(255,138,0,0.35)] hover:brightness-110 transition-all" disabled={loading}>
               {loading ? "Přihlašuji..." : "Přihlásit se"}
             </Button>
 
-            {enabledOAuthProviders.length > 0 && (
+            {ENABLED_OAUTH_PROVIDERS.length > 0 && (
               <div className="flex flex-col space-y-2 w-full">
-                {enabledOAuthProviders.includes("google") && (
-                  <Button type="button" variant="outline" className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]" onClick={() => handleOAuthSignIn("google")}>
+                {ENABLED_OAUTH_PROVIDERS.includes("google") && (
+                  <Button type="button" variant="outline" className="w-full border-[rgba(255,138,0,0.2)] hover:border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.08)]" onClick={() => handleOAuthSignIn("google")}>
                     Přihlásit se přes Google
                   </Button>
                 )}
 
-                {enabledOAuthProviders.includes("apple") && (
-                  <Button type="button" variant="outline" className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]" onClick={() => handleOAuthSignIn("apple")}>
+                {ENABLED_OAUTH_PROVIDERS.includes("apple") && (
+                  <Button type="button" variant="outline" className="w-full border-[rgba(255,138,0,0.2)] hover:border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.08)]" onClick={() => handleOAuthSignIn("apple")}>
                     Přihlásit se přes Apple
                   </Button>
                 )}
 
-                {enabledOAuthProviders.includes("facebook") && (
-                  <Button type="button" variant="outline" className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]" onClick={() => handleOAuthSignIn("facebook")}>
+                {ENABLED_OAUTH_PROVIDERS.includes("facebook") && (
+                  <Button type="button" variant="outline" className="w-full border-[rgba(255,138,0,0.2)] hover:border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.08)]" onClick={() => handleOAuthSignIn("facebook")}>
                     Přihlásit se přes Facebook
                   </Button>
                 )}

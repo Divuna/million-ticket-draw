@@ -321,7 +321,7 @@ const FavoriteGames = () => {
         won_prize: rpcResult.won_prize ?? null,
         won_type: rpcResult.won_type ?? null,
         bonus_prize_id: rpcResult.bonus_prize_id ?? null,
-        remaining_tickets: rpcResult.remaining_tickets ?? 0,
+        remaining_tickets: rpcResult.remaining_tickets ?? undefined,
         partner_offer: partnerOffer,
       };
 
@@ -334,8 +334,6 @@ const FavoriteGames = () => {
 
       if (result.won_prize) {
         toast.success(`Gratulujeme! Vyhrál jsi ${result.won_prize}!`);
-      } else {
-        toast.success(`Tiket #${result.ticket_number.toLocaleString('cs-CZ')} zakoupen!`);
       }
     } catch (error: any) {
       console.error('Error unlocking ticket:', error);
@@ -429,7 +427,8 @@ const FavoriteGames = () => {
           won_prize: modalResult.won_prize,
           won_type: modalResult.won_type,
           bonus_prize_id: modalResult.bonus_prize_id,
-          remaining_tickets: modalResult.remaining_tickets
+          remaining_tickets: modalResult.remaining_tickets,
+          partner_offer: modalResult.partner_offer ?? null,
         } : null}
         contestId={modalContestId}
         isOpen={!!modalResult}

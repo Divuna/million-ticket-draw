@@ -5,6 +5,7 @@ interface ComingSoonBanner {
   id: string;
   image_url: string;
   title: string | null;
+  description: string | null;
   created_at: string;
 }
 

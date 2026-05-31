@@ -19,68 +19,81 @@
 
 @layer base {
   :root {
-    /* Premium Dark Navy/Graphite Theme */
-    --background: 225 44% 5%;
-    --foreground: 210 20% 98%;
-    --card: 222 38% 10% / 0.85;
-    --card-foreground: 210 20% 98%;
-    --popover: 222 38% 10% / 0.92;
-    --popover-foreground: 210 20% 98%;
-    --primary: 32 100% 50%;
+    /* OneMil brand tokens */
+    --om-black:        #0A0B0F;
+    --om-navy:         #101722;
+    --om-graphite:     #1D2128;
+    --om-platinum:     #E7EBF0;
+    --om-silver:       #BFC6CF;
+    --om-muted-silver: #8E98A6;
+    --om-orange:       #FF8A00;
+    --om-amber:        #FFB547;
+    --om-soft-gold:    #D8BA78;
+    --om-font-heading: 'Poppins', system-ui, sans-serif;
+    --om-font-body:    'Inter', system-ui, sans-serif;
+
+    /* Premium Dark Theme — aligned with OneMil brand */
+    --background: 228 22% 5%;
+    --foreground: 212 25% 92%;
+    --card: 217 37% 10% / 0.85;
+    --card-foreground: 212 25% 92%;
+    --popover: 222 15% 14% / 0.92;
+    --popover-foreground: 212 25% 92%;
+    --primary: 33 100% 50%;
     --primary-foreground: 0 0% 7%;
     --secondary: 38 100% 64%;
     --secondary-foreground: 0 0% 7%;
     --muted: 220 30% 18%;
-    --muted-foreground: 215 15% 70%;
-    --accent: 32 100% 50%;
+    --muted-foreground: 212 12% 60%;
+    --accent: 33 100% 50%;
     --accent-foreground: 0 0% 7%;
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 20% 98%;
+    --destructive-foreground: 212 25% 92%;
     --border: 215 20% 28%;
     --input: 220 30% 14%;
-    --ring: 32 100% 50%;
+    --ring: 33 100% 50%;
     --radius: 0.625rem;
-    
+
     /* Unified box styles */
-    --card-shadow: 0 4px 16px hsl(222 50% 3% / 0.5), 0 1px 3px hsl(222 50% 3% / 0.3);
+    --card-shadow: 0 4px 16px hsl(228 22% 3% / 0.5), 0 1px 3px hsl(228 22% 3% / 0.3);
     --card-border: 1px solid hsl(215 20% 35% / 0.4);
 
     /* Sidebar */
-    --sidebar-background: 220 40% 10%;
-    --sidebar-foreground: 210 20% 95%;
-    --sidebar-primary: 220 80% 45%;
-    --sidebar-primary-foreground: 210 20% 98%;
-    --sidebar-accent: 220 30% 15%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 220 25% 20%;
-    --sidebar-ring: 220 80% 45%;
+    --sidebar-background: 217 37% 9%;
+    --sidebar-foreground: 212 25% 92%;
+    --sidebar-primary: 33 100% 50%;
+    --sidebar-primary-foreground: 0 0% 7%;
+    --sidebar-accent: 220 25% 14%;
+    --sidebar-accent-foreground: 212 25% 92%;
+    --sidebar-border: 220 20% 18%;
+    --sidebar-ring: 33 100% 50%;
 
-    /* Luxury Colors - Dark Blue, Gold, Silver */
-    --neon-blue: 220 80% 45%;
-    --neon-gold: 43 90% 55%;
+    /* Brand-aligned accent colors */
+    --neon-blue: 33 100% 50%;
+    --neon-gold: 38 100% 64%;
     --neon-red: 0 72% 51%;
     --neon-purple: 270 50% 60%;
     --neon-cyan: 210 80% 65%;
     --neon-green: 160 55% 45%;
     --neon-pink: 330 60% 60%;
-    
+
     /* Package Colors - for MioCoin tiers */
     --package-blue: 210 80% 65%;
-    --package-gold: 43 90% 55%;
+    --package-gold: 38 100% 64%;
     --package-purple: 270 60% 60%;
     --package-green: 160 55% 50%;
-    
-    /* Premium Typography Colors - matched to OneMil logo */
-    --heading-gold: 43 78% 54%;
-    --heading-gold-soft: 43 65% 48%;
-    --heading-gold-muted: 43 50% 42%;
-    --text-silver: 210 18% 88%;
-    --text-muted-gray: 215 10% 55%;
 
-    /* Luxury Gradients */
+    /* Premium Typography Colors */
+    --heading-gold: 38 100% 64%;
+    --heading-gold-soft: 38 85% 55%;
+    --heading-gold-muted: 38 65% 42%;
+    --text-silver: 210 18% 78%;
+    --text-muted-gray: 212 12% 55%;
+
+    /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--neon-blue)), hsl(var(--neon-gold)));
     --gradient-hero: linear-gradient(135deg, hsl(var(--neon-gold)), hsl(var(--neon-blue)));
-    --gradient-urban: linear-gradient(180deg, hsl(222 47% 4%), hsl(222 40% 8%));
+    --gradient-urban: linear-gradient(180deg, hsl(228 22% 4%), hsl(220 18% 8%));
     --gradient-mystery: linear-gradient(45deg, hsl(var(--neon-blue) / 0.1), hsl(var(--neon-gold) / 0.1));
 
     /* Luxury Shadows */
@@ -91,29 +104,29 @@
   }
 
   .dark {
-    /* Premium Dark Navy/Graphite Theme */
-    --background: 225 50% 4%;
-    --foreground: 210 20% 98%;
-    --card: 225 42% 9% / 0.85;
-    --card-foreground: 210 20% 98%;
-    --popover: 225 42% 10% / 0.92;
-    --popover-foreground: 210 20% 98%;
-    --primary: 32 100% 50%;
+    /* Premium Dark Theme — aligned with OneMil brand */
+    --background: 228 22% 4%;
+    --foreground: 212 25% 92%;
+    --card: 217 37% 9% / 0.85;
+    --card-foreground: 212 25% 92%;
+    --popover: 222 15% 13% / 0.92;
+    --popover-foreground: 212 25% 92%;
+    --primary: 33 100% 50%;
     --primary-foreground: 0 0% 7%;
     --secondary: 38 100% 64%;
     --secondary-foreground: 0 0% 7%;
     --muted: 220 35% 16%;
-    --muted-foreground: 215 15% 75%;
-    --accent: 32 100% 50%;
+    --muted-foreground: 212 12% 65%;
+    --accent: 33 100% 50%;
     --accent-foreground: 0 0% 7%;
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 20% 98%;
+    --destructive-foreground: 212 25% 92%;
     --border: 215 20% 30%;
     --input: 220 35% 12%;
-    --ring: 32 100% 50%;
-    
+    --ring: 33 100% 50%;
+
     /* Unified box styles */
-    --card-shadow: 0 4px 20px hsl(225 50% 2% / 0.6), 0 1px 4px hsl(225 50% 2% / 0.4);
+    --card-shadow: 0 4px 20px hsl(228 22% 2% / 0.6), 0 1px 4px hsl(228 22% 2% / 0.4);
     --card-border: 1px solid hsl(215 20% 38% / 0.35);
 
     /* Enhanced Luxury Glow Effects */
@@ -193,9 +206,9 @@
     bottom: 0;
     background: linear-gradient(
       180deg,
-      hsl(225 50% 3%) 0%,
-      hsl(222 45% 6%) 50%,
-      hsl(220 40% 8%) 100%
+      hsl(228 22% 3%) 0%,
+      hsl(222 20% 6%) 50%,
+      hsl(217 25% 8%) 100%
     );
     pointer-events: none;
     z-index: -1;
@@ -217,6 +230,41 @@
     );
     pointer-events: none;
     z-index: -1;
+  }
+
+  @media (max-width: 768px) {
+    html,
+    body,
+    #root {
+      min-height: 100%;
+      overscroll-behavior-y: none;
+    }
+
+    .customer-layout {
+      padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+      /* Ensure customer-layout fills the full viewport on mobile so there is
+         zero rubber-band scroll space below the shell. Without this, iOS Safari
+         can bouncy-scroll the whole page (including the fixed bottom nav)
+         whenever the inner messages list scroll reaches its end. */
+      min-height: 100dvh;
+    }
+
+    .ios-pwa-bottom-nav {
+      bottom: 0;
+      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+      transform: translate3d(0, 0, 0);
+      -webkit-transform: translate3d(0, 0, 0);
+      will-change: transform;
+      contain: layout paint;
+    }
+
+    .messages-mobile-fixed-shell {
+      height: calc(100dvh - 5.75rem - env(safe-area-inset-bottom, 0px));
+      min-height: calc(100dvh - 5.75rem - env(safe-area-inset-bottom, 0px));
+      margin-bottom: calc(-5.75rem - env(safe-area-inset-bottom, 0px));
+      overflow: hidden;
+      overscroll-behavior: contain;
+    }
   }
 }
 
@@ -250,12 +298,10 @@
   .text-heading-gold {
     background: linear-gradient(
       180deg,
-      hsl(50 95% 85%) 0%,
-      hsl(48 90% 78%) 8%,
-      hsl(45 85% 68%) 30%,
-      hsl(43 80% 55%) 55%,
-      hsl(40 75% 48%) 80%,
-      hsl(35 70% 40%) 100%
+      #FFB547 0%,
+      #FF8A00 40%,
+      #FFB547 80%,
+      #FF8A00 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
@@ -890,11 +936,44 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    hsl(43 90% 55% / 0.1) 20%,
-    hsl(43 90% 55% / 0.5) 50%,
-    hsl(43 90% 55% / 0.1) 80%,
+    rgba(255, 138, 0, 0.1) 20%,
+    rgba(255, 138, 0, 0.5) 50%,
+    rgba(255, 138, 0, 0.1) 80%,
     transparent 100%
   );
   background-size: 200% 100%;
   animation: winner-shimmer 3s ease-in-out infinite;
+}
+
+@keyframes info-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 138, 0, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 138, 0, 0);
+    transform: scale(1.08);
+  }
+}
+
+/* Partner logo float variants — slow calm drift, different directions */
+@keyframes partner-float-a {
+  0%,  100% { transform: translate(0px,  0px);   }
+  40%        { transform: translate(14px, -10px); }
+  70%        { transform: translate(6px,   12px); }
+}
+@keyframes partner-float-b {
+  0%,  100% { transform: translate(0px,   0px);  }
+  35%        { transform: translate(-12px,  8px); }
+  68%        { transform: translate(-4px, -14px); }
+}
+@keyframes partner-float-c {
+  0%,  100% { transform: translate(0px,  0px);   }
+  45%        { transform: translate(10px, 14px);  }
+  72%        { transform: translate(-8px,  5px);  }
+}
+@keyframes partner-float-d {
+  0%,  100% { transform: translate(0px,   0px);  }
+  38%        { transform: translate(-14px, -8px); }
+  65%        { transform: translate(10px, -12px); }
 }

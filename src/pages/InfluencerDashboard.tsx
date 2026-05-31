@@ -109,7 +109,7 @@ const InfluencerDashboard = () => {
           <User className="w-12 h-12 mx-auto text-muted-foreground" />
           <h2 className="text-xl font-semibold text-[hsl(var(--text-silver))]">Přihlášení vyžadováno</h2>
           <p className="text-muted-foreground text-sm">
-            Pro přístup k influencer dashboardu se musíte nejdříve přihlásit.
+            Pro přístup k Affiliate dashboardu se musíte nejdříve přihlásit.
           </p>
           <Link to="/partner/login" className="inline-block text-sm text-[hsl(var(--neon-gold))] hover:underline mt-2">
             Přejít na přihlášení →
@@ -126,7 +126,7 @@ const InfluencerDashboard = () => {
           <Clock className="w-12 h-12 mx-auto text-amber-500" />
           <h2 className="text-xl font-semibold text-[hsl(var(--text-silver))]">Žádost ve schvalování</h2>
           <p className="text-muted-foreground text-sm">
-            Vaše žádost o influencer účet je ve schvalování.
+            Vaše žádost o Affiliate účet je ve schvalování.
           </p>
           <p className="text-muted-foreground text-sm">
             O schválení vás budeme informovat e-mailem.
@@ -147,7 +147,7 @@ const InfluencerDashboard = () => {
           <User className="w-12 h-12 mx-auto text-destructive" />
           <h2 className="text-xl font-semibold text-[hsl(var(--text-silver))]">Žádost zamítnuta</h2>
           <p className="text-muted-foreground text-sm">
-            Vaše žádost o influencer účet byla zamítnuta.
+            Vaše žádost o Affiliate účet byla zamítnuta.
           </p>
           <p className="text-muted-foreground text-sm">
             Pokud máte dotazy, kontaktujte nás na{' '}
@@ -171,7 +171,7 @@ const InfluencerDashboard = () => {
           <Clock className="w-12 h-12 mx-auto text-muted-foreground" />
           <h2 className="text-xl font-semibold text-[hsl(var(--text-silver))]">Přístup zamítnut</h2>
           <p className="text-muted-foreground text-sm">
-            Váš influencer účet nebyl nalezen nebo nemáte oprávnění.
+            Váš Affiliate účet nebyl nalezen nebo nemáte oprávnění.
           </p>
           <Link to="/" className="inline-flex items-center text-sm text-[hsl(var(--neon-gold))] hover:underline mt-2">
             <ArrowLeft className="mr-1 h-4 w-4" /> Zpět na hlavní stránku
@@ -204,7 +204,7 @@ const InfluencerDashboard = () => {
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[hsl(var(--neon-gold)/0.4)] bg-[hsl(var(--neon-gold)/0.1)]">
                   <Star className="w-3.5 h-3.5 text-[hsl(var(--neon-gold))]" />
                   <span className="text-xs font-semibold tracking-wide uppercase text-[hsl(var(--neon-gold))]">
-                    Aktivní influencer
+                    Aktivní Affiliate partner
                   </span>
                 </div>
                 <Button
@@ -221,7 +221,7 @@ const InfluencerDashboard = () => {
                 Vydělávejte s OneMil
               </h1>
               <p className="text-sm text-[hsl(var(--text-muted-gray))] max-w-md">
-                Sdílejte svůj odkaz, přivádějte nové hráče a sledujte své výdělky v reálném čase.
+                Sdílejte svůj Affiliate odkaz, přivádějte nové uživatele a sledujte své provize v reálném čase.
               </p>
             </div>
 
@@ -284,12 +284,12 @@ const InfluencerDashboard = () => {
           ))}
         </div>
 
-        {/* ══════ REFERRAL LINK ══════ */}
+        {/* ══════ AFFILIATE LINK ══════ */}
         <div className="luxury-card overflow-hidden">
           <div className="p-6 space-y-4">
             <div className="flex items-center gap-2 mb-1">
               <Link2 className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
-              <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Váš referral odkaz</h3>
+              <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Váš Affiliate odkaz</h3>
             </div>
 
             <div className="flex gap-2">
@@ -314,7 +314,7 @@ const InfluencerDashboard = () => {
                 Jak to funguje?
               </p>
               <p className="text-sm text-[hsl(var(--text-muted-gray))] leading-relaxed">
-                Sdílejte tento odkaz se svými sledujícími. Za každého nového uživatele, který se přes váš odkaz zaregistruje a provede platbu, získáváte provizi. Provize se automaticky počítají a vyplácejí měsíčně.
+                Affiliate partner doporučuje OneMil a získává provize za přivedené uživatele. Sdílejte tento odkaz se svým publikem, kontakty nebo komunitou. Provize se automaticky počítají a vyplácejí měsíčně.
               </p>
             </div>
 
@@ -339,7 +339,7 @@ const InfluencerDashboard = () => {
           <div className="p-6 space-y-4">
             <div className="flex items-center gap-2 mb-1">
               <Wallet className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
-              <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Provize a výplaty</h3>
+              <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Affiliate provize a výplaty</h3>
             </div>
 
             {/* Payout summary row */}
@@ -364,7 +364,7 @@ const InfluencerDashboard = () => {
               <div className="text-center py-10 space-y-2">
                 <Banknote className="w-10 h-10 mx-auto text-[hsl(var(--text-muted-gray)/0.4)]" />
                 <p className="text-sm text-[hsl(var(--text-muted-gray))]">
-                  Zatím žádné provize. Sdílejte svůj odkaz a začněte vydělávat!
+                  Zatím žádné Affiliate provize. Sdílejte svůj odkaz a začněte přivádět uživatele.
                 </p>
               </div>
             ) : (
@@ -414,7 +414,7 @@ const InfluencerDashboard = () => {
           <div className="p-6 space-y-4">
             <div className="flex items-center gap-2 mb-1">
               <Megaphone className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
-              <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Kampaně</h3>
+              <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Affiliate kampaně</h3>
             </div>
 
             {campaigns.length === 0 ? (

@@ -97,10 +97,24 @@ interface PhysicalPrize {
   ticket_position: number;
   description: string;
   detailed_description?: string;
+  supplier_name?: string;
+  unit_cost_czk?: number;
+  vat_rate?: number;
+  handling_override_czk?: number | null;
   image_url?: string | null;
   image_file?: File | null;
   ai_image_url?: string | null;
   ai_generating?: boolean;
+}
+
+interface EconomyAssumptions {
+  mainPrizeRealCost: number;
+  mioCoinRealCost: number;
+  vatRate: number;
+  setupCost: number;
+  marketingPercent: number;
+  handlingCostPerPhysicalPrize: number;
+  targetMarginPercent: number;
 }
 
 interface ContestModalProps {
@@ -119,6 +133,16 @@ const STATUS_OPTIONS = [
 ];
 
 const SELECTABLE_STATUS_OPTIONS = STATUS_OPTIONS.filter((opt) => opt.value !== "closed");
+
+const DEFAULT_ECONOMY_ASSUMPTIONS: EconomyAssumptions = {
+  mainPrizeRealCost: 0,
+  mioCoinRealCost: 0,
+  vatRate: 21,
+  setupCost: 7000,
+  marketingPercent: 15,
+  handlingCostPerPhysicalPrize: 75,
+  targetMarginPercent: 20,
+};
 
 const getStatusBadgeClass = (status: string) => {
   const option = STATUS_OPTIONS.find((opt) => opt.value === status);
@@ -174,9 +198,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   // MioCoin bonus state
   const [mioCoinBonuses, setMioCoinBonuses] = useState<MioCoinBonus[]>([]);
+  const [hasPersistedMioCoinBonuses, setHasPersistedMioCoinBonuses] = useState(false);
   const [totalMioCoinsInput, setTotalMioCoinsInput] = useState<number>(0);
   const [stepValue, setStepValue] = useState<number>(0);
   const [distributionType, setDistributionType] = useState<"even" | "random">("even");
+  const [mioCoinGeneratorTouched, setMioCoinGeneratorTouched] = useState(false);
+  const [economyAssumptions, setEconomyAssumptions] =
+    useState<EconomyAssumptions>(DEFAULT_ECONOMY_ASSUMPTIONS);
 
   // Physical prize state
   const [physicalPrizes, setPhysicalPrizes] = useState<PhysicalPrize[]>([]);
@@ -184,8 +212,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     ticket_position: 1,
     description: "",
     detailed_description: "",
+    supplier_name: "",
+    unit_cost_czk: 0,
+    vat_rate: 21,
+    handling_override_czk: null,
     image_file: null,
   });
+  // Bulk quantity and distribution type (form-only, not persisted per row)
+  const [physicalPrizeQuantity, setPhysicalPrizeQuantity] = useState<number>(1);
+  const [physicalPrizeDistribution, setPhysicalPrizeDistribution] = useState<"even" | "random">("even");
 
   // Reset form when modal opens or editingContest changes
   useEffect(() => {
@@ -211,6 +246,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       // Load existing bonuses and gallery for editing
       loadExistingBonuses(editingContest.contest_id);
       loadGalleryMedia(editingContest.contest_id);
+      loadEconomyAssumptions(editingContest.contest_id);
     } else {
       setForm({
         title: "",
@@ -231,6 +267,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         fast_game: false,
       });
       setMioCoinBonuses([]);
+      setHasPersistedMioCoinBonuses(false);
       setPhysicalPrizes([]);
       setGalleryMedia([]);
       setPendingMediaFiles({});
@@ -239,9 +276,24 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setTotalMioCoinsInput(0);
       setStepValue(0);
       setDistributionType("even");
+      setMioCoinGeneratorTouched(false);
+      // New contest starts with fresh economy defaults.
+      setEconomyAssumptions(DEFAULT_ECONOMY_ASSUMPTIONS);
     }
     setActiveTab("basic");
   }, [editingContest, open]);
+
+  useEffect(() => {
+    if (
+      totalMioCoinsInput === 0 &&
+      stepValue === 0 &&
+      distributionType === "even" &&
+      mioCoinBonuses.length === 0 &&
+      mioCoinGeneratorTouched
+    ) {
+      setMioCoinGeneratorTouched(false);
+    }
+  }, [distributionType, mioCoinBonuses.length, mioCoinGeneratorTouched, stepValue, totalMioCoinsInput]);
 
   // ---- Draft persistence (only for new contests, not editing) ----
   const DRAFT_KEY = "draft_new_contest";
@@ -346,6 +398,35 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     onClose();
   };
 
+  /**
+   * Sanitize a raw file name so it is safe for Supabase Storage keys.
+   * Supabase Storage rejects keys containing spaces, Czech diacritics,
+   * parentheses, or other non-ASCII characters ("Invalid key" error).
+   *
+   * Steps:
+   *  1. Separate base name from extension (lowercased).
+   *  2. Normalise Unicode (NFD) and strip combining diacritical marks.
+   *  3. Replace spaces with hyphens.
+   *  4. Strip any character that is not a-z, A-Z, 0-9, dot, underscore, or hyphen.
+   *  5. Collapse repeated hyphens.
+   *  6. Fall back to "file" if the result is empty.
+   */
+  const sanitizeStorageFileName = (fileName: string): string => {
+    const lastDot = fileName.lastIndexOf(".");
+    const rawBase = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
+    const ext = lastDot > 0 ? fileName.slice(lastDot + 1).toLowerCase() : "";
+
+    const safeBase = rawBase
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")   // strip combining diacritical marks
+      .replace(/\s+/g, "-")              // spaces → hyphens
+      .replace(/[^a-zA-Z0-9._-]/g, "")  // remove remaining special chars
+      .replace(/-{2,}/g, "-")            // collapse repeated hyphens
+      || "file";                          // fallback
+
+    return ext ? `${safeBase}.${ext}` : safeBase;
+  };
+
   const loadGalleryMedia = async (contestId: string) => {
     setLoadingMedia(true);
     const { data, error } = await supabase
@@ -360,6 +441,34 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setGalleryMedia(data || []);
     }
     setLoadingMedia(false);
+  };
+
+  // Load persisted economy assumptions for an existing contest.
+  // Falls back to DEFAULT_ECONOMY_ASSUMPTIONS if no row exists yet.
+  const loadEconomyAssumptions = async (contestId: string) => {
+    try {
+      const { data } = await supabase
+        .from("contest_economy")
+        .select("*")
+        .eq("contest_id", contestId)
+        .maybeSingle();
+      if (data) {
+        setEconomyAssumptions({
+          mainPrizeRealCost: data.main_prize_cost_czk ?? DEFAULT_ECONOMY_ASSUMPTIONS.mainPrizeRealCost,
+          mioCoinRealCost: data.miocoin_real_cost_czk ?? DEFAULT_ECONOMY_ASSUMPTIONS.mioCoinRealCost,
+          vatRate: data.vat_rate_percent ?? DEFAULT_ECONOMY_ASSUMPTIONS.vatRate,
+          setupCost: data.setup_cost_czk ?? DEFAULT_ECONOMY_ASSUMPTIONS.setupCost,
+          marketingPercent: data.marketing_percent ?? DEFAULT_ECONOMY_ASSUMPTIONS.marketingPercent,
+          handlingCostPerPhysicalPrize: data.default_handling_czk ?? DEFAULT_ECONOMY_ASSUMPTIONS.handlingCostPerPhysicalPrize,
+          targetMarginPercent: data.target_margin_percent ?? DEFAULT_ECONOMY_ASSUMPTIONS.targetMarginPercent,
+        });
+      } else {
+        setEconomyAssumptions(DEFAULT_ECONOMY_ASSUMPTIONS);
+      }
+    } catch (e) {
+      console.warn("Failed to load contest economy assumptions:", e);
+      setEconomyAssumptions(DEFAULT_ECONOMY_ASSUMPTIONS);
+    }
   };
 
   const handleAddMedia = async () => {
@@ -381,12 +490,17 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         finalUrl = URL.createObjectURL(newMediaFile);
       } else {
         setAddingMedia(true);
-        const filePath = `contests/${contestId}/gallery/${Date.now()}-${newMediaFile.name}`;
+        const safeImageName = sanitizeStorageFileName(newMediaFile.name);
+        const filePath = `contests/${contestId}/gallery/${Date.now()}-${crypto.randomUUID()}-${safeImageName}`;
         const { error: uploadError } = await supabase.storage
           .from("contest-images")
           .upload(filePath, newMediaFile);
         if (uploadError) {
-          toast({ title: "Chyba uploadu", description: uploadError.message, variant: "destructive" });
+          toast({
+            title: "Chyba uploadu",
+            description: "Galerii se nepodařilo nahrát. Zkuste soubor přejmenovat bez speciálních znaků.",
+            variant: "destructive",
+          });
           setAddingMedia(false);
           return;
         }
@@ -403,12 +517,17 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         finalUrl = URL.createObjectURL(newMediaFile);
       } else {
         setAddingMedia(true);
-        const filePath = `contests/${contestId}/gallery/${Date.now()}-${newMediaFile.name}`;
+        const safeBgName = sanitizeStorageFileName(newMediaFile.name);
+        const filePath = `contests/${contestId}/gallery/${Date.now()}-${crypto.randomUUID()}-${safeBgName}`;
         const { error: uploadError } = await supabase.storage
           .from("contest-images")
           .upload(filePath, newMediaFile);
         if (uploadError) {
-          toast({ title: "Chyba uploadu", description: uploadError.message, variant: "destructive" });
+          toast({
+            title: "Chyba uploadu",
+            description: "Galerii se nepodařilo nahrát. Zkuste soubor přejmenovat bez speciálních znaků.",
+            variant: "destructive",
+          });
           setAddingMedia(false);
           return;
         }
@@ -549,17 +668,25 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           ticket_position: bonus.ticket_position,
           description: bonus.description || "",
           detailed_description: bonus.detailed_description || "",
+          // Load persisted economy metadata (Phase 4); null → frontend default.
+          supplier_name: bonus.supplier_name || "",
+          unit_cost_czk: bonus.unit_cost_czk ?? 0,
+          vat_rate: bonus.vat_rate_percent ?? 21,
+          handling_override_czk: bonus.handling_override_czk ?? null,
           image_url: bonus.image_url,
         });
       }
     });
 
     setMioCoinBonuses(mioCoins);
+    setHasPersistedMioCoinBonuses(mioCoins.length > 0);
     setPhysicalPrizes(physical);
     // Reset generator inputs so the "Počet pozic" preview reflects only what
     // the admin actively types, not stale defaults left over between contests.
     setTotalMioCoinsInput(0);
     setStepValue(0);
+    setDistributionType("even");
+    setMioCoinGeneratorTouched(false);
   };
 
   const handleChange =
@@ -567,6 +694,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       const value = field === "ticket_count" || field === "ticket_price" ? Number(e.target.value || 0) : e.target.value;
       setForm((prev) => ({ ...prev, [field]: value as any }));
     };
+
+  // When the user focuses a numeric input whose stored value is 0 (the common
+  // default), select all text so typing replaces "0" instead of producing a
+  // leading-zero value like "065000". Stored numeric values stay correct.
+  const handleNumericFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (Number(e.target.value) === 0) {
+      e.target.select();
+    }
+  };
 
   const handleStatusChange = (value: string) => {
     setForm((prev) => ({ ...prev, status: value }));
@@ -937,8 +1073,18 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   // Computed number of positions
   const computedPositionCount = stepValue > 0 ? Math.floor(totalMioCoinsInput / stepValue) : 0;
 
-  // MioCoin bonus generation - saves immediately to DB when editing existing contest
+  // MioCoin bonus generation - frontend preview only; rows are persisted by the final save flow.
   const generateMioCoinBonuses = async () => {
+    if (editingContest && hasPersistedMioCoinBonuses) {
+      toast({
+        title: "MioCoin pozice nelze změnit",
+        description:
+          "Vygenerované MioCoin bonusové pozice už byly pro tuto soutěž vytvořeny. Po vytvoření je nelze v editaci přegenerovat ani přepsat.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (totalMioCoinsInput <= 0 || stepValue <= 0) {
       toast({
         title: "Chyba",
@@ -964,31 +1110,34 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
     const newBonuses: MioCoinBonus[] = [];
     const ticketCount = form.ticket_count || 1000000;
+    // MioCoin positions must never land on the final ticket (ticket_count).
+    // That position is reserved for the main prize.
+    const maxMioCoinPosition = ticketCount - 1;
 
     if (distributionType === "even") {
-      // Evenly spaced positions (spacing must be >= 1 so ticket_position is never 0)
-      const rawSpacing = Math.floor(ticketCount / (computedPositionCount + 1));
+      // Evenly spaced positions within [1, maxMioCoinPosition]
+      const rawSpacing = Math.floor(maxMioCoinPosition / (computedPositionCount + 1));
       const spacing = rawSpacing < 1 ? 1 : rawSpacing;
       for (let i = 1; i <= computedPositionCount; i++) {
         let position = spacing * i;
         if (position < 1) position = 1;
-        if (position > ticketCount) continue;
+        if (position > maxMioCoinPosition) continue;
         // Adjust if position is already used
-        while (usedPositions.has(position) && position <= ticketCount) {
+        while (usedPositions.has(position) && position <= maxMioCoinPosition) {
           position++;
         }
-        if (position <= ticketCount && !usedPositions.has(position)) {
+        if (position <= maxMioCoinPosition && !usedPositions.has(position)) {
           usedPositions.add(position);
           newBonuses.push({ ticket_position: position, amount: stepValue });
         }
       }
     } else {
-      // Random positions
+      // Random positions within [1, maxMioCoinPosition]
       let attempts = 0;
       const maxAttempts = computedPositionCount * 10;
 
       while (newBonuses.length < computedPositionCount && attempts < maxAttempts) {
-        const position = Math.floor(Math.random() * ticketCount) + 1;
+        const position = Math.floor(Math.random() * maxMioCoinPosition) + 1;
         if (!usedPositions.has(position)) {
           usedPositions.add(position);
           newBonuses.push({ ticket_position: position, amount: stepValue });
@@ -1004,145 +1153,220 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       });
     }
 
-    // If editing existing contest, save immediately to DB
-    if (editingContest?.contest_id) {
-      try {
-        const contestId = editingContest.contest_id;
-        
-        // Delete existing MioCoin bonuses (only those with amount > 0)
-        // Delete existing MioCoin bonuses (only those with amount > 0) via RPC
-        // First fetch existing MioCoin bonus IDs to delete them via RPC
-        const { data: existingMcBonuses } = await supabase
-          .from("bonus_prizes")
-          .select("id")
-          .eq("contest_id", contestId)
-          .gt("amount", 0);
-
-        if (existingMcBonuses && existingMcBonuses.length > 0) {
-          for (const bonus of existingMcBonuses) {
-            await supabase.rpc("admin_manage_bonus_prize", {
-              p_prize_id: bonus.id,
-              p_contest_id: contestId,
-              p_status: "deleted",
-              p_operation: "update",
-            });
-          }
-        }
-
-        // Insert new MioCoin bonuses via RPC (writes to bonus_prizes)
-        console.log(
-          "[AdminContestManagement] MioCoin bonus RPC batch length:",
-          newBonuses.length
-        );
-        for (const bonus of newBonuses) {
-          console.log("[AdminContestManagement] MioCoin bonus RPC before insert", {
-            contest_id: contestId,
-            ticket_position: bonus.ticket_position,
-            amount: bonus.amount,
-          });
-          try {
-            const { error: rpcError } = await supabase.rpc("admin_manage_bonus_prize", {
-              p_contest_id: contestId,
-              p_ticket_position: bonus.ticket_position,
-              p_amount: bonus.amount,
-              p_description: `${bonus.amount} MioCoinů`,
-              p_status: "pending",
-              p_operation: "create",
-            });
-            if (rpcError) {
-              console.error("[AdminContestManagement] MioCoin bonus RPC failed", {
-                message: rpcError.message,
-                details: rpcError.details,
-                code: rpcError.code,
-              });
-            } else {
-              console.log("[AdminContestManagement] MioCoin bonus RPC success", {
-                contest_id: contestId,
-                ticket_position: bonus.ticket_position,
-                amount: bonus.amount,
-              });
-            }
-          } catch (rpcErr: unknown) {
-            const err = rpcErr as { message?: string; details?: string; code?: string };
-            console.error("[AdminContestManagement] MioCoin bonus RPC exception", rpcErr, {
-              message: err?.message,
-              details: err?.details,
-              code: err?.code,
-            });
-            throw rpcErr;
-          }
-        }
-
-        // Note: total_miocoin_bonus is updated automatically by database trigger trg_sync_total_miocoin_bonus
-        const totalMioCoins = newBonuses.reduce((sum, b) => sum + b.amount, 0);
-        
-        toast({
-          title: "MioCoiny uloženy",
-          description: `${newBonuses.length} MioCoin bonusů (celkem ${totalMioCoins}) bylo uloženo do databáze.`,
-        });
-      } catch (err: unknown) {
-        const e = err as { message?: string; details?: string; code?: string };
-        console.error("Error saving MioCoin bonuses:", err, {
-          message: e?.message,
-          details: e?.details,
-          code: e?.code,
-        });
-        toast({
-          title: "Chyba při ukládání",
-          description: "MioCoiny byly vygenerovány, ale nepodařilo se je uložit.",
-          variant: "destructive",
-        });
-      }
-    } else {
-      toast({
-        title: "MioCoiny vygenerovány",
-        description: `Přidáno ${newBonuses.length} MioCoin bonusů. Budou uloženy po vytvoření soutěže.`,
-      });
-    }
+    toast({
+      title: "MioCoiny připraveny",
+      description: `Připraveno ${newBonuses.length} MioCoin bonusů. Do soutěže se uloží až při finálním uložení.`,
+    });
 
     setMioCoinBonuses((prev) => [...prev, ...newBonuses]);
   };
 
   const clearMioCoinBonuses = () => {
+    if (editingContest && hasPersistedMioCoinBonuses) {
+      toast({
+        title: "MioCoin pozice nelze změnit",
+        description:
+          "Vygenerované MioCoin bonusové pozice už byly pro tuto soutěž vytvořeny. Po vytvoření je nelze v editaci smazat ani nahradit.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setMioCoinBonuses([]);
     toast({ title: "MioCoiny smazány", description: "Všechny MioCoin bonusy byly odstraněny." });
   };
 
   // Physical prize management
-  const addPhysicalPrize = async () => {
-    if (!newPhysicalPrize.description || newPhysicalPrize.ticket_position < 1) {
+
+  /**
+   * Pick `count` positions from the `available` pool.
+   * "even"   – evenly spaced indices across the pool (deterministic, easy to audit).
+   * "random" – Fisher-Yates shuffle, first count results, returned sorted.
+   */
+  const pickPositions = (
+    strategy: "even" | "random",
+    count: number,
+    available: number[]
+  ): number[] => {
+    if (count === 1) {
+      // Single prize: return the middle of the pool so it sits roughly in the middle.
+      return [available[Math.floor(available.length / 2)]];
+    }
+    if (strategy === "even") {
+      const step = (available.length - 1) / (count - 1);
+      return Array.from({ length: count }, (_, i) => available[Math.round(i * step)]);
+    }
+    // random
+    const shuffled = [...available];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled.slice(0, count).sort((a, b) => a - b);
+  };
+
+  const addPhysicalPrize = () => {
+    if (!newPhysicalPrize.description) {
       toast({
         title: "Chyba",
-        description: "Vyplň popis a platnou pozici tiketu.",
+        description: "Vyplň popis výhry.",
         variant: "destructive",
       });
       return;
     }
 
-    const usedPositions = new Set([
+    const qty = physicalPrizeQuantity;
+
+    // ── Single prize: keep original manual-position behaviour ──────────────
+    if (qty === 1) {
+      if (newPhysicalPrize.ticket_position < 1) {
+        toast({
+          title: "Chyba",
+          description: "Vyplň platnou pozici tiketu.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const usedPositions = new Set([
+        ...mioCoinBonuses.map((b) => b.ticket_position),
+        ...physicalPrizes.map((p) => p.ticket_position),
+      ]);
+
+      if (usedPositions.has(newPhysicalPrize.ticket_position)) {
+        toast({
+          title: "Chyba",
+          description: `Pozice #${newPhysicalPrize.ticket_position} je již obsazena jinou výhrou.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setPhysicalPrizes((prev) => [...prev, { ...newPhysicalPrize }]);
+      setNewPhysicalPrize({
+        ticket_position: 1,
+        description: "",
+        detailed_description: "",
+        supplier_name: "",
+        unit_cost_czk: 0,
+        vat_rate: 21,
+        handling_override_czk: null,
+        image_file: null,
+      });
+      setPhysicalPrizeQuantity(1);
+      toast({ title: "Výhra přidána", description: "Věcná výhra byla přidána." });
+      return;
+    }
+
+    // ── Bulk (qty > 1): auto-distribute positions ──────────────────────────
+    const ticketCount = form.ticket_count;
+    if (!ticketCount || ticketCount < 2) {
+      toast({
+        title: "Chyba",
+        description: "Nejprve nastav počet tiketů soutěže na záložce Základní info.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const occupied = new Set([
       ...mioCoinBonuses.map((b) => b.ticket_position),
       ...physicalPrizes.map((p) => p.ticket_position),
     ]);
 
-    if (usedPositions.has(newPhysicalPrize.ticket_position)) {
+    // Available = 1..(ticketCount-1) excluding occupied
+    const available: number[] = [];
+    for (let pos = 1; pos < ticketCount; pos++) {
+      if (!occupied.has(pos)) available.push(pos);
+    }
+
+    if (available.length < qty) {
       toast({
-        title: "Chyba",
-        description: `Pozice #${newPhysicalPrize.ticket_position} je již obsazena jinou výhrou.`,
+        title: "Nedostatek volných pozic",
+        description: `V rozsahu 1–${ticketCount - 1} je pouze ${available.length} volných pozic. Snižte počet kusů nebo zkontrolujte obsazené pozice.`,
         variant: "destructive",
       });
       return;
     }
 
-    const prizeToAdd = { ...newPhysicalPrize };
-    
-    // Add prize directly without AI processing
-    setPhysicalPrizes((prev) => [...prev, prizeToAdd]);
-    setNewPhysicalPrize({ ticket_position: 1, description: "", detailed_description: "", image_file: null });
-    toast({ title: "Výhra přidána", description: "Věcná výhra byla přidána." });
+    const positions = pickPositions(physicalPrizeDistribution, qty, available);
+    const base = { ...newPhysicalPrize };
+    const newPrizes: PhysicalPrize[] = positions.map((pos) => ({
+      ...base,
+      ticket_position: pos,
+    }));
+
+    setPhysicalPrizes((prev) => [...prev, ...newPrizes]);
+
+    // Reset description/image; keep economy fields so admin can add another product quickly.
+    setNewPhysicalPrize({
+      ticket_position: 1,
+      description: "",
+      detailed_description: "",
+      supplier_name: base.supplier_name,
+      unit_cost_czk: base.unit_cost_czk,
+      vat_rate: base.vat_rate,
+      handling_override_czk: base.handling_override_czk,
+      image_file: null,
+    });
+    setPhysicalPrizeQuantity(1);
+
+    const previewPositions = positions.slice(0, 5).map((p) => `#${p}`).join(", ");
+    const suffix = positions.length > 5 ? ` … +${positions.length - 5} dalších` : "";
+    toast({
+      title: `Přidáno ${qty} výher`,
+      description: `Pozice: ${previewPositions}${suffix}`,
+    });
   };
 
   const removePhysicalPrize = (index: number) => {
     setPhysicalPrizes((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const validateBonusPositions = (ticketCount: number): string | null => {
+    const physicalPositions = new Set<number>();
+
+    for (const prize of physicalPrizes) {
+      if (!Number.isInteger(prize.ticket_position)) {
+        return "Pozice věcných bonusových výher musí být celá čísla.";
+      }
+      if (prize.ticket_position < 1 || prize.ticket_position > ticketCount) {
+        return `Pozice věcné bonusové výhry #${prize.ticket_position} musí být v rozsahu 1 až ${ticketCount}.`;
+      }
+      if (prize.ticket_position === ticketCount) {
+        return "Bonusová výhra nesmí být na posledním ticketu, který je vyhrazen pro hlavní výhru.";
+      }
+      if (physicalPositions.has(prize.ticket_position)) {
+        return `Pozice #${prize.ticket_position} je duplicitní mezi věcnými bonusovými výhrami.`;
+      }
+      physicalPositions.add(prize.ticket_position);
+    }
+
+    const mioCoinPositions = new Set<number>();
+
+    for (const bonus of mioCoinBonuses) {
+      if (!Number.isInteger(bonus.ticket_position)) {
+        return "Pozice MioCoin bonusů musí být celá čísla.";
+      }
+      if (bonus.ticket_position < 1 || bonus.ticket_position > ticketCount) {
+        return `Pozice MioCoin bonusu #${bonus.ticket_position} musí být v rozsahu 1 až ${ticketCount}.`;
+      }
+      if (bonus.ticket_position === ticketCount) {
+        return "MioCoin bonus nesmí být na posledním ticketu, který je vyhrazen pro hlavní výhru.";
+      }
+      if (mioCoinPositions.has(bonus.ticket_position)) {
+        return `Pozice #${bonus.ticket_position} je duplicitní mezi MioCoin bonusy.`;
+      }
+      if (physicalPositions.has(bonus.ticket_position)) {
+        return `Pozice #${bonus.ticket_position} je už obsazena věcnou bonusovou výhrou.`;
+      }
+      if (!Number.isFinite(bonus.amount) || bonus.amount <= 0) {
+        return "Hodnota MioCoin bonusu musí být větší než 0.";
+      }
+      mioCoinPositions.add(bonus.ticket_position);
+    }
+
+    return null;
   };
 
   const handleSave = async () => {
@@ -1186,7 +1410,65 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       return;
     }
 
+    const bonusValidationError = validateBonusPositions(normalizedTicketCount);
+    if (bonusValidationError) {
+      toast({
+        title: "Chyba v bonusových pozicích",
+        description: bonusValidationError,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const isEditingContest = !!editingContest;
+
+    if (isEditingContest) {
+      const { count: soldTicketsCount, error: soldTicketsError } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("contest_id", editingContest.contest_id);
+
+      if (soldTicketsError) {
+        console.error("Error checking sold tickets before bonus rewrite:", soldTicketsError);
+        toast({
+          title: "Chyba kontroly ticketů",
+          description: "Nepodařilo se ověřit, zda soutěž už má otevřené tickety. Uložení bylo zastaveno.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if ((soldTicketsCount ?? 0) > 0) {
+        toast({
+          title: "Bonusové pozice nelze přepsat",
+          description:
+            "Tato soutěž už má otevřené tickety, proto nelze bezpečně přepisovat bonusové pozice. Vytvořte novou verzi soutěže nebo použijte schválený servisní postup.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    const hasImmutablePersistedMioCoinBonuses = isEditingContest && hasPersistedMioCoinBonuses;
+    const mioCoinGeneratorHasInput =
+      totalMioCoinsInput > 0 || stepValue > 0 || distributionType !== "even";
+
+    if (hasImmutablePersistedMioCoinBonuses && (mioCoinGeneratorTouched || mioCoinGeneratorHasInput)) {
+      toast({
+        title: "MioCoin pozice nelze změnit",
+        description:
+          "Tato soutěž už má vygenerované MioCoin bonusové pozice. Po vytvoření je nelze v editaci přegenerovat ani přepsat.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
+
+    // Tracks whether admin_manage_contest already persisted a NEW contest in CREATE mode.
+    // If a later save step throws, the outer catch uses this to force-close the modal so a
+    // retry click cannot create a duplicate contest (the contest already exists in DB).
+    let createdContestIdInCreateMode: string | null = null;
 
     try {
       let imagePath: string | null = editingContest?.main_image || null;
@@ -1197,8 +1479,6 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       } else if (form.main_image_file) {
         imagePath = await handleImageUpload(form.main_image_file);
       }
-
-      const isEditingContest = !!editingContest;
 
       const { data: contestResult, error } = await supabase.rpc("admin_manage_contest", {
         p_contest_id: isEditingContest ? editingContest.contest_id : null,
@@ -1250,6 +1530,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         return;
       }
 
+      // Contest is now persisted in DB. In CREATE mode, any subsequent throw must NOT
+      // leave the modal open as CREATE — otherwise a retry click would create a duplicate.
+      if (!isEditingContest) {
+        createdContestIdInCreateMode = contestId;
+      }
+
       // Update images directly in contests table (manual uploads only)
       if (contestId) {
         const additionalUpdates: Record<string, string | null> = {};
@@ -1273,8 +1559,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               description: `Nepodařilo se nahrát PDF s pravidly: ${uploadError.message}`,
               variant: "destructive",
             });
-            setSaving(false);
-            return;
+            if (isEditingContest) {
+              // Edit mode: keep modal open so admin can retry the PDF upload.
+              setSaving(false);
+              return;
+            }
+            // Create mode: the contest was already created by the SECURITY DEFINER RPC.
+            // Fall through to onSaved()/onClose() so the modal closes and the contest
+            // appears in the list. Admin can reopen the contest and re-upload the PDF rules.
           }
           const { data: pub } = supabase.storage.from("contest-rules").getPublicUrl(filePath);
           // Cache-bust so the new file is fetched immediately
@@ -1304,17 +1596,35 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           additionalUpdates.main_prize_secondary_image = imagePath;
         }
 
-        // Apply additional updates if any
+        // Apply additional updates if any (rules_pdf_url, rules, images).
+        // .select('id') lets us detect silent no-ops (0 rows) caused by RLS filtering the row.
         if (Object.keys(additionalUpdates).length > 0) {
-          const { error: updateError } = await supabase.from("contests").update(additionalUpdates).eq("id", contestId);
+          const { data: updatedRows, error: updateError } = await supabase
+            .from("contests")
+            .update(additionalUpdates)
+            .eq("id", contestId)
+            .select("id");
 
-          if (updateError) {
-            console.error("Error updating images:", updateError);
+          if (updateError || !updatedRows || updatedRows.length === 0) {
+            const errMsg = updateError?.message ?? "Soutěž nebyla nalezena nebo přístup odepřen.";
+            console.error("Error updating contest extras:", updateError ?? "0 rows affected", { contestId, additionalUpdates });
+            const hasRulesPdf = "rules_pdf_url" in additionalUpdates;
             toast({
-              title: "Chyba ukládání obrázků",
-              description: `Detail/Banner se neuložil: ${updateError.message}`,
+              title: hasRulesPdf ? "Chyba ukládání pravidel" : "Chyba ukládání pravidel / obrázků",
+              description: hasRulesPdf
+                ? "Nepodařilo se uložit pravidla soutěže. Zkuste to prosím znovu."
+                : `Pravidla soutěže a obrázky se neuložily: ${errMsg}`,
               variant: "destructive",
             });
+            if (isEditingContest) {
+              // Edit mode: stay open so admin can retry extras
+              setSaving(false);
+              return;
+            }
+            // Create mode: contest was persisted by the SECURITY DEFINER RPC — the direct
+            // client UPDATE may be blocked by RLS on the freshly-created row.
+            // Fall through to onSaved()/onClose() so the modal closes and the contest
+            // appears in the list. Admin can reopen and fix extras.
           }
         }
 
@@ -1381,11 +1691,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               let url = item.url;
               const file = effectivePendingFiles[item.id];
               if (file) {
-                const filePath = `contests/${contestId}/gallery/${Date.now()}-${file.name}`;
+                const safePendingName = sanitizeStorageFileName(file.name);
+                const filePath = `contests/${contestId}/gallery/${Date.now()}-${crypto.randomUUID()}-${safePendingName}`;
                 const { error: uploadError } = await supabase.storage
                   .from("contest-images")
                   .upload(filePath, file);
-                if (uploadError) throw uploadError;
+                if (uploadError) throw new Error("Galerii se nepodařilo nahrát. Zkuste soubor přejmenovat bez speciálních znaků.");
                 const { data: pub } = supabase.storage.from("contest-images").getPublicUrl(filePath);
                 url = pub.publicUrl;
               }
@@ -1415,10 +1726,69 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         }
       }
 
+      // Persist contest economy assumptions (Phase 4).
+      // This is non-blocking: a failure logs a warning but does not abort the save.
+      if (contestId) {
+        const { error: econSaveError } = await supabase
+          .from("contest_economy")
+          .upsert(
+            {
+              contest_id: contestId,
+              main_prize_cost_czk: economyAssumptions.mainPrizeRealCost,
+              miocoin_real_cost_czk: effectiveMioCoinCost,
+              vat_rate_percent: economyAssumptions.vatRate,
+              setup_cost_czk: economyAssumptions.setupCost,
+              marketing_percent: economyAssumptions.marketingPercent,
+              default_handling_czk: economyAssumptions.handlingCostPerPhysicalPrize,
+              target_margin_percent: economyAssumptions.targetMarginPercent,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "contest_id" }
+          );
+        if (econSaveError) {
+          console.error("Error saving economy assumptions:", econSaveError);
+          // Non-fatal: economy data is planning-only; does not block contest save.
+          toast({
+            title: "Soutěž uložena",
+            description: "Ekonomická data se nepodařilo uložit. Zkontrolujte konzoli a zkuste znovu.",
+            variant: "destructive",
+          });
+        }
+      }
+
+      // Guard: generator inputs filled but "Vygenerovat MioCoiny" never clicked.
+      // Saving in this state would silently persist 0 MioCoin rows — block and warn.
+      const mioCoinGeneratorHasInput =
+        totalMioCoinsInput > 0 || stepValue > 0 || distributionType !== "even";
+
+      if (mioCoinBonuses.length === 0 && (mioCoinGeneratorTouched || mioCoinGeneratorHasInput)) {
+        console.warn(
+          "[AdminContestManagement] MioCoin save guard triggered — generator touched/filled but bonuses not generated.",
+          { totalMioCoinsInput, stepValue, distributionType, computedPositionCount, mioCoinGeneratorTouched }
+        );
+        toast({
+          title: "MioCoin bonusy nejsou vygenerované",
+          description:
+            "Upravil(a) jste nastavení MioCoin bonusů, ale preview pozice nejsou vygenerované. Klikněte nejdřív na 'Vygenerovat MioCoiny' a potom soutěž uložte.",
+          variant: "destructive",
+        });
+        setSaving(false);
+        return;
+      }
+
       // Save bonuses if we have a contest ID
       if (contestId) {
-        // Delete existing bonuses for this contest
-        await supabase.from("bonus_prizes").delete().eq("contest_id", contestId);
+        // Delete existing bonuses for this contest.
+        // Edit mode keeps already-materialized MioCoin rows immutable.
+        if (hasImmutablePersistedMioCoinBonuses) {
+          await supabase
+            .from("bonus_prizes")
+            .delete()
+            .eq("contest_id", contestId)
+            .or("amount.is.null,amount.eq.0");
+        } else {
+          await supabase.from("bonus_prizes").delete().eq("contest_id", contestId);
+        }
 
         // Insert physical prizes FIRST so MioCoin generation excludes their positions
         for (const prize of physicalPrizes) {
@@ -1456,85 +1826,113 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           if (insertData && (insertData as any).success === false) {
             throw new Error(`Chyba při ukládání výhry: ${(insertData as any).message}`);
           }
+
+          // Persist economy metadata for this physical prize (Phase 4).
+          // Non-blocking: a failure is logged but does not abort the save.
+          const savedPrizeId = (insertData as any)?.prize_id as string | undefined;
+          if (savedPrizeId) {
+            const { error: econPrizeError } = await supabase
+              .from("bonus_prizes")
+              .update({
+                supplier_name: prize.supplier_name ?? null,
+                unit_cost_czk: prize.unit_cost_czk ?? null,
+                vat_rate_percent: prize.vat_rate ?? null,
+                handling_override_czk: prize.handling_override_czk ?? null,
+              })
+              .eq("id", savedPrizeId);
+            if (econPrizeError) {
+              console.error("Error saving physical prize economy data:", econPrizeError);
+              toast({
+                title: "Soutěž uložena",
+                description: "Ekonomická data fyzické výhry se nepodařilo uložit. Zkontrolujte konzoli a zkuste znovu.",
+                variant: "destructive",
+              });
+            }
+          }
         }
 
-        // Generate MioCoin bonuses via edge function (excludes already-occupied physical positions)
-        if (mioCoinBonuses.length > 0) {
-          const totalMioCoinCount = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
-          const distributeBody = {
-            contest_id: contestId,
-            bonus_type: "MioCoin",
-            total_value: totalMioCoinCount,
-            amount_per_unit: 1,
-            distribution_rule: "random",
-            batch_size: 500,
-          };
-          console.log("[DEBUG BONUS PAYLOAD]", {
-            contest_id: contestId,
-            ticketCount: form.ticket_count,
-            newBonusesLength: mioCoinBonuses.length,
-            newBonuses: mioCoinBonuses,
-          });
-          mioCoinBonuses.forEach((b, idx) => {
-            console.log("[DEBUG BONUS PAYLOAD] row", idx, {
-              ticket_position: b.ticket_position,
-              amount: b.amount,
-            });
-          });
+        // Persist MioCoin bonuses via the chunked three-call SQL RPC pattern.
+        //
+        // Issue #71: A single synchronous RPC carrying ~95k positions could not
+        // finish under the Supabase API gateway HTTP timeout (~60s), even after
+        // PRs #65/#66/#68/#76 optimised the underlying function. The chunked
+        // pattern splits the save so each call finishes well under the gateway
+        // budget:
+        //   1. admin_begin_miocoin_save     — wipe stale rows, reset total
+        //   2. admin_append_miocoin_chunk   — insert one chunk (~5 000 rows)
+        //   3. admin_finalize_miocoin_save  — verify count, sync total, write log
+        //
+        // The legacy admin_bulk_insert_miocoin_bonuses remains in place untouched
+        // for any other callers; only this save path migrates to the chunked flow.
+        if (mioCoinBonuses.length > 0 && !hasImmutablePersistedMioCoinBonuses) {
+          const bonusPayload = mioCoinBonuses.map(({ ticket_position, amount }) => ({
+            ticket_position,
+            amount,
+          }));
+          const expectedCount = bonusPayload.length;
+          // CHUNK_SIZE = 500: production test23 with 5 000 still hit the Supabase
+          // API gateway HTTP timeout on chunk 1/9. Lowered to 500 so each
+          // append RPC finishes comfortably under the gateway budget.
+          const CHUNK_SIZE = 500;
 
-          try {
-            const { data: distributionResult, error: distributionError } =
-              await supabase.functions.invoke("distribute-bonus-prizes", {
-                body: distributeBody,
-              });
-
-            if (distributionError) {
-              console.error("[AdminContestManagement] distribute-bonus-prizes invoke error", {
-                message: distributionError.message,
-                details: (distributionError as { details?: string }).details,
-                code: (distributionError as { code?: string }).code,
-                raw: distributionError,
-              });
-              throw new Error(`Chyba při generování MioCoin bonusů: ${distributionError.message}`);
+          // 1) Begin: wipe stale rows + reset total + audit row
+          const { data: beginResult, error: beginError } = await supabase.rpc(
+            "admin_begin_miocoin_save",
+            {
+              p_contest_id: contestId,
+              p_expected_count: expectedCount,
             }
-
-            console.log("[AdminContestManagement] distribute-bonus-prizes after invoke", {
-              success: distributionResult?.success,
-              result: distributionResult,
-            });
-
-            if (!distributionResult?.success) {
-              console.error("[AdminContestManagement] distribute-bonus-prizes logical failure", {
-                distributionResult,
-              });
-              throw new Error(
-                distributionResult?.error || "Nepodařilo se vygenerovat MioCoin bonusy"
-              );
-            }
-          } catch (distErr: unknown) {
-            const e = distErr as { message?: string; details?: string; code?: string };
-            console.error("[AdminContestManagement] distribute-bonus-prizes catch", distErr, {
-              message: e?.message,
-              details: e?.details,
-              code: e?.code,
-            });
-            throw distErr;
+          );
+          if (beginError) {
+            throw new Error(`Chyba při ukládání MioCoin bonusů (begin): ${beginError.message}`);
+          }
+          if (!beginResult?.success) {
+            throw new Error(
+              `Chyba při ukládání MioCoin bonusů (begin): ${beginResult?.message || "Nepodařilo se zahájit ukládání MioCoin bonusů"}`
+            );
           }
 
-          // Explicitly set total_miocoin_bonus in contests table
-          // Update total_miocoin_bonus via admin_manage_contest RPC
-          const { error: updateMioCoinError } = await supabase.rpc("admin_manage_contest", {
-            p_operation: "update",
-            p_contest_id: contestId,
-            p_title: null,
-            p_description: null,
-            p_main_prize: null,
-            p_main_image: null,
-            p_status: null,
-          });
+          // 2) Append chunks sequentially
+          for (let i = 0; i < bonusPayload.length; i += CHUNK_SIZE) {
+            const chunk = bonusPayload.slice(i, i + CHUNK_SIZE);
+            const chunkIndex = Math.floor(i / CHUNK_SIZE) + 1;
+            const totalChunks = Math.ceil(bonusPayload.length / CHUNK_SIZE);
 
-          if (updateMioCoinError) {
-            console.error("Error updating total_miocoin_bonus:", updateMioCoinError);
+            const { data: chunkResult, error: chunkError } = await supabase.rpc(
+              "admin_append_miocoin_chunk",
+              {
+                p_contest_id: contestId,
+                p_bonuses: chunk,
+              }
+            );
+            if (chunkError) {
+              throw new Error(
+                `Chyba při ukládání MioCoin bonusů (chunk ${chunkIndex}/${totalChunks}): ${chunkError.message}`
+              );
+            }
+            if (!chunkResult?.success) {
+              throw new Error(
+                `Chyba při ukládání MioCoin bonusů (chunk ${chunkIndex}/${totalChunks}): ${chunkResult?.message || "Nepodařilo se uložit chunk MioCoin bonusů"}`
+              );
+            }
+          }
+
+          // 3) Finalize: verify exact count, sync total, write final audit row.
+          //    Save is only considered successful if finalize returns success.
+          const { data: finalizeResult, error: finalizeError } = await supabase.rpc(
+            "admin_finalize_miocoin_save",
+            {
+              p_contest_id: contestId,
+              p_expected_count: expectedCount,
+            }
+          );
+          if (finalizeError) {
+            throw new Error(`Chyba při ukládání MioCoin bonusů (finalize): ${finalizeError.message}`);
+          }
+          if (!finalizeResult?.success) {
+            throw new Error(
+              `Chyba při ukládání MioCoin bonusů (finalize): ${finalizeResult?.message || "Finalizace MioCoin save selhala"}`
+            );
           }
         }
       }
@@ -1574,17 +1972,33 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         setTotalMioCoinsInput(0);
         setStepValue(0);
         setDistributionType("even");
+        setMioCoinGeneratorTouched(false);
       }
 
       onSaved();
       onClose();
     } catch (err: any) {
       console.error("Error saving contest:", err);
-      toast({
-        title: "Chyba",
-        description: err?.message || "Nepodařilo se uložit soutěž. Zkus to prosím znovu.",
-        variant: "destructive",
-      });
+      // If a contest was already persisted in CREATE mode and a later step threw,
+      // force-close the modal so a retry click cannot create a duplicate contest.
+      // The admin must reopen the contest in EDIT mode (Archiv test) to fix missing data.
+      if (createdContestIdInCreateMode) {
+        toast({
+          title: "Soutěž byla vytvořena, ale ne vše se uložilo",
+          description:
+            (err?.message ? err.message + " " : "") +
+            "Otevřete soutěž v Archivu test a doplňte chybějící údaje (např. MioCoin bonusy).",
+          variant: "destructive",
+        });
+        onSaved();
+        onClose();
+      } else {
+        toast({
+          title: "Chyba",
+          description: err?.message || "Nepodařilo se uložit soutěž. Zkus to prosím znovu.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setSaving(false);
     }
@@ -1592,6 +2006,77 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   const isEditing = !!editingContest;
   const totalMioCoins = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
+  // Effective MioCoin cost for Economy calculations:
+  //   1. If MioCoin bonuses are configured → use their actual total (totalMioCoins)
+  //   2. Else if the bulk MioCoin input field has a value → use that
+  //   3. Else fall back to the manually entered economy assumption
+  const effectiveMioCoinCost =
+    mioCoinBonuses.length > 0
+      ? totalMioCoins
+      : totalMioCoinsInput > 0
+        ? totalMioCoinsInput
+        : economyAssumptions.mioCoinRealCost;
+  const getHandlingCostForPrize = (prize: PhysicalPrize) =>
+    prize.handling_override_czk != null
+      ? Math.max(0, prize.handling_override_czk)
+      : Math.max(0, economyAssumptions.handlingCostPerPhysicalPrize || 0);
+  const getPhysicalPrizeCostIncludingVat = (prize: PhysicalPrize) => {
+    const unitCostWithoutVat = Math.max(0, prize.unit_cost_czk || 0);
+    const prizeVatRate = Math.max(0, prize.vat_rate ?? 21);
+    return unitCostWithoutVat * (1 + prizeVatRate / 100);
+  };
+  const physicalPrizeBaseCost = physicalPrizes.reduce((sum, prize) => sum + getPhysicalPrizeCostIncludingVat(prize), 0);
+  const grossRevenue = Math.max(0, form.ticket_count || 0) * Math.max(0, form.ticket_price || 0);
+  const vatRate = Math.max(0, economyAssumptions.vatRate || 0);
+  const vatFromRevenue = grossRevenue > 0 ? (grossRevenue * vatRate) / (100 + vatRate) : 0;
+  const netRevenue = grossRevenue - vatFromRevenue;
+  const netTicketRevenue = Math.max(0, form.ticket_price || 0) - ((Math.max(0, form.ticket_price || 0) * vatRate) / (100 + vatRate));
+  const marketingCost = grossRevenue * Math.max(0, economyAssumptions.marketingPercent || 0) / 100;
+  const physicalBonusEstimatedCost = physicalPrizeBaseCost;
+  const handlingCostTotal = physicalPrizes.reduce(
+    (sum, prize) => sum + getHandlingCostForPrize(prize),
+    0
+  );
+  const totalEstimatedCost =
+    Math.max(0, economyAssumptions.mainPrizeRealCost || 0) +
+    Math.max(0, effectiveMioCoinCost || 0) +
+    physicalBonusEstimatedCost +
+    handlingCostTotal +
+    Math.max(0, economyAssumptions.setupCost || 0) +
+    marketingCost;
+  const estimatedProfit = netRevenue - totalEstimatedCost;
+  const marginPercent = netRevenue > 0 ? (estimatedProfit / netRevenue) * 100 : 0;
+  const breakEvenTickets = netTicketRevenue > 0 ? Math.ceil(totalEstimatedCost / netTicketRevenue) : 0;
+  const targetMarginRatio = Math.min(Math.max(economyAssumptions.targetMarginPercent || 0, 0), 95) / 100;
+  const requiredNetRevenueForTarget = form.ticket_count > 0 ? totalEstimatedCost / (1 - targetMarginRatio) : 0;
+  const recommendedTicketPrice =
+    form.ticket_count > 0
+      ? (requiredNetRevenueForTarget / form.ticket_count) * (1 + vatRate / 100)
+      : 0;
+  const formatCzk = (value: number) =>
+    `${Math.round(value).toLocaleString("cs-CZ")} Kč`;
+  const formatPercent = (value: number) =>
+    `${value.toLocaleString("cs-CZ", { maximumFractionDigits: 1 })} %`;
+  const updateEconomyAssumption =
+    (field: keyof EconomyAssumptions) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setEconomyAssumptions((prev) => ({
+        ...prev,
+        [field]: Number(e.target.value || 0),
+      }));
+    };
+  const economyWarnings = [
+    estimatedProfit < 0 && "Marže je záporná. Odhadované náklady jsou vyšší než čistá tržba.",
+    estimatedProfit >= 0 &&
+      marginPercent < economyAssumptions.targetMarginPercent &&
+      "Marže je nižší než cílová marže.",
+    form.ticket_count > 0 &&
+      breakEvenTickets > form.ticket_count &&
+      "Bod zvratu je vyšší než počet dostupných ticketů.",
+  ].filter(Boolean) as string[];
+  const hasEconomyWarning = estimatedProfit < 0 || marginPercent < economyAssumptions.targetMarginPercent;
+  const economySummaryClass = hasEconomyWarning
+    ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-100"
+    : "border-emerald-500/20 bg-emerald-500/10 text-emerald-50";
 
   // Validation logic for each tab
   const hasMainImage = !!(form.main_image_file || form.main_image_url || (isEditing && editingContest?.main_image));
@@ -1625,7 +2110,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) attemptClose(); }}>
       <DialogContent
-        className="max-w-4xl w-[95vw] h-[90vh] flex flex-col p-0"
+        className="max-w-[95vw] h-[90vh] flex flex-col p-0"
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
@@ -1635,14 +2120,32 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 px-6">
-          <div className="shrink-0 overflow-x-auto py-4">
-            <TabsList className="inline-flex w-max gap-1">
+          <div className="shrink-0 py-4 space-y-3">
+            <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 rounded-lg border p-3 ${economySummaryClass}`}>
+              {[
+                ["Počet ticketů", `${Math.max(0, form.ticket_count || 0).toLocaleString("cs-CZ")}`],
+                ["Celkové odhadované náklady", formatCzk(totalEstimatedCost)],
+                [
+                  "Doporučená cena ticketu",
+                  `${recommendedTicketPrice.toLocaleString("cs-CZ", { maximumFractionDigits: 2 })} Kč`,
+                ],
+                ["Odhadovaný čistý zisk", formatCzk(estimatedProfit)],
+                ["Marže", formatPercent(marginPercent)],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <div className="text-[11px] uppercase tracking-wide opacity-70">{label}</div>
+                  <div className="mt-1 text-sm font-semibold text-foreground">{value}</div>
+                </div>
+              ))}
+            </div>
+            <TabsList className="flex flex-wrap h-auto w-full gap-1">
               <TabsTrigger value="basic" className="flex items-center">
                 Základní údaje
                 <TabIndicator isValid={validation.basic.isValid} />
               </TabsTrigger>
               <TabsTrigger value="bonus-coins">Bonusy – MioCoins</TabsTrigger>
               <TabsTrigger value="bonus-physical">Bonusy – věcné</TabsTrigger>
+              <TabsTrigger value="economy">Ekonomika</TabsTrigger>
               <TabsTrigger value="graphics" className="flex items-center">
                 Grafika
                 <TabIndicator isValid={validation.graphics.isValid} />
@@ -1663,6 +2166,19 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 <Label>Hlavní výhra</Label>
                 <Input value={form.main_prize} onChange={handleChange("main_prize")} placeholder="Např. Corvette C8" />
                 <p className="text-xs text-muted-foreground mt-1">Automaticky předvyplněno z názvu soutěže</p>
+              </div>
+
+              <div>
+                <Label>Náklad na hlavní výhru v Kč</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={economyAssumptions.mainPrizeRealCost}
+                  onChange={updateEconomyAssumption("mainPrizeRealCost")}
+                  onFocus={handleNumericFocus}
+                  placeholder="0"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Pořizovací náklad hlavní výhry — použije se v ekonomické kalkulaci.</p>
               </div>
 
               {/* Popis soutěže */}
@@ -1726,11 +2242,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               <div className="flex gap-4">
                 <div className="flex-1">
                   <Label>Počet tiketů</Label>
-                  <Input type="number" min={1} value={form.ticket_count} onChange={handleChange("ticket_count")} />
+                  <Input type="number" min={1} value={form.ticket_count} onChange={handleChange("ticket_count")} onFocus={handleNumericFocus} />
                 </div>
                 <div className="flex-1">
                   <Label>Cena tiketu (MioCoins)</Label>
-                  <Input type="number" min={1} value={form.ticket_price} onChange={handleChange("ticket_price")} />
+                  <Input type="number" min={1} value={form.ticket_price} onChange={handleChange("ticket_price")} onFocus={handleNumericFocus} />
                 </div>
               </div>
 
@@ -1783,7 +2299,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                       type="number"
                       min={1}
                       value={totalMioCoinsInput}
-                      onChange={(e) => setTotalMioCoinsInput(Number(e.target.value))}
+                      onChange={(e) => {
+                        setMioCoinGeneratorTouched(true);
+                        setTotalMioCoinsInput(Number(e.target.value));
+                      }}
+                      onFocus={handleNumericFocus}
                     />
                   </div>
                   <div className="flex-1">
@@ -1792,7 +2312,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                       type="number"
                       min={1}
                       value={stepValue}
-                      onChange={(e) => setStepValue(Number(e.target.value))}
+                      onChange={(e) => {
+                        setMioCoinGeneratorTouched(true);
+                        setStepValue(Number(e.target.value));
+                      }}
+                      onFocus={handleNumericFocus}
                     />
                   </div>
                 </div>
@@ -1813,7 +2337,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                         name="distributionType"
                         value="even"
                         checked={distributionType === "even"}
-                        onChange={() => setDistributionType("even")}
+                        onChange={() => {
+                          setMioCoinGeneratorTouched(true);
+                          setDistributionType("even");
+                        }}
                         className="w-4 h-4 accent-primary"
                       />
                       <span>Rovnoměrně</span>
@@ -1824,7 +2351,10 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                         name="distributionType"
                         value="random"
                         checked={distributionType === "random"}
-                        onChange={() => setDistributionType("random")}
+                        onChange={() => {
+                          setMioCoinGeneratorTouched(true);
+                          setDistributionType("random");
+                        }}
                         className="w-4 h-4 accent-primary"
                       />
                       <span>Náhodně</span>
@@ -1876,17 +2406,137 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   />
                 </div>
 
-                <div>
-                  <Label>Pozice tiketu</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={newPhysicalPrize.ticket_position}
-                    onChange={(e) =>
-                      setNewPhysicalPrize((prev) => ({ ...prev, ticket_position: Number(e.target.value) }))
-                    }
-                  />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label>Dodavatel</Label>
+                    <Input
+                      value={newPhysicalPrize.supplier_name || ""}
+                      onChange={(e) => setNewPhysicalPrize((prev) => ({ ...prev, supplier_name: e.target.value }))}
+                      placeholder="Např. Apple Premium Reseller"
+                    />
+                  </div>
+                  <div>
+                    <Label>Nákupní cena bez DPH v Kč</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={newPhysicalPrize.unit_cost_czk ?? 0}
+                      onChange={(e) =>
+                        setNewPhysicalPrize((prev) => ({ ...prev, unit_cost_czk: Number(e.target.value || 0) }))
+                      }
+                      onFocus={handleNumericFocus}
+                    />
+                  </div>
                 </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label>DPH v %</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.1"
+                      value={newPhysicalPrize.vat_rate ?? 21}
+                      onChange={(e) =>
+                        setNewPhysicalPrize((prev) => ({ ...prev, vat_rate: Number(e.target.value || 0) }))
+                      }
+                      onFocus={handleNumericFocus}
+                    />
+                  </div>
+                  <div>
+                    <Label>Balné / pošta / práce (override v Kč)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={newPhysicalPrize.handling_override_czk ?? ""}
+                      onChange={(e) =>
+                        setNewPhysicalPrize((prev) => ({
+                          ...prev,
+                          handling_override_czk: e.target.value === "" ? null : Number(e.target.value),
+                        }))
+                      }
+                      onFocus={handleNumericFocus}
+                      placeholder={`Jinak se použije ${Math.max(0, economyAssumptions.handlingCostPerPhysicalPrize || 0).toLocaleString("cs-CZ")} Kč`}
+                    />
+                  </div>
+                </div>
+
+                {/* Počet kusů + distribution — always visible */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label>Počet kusů</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={physicalPrizeQuantity}
+                      onChange={(e) =>
+                        setPhysicalPrizeQuantity(Math.max(1, Math.floor(Number(e.target.value) || 1)))
+                      }
+                      onFocus={handleNumericFocus}
+                      placeholder="1"
+                    />
+                  </div>
+                  {physicalPrizeQuantity > 1 && (
+                    <div>
+                      <Label>Rozmístění pozic</Label>
+                      <div className="flex gap-4 mt-2">
+                        <label className="flex items-center gap-2 cursor-pointer text-sm">
+                          <input
+                            type="radio"
+                            name="physicalDistribution"
+                            value="even"
+                            checked={physicalPrizeDistribution === "even"}
+                            onChange={() => setPhysicalPrizeDistribution("even")}
+                          />
+                          Rovnoměrně
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-sm">
+                          <input
+                            type="radio"
+                            name="physicalDistribution"
+                            value="random"
+                            checked={physicalPrizeDistribution === "random"}
+                            onChange={() => setPhysicalPrizeDistribution("random")}
+                          />
+                          Náhodně
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Pozice tiketu — only for single prize */}
+                {physicalPrizeQuantity === 1 && (
+                  <div>
+                    <Label>Pozice tiketu</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={newPhysicalPrize.ticket_position}
+                      onChange={(e) =>
+                        setNewPhysicalPrize((prev) => ({ ...prev, ticket_position: Number(e.target.value) }))
+                      }
+                      onFocus={handleNumericFocus}
+                    />
+                  </div>
+                )}
+
+                {physicalPrizeQuantity > 1 && form.ticket_count > 1 && (
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-muted-foreground">
+                    Pozice budou automaticky přiřazeny z {form.ticket_count - 1} tiketů (1–{form.ticket_count - 1}),
+                    s vyloučením již obsazených pozic. Volných pozic:{" "}
+                    {Math.max(
+                      0,
+                      (form.ticket_count - 1) -
+                        physicalPrizes.length -
+                        mioCoinBonuses.length
+                    ).toLocaleString("cs-CZ")}.
+                  </div>
+                )}
 
                 <div>
                   <Label>Obrázek výhry (volitelné)</Label>
@@ -1899,9 +2549,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   />
                 </div>
 
+                <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-muted-foreground">
+                  Nákupní cena se zadává bez DPH; do nákladů se počítá včetně DPH. Ekonomická metadata se ukládají do Supabase při uložení soutěže.
+                </div>
+
                 <Button onClick={addPhysicalPrize} className="w-full">
                   <Plus className="mr-2 h-4 w-4" />
-                  Přidat věcnou výhru
+                  {physicalPrizeQuantity > 1
+                    ? `Přidat ${physicalPrizeQuantity} věcných výher`
+                    : "Přidat věcnou výhru"}
                 </Button>
               </div>
 
@@ -1929,6 +2585,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                               <span className="font-medium">{prize.description}</span>
                               <span className="text-muted-foreground ml-2">Pozice #{prize.ticket_position}</span>
                             </div>
+                            <div className="text-xs text-muted-foreground">
+                              Dodavatel: {prize.supplier_name?.trim() || "neuvedený"} · Nákupní cena bez DPH:{" "}
+                              {formatCzk(prize.unit_cost_czk || 0)} · DPH: {(prize.vat_rate ?? 21).toLocaleString("cs-CZ")} % ·
+                              {" "}Náklad včetně DPH: {formatCzk(getPhysicalPrizeCostIncludingVat(prize))} ·
+                              {" "}Balné: {formatCzk(getHandlingCostForPrize(prize))}
+                              {prize.handling_override_czk != null ? " (override)" : " (globální default)"}
+                            </div>
                           </div>
                         </div>
                         <Button
@@ -1941,6 +2604,133 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Tab 4: Ekonomika */}
+            <TabsContent value="economy" className="space-y-4 mt-0">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="h-5 w-5 text-emerald-400" />
+                <span className="font-medium">Ekonomika soutěže</span>
+                <Badge variant="secondary" className="ml-auto">
+                  Pouze náhled
+                </Badge>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-sm text-muted-foreground">
+                Výpočet je orientační a neukládá se. Používá aktuální počet ticketů, cenu ticketu a níže uvedené
+                plánovací předpoklady.
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Reálný náklad na MioCoin bonusy v Kč</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={effectiveMioCoinCost}
+                    readOnly
+                    className="opacity-70 cursor-not-allowed"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Počítá se automaticky podle záložky Bonusy – MioCoins.
+                  </p>
+                </div>
+                <div>
+                  <Label>Sazba DPH v %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={economyAssumptions.vatRate}
+                    onChange={updateEconomyAssumption("vatRate")}
+                    onFocus={handleNumericFocus}
+                  />
+                </div>
+                <div>
+                  <Label>Jednorázový náklad soutěže v Kč</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={economyAssumptions.setupCost}
+                    onChange={updateEconomyAssumption("setupCost")}
+                    onFocus={handleNumericFocus}
+                  />
+                </div>
+                <div>
+                  <Label>Marketingový náklad v %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={economyAssumptions.marketingPercent}
+                    onChange={updateEconomyAssumption("marketingPercent")}
+                    onFocus={handleNumericFocus}
+                  />
+                </div>
+                <div>
+                  <Label>Balné / pošta / práce na věcnou výhru v Kč</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={economyAssumptions.handlingCostPerPhysicalPrize}
+                    onChange={updateEconomyAssumption("handlingCostPerPhysicalPrize")}
+                    onFocus={handleNumericFocus}
+                  />
+                </div>
+                <div>
+                  <Label>Cílová marže v %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={95}
+                    value={economyAssumptions.targetMarginPercent}
+                    onChange={updateEconomyAssumption("targetMarginPercent")}
+                    onFocus={handleNumericFocus}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {[
+                  ["Hrubá tržba včetně DPH", formatCzk(grossRevenue)],
+                  ["DPH z tržby", formatCzk(vatFromRevenue)],
+                  ["Čistá tržba bez DPH", formatCzk(netRevenue)],
+                  ["Náklad na hlavní výhru", formatCzk(economyAssumptions.mainPrizeRealCost)],
+                  ["Náklad na MioCoin bonusy", formatCzk(effectiveMioCoinCost)],
+                  ["Odhad nákladů na věcné bonusové výhry", formatCzk(physicalBonusEstimatedCost)],
+                  ["Balné / pošta / práce", formatCzk(handlingCostTotal)],
+                  ["Jednorázový náklad soutěže", formatCzk(economyAssumptions.setupCost)],
+                  ["Marketingový náklad", formatCzk(marketingCost)],
+                  ["Celkové odhadované náklady", formatCzk(totalEstimatedCost)],
+                  ["Odhadovaný zisk", formatCzk(estimatedProfit)],
+                  ["Marže", formatPercent(marginPercent)],
+                  ["Bod zvratu v počtu ticketů", `${breakEvenTickets.toLocaleString("cs-CZ")} ticketů`],
+                  ["Doporučená minimální cena ticketu", `${recommendedTicketPrice.toLocaleString("cs-CZ", { maximumFractionDigits: 2 })} Kč`],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2">
+                    <span className="text-sm text-muted-foreground">{label}</span>
+                    <span className="text-sm font-semibold text-foreground text-right">{value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-muted/20 p-3 text-sm text-muted-foreground">
+                Věcné bonusové výhry: {physicalPrizes.length.toLocaleString("cs-CZ")} položek. MioCoin bonusy:{" "}
+                {totalMioCoins.toLocaleString("cs-CZ")} MC na {mioCoinBonuses.length.toLocaleString("cs-CZ")} pozicích.
+                Nákupní ceny věcných výher zatím nejsou v této fázi modelované.
+              </div>
+
+              {economyWarnings.length > 0 && (
+                <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3">
+                  <div className="mb-2 flex items-center gap-2 text-sm font-medium text-yellow-300">
+                    <AlertCircle className="h-4 w-4" />
+                    Varování ekonomiky
+                  </div>
+                  <ul className="ml-5 list-disc space-y-1 text-sm text-yellow-100/90">
+                    {economyWarnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </TabsContent>
@@ -2095,6 +2885,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                             min={0}
                             value={newMediaSortOrder}
                             onChange={(e) => setNewMediaSortOrder(Number(e.target.value))}
+                            onFocus={handleNumericFocus}
                             className="h-9"
                           />
                         </div>
@@ -2351,8 +3142,40 @@ export const AdminContestManagement: React.FC = () => {
         setLinkedContestIds(new Set());
       }
 
-      // total_miocoin_bonus is maintained by DB trigger trg_sync_total_miocoin_bonus
-      // — already loaded from contests table above, no extra queries needed
+      // Fix: contests.total_miocoin_bonus is NOT kept in sync by any trigger in production
+      // (the referenced trg_sync_total_miocoin_bonus does not exist). When MioCoins are
+      // generated via the legacy distribute-bonus-prizes Edge Function (triggered on
+      // contest insert) instead of admin_bulk_insert_miocoin_bonuses, the column stays at 0
+      // even though bonus_prizes contains tens of thousands of MioCoin rows.
+      // Compute the real sum from bonus_prizes and override the displayed value.
+      if (contestIds.length > 0) {
+        try {
+          const { data: bonusSumRows, error: bonusSumError } = await supabase
+            .from("bonus_prizes")
+            .select("contest_id, amount.sum()")
+            .gt("amount", 0)
+            .in("contest_id", contestIds);
+
+          if (bonusSumError) {
+            console.error("Error fetching real MioCoin bonus sums:", bonusSumError);
+          } else if (bonusSumRows) {
+            const sumMap = new Map<string, number>();
+            for (const row of bonusSumRows as any[]) {
+              const cid = row.contest_id as string;
+              const sum = Number(row.sum ?? 0);
+              if (cid) sumMap.set(cid, sum);
+            }
+            for (const c of contestsData) {
+              const real = sumMap.get(c.contest_id);
+              if (real !== undefined && real > 0) {
+                c.total_miocoin_bonus = real;
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Unexpected error computing real MioCoin bonus sums:", e);
+        }
+      }
 
       setContests(contestsData);
     } catch (error: any) {
@@ -2374,6 +3197,17 @@ export const AdminContestManagement: React.FC = () => {
   }, []);
 
   const handleStatusChange = async (contestId: string, newStatus: string) => {
+    const current = contests.find((c) => c.contest_id === contestId);
+
+    if (current?.status === "closed") {
+      toast({
+        title: "Akce zamítnuta",
+        description: "Ukončenou soutěž nelze znovu aktivovat ani přesunout.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (newStatus === "closed") {
       toast({
         title: "Akce zamítnuta",
@@ -2384,7 +3218,6 @@ export const AdminContestManagement: React.FC = () => {
     }
 
     if (newStatus === "draft") {
-      const current = contests.find((c) => c.contest_id === contestId);
       if (current?.status === "active") {
         toast({
           title: "Akce zamítnuta",
@@ -2932,7 +3765,7 @@ export const AdminContestManagement: React.FC = () => {
                           <Select
                             value={contest.status}
                             onValueChange={(value) => handleStatusChange(contest.contest_id, value)}
-                            disabled={updatingStatus === contest.contest_id}
+                            disabled={updatingStatus === contest.contest_id || contest.status === "closed"}
                           >
                             <SelectTrigger className="w-8 h-8 p-0 bg-transparent border-white/10 hover:bg-white/10">
                               {updatingStatus === contest.contest_id ? (

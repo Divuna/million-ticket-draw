@@ -345,6 +345,9 @@ export const AdminValidationWorkflows: React.FC = () => {
                   <div>
                     <h4 className="font-medium mb-2">Platby</h4>
                     <p className="text-sm text-muted-foreground">{adminSummary.payments_summary}</p>
+                    <p className="text-xs text-amber-600 mt-1">
+                      Poznámka: tento souhrn pochází z DB funkce a může označovat připsané MioCoiny jako Kč.
+                    </p>
                   </div>
                   <div>
                     <h4 className="font-medium mb-2">Oznámení</h4>

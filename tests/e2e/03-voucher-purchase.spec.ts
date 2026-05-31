@@ -26,17 +26,12 @@ test.describe('Voucher Purchase', () => {
   test('voucher buy button visible or empty-state shown', async ({ page }) => {
     await page.goto('/vouchers');
 
-    // Wait for async data to load (skeleton replaced by real content)
-    await page.waitForTimeout(3_000);
-
     const buyButton = page.getByRole('button', { name: /KOUPIT ZA 5 MC/i }).first();
-    const emptyState = page.getByText(/Žádné dostupné vouchery|Momentálně nejsou/i);
+    const emptyState = page.getByRole('heading', { name: 'Žádné dostupné vouchery' });
 
-    const buyVisible = await buyButton.isVisible();
-    const emptyVisible = await emptyState.isVisible();
-
-    // One of these two states must be true – the page must not be blank
-    expect(buyVisible || emptyVisible).toBeTruthy();
+    // Wait up to 15 s for either state: role loading (2 Supabase queries) +
+    // voucher loading (1 Supabase query) can exceed 3 s on a cold CI connection.
+    await expect(buyButton.or(emptyState)).toBeVisible({ timeout: 15_000 });
   });
 
   test('clicking buy button produces success or error feedback', async ({ page }) => {

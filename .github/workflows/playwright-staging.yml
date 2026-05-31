@@ -1,0 +1,472 @@
+name: Playwright Staging Full E2E
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Prague time (CEST = UTC+2): 04:00, 12:00, 20:00 — offset from prod smoke (00:00, 08:00, 16:00)
+    - cron: '0 2 * * *'    # 04:00 Praha
+    - cron: '0 10 * * *'   # 12:00 Praha
+    - cron: '0 18 * * *'   # 20:00 Praha
+
+jobs:
+  e2e:
+    name: Full E2E (Chromium) — Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Seed win contest
+        id: seed-win-contest
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            "${SUPABASE_URL}/rest/v1/contests" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{
+              "title": "E2E staging win contest auto",
+              "description": "Automatic staging win-flow contest for E2E.",
+              "main_prize": "Staging main prize",
+              "ticket_count": 100,
+              "ticket_price": 10,
+              "status": "active",
+              "next_ticket_number": 100,
+              "fast_game": false,
+              "created_at": "2020-01-01T00:00:00Z"
+            }')
+          echo "PostgREST response: $RESPONSE"
+          WIN_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
+          if [ -z "$WIN_ID" ] || [ "$WIN_ID" = "null" ]; then
+            echo "ERROR: seed failed — see PostgREST response above" >&2
+            exit 1
+          fi
+          echo "win_contest_id=$WIN_ID" >> $GITHUB_OUTPUT
+          echo "Seeded win contest: $WIN_ID"
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Reset test user wallet
+        run: |
+          curl -s -X PATCH \
+            "${SUPABASE_URL}/rest/v1/wallets?user_id=eq.7822a82e-f1d3-45ee-827b-679640ce6b65" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d '{"balance_coins": 5000, "bonus_balance_coins": 0}'
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Reset test user vouchers
+        # Delete all user_vouchers rows for the E2E test user so that seeded
+        # vouchers appear as "available" again on /vouchers (the UI filters out
+        # vouchers already in the user's collection via useUserVouchers).
+        run: |
+          curl -s -X DELETE \
+            "${SUPABASE_URL}/rest/v1/user_vouchers?user_id=eq.7822a82e-f1d3-45ee-827b-679640ce6b65" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Prefer: return=minimal"
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Seed E2E Spec03 voucher
+        # Seed a fresh voucher for spec 03 with default created_at (now) so it
+        # appears FIRST in the Dostupné list (sorted created_at DESC). Spec 03
+        # uses .first() and always picks this newest entry — never spec 10's card.
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            "${SUPABASE_URL}/rest/v1/vouchers" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{
+              "name": "E2E Spec03 Voucher",
+              "is_public": true,
+              "max_quantity": null,
+              "redeemed_count": 0,
+              "start_date": null,
+              "end_date": null,
+              "image_url": "https://placehold.co/200x200/1D2128/E7EBF0?text=E2E03",
+              "banner_url": "https://placehold.co/400x200/1D2128/E7EBF0?text=E2E+Spec03"
+            }')
+          echo "Seed spec03 voucher response: $RESPONSE"
+          VOUCHER_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
+          if [ -z "$VOUCHER_ID" ] || [ "$VOUCHER_ID" = "null" ]; then
+            echo "WARNING: spec03 voucher seed failed. Response: $RESPONSE" >&2
+          else
+            echo "Seeded E2E Spec03 voucher: $VOUCHER_ID"
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Seed E2E Spec10 voucher
+        # Seed a dedicated voucher for spec 10 with a past created_at so it
+        # appears LAST in the Dostupné list. Spec 03 uses .first() and always
+        # picks the newest entry (E2E Spec03 Voucher seeded above). Spec 10
+        # finds this card by name via scoped locator — never conflicts with spec 03.
+        # max_quantity: null = unlimited (can be bought again after user_vouchers reset).
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            "${SUPABASE_URL}/rest/v1/vouchers" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{
+              "name": "E2E Spec10 Voucher",
+              "is_public": true,
+              "max_quantity": null,
+              "redeemed_count": 0,
+              "start_date": null,
+              "end_date": null,
+              "created_at": "2020-01-01T00:00:00Z",
+              "image_url": "https://placehold.co/200x200/1D2128/E7EBF0?text=E2E10",
+              "banner_url": "https://placehold.co/400x200/1D2128/E7EBF0?text=E2E+Spec10"
+            }')
+          echo "Seed spec10 voucher response: $RESPONSE"
+          VOUCHER_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
+          if [ -z "$VOUCHER_ID" ] || [ "$VOUCHER_ID" = "null" ]; then
+            echo "WARNING: spec10 voucher seed failed — spec 10 may fail. Response: $RESPONSE" >&2
+          else
+            echo "Seeded E2E Spec10 voucher: $VOUCHER_ID"
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Seed E2E Spec11 purchased voucher
+        # Seed a dedicated already-purchased voucher for spec 11. This runs
+        # after the user_vouchers reset and does not affect spec 10 because
+        # spec 10 targets "E2E Spec10 Voucher" by name in the Dostupné tab.
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            "${SUPABASE_URL}/rest/v1/vouchers" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{
+              "name": "E2E Spec11 Voucher",
+              "is_public": true,
+              "max_quantity": null,
+              "redeemed_count": 0,
+              "start_date": null,
+              "end_date": null,
+              "created_at": "2020-01-02T00:00:00Z",
+              "image_url": "https://placehold.co/200x200/1D2128/E7EBF0?text=E2E11",
+              "banner_url": "https://placehold.co/400x200/1D2128/E7EBF0?text=E2E+Spec11"
+            }')
+          echo "Seed spec11 voucher response: $RESPONSE"
+          VOUCHER_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
+          if [ -z "$VOUCHER_ID" ] || [ "$VOUCHER_ID" = "null" ]; then
+            echo "ERROR: spec11 voucher seed failed. Response: $RESPONSE" >&2
+            exit 1
+          fi
+
+          USER_VOUCHER_RESPONSE=$(curl -s -X POST \
+            "${SUPABASE_URL}/rest/v1/user_vouchers" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d "{
+              \"user_id\": \"7822a82e-f1d3-45ee-827b-679640ce6b65\",
+              \"voucher_id\": \"${VOUCHER_ID}\",
+              \"redeemed\": true
+            }")
+          echo "Seed spec11 user_voucher response: $USER_VOUCHER_RESPONSE"
+          USER_VOUCHER_ID=$(echo "$USER_VOUCHER_RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
+          if [ -z "$USER_VOUCHER_ID" ] || [ "$USER_VOUCHER_ID" = "null" ]; then
+            echo "ERROR: spec11 user_voucher seed failed. Response: $USER_VOUCHER_RESPONSE" >&2
+            exit 1
+          fi
+
+          echo "Seeded E2E Spec11 purchased voucher: voucher=${VOUCHER_ID}, user_voucher=${USER_VOUCHER_ID}"
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Seed E2E Spec18 economy test contest
+        # Seed a fresh draft contest for spec 18 (admin economy persist).
+        # Uses status=draft so it appears in the "Archiv test" admin tab.
+        # "Archiv test" has far fewer rows than "Aktivní soutěže", making the
+        # row reliably findable. The spec locates the row by SPEC18_CONTEST_ID
+        # (rendered as "ID: <uuid>" in each row) — unique per run, no title collisions.
+        # main_image is set to a placeholder so the graphics validation passes
+        # and the Save button is enabled (isFormValid = basic.isValid && hasMainImage).
+        # rules_pdf_url is pre-set to a placeholder so save validation passes
+        # without requiring a real PDF upload during the test.
+        # WARNING-only: if the contest_economy table does not yet exist (migration
+        # not applied), spec 18 will skip rather than fail the whole suite.
+        id: seed-spec18-contest
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            "${SUPABASE_URL}/rest/v1/contests" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{
+              "title": "E2E Spec18 Economy Persist",
+              "main_prize": "E2E economy test prize",
+              "ticket_count": 100,
+              "ticket_price": 10,
+              "status": "draft",
+              "next_ticket_number": 1,
+              "fast_game": false,
+              "main_image": "https://placehold.co/800x600/1D2128/E7EBF0?text=E2E+Spec18",
+              "rules_pdf_url": "https://example.com/e2e-test-rules.pdf"
+            }')
+          echo "Seed spec18 contest response: $RESPONSE"
+          SPEC18_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
+          if [ -z "$SPEC18_ID" ] || [ "$SPEC18_ID" = "null" ]; then
+            echo "WARNING: spec18 contest seed failed — spec 18 will skip. Response: $RESPONSE" >&2
+            SPEC18_ID=""
+          else
+            echo "Seeded spec18 economy contest: $SPEC18_ID"
+          fi
+          echo "spec18_contest_id=$SPEC18_ID" >> $GITHUB_OUTPUT
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Seed E2E Spec20 chunked MioCoin save test contest
+        # Seed a fresh draft contest for spec 20 (admin MioCoin chunked save).
+        # ticket_count = 1000 (≥ 601 required so 600 MioCoin positions fit;
+        # SPEC18 contest cannot be reused because its ticket_count = 100).
+        # ticket_price = 1, status = draft, main_image + rules_pdf_url set
+        # so save validation passes without UI file uploads.
+        # Spec 20 generates 600 MioCoin bonuses on this contest — fresh per
+        # run, so no stale MioCoin rows accumulate.
+        # WARNING-only: if seed fails, spec 20 skips rather than failing the suite.
+        id: seed-spec20-contest
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            "${SUPABASE_URL}/rest/v1/contests" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{
+              "title": "E2E Spec20 MioCoin Chunked Save",
+              "description": "Staging-only contest used by spec 20 to lock the chunked MioCoin save flow (issue #71).",
+              "main_prize": "E2E chunked-save test prize",
+              "ticket_count": 1000,
+              "ticket_price": 1,
+              "status": "draft",
+              "next_ticket_number": 1,
+              "fast_game": false,
+              "main_image": "https://placehold.co/800x600/1D2128/E7EBF0?text=E2E+Spec20",
+              "rules_pdf_url": "https://example.com/e2e-test-rules.pdf"
+            }')
+          echo "Seed spec20 contest response: $RESPONSE"
+          SPEC20_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
+          if [ -z "$SPEC20_ID" ] || [ "$SPEC20_ID" = "null" ]; then
+            echo "WARNING: spec20 contest seed failed — spec 20 will skip. Response: $RESPONSE" >&2
+            SPEC20_ID=""
+          else
+            echo "Seeded spec20 chunked-save contest: $SPEC20_ID"
+          fi
+          echo "spec20_contest_id=$SPEC20_ID" >> $GITHUB_OUTPUT
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Ensure staging admin E2E user has admin role
+        # ── Why this step exists ──────────────────────────────────────────────
+        # Specs 15, 16, 18, 19 log in as the admin E2E account.
+        # admin_manage_bonus_prize (called by spec 19) checks:
+        #   SELECT 1 FROM public.users WHERE id = auth.uid()
+        #                               AND role IN ('admin','superadmin')
+        # If the account is missing from public.users, or its role column is
+        # wrong, the RPC returns {success:false} and the dialog stays open.
+        #
+        # This step is idempotent — safe to run on every workflow trigger.
+        # It uses the Supabase Admin API to find (or create) the auth user,
+        # then upserts public.users, user_roles, profiles, and wallets rows.
+        #
+        # Credential safety: ADMIN_EMAIL and ADMIN_PASSWORD flow only through
+        # env vars and jq --arg interpolation. They are never echoed or
+        # interpolated into curl URLs. GitHub Actions masks all secret-backed
+        # env vars in log output automatically.
+        run: |
+          ADMIN_API="${SUPABASE_URL}/auth/v1/admin/users"
+          REST_API="${SUPABASE_URL}/rest/v1"
+
+          # ── 1. Find admin E2E user in auth.users ────────────────────────────
+          # List all users and filter by email with jq --arg — email never
+          # appears in a curl URL or in an echo statement.
+          LIST=$(curl -sf \
+            "${ADMIN_API}?page=1&per_page=1000" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}")
+
+          ADMIN_UUID=$(echo "$LIST" | jq -r \
+            --arg e "${ADMIN_EMAIL}" \
+            '.users[]? | select(.email == $e) | .id' | head -1)
+
+          if [ -z "$ADMIN_UUID" ] || [ "$ADMIN_UUID" = "null" ]; then
+            # ── 2a. User missing — create via Admin API ──────────────────────
+            echo "Admin E2E user not found in staging auth.users — creating (credentials masked)"
+            PAYLOAD=$(jq -n \
+              --arg em "${ADMIN_EMAIL}" \
+              --arg pw "${ADMIN_PASSWORD}" \
+              '{email: $em, password: $pw, email_confirm: true}')
+            CREATE=$(curl -sf -X POST "${ADMIN_API}" \
+              -H "apikey: ${SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+              -H "Content-Type: application/json" \
+              -d "${PAYLOAD}")
+            ADMIN_UUID=$(echo "$CREATE" | jq -r '.id // empty')
+            if [ -z "$ADMIN_UUID" ]; then
+              echo "ERROR: failed to create admin E2E user." \
+                   "Verify STAGING_E2E_ADMIN_EMAIL and STAGING_E2E_ADMIN_PASSWORD are set." >&2
+              exit 1
+            fi
+            echo "Admin E2E user created in auth.users (UUID masked)"
+          else
+            echo "Admin E2E user found in auth.users (UUID masked)"
+          fi
+
+          # ── 2b. UPSERT public.users with role=admin ──────────────────────────
+          # merge-duplicates = ON CONFLICT (id) DO UPDATE SET ...
+          # Overwrites any stale role value ('user') with 'admin'.
+          PU=$(jq -n \
+            --arg id "$ADMIN_UUID" \
+            --arg em "${ADMIN_EMAIL}" \
+            '{id: $id, email: $em, name: "Admin E2E", role: "admin"}')
+          PU_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${REST_API}/users" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates,return=minimal" \
+            -d "${PU}")
+          if [ "$PU_STATUS" -lt 200 ] || [ "$PU_STATUS" -ge 300 ]; then
+            echo "ERROR: public.users upsert failed (HTTP ${PU_STATUS})" >&2
+            exit 1
+          fi
+          echo "public.users: role=admin ensured (HTTP ${PU_STATUS})"
+
+          # ── 3. Ensure user_roles row exists ────────────────────────────────
+          # ignore-duplicates = ON CONFLICT DO NOTHING — safe for UNIQUE(user_id,role).
+          UR=$(jq -n --arg uid "$ADMIN_UUID" '{user_id: $uid, role: "admin"}')
+          UR_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${REST_API}/user_roles" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=ignore-duplicates,return=minimal" \
+            -d "${UR}")
+          echo "user_roles: admin row ensured (HTTP ${UR_STATUS})"
+
+          # ── 4. Ensure profiles row exists ──────────────────────────────────
+          PR=$(jq -n --arg id "$ADMIN_UUID" '{id: $id, full_name: "Admin E2E"}')
+          PR_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${REST_API}/profiles" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=ignore-duplicates,return=minimal" \
+            -d "${PR}")
+          echo "profiles: row ensured (HTTP ${PR_STATUS})"
+
+          # ── 5. Ensure wallets row exists ───────────────────────────────────
+          WA=$(jq -n --arg uid "$ADMIN_UUID" \
+            '{user_id: $uid, balance_coins: 0, bonus_balance_coins: 0}')
+          WA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${REST_API}/wallets" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=ignore-duplicates,return=minimal" \
+            -d "${WA}")
+          echo "wallets: row ensured (HTTP ${WA_STATUS})"
+
+          echo "Admin E2E user seed complete"
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          ADMIN_EMAIL: ${{ secrets.STAGING_E2E_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.STAGING_E2E_ADMIN_PASSWORD }}
+
+      - name: Run full E2E suite
+        id: e2e_tests
+        run: npm run test:smoke
+        env:
+          CI: true
+          VITE_SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.STAGING_VITE_SUPABASE_ANON_KEY }}
+          VITE_INTERNAL_FUNCTION_TOKEN: ${{ secrets.STAGING_VITE_INTERNAL_FUNCTION_TOKEN }}
+          E2E_TEST_EMAIL: ${{ secrets.STAGING_E2E_TEST_EMAIL }}
+          E2E_TEST_PASSWORD: ${{ secrets.STAGING_E2E_TEST_PASSWORD }}
+          E2E_CONTEST_ID: ${{ secrets.STAGING_E2E_CONTEST_ID }}
+          E2E_WIN_CONTEST_ID: ${{ steps.seed-win-contest.outputs.win_contest_id }}
+          E2E_SPEC18_CONTEST_ID: ${{ steps.seed-spec18-contest.outputs.spec18_contest_id }}
+          E2E_SPEC20_CONTEST_ID: ${{ steps.seed-spec20-contest.outputs.spec20_contest_id }}
+          E2E_AFFILIATE_EMAIL: ${{ secrets.STAGING_E2E_AFFILIATE_EMAIL }}
+          E2E_AFFILIATE_PASSWORD: ${{ secrets.STAGING_E2E_AFFILIATE_PASSWORD }}
+          E2E_ADMIN_EMAIL: ${{ secrets.STAGING_E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.STAGING_E2E_ADMIN_PASSWORD }}
+
+      - name: E2E status — OK
+        if: success()
+        run: |
+          echo "## ✅ OneMil STAGING full E2E OK" >> $GITHUB_STEP_SUMMARY
+          echo "All specs passed against staging." >> $GITHUB_STEP_SUMMARY
+
+      - name: Telegram — OK
+        if: success()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d '{"chat_id":"${{ secrets.TELEGRAM_CHAT_ID }}","text":"✅ OneMil STAGING full E2E OK — all specs passed"}'
+
+      - name: E2E status — FAILED
+        if: failure()
+        run: |
+          echo "## ❌ OneMil STAGING full E2E FAILED" >> $GITHUB_STEP_SUMMARY
+          echo "Check the HTML report artifact and screenshots above." >> $GITHUB_STEP_SUMMARY
+
+      - name: Telegram — FAILED
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d '{"chat_id":"${{ secrets.TELEGRAM_CHAT_ID }}","text":"❌ OneMil STAGING full E2E FAILED\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}'
+
+      - name: Upload HTML report
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-playwright-report-${{ github.run_id }}
+          path: playwright-report/
+          retention-days: 3
+
+      - name: Upload failure screenshots
+        if: failure()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-screenshots-${{ github.run_id }}
+          path: test-results/
+          retention-days: 3

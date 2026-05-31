@@ -236,7 +236,7 @@ const AdminReferralAudit: React.FC = () => {
           </TabsTrigger>
           <TabsTrigger value="referrals" className="text-xs sm:text-sm">
             <Link2 className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />
-            Referraly ({filteredReferrals.length})
+            Doporučení ({filteredReferrals.length})
           </TabsTrigger>
           <TabsTrigger value="rewards" className="text-xs sm:text-sm">
             <Coins className="h-3.5 w-3.5 mr-1.5 hidden sm:inline" />
@@ -248,7 +248,7 @@ const AdminReferralAudit: React.FC = () => {
         <TabsContent value="attempts">
           <Card className="luxury-card">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Pokusy o referral</CardTitle>
+              <CardTitle className="text-base">Pokusy o doporučení</CardTitle>
             </CardHeader>
             <CardContent>
               {filteredAttempts.length === 0 ? (
@@ -289,7 +289,7 @@ const AdminReferralAudit: React.FC = () => {
         <TabsContent value="referrals">
           <Card className="luxury-card">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Referral vazby</CardTitle>
+              <CardTitle className="text-base">Vazby doporučení</CardTitle>
             </CardHeader>
             <CardContent>
               {filteredReferrals.length === 0 ? (
@@ -359,7 +359,7 @@ const AdminReferralAudit: React.FC = () => {
               <CardTitle className="text-base">Odměny</CardTitle>
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
                 <Ban className="h-3 w-3 shrink-0" />
-                Blokace odměny neblokuje doporučitele. Pro blokaci doporučitele použijte záložku „Referraly".
+                Blokace odměny neblokuje doporučitele. Pro blokaci doporučitele použijte záložku „Doporučení".
               </p>
             </CardHeader>
             <CardContent>

@@ -33,24 +33,44 @@ Deno.serve(async (req) => {
 
     console.log('🧪 Test notifikace pro uživatele:', user.id);
 
-    // Get user's device player_id
-    const { data: devices, error: deviceError } = await supabaseClient
-      .from('user_devices')
-      .select('player_id')
-      .eq('user_id', user.id)
-      .eq('device_type', 'web')
-      .limit(1)
-      .single();
+    // Resolve OneSignal recipient with fallback chain:
+    // 1) user_devices.onesignal_player_id (latest device)
+    // 2) users.onesignal_player_id
+    // 3) user_devices.player_id
+    let playerId: string | null = null;
 
-    if (deviceError || !devices?.player_id) {
-      console.error('❌ Player ID nenalezen:', deviceError);
+    const { data: deviceRows } = await supabaseClient
+      .from('user_devices')
+      .select('onesignal_player_id, player_id, updated_at')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false });
+
+    if (deviceRows && deviceRows.length > 0) {
+      playerId = deviceRows.find((d: { onesignal_player_id?: string | null }) => d.onesignal_player_id)?.onesignal_player_id ?? null;
+    }
+
+    if (!playerId) {
+      const { data: userRow } = await supabaseClient
+        .from('users')
+        .select('onesignal_player_id')
+        .eq('id', user.id)
+        .single();
+      playerId = userRow?.onesignal_player_id ?? null;
+    }
+
+    if (!playerId && deviceRows && deviceRows.length > 0) {
+      playerId = deviceRows.find((d: { player_id?: string | null }) => d.player_id)?.player_id ?? null;
+    }
+
+    if (!playerId) {
+      console.error('❌ OneSignal recipient nenalezen pro uživatele:', user.id);
       return new Response(
-        JSON.stringify({ error: 'Player ID nenalezen. Povolte nejprve notifikace.' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Pro toto zařízení nebylo nalezeno žádné OneSignal ID. Povolte nejprve notifikace v prohlížeči.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('📲 Odesílám test notifikaci na player_id:', devices.player_id);
+    console.log('📲 Odesílám test notifikaci na player_id:', playerId);
 
     // Send notification via OneSignal API
     const oneSignalResponse = await fetch('https://onesignal.com/api/v1/notifications', {
@@ -61,7 +81,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         app_id: '357be038-dbaf-4551-9a16-96d9897197a3',
-        include_player_ids: [devices.player_id],
+        include_player_ids: [playerId],
         headings: { en: 'Test notifikace' },
         contents: { en: 'Gratulujeme! Notifikace fungují správně. 🎉' },
         web_url: Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || 'https://onemil.lovable.app'
@@ -97,7 +117,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: 'Notifikace odeslána',
-        player_id: devices.player_id,
+        player_id: playerId,
         notification_id: oneSignalData.id
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

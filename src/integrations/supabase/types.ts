@@ -328,11 +328,15 @@ export type Database = {
           description: string
           detailed_description: string | null
           guardian_required: boolean
+          handling_override_czk: number | null
           id: string
           image_url: string | null
           status: string
+          supplier_name: string | null
           ticket_position: number
           title: string | null
+          unit_cost_czk: number | null
+          vat_rate_percent: number | null
         }
         Insert: {
           admin_notes?: string | null
@@ -342,11 +346,15 @@ export type Database = {
           description: string
           detailed_description?: string | null
           guardian_required?: boolean
+          handling_override_czk?: number | null
           id?: string
           image_url?: string | null
           status?: string
+          supplier_name?: string | null
           ticket_position: number
           title?: string | null
+          unit_cost_czk?: number | null
+          vat_rate_percent?: number | null
         }
         Update: {
           admin_notes?: string | null
@@ -356,11 +364,15 @@ export type Database = {
           description?: string
           detailed_description?: string | null
           guardian_required?: boolean
+          handling_override_czk?: number | null
           id?: string
           image_url?: string | null
           status?: string
+          supplier_name?: string | null
           ticket_position?: number
           title?: string | null
+          unit_cost_czk?: number | null
+          vat_rate_percent?: number | null
         }
         Relationships: [
           {
@@ -497,6 +509,95 @@ export type Database = {
           version?: string | null
         }
         Relationships: []
+      }
+      contest_economy: {
+        Row: {
+          contest_id: string
+          created_at: string
+          default_handling_czk: number
+          main_prize_cost_czk: number
+          marketing_percent: number
+          miocoin_real_cost_czk: number
+          setup_cost_czk: number
+          target_margin_percent: number
+          updated_at: string
+          vat_rate_percent: number
+        }
+        Insert: {
+          contest_id: string
+          created_at?: string
+          default_handling_czk?: number
+          main_prize_cost_czk?: number
+          marketing_percent?: number
+          miocoin_real_cost_czk?: number
+          setup_cost_czk?: number
+          target_margin_percent?: number
+          updated_at?: string
+          vat_rate_percent?: number
+        }
+        Update: {
+          contest_id?: string
+          created_at?: string
+          default_handling_czk?: number
+          main_prize_cost_czk?: number
+          marketing_percent?: number
+          miocoin_real_cost_czk?: number
+          setup_cost_czk?: number
+          target_margin_percent?: number
+          updated_at?: string
+          vat_rate_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contest_economy_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: true
+            referencedRelation: "admin_contest_status"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "contest_economy_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: true
+            referencedRelation: "admin_winner_delivery_stats"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "contest_economy_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: true
+            referencedRelation: "contest_analytics"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "contest_economy_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: true
+            referencedRelation: "contest_integrity_check"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "contest_economy_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: true
+            referencedRelation: "contest_progress"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "contest_economy_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: true
+            referencedRelation: "contest_revenue"
+            referencedColumns: ["contest_id"]
+          },
+          {
+            foreignKeyName: "contest_economy_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: true
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contest_media: {
         Row: {
@@ -2965,6 +3066,7 @@ export type Database = {
           google_id: string | null
           id: string
           last_name: string | null
+          last_seen_at: string | null
           name: string | null
           nickname: string | null
           onesignal_player_id: string | null
@@ -2981,6 +3083,7 @@ export type Database = {
           google_id?: string | null
           id: string
           last_name?: string | null
+          last_seen_at?: string | null
           name?: string | null
           nickname?: string | null
           onesignal_player_id?: string | null
@@ -2997,6 +3100,7 @@ export type Database = {
           google_id?: string | null
           id?: string
           last_name?: string | null
+          last_seen_at?: string | null
           name?: string | null
           nickname?: string | null
           onesignal_player_id?: string | null
@@ -3965,9 +4069,25 @@ export type Database = {
         Args: { p_api_key: string; p_partner_id: string; p_reward_code: string }
         Returns: Json
       }
+      admin_append_miocoin_chunk: {
+        Args: { p_bonuses: Json; p_contest_id: string }
+        Returns: Json
+      }
+      admin_begin_miocoin_save: {
+        Args: { p_contest_id: string; p_expected_count: number }
+        Returns: Json
+      }
       admin_block_referrer: {
         Args: { p_blocked: boolean; p_reason?: string; p_user_id: string }
         Returns: undefined
+      }
+      admin_bulk_insert_miocoin_bonuses: {
+        Args: { p_bonuses: Json; p_contest_id: string }
+        Returns: Json
+      }
+      admin_finalize_miocoin_save: {
+        Args: { p_contest_id: string; p_expected_count: number }
+        Returns: Json
       }
       admin_manage_bonus_prize:
         | {
@@ -4056,6 +4176,7 @@ export type Database = {
         Returns: string
       }
       build_isdoc_payload: { Args: { p_invoice_id: string }; Returns: Json }
+      bump_user_last_seen: { Args: never; Returns: undefined }
       buy_ticket_atomic: {
         Args: { p_contest_id: string; p_user_id: string }
         Returns: Json
@@ -4219,6 +4340,10 @@ export type Database = {
           unbilled_activations: number
         }[]
       }
+      get_admin_online_users: {
+        Args: { p_active_window_seconds?: number }
+        Returns: Json
+      }
       get_admin_summary_dashboard: {
         Args: never
         Returns: {
@@ -4230,6 +4355,7 @@ export type Database = {
           vouchers_summary: string
         }[]
       }
+      get_admin_top_bar_stats: { Args: never; Returns: Json }
       get_available_vouchers: {
         Args: { p_user_id?: string }
         Returns: {

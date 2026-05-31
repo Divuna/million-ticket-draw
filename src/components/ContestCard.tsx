@@ -2,9 +2,10 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { Badge } from '@/components/ui/badge';
-import { Heart, Trophy } from 'lucide-react';
+import { OneMilHeartIcon, OneMilTrophyIcon } from '@/components/icons/OneMilIcons';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import trophyIcon from '@/assets/icon-trophy-onemil.png';
 import './ContestCard.css';
 
 interface Contest {
@@ -36,6 +37,8 @@ interface ContestCardProps {
   showTotalOnly?: boolean;
   /** When set (e.g. on Games / Favorites), gates purchase CTA vs top-up using this balance */
   walletBalance?: number;
+  /** Listing-only: hide contest title and ticket count/progress display */
+  hideTitleAndCount?: boolean;
 }
 
 export const ContestCard: React.FC<ContestCardProps> = ({
@@ -53,6 +56,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
   ticketsTotal,
   showTotalOnly = false,
   walletBalance,
+  hideTitleAndCount = false,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -133,7 +137,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         contest-card-glow
         relative overflow-hidden
         rounded-[20px]
-        border-[3px] border-[hsl(32_100%_50%/0.6)]
+        border-[3px] border-[rgba(255,138,0,0.45)]
         transition-all duration-300 ease-out
         hover:scale-[1.02]
         ${className}
@@ -152,8 +156,13 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             }}
           />
         ) : (
-          <div className="w-full h-full bg-[hsl(220_25%_10%)] flex items-center justify-center">
-            <Trophy className="w-16 h-16 text-[hsl(45_80%_55%/0.2)]" />
+          <div className="w-full h-full bg-gradient-to-b from-[#101722] to-[#0A0B0F] flex items-center justify-center">
+            <img
+              src={trophyIcon}
+              alt="OneMil"
+              className="w-20 h-20 opacity-40 select-none pointer-events-none"
+              draggable={false}
+            />
           </div>
         )}
       </div>
@@ -183,7 +192,8 @@ export const ContestCard: React.FC<ContestCardProps> = ({
               "
               aria-label={fromPage === 'favorites' ? 'Remove from favorites' : 'Toggle favorite'}
             >
-              <Heart
+              <OneMilHeartIcon
+                size={20}
                 className={`w-5 h-5 transition-colors ${
                   fromPage === 'favorites' || isFavorite
                     ? 'fill-[hsl(0_85%_60%)] text-[hsl(0_85%_60%)]'
@@ -219,16 +229,21 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         {/* Bottom content - text directly on gradient */}
         <div className="mt-auto space-y-3">
           {/* Title */}
-          <h3 className="font-bold text-xl text-white drop-shadow-md line-clamp-2">
-            {contest.title}
-          </h3>
-          
-          {showTotalOnlyLine && (
+          {!hideTitleAndCount && (
+            <h3
+              className="font-bold text-xl text-[#E7EBF0] drop-shadow-md line-clamp-2 tracking-[-0.02em]"
+              style={{ fontFamily: 'var(--om-font-heading)' }}
+            >
+              {contest.title}
+            </h3>
+          )}
+
+          {!hideTitleAndCount && showTotalOnlyLine && (
             <p className="text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
               Celkem {ticketsTotal.toLocaleString("cs-CZ")} ticketů
             </p>
           )}
-          {showProgress && (
+          {!hideTitleAndCount && showProgress && (
             <div className="space-y-0.5">
               <p className="text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
                 {soldForBar.toLocaleString("cs-CZ")} / {ticketsTotal.toLocaleString("cs-CZ")} ticketů
@@ -259,13 +274,13 @@ export const ContestCard: React.FC<ContestCardProps> = ({
                   flex-1 flex items-center justify-center gap-2
                   h-11 px-5
                   whitespace-nowrap
-                  bg-[rgba(0,0,0,0.4)]
-                  backdrop-blur-sm
-                  text-[hsl(32_100%_50%)] font-semibold text-sm
+                  bg-gradient-to-r from-[#FF8A00] to-[#FFB547]
+                  text-[#111] font-bold text-sm
                   rounded-full
-                  border-2 border-[hsl(32_100%_50%/0.6)]
-                  hover:bg-[rgba(0,0,0,0.5)]
-                  hover:text-[hsl(38_100%_64%)]
+                  border border-[rgba(255,181,71,0.65)]
+                  shadow-[0_0_16px_rgba(255,138,0,0.25)]
+                  hover:shadow-[0_0_24px_rgba(255,138,0,0.35)]
+                  hover:brightness-105
                   active:scale-[0.98]
                   transition-all duration-200
                   disabled:opacity-40 disabled:cursor-not-allowed
@@ -287,20 +302,20 @@ export const ContestCard: React.FC<ContestCardProps> = ({
                 {insufficientFunds ? (
                   <>Dobít MioCoiny</>
                 ) : (
-                  <>🏆 {getPlayButtonText()}</>
+                  <><OneMilTrophyIcon size={16} className="w-4 h-4 shrink-0" />{getPlayButtonText()}</>
                 )}
               </button>
               {/* Detail button */}
               <button
                 className="
                   h-11 px-4
-                  bg-[rgba(0,0,0,0.4)]
+                  bg-[rgba(0,0,0,0.35)]
                   backdrop-blur-sm
-                  text-white/80 font-medium text-sm
+                  text-[#E7EBF0]/80 font-medium text-sm
                   rounded-full
-                  border border-white/20
-                  hover:bg-[rgba(0,0,0,0.5)]
-                  hover:text-white
+                  border border-[rgba(191,198,207,0.25)]
+                  hover:border-[rgba(255,138,0,0.4)]
+                  hover:text-[#E7EBF0]
                   active:scale-[0.98]
                   transition-all duration-200
                 "
@@ -317,13 +332,13 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             <button
               className="
                 w-full py-3 px-5
-                bg-[rgba(0,0,0,0.4)]
+                bg-[rgba(0,0,0,0.35)]
                 backdrop-blur-sm
-                text-white/80 font-medium text-sm
+                text-[#E7EBF0]/80 font-medium text-sm
                 rounded-full
-                border border-white/20
-                hover:bg-[rgba(0,0,0,0.5)]
-                hover:text-white
+                border border-[rgba(191,198,207,0.25)]
+                hover:border-[rgba(255,138,0,0.4)]
+                hover:text-[#E7EBF0]
                 active:scale-[0.98]
                 transition-all duration-200
               "

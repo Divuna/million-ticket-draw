@@ -14,7 +14,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon, Bell, Coins, Check, Volume2, VolumeX, User, Camera, Loader2, ChevronDown, Mail, CheckCircle, XCircle, Info, Crown, Sparkles, Wallet, Shield } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Check, Volume2, VolumeX, Camera, Loader2, ChevronDown, CheckCircle, XCircle } from 'lucide-react';
+import {
+  OneMilBellIcon,
+  OneMilCoinsIcon,
+  OneMilProfileIcon,
+  OneMilEmailIcon,
+  OneMilCrownIcon,
+  OneMilDiamondIcon,
+  OneMilWalletIcon,
+  OneMilShieldIcon,
+  OneMilInfoIcon,
+} from '@/components/icons/OneMilIcons';
 import ReferralSection from '@/components/ReferralSection';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link } from 'react-router-dom';
@@ -102,69 +113,30 @@ const useCountUp = (target: number, duration: number = 1200) => {
   return count;
 };
 
-// Premium VIP Card Component
-const VIPCard: React.FC<{
-  children: React.ReactNode;
-  className?: string;
-  delay?: number;
-  variant?: 'default' | 'gold' | 'accent';
-  glowIntensity?: 'low' | 'medium' | 'high';
-  isLoaded?: boolean;
-}> = ({ children, className = '', delay = 0, variant = 'default', glowIntensity = 'low', isLoaded = true }) => {
-  const glowStyles = {
-    low: 'shadow-[0_0_30px_-8px_hsl(var(--border)/0.3)]',
-    medium: 'shadow-[0_0_40px_-8px_hsl(43_90%_55%/0.15)]',
-    high: 'shadow-[0_0_60px_-12px_hsl(43_90%_55%/0.25),0_0_100px_-20px_hsl(43_90%_55%/0.15)]'
-  };
+// Premium section card — consistent with Games/Vouchers/Wins/Messages design
+const PremiumCard: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div
+    className={`relative overflow-hidden rounded-2xl ${className}`}
+    style={{
+      background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
+      border: '1px solid rgba(255,138,0,0.2)',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.06)',
+    }}
+  >
+    {children}
+  </div>
+);
 
-  const variantStyles = {
-    default: 'border-border/30 bg-gradient-to-br from-card/95 via-card/90 to-card/80',
-    gold: 'border-yellow-500/25 bg-gradient-to-br from-yellow-500/5 via-card/95 to-yellow-600/5',
-    accent: 'border-primary/25 bg-gradient-to-br from-primary/5 via-card/95 to-primary/3'
-  };
-
-  return (
-    <div
-      className={`
-        relative overflow-hidden rounded-2xl border backdrop-blur-xl
-        transition-all duration-700 ease-out
-        hover:border-opacity-60 hover:shadow-xl
-        ${variantStyles[variant]}
-        ${glowStyles[glowIntensity]}
-        ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}
-        ${className}
-      `}
-      style={{ transitionDelay: `${delay}ms` }}
-    >
-      {/* Shimmer effect overlay */}
-      <div 
-        className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-        style={{
-          background: 'linear-gradient(105deg, transparent 40%, hsl(43 90% 55% / 0.03) 45%, hsl(43 90% 55% / 0.05) 50%, hsl(43 90% 55% / 0.03) 55%, transparent 60%)',
-          backgroundSize: '200% 100%',
-          animation: 'shimmer 3s ease-in-out infinite'
-        }}
-      />
-      {children}
-    </div>
-  );
-};
-
-// Floating particles background
-const FloatingParticles: React.FC = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    {[...Array(6)].map((_, i) => (
-      <div
-        key={i}
-        className="absolute w-1 h-1 rounded-full bg-yellow-500/20"
-        style={{
-          left: `${15 + i * 15}%`,
-          top: `${20 + (i % 3) * 25}%`,
-          animation: `float ${4 + i * 0.5}s ease-in-out infinite`,
-          animationDelay: `${i * 0.3}s`
-        }}
-      />
-    ))}
+// Standard icon tile for section headers
+const SectionTile: React.FC<{ icon: React.ReactNode }> = ({ icon }) => (
+  <div
+    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+    style={{
+      background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
+      boxShadow: '0 4px 20px rgba(255,138,0,0.25)',
+    }}
+  >
+    {icon}
   </div>
 );
 
@@ -684,8 +656,8 @@ const Profile: React.FC = () => {
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="relative">
-              <div className="w-12 h-12 rounded-full border-2 border-yellow-500/30 border-t-yellow-500 animate-spin" />
-              <Sparkles className="absolute inset-0 m-auto w-5 h-5 text-yellow-500 animate-pulse" />
+              <div className="w-12 h-12 rounded-full border-2 border-[rgba(255,138,0,0.25)] border-t-[#FF8A00] animate-spin" />
+              <OneMilDiamondIcon size={20} className="absolute inset-0 m-auto w-5 h-5 text-[#FF8A00] animate-pulse" />
             </div>
           </div>
         </div>
@@ -695,436 +667,183 @@ const Profile: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background dark pb-20">
-      {/* Custom CSS for animations */}
-      <style>{`
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.4; }
-          50% { transform: translateY(-20px) rotate(180deg); opacity: 0.8; }
-        }
-        @keyframes pulse-ring {
-          0% { transform: scale(0.95); opacity: 0.5; }
-          50% { transform: scale(1.05); opacity: 0.8; }
-          100% { transform: scale(0.95); opacity: 0.5; }
-        }
-        @keyframes rotate-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes glow-pulse {
-          0%, 100% { opacity: 0.4; filter: blur(20px); }
-          50% { opacity: 0.7; filter: blur(25px); }
-        }
-        @keyframes coin-shine {
-          0% { background-position: -100% 0; }
-          100% { background-position: 200% 0; }
-        }
-        @keyframes ambient-drift {
-          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
-          25% { transform: translate(10px, -5px) scale(1.02); opacity: 0.4; }
-          50% { transform: translate(-5px, 5px) scale(0.98); opacity: 0.35; }
-          75% { transform: translate(-10px, -3px) scale(1.01); opacity: 0.38; }
-        }
-        @keyframes avatar-ring-glow {
-          0%, 100% { 
-            box-shadow: 0 0 30px hsl(43 90% 55% / 0.3), 0 0 60px hsl(43 90% 55% / 0.15), inset 0 0 20px hsl(43 90% 55% / 0.1);
-          }
-          50% { 
-            box-shadow: 0 0 40px hsl(43 90% 55% / 0.45), 0 0 80px hsl(43 90% 55% / 0.2), inset 0 0 25px hsl(43 90% 55% / 0.15);
-          }
-        }
-        @keyframes hover-shimmer {
-          0% { left: -100%; opacity: 0; }
-          50% { opacity: 0.6; }
-          100% { left: 100%; opacity: 0; }
-        }
-        .vip-button {
-          position: relative;
-          overflow: hidden;
-        }
-        .vip-button::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-          transition: left 0.5s ease;
-        }
-        .vip-button:hover::before {
-          left: 100%;
-        }
-        .premium-input:focus {
-          box-shadow: 0 0 0 2px hsl(43 90% 55% / 0.2), 0 0 20px -5px hsl(43 90% 55% / 0.3);
-        }
-        .vip-header-container {
-          position: relative;
-        }
-        .vip-header-container::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(135deg, hsl(43 90% 55% / 0.03) 0%, transparent 40%, hsl(220 80% 45% / 0.03) 100%);
-          pointer-events: none;
-        }
-        .avatar-hover-shimmer::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 50%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, hsl(43 90% 75% / 0.4), transparent);
-          pointer-events: none;
-          opacity: 0;
-          transition: opacity 0.3s ease;
-        }
-        .avatar-hover-shimmer:hover::before {
-          animation: hover-shimmer 0.8s ease-out forwards;
-          opacity: 1;
-        }
-      `}</style>
-
       <Header />
-      
-      <div className="container mx-auto px-4 py-8 relative">
-        {/* Background ambient glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-yellow-500/5 rounded-full blur-[100px] pointer-events-none" />
-        
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* VIP HEADER SECTION - Premium Luxury Design */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        <div 
-          className={`relative mb-12 transition-all duration-1000 ease-out ${
-            pageLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`}
+
+      <div className="container mx-auto px-4 py-8">
+
+        {/* ── Premium Profile Header ──────────────────────────────────── */}
+        <div
+          className="relative overflow-hidden rounded-2xl p-6 mb-6"
+          style={{
+            background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
+            border: '1px solid rgba(255,138,0,0.2)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.06)',
+          }}
         >
-          {/* Full-width premium header container */}
-          <div className="vip-header-container relative rounded-3xl overflow-hidden border border-yellow-500/10">
-            {/* Multi-layer gradient background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-background via-card/95 to-background" />
-            <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/[0.03] via-transparent to-primary/[0.03]" />
-            
-            {/* Animated ambient light orbs - very subtle */}
-            <div 
-              className="absolute top-0 left-1/4 w-64 h-64 rounded-full pointer-events-none"
-              style={{
-                background: 'radial-gradient(circle, hsl(43 90% 55% / 0.08) 0%, transparent 70%)',
-                animation: 'ambient-drift 12s ease-in-out infinite'
-              }}
-            />
-            <div 
-              className="absolute bottom-0 right-1/4 w-48 h-48 rounded-full pointer-events-none"
-              style={{
-                background: 'radial-gradient(circle, hsl(220 80% 55% / 0.06) 0%, transparent 70%)',
-                animation: 'ambient-drift 15s ease-in-out infinite reverse'
-              }}
-            />
-            
-            {/* Subtle noise texture overlay */}
-            <div 
-              className="absolute inset-0 opacity-[0.015] pointer-events-none"
-              style={{
-                backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")'
-              }}
-            />
-            
-            <div className="relative px-6 py-10 md:py-12 flex flex-col items-center">
-              {/* Premium Avatar Container - Centered & Larger */}
-              <div className="relative group mb-6">
-                {/* Outermost soft glow halo */}
-                <div 
-                  className="absolute -inset-8 rounded-full opacity-40 pointer-events-none"
-                  style={{
-                    background: 'radial-gradient(circle, hsl(43 90% 55% / 0.25) 0%, hsl(43 90% 55% / 0.1) 40%, transparent 70%)',
-                    animation: 'glow-pulse 4s ease-in-out infinite'
-                  }}
-                />
-                
-                {/* Animated rotating gold gradient ring */}
-                <div 
-                  className="absolute -inset-[6px] rounded-full"
-                  style={{
-                    background: 'conic-gradient(from 0deg, hsl(48 95% 65%), hsl(43 90% 55%), hsl(38 85% 48%), hsl(43 90% 55%), hsl(48 95% 65%))',
-                    animation: 'rotate-slow 12s linear infinite'
-                  }}
-                />
-                
-                {/* Inner dark ring to separate gradient from avatar */}
-                <div className="absolute -inset-[3px] rounded-full bg-background" />
-                
-                {/* Glowing ring effect */}
-                <div 
-                  className="absolute -inset-[3px] rounded-full pointer-events-none"
-                  style={{
-                    animation: 'avatar-ring-glow 3s ease-in-out infinite'
-                  }}
-                />
-                
-                {/* The Avatar itself */}
-                <Avatar className="avatar-hover-shimmer relative h-32 w-32 md:h-36 md:w-36 border-2 border-yellow-500/40 shadow-2xl overflow-hidden">
-                  <AvatarImage src={profile.avatar_url || undefined} alt="Avatar" className="object-cover" />
-                  <AvatarFallback className="bg-gradient-to-br from-yellow-500/20 via-card to-primary/20 text-4xl font-bold text-yellow-500">
-                    {getInitials()}
-                  </AvatarFallback>
-                </Avatar>
-                
-                {/* VIP Crown Badge - Larger & More Prominent */}
-                <div 
-                  className="absolute -top-1 -right-1 p-2.5 rounded-full bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 shadow-xl"
-                  style={{
-                    boxShadow: '0 4px 20px hsl(43 90% 55% / 0.5), 0 0 30px hsl(43 90% 55% / 0.3)'
-                  }}
+          <div
+            className="absolute inset-0 opacity-10 pointer-events-none"
+            style={{
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,1) 50%, transparent 100%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer 4s ease-in-out infinite',
+            }}
+          />
+          <div className="relative flex items-center gap-5">
+            {/* Avatar with upload */}
+            <div className="relative group flex-shrink-0">
+              <Avatar className="h-20 w-20 border-2 border-[rgba(255,138,0,0.4)] shadow-lg">
+                <AvatarImage src={profile.avatar_url || undefined} alt="Avatar" className="object-cover" />
+                <AvatarFallback
+                  className="text-2xl font-bold"
+                  style={{ background: 'rgba(255,138,0,0.15)', color: '#FFB547', fontFamily: 'var(--om-font-heading)' }}
                 >
-                  <Crown className="w-5 h-5 text-black" />
-                </div>
-                
-                {/* Upload overlay on hover */}
-                <button
-                  onClick={() => avatarInputRef.current?.click()}
-                  disabled={avatarUploading}
-                  className="absolute inset-0 flex items-center justify-center bg-black/75 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer backdrop-blur-sm border-2 border-yellow-500/50"
-                >
-                  {avatarUploading ? (
-                    <Loader2 className="h-10 w-10 text-yellow-500 animate-spin" />
-                  ) : (
-                    <Camera className="h-10 w-10 text-yellow-500" />
-                  )}
-                </button>
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  className="hidden"
-                />
-              </div>
-              
-              {/* VIP Title & Badge - Elegant Typography */}
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-3 mb-3">
-                  <h1 
-                    className="text-4xl md:text-5xl font-bold"
-                    style={{
-                      background: 'linear-gradient(135deg, hsl(50 95% 75%) 0%, hsl(45 90% 65%) 25%, hsl(43 85% 55%) 50%, hsl(40 80% 50%) 75%, hsl(38 75% 45%) 100%)',
-                      WebkitBackgroundClip: 'text',
-                      backgroundClip: 'text',
-                      color: 'transparent',
-                      textShadow: '0 2px 30px hsl(43 90% 55% / 0.3)'
-                    }}
-                  >
-                    {profile.nickname || profile.first_name || 'Můj profil'}
-                  </h1>
-                  
-                  {/* VIP Badge */}
-                  <div 
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-yellow-500/40"
-                    style={{
-                      background: 'linear-gradient(135deg, hsl(43 90% 55% / 0.15) 0%, hsl(43 85% 50% / 0.08) 100%)',
-                      boxShadow: '0 0 20px hsl(43 90% 55% / 0.15), inset 0 1px 0 hsl(43 90% 70% / 0.1)'
-                    }}
-                  >
-                    <Sparkles className="w-4 h-4 text-yellow-500" />
-                    <span className="text-sm font-bold tracking-wider text-yellow-500">VIP</span>
-                  </div>
-                </div>
-                
-                <p className="text-muted-foreground text-base md:text-lg">
-                  Kliknutím na avatar změníte obrázek
-                </p>
-              </div>
+                  {getInitials()}
+                </AvatarFallback>
+              </Avatar>
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={avatarUploading}
+                className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+              >
+                {avatarUploading
+                  ? <Loader2 className="h-7 w-7 text-[#FF8A00] animate-spin" />
+                  : <Camera className="h-7 w-7 text-[#FF8A00]" />}
+              </button>
+              <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
             </div>
-            
-            {/* Bottom gradient fade */}
-            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background/50 to-transparent pointer-events-none" />
+            {/* Name + subtitle */}
+            <div>
+              <h1
+                className="text-2xl md:text-3xl font-bold tracking-tight"
+                style={{
+                  fontFamily: 'var(--om-font-heading)',
+                  background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                }}
+              >
+                {profile.nickname || profile.first_name || 'Můj profil'}
+              </h1>
+              <p className="text-sm text-gray-400 mt-1">Kliknutím na avatar změníte obrázek</p>
+            </div>
           </div>
         </div>
 
-        <div className="max-w-2xl mx-auto space-y-6 relative">
-          
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* WALLET SECTION - The Crown Jewel */}
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          <VIPCard 
-            delay={150} 
-            variant="gold" 
-            glowIntensity="high" 
-            isLoaded={pageLoaded}
-            className="relative"
-          >
-            {/* Floating particles */}
-            <FloatingParticles />
-            
-            {/* Premium corner accents */}
-            <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-yellow-500/20 to-transparent rounded-br-full" />
-            <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-yellow-500/10 to-transparent rounded-tl-full" />
-            
-            {/* Background glow orbs */}
-            <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl" />
-            <div className="absolute top-1/4 right-1/4 w-24 h-24 bg-yellow-600/8 rounded-full blur-2xl" />
-            
-            <div className="relative p-8">
+        <div className="w-full space-y-5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+
+            {/* LEFT COLUMN */}
+            <div className="space-y-5">
+
+          {/* Penezenka */}
+          <PremiumCard>
+            <div className="p-6">
               {/* Header */}
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-yellow-500/40 rounded-2xl blur-lg" />
-                    <div className="relative p-3.5 rounded-2xl bg-gradient-to-br from-yellow-500/30 via-yellow-500/20 to-yellow-600/30 border border-yellow-500/40 shadow-inner">
-                      <Wallet className="h-6 w-6 text-yellow-500" />
-                    </div>
-                  </div>
+                  <SectionTile icon={<OneMilWalletIcon size={24} className="w-6 h-6 text-black" />} />
                   <div>
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
-                      Peněženka
-                    </h2>
-                    <p className="text-sm text-muted-foreground">Váš MioCoin účet</p>
+                    <h2 className="text-xl font-bold text-[#E7EBF0]">Peněženka</h2>
+                    <p className="text-sm text-gray-400">Váš MioCoin účet</p>
                   </div>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={handleRefreshBalance} 
-                  disabled={refreshing}
-                  className="text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10 transition-all duration-300 hover:scale-105"
-                >
+                <Button variant="ghost" size="sm" onClick={handleRefreshBalance} disabled={refreshing}
+                  className="text-[#8E98A6] hover:text-[#FF8A00] hover:bg-[rgba(255,138,0,0.08)] transition-all duration-200">
                   <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                   {refreshing ? 'Aktualizuji...' : 'Aktualizovat'}
                 </Button>
               </div>
-              
-              {/* Main Balance Display - Premium Design */}
-              <div className="relative mb-8">
-                <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 via-yellow-400/5 to-yellow-500/10 rounded-2xl blur-sm" />
-                <div className="relative rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-yellow-500/5 via-transparent to-yellow-600/5 p-8 overflow-hidden">
-                  {/* Animated shine effect */}
-                  <div 
-                    className="absolute inset-0 opacity-50"
-                    style={{
-                      background: 'linear-gradient(105deg, transparent 40%, hsl(43 90% 55% / 0.08) 45%, hsl(43 90% 55% / 0.12) 50%, hsl(43 90% 55% / 0.08) 55%, transparent 60%)',
-                      backgroundSize: '200% 100%',
-                      animation: 'coin-shine 4s ease-in-out infinite'
-                    }}
-                  />
-                  
-                  <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
-                    {/* Main Balance */}
-                    <div className="flex items-center gap-5">
-                      <div className="relative">
-                        {/* Coin glow */}
-                        <div className="absolute inset-0 bg-yellow-500/50 rounded-full blur-xl scale-150" style={{ animation: 'glow-pulse 2s ease-in-out infinite' }} />
-                        <div className="relative p-4 rounded-full bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 shadow-xl shadow-yellow-500/30">
-                          <Coins className="h-10 w-10 text-black" />
-                        </div>
+
+              {/* Balance display */}
+              <div className="rounded-xl border border-[rgba(255,138,0,0.15)] bg-[rgba(255,138,0,0.04)] p-6 mb-5 overflow-hidden">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6">
+                  {/* Main balance */}
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="p-3 rounded-full bg-gradient-to-br from-[#FFB547] via-[#FF8A00] to-[#e07800] shadow-lg shadow-[rgba(255,138,0,0.2)] shrink-0">
+                      <OneMilCoinsIcon size={32} className="h-8 w-8 text-black" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-[rgba(255,138,0,0.7)] uppercase tracking-wider mb-0.5">MioCoiny</p>
+                      <p className="text-4xl lg:text-5xl font-black text-[#FFB547] tabular-nums tracking-tight truncate">
+                        {animatedBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Bonus balance */}
+                  <div className="flex flex-col gap-3 pt-5 border-t xl:pt-0 xl:border-t-0 xl:pl-6 xl:border-l border-[rgba(255,138,0,0.15)] min-w-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2.5 rounded-xl bg-green-500/20 border border-green-500/30 shrink-0">
+                        <OneMilCoinsIcon size={20} className="h-5 w-5 text-green-500" />
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-yellow-500/80 uppercase tracking-wider mb-1">MioCoiny</p>
-                        <p className="text-5xl lg:text-6xl font-black bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 bg-clip-text text-transparent tabular-nums tracking-tight">
-                          {animatedBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="text-xs text-green-500/80 uppercase tracking-wider">Bonusové</p>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <OneMilInfoIcon size={14} className="h-3.5 w-3.5 text-muted-foreground hover:text-green-500 cursor-help transition-colors" />
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50">
+                                <p className="text-sm">Bonusové MioCoiny získáváte jako odměnu při hraní soutěží. Můžete je převést do hlavní peněženky a použít na otevření tiketů.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <p className="text-2xl font-bold text-green-500 tabular-nums truncate">
+                          {animatedBonusBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
                         </p>
                       </div>
                     </div>
-                    
-                    {/* Bonus Balance */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 lg:border-l lg:border-yellow-500/20 lg:pl-8">
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
-                          <div className="absolute inset-0 bg-green-500/30 rounded-full blur-lg" />
-                          <div className="relative p-3 rounded-full bg-gradient-to-br from-green-500/30 to-green-600/20 border border-green-500/40">
-                            <Coins className="h-6 w-6 text-green-500" />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <p className="text-sm font-medium text-green-500/80 uppercase tracking-wider">Bonusové</p>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-green-500 cursor-help transition-colors" />
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50">
-                                  <p className="text-sm">Bonusové MioCoiny získáváte jako odměnu při hraní soutěží. Můžete je převést do hlavní peněženky a použít na nákup losů.</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          <p className="text-3xl font-bold text-green-500 tabular-nums">
-                            {animatedBonusBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={handleTransferBonus}
-                        disabled={transferring || (wallet?.bonus_balance_coins ?? 0) === 0}
-                        className="bg-gradient-to-r from-green-600 via-green-500 to-green-600 hover:from-green-500 hover:via-green-600 hover:to-green-500 text-white font-semibold shadow-lg shadow-green-500/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-green-500/30 border-0"
-                      >
-                        {transferring ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : (
-                          <Sparkles className="h-4 w-4 mr-2" />
-                        )}
-                        Převést bonusové MioCoiny
-                      </Button>
-                    </div>
+                    <Button size="sm" onClick={handleTransferBonus}
+                      disabled={transferring || (wallet?.bonus_balance_coins ?? 0) === 0}
+                      className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold shadow-lg shadow-green-500/15 transition-all duration-200">
+                      {transferring ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <OneMilDiamondIcon size={16} className="h-4 w-4 mr-2" />}
+                      Převést bonusové MioCoiny
+                    </Button>
                   </div>
                 </div>
               </div>
-              
-              {/* Action Buttons - Premium Style */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button 
-                  onClick={() => setShowTopUpModal(true)} 
-                  className="vip-button flex-1 bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-500 hover:from-yellow-400 hover:via-yellow-500 hover:to-yellow-400 text-black font-bold text-lg shadow-xl shadow-yellow-500/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-yellow-500/40 border-0" 
-                  size="lg"
-                >
-                  <Coins className="h-5 w-5 mr-2" />
+
+              {/* Action buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-5">
+                <Button onClick={() => setShowTopUpModal(true)}
+                  className="flex-1 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold shadow-lg shadow-[rgba(255,138,0,0.2)] transition-all duration-200"
+                  size="lg">
+                  <OneMilCoinsIcon size={20} className="h-5 w-5 mr-2" />
                   Dobít MioCoiny
                 </Button>
-                
-                <Button 
-                  onClick={() => navigate('/my-contests')} 
-                  variant="outline" 
-                  className="vip-button flex-1 border-primary/40 hover:border-primary/60 hover:bg-primary/10 text-lg font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/10" 
-                  size="lg"
-                >
+                <Button onClick={() => navigate('/my-contests')} variant="outline"
+                  className="flex-1 border-[rgba(255,138,0,0.3)] hover:border-[rgba(255,138,0,0.5)] hover:bg-[rgba(255,138,0,0.06)] text-[#E7EBF0] font-semibold transition-all duration-200"
+                  size="lg">
                   <GamepadIcon className="h-5 w-5 mr-2" />
                   Moje hry
                 </Button>
               </div>
 
-              {/* Bonus Transfer History */}
-              <div className="mt-8 pt-6 border-t border-yellow-500/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Historie převodů</h3>
+              {/* Transfer history */}
+              <div className="pt-5 border-t border-[rgba(255,138,0,0.12)]">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-[#8E98A6] uppercase tracking-wider">Historie převodů</h3>
                   {bonusTransfers.length > 3 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                    <Button variant="ghost" size="sm"
                       onClick={() => setHistoryExpanded(!historyExpanded)}
-                      className="text-xs text-muted-foreground hover:text-yellow-500 flex items-center gap-1 transition-all duration-300"
-                    >
+                      className="text-xs text-[#8E98A6] hover:text-[#FF8A00] flex items-center gap-1">
                       {historyExpanded ? 'Skrýt historii' : 'Zobrazit celou historii'}
-                      <ChevronDown 
-                        className={`h-4 w-4 transition-transform duration-300 ${historyExpanded ? 'rotate-180' : ''}`} 
-                      />
+                      <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${historyExpanded ? 'rotate-180' : ''}`} />
                     </Button>
                   )}
                 </div>
                 {bonusTransfersLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 text-sm text-[#8E98A6]">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Načítám...
                   </div>
                 ) : bonusTransfers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic">Zatím žádné převody bonusových MioCoinů</p>
+                  <p className="text-sm text-[#8E98A6] italic">Zatím žádné převody bonusových MioCoinů</p>
                 ) : (
-                  <div 
-                    className={`space-y-2 transition-all duration-500 ease-out ${
-                      historyExpanded ? 'max-h-64 overflow-y-auto' : 'max-h-none overflow-hidden'
+                  <div
+                    className={`space-y-2 pr-1 ${
+                      historyExpanded ? 'max-h-64 overflow-y-auto' : 'overflow-hidden'
                     }`}
                   >
                     {(historyExpanded ? bonusTransfers : bonusTransfers.slice(0, 3)).map((transfer, index) => (
@@ -1135,7 +854,7 @@ const Profile: React.FC = () => {
                       >
                         <div className="flex items-center gap-3">
                           <div className="p-1.5 rounded-lg bg-green-500/15">
-                            <Coins className="h-4 w-4 text-green-500" />
+                            <OneMilCoinsIcon size={16} className="h-4 w-4 text-green-500" />
                           </div>
                           <span className="text-sm text-foreground">Převod bonusových MioCoinů</span>
                         </div>
@@ -1157,161 +876,18 @@ const Profile: React.FC = () => {
                 )}
               </div>
             </div>
-          </VIPCard>
+          </PremiumCard>
 
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* ACCOUNT SECTION - Premium Wallet Style */}
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          <VIPCard 
-            delay={250} 
-            variant="accent" 
-            glowIntensity="medium" 
-            isLoaded={pageLoaded}
-            className="relative"
-          >
-            {/* Subtle floating particles */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {[...Array(4)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute w-1 h-1 rounded-full bg-primary/20"
-                  style={{
-                    left: `${20 + i * 20}%`,
-                    top: `${25 + (i % 2) * 50}%`,
-                    animation: `float ${5 + i * 0.5}s ease-in-out infinite`,
-                    animationDelay: `${i * 0.4}s`
-                  }}
-                />
-              ))}
-            </div>
-            
-            {/* Premium corner accents */}
-            <div className="absolute top-0 left-0 w-16 h-16 bg-gradient-to-br from-primary/15 to-transparent rounded-br-full" />
-            <div className="absolute bottom-0 right-0 w-16 h-16 bg-gradient-to-tl from-primary/10 to-transparent rounded-tl-full" />
-            
-            {/* Background glow orbs */}
-            <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-primary/8 rounded-full blur-2xl" />
-            <div className="absolute top-1/4 right-1/4 w-20 h-20 bg-primary/5 rounded-full blur-xl" />
-            
-            <div className="relative p-8">
+          {/* Osobni udaje */}
+          <PremiumCard>
+            <div className="p-6">
               {/* Section Header */}
-              <div className="flex items-center gap-5 mb-8">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-primary/20 rounded-xl blur-lg" />
-                  <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-primary/25 to-primary/10 border border-primary/30 shadow-lg shadow-primary/10">
-                    <Shield className="h-6 w-6 text-primary" />
-                  </div>
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">Účet</h2>
-                  <p className="text-sm text-muted-foreground/70 mt-0.5">Přihlašovací údaje</p>
-                </div>
-              </div>
-              
-              {/* Premium Info Blocks */}
-              <div className="space-y-4">
-                {/* Email Block */}
-                <div className="group relative p-5 rounded-2xl bg-gradient-to-br from-primary/8 via-transparent to-primary/5 border border-primary/15 hover:border-primary/30 transition-all duration-500 hover:shadow-lg hover:shadow-primary/5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="p-2.5 rounded-xl bg-primary/15 border border-primary/20">
-                        <Mail className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">
-                          E-mailová adresa
-                        </p>
-                        <p className="text-lg font-semibold text-foreground truncate">
-                          {wallet?.email || user?.email}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/15 border border-green-500/25 shadow-sm shadow-green-500/10">
-                      <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                      <span className="text-xs font-semibold text-green-500">Ověřeno</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Name Block */}
-                {wallet?.name && (
-                  <div className="group relative p-5 rounded-2xl bg-gradient-to-br from-primary/8 via-transparent to-primary/5 border border-primary/15 hover:border-primary/30 transition-all duration-500 hover:shadow-lg hover:shadow-primary/5">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2.5 rounded-xl bg-primary/15 border border-primary/20">
-                        <User className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1.5">
-                          Jméno účtu
-                        </p>
-                        <p className="text-lg font-semibold text-foreground truncate">
-                          {wallet.name}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </VIPCard>
-
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* PERSONAL DETAILS SECTION - Premium Wallet Style */}
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          <VIPCard 
-            delay={350} 
-            variant="gold" 
-            glowIntensity="medium" 
-            isLoaded={pageLoaded}
-            className="relative"
-          >
-            {/* Floating particles */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute w-1 h-1 rounded-full bg-yellow-500/15"
-                  style={{
-                    left: `${10 + i * 18}%`,
-                    top: `${15 + (i % 3) * 30}%`,
-                    animation: `float ${4.5 + i * 0.4}s ease-in-out infinite`,
-                    animationDelay: `${i * 0.25}s`
-                  }}
-                />
-              ))}
-            </div>
-            
-            {/* Premium corner accents */}
-            <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-yellow-500/15 to-transparent rounded-br-full pointer-events-none" />
-            <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-yellow-500/10 to-transparent rounded-tl-full pointer-events-none" />
-            
-            {/* Background glow orbs */}
-            <div className="absolute top-1/3 left-1/3 w-28 h-28 bg-yellow-500/8 rounded-full blur-2xl pointer-events-none" />
-            <div className="absolute bottom-1/4 right-1/4 w-24 h-24 bg-yellow-600/5 rounded-full blur-xl pointer-events-none" />
-            
-            <div className="relative z-10 p-8">
-              {/* Section Header */}
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-5">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-yellow-500/25 rounded-xl blur-lg pointer-events-none" />
-                    <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-yellow-500/25 to-yellow-600/15 border border-yellow-500/35 shadow-lg shadow-yellow-500/10">
-                      <User className="h-6 w-6 text-yellow-500" />
-                    </div>
-                  </div>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <SectionTile icon={<OneMilProfileIcon size={24} className="w-6 h-6 text-black" />} />
                   <div>
-                    <h2 
-                      className="text-2xl font-bold"
-                      style={{
-                        background: 'linear-gradient(135deg, hsl(50 95% 70%) 0%, hsl(45 90% 60%) 50%, hsl(43 85% 55%) 100%)',
-                        WebkitBackgroundClip: 'text',
-                        backgroundClip: 'text',
-                        color: 'transparent'
-                      }}
-                    >
-                      Osobní údaje
-                    </h2>
-                    <p className="text-sm text-muted-foreground/70 mt-0.5">Profil a kontaktní informace</p>
+                    <h2 className="text-xl font-bold text-[#E7EBF0]">Osobní údaje</h2>
+                    <p className="text-sm text-gray-400">Profil a kontaktní informace</p>
                   </div>
                 </div>
                 {!editMode && (
@@ -1320,9 +896,9 @@ const Profile: React.FC = () => {
                     size="default" 
                     type="button"
                     onClick={() => setEditMode(true)}
-                    className="relative z-20 vip-button border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 hover:border-yellow-500/50 text-yellow-500 hover:text-yellow-400 transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-yellow-500/10 hover:scale-[1.02]"
+                    className="relative z-20 border-[rgba(255,138,0,0.3)] bg-[rgba(255,138,0,0.04)] hover:bg-[rgba(255,138,0,0.08)] hover:border-[rgba(255,138,0,0.5)] text-[#FF8A00] hover:text-[#FFB547] transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-[rgba(255,138,0,0.08)] hover:scale-[1.02]"
                   >
-                    <Sparkles className="h-4 w-4 mr-2" />
+                    <OneMilDiamondIcon size={16} className="h-4 w-4 mr-2" />
                     Upravit
                   </Button>
                 )}
@@ -1333,8 +909,8 @@ const Profile: React.FC = () => {
                   {/* Edit Mode - Premium Input Fields */}
                   <div className="relative z-20 grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
                     <div className="space-y-2.5">
-                      <Label htmlFor="nickname" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
-                        <Sparkles className="h-3 w-3" />
+                      <Label htmlFor="nickname" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
+                        <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Přezdívka
                       </Label>
                       <Input 
@@ -1347,13 +923,13 @@ const Profile: React.FC = () => {
                           nickname: e.target.value
                         }))} 
                         placeholder="Zadejte přezdívku"
-                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
                     <div className="space-y-2.5">
-                      <Label htmlFor="phone" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
-                        <Sparkles className="h-3 w-3" />
+                      <Label htmlFor="phone" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
+                        <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Telefon
                       </Label>
                       <Input 
@@ -1366,13 +942,13 @@ const Profile: React.FC = () => {
                           phone: e.target.value
                         }))} 
                         placeholder="Zadejte telefon"
-                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
                     <div className="space-y-2.5">
-                      <Label htmlFor="first_name" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
-                        <Sparkles className="h-3 w-3" />
+                      <Label htmlFor="first_name" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
+                        <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Křestní jméno
                       </Label>
                       <Input 
@@ -1385,13 +961,13 @@ const Profile: React.FC = () => {
                           first_name: e.target.value
                         }))} 
                         placeholder="Zadejte křestní jméno"
-                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
                     <div className="space-y-2.5">
-                      <Label htmlFor="last_name" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
-                        <Sparkles className="h-3 w-3" />
+                      <Label htmlFor="last_name" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
+                        <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Příjmení
                       </Label>
                       <Input 
@@ -1404,13 +980,13 @@ const Profile: React.FC = () => {
                           last_name: e.target.value
                         }))} 
                         placeholder="Zadejte příjmení"
-                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
                     <div className="space-y-2.5 md:col-span-2">
-                      <Label htmlFor="address" className="text-xs font-semibold text-yellow-500/70 uppercase tracking-widest flex items-center gap-2">
-                        <Sparkles className="h-3 w-3" />
+                      <Label htmlFor="address" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
+                        <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Doručovací adresa výhry
                       </Label>
                       <Textarea 
@@ -1423,7 +999,7 @@ const Profile: React.FC = () => {
                         }))} 
                         placeholder="Zadejte doručovací adresu pro výhry" 
                         rows={3}
-                        className="premium-input pointer-events-auto px-5 py-4 rounded-xl bg-yellow-500/5 border-yellow-500/20 focus:border-yellow-500/40 focus:bg-yellow-500/10 transition-all duration-300 placeholder:text-muted-foreground/30 resize-none text-lg"
+                        className="premium-input pointer-events-auto px-5 py-4 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 resize-none text-lg"
                       />
                     </div>
                   </div>
@@ -1433,7 +1009,7 @@ const Profile: React.FC = () => {
                     <Button 
                       onClick={handleProfileSave} 
                       disabled={profileSaving}
-                      className="vip-button bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-500 hover:from-yellow-400 hover:via-yellow-500 hover:to-yellow-400 text-black font-bold px-8 h-12 rounded-xl transition-all duration-300 shadow-lg shadow-yellow-500/25 hover:shadow-yellow-500/40 hover:scale-[1.02]"
+                      className="bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00] hover:from-[#FFB547] hover:via-[#FF8A00] hover:to-[#FFB547] text-black font-bold px-8 h-12 rounded-xl transition-all duration-300 shadow-lg shadow-[rgba(255,138,0,0.2)] hover:shadow-[rgba(255,138,0,0.35)] hover:scale-[1.02]"
                     >
                       {profileSaving ? (
                         <>
@@ -1451,7 +1027,7 @@ const Profile: React.FC = () => {
                       variant="ghost" 
                       onClick={() => setEditMode(false)}
                       disabled={profileSaving}
-                      className="text-muted-foreground hover:text-foreground hover:bg-yellow-500/10 transition-all duration-300 h-12 px-6 rounded-xl border border-transparent hover:border-yellow-500/20"
+                      className="text-muted-foreground hover:text-foreground hover:bg-[rgba(255,138,0,0.08)] transition-all duration-300 h-12 px-6 rounded-xl border border-transparent hover:border-[rgba(255,138,0,0.15)]"
                     >
                       Zrušit
                     </Button>
@@ -1463,9 +1039,9 @@ const Profile: React.FC = () => {
                   {(profile.nickname || profile.phone || profile.first_name || profile.last_name || profile.address || profile.date_of_birth) ? (
                     <div className="space-y-4">
                       {/* Nickname Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
-                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2 flex items-center gap-2">
-                          <Sparkles className="h-3 w-3" />
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2 flex items-center gap-2">
+                          <OneMilDiamondIcon size={12} className="h-3 w-3" />
                           Přezdívka
                         </p>
                         <p className="text-xl text-foreground font-semibold tracking-tight">
@@ -1474,9 +1050,9 @@ const Profile: React.FC = () => {
                       </div>
                       
                       {/* Full Name Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
-                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2 flex items-center gap-2">
-                          <User className="h-3 w-3" />
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2 flex items-center gap-2">
+                          <OneMilProfileIcon size={12} className="h-3 w-3" />
                           Celé jméno
                         </p>
                         <p className="text-xl text-foreground font-semibold tracking-tight">
@@ -1487,16 +1063,16 @@ const Profile: React.FC = () => {
                       </div>
                       
                       {/* Phone Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
-                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2">Telefon</p>
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2">Telefon</p>
                         <p className="text-xl text-foreground font-semibold tracking-tight">
                           {profile.phone || <span className="text-muted-foreground/40 font-normal italic">Nenastaveno</span>}
                         </p>
                       </div>
                       
                       {/* Date of Birth Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
-                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2">Datum narození</p>
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2">Datum narození</p>
                         <p className="text-xl text-foreground font-semibold tracking-tight">
                           {profile.date_of_birth 
                             ? format(new Date(profile.date_of_birth), 'dd. MMMM yyyy', { locale: cs })
@@ -1505,8 +1081,8 @@ const Profile: React.FC = () => {
                       </div>
                       
                       {/* Address Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-yellow-500/8 via-transparent to-yellow-500/5 border border-yellow-500/15 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
-                        <p className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider mb-2">Doručovací adresa</p>
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2">Doručovací adresa</p>
                         <p className="text-xl text-foreground font-semibold tracking-tight whitespace-pre-wrap leading-relaxed">
                           {profile.address || <span className="text-muted-foreground/40 font-normal italic">Nenastaveno</span>}
                         </p>
@@ -1515,9 +1091,9 @@ const Profile: React.FC = () => {
                   ) : (
                     <div className="text-center py-16 px-8">
                       <div className="relative w-fit mx-auto mb-6">
-                        <div className="absolute inset-0 bg-yellow-500/20 rounded-3xl blur-xl" />
-                        <div className="relative p-6 rounded-3xl bg-gradient-to-br from-yellow-500/15 to-yellow-600/5 border border-yellow-500/20">
-                          <User className="w-12 h-12 text-yellow-500/50" />
+                        <div className="absolute inset-0 bg-[rgba(255,138,0,0.15)] rounded-3xl blur-xl" />
+                        <div className="relative p-6 rounded-3xl bg-gradient-to-br from-[rgba(255,138,0,0.12)] to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.15)]">
+                          <OneMilProfileIcon size={48} className="w-12 h-12 text-[rgba(255,138,0,0.4)]" />
                         </div>
                       </div>
                       <p className="text-xl text-foreground font-semibold mb-2">Zatím nemáte vyplněny osobní údaje</p>
@@ -1527,58 +1103,70 @@ const Profile: React.FC = () => {
                 </div>
               )}
             </div>
-          </VIPCard>
+          </PremiumCard>
 
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* NOTIFICATIONS SECTION - Premium Wallet Style */}
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          <VIPCard 
-            delay={450} 
-            variant="accent" 
-            glowIntensity="medium" 
-            isLoaded={pageLoaded}
-            className="relative"
-          >
-            {/* Subtle floating particles */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {[...Array(3)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute w-1 h-1 rounded-full bg-primary/20"
-                  style={{
-                    left: `${25 + i * 25}%`,
-                    top: `${30 + (i % 2) * 40}%`,
-                    animation: `float ${5.5 + i * 0.5}s ease-in-out infinite`,
-                    animationDelay: `${i * 0.3}s`
-                  }}
-                />
-              ))}
             </div>
-            
-            {/* Premium corner accents */}
-            <div className="absolute top-0 left-0 w-16 h-16 bg-gradient-to-br from-primary/15 to-transparent rounded-br-full" />
-            <div className="absolute bottom-0 right-0 w-16 h-16 bg-gradient-to-tl from-primary/10 to-transparent rounded-tl-full" />
-            
-            {/* Background glow */}
-            <div className="absolute top-1/2 right-1/4 w-24 h-24 bg-primary/8 rounded-full blur-2xl" />
-            
-            <div className="relative p-8">
-              {/* Section Header */}
-              <div className="flex items-center gap-5 mb-8">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-primary/20 rounded-xl blur-lg" />
-                  <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-primary/25 to-primary/10 border border-primary/30 shadow-lg shadow-primary/10">
-                    <Bell className="h-6 w-6 text-primary" />
-                  </div>
-                </div>
+
+            {/* RIGHT COLUMN */}
+            <div className="space-y-5">
+
+          {/* Pozvi pratele */}
+          <ReferralSection isLoaded={pageLoaded} />
+
+          {/* Ucet */}
+          <PremiumCard>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-5">
+                <SectionTile icon={<OneMilShieldIcon size={24} className="w-6 h-6 text-black" />} />
                 <div>
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">Notifikace</h2>
-                  <p className="text-sm text-muted-foreground/70 mt-0.5">Zvuky a upozornění</p>
+                  <h2 className="text-xl font-bold text-[#E7EBF0]">Účet</h2>
+                  <p className="text-sm text-gray-400">Přihlašovací údaje</p>
                 </div>
               </div>
-              
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.1)]">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="p-2 rounded-lg bg-[rgba(255,138,0,0.1)]">
+                      <OneMilEmailIcon size={18} className="text-[#FF8A00]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-[#8E98A6] uppercase tracking-wider mb-1">E-mailová adresa</p>
+                      <p className="text-base font-semibold text-[#E7EBF0] truncate">{wallet?.email || user?.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/20 shrink-0">
+                    <CheckCircle className="h-3 w-3 text-green-500" />
+                    <span className="text-xs font-medium text-green-500">Ověřeno</span>
+                  </div>
+                </div>
+                {wallet?.name && (
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.1)]">
+                    <div className="p-2 rounded-lg bg-[rgba(255,138,0,0.1)]">
+                      <OneMilProfileIcon size={18} className="text-[#FF8A00]" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-[#8E98A6] uppercase tracking-wider mb-1">Jméno účtu</p>
+                      <p className="text-base font-semibold text-[#E7EBF0] truncate">{wallet.name}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </PremiumCard>
+
+          {/* Notifikace */}
+          <PremiumCard>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-5">
+                <SectionTile icon={<OneMilBellIcon size={24} className="w-6 h-6 text-black" />} />
+                <div>
+                  <h2 className="text-xl font-bold text-[#E7EBF0]">Notifikace</h2>
+                  <p className="text-sm text-gray-400">Zvuky a upozornění</p>
+                </div>
+              </div>
+
               {/* Message sound toggle */}
-              <div className="flex items-center justify-between mb-4 p-5 rounded-xl bg-gradient-to-r from-primary/10 via-transparent to-primary/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
+              <div className="flex items-center justify-between mb-3 p-4 rounded-xl bg-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.1)] hover:border-[rgba(255,138,0,0.2)] transition-all duration-200">
                 <div className="flex items-center gap-4">
                   <div className={`p-3 rounded-xl transition-all duration-300 ${messageSoundEnabled ? 'bg-primary/25 border border-primary/40 shadow-lg shadow-primary/15' : 'bg-muted/30 border border-border/30'}`}>
                     {messageSoundEnabled ? (
@@ -1600,11 +1188,11 @@ const Profile: React.FC = () => {
               </div>
 
               {/* Win sound toggle */}
-              <div className="flex items-center justify-between mb-6 p-5 rounded-xl bg-gradient-to-r from-yellow-500/10 via-transparent to-yellow-500/5 border border-yellow-500/25 hover:border-yellow-500/45 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/10">
+              <div className="flex items-center justify-between mb-4 p-4 rounded-xl bg-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.1)] hover:border-[rgba(255,138,0,0.2)] transition-all duration-200">
                 <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-xl transition-all duration-300 ${winSoundEnabled ? 'bg-yellow-500/25 border border-yellow-500/40 shadow-lg shadow-yellow-500/15' : 'bg-muted/30 border border-border/30'}`}>
+                  <div className={`p-3 rounded-xl transition-all duration-300 ${winSoundEnabled ? 'bg-[rgba(255,138,0,0.2)] border border-[rgba(255,138,0,0.35)] shadow-lg shadow-[rgba(255,138,0,0.12)]' : 'bg-muted/30 border border-border/30'}`}>
                     {winSoundEnabled ? (
-                      <Volume2 className="h-5 w-5 text-yellow-500" />
+                      <Volume2 className="h-5 w-5 text-[#FF8A00]" />
                     ) : (
                       <VolumeX className="h-5 w-5 text-muted-foreground" />
                     )}
@@ -1617,81 +1205,33 @@ const Profile: React.FC = () => {
                 <Switch
                   checked={winSoundEnabled}
                   onCheckedChange={toggleWinSound}
-                  className="data-[state=checked]:bg-yellow-500"
+                  className="data-[state=checked]:bg-[#FF8A00]"
                 />
               </div>
 
               {/* Test notification section */}
-              <div className="mt-8 pt-6 border-t border-primary/10">
-                <p className="text-sm text-muted-foreground/70 mb-4">Otestujte si funkčnost push notifikací na vašem zařízení.</p>
-                <Button 
-                  onClick={handleTestNotification} 
-                  variant="outline" 
-                  disabled={testingNotification}
-                  className="vip-button w-full sm:w-auto border-primary/35 bg-primary/5 hover:border-primary/55 hover:bg-primary/15 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/10 font-semibold"
-                >
-                  <Bell className={`h-4 w-4 mr-2 ${testingNotification ? 'animate-pulse' : ''}`} />
+              <div className="pt-4 border-t border-[rgba(255,138,0,0.12)]">
+                <p className="text-sm text-[#8E98A6] mb-3">Otestujte si funkčnost push notifikací na vašem zařízení.</p>
+                <Button onClick={handleTestNotification} variant="outline" disabled={testingNotification}
+                  className="w-full sm:w-auto border-[rgba(255,138,0,0.3)] hover:border-[rgba(255,138,0,0.5)] hover:bg-[rgba(255,138,0,0.06)] text-[#E7EBF0] font-semibold transition-all duration-200">
+                  <OneMilBellIcon size={16} className={`h-4 w-4 mr-2 ${testingNotification ? 'animate-pulse' : ''}`} />
                   {testingNotification ? 'Odesílám...' : 'Otestovat notifikaci'}
                 </Button>
               </div>
             </div>
-          </VIPCard>
+          </PremiumCard>
 
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* MARKETING SECTION - Premium Wallet Style */}
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          <VIPCard 
-            delay={550} 
-            variant="gold" 
-            glowIntensity="low" 
-            isLoaded={pageLoaded}
-            className="relative"
-          >
-            {/* Subtle floating particles */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {[...Array(3)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute w-1 h-1 rounded-full bg-yellow-500/15"
-                  style={{
-                    left: `${15 + i * 30}%`,
-                    top: `${20 + (i % 2) * 55}%`,
-                    animation: `float ${6 + i * 0.4}s ease-in-out infinite`,
-                    animationDelay: `${i * 0.35}s`
-                  }}
-                />
-              ))}
             </div>
-            
-            {/* Premium corner accents */}
-            <div className="absolute top-0 left-0 w-14 h-14 bg-gradient-to-br from-yellow-500/12 to-transparent rounded-br-full" />
-            <div className="absolute bottom-0 right-0 w-14 h-14 bg-gradient-to-tl from-yellow-500/8 to-transparent rounded-tl-full" />
-            
-            {/* Background glow */}
-            <div className="absolute top-1/3 left-1/3 w-20 h-20 bg-yellow-500/6 rounded-full blur-xl" />
-            
-            <div className="relative p-8">
-              {/* Section Header */}
-              <div className="flex items-center gap-5 mb-8">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-yellow-500/20 rounded-xl blur-lg" />
-                  <div className="relative p-3.5 rounded-xl bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 border border-yellow-500/30 shadow-lg shadow-yellow-500/10">
-                    <Mail className="h-6 w-6 text-yellow-500" />
-                  </div>
-                </div>
+          </div>
+
+          {/* Marketing full width */}
+          <PremiumCard>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-5">
+                <SectionTile icon={<OneMilEmailIcon size={24} className="w-6 h-6 text-black" />} />
                 <div>
-                  <h2 
-                    className="text-2xl font-bold"
-                    style={{
-                      background: 'linear-gradient(135deg, hsl(50 95% 70%) 0%, hsl(45 90% 60%) 50%, hsl(43 85% 55%) 100%)',
-                      WebkitBackgroundClip: 'text',
-                      backgroundClip: 'text',
-                      color: 'transparent'
-                    }}
-                  >
-                    Marketingová sdělení
-                  </h2>
-                  <p className="text-sm text-muted-foreground/70 mt-0.5">E-mailové novinky</p>
+                  <h2 className="text-xl font-bold text-[#E7EBF0]">Marketingová sdělení</h2>
+                  <p className="text-sm text-gray-400">E-mailové novinky</p>
                 </div>
               </div>
               
@@ -1700,7 +1240,7 @@ const Profile: React.FC = () => {
                 <div className={`flex items-center gap-4 p-5 rounded-xl transition-all duration-500 hover:shadow-lg ${
                   marketingStatus === 'active' 
                     ? 'bg-gradient-to-r from-green-500/15 via-green-500/5 to-transparent border border-green-500/30 hover:border-green-500/50 hover:shadow-green-500/10' 
-                    : 'bg-gradient-to-r from-yellow-500/10 via-transparent to-yellow-500/5 border border-yellow-500/20 hover:border-yellow-500/35 hover:shadow-yellow-500/5'
+                    : 'bg-gradient-to-r from-[rgba(255,138,0,0.08)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.15)] hover:border-[rgba(255,138,0,0.3)] hover:shadow-[rgba(255,138,0,0.04)]'
                 }`}>
                   {marketingStatus === 'active' ? (
                     <>
@@ -1734,7 +1274,7 @@ const Profile: React.FC = () => {
                     </>
                   ) : (
                     <div className="flex items-center gap-3">
-                      <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
+                      <Loader2 className="h-5 w-5 animate-spin text-[#FF8A00]" />
                       <span className="text-muted-foreground">Načítám...</span>
                     </div>
                   )}
@@ -1745,27 +1285,27 @@ const Profile: React.FC = () => {
                 </p>
                 
                 {marketingStatus === 'active' && (
-                  <div className="pt-4 border-t border-yellow-500/10">
+                  <div className="pt-4 border-t border-[rgba(255,138,0,0.08)]">
                     <p className="text-sm text-muted-foreground/60 mb-4">Pokud si již nepřejete dostávat marketingová sdělení, můžete se odhlásit.</p>
                     <Button 
                       variant="outline" 
-                      className="vip-button w-full sm:w-auto border-destructive/35 bg-destructive/5 hover:border-destructive/55 hover:bg-destructive/15 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-destructive/10 font-semibold"
+                      className="w-full sm:w-auto border-destructive/35 bg-destructive/5 hover:border-destructive/55 hover:bg-destructive/15 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-destructive/10 font-semibold"
                       onClick={() => {
                         setPendingMarketingAction('unsubscribe');
                         setMarketingDialogOpen(true);
                       }}
                     >
-                      <Mail className="h-4 w-4 mr-2" />
+                      <OneMilEmailIcon size={16} className="h-4 w-4 mr-2" />
                       Odhlásit marketing
                     </Button>
                   </div>
                 )}
 
                 {(marketingStatus === 'revoked' || marketingStatus === 'none') && (
-                  <div className="pt-4 border-t border-yellow-500/10">
+                  <div className="pt-4 border-t border-[rgba(255,138,0,0.08)]">
                     <p className="text-sm text-muted-foreground/60 mb-4">Chcete-li dostávat marketingová sdělení, můžete se přihlásit.</p>
                     <Button 
-                      className="vip-button w-full sm:w-auto bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-500 hover:from-yellow-400 hover:via-yellow-500 hover:to-yellow-400 text-black font-bold transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-yellow-500/25 hover:shadow-yellow-500/40"
+                      className="w-full sm:w-auto bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00] hover:from-[#FFB547] hover:via-[#FF8A00] hover:to-[#FFB547] text-black font-bold transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-[rgba(255,138,0,0.2)] hover:shadow-[rgba(255,138,0,0.35)]"
                       onClick={() => {
                         setPendingMarketingAction('subscribe');
                         setMarketingDialogOpen(true);
@@ -1779,7 +1319,7 @@ const Profile: React.FC = () => {
                         </>
                       ) : (
                         <>
-                          <Mail className="h-4 w-4 mr-2" />
+                          <OneMilEmailIcon size={16} className="h-4 w-4 mr-2" />
                           Přihlásit marketing
                         </>
                       )}
@@ -1788,22 +1328,18 @@ const Profile: React.FC = () => {
                 )}
               </div>
             </div>
-          </VIPCard>
+          </PremiumCard>
 
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* REFERRAL SECTION - Invite Friends */}
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          <ReferralSection isLoaded={pageLoaded} />
         </div>
       </div>
 
       {/* Premium Top-up Modal */}
       <Dialog open={showTopUpModal} onOpenChange={setShowTopUpModal}>
-        <DialogContent className="max-w-md border-yellow-500/20 bg-gradient-to-br from-card via-card to-yellow-500/5 backdrop-blur-xl">
+        <DialogContent className="max-w-md border-[rgba(255,138,0,0.15)] bg-gradient-to-br from-card via-card to-[rgba(255,138,0,0.04)] backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-yellow-500/20">
-                <Coins className="h-5 w-5 text-yellow-500" />
+              <div className="p-2 rounded-xl bg-[rgba(255,138,0,0.15)]">
+                <OneMilCoinsIcon size={20} className="h-5 w-5 text-[#FF8A00]" />
               </div>
               Dobít MioCoiny
             </DialogTitle>
@@ -1818,14 +1354,14 @@ const Profile: React.FC = () => {
                   onClick={() => handlePackageSelect(pkg)}
                   className={`p-5 rounded-xl border-2 text-left transition-all duration-300 hover:scale-[1.01] ${
                     selectedPackage?.id === pkg.id
-                      ? 'border-yellow-500/60 bg-gradient-to-r from-yellow-500/15 via-yellow-500/10 to-yellow-500/5 shadow-lg shadow-yellow-500/10'
-                      : 'border-border/40 hover:border-yellow-500/30 bg-muted/10'
+                      ? 'border-[rgba(255,138,0,0.5)] bg-gradient-to-r from-[rgba(255,138,0,0.12)] via-[rgba(255,138,0,0.08)] to-[rgba(255,138,0,0.04)] shadow-lg shadow-[rgba(255,138,0,0.08)]'
+                      : 'border-border/40 hover:border-[rgba(255,138,0,0.25)] bg-muted/10'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className={`p-2.5 rounded-xl transition-all duration-300 ${selectedPackage?.id === pkg.id ? 'bg-yellow-500/25' : 'bg-muted/30'}`}>
-                        <Coins className={`h-5 w-5 transition-colors ${selectedPackage?.id === pkg.id ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                      <div className={`p-2.5 rounded-xl transition-all duration-300 ${selectedPackage?.id === pkg.id ? 'bg-[rgba(255,138,0,0.2)]' : 'bg-muted/30'}`}>
+                        <OneMilCoinsIcon size={20} className={`h-5 w-5 transition-colors ${selectedPackage?.id === pkg.id ? 'text-[#FF8A00]' : 'text-muted-foreground'}`} />
                       </div>
                       <div>
                         <p className="font-bold text-lg">
@@ -1838,7 +1374,7 @@ const Profile: React.FC = () => {
                       </div>
                     </div>
                     {selectedPackage?.id === pkg.id && (
-                      <Check className="h-6 w-6 text-yellow-500" />
+                      <Check className="h-6 w-6 text-[#FF8A00]" />
                     )}
                   </div>
                 </button>
@@ -1854,11 +1390,11 @@ const Profile: React.FC = () => {
                 min="1"
                 value={customAmount}
                 onChange={(e) => handleCustomAmountChange(e.target.value)}
-                className="mt-2 premium-input bg-muted/20 border-border/40 focus:border-yellow-500/50"
+                className="mt-2 premium-input bg-muted/20 border-border/40 focus:border-[rgba(255,138,0,0.45)]"
               />
               {customAmount && parseInt(customAmount) > 0 && (
                 <p className="text-sm text-muted-foreground mt-2">
-                  Obdržíte <span className="text-yellow-500 font-semibold">{parseInt(customAmount).toLocaleString('cs-CZ')} MioCoinů</span> (bez bonusu)
+                  Obdržíte <span className="text-[#FFB547] font-semibold">{parseInt(customAmount).toLocaleString('cs-CZ')} MioCoinů</span> (bez bonusu)
                 </p>
               )}
             </div>
@@ -1880,7 +1416,7 @@ const Profile: React.FC = () => {
             <Button 
               onClick={handleTopUpPurchase} 
               disabled={purchaseLoading || (!selectedPackage && !customAmount)}
-              className="vip-button bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-bold transition-all duration-300 hover:scale-[1.02]"
+              className="bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold transition-all duration-300 hover:scale-[1.02]"
             >
               {purchaseLoading ? (
                 <>
@@ -1916,7 +1452,7 @@ const Profile: React.FC = () => {
                 setPendingMarketingAction(null);
                 setMarketingDialogOpen(false);
               }}
-              className="vip-button bg-gradient-to-r from-primary to-primary/80 transition-all duration-300 hover:scale-[1.02]"
+              className="bg-gradient-to-r from-primary to-primary/80 transition-all duration-300 hover:scale-[1.02]"
             >
               Potvrdit
             </AlertDialogAction>

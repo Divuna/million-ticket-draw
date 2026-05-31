@@ -8,6 +8,11 @@ Always read these files first — they are the source of truth for current syste
 - `onemil_state.md` — current system state (treat as authoritative, ignore `state.md`)
 - `onemil_history.md` — project timeline and context
 
+Always read:
+- `COMPANY_CONTEXT.md` — for company identity, owner, contacts, email signature, billing identity, and official company context.
+- `ONEMIL_BUSINESS_CONTEXT.md` — for OneMil business model, product positioning, partner model, user rewards, influencers, agencies, social contests, vouchers, coupons, Partner Offers, and official explanation of what OneMil is.
+- `PAPERCLIP_SETUP_CONTEXT.md` — for Paperclip setup, AI agents, OneMil Chief of Staff, sales department, lead database, and AI employee structure.
+
 For schema/architecture context: `.cursor/SYSTEM_MAP.md` and `.cursor/PROJECT_CONTEXT.md`
 
 ## Commands
@@ -24,7 +29,7 @@ npm run test:concurrency # Race condition tests
 
 ## Architecture
 
-**OneMil** is a global lottery/contest platform (React 18 + TypeScript + Vite, hosted via Lovable/Vercel).
+**OneMil** is a global contest and reward platform (React 18 + TypeScript + Vite, hosted via Lovable/Vercel).
 
 **Core flow:** voucher purchase (Stripe) → wallet credit (MioCoin) → ticket purchase (`buy_ticket_atomic` RPC) → contest close at 1,000,000 tickets → winner distribution → prize delivery
 
@@ -66,6 +71,48 @@ Do not execute these without explicit user instruction:
 - Push pipeline: `notifications` → `push_log` → OneSignal
 - Voucher → MioCoin → ticket economic flow
 
+## Admin Contest Economy Panel
+
+- PR #26 added a frontend-only read-only **Ekonomika** tab to `src/components/AdminContestManagement.tsx`.
+- PR #27 added a compact read-only live economy summary bar above the admin contest modal tabs.
+- PR #30 changed the admin final save path so MioCoin bonuses are persisted using the exact previewed positions from frontend state instead of being re-randomized through `distribute-bonus-prizes`.
+- PR #72 updated the final MioCoin save architecture to reuse the batched Edge Function `distribute-bonus-prizes` with `explicit_bonuses`, so large MioCoin bonus creation works without one monolithic DB insert.
+- Generated MioCoin bonus positions are immutable after contest creation. In edit mode, already materialized MioCoin positions cannot be regenerated, cleared, or rewritten.
+- `distribute-bonus-prizes` was deployed to production after PR #72 merge.
+- Verified production result (`test7`): `admin_total=63000`, `real_total=63000`, `miocoin_rows=63000`.
+- Phase 3A adds frontend-only physical prize cost preview fields in `src/components/AdminContestManagement.tsx`: supplier name, unit cost CZK, VAT rate, and optional per-prize handling override.
+- The panel is an orientation preview during contest creation/editing. It calculates gross revenue, VAT, net revenue, main prize cost, MioCoin cost, handling cost, setup cost, marketing cost, total estimated cost, profit, margin, break-even ticket count, and recommended ticket price.
+- The summary bar shows ticket count, total estimated costs, recommended ticket price, estimated net profit, and margin using the same frontend-only calculations as the **Ekonomika** tab.
+- Economy assumptions are local frontend state only and reset when the modal context changes.
+- The panel and summary bar do not save economy assumptions to Supabase.
+- Physical prize cost preview is also frontend-only; supplier/cost/VAT/handling preview fields are not persisted to Supabase yet.
+- Physical prize preview cost is now included in total estimated cost, profit, margin, break-even, and recommended ticket price. Handling uses per-prize override when set, otherwise the global default.
+- Final contest save now validates bonus positions before persisting MioCoin rows: integer positions, range `1..ticket_count`, duplicate MioCoin positions, physical/MioCoin collisions, and final-ticket collisions.
+- Editing existing contest bonus positions is blocked when tickets already exist.
+- PR #52 added bulk quantity distribution for physical bonus prizes (Počet kusů + Rozmístění pozic: Rovnoměrně/Náhodně). For qty > 1 the app auto-assigns N unique positions via `pickPositions` helper; collision rules exclude MioCoin positions, existing physical prizes, final-ticket position, and out-of-range positions. Only `src/components/AdminContestManagement.tsx` changed.
+- No changes were made to `buy_ticket_atomic`, ticket purchase logic, winner logic, Partner Offers, `bonus_prizes` schema, main prize final-ticket logic, migrations, or production smoke scope.
+
+## Store Policy / Launch Copy Rules
+
+- Public launch age rule is **18+**.
+- Public copy must not describe OneMil contests as lottery, drawing/losování, random-generator based, gambling, betting, jackpot, casino, or similar framing.
+- Correct public contest model: tickets open sequentially in order `1, 2, 3...`; winning positions are predefined in the rules of the given contest.
+- MioCoin is internal OneMil credit.
+- MioCoin cannot be withdrawn as money.
+- MioCoin cannot be transferred outside OneMil.
+- MioCoin can only be used inside OneMil.
+- Charitable campaigns must state the specific beneficiary, purpose, and support amount for that campaign.
+- PR #2 merged these copy rules to `main` after PR smoke and staging full E2E passed. No deploy was performed as part of that merge.
+
+## Launch Strategy / Store Submission
+
+- OneMil launch strategy is **Web/PWA first**.
+- Apple App Store and Google Play submission is postponed.
+- Reason: OneMil will not pay Apple/Google 15–30% fees for MioCoin purchases in the current launch strategy.
+- Stripe remains the payment provider for Web/PWA MioCoin top-up.
+- Future native iOS/Android apps may be reconsidered only after payment/store strategy is explicitly approved.
+- Do not implement native store billing, native app submission changes, or mobile-only payment-routing changes without explicit user approval.
+
 ## Deployment rule
 After every file change, always run:
 git add -A && git commit -m "fix: <short description of change>" && git push
@@ -95,21 +142,152 @@ Technical:
 
 ---
 
-## CURRENT SYSTEM STATUS (24. 04. 2026)
+## CURRENT SYSTEM STATUS (31. 05. 2026)
 
-- CI pipeline stabilní: `.github/workflows/playwright.yml` — registration + login testy passing
+- **Winner card backgrounds KOMPLETNÍ (31. 05. 2026):** Rotující brand pozadí (trophy/crown/clean) na kartách výherců. Assets v `src/assets/winner-backgrounds/`. Konstanta `WINNER_BG_ROTATION` + `index % 3` nasazena na Homepage i Winners stránce. Overlay v `WinnerCard.tsx`: opacity `0.42`, gradient levý `0.78` / střed `0.20` / pravý `0.14`. **Pravidlo:** každá nová stránka se `WinnerCard` musí použít `WINNER_BG_ROTATION[index % 3]` — overlay logika je automatická v komponentě. Commity: `7276c254` → `4b127aef` → `9d9c716c` → `8197d6ae`.
+- **GitHub Actions odblokován (31. 05. 2026):** Repo změněno z private na **public** — Actions minuty jsou nyní zdarma neomezeně. Smoke ✅, Staging Full E2E ✅.
+
+## CURRENT SYSTEM STATUS (30. 05. 2026)
+
+- **OneMil Premium Icon System KOMPLETNÍ (30. 05. 2026):** `src/components/icons/OneMilIcons.tsx` obsahuje 23 brand ikon. Customer-facing UI kompletně přepnuto z Lucide na OneMil ikony. Sémantická pravidla: `OneMilGiftIcon` = bonusy/dárky; `OneMilVoucherIcon` = vouchery; `OneMilWinIcon` = sekce Výhry; `OneMilTrophyIcon` = Soutěže/hlavní výhra; `OneMilMioCoinIcon` = MioCoin dobití. Všechny hlavní customer stránky mají unifikovaný premium header tile vzor (dark karta + shimmer + 64px orange gradient tile + gradient h1). Bottom nav: size 24px, active scale-110. Commity: `cc490725` → `ee9b7d9c` → `61840ab6` → `94ed004f` → `1d5c5dde` → `87f74083`. Detailní dokumentace v `onemil_state.md`.
+- **Icon pravidlo pro budoucí vývoj:** Nové customer-facing stránky MUSÍ používat `OneMilIcons.tsx` a unifikovaný header tile vzor. Lucide ikony zachovat POUZE pro utility (Clock, Arrow, Check, Loader2, Camera, Volume aj.).
+
+## CURRENT SYSTEM STATUS (27. 05. 2026)
+
+- **Migrace coming_soon_banners.description APLIKOVÁNA (27. 05. 2026):** `supabase/migrations/20260527_coming_soon_banners_add_description.sql` aplikována manuálně v Supabase a ověřena. Struktura: `id uuid, image_url text, title text, created_at timestamptz, description text`. Info popup feature je plně funkční.
+- **WinnerCard redesign (27. 05. 2026):** `src/components/WinnerCard.tsx` přepsán — sjednocen s MioCoin card stylem (dark bg, orange border, Poppins prize gradient, muted labels, h-112px, star šum snížen). Commit `b6776ebe`.
+- **Připravujeme bannery — info popup (27. 05. 2026):** Nový sloupec `description`, admin textarea, homepage pulsující ℹ ikona + dark premium modal. Commit `f11b634f`. (Vyžaduje aplikaci migrace výše.)
+- **Připravujeme bannery — editovatelné tituly (27. 05. 2026):** Admin input + Uložit pro `title`; premium Poppins gradient na homepage i admin preview. Commity `4428b7d0`, `265f2330`.
+- **Telegram bot nastaven (25. 05. 2026):** @Onemilclaudebot (id `8969270078`). Token + chat_id Pavla (`6714365501`) uloženy jako Windows user env vars `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID`. Claude Code může posílat notifikace přes Telegram Bot API. Žádný server/webhook — pouze jednosměrné notifikace (Claude → Pavel).
+- **CI artifact upload — continue-on-error (25. 05. 2026):** `continue-on-error: true` přidáno na všechny `upload-artifact` kroky v `playwright.yml` i `playwright-staging.yml` (commit `408da958`). Plná kvóta artefaktů už nemůže shodit workflow — testy jsou autoritativní.
+- **Homepage hero banner — finální stav (25. 05. 2026):** Cílový rozměr **1920 × 600 px**. Kontejner `w-full sm:aspect-[16/5] sm:max-h-[600px]`. Mobil: `h-auto object-contain` (žádné pruhy, žádný ořez). Tablet+: `sm:object-cover`. Commit `ecea087c`.
+- **Admin bannery — toggle Zobrazovat trvale (24. 05. 2026):** `src/pages/AdminBanners.tsx` — Switch skrývá datumová pole a ukládá `null` pro trvale zobrazené bannery. Commit `03271812`.
+- **Homepage placement bannery — layout (24. 05. 2026):** MioCoin karty — fallback text skryt při banner obrázku; layout obrázek nahoře / tlačítko dole. Lower boxy — ikona+text skryty při banner obrázku, `min-h` zachovává výšku. Commity `f486afa9`–`e9254494`.
+- **Admin „Online teď" ZAMČEN PROTI REGRESI v staging CI (20. 05. 2026):** Staging Full E2E run `26189017692` — **29 passed, 0 failed, 3 skipped** (4m 35s). Spec 21 (`tests/e2e/21-admin-online-registered-users.spec.ts`) prošel za 16.8s. Ověřeno: `useHeartbeat` fires `bump_user_last_seen` po přihlášení, `get_admin_online_users` vrátí aktivního uživatele adminovi, badge count ≥ 1, popover zobrazuje e-mail normálního E2E uživatele. Commit `b70beba` (spec 21 add) + `b2129ac` (fix: `exact:false` → `exact:true` — strict-mode violation). Anonymní návštěvníci nejsou sledováni (zůstávají v Google Analytics).
+- **Admin „Online teď" LIVE na produkci (20. 05. 2026):** Přihlášení uživatelé jsou zobrazeni v admin top bar "Online teď" badge. Migrace `20260520_registered_user_presence.sql` aplikována a ověřena na staging i produkci. Frontend: `useHeartbeat(user?.id)` volá `bump_user_last_seen` každých 60 s; `useAdminOnlineIndicator` polluje `get_admin_online_users` každých 30 s. Anonymní návštěvníci nejsou sledováni (zůstávají v Google Analytics). Commit `0732738` (feat) + `ab5cb25` (fix: `.catch` → `async/await` runtime crash). Lovable publish dokončen, live chování ověřeno.
+- **Issue #71 ZAMČEN PROTI REGRESI v staging CI (20. 05. 2026):** Staging Full E2E run `26180130657` — **28 passed, 0 failed, 3 skipped** (2m 54s). Spec 20 (`tests/e2e/20-admin-miocoin-chunked-save.spec.ts`) prošel za 9.7s a end-to-end ověřil: 600 MioCoin pozic vygenerováno, `CHUNK_SIZE = 500` → 2 chunky, `bonus_prizes` count = 600, `contests.total_miocoin_bonus` = 6 000, `admin_actions` obsahuje `miocoin_save_begin` + `miocoin_bulk_create` s `metadata.chunked = true`. Telegram `✅ OneMil STAGING full E2E OK — all specs passed` doručen (message_id 560). Chunked MioCoin save flow je nyní chráněn každým staging CI během.
+- **PR #81 mergnut (20. 05. 2026):** fix(test): scope spec 20 "600 pozic" assertion to the badge only. Merge commit: `ef01011`. Pouze `tests/e2e/20-admin-miocoin-chunked-save.spec.ts` (6 ins / 3 del). Anchored regex `/^Celkem:.*600 pozic/i` eliminuje Playwright strict-mode kolizi s "Vygenerováno 600 pozic s celkovou hodnotou…" summary řádkem.
+- **PR #80 mergnut (20. 05. 2026):** ci(staging): seed E2E Spec20 chunked MioCoin save test contest. Merge commit: `cbd51f9`. Pouze `.github/workflows/playwright-staging.yml` (+43 řádků). Přidán seed step `seed-spec20-contest` (status=draft, ticket_count=1000, ticket_price=1, main_image set) + `E2E_SPEC20_CONTEST_ID` v test env. Production workflow `playwright.yml` nedotčen.
+- **PR #79 mergnut (20. 05. 2026):** test: lock chunked MioCoin save with staging E2E spec 20. Merge commit: `6573144`. Pouze `tests/e2e/20-admin-miocoin-chunked-save.spec.ts` (+183 řádků). Staging-only, non-destructive — drží frontend na `admin_begin/admin_append_chunk/admin_finalize` flow + `total_miocoin_bonus` sync + audit rows `miocoin_save_begin/miocoin_bulk_create` s `chunked=true`. Read-back přes `@supabase/supabase-js` (anon + admin sign-in). Druhý commit ve stejném PR: fix(test) na `admin_actions.timestamp` sloupec (ne `created_at`).
+- **Issue #71 finálně VYŘEŠEN (20. 05. 2026):** velké MioCoin bonusové save (~95k pozic) nyní fungují na produkci. Final invariant: large MioCoin saves musí používat chunked flow s `CHUNK_SIZE = 500` (`admin_begin_miocoin_save` → `admin_append_miocoin_chunk` × N → `admin_finalize_miocoin_save`). Production manual test ✅ — MioCoin bonus creation works, admin totals display correctly. Předchozí selhané cesty: (1) jeden velký Edge Function request (`distribute-bonus-prizes` s `explicit_bonuses`) — Deno wall-clock timeout, (2) jeden velký SQL RPC (`admin_bulk_insert_miocoin_bonuses`) — PostgREST/Kong gateway HTTP timeout (~60s), (3) chunked save s `CHUNK_SIZE=5000` — chunk 1/9 stále hitnul gateway timeout.
+- **PR #78 mergnut (20. 05. 2026):** lower MioCoin save chunk size from 5000 to 500. Merge commit: `301a778`. Pouze `src/components/AdminContestManagement.tsx` (4 ins / 1 del). Production test23 ukázal timeout i s chunky po 5000; sníženo na 500 → ~190 malých chunků pro 95k pozic, každý komfortně pod gateway budget. Žádné DB ani Edge Function změny.
+- **PR #77 mergnut + migrace aplikována na produkci (20. 05. 2026):** chunked MioCoin save — tři nové SECURITY DEFINER funkce: `admin_begin_miocoin_save(p_contest_id, p_expected_count)` (wipe stale rows, reset total, audit `miocoin_save_begin`), `admin_append_miocoin_chunk(p_contest_id, p_bonuses)` (set-based INSERT … SELECT, žádný DELETE), `admin_finalize_miocoin_save(p_contest_id, p_expected_count)` (verify count, sync `total_miocoin_bonus`, audit `miocoin_bulk_create`). Merge commit: `3ecd892`. Migrace: `supabase/migrations/20260520_miocoin_chunked_save_functions.sql`. Frontend `handleSave` upraven: begin → append loop → finalize; save success vyžaduje finalize success. Legacy `admin_bulk_insert_miocoin_bonuses` ponechán beze změny.
+- **PR #76 mergnut + migrace aplikována (20. 05. 2026), ale neúčinný:** přidal `set_config('statement_timeout', '300000', true)` do `admin_bulk_insert_miocoin_bonuses` + idempotentní DROP TABLE IF EXISTS. Production verifikace: `contains_drop_tmp=true`, `contains_statement_timeout=true`, `contains_total_sync=true`. **Stále selhalo** na test22 s `canceling statement due to statement timeout` — root cause: PL/pgSQL `set_config` LOCAL nezasahuje běžící outer PostgREST statement a Supabase API gateway má vlastní HTTP timeout. Tento PR byl architektonický slepá ulička; nahrazen chunked flow v PR #77/#78.
+- **PR #75 mergnut (20. 05. 2026):** exclude final ticket from MioCoin bonus position generator. Merge commit: `42c1017`. Pouze `src/components/AdminContestManagement.tsx` (10 ins / 7 del). Zavedena konstanta `maxMioCoinPosition = ticketCount - 1` aplikovaná v obou distribučních cestách (even + random). Save-time validation guard zachován jako safety net.
+- **PR #74 mergnut (20. 05. 2026):** switch explicit MioCoin save from Edge Function to SQL RPC. Merge commit: `3a46ede`. Pouze `src/components/AdminContestManagement.tsx` (18 ins / 21 del). Nahrazeno `supabase.functions.invoke("distribute-bonus-prizes", { explicit_bonuses })` voláním `supabase.rpc("admin_bulk_insert_miocoin_bonuses", …)` — eliminace Deno wall-clock timeoutu pro explicitní save. `distribute-bonus-prizes` ponechán pro non-explicit (random/step_interval) cestu.
+- **PR #66 migrace aplikována na produkci (20. 05. 2026):** `admin_bulk_insert_miocoin_bonuses` nyní materializuje JSON payload do temp tabulky `tmp_miocoin_bonuses (ON COMMIT DROP)` — `jsonb_array_elements` voláno přesně 1× místo 5×. Index `idx_bonus_prizes_contest_position` na `bonus_prizes(contest_id, ticket_position)` přidán. Timeout při 56 000–95 000 pozicích odstraněn.
+- **Staging Full E2E ZELENÝ po PR #66 (20. 05. 2026):** run `26156907020` — **27 passed, 0 failed, 3 skipped** (3m 6s). Spec 18 ✅ (11.3s). Spec 19 ✅ (10.4s). Telegram: `✅ OneMil STAGING full E2E OK` doručen (message_id 521).
+- **PR #66 mergnut (20. 05. 2026):** perf: materialize JSON payload once in admin_bulk_insert_miocoin_bonuses. Merge commit: `59b2efe3154d629d6c4b9acd4dd4477f0a4ef502`. Pouze `supabase/migrations/20260520_materialize_bulk_miocoin_payload.sql`. Žádný frontend, žádné testy, žádný workflow.
+- **PR #65 migrace aplikována na produkci (20. 05. 2026):** set-based SQL validace (GROUP BY HAVING, JOIN) namísto per-row smyčky. Aplikováno dříve ve stejný den.
+- **Staging Full E2E ZELENÝ po PR #65 (20. 05. 2026):** run `26153556353` — **27 passed, 0 failed, 3 skipped** (2m 54s). Spec 18 ✅ (10.0s). Spec 19 ✅ (10.0s). Telegram: `✅ OneMil STAGING full E2E OK` doručen (message_id 517).
+- **PR #65 mergnut (20. 05. 2026):** perf: optimize admin_bulk_insert_miocoin_bonuses for 95k rows. Merge commit: `e809bd0561d05846290922d94a860d5df49c78cf`. Pouze `supabase/migrations/20260520_optimize_bulk_miocoin_bonuses.sql`.
+- **PR #64 mergnut (20. 05. 2026):** fix duplicate contest creation when CREATE save partially succeeds and later step throws. Merge commit: `72b74bc64dad27abd04a2c64214c77dc1e3a533c`. Pouze `src/components/AdminContestManagement.tsx`. Root cause: outer `catch` v `handleSave` zobrazil toast ale nezavřel modal → admin mohl kliknout Uložit znovu → druhý contest vytvořen. Fix: `createdContestIdInCreateMode` tracking variable — pokud contest byl vytvořen ale pozdější krok selhal, outer catch zavolá `onSaved()/onClose()` s informativním toastem místo tiché smyčky. Production smoke po mergi: run `26151630359` ✅.
+- **PR #63 mergnut (20. 05. 2026):** fix stale contests.total_miocoin_bonus after bulk MioCoin save. Migrace aplikována na staging i produkci. Root cause: trigger `sync_total_miocoin_bonus` na produkci neexistuje → sloupec zůstával 0. Fix: UPDATE contests.total_miocoin_bonus po každém bulk INSERT + backfill + zero-fill.
+- **PR #62 mergnut (20. 05. 2026):** fix silent save when MioCoin generator inputs filled but bonuses not generated. Guard v `handleSave`: pokud `mioCoinBonuses.length === 0 && totalMioCoinsInput > 0 && stepValue > 0` → toast + return před persistencí. Staging E2E zelený (run `26135981706`, 27/0/3).
+- **PR #61 mergnut (20. 05. 2026):** bulk MioCoin bonus save — nová SECURITY DEFINER funkce `admin_bulk_insert_miocoin_bonuses` nahrazuje N sequential RPC callů jedním bulk INSERT. RLS policy "Allow admin full access to bonus prizes" přidána idempotentně. Aplikováno na staging i produkci.
+- **Staging Full E2E ZELENÝ po PR #60 (19. 05. 2026):** run `26113679217` — **26 passed, 0 failed, 3 skipped**. Spec 18 ✅ (retry — transient staging latence). Spec 19 ✅. Telegram: `✅ OneMil STAGING full E2E OK` doručen (message_id 497).
+- **PR #60 mergnut (19. 05. 2026):** fix create modal not closing when rules PDF upload fails after contest creation. Merge commit: `a25a7d71d986485d60cab92f153db30746e09019`. Změněn pouze `src/components/AdminContestManagement.tsx`. Root cause: v PDF upload error branch byl `return` i v CREATE módu — modal zůstával otevřený přestože contest byl už vytvořen SECURITY DEFINER RPC. Fix (mirrors PR #55): v CREATE módu falls through k `onSaved()/onClose()`; v EDIT módu `setSaving(false); return` zachováno. Žádné migrace, žádný RPC, žádné workflow changes.
+- **Staging Full E2E ZELENÝ po PR #59 (19. 05. 2026):** run `26106988469` — **27 passed, 0 failed, 3 skipped** (3m 6s). Spec 18 ✅ (11.3s, první pokus). Spec 19 ✅. Telegram: `✅ OneMil STAGING full E2E OK` doručen (message_id 492).
+- **PR #59 mergnut (19. 05. 2026):** fix spec 18 pro PRs #56/#57 economy UI changes. Merge commit: `ab9e37f`. Změněn pouze `tests/e2e/18-admin-economy-persist.spec.ts`. Root cause: staging run `26105990009` — spec timeout na `Náklad na hlavní výhru` fill (pole přesunuto PR #57 do Basic tabu) a pokus o fill read-only pole `Náklad na MioCoin bonusy` (PR #56/#57). Fix: Step 4a v Basic tabu, Step 4b jen `Jednorázový`+`Cílová marže`, `Náklad na MioCoin bonusy` fill+assertion odstraněny.
+- **PR #58 mergnut (19. 05. 2026):** fix physical prize grouping key — `image_url` vyloučeno z klíče v `src/pages/ContestDetail.tsx`. Bulk výhry mají unikátní UUID storage cestu → starý klíč s `image_url` → N duplicitních karet. Nový klíč: `${description}||${detailed_description}` → správné seskupení.
+- **PR #57 mergnut (19. 05. 2026):** Economy input cleanup v `src/components/AdminContestManagement.tsx`. `Náklad na hlavní výhru` přesunut do Basic tabu. `Reálný náklad na MioCoin bonusy` vždy read-only (auto-odvozeno z `effectiveMioCoinCost`).
+- **PR #56 mergnut (19. 05. 2026):** fix MioCoin bonus save RPC + auto-sync economy v `src/components/AdminContestManagement.tsx`. `admin_manage_bonus_prize` RPC s explicitními null args (eliminuje overload ambiguitu). `effectiveMioCoinCost` = auto-sync economy kalkulace se skutečnými MioCoin bonusy.
+- **Staging Full E2E ZELENÝ po PR #55 (19. 05. 2026):** run `26059677757` — **27 passed, 0 failed, 3 skipped** (4m 14s). Spec 18 ✅ (10.8s, první pokus). Spec 19 ✅ (10.9s). Telegram: `✅ OneMil STAGING full E2E OK` doručen (message_id 475).
+- **PR #55 mergnut (19. 05. 2026):** fix duplicate physical bonus prize cards (ContestDetail) + fix create-contest modal not closing. Merge commit: `9808f83d13e4ff09516dc2f352abcc3c28274ab8`. Změněny: `src/pages/ContestDetail.tsx`, `src/components/AdminContestManagement.tsx`. Part A: přidán `groupedBonusPrizes` useMemo — fyzické výhry se seskupují podle `description+detailed_description+image`; každá skupina → jedna karta s badge `N× v soutěži`. MioCoin bonusy zůstávají individuální. Part B: pro CREATE mód při `updatedRows.length === 0` (RLS blokuje client-side UPDATE čerstvého řádku) kód nyní pokračuje k `onSaved()/onClose()` místo `return`; pro EDIT mód původní chování zachováno. Žádné migrace, žádný RPC, žádné workflow changes.
+- **Staging Full E2E ZELENÝ po PR #53 + #54 (18. 05. 2026):** run `26057380995` — **26 passed, 0 failed, 3 skipped** (4m 0s). Spec 08 ✅ skipped (PR #54 fix drží). Spec 18 ✅ passed (retry #1, 15.8s — transient staging latence). Spec 19 ✅ (12.3s). Telegram: `✅ OneMil STAGING full E2E OK` doručen (message_id 471).
+- **PR #54 mergnut (18. 05. 2026):** fix flaky skip guard v spec 08 (`tests/e2e/08-partner-offer-persistence.spec.ts`). Merge commit: `819cb77819bfc37598a621b46821a1995c17d2c9`. Nahrazen `waitForTimeout(2_000) + okamžité isVisible()` za `Promise.race` pattern (mirror spec 07) — wait up to 10s pro offer card nebo empty state, poté skip guard. Přidán i `!firstCard.isVisible()` fallback skip. Žádný app kód, workflow, schéma nezměněno.
+- **PR #53 mergnut (18. 05. 2026):** fix gallery upload "Invalid key" — raw file names se sanitizují před uložením do Supabase Storage (`src/components/AdminContestManagement.tsx`). Merge commit: `8356ac04bdf3d03f457febe6e199fca4593e856b`. Přidán helper `sanitizeStorageFileName()`: NFD normalize + strip diakritiky + spaces→hyphens + strip speciálních znaků + collapse hyphens + fallback "file". Aplikován na všechny 3 gallery upload paths. Nový storage key formát: `${Date.now()}-${crypto.randomUUID()}-${safeFileName}`. Žádné migrace, žádný RPC, žádné workflow changes.
+- **Staging Full E2E ZELENÝ po PR #52 (18. 05. 2026):** run `26053065266` — **27 passed, 0 failed, 3 skipped** (3m 56s). Spec 18 ✅ (9.8s), spec 19 ✅ (10.0s). Telegram: `✅ OneMil STAGING full E2E OK` doručen. Žádná regrese po přidání bulk distribution feature.
+- **PR #52 mergnut (18. 05. 2026):** přidána bulk quantity distribution pro věcné bonusové výhry v `src/components/AdminContestManagement.tsx`. Merge commit: `e43cda76c4f187bd4a8e9ae00ec3396626a73e19`. Nová UI pole: Počet kusů (default 1), Rozmístění pozic (Rovnoměrně / Náhodně). Automatická bezkolizní distribuce pozic pro qty > 1 — vylučuje MioCoin pozice, existující věcné výhry, final-ticket pozici a pozice mimo rozsah. Opraven stale helper text. Žádné migrace, žádný RPC, žádné workflow changes.
+- **Staging Full E2E ZELENÝ — Phase 4 KOMPLETNÍ (18. 05. 2026):** run `26046436837` — **27 passed, 0 failed, 3 skipped** (4m 28s). Spec 18 ✅ (11.9s), spec 19 ✅ (11.2s, první pokus bez retry). Telegram: `✅ OneMil STAGING full E2E OK` doručen. Všechny 19 spec souborů zelené. 3 skipy jsou pre-existující záměrné skipy (spec 01 new-user registration, spec 07 partner offer open, spec 08 partner offer persistence).
+- **Staging SQL fix aplikován manuálně (18. 05. 2026):** Na staging projektu `dxmowysntemfqfnanxua` bylo aplikováno: (1) `ALTER TABLE bonus_prizes ADD COLUMN IF NOT EXISTS supplier_name/unit_cost_czk/vat_rate_percent/handling_override_czk` — Phase 4 economy sloupce; (2) `CREATE POLICY "Allow admin full access to bonus prizes" ON bonus_prizes FOR ALL USING (has_role(...))` — chybějící write policy odblokovala přímé client-side UPDATE/DELETE z admin UI. Bez write policy `.update()` economy dat tiše selhával (0 řádků), `.delete()` cleanup taky; SECURITY DEFINER RPC obcházel RLS a INSERT fungoval, čímž se maskovala chyba.
+- **PR #51 mergnut (18. 05. 2026):** přidán workflow seed step "Ensure staging admin E2E user has admin role" do `playwright-staging.yml` — Supabase Admin API najde/vytvoří `admin-e2e@onemil.cz` v auth.users a upsertuje public.users (role=admin), user_roles, profiles, wallets před spuštěním E2E suite. Idempotentní. Merge commit: `97797662d19cafe53062a04fb73449545ef98780`. Pouze `.github/workflows/playwright-staging.yml`.
+- **Production smoke ZELENÝ (18. 05. 2026):** run `26027726603` — 5 passed, 0 failed, 0 skipped (22s). Telegram: `✅ OneMil PROD smoke OK`. Phase 4 migrace na produkci ověřeny bez regrese.
+- **Phase 4 — Economy Persistence NASAZENA NA PRODUKCI (18. 05. 2026):** `contest_economy` tabulka + `bonus_prizes` economy sloupce aplikovány na produkci; production smoke zelený; staging Full E2E zelený (run `26026329321`, 26/3/0); spec 18 ověřuje celý persistence cyklus.
+- **PR #49 mergnut (18. 05. 2026):** fix spec 18 cleanup hang — přidán `{ timeout: 1000 }` do close button click; selector `[aria-label="Close"]` nenacházel element, bez `actionTimeout` čekal donekonečna. Merge commit: `a0a2b494ef398c74b1cee591b1554d4610daac00`. Pouze `tests/e2e/18-admin-economy-persist.spec.ts`.
+- **PR #50 mergnut (18. 05. 2026):** přidán `tests/e2e/19-admin-physical-prize-economy-persist.spec.ts` (173 řádků, staging-only). Ověřuje celý cyklus persistování fyzických nákladových údajů věcných výher (supplier_name, unit_cost_czk, vat_rate_percent, handling_override_czk). Sdílí `E2E_SPEC18_CONTEST_ID`. Merge commit: `1b937efba87cbda9118a2d8e532d2da6fdc46d44`.
+- **Staging Full E2E ZELENÝ (18. 05. 2026):** run `26026329321` — 26 passed, 3 skipped, 0 failed. Spec 18 (economy persist) prošel (10.7s). Spec 17 prošel. Spec 16 prošel. Telegram OK doručen.
+- **PR #16 mergnut (17. 05. 2026):** přidán `tests/e2e/17-profile-smoke.spec.ts` — staging-only, read-only profile smoke test. Ověřuje `/profile` rendering pro E2E uživatele: identita, peněženka/MioCoin sekce, Účet heading, Přihlašovací údaje, Osobní údaje. Přejmenováno z `12-` na `17-` (kolize s `12-mobile-messages-layout.spec.ts`). Merge commit: `7fd9766972b4a84c9ee33b11357f42ad46c38854`. Žádný app kód, migrace ani business logika nezměněna.
+- **PR #38 mergnut (17. 05. 2026):** spec 16 Ekonomika tab assertions přesunuty na `econPanel = dialog.locator('[role="tabpanel"][data-state="active"]')` — zamezuje strict mode violations z always-visible summary baru. Pouze `tests/e2e/16-admin-economy-preview.spec.ts`.
+- **PR #37 mergnut (17. 05. 2026):** spec 16 `Balné` assertion opraven na `{ exact: true }` — regex matchoval 2 elementy. Pouze `tests/e2e/16-admin-economy-preview.spec.ts` (1 řádek).
+- **PR #36 mergnut (17. 05. 2026):** admin contest create/edit modal je nyní wider (`max-w-[95vw]`), economy summary bar se zalamuje responsivně, záložky se zalamují — žádný vnitřní horizontální scrollbar. Změněn pouze `src/components/AdminContestManagement.tsx` (layout CSS). Žádná logika nezměněna.
+- **PR #34 mergnut (17. 05. 2026):** přidán `tests/e2e/16-admin-economy-preview.spec.ts` — staging-only, read-only smoke test admin economy preview. Ověřuje, že věcná výhra aktualizuje economy summary bar a záložku Ekonomika bez finálního uložení. Selektory jsou stabilní (inputByLabel helper, summaryValue přes div.uppercase.opacity-70). Skip guard pokud chybí admin secrets.
+- **Playwright testy: 19 spec souborů** (01–19); staging full E2E obsahuje všechny spec soubory
+- CI pipeline stabilní: dva oddělené workflow (commit `82f979f`):
+  - `.github/workflows/playwright.yml` — **production smoke**: pouze `01-registration` + `02-login`; spouští se 3× denně + push/PR na `main`
+  - `.github/workflows/playwright-staging.yml` — **staging full E2E**: všech 19 spec souborů; pouze `workflow_dispatch` (manuálně) + schedule 3× denně
+- **Produkce nemůže spouštět** testy 03–17 (ticket purchase, voucher, wallet, win-flow, Partner Offers, admin, profile) — hard-coded file paths v `playwright.yml`
+- Telegram zprávy rozlišují: `✅ OneMil PROD smoke OK` / `❌ OneMil PROD smoke FAILED` vs `✅ OneMil STAGING full E2E OK` / `❌ OneMil STAGING full E2E FAILED`
+- **Production smoke manuálně ověřen** (run `25618763318`): 6 passed, 1m 22s, Telegram doručen, specs 03–08 neběžely ✅
 - Payment pipeline ověřen: Stripe webhook vrací 500 na selhání (retry), idempotency funguje, wallet credit přes trigger
 - Registrace + login plně otestovány v Playwright (Chromium, CI)
-- Telegram notifikace na CI success/failure nakonfigurovány a funkční
-- Playwright testy: **8 spec souborů** (01–08); testy 03–08 skip bez credentials
-  - `E2E_TEST_EMAIL` + `E2E_TEST_PASSWORD` — přidat jako GitHub Secrets pro testy 03–08
-  - `E2E_WIN_CONTEST_ID` — přidat jako GitHub Secret pro test 05 (soutěž se 1 zbývající tiketou)
-- **Tři migrace commitnuty ale neaplikovány** v Supabase:
+- Playwright testy: **17 spec souborů**; staging testy 03–17 čekají na GitHub Secrets (set):
+  - `STAGING_E2E_TEST_EMAIL` → `e2e@onemil.cz`, `STAGING_E2E_TEST_PASSWORD`, `STAGING_E2E_CONTEST_ID` → `3fa56db0-4007-4fb7-aa2f-e460173070d8`, `STAGING_E2E_WIN_CONTEST_ID` → `7ff58a8e-c691-46e1-9e0c-ca6cddeb8abb`
+- **Staging seed ověřen** (10. 05. 2026): test user `e2e@onemil.cz`, wallet 5000 MioCoin, general contest + win contest active, partner offer approved a připojena — detaily v `onemil_state.md`
+- **Staging full E2E ZELENÝ + wallet reset ověřen** (run `25625184545`, 10. 05. 2026): ✅ ALL PASSED — 13 passed, 4 skipped, 0 failed, 2m 33s
+  - Workflow auto-seeduje nový win contest před každým spuštěním (PostgREST INSERT + step output)
+  - Workflow resetuje wallet test uživatele na 5 000 MioCoin před testy (commit `50ba68c`)
+  - Telegram success doručen
+  - Commity: `3c4aecf`, `324a747`, `6ee26df`, `e70fd5c` (stabilizace) + `50ba68c` (wallet reset) + `631f915` (signup email domain `@example.com` → `@onemil.cz`)
+  - Staging full E2E **naplánováno 3× denně** (commit `37cfd6c`): 04:00 / 12:00 / 20:00 Praha — offset od production smoke, žádný překryv
+  - `workflow_dispatch` zůstává dostupný
+  - Destruktivní testy (03–08) **nesmí běžet v produkci** (hard-coded v `playwright.yml`)
+  - Produkce nedotčena
+- **Migrace commitnuty ale neaplikovány** v Supabase:
   - `20260420_ensure_wallet_exists.sql` — wallet auto-creation helper
   - `20260420_fix_profiles_insert_remove_user_id.sql` — oprava trigger profiles INSERT
   - `20260424_fix_won_type_main_priority_over_bonus.sql` — won_type: main > bonus priorita
+  - `20260504_fix_nonblocking_sofinity_triggers.sql` — 57014 timeout fix (trigger non-blocking)
+- **Migrace aplikované v produkci (05. 05. 2026):**
+  - `20260504_add_remaining_and_bonus_distance_to_buy_ticket_atomic.sql` ✅
 - won_type bug potvrzen a opravena v migraci: poslední tiket + bonusová pozice → byl vracen 'bonus' místo 'main'
 - Frontend volá `buy_ticket_atomic` přímo (ContestDetail, Games, FavoriteGames) — ne přes Edge Function
+- buy_ticket_atomic nyní vrací: `remaining_tickets`, `next_bonus_position`, `distance_to_next_bonus`
+
+## STAGING READINESS — stav (09. 05. 2026)
+
+**Produkce:** projekt `onemil`, ref `xkzhjldrojjlrkezorey`, region `eu-north-1`
+**Staging:** projekt `onemil-staging`, region `eu-north-1`, ref TBD po vytvoření manuálně
+
+- **Fáze 1 dokončena** (commit `20c6452`): hardcoded produkční URL nahrazeny env/client-based hodnotami
+  - `process_event_queue_worker/index.ts` — `SOFINITY_RELAY_URL` env var
+  - `src/pages/ShareTicket.tsx` — `${supabaseUrl}/functions/v1/og-ticket-share`
+  - `src/components/TicketResultModal.tsx` — `${supabaseUrl}/functions/v1/og-ticket-share`
+- `api/og-ticket.ts` + `vercel.json` — **legacy**, Lovable je aktivní deploy cesta; tyto soubory se nespouštějí
+- **Fáze 2 dokončena** (09. 05. 2026, commit `4167527`):
+  - Projekt `onemil-staging` vytvořen, ref `dxmowysntemfqfnanxua`, region `eu-north-1`
+  - `SOFINITY_RELAY_URL` nastaven → `https://dxmowysntemfqfnanxua.supabase.co/functions/v1/sofinity-noop`
+  - `sofinity-noop` nasazena na staging, POST test ✅ `{"ok":true,"noop":true}`
+  - Produkce `xkzhjldrojjlrkezorey` a Sofinity relay `rrmvxsldrjgbdxluklka` nedotčeny
+- **Fáze 3 — POZASTAVENO (10. 05. 2026):**
+  - `db push` selhal na migraci #3 (`20250914043049_`) — `public.payments` neexistuje v prázdné staging DB
+  - Root cause: počáteční schéma nebylo nikdy zachyceno jako migrace; první migrace jsou hotfixy na existující schéma
+  - **Schema baseline aplikován manuálně:** produkční schéma zdumpováno a aplikováno na staging přes SQL Editor
+  - Ověřeno na staging: 73 tabulek ✅, `buy_ticket_atomic` ✅, wallet trigger ✅, 95 RLS ✅
+  - `schema_migrations` testován ve 4 formátech — nejlepší dosažitelný stav: **324 číselných prefixů, 17 souborů permanently pending**
+  - Root cause: repozitář obsahuje soubory s duplicitními timestamps a smíšenými 8/14-cifernými prefixy — exit code 0 nelze dosáhnout bez přejmenování souborů
+  - **Strategie rozhodnuta (10. 05. 2026): Option A — `db push` se na staging nepoužívá**
+  - Nové DB změny se aplikují manuálně přes SQL Editor (stejný workflow jako produkce)
+  - `schema_migrations`: 324 řádků — přijato jako finální stav, neměnit
+  - 17 permanently pending souborů je obsaženo v baseline schématu — CLI je nedokáže sledovat, ale schéma je správné
+  - **⛔ Nespouštět `db push` na staging. Needitovat `schema_migrations` bez schválení.**
+  - Produkce `xkzhjldrojjlrkezorey` nedotčena ✅
+  - Detaily v `onemil_state.md` — Fáze 3 sekce
+- **Staging Edge Functions nasazeny (10. 05. 2026):**
+  - `sofinity-noop` — ACTIVE ✅ (nasazeno dříve)
+  - `upload-ticket-share` — ACTIVE ✅ (nasazeno 10. 05. 2026)
+  - Storage bucket `ticket-shares` existuje na staging, public: true ✅
+
+## NEDODĚLÁNO — otevřené body (10. 05. 2026)
+
+- **Vizuální systém:** brand větve nemergnuto do `main` (viz sekce níže)
+
+## Partner Offers — invarianty (uzamčeno, nesmí se měnit)
+
+- Partner Offers **nejsou** výhry soutěže
+- Partner Offers se **nesmí** počítat do výpočtu vzdálenosti k nejbližší výhře v `TicketResultModal`
+- Partner Offers se **nesmí** zapisovat do tabulek `winners` ani `bonus_prizes`
+- `assign_partner_offer_to_ticket` se volá pouze při `won_type === null`
 
 ---
 
@@ -164,6 +342,7 @@ Grafika je rozpracovaná. Momentálně testujeme funkčnost systému. Grafika se
 - Platné hodnoty v DB (constraint `contests_status_check`): `draft`, `pending`, `active`, `paused`, `closed`
 - `draft` se v admin UI zobrazuje jako **„Archiv test"** — DB hodnota se nemění
 - `closed` je pouze systémový přechod — admin ho nemůže nastavit ručně
+- **`closed` je finální** — uzavřená soutěž se nesmí vrátit do žádného jiného stavu; `handleStatusChange` to blokuje guard + disabled Select
 
 ### Admin contest management UX
 - `src/components/AdminContestManagement.tsx` — 3 taby: Aktivní soutěže / Archiv test / Archiv ukončených soutěží (archiv na stejné stránce, ne nová stránka ani row dropdown)
@@ -233,3 +412,27 @@ git add -A && git commit -m "update state" && git push origin main
 ```
 
 Toto pravidlo platí vždy, bez výjimky — nikdy nenechávej state/history změny bez commitu a pushe.
+
+---
+
+## Paperclip — operační pravidla (12. 05. 2026)
+
+Paperclip běží lokálně jako AI management vrstva pro OneMil.
+Spuštění: `npx paperclipai onboard --yes` z `C:\Users\divis\Desktop\Onemil - Projekt\million-ticket-draw`.
+Detailní setup viz `PAPERCLIP_SETUP_CONTEXT.md`.
+
+### Aktivní agenti
+
+| Agent | Adaptér | Role |
+|-------|---------|------|
+| Provozní ředitel OneMil | claude_local / codex_local | Manažer, deleguje práci |
+| Průzkumník obchodních leadů OneMil | codex_local | Lead research, hledá firmy |
+
+### Pravidla pro Claude Code při práci s Paperclipem
+
+- **Nikdy nečti `onemil_history.md` automaticky** v kontextu Paperclip agentů — pouze na výslovnou žádost Pavla.
+- Provozní ředitel **deleguje** lead scouting, velké tabulky, marketingový průzkum a repetitivní práci na Průzkumníka. Sám zpracovává, pouze pokud Pavel řekne „zpracuj osobně".
+- Výstupy se **zveřejňují přímo do komentáře Paperclip issue** (ne jen jako interní soubor).
+- Soubory (CSV, Markdown, reporty) se ukládají do: `C:\Users\divis\Desktop\OneMil Paperclip Outputs`
+- Nový agent se **navrhuje, ale nespouští** bez schválení Pavla Diviše.
+- Pavel Diviš je owner a final decision maker — žádná akce (e-mail, outreach, GitHub, Supabase, Stripe, produkce) bez jeho výslovného schválení.

@@ -17,14 +17,14 @@ const InfluencerHowToEarn = () => {
           className="inline-flex items-center text-sm text-muted-foreground hover:text-neon-gold transition-colors mb-8"
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
-          Zpět na Pro influencery
+          Zpět na Affiliate program
         </Link>
 
         <div className="space-y-4 mb-12">
           <h1 className="text-3xl sm:text-4xl font-bold">Jak vydělávat s OneMil</h1>
           <p className="text-lg text-muted-foreground leading-relaxed">
-            Zjistěte, jak můžete spolupracovat s OneMil a získávat odměny za propagaci
-            našich soutěží o luxusní ceny.
+            Zjistěte, jak můžete doporučovat OneMil a získávat Affiliate provize
+            za přivedené uživatele.
           </p>
         </div>
 
@@ -36,10 +36,10 @@ const InfluencerHowToEarn = () => {
                 <Share2 className="w-6 h-6 text-neon-gold" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-semibold text-heading-gold">1. Sdílejte soutěže</h3>
+                <h3 className="text-xl font-semibold text-heading-gold">1. Sdílejte Affiliate odkaz</h3>
                 <p className="text-muted-foreground">
-                  Po schválení vašeho profilu získáte přístup ke sdíleným odkazům a materiálům.
-                  Sdílejte soutěže OneMil na svých sociálních sítích a oslovte své sledující.
+                  Po schválení vašeho profilu získáte přístup k Affiliate odkazu a materiálům.
+                  Sdílejte OneMil na svých kanálech a oslovte své publikum, kontakty nebo komunitu.
                 </p>
               </div>
             </CardContent>
@@ -53,8 +53,8 @@ const InfluencerHowToEarn = () => {
               <div className="space-y-2">
                 <h3 className="text-xl font-semibold text-heading-gold">2. Přivádějte uživatele</h3>
                 <p className="text-muted-foreground">
-                  Za každého nového uživatele, který se zaregistruje přes váš odkaz,
-                  získáte odměnu. Čím více lidí přivedete, tím více vyděláte.
+                  Za každého nového uživatele, který se zaregistruje přes váš Affiliate odkaz,
+                  získáváte provizi. Čím více lidí přivedete, tím větší výkon programu.
                 </p>
               </div>
             </CardContent>
@@ -66,9 +66,9 @@ const InfluencerHowToEarn = () => {
                 <Coins className="w-6 h-6 text-neon-gold" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-semibold text-heading-gold">3. Získejte odměny</h3>
+                <h3 className="text-xl font-semibold text-heading-gold">3. Získejte Affiliate provize</h3>
                 <p className="text-muted-foreground">
-                  Za aktivitu vašich přizvaných uživatelů dostáváte provize.
+                  Za aktivitu vašich přivedených uživatelů dostáváte Affiliate provize.
                   Podrobnosti o výplatách a provizích budou upřesněny po schválení vaší registrace.
                 </p>
               </div>
@@ -83,8 +83,8 @@ const InfluencerHowToEarn = () => {
               <div className="space-y-2">
                 <h3 className="text-xl font-semibold text-heading-gold">4. Sledujte statistiky</h3>
                 <p className="text-muted-foreground">
-                  V influencer dashboardu uvidíte přehled vašich přizvaných uživatelů,
-                  výdělků a statistik. Dashboard bude dostupný po schválení registrace.
+                  V Affiliate dashboardu uvidíte přehled vašich přivedených uživatelů,
+                  provizí a statistik. Dashboard bude dostupný po schválení registrace.
                 </p>
               </div>
             </CardContent>
@@ -97,8 +97,8 @@ const InfluencerHowToEarn = () => {
           <div className="space-y-4">
             {[
               {
-                q: 'Kdo se může stát influencerem?',
-                a: 'Každý, kdo má aktivní profil na sociálních sítích a zajímá se o spolupráci s OneMil. Vhodné pro tvůrce obsahu, bloggery, streameři a další.',
+                q: 'Kdo se může stát Affiliate partnerem?',
+                a: 'Každý, kdo chce doporučovat OneMil a přivádět nové uživatele. Vhodné pro tvůrce obsahu, freelancery, agentury, obchodníky, komunity a další.',
               },
               {
                 q: 'Jak dlouho trvá schválení?',
@@ -106,11 +106,11 @@ const InfluencerHowToEarn = () => {
               },
               {
                 q: 'Je registrace zdarma?',
-                a: 'Ano, registrace jako influencer je zcela zdarma. Neplatíte žádné poplatky.',
+                a: 'Ano, registrace jako Affiliate partner je zcela zdarma. Neplatíte žádné poplatky.',
               },
               {
                 q: 'Jaké materiály dostanu?',
-                a: 'Po schválení získáte přístup k bannerům, odkazům, promo kódům a dalším materiálům pro propagaci.',
+                a: 'Po schválení získáte přístup k bannerům, Affiliate odkazu, Affiliate kódu a dalším materiálům pro doporučování OneMil.',
               },
             ].map((faq, i) => (
               <Card key={i} className={premiumCard}>
@@ -131,7 +131,7 @@ const InfluencerHowToEarn = () => {
           </p>
           <Link to="/influencer/register">
             <Button size="lg" className="text-base px-8">
-              Registrovat se jako influencer
+              Registrovat se jako Affiliate partner
               <ChevronRight className="ml-1 w-5 h-5" />
             </Button>
           </Link>

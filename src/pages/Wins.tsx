@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
+import { LoggedOutScreen } from '@/components/LoggedOutScreen';
 import { supabase } from '@/integrations/supabase/client';
-import { Trophy, Filter, ArrowUp, ArrowDown, Gift, Sparkles, Crown, Tag } from 'lucide-react';
+import { ArrowUp, ArrowDown, Tag } from 'lucide-react';
+import { OneMilFilterIcon, OneMilGiftIcon, OneMilDiamondIcon, OneMilTrophyIcon, OneMilWinIcon } from '@/components/icons/OneMilIcons';
 import { useNavigate } from 'react-router-dom';
 import { WinCard } from '@/components/WinCard';
 import { WinDetailModal } from '@/components/WinDetailModal';
@@ -373,14 +375,7 @@ const Wins: React.FC = () => {
 
   // ── Not logged in ──────────────────────────────────────────────────────────
   if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-[hsl(220,20%,4%)] via-[hsl(220,25%,6%)] to-[hsl(220,20%,4%)] pb-20">
-        <Header />
-        <main className="container mx-auto px-4 py-6">
-          <p className="text-gray-400 text-center">Pro zobrazení výher se musíte přihlásit.</p>
-        </main>
-      </div>
-    );
+    return <LoggedOutScreen />;
   }
 
   return (
@@ -392,7 +387,7 @@ const Wins: React.FC = () => {
             key={i}
             className="absolute w-1 h-1 rounded-full"
             style={{
-              background: `radial-gradient(circle, hsl(45, 93%, ${50 + Math.random() * 20}%) 0%, transparent 70%)`,
+              background: `radial-gradient(circle, rgba(255,181,71,1) 0%, transparent 70%)`,
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
               opacity: 0.15 + Math.random() * 0.15,
@@ -407,7 +402,7 @@ const Wins: React.FC = () => {
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.02]"
         style={{
-          background: 'linear-gradient(45deg, transparent 30%, hsl(45, 93%, 60%) 50%, transparent 70%)',
+          background: 'linear-gradient(45deg, transparent 30%, rgba(255,181,71,1) 50%, transparent 70%)',
           backgroundSize: '200% 200%',
           animation: 'shimmer 8s ease-in-out infinite',
         }}
@@ -421,15 +416,15 @@ const Wins: React.FC = () => {
           className="relative overflow-hidden rounded-2xl p-6 mb-6"
           style={{
             background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-            border: '1px solid hsl(45, 70%, 40%, 0.2)',
-            boxShadow: '0 8px 32px hsl(0, 0%, 0%, 0.4), inset 0 1px 0 hsl(45, 70%, 50%, 0.1)',
+            border: '1px solid rgba(255,138,0,0.2)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.1)',
           }}
         >
           {/* Header shimmer */}
           <div
             className="absolute inset-0 opacity-10"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, hsl(45, 93%, 60%) 50%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,1) 50%, transparent 100%)',
               backgroundSize: '200% 100%',
               animation: 'shimmer 4s ease-in-out infinite',
             }}
@@ -440,18 +435,18 @@ const Wins: React.FC = () => {
               <div
                 className="w-16 h-16 rounded-xl flex items-center justify-center"
                 style={{
-                  background: 'linear-gradient(135deg, hsl(45, 80%, 45%) 0%, hsl(35, 90%, 35%) 100%)',
-                  boxShadow: '0 4px 20px hsl(45, 80%, 40%, 0.3)',
+                  background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
+                  boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
                 }}
               >
-                <Trophy className="w-8 h-8 text-black" />
+                <OneMilWinIcon size={36} className="w-8 h-8 md:w-9 md:h-9 text-black" />
               </div>
 
               <div>
                 <h1
                   className="text-3xl font-bold tracking-tight"
                   style={{
-                    background: 'linear-gradient(135deg, hsl(45, 93%, 65%) 0%, hsl(35, 90%, 55%) 50%, hsl(45, 93%, 65%) 100%)',
+                    background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
@@ -464,9 +459,9 @@ const Wins: React.FC = () => {
             </div>
 
             {wins.length > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(45,80%,45%)]/10 border border-[hsl(45,70%,50%)]/20">
-                <Crown className="w-5 h-5 text-[hsl(45,80%,55%)]" />
-                <span className="text-lg font-bold text-[hsl(45,80%,60%)]">{wins.length}</span>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.2)]">
+                <OneMilWinIcon size={20} className="w-5 h-5 text-[#FF8A00]" />
+                <span className="text-lg font-bold text-[#FFB547]">{wins.length}</span>
               </div>
             )}
           </div>
@@ -484,11 +479,11 @@ const Wins: React.FC = () => {
             onClick={() => setActiveTab('vyhry')}
             className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-sm font-semibold transition-all duration-300 ${
               activeTab === 'vyhry'
-                ? 'bg-gradient-to-r from-[hsl(45,80%,45%)] to-[hsl(35,90%,35%)] text-black shadow-[0_4px_16px_hsl(45,80%,40%,0.3)]'
+                ? 'bg-gradient-to-r from-[#FF8A00] to-[#c86000] text-black shadow-[0_4px_16px_rgba(255,138,0,0.3)]'
                 : 'text-gray-400 hover:text-gray-200'
             }`}
           >
-            <Trophy className="w-4 h-4" />
+            <OneMilWinIcon size={16} className="w-4 h-4" />
             Výhry
             {wins.length > 0 && (
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${
@@ -503,7 +498,7 @@ const Wins: React.FC = () => {
             onClick={() => setActiveTab('nabidky')}
             className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-sm font-semibold transition-all duration-300 ${
               activeTab === 'nabidky'
-                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-[0_4px_16px_rgba(37,99,235,0.3)]'
+                ? 'bg-gradient-to-r from-[#FF8A00] to-[#c86000] text-black shadow-[0_4px_16px_rgba(255,138,0,0.3)]'
                 : 'text-gray-400 hover:text-gray-200'
             }`}
           >
@@ -541,8 +536,8 @@ const Wins: React.FC = () => {
                     onClick={() => setTypeFilter('all')}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                       typeFilter === 'all'
-                        ? 'bg-gradient-to-r from-[hsl(45,80%,45%)] to-[hsl(35,90%,35%)] text-black shadow-[0_4px_16px_hsl(45,80%,40%,0.3)]'
-                        : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[hsl(45,70%,50%)]/30'
+                        ? 'bg-gradient-to-r from-[#FF8A00] to-[#c86000] text-black shadow-[0_4px_16px_rgba(255,138,0,0.3)]'
+                        : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[rgba(255,138,0,0.3)]'
                     }`}
                   >
                     Všechny ({typeCounts.all})
@@ -555,7 +550,7 @@ const Wins: React.FC = () => {
                         : 'bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20'
                     }`}
                   >
-                    <Trophy className="w-4 h-4" />
+                    <OneMilTrophyIcon size={16} className="w-4 h-4" />
                     Hlavní ({typeCounts.main})
                   </button>
                   <button
@@ -566,7 +561,7 @@ const Wins: React.FC = () => {
                         : 'bg-purple-500/10 text-purple-400 border border-purple-500/30 hover:bg-purple-500/20'
                     }`}
                   >
-                    <Gift className="w-4 h-4" />
+                    <OneMilGiftIcon size={16} className="w-4 h-4" />
                     Bonus ({typeCounts.bonus})
                   </button>
                 </div>
@@ -574,13 +569,13 @@ const Wins: React.FC = () => {
                 {/* Status Filter and Sort */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2 border-t border-[hsl(220,20%,15%)]">
                   <div className="flex flex-wrap items-center gap-3">
-                    <Filter className="w-4 h-4 text-gray-500" />
+                    <OneMilFilterIcon size={16} className="w-4 h-4 text-gray-500" />
                     <button
                       onClick={() => setFilter('all')}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                         filter === 'all'
-                          ? 'bg-gradient-to-r from-[hsl(45,80%,45%)] to-[hsl(35,90%,35%)] text-black shadow-[0_4px_16px_hsl(45,80%,40%,0.3)]'
-                          : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[hsl(45,70%,50%)]/30'
+                          ? 'bg-gradient-to-r from-[#FF8A00] to-[#c86000] text-black shadow-[0_4px_16px_rgba(255,138,0,0.3)]'
+                          : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[rgba(255,138,0,0.3)]'
                       }`}
                     >
                       Všechny ({statusCounts.all})
@@ -589,8 +584,8 @@ const Wins: React.FC = () => {
                       onClick={() => setFilter('pending')}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                         filter === 'pending'
-                          ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-black shadow-[0_4px_16px_rgba(234,179,8,0.3)]'
-                          : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/20'
+                          ? 'bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black shadow-[0_4px_16px_rgba(255,138,0,0.3)]'
+                          : 'bg-[rgba(255,138,0,0.1)] text-[#FFB547] border border-[rgba(255,138,0,0.3)] hover:bg-[rgba(255,138,0,0.2)]'
                       }`}
                     >
                       Čeká ({statusCounts.pending})
@@ -599,8 +594,8 @@ const Wins: React.FC = () => {
                       onClick={() => setFilter('shipped')}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                         filter === 'shipped'
-                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0_4px_16px_rgba(59,130,246,0.3)]'
-                          : 'bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20'
+                          ? 'bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black shadow-[0_4px_16px_rgba(255,138,0,0.3)]'
+                          : 'bg-[rgba(255,138,0,0.1)] text-[#FFB547] border border-[rgba(255,138,0,0.3)] hover:bg-[rgba(255,138,0,0.2)]'
                       }`}
                     >
                       Odesláno ({statusCounts.shipped})
@@ -619,12 +614,12 @@ const Wins: React.FC = () => {
 
                   <button
                     onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[hsl(220,25%,12%)] border border-[hsl(220,20%,20%)] hover:border-[hsl(45,70%,50%)]/30 transition-all duration-300 text-sm text-gray-300 hover:text-white"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[hsl(220,25%,12%)] border border-[hsl(220,20%,20%)] hover:border-[rgba(255,138,0,0.3)] transition-all duration-300 text-sm text-gray-300 hover:text-white"
                   >
                     {sortOrder === 'newest' ? (
-                      <ArrowDown className="w-4 h-4 text-[hsl(45,70%,50%)]" />
+                      <ArrowDown className="w-4 h-4 text-[#FF8A00]" />
                     ) : (
-                      <ArrowUp className="w-4 h-4 text-[hsl(45,70%,50%)]" />
+                      <ArrowUp className="w-4 h-4 text-[#FF8A00]" />
                     )}
                     {sortOrder === 'newest' ? 'Nejnovější' : 'Nejstarší'}
                   </button>
@@ -652,7 +647,7 @@ const Wins: React.FC = () => {
                 className="relative overflow-hidden rounded-2xl p-12 text-center"
                 style={{
                   background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-                  border: '1px solid hsl(45, 70%, 40%, 0.15)',
+                  border: '1px solid rgba(255,138,0,0.15)',
                   boxShadow: '0 8px 32px hsl(0, 0%, 0%, 0.3)',
                 }}
               >
@@ -660,15 +655,15 @@ const Wins: React.FC = () => {
                   className="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center"
                   style={{
                     background: 'linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 16%) 100%)',
-                    border: '1px solid hsl(45, 70%, 40%, 0.1)',
+                    border: '1px solid rgba(255,138,0,0.1)',
                   }}
                 >
-                  <Trophy className="w-12 h-12 text-[hsl(45,70%,50%)]/30" />
+                  <OneMilWinIcon size={48} className="w-12 h-12 text-[#FF8A00]/30" />
                 </div>
                 <h3
                   className="text-2xl font-bold mb-3"
                   style={{
-                    background: 'linear-gradient(135deg, hsl(45, 93%, 65%) 0%, hsl(35, 90%, 55%) 100%)',
+                    background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
@@ -686,7 +681,7 @@ const Wins: React.FC = () => {
                   border: '1px solid hsl(220, 20%, 18%)',
                 }}
               >
-                <Filter className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+                <OneMilFilterIcon size={64} className="w-16 h-16 mx-auto mb-4 text-gray-600" />
                 <h3 className="text-xl font-semibold text-gray-300 mb-2">Žádné výhry v této kategorii</h3>
                 <p className="text-gray-500">Zkuste jiný filtr pro zobrazení výher.</p>
               </div>
@@ -759,7 +754,7 @@ const Wins: React.FC = () => {
                     border: '1px solid hsl(220, 20%, 20%)',
                   }}
                 >
-                  <Tag className="w-12 h-12 text-blue-400/30" />
+                  <Tag className="w-12 h-12 text-[rgba(255,138,0,0.3)]" />
                 </div>
                 <h3 className="text-2xl font-bold mb-3 text-gray-200">
                   Zatím nemáte žádné nabídky
