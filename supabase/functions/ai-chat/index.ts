@@ -21,15 +21,14 @@ const OPENAI_FAILURE_FALLBACK_TEXT = "Teď se mi nepodařilo odpovědět. Zkus t
 const BOB_WHATSAPP_FALLBACK_URL =
   "https://wa.me/420XXXXXXXXX?text=Potřebuju%20pomoc%20s%20OneMil"
 
-// Support is handled ONLY via CTA click → support-handoff. ai-chat must never claim it forwarded anything.
+// ai-chat must never trigger support-handoff or claim it forwarded anything.
 
 function bobSupportCtaPayload(text: string): BobAssistantPayload {
-  // Must contain "Kontaktovat podporu" in text so the server-side CTA gate keeps /messages.
   const t = text.trim()
   const withHint = t.includes("Kontaktovat podporu")
     ? t
-    : `${t}\nKlikni na „Kontaktovat podporu“.`
-  return { text: withHint, cta: { label: "Kontaktovat podporu", action: "/messages" } }
+    : `${t}\nMůžu ti nabídnout kontaktovat podporu.`
+  return { text: withHint, cta: null }
 }
 
 const AI_KNOWLEDGE = {
@@ -42,7 +41,7 @@ const AI_KNOWLEDGE = {
   },
   miocoin: {
     definition:
-      "MioCoin je interní kredit pro nákup voucherů a účast v soutěžích. Nelze ho vybrat ani směnit za peníze.",
+      "MioCoin je interní OneMil kredit pro nákup voucherů a účast v soutěžích. Není to hotovost a nelze ho vybrat ani směnit za peníze.",
     sources:
       "MioCoiny lze získat dobitím, od partnerů, jako bonus, ze sociálních sítí, akcí nebo influencerů.",
   },
@@ -195,19 +194,19 @@ Přísně: zachovej význam a všechna fakta z TEXTu (čísla, částky, názvy,
 Vždy nejdřív odpověz přímo na otázku uživatele.
 Potom přidej přesně JEDNU velmi krátkou větu s dalším krokem v aplikaci (max 1 věta), pokud to dává smysl — kromě případů níže, kde je „cta“ povinné.
 Povinné „cta“: pokud uživatel v OTÁZCE jasně míří na jednu sekci aplikace, VŽDY přidej přesně odpovídající „cta“ (nesmí chybět):
-• výhry / výhra / výher / „moje výhry“ / přehled výher → {"label":"Výhry","action":"/wins"}
-• peněženka / MioCoiny / dobíjení / zůstatek mincí → {"label":"Peněženka","action":"/wallet"}
-• vouchery / platby / dobití → {"label":"Vouchery","action":"/vouchers"}
-• moje soutěže / účast → {"label":"Moje soutěže","action":"/my-contests"}
-• soutěže / tikety / otevření tiketů / hraní → {"label":"Soutěže","action":"/games"}
-Jiné situace: jedno volitelné „cta“ jen když dává smysl; jinak „cta“ vynech.
-Při více tématech v jedné otázce zvol jedno „cta“ nejvíc odpovídající prvnímu / hlavnímu záměru (priorita pro rozklad shody: Výhry > Peněženka > Vouchery > Moje soutěže > Soutěže).
+• soutěže / hry / tikety / hraní → {"label":"Soutěže","action":"/games"}
+• výhry / ceny / doručení výher → {"label":"Výhry","action":"/wins"}
+• vouchery / MioCoin dobití / platby / peněženka / kredit / zůstatek → {"label":"Vouchery","action":"/vouchers"}
+• profil / osobní údaje / notifikace / pozvat přátele → {"label":"Profil","action":"/profile"}
+• předání na podporu / lidská podpora → "cta": null
+Jiné normální situace: použij fallback {"label":"Soutěže","action":"/games"}.
+Při více tématech v jedné otázce zvol jedno „cta“ nejvíc odpovídající prvnímu / hlavnímu záměru (priorita pro rozklad shody: Podpora > Výhry > Vouchery > Profil > Soutěže).
 Forma doprovodné věty: mluv přirozeně a lidsky — ne jako robot. Vyhni se generickým motivačním větám typu „Pokračuj ve hře a přibliž se výhře“.
 Každá odpověď jinak: přizpůsob tón otázce a TEXTu.
 Buď konkrétní, když to jde: pokud jsou v TEXTu přesná čísla, zachovej je; bez nových faktů.
 V poli „text“ používej názvy obrazovek tak, jak je uživatel vidí: „Peněženka“, „Soutěže“, „Výhry“, „Vouchery“ — nikdy v „text“ nepisuj vnitřní cesty (/…) ani URL.
 „label“ a „action“ v „cta“ musí přesně odpovídat jedné řádce v tabulce výše (žádné jiné cesty).
-Výstup musí být POUZE jeden platný JSON objekt (žádný markdown, žádné \`\`\`), např. {"text":"celá odpověď v češtině"} nebo s „cta“ podle pravidel výše.
+Výstup musí být POUZE jeden platný JSON objekt (žádný markdown, žádné \`\`\`), např. {"text":"celá odpověď v češtině","cta":{"label":"Soutěže","action":"/games"}} nebo při předání na podporu {"text":"krátká odpověď","cta":null}.
 Nepiš úvod typu „Jistě“ ani shrnutí navíc.`
 
 async function rephraseKnowledgeForBob(
@@ -314,8 +313,10 @@ function buildSanitizedAiMessagePayload(
  * Sole serialization path for AI `messages.content`. Default CTA unless a CTA is explicitly provided.
  */
 function serializeAiMessageContentForDb(responseText: unknown, cta: unknown): string {
+  const explicitNullCta = cta === null
   const payload = buildSanitizedAiMessagePayload(responseText, cta)
   if (
+    !explicitNullCta &&
     (!payload.cta || payload.cta === null)
   ) {
     payload.cta = { ...DEFAULT_AI_MESSAGE_CTA_FALLBACK }
@@ -338,7 +339,7 @@ function normalizeAiMessageContentForStorage(content: string): string {
       // fall through: store whole string as text
     }
   }
-  return serializeAiMessageContentForDb(content, null)
+  return serializeAiMessageContentForDb(content, undefined)
 }
 
 /** AI reply: `content` is always produced via `serializeAiMessageContentForDb` (directly or through `normalizeAiMessageContentForStorage`). */
@@ -350,7 +351,7 @@ async function insertAiReply(
   const rowContent =
     typeof content === "string"
       ? normalizeAiMessageContentForStorage(content)
-      : serializeAiMessageContentForDb(content.text, content.cta ?? null)
+      : serializeAiMessageContentForDb(content.text, content.cta)
 
   const { data, error } = await supabase
     .from("messages")
@@ -487,9 +488,9 @@ Do NOT push actions aggressively in general chat.
 Keep responses natural and human.
 NEVER ask vague follow-up questions (e.g. "upřesni dotaz", "co přesně myslíš?") when the user's intent is already clear from their message.
 If the user asks a general question like "Co mám dělat?" or "Jak pokračovat?", ALWAYS use the available user data from context (USER DATA mioCoins/wins, Last activity, Contests JSON) and give one or two concrete next steps in the app flow — do NOT answer with generic clarification questions only.
-For such general questions, base suggestions on USER DATA mioCoins when it is not "unavailable" (e.g. low balance → Peněženka; enough for play → Soutěže); use USER DATA wins when the topic is výhry; if the topic is vouchers, point to Vouchery. If mioCoins is unavailable, still give concrete OneMil steps without asking the user to "upřesnit". Never write internal paths (/games, /my-contests, /wins, /vouchers, /wallet, /profile, /customer-inbox, …) inside "text" — use visible Czech UI names (Peněženka, Soutěže, Výhry, Vouchery, Profil, …).
-For support-related questions (complaints, account problems, legal, refunds): answer helpfully first with the best matching in-app CTA (/wallet, /wins, /vouchers, /games, …). Do NOT offer "Kontaktovat podporu" (/messages) unless you truly cannot answer or the user clearly needs a human.
-If you need to offer human support, say so briefly in Czech in "text" and set cta to action "/messages" with label "Kontaktovat podporu". Do not claim the message was already forwarded.
+For such general questions, base suggestions on USER DATA mioCoins when it is not "unavailable" (e.g. low balance → Vouchery; enough for play → Soutěže); use USER DATA wins when the topic is výhry; if the topic is vouchers, point to Vouchery. If mioCoins is unavailable, still give concrete OneMil steps without asking the user to "upřesnit". Never write internal paths (/games, /wins, /vouchers, /profile, …) inside "text" — use visible Czech UI names (Soutěže, Výhry, Vouchery, Profil, …).
+For support-related questions (complaints, account problems, legal, refunds): answer helpfully first. If you cannot answer confidently or the user clearly needs a human, say that clearly and set "cta": null. Do not claim the message was already forwarded.
+If you need to offer human support, say so briefly in Czech in "text" and set "cta": null. Do not claim the message was already forwarded.
 NEVER suggest recharge if user has enough MioCoins (use USER DATA mioCoins as the numeric truth; if it is enough for typical contest ticket_price from contests data, do not suggest top-up).
 A separate system message starts with USER DATA (mioCoins, wins, vouchers, etc.). Those fields are loaded from the database for this user — authoritative source of truth, not optional hints.
 
@@ -507,27 +508,32 @@ The JSON "cta" field is separate (mandatory CTA rules below still apply); do not
 
 If mioCoins / wins / vouchers in USER DATA is "unavailable", say you cannot see that figure; do not invent numbers.
 Put the conversational part in "text" using natural Czech and visible screen names — never put raw paths or external URLs inside "text".
+MioCoin vždy popisuj jako interní OneMil kredit. Není to hotovost, nejde vybrat jako peníze a nejde převést mimo OneMil.
+Nikdy neslibuj jistou výhru ani garantovaný výsledek.
+Nevymýšlej fakta. Když si nejsi jistý, řekni to jasně a nabídni podporu.
+Nepoužívej tato slova v odpovědi: casino, hazard, jackpot, sázení, losování.
+Odpovědi drž krátké, užitečné a přátelské v češtině.
 
 JSON a CTA (povinné pravidlo pro každou odpověď):
-Každá odpověď musí být validní JSON objekt s polem text a cta.
+Každá normální odpověď musí být validní JSON objekt přesně ve tvaru {"text":"...","cta":{"label":"...","action":"..."}}.
+Pouze při nabídce předání na podporu použij {"text":"...","cta":null}.
 Pole cta musí mít label (česky) a action podle tohoto pravidla:
 
-- soutěže, hraní, MioCoin, tikety → action: '/games', label: "Soutěže"
-- moje soutěže, účast → action: '/my-contests'
-- výhry, historie výher → action: '/wins'
-- profil, účet, nastavení → action: '/profile'
-- platby, vouchery, dobití → action: '/vouchers'
-- peněženka, zůstatek MioCoinů → action: '/wallet'
-- cokoliv jiného → action: '/games', label: "Soutěže"
+- soutěže, hry, tikety, hraní → action: "/games", label: "Soutěže"
+- výhry, ceny, doručení výher → action: "/wins", label: "Výhry"
+- vouchery, MioCoin dobití, platby, peněženka, kredit, zůstatek → action: "/vouchers", label: "Vouchery"
+- profil, osobní údaje, notifikace, pozvat přátele → action: "/profile", label: "Profil"
+- předání na podporu / lidská podpora → cta: null
+- cokoliv jiného → action: "/games", label: "Soutěže"
 
 PRAVIDLA:
 - vždy interní route začínající /
-- nikdy cta: null (vždy objekt s label + action)
+- cta: null jen pro předání na podporu
 - nikdy externí URL v cta ani v text
 - label musí být česky a výstižně popisovat akci
 
 OUTPUT FORMAT: jeden platný JSON objekt (žádný markdown, žádné trojité zpětné apostrofy v odpovědi).
-Action "/messages" (Kontaktovat podporu) smíš použít jen když opravdu nevíš, nemáš potřebné informace, nebo uživatel potřebuje osobní zásah člověka. Jinak vždy preferuj konkrétní sekci aplikace (/games, /wallet, …).`
+Nepoužívej action "/messages". Pro podporu použij cta: null. Jinak vždy preferuj konkrétní sekci aplikace podle pravidel výše.`
 
 const BOB_SUPPORT_MODE_SYSTEM = `SUPPORT MODE (hard rules):
 - The user is in a support/help situation.
@@ -591,18 +597,14 @@ function buildBobContextSystemMessage(params: {
 /** Allowed in-app CTA targets; label is canonical per action (normalized server-side). Matches customer routes in App.tsx. */
 const BOB_CTA_BY_ACTION = {
   "/games": "Soutěže",
-  "/my-contests": "Moje soutěže",
-  "/customer-inbox": "Soutěže",
-  "/wallet": "Peněženka",
   "/wins": "Výhry",
   "/vouchers": "Vouchery",
-  "/messages": "Kontaktovat podporu",
   "/profile": "Profil",
 } as const
 
 type BobCtaAction = keyof typeof BOB_CTA_BY_ACTION
 type BobCta = { label: (typeof BOB_CTA_BY_ACTION)[BobCtaAction]; action: BobCtaAction }
-type BobAssistantPayload = { text: string; cta?: BobCta }
+type BobAssistantPayload = { text: string; cta?: BobCta | null }
 
 function stripAssistantCodeFence(raw: string): string {
   const s = raw.trim()
@@ -676,6 +678,9 @@ function bobPayloadFromRawAssistantString(raw: string): BobAssistantPayload {
       return { text: raw.trim() }
     }
     const text = o.text.trim()
+    if ("cta" in o && o.cta === null) {
+      return { text, cta: null }
+    }
     if (!o.cta || typeof o.cta !== "object") {
       return { text }
     }
@@ -693,7 +698,7 @@ function bobPayloadFromRawAssistantString(raw: string): BobAssistantPayload {
   }
 }
 
-// NOTE: Support is never "handed off" automatically from ai-chat; we only provide CTA to /messages.
+// NOTE: Support is never handed off automatically from ai-chat; support handoff uses cta: null.
 
 /** Lowercase + strip diacritics for robust Czech keyword matching. */
 function foldCs(s: string): string {
@@ -760,7 +765,7 @@ function isSupportRelatedQuestion(userText: string): boolean {
 
 type SupportIntentHistoryMessage = { sender: string; content: string; created_at: string }
 
-/** Broader context for SUPPORT MODE tone (empathy, no upsell). Does NOT control whether /messages CTA is shown. */
+/** Broader context for SUPPORT MODE tone (empathy, no upsell). Does NOT control whether support handoff is offered. */
 function isSupportToneContext(
   userText: string,
   assistantText: string | undefined,
@@ -891,7 +896,7 @@ function isExplicitSupportHandoffRequest(userText: string): boolean {
   )
 }
 
-/** True when assistant text clearly offers human support / admits limits (server-side CTA gate for /messages). */
+/** True when assistant text clearly offers human support / admits limits (server-side support handoff gate). */
 function assistantSignalsHumanSupportOffer(assistantText: string | undefined): boolean {
   if (!assistantText || typeof assistantText !== "string") return false
   const f = foldCs(assistantText)
@@ -981,29 +986,22 @@ function shouldRouteUserDataQuestionToGpt(userText: string): boolean {
 function requiredBobCtaActionFromUserQuestion(userQuestion: string): BobCtaAction | null {
   const f = foldCs(userQuestion)
   const rules: Array<{ action: BobCtaAction; re: RegExp }> = [
+    { action: "/games", re: /\bsoutez|hry\b|games?\b|tikety?\b|otevreni\s+tiketu?|\bhrani\b|\bhrat\b/i },
     {
       action: "/wins",
-      re: /moje\s+vyhry|\bvyhry\b|\bvyher\b|\bvyhre\b|\bvyhra\b|\bvyhru\b|\bvyhram\b/i,
+      re: /moje\s+vyhry|\bvyhry\b|\bvyher\b|\bvyhre\b|\bvyhra\b|\bvyhru\b|\bvyhram\b|\bceny\b|\bcena\b|dorucen/i,
     },
-    { action: "/wallet", re: /\bpenezen|miocoin|mio[\s-]*coin\b/i },
-    { action: "/vouchers", re: /voucher|platb|dobit|dobij|dobijen/i },
-    { action: "/profile", re: /\bprofil|ucet|uctu|nastaven/i },
     {
-      action: "/my-contests",
-      re: /moje\s+soutez|ucast|ucasti|moje\s+tikety|my[\s-]contest/i,
+      action: "/vouchers",
+      re: /voucher|miocoin|mio[\s-]*coin|platb|dobit|dobij|dobijen|\bpenezen|\bkredit|\bzustatek|\bzustatku|\bbilanc/i,
     },
-    { action: "/games", re: /\bsoutez|tikety?\b|otevreni\s+tiketu?|\bhrani\b/i },
-    { action: "/customer-inbox", re: /customer[\s-]inbox|inbox/i },
+    { action: "/profile", re: /\bprofil|ucet|uctu|nastaven|osobni\s+udaj|notifikac|pozv[a-z]*\s+pratel|doporuc/i },
   ]
   const priority: Record<BobCtaAction, number> = {
     "/wins": 0,
-    "/wallet": 1,
-    "/vouchers": 2,
-    "/profile": 3,
-    "/my-contests": 4,
-    "/games": 5,
-    "/customer-inbox": 6,
-    "/messages": 7,
+    "/vouchers": 1,
+    "/profile": 2,
+    "/games": 3,
   }
   const hits: Array<{ action: BobCtaAction; idx: number }> = []
   for (const { action, re } of rules) {
@@ -1023,9 +1021,9 @@ function enforceRequiredSectionCta(
   payload: BobAssistantPayload,
   history: SupportIntentHistoryMessage[],
 ): BobAssistantPayload {
-  if (payload.cta?.action === "/messages") {
+  if (payload.cta === null) {
     const ok = allowBobSupportCta(userQuestion, payload.text, history)
-    console.log("[ai-chat] support CTA gate (enforceRequiredSectionCta)", {
+    console.log("[ai-chat] support handoff gate (enforceRequiredSectionCta)", {
       userPreview: previewForLog(userQuestion),
       assistantPreview: previewForLog(payload.text),
       ok,
@@ -1047,8 +1045,8 @@ function normalizeBobPayloadBeforeFinalize(
   history: SupportIntentHistoryMessage[],
 ): BobAssistantPayload {
   const stripped = payload
-  if (stripped.cta?.action === "/messages" && !allowBobSupportCta(userQuestion, stripped.text, history)) {
-    console.log("[ai-chat] support CTA stripped → fallback /games (normalize)", {
+  if (stripped.cta === null && !allowBobSupportCta(userQuestion, stripped.text, history)) {
+    console.log("[ai-chat] support handoff stripped → fallback /games (normalize)", {
       userPreview: previewForLog(userQuestion),
       assistantPreview: previewForLog(stripped.text),
       originalCta: payload.cta ?? null,
@@ -1085,7 +1083,7 @@ async function finalizeBobPayload(
   payload: BobAssistantPayload,
 ): Promise<string> {
   const greetedText = await withBobGreetingIfNeeded(supabase, userId, currentMessageId, payload.text)
-  return serializeAiMessageContentForDb(greetedText, payload.cta ?? null)
+  return serializeAiMessageContentForDb(greetedText, payload.cta)
 }
 
 function shouldFallbackToAdmin(reply: string): boolean {
@@ -1236,7 +1234,7 @@ serve(async (req) => {
         userMsg.user_id,
         messageId,
         userContent,
-        { text: reply, cta: { label: "Kontaktovat podporu", action: "/messages" } },
+        { text: reply, cta: null },
         [],
       )
       const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
@@ -1350,7 +1348,7 @@ serve(async (req) => {
           userMsg.user_id,
           messageId,
           userContent,
-          { text: reply, cta: { label: "Kontaktovat podporu", action: "/messages" } },
+          { text: reply, cta: null },
           [],
         )
 
@@ -1453,10 +1451,10 @@ serve(async (req) => {
       // fall through
     }
 
-    // Support / contact queries → always return CTA /messages; never suggest an email address.
+    // Support / contact queries → offer support handoff with cta null; never suggest an email address.
     if (userTextLower.includes("podpora") || userTextLower.includes("kontakt")) {
-      console.log("[ai-chat] support/contact query → CTA /messages")
-      const supportText = "Rádi ti pomůžeme. Klikni na tlačítko níže pro kontakt s naší podporou."
+      console.log("[ai-chat] support/contact query → cta null")
+      const supportText = "Rádi ti pomůžeme. Můžu ti nabídnout kontaktovat podporu."
       const finalReply = await finalizeBobPayloadNormalized(
         supabase,
         userMsg.user_id,
@@ -1495,7 +1493,7 @@ serve(async (req) => {
           signalOffer
             ? {
                 text: addOptionalSupportCta(reply),
-                cta: { label: "Kontaktovat podporu", action: "/messages" },
+                cta: null,
               }
             : bobPayloadFromRawAssistantString(reply)
 
@@ -1540,7 +1538,7 @@ serve(async (req) => {
           signalOffer
             ? {
                 text: addOptionalSupportCta(reply),
-                cta: { label: "Kontaktovat podporu", action: "/messages" },
+                cta: null,
               }
             : bobPayloadFromRawAssistantString(reply)
 
@@ -1917,14 +1915,14 @@ serve(async (req) => {
           allowSupport,
         })
 
-        if (bobPayload.cta?.action === "/messages" && !allowSupport) {
-          console.log("[ai-chat] support CTA removed → /games (GPT final)", {
+        if (bobPayload.cta === null && !allowSupport) {
+          console.log("[ai-chat] support handoff removed → /games (GPT final)", {
             userPreview: previewForLog(userContent),
             assistantPreview: previewForLog(bobPayload.text),
           })
           bobPayload = { ...bobPayload, cta: { label: "Soutěže", action: "/games" } }
         } else if (allowSupport) {
-          bobPayload = { ...bobPayload, cta: { label: "Kontaktovat podporu", action: "/messages" } }
+          bobPayload = { ...bobPayload, cta: null }
         }
 
         if (shouldFallbackToAdmin(bobPayload.text)) {
@@ -1933,7 +1931,7 @@ serve(async (req) => {
             userMsg.user_id,
             messageId,
             userContent,
-            { text: "Teď si nejsem jistý.", cta: { label: "Kontaktovat podporu", action: "/messages" } },
+            { text: "Teď si nejsem jistý. Můžu ti nabídnout kontaktovat podporu.", cta: null },
             supportIntentHistory,
           )
           const up = await updateAiMessageContentById(supabase, streamingRowId, finalFallbackReply)
