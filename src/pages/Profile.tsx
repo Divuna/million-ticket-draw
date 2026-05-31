@@ -728,11 +728,14 @@ const Profile: React.FC = () => {
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-5xl mx-auto space-y-5">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
 
-          {/* ── Peněženka — left col, row 1 ──────────────────────────── */}
-          <PremiumCard className="lg:col-start-1">
+            {/* LEFT COLUMN */}
+            <div className="space-y-5">
+
+          {/* Penezenka */}
+          <PremiumCard>
             <div className="p-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
@@ -875,54 +878,8 @@ const Profile: React.FC = () => {
             </div>
           </PremiumCard>
 
-          {/* ── Referral — right col, row 1 ─────────────────────────────── */}
-          <div className="lg:col-start-2">
-            <ReferralSection isLoaded={pageLoaded} />
-          </div>
-
-          {/* ── Účet — right col, row 2 ──────────────────────────────── */}
-          <PremiumCard className="lg:col-start-2">
-            <div className="p-6">
-              <div className="flex items-center gap-4 mb-5">
-                <SectionTile icon={<OneMilShieldIcon size={24} className="w-6 h-6 text-black" />} />
-                <div>
-                  <h2 className="text-xl font-bold text-[#E7EBF0]">Účet</h2>
-                  <p className="text-sm text-gray-400">Přihlašovací údaje</p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.1)]">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="p-2 rounded-lg bg-[rgba(255,138,0,0.1)]">
-                      <OneMilEmailIcon size={18} className="text-[#FF8A00]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-[#8E98A6] uppercase tracking-wider mb-1">E-mailová adresa</p>
-                      <p className="text-base font-semibold text-[#E7EBF0] truncate">{wallet?.email || user?.email}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/20 shrink-0">
-                    <CheckCircle className="h-3 w-3 text-green-500" />
-                    <span className="text-xs font-medium text-green-500">Ověřeno</span>
-                  </div>
-                </div>
-                {wallet?.name && (
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.1)]">
-                    <div className="p-2 rounded-lg bg-[rgba(255,138,0,0.1)]">
-                      <OneMilProfileIcon size={18} className="text-[#FF8A00]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-[#8E98A6] uppercase tracking-wider mb-1">Jméno účtu</p>
-                      <p className="text-base font-semibold text-[#E7EBF0] truncate">{wallet.name}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </PremiumCard>
-
-          {/* ── Osobní údaje — left col, row 2 ──────────────────────────── */}
-          <PremiumCard className="lg:col-start-1">
+          {/* Osobni udaje */}
+          <PremiumCard>
             <div className="p-6">
               {/* Section Header */}
               <div className="flex items-center justify-between mb-6">
@@ -1148,8 +1105,57 @@ const Profile: React.FC = () => {
             </div>
           </PremiumCard>
 
-          {/* ── Notifikace — right col, row 3 ───────────────────────────── */}
-          <PremiumCard className="lg:col-start-2">
+            </div>
+
+            {/* RIGHT COLUMN */}
+            <div className="space-y-5">
+
+          {/* Pozvi pratele */}
+          <ReferralSection isLoaded={pageLoaded} />
+
+          {/* Ucet */}
+          <PremiumCard>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-5">
+                <SectionTile icon={<OneMilShieldIcon size={24} className="w-6 h-6 text-black" />} />
+                <div>
+                  <h2 className="text-xl font-bold text-[#E7EBF0]">Účet</h2>
+                  <p className="text-sm text-gray-400">Přihlašovací údaje</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.1)]">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="p-2 rounded-lg bg-[rgba(255,138,0,0.1)]">
+                      <OneMilEmailIcon size={18} className="text-[#FF8A00]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-[#8E98A6] uppercase tracking-wider mb-1">E-mailová adresa</p>
+                      <p className="text-base font-semibold text-[#E7EBF0] truncate">{wallet?.email || user?.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/20 shrink-0">
+                    <CheckCircle className="h-3 w-3 text-green-500" />
+                    <span className="text-xs font-medium text-green-500">Ověřeno</span>
+                  </div>
+                </div>
+                {wallet?.name && (
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.1)]">
+                    <div className="p-2 rounded-lg bg-[rgba(255,138,0,0.1)]">
+                      <OneMilProfileIcon size={18} className="text-[#FF8A00]" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-[#8E98A6] uppercase tracking-wider mb-1">Jméno účtu</p>
+                      <p className="text-base font-semibold text-[#E7EBF0] truncate">{wallet.name}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </PremiumCard>
+
+          {/* Notifikace */}
+          <PremiumCard>
             <div className="p-6">
               <div className="flex items-center gap-4 mb-5">
                 <SectionTile icon={<OneMilBellIcon size={24} className="w-6 h-6 text-black" />} />
@@ -1215,8 +1221,11 @@ const Profile: React.FC = () => {
             </div>
           </PremiumCard>
 
-          {/* ── Marketingová sdělení — right col, row 4 ─────────────────── */}
-          <PremiumCard className="lg:col-start-2">
+            </div>
+          </div>
+
+          {/* Marketing full width */}
+          <PremiumCard>
             <div className="p-6">
               <div className="flex items-center gap-4 mb-5">
                 <SectionTile icon={<OneMilEmailIcon size={24} className="w-6 h-6 text-black" />} />
@@ -1321,9 +1330,7 @@ const Profile: React.FC = () => {
             </div>
           </PremiumCard>
 
-          </div>{/* end grid */}
-
-        </div>{/* end max-w-5xl */}
+        </div>
       </div>
 
       {/* Premium Top-up Modal */}
