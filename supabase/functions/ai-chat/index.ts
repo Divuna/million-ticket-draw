@@ -729,13 +729,23 @@ type UserDataIntent = "balance" | "wins" | "vouchers" | null
 function userDataIntentFromUserText(userText: string): UserDataIntent {
   const f = foldCs(userText)
   if (
+    isExplicitTicketCountQuestion(userText) ||
     isMioCoinPurchaseProblem(userText) ||
     isCreditPurchaseQuestion(userText) ||
     isDefinitionQuestion(userText) ||
     isTicketQuestionHandledWithoutCount(userText) ||
     isWinStatusQuestion(userText) ||
     isVoucherLocationQuestion(userText) ||
+    isReferralCodeQuestion(userText) ||
     isBonusMioCoinUseQuestion(userText) ||
+    isWinDeliveryFollowupQuestion(userText) ||
+    isDoublePaymentQuestion(userText) ||
+    isAppBrokenQuestion(userText) ||
+    isEmailChangeQuestion(userText) ||
+    isGuaranteedWinQuestion(userText) ||
+    isWinnerSelectionQuestion(userText) ||
+    isContestEndedQuestion(userText) ||
+    isForbiddenCategoryQuestion(userText) ||
     isGameCreditProblem(userText) ||
     isMioCoinWithdrawalQuestion(userText) ||
     isWinClaimOrDeliveryQuestion(userText) ||
@@ -830,7 +840,16 @@ function isGenericHelpSupportContactOrLoginProblem(userText: string): boolean {
     isTicketQuestionHandledWithoutCount(userText) ||
     isWinStatusQuestion(userText) ||
     isVoucherLocationQuestion(userText) ||
+    isReferralCodeQuestion(userText) ||
     isBonusMioCoinUseQuestion(userText) ||
+    isWinDeliveryFollowupQuestion(userText) ||
+    isDoublePaymentQuestion(userText) ||
+    isAppBrokenQuestion(userText) ||
+    isEmailChangeQuestion(userText) ||
+    isGuaranteedWinQuestion(userText) ||
+    isWinnerSelectionQuestion(userText) ||
+    isContestEndedQuestion(userText) ||
+    isForbiddenCategoryQuestion(userText) ||
     isGameCreditProblem(userText) ||
     isWinClaimOrDeliveryQuestion(userText) ||
     isProfileDataChangeQuestion(userText) ||
@@ -1000,7 +1019,8 @@ function isInviteFriendQuestion(userText: string): boolean {
     f.includes("pozvu pratel") ||
     f.includes("pozvat pratel") ||
     f.includes("invite friend") ||
-    f.includes("doporucit kamar")
+    f.includes("doporucit kamar") ||
+    isReferralCodeQuestion(userText)
   )
 }
 
@@ -1014,9 +1034,19 @@ function isVoucherLocationQuestion(userText: string): boolean {
   return f.includes("voucher") && (f.includes("kde najdu") || f.includes("zakoupene") || f.includes("koupen"))
 }
 
+function isReferralCodeQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return f.includes("doporucovaci") || f.includes("referral") || (f.includes("kod") && f.includes("doporuc"))
+}
+
 function isProfilePhotoQuestion(userText: string): boolean {
   const f = foldCs(userText)
   return f.includes("profil") && (f.includes("fotk") || f.includes("obrazek") || f.includes("avatar"))
+}
+
+function isWinDeliveryFollowupQuestion(userText: string): boolean {
+  const f = foldCs(userText).trim()
+  return f.includes("poslete") || f.includes("poslat mi ji") || f.includes("dorucite")
 }
 
 function isWinStatusQuestion(userText: string): boolean {
@@ -1031,6 +1061,41 @@ function isBonusMioCoinUseQuestion(userText: string): boolean {
     (f.includes("miocoin") || f.includes("mio coin")) &&
     (f.includes("pouzit") || f.includes("pouzij") || f.includes("soutez") || f.includes("tiket"))
   )
+}
+
+function isDoublePaymentQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return f.includes("platb") && (f.includes("dvakrat") || f.includes("2x") || f.includes("strhla"))
+}
+
+function isAppBrokenQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (f.includes("aplikace") || f.includes("appka")) && (f.includes("nefunguje") || f.includes("nejde") || f.includes("problem"))
+}
+
+function isEmailChangeQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (f.includes("zmenit") || f.includes("zmena") || f.includes("potrebuji")) && (f.includes("email") || f.includes("e-mail"))
+}
+
+function isGuaranteedWinQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (f.includes("jistotu") || f.includes("garanci") || f.includes("garant")) && f.includes("vyhr")
+}
+
+function isWinnerSelectionQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (f.includes("jak se vybira") || f.includes("jak vybirate") || f.includes("jak je vybran")) && (f.includes("vitez") || f.includes("vyher"))
+}
+
+function isContestEndedQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return f.includes("soutez") && (f.includes("skonci") || f.includes("skoncila") || f.includes("konec"))
+}
+
+function isForbiddenCategoryQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return f.includes("hazard") || f.includes("casino") || f.includes("jackpot") || f.includes("sazeni") || f.includes("losovani")
 }
 
 function isMioCoinWithdrawalQuestion(userText: string): boolean {
@@ -1108,6 +1173,7 @@ function isVoucherProblemQuestion(userText: string): boolean {
     f.includes("voucher") &&
     (
       f.includes("nejde") ||
+      f.includes("nefunguje") ||
       f.includes("otevrit") ||
       f.includes("uplatnit") ||
       f.includes("spatn") ||
@@ -1320,6 +1386,7 @@ function allowBobSupportCta(
 ): boolean {
   if (isShortConfirmation(userText) && historyHasSupportOrAccountDeletionContext(_history)) return true
   if (isGenericHelpSupportContactOrLoginProblem(userText)) return true
+  if (isAppBrokenQuestion(userText)) return true
   if (isAgeRestrictionQuestion(userText)) return true
   if (isAccountDeletionQuestion(userText)) return true
   if (isTicketCancelQuestion(userText)) return true
@@ -1369,18 +1436,23 @@ function shouldRouteUserDataQuestionToGpt(userText: string): boolean {
 function requiredBobCtaActionFromUserQuestion(userQuestion: string): BobCtaAction | null {
   const f = foldCs(userQuestion)
   if (isAccountDeletionQuestion(userQuestion)) return null
+  if (isAppBrokenQuestion(userQuestion)) return null
   if (isTicketCancelQuestion(userQuestion)) return null
   if (isInviteFriendQuestion(userQuestion)) return "/profile"
+  if (isEmailChangeQuestion(userQuestion)) return "/profile"
   if (isProfilePhotoQuestion(userQuestion)) return "/profile"
   if (isProfileDataChangeQuestion(userQuestion)) return "/profile"
+  if (isReferralCodeQuestion(userQuestion)) return "/profile"
   if (isWinStatusQuestion(userQuestion)) return "/wins"
+  if (isWinDeliveryFollowupQuestion(userQuestion)) return "/wins"
   if (f.includes("jak poznam") && f.includes("vyhr")) return "/wins"
   if (f.includes("moje vyhry") || f.includes("kde najdu") && f.includes("vyhr")) return "/wins"
   if (isBonusWinDefinitionQuestion(userQuestion)) return "/wins"
   if (isMainWinDefinitionQuestion(userQuestion)) return "/wins"
   if (isWinClaimOrDeliveryQuestion(userQuestion)) return "/wins"
   if (isMioCoinDefinitionQuestion(userQuestion)) return "/vouchers"
-  if (isBonusMioCoinUseQuestion(userQuestion)) return "/vouchers"
+  if (isBonusMioCoinUseQuestion(userQuestion)) return "/games"
+  if (isDoublePaymentQuestion(userQuestion)) return "/vouchers"
   if (isCreditPurchaseQuestion(userQuestion)) return "/vouchers"
   if (isVoucherTransferQuestion(userQuestion)) return "/vouchers"
   if (isVoucherLocationQuestion(userQuestion)) return "/vouchers"
@@ -1389,6 +1461,11 @@ function requiredBobCtaActionFromUserQuestion(userQuestion: string): BobCtaActio
   if (isMioCoinPurchaseProblem(userQuestion)) return "/vouchers"
   if (isMioCoinWithdrawalQuestion(userQuestion)) return "/vouchers"
   if (isTicketLocationQuestion(userQuestion) || isTicketMissingQuestion(userQuestion)) return "/games"
+  if (isExplicitTicketCountQuestion(userQuestion)) return "/games"
+  if (isForbiddenCategoryQuestion(userQuestion)) return "/games"
+  if (isGuaranteedWinQuestion(userQuestion)) return "/games"
+  if (isWinnerSelectionQuestion(userQuestion)) return "/games"
+  if (isContestEndedQuestion(userQuestion)) return "/games"
   if (isGameCreditProblem(userQuestion)) return "/games"
   const rules: Array<{ action: BobCtaAction; re: RegExp }> = [
     { action: "/games", re: /\bsoutez|hry\b|games?\b|tikety?\b|otevreni\s+tiketu?|\bhrani\b|\bhrat\b/i },
@@ -1709,6 +1786,167 @@ serve(async (req) => {
       return jsonSuccess(ins.id)
     }
 
+    if (isDoublePaymentQuestion(userContent)) {
+      const reply =
+        "Mrzí mě, že se platba strhla dvakrát. Zkontrolujte platbu ve Voucherech; pokud problém trvá, kontaktujte podporu."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Vouchery", action: "/vouchers" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isAppBrokenQuestion(userContent)) {
+      const reply = "Mrzí mě, že aplikace nefunguje. Zkuste ji prosím obnovit; pokud problém trvá, kontaktujte podporu."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: null },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isEmailChangeQuestion(userContent)) {
+      const reply = "Pokud je změna e-mailu dostupná, najdete ji v Profilu. Když to nepůjde, kontaktujte podporu."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Profil", action: "/profile" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isForbiddenCategoryQuestion(userContent)) {
+      const reply = "OneMil je soutěžní platforma s předem danými pravidly. MioCoin je interní kredit OneMil, ne hotovost."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Soutěže", action: "/games" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isGuaranteedWinQuestion(userContent)) {
+      const reply = "Ne, výhru nelze slíbit ani garantovat. Podmínky najdete u konkrétní soutěže."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Soutěže", action: "/games" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isWinnerSelectionQuestion(userContent)) {
+      const reply = "Vítězný tiket je pevně určen podle pravidel konkrétní soutěže. Detaily najdete v pravidlech soutěže."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Soutěže", action: "/games" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isContestEndedQuestion(userContent)) {
+      const reply = "Po skončení soutěže zkontrolujte detail soutěže a sekci Moje výhry. Pokud si nejste jistí, kontaktujte podporu."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Soutěže", action: "/games" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isWinDeliveryFollowupQuestion(userContent)) {
+      const reply = "Informace o doručení najdete v sekci Moje výhry. Pokud tam chybí nebo si nejste jistí, kontaktujte podporu."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Moje výhry", action: "/wins" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
     if (isMioCoinWithdrawalQuestion(userContent)) {
       const reply =
         "MioCoin je interní kredit OneMil. Není to hotovost a nelze ho vybrat ani směnit zpět za peníze."
@@ -1833,6 +2071,35 @@ serve(async (req) => {
         })
       }
       return jsonSuccess(ins.id)
+    }
+
+    if (isExplicitTicketCountQuestion(userContent)) {
+      const { count, error: tErr } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userMsg.user_id)
+
+      if (tErr) {
+        console.error("[ai-chat] tickets lookup failed", tErr)
+      } else if (typeof count === "number") {
+        const reply = `Máte ${formatCsNumber(count)} tiketů.`
+        const finalReply = await finalizeBobPayloadNormalized(
+          supabase,
+          userMsg.user_id,
+          messageId,
+          userContent,
+          { text: reply, cta: { label: "Soutěže", action: "/games" } },
+          [],
+        )
+        const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+        if (!ins.ok) {
+          return new Response(JSON.stringify({ error: ins.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          })
+        }
+        return jsonSuccess(ins.id)
+      }
     }
 
     if (isWinStatusQuestion(userContent)) {
@@ -1961,6 +2228,26 @@ serve(async (req) => {
 
     if (isProfilePhotoQuestion(userContent)) {
       const reply = "Pokud je změna fotky dostupná, najdete ji v Profilu."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Profil", action: "/profile" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isReferralCodeQuestion(userContent)) {
+      const reply = "Doporučovací kód najdete v Profilu v části pro pozvání přátel."
       const finalReply = await finalizeBobPayloadNormalized(
         supabase,
         userMsg.user_id,
