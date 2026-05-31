@@ -493,11 +493,18 @@ For support-related questions (complaints, account problems, legal, refunds): an
 If you need to offer human support, say so briefly in Czech in "text" and set "cta": null. Do not claim the message was already forwarded.
 Generic help/support/contact/login/problem intents MUST use "cta": null. Never route these to the fallback Soutěže CTA.
 Problem reports MUST NOT be answered only with account data. If the user reports that something is broken, missing, not credited, not opening, delayed, or wrong, acknowledge the problem first, give one practical next step, and mention support if it persists.
+Definition questions ("co znamená", "jak funguje", "jak fungují", "proč mám", "co je") MUST explain the concept shortly. Do not answer definition questions with account balance, ticket count, or win count.
 If the user asks whether MioCoins can be withdrawn or exchanged back to money, always answer exactly this fact: "MioCoin je interní kredit OneMil. Není to hotovost a nelze ho vybrat ani směnit zpět za peníze."
+Credit purchase/top-up questions: say "MioCoiny dobijete v sekci Vouchery nebo v Profilu v části Peněženka přes tlačítko Dobít MioCoiny." and use Vouchery CTA.
+Ticket questions: only answer with the ticket count when the user explicitly asks "kolik mám tiketů". Otherwise explain where tickets are or acknowledge the problem. If the user asks about cancelling after buying a ticket, do not invent rules; tell them to check contest rules or support and set "cta": null.
 Win delivery/claim questions: say that details are in "Moje výhry"; use the Výhry CTA; if delivery/claim info is missing or delayed, suggest support. Do not answer only with the number of wins.
 Profile data changes (phone, address, delivery address, personal data) route to Profil. If an already shipped win is mentioned, also suggest support in the text.
+Invite friends / pozvat kamaráda routes to Profil.
+Account deletion / deleting an account is a support handoff and MUST use "cta": null.
 Age restriction: if the user says they are 15, 16, 17, or under 18, clearly say participation is only for users 18+. Do not push the Soutěže CTA.
 Voucher problems (cannot open, wrong voucher, redemption problem) route to Vouchery, give a practical first step, and suggest support if it persists.
+For voucher transfer questions, do not say whether vouchers are transferable unless approved knowledge says so. Say: "Zkontrolujte podmínky konkrétního voucheru."
+For profile photo questions, do not confidently claim the feature exists. Say: "Pokud je změna fotky dostupná, najdete ji v Profilu."
 Payment confirmation/invoice questions route to Vouchery; do not invent where an invoice is if unknown, and suggest support if the user cannot find it.
 Do not invent operational facts such as delivery timeframes unless they are explicitly present in approved OneMil knowledge.
 Do not repeat the same support sentence twice.
@@ -722,11 +729,19 @@ function userDataIntentFromUserText(userText: string): UserDataIntent {
   const f = foldCs(userText)
   if (
     isMioCoinPurchaseProblem(userText) ||
+    isCreditPurchaseQuestion(userText) ||
+    isDefinitionQuestion(userText) ||
+    isTicketQuestionHandledWithoutCount(userText) ||
+    isWinStatusQuestion(userText) ||
+    isVoucherLocationQuestion(userText) ||
+    isBonusMioCoinUseQuestion(userText) ||
     isGameCreditProblem(userText) ||
     isMioCoinWithdrawalQuestion(userText) ||
     isWinClaimOrDeliveryQuestion(userText) ||
     isVoucherProblemQuestion(userText) ||
     isPaymentConfirmationQuestion(userText) ||
+    isAccountDeletionQuestion(userText) ||
+    isInviteFriendQuestion(userText) ||
     isGenericHelpSupportContactOrLoginProblem(userText)
   ) {
     return null
@@ -809,12 +824,20 @@ function isGenericHelpSupportContactOrLoginProblem(userText: string): boolean {
   const f = foldCs(userText)
   const isSpecificSectionProblem =
     isMioCoinPurchaseProblem(userText) ||
+    isCreditPurchaseQuestion(userText) ||
+    isDefinitionQuestion(userText) ||
+    isTicketQuestionHandledWithoutCount(userText) ||
+    isWinStatusQuestion(userText) ||
+    isVoucherLocationQuestion(userText) ||
+    isBonusMioCoinUseQuestion(userText) ||
     isGameCreditProblem(userText) ||
     isWinClaimOrDeliveryQuestion(userText) ||
     isProfileDataChangeQuestion(userText) ||
     isVoucherProblemQuestion(userText) ||
     isPaymentConfirmationQuestion(userText) ||
     isMioCoinWithdrawalQuestion(userText) ||
+    isAccountDeletionQuestion(userText) ||
+    isInviteFriendQuestion(userText) ||
     isAgeRestrictionQuestion(userText)
 
   if (isSpecificSectionProblem) return false
@@ -832,6 +855,151 @@ function isGenericHelpSupportContactOrLoginProblem(userText: string): boolean {
     f.includes("login") ||
     f.includes("heslo") ||
     f.includes("problem")
+  )
+}
+
+function isDefinitionQuestion(userText: string): boolean {
+  const f = foldCs(userText).trim()
+  return (
+    f.includes("co znamena") ||
+    f.includes("jak funguje") ||
+    f.includes("jak funguji") ||
+    f.includes("proc mam") ||
+    f.includes("co je")
+  )
+}
+
+function isBonusWinDefinitionQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return isDefinitionQuestion(userText) && f.includes("bonus") && f.includes("vyhr")
+}
+
+function isMainWinDefinitionQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return isDefinitionQuestion(userText) && (f.includes("hlavni vyhr") || f.includes("hlavni cena"))
+}
+
+function isMioCoinDefinitionQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return isDefinitionQuestion(userText) && (f.includes("miocoin") || f.includes("mio coin"))
+}
+
+function isBonusMioCoinDefinitionQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return isMioCoinDefinitionQuestion(userText) && f.includes("bonus")
+}
+
+function isCreditPurchaseQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (
+    (f.includes("jak") || f.includes("nevim") || f.includes("kde")) &&
+    (
+      f.includes("koupit kredit") ||
+      f.includes("dobit miocoin") ||
+      f.includes("dobit mio coin") ||
+      f.includes("dobiju miocoin") ||
+      f.includes("dobiju mio coin") ||
+      f.includes("koupit miocoin") ||
+      f.includes("kredit")
+    ) &&
+    !hasProblemSignal(userText)
+  )
+}
+
+function isExplicitTicketCountQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (
+    (f.includes("kolik") || f.includes("pocet")) &&
+    (f.includes("tiket") || f.includes("listek") || f.includes("listku"))
+  )
+}
+
+function isTicketQuestionHandledWithoutCount(userText: string): boolean {
+  const f = foldCs(userText)
+  const mentionsTicket = f.includes("tiket") || f.includes("listek") || f.includes("listku")
+  if (!mentionsTicket && !f.includes("zrusit soutez")) return false
+  if (isExplicitTicketCountQuestion(userText)) return false
+  return (
+    f.includes("kde najdu") ||
+    f.includes("nevidim") ||
+    f.includes("nevidim ho") ||
+    f.includes("koupil") ||
+    f.includes("zrusit") ||
+    f.includes("zrusim") ||
+    f.includes("po koupi")
+  )
+}
+
+function isTicketCancelQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (
+    (f.includes("zrusit") || f.includes("zrusim")) &&
+    (f.includes("soutez") || f.includes("tiket") || f.includes("po koupi"))
+  )
+}
+
+function isTicketMissingQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (
+    (f.includes("tiket") || f.includes("listek")) &&
+    (f.includes("nevidim") || f.includes("nenajdu") || f.includes("koupil"))
+  )
+}
+
+function isTicketLocationQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (
+    (f.includes("tiket") || f.includes("listek")) &&
+    (f.includes("kde najdu") || f.includes("kde jsou") || f.includes("moje"))
+  )
+}
+
+function isAccountDeletionQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (
+    (f.includes("smazat") || f.includes("zrusit") || f.includes("odstranit")) &&
+    (f.includes("ucet") || f.includes("uctu") || f.includes("account"))
+  )
+}
+
+function isInviteFriendQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (
+    f.includes("pozvu kamar") ||
+    f.includes("pozvat kamar") ||
+    f.includes("pozvu pratel") ||
+    f.includes("pozvat pratel") ||
+    f.includes("invite friend") ||
+    f.includes("doporucit kamar")
+  )
+}
+
+function isVoucherTransferQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return f.includes("voucher") && (f.includes("poslat") || f.includes("prevest") || f.includes("nekomu jinemu"))
+}
+
+function isVoucherLocationQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return f.includes("voucher") && (f.includes("kde najdu") || f.includes("zakoupene") || f.includes("koupen"))
+}
+
+function isProfilePhotoQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return f.includes("profil") && (f.includes("fotk") || f.includes("obrazek") || f.includes("avatar"))
+}
+
+function isWinStatusQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (f.includes("jak poznam") || f.includes("kde zjistim")) && f.includes("vyhr")
+}
+
+function isBonusMioCoinUseQuestion(userText: string): boolean {
+  const f = foldCs(userText)
+  return (
+    f.includes("bonus") &&
+    (f.includes("miocoin") || f.includes("mio coin")) &&
+    (f.includes("pouzit") || f.includes("pouzij") || f.includes("soutez") || f.includes("tiket"))
   )
 }
 
@@ -863,6 +1031,7 @@ function isMioCoinPurchaseProblem(userText: string): boolean {
 
 function isGameCreditProblem(userText: string): boolean {
   const f = foldCs(userText)
+  if (isDefinitionQuestion(userText) || isBonusMioCoinUseQuestion(userText)) return false
   return (
     (f.includes("hra") || f.includes("hru") || f.includes("hrat") || f.includes("soutez") || f.includes("tiket")) &&
     (f.includes("nejde") || f.includes("uplatnit") || f.includes("pouzit")) &&
@@ -1121,6 +1290,8 @@ function allowBobSupportCta(
 ): boolean {
   if (isGenericHelpSupportContactOrLoginProblem(userText)) return true
   if (isAgeRestrictionQuestion(userText)) return true
+  if (isAccountDeletionQuestion(userText)) return true
+  if (isTicketCancelQuestion(userText)) return true
   if (assistantSignalsHumanSupportOffer(assistantText)) return true
   if (assistantText && isForcedSupportOfferReply(assistantText)) return true
   return false
@@ -1166,12 +1337,27 @@ function shouldRouteUserDataQuestionToGpt(userText: string): boolean {
  */
 function requiredBobCtaActionFromUserQuestion(userQuestion: string): BobCtaAction | null {
   const f = foldCs(userQuestion)
+  if (isAccountDeletionQuestion(userQuestion)) return null
+  if (isTicketCancelQuestion(userQuestion)) return null
+  if (isInviteFriendQuestion(userQuestion)) return "/profile"
+  if (isProfilePhotoQuestion(userQuestion)) return "/profile"
   if (isProfileDataChangeQuestion(userQuestion)) return "/profile"
+  if (isWinStatusQuestion(userQuestion)) return "/wins"
+  if (f.includes("jak poznam") && f.includes("vyhr")) return "/wins"
+  if (f.includes("moje vyhry") || f.includes("kde najdu") && f.includes("vyhr")) return "/wins"
+  if (isBonusWinDefinitionQuestion(userQuestion)) return "/wins"
+  if (isMainWinDefinitionQuestion(userQuestion)) return "/wins"
   if (isWinClaimOrDeliveryQuestion(userQuestion)) return "/wins"
+  if (isMioCoinDefinitionQuestion(userQuestion)) return "/vouchers"
+  if (isBonusMioCoinUseQuestion(userQuestion)) return "/vouchers"
+  if (isCreditPurchaseQuestion(userQuestion)) return "/vouchers"
+  if (isVoucherTransferQuestion(userQuestion)) return "/vouchers"
+  if (isVoucherLocationQuestion(userQuestion)) return "/vouchers"
   if (isVoucherProblemQuestion(userQuestion)) return "/vouchers"
   if (isPaymentConfirmationQuestion(userQuestion)) return "/vouchers"
   if (isMioCoinPurchaseProblem(userQuestion)) return "/vouchers"
   if (isMioCoinWithdrawalQuestion(userQuestion)) return "/vouchers"
+  if (isTicketLocationQuestion(userQuestion) || isTicketMissingQuestion(userQuestion)) return "/games"
   if (isGameCreditProblem(userQuestion)) return "/games"
   const rules: Array<{ action: BobCtaAction; re: RegExp }> = [
     { action: "/games", re: /\bsoutez|hry\b|games?\b|tikety?\b|otevreni\s+tiketu?|\bhrani\b|\bhrat\b/i },
@@ -1448,6 +1634,47 @@ serve(async (req) => {
     }
 
     // Audit-backed problem intents: handle before user-data shortcuts so Bob does not answer only with balances/counts.
+    if (isAccountDeletionQuestion(userContent)) {
+      const reply = "Se smazáním účtu vám pomůže podpora. Můžu vám nabídnout kontaktovat podporu."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: null },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isCreditPurchaseQuestion(userContent)) {
+      const reply =
+        "MioCoiny dobijete v sekci Vouchery nebo v Profilu v části Peněženka přes tlačítko Dobít MioCoiny."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Vouchery", action: "/vouchers" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
     if (isMioCoinWithdrawalQuestion(userContent)) {
       const reply =
         "MioCoin je interní kredit OneMil. Není to hotovost a nelze ho vybrat ani směnit zpět za peníze."
@@ -1457,6 +1684,275 @@ serve(async (req) => {
         messageId,
         userContent,
         { text: reply, cta: { label: "Vouchery", action: "/vouchers" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isBonusWinDefinitionQuestion(userContent)) {
+      const reply =
+        "Bonusová výhra je doplňková výhra u soutěže. Pokud ji získáte, detail a další postup najdete v Moje výhry."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Výhry", action: "/wins" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isMainWinDefinitionQuestion(userContent)) {
+      const reply =
+        "Hlavní výhra je hlavní cena konkrétní soutěže. Detail najdete u soutěže a případně také v Moje výhry."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Výhry", action: "/wins" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isBonusMioCoinDefinitionQuestion(userContent)) {
+      const reply =
+        "Bonusové MioCoiny jsou bonusový interní kredit OneMil. Nejsou hotovost a nelze je vybrat ani směnit zpět za peníze."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Vouchery", action: "/vouchers" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isMioCoinDefinitionQuestion(userContent)) {
+      const reply =
+        "MioCoin je interní kredit OneMil pro použití v aplikaci. Není to hotovost a nelze ho vybrat ani směnit zpět za peníze."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Vouchery", action: "/vouchers" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isBonusMioCoinUseQuestion(userContent)) {
+      const reply =
+        "Nejsem si jistý, jestli lze bonusové MioCoiny použít na konkrétní soutěž. Zkontrolujte podmínky soutěže nebo se obraťte na podporu."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Soutěže", action: "/games" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isWinStatusQuestion(userContent)) {
+      const reply =
+        "Výhru poznáte v sekci Moje výhry, kde najdete aktuální stav a detail výhry."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Výhry", action: "/wins" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isTicketCancelQuestion(userContent)) {
+      const reply =
+        "Nejsem si jistý, zda jde účast po koupi tiketu zrušit. Zkontrolujte pravidla konkrétní soutěže nebo kontaktujte podporu."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: null },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isTicketMissingQuestion(userContent)) {
+      const reply =
+        "Mrzí mě, že tiket nevidíte. Zkontrolujte prosím Soutěže nebo detail soutěže; pokud se tiket stále nezobrazuje, kontaktujte podporu."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Soutěže", action: "/games" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isTicketLocationQuestion(userContent)) {
+      const reply =
+        "Svoje tikety najdete u soutěží nebo v detailu konkrétní soutěže."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Soutěže", action: "/games" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isVoucherLocationQuestion(userContent)) {
+      const reply = "Zakoupené vouchery najdete v sekci Vouchery."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Vouchery", action: "/vouchers" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isVoucherTransferQuestion(userContent)) {
+      const reply = "Zkontrolujte podmínky konkrétního voucheru."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Vouchery", action: "/vouchers" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isProfilePhotoQuestion(userContent)) {
+      const reply = "Pokud je změna fotky dostupná, najdete ji v Profilu."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Profil", action: "/profile" } },
+        [],
+      )
+      const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
+      if (!ins.ok) {
+        return new Response(JSON.stringify({ error: ins.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        })
+      }
+      return jsonSuccess(ins.id)
+    }
+
+    if (isInviteFriendQuestion(userContent)) {
+      const reply = "Kamaráda pozvete v Profilu v části pro pozvání přátel."
+      const finalReply = await finalizeBobPayloadNormalized(
+        supabase,
+        userMsg.user_id,
+        messageId,
+        userContent,
+        { text: reply, cta: { label: "Profil", action: "/profile" } },
         [],
       )
       const ins = await insertAiReply(supabase, userMsg.user_id, finalReply)
@@ -1797,9 +2293,12 @@ serve(async (req) => {
     }
 
     if (
-      userTextLower.includes("tiket") ||
-      userTextLower.includes("lístek") ||
-      userTextLower.includes("list")
+      isExplicitTicketCountQuestion(userContent) &&
+      (
+        userTextLower.includes("tiket") ||
+        userTextLower.includes("lístek") ||
+        userTextLower.includes("list")
+      )
     ) {
       const { count, error: tErr } = await supabase
         .from("tickets")
