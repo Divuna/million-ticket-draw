@@ -755,22 +755,22 @@ const Profile: React.FC = () => {
 
               {/* Balance display */}
               <div className="rounded-xl border border-[rgba(255,138,0,0.15)] bg-[rgba(255,138,0,0.04)] p-6 mb-5 overflow-hidden">
-                <div className="flex flex-col gap-5">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6">
                   {/* Main balance */}
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-full bg-gradient-to-br from-[#FFB547] via-[#FF8A00] to-[#e07800] shadow-lg shadow-[rgba(255,138,0,0.2)]">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="p-3 rounded-full bg-gradient-to-br from-[#FFB547] via-[#FF8A00] to-[#e07800] shadow-lg shadow-[rgba(255,138,0,0.2)] shrink-0">
                       <OneMilCoinsIcon size={32} className="h-8 w-8 text-black" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs text-[rgba(255,138,0,0.7)] uppercase tracking-wider mb-0.5">MioCoiny</p>
-                      <p className="text-4xl lg:text-5xl font-black text-[#FFB547] tabular-nums tracking-tight">
+                      <p className="text-4xl lg:text-5xl font-black text-[#FFB547] tabular-nums tracking-tight truncate">
                         {animatedBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
                       </p>
                     </div>
                   </div>
 
                   {/* Bonus balance */}
-                  <div className="flex flex-col gap-3 pt-5 border-t border-[rgba(255,138,0,0.15)] min-w-0">
+                  <div className="flex flex-col gap-3 pt-5 border-t xl:pt-0 xl:border-t-0 xl:pl-6 xl:border-l border-[rgba(255,138,0,0.15)] min-w-0">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="p-2.5 rounded-xl bg-green-500/20 border border-green-500/30 shrink-0">
                         <OneMilCoinsIcon size={20} className="h-5 w-5 text-green-500" />
@@ -789,7 +789,7 @@ const Profile: React.FC = () => {
                             </Tooltip>
                           </TooltipProvider>
                         </div>
-                        <p className="text-2xl font-bold text-green-500 tabular-nums">
+                        <p className="text-2xl font-bold text-green-500 tabular-nums truncate">
                           {animatedBonusBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
                         </p>
                       </div>
