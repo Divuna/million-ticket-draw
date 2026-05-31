@@ -841,9 +841,9 @@ const Profile: React.FC = () => {
                 ) : bonusTransfers.length === 0 ? (
                   <p className="text-sm text-[#8E98A6] italic">Zatím žádné převody bonusových MioCoinů</p>
                 ) : (
-                  <div 
-                    className={`space-y-2 transition-all duration-500 ease-out ${
-                      historyExpanded ? 'max-h-64 overflow-y-auto' : 'max-h-none overflow-hidden'
+                  <div
+                    className={`space-y-2 pr-1 ${
+                      historyExpanded ? 'max-h-64 overflow-y-auto' : 'overflow-hidden'
                     }`}
                   >
                     {(historyExpanded ? bonusTransfers : bonusTransfers.slice(0, 3)).map((transfer, index) => (
