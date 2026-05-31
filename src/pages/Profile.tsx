@@ -728,7 +728,7 @@ const Profile: React.FC = () => {
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto space-y-5">
+        <div className="w-full space-y-5">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
 
             {/* LEFT COLUMN */}
@@ -754,8 +754,8 @@ const Profile: React.FC = () => {
               </div>
 
               {/* Balance display */}
-              <div className="rounded-xl border border-[rgba(255,138,0,0.15)] bg-[rgba(255,138,0,0.04)] p-6 mb-5">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div className="rounded-xl border border-[rgba(255,138,0,0.15)] bg-[rgba(255,138,0,0.04)] p-6 mb-5 overflow-hidden">
+                <div className="flex flex-col gap-5">
                   {/* Main balance */}
                   <div className="flex items-center gap-4">
                     <div className="p-3 rounded-full bg-gradient-to-br from-[#FFB547] via-[#FF8A00] to-[#e07800] shadow-lg shadow-[rgba(255,138,0,0.2)]">
@@ -770,12 +770,12 @@ const Profile: React.FC = () => {
                   </div>
 
                   {/* Bonus balance */}
-                  <div className="flex flex-col gap-3 lg:border-l lg:border-[rgba(255,138,0,0.15)] lg:pl-6">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 rounded-xl bg-green-500/20 border border-green-500/30">
+                  <div className="flex flex-col gap-3 pt-5 border-t border-[rgba(255,138,0,0.15)] min-w-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2.5 rounded-xl bg-green-500/20 border border-green-500/30 shrink-0">
                         <OneMilCoinsIcon size={20} className="h-5 w-5 text-green-500" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <p className="text-xs text-green-500/80 uppercase tracking-wider">Bonusové</p>
                           <TooltipProvider>
