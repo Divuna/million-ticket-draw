@@ -501,6 +501,7 @@ Win delivery/claim questions: say that details are in "Moje výhry"; use the Vý
 Profile data changes (phone, address, delivery address, personal data) route to Profil. If an already shipped win is mentioned, also suggest support in the text.
 Invite friends / pozvat kamaráda routes to Profil.
 Account deletion / deleting an account is a support handoff and MUST use "cta": null.
+Short confirmations after support/account deletion context ("ano", "jo", "dobře", "ok") MUST keep "cta": null and must never fallback to Soutěže.
 Age restriction: if the user says they are 15, 16, 17, or under 18, clearly say participation is only for users 18+. Do not push the Soutěže CTA.
 Voucher problems (cannot open, wrong voucher, redemption problem) route to Vouchery, give a practical first step, and suggest support if it persists.
 For voucher transfer questions, do not say whether vouchers are transferable unless approved knowledge says so. Say: "Zkontrolujte podmínky konkrétního voucheru."
@@ -962,6 +963,35 @@ function isAccountDeletionQuestion(userText: string): boolean {
   )
 }
 
+function isShortConfirmation(userText: string): boolean {
+  const f = foldCs(userText).trim()
+  return (
+    f === "ano" ||
+    f === "jo" ||
+    f === "jj" ||
+    f === "ok" ||
+    f === "okay" ||
+    f === "dobre" ||
+    f === "jasne" ||
+    f === "souhlasim" ||
+    f === "potvrzuji"
+  )
+}
+
+function historyHasSupportOrAccountDeletionContext(history: SupportIntentHistoryMessage[]): boolean {
+  const recent = (history ?? []).slice(0, 6)
+  for (const m of recent) {
+    const f = foldCs(m.content ?? "")
+    if (!f) continue
+    if (isAccountDeletionQuestion(f)) return true
+    if (isGenericHelpSupportContactOrLoginProblem(f)) return true
+    if (f.includes("smazanim uctu") || f.includes("smazani uctu")) return true
+    if (f.includes("kontaktovat podporu")) return true
+    if (f.includes("obratte se na podporu") || f.includes("obratit na podporu")) return true
+  }
+  return false
+}
+
 function isInviteFriendQuestion(userText: string): boolean {
   const f = foldCs(userText)
   return (
@@ -1288,6 +1318,7 @@ function allowBobSupportCta(
   assistantText: string | undefined,
   _history: SupportIntentHistoryMessage[],
 ): boolean {
+  if (isShortConfirmation(userText) && historyHasSupportOrAccountDeletionContext(_history)) return true
   if (isGenericHelpSupportContactOrLoginProblem(userText)) return true
   if (isAgeRestrictionQuestion(userText)) return true
   if (isAccountDeletionQuestion(userText)) return true
@@ -1419,6 +1450,9 @@ function normalizeBobPayloadBeforeFinalize(
   history: SupportIntentHistoryMessage[],
 ): BobAssistantPayload {
   const stripped = payload
+  if (isShortConfirmation(userQuestion) && historyHasSupportOrAccountDeletionContext(history)) {
+    return { text: stripped.text, cta: null }
+  }
   if (stripped.cta === null && !allowBobSupportCta(userQuestion, stripped.text, history)) {
     console.log("[ai-chat] support handoff stripped → fallback /games (normalize)", {
       userPreview: previewForLog(userQuestion),
