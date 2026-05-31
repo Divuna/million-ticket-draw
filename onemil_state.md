@@ -4,6 +4,40 @@
 
 ---
 
+## SOCIAL LOGIN BUTTON VISIBILITY — AKTUÁLNÍ STAV (31. 05. 2026)
+
+### Výchozí chování
+
+- Google social login tlačítko je viditelné defaultně.
+- Facebook social login tlačítko je viditelné defaultně.
+- Apple social login tlačítko je skryté defaultně, protože Apple provider v Supabase vracel chybu `Unsupported provider: provider is not enabled`.
+
+### Env flagy
+
+| Provider | Výchozí stav | Env override |
+|----------|--------------|--------------|
+| Google | viditelné | `VITE_ENABLE_GOOGLE_AUTH=false` nebo `0` skryje tlačítko |
+| Facebook | viditelné | `VITE_ENABLE_FACEBOOK_AUTH=false` nebo `0` skryje tlačítko |
+| Apple | skryté | `VITE_ENABLE_APPLE_AUTH=true` nebo `1` zobrazí tlačítko |
+
+### Soubory a pravidla
+
+- Kanonická konfigurace viditelnosti je `src/config/socialAuth.ts`.
+- `src/pages/Login.tsx` a `src/pages/Register.tsx` pouze čtou `ENABLED_OAUTH_PROVIDERS`.
+- Email/password login zůstal beze změny.
+- Odkazy mezi loginem a registrací zůstaly beze změny.
+- Nebyla měněna Supabase Auth konfigurace, databáze, profile, wallet, contests, tickets, vouchers, winners, Partner Offers, AI chat ani admin.
+
+### Commity
+
+| Commit | Popis |
+|--------|-------|
+| `cdbaec0` | první fix: social auth tlačítka skrytá za explicitním env opt-in |
+| `ec48700` | merge s aktuálním `origin/main`, zachování social auth guardů |
+| `3874f20` | finální úprava: Google/Facebook default visible, Apple default hidden |
+
+---
+
 ## WINNER CARD BACKGROUNDS — KOMPLETNÍ (31. 05. 2026)
 
 ### Assets

@@ -436,3 +436,16 @@ Detailní setup viz `PAPERCLIP_SETUP_CONTEXT.md`.
 - Soubory (CSV, Markdown, reporty) se ukládají do: `C:\Users\divis\Desktop\OneMil Paperclip Outputs`
 - Nový agent se **navrhuje, ale nespouští** bez schválení Pavla Diviše.
 - Pavel Diviš je owner a final decision maker — žádná akce (e-mail, outreach, GitHub, Supabase, Stripe, produkce) bez jeho výslovného schválení.
+
+---
+
+## Social login visibility rule (31. 05. 2026)
+
+- Canonical config: `src/config/socialAuth.ts`.
+- `src/pages/Login.tsx` and `src/pages/Register.tsx` should only read `ENABLED_OAUTH_PROVIDERS`; do not duplicate provider visibility logic there.
+- Google and Facebook buttons are visible by default.
+- Hide Google or Facebook only with explicit env disable flags: `VITE_ENABLE_GOOGLE_AUTH=false` / `0`, `VITE_ENABLE_FACEBOOK_AUTH=false` / `0`.
+- Apple is hidden by default because Supabase returned `Unsupported provider: provider is not enabled`.
+- Show Apple only when `VITE_ENABLE_APPLE_AUTH=true` / `1` and the provider is actually enabled in Supabase.
+- Do not change Supabase Auth config, database, email/password login, registration links, profile, wallet, contests, tickets, vouchers, winners, Partner Offers, AI chat, or admin when adjusting only social button visibility.
+- Related commits: `cdbaec0`, `ec48700`, `3874f20`.

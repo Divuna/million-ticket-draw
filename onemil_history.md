@@ -2474,3 +2474,15 @@ Po kompletním dokončení Phase 4 Economy Persistence bylo zjištěno, že fyzi
 ### Staging Full E2E po PR #50
 - **Run:** `26029330415` — spuštěno, výsledek čeká
 - **Playwright testy: 19 spec souborů** (01–19)
+
+---
+
+## 2026-05-31 - Social login visibility adjusted (commits `cdbaec0`, `ec48700`, `3874f20`)
+
+- Apple social login byl potvrzeny jako rozbity: Supabase vracel `Unsupported provider: provider is not enabled`.
+- Prvni fix (`cdbaec0`) skryl Google, Apple i Facebook za explicitni env opt-in.
+- Po fetchi z `origin/main` vznikl konflikt v `src/pages/Login.tsx` a `src/pages/Register.tsx`; merge commit `ec48700` zachoval aktualni remote zmeny a social auth guardy.
+- Finalni follow-up (`3874f20`) upravil vychozi chovani: Google a Facebook jsou viditelne defaultne; Apple zustava skryty defaultne a zobrazi se jen pri `VITE_ENABLE_APPLE_AUTH=true`.
+- Kanonicka konfigurace je `src/config/socialAuth.ts`; `Login.tsx` a `Register.tsx` pouze ctou `ENABLED_OAUTH_PROVIDERS`.
+- Nebyla menena Supabase Auth konfigurace, databaze, email/password login, odkazy login/register, profile, wallet, contests, tickets, vouchers, winners, Partner Offers, AI chat ani admin.
+- Build po obou zmenach prosel pres `npm.cmd run build`; zustaly jen existujici Vite/Tailwind warningy.
