@@ -24,7 +24,7 @@ const GoogleIcon = () => (
 );
 
 const FacebookIcon = () => (
-  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6 shrink-0">
+  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-7 w-7 shrink-0">
     <circle cx="12" cy="12" r="11" fill="#1877F2" />
     <path fill="#FFFFFF" d="M15.25 12.65l.35-2.29h-2.2V8.88c0-.63.31-1.24 1.29-1.24h1V5.69s-.91-.16-1.78-.16c-1.82 0-3.01 1.1-3.01 3.1v1.73H8.88v2.29h2.02v5.53h2.5v-5.53h1.85z" />
   </svg>
