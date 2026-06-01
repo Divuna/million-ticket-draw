@@ -14,6 +14,19 @@
 
 ---
 
+## 2026-06-01 — Shop recommendation mailto card (commit `04e5a73`)
+
+- Přidána customer Profile funkce `Doporučit OneMil oblíbenému obchodu`:
+  `src/components/RecommendShopMailtoCard.tsx` + mount v `src/pages/Profile.tsx`.
+- Karta je v Profilu pod „Pozvi přátele"; uživatel zadá e-mail obchodu/prodejce a vlastní e-mailová
+  aplikace se otevře přes `mailto:` s předvyplněnou zprávou. OneMil e-mail neposílá automaticky.
+- Nebyl dotčen Supabase, SQL, databáze, Edge Functions ani deploy. Uživatel potvrdil viditelnost po
+  Lovable Publish.
+- Poznámka pro budoucnost: reward/statistics layer pro 1 MioCoin za doporučení, denní limit, deduplikaci
+  podle target e-mailu, anti-abuse a admin statistiky zatím NENÍ implementován.
+
+---
+
 ## 2026-05-31 — Profile save RLS fix: persist profiles INSERT policy (commit `6fceef27`)
 
 - Root cause: `Profile.tsx handleProfileSave` používá `supabase.from('profiles').upsert(...)`; RLS na

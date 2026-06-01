@@ -1,16 +1,45 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 31. 05. 2026
+**Aktualizováno:** 01. 06. 2026
 
 ---
 
-## ➡️ CURRENT NEXT STEP (31. 05. 2026)
+## ➡️ CURRENT NEXT STEP (01. 06. 2026)
 
-**Připravit lepší premium vizuální koncept pro OneMil video/prezentační vizuály.**
-Surové screenshoty (raw screenshots) působí příliš technicky a nedostatečně premium.
-Pavel není plně spokojen s raw screenshoty z HeyGen demo přípravy a chce kvalitnější
-premium vizuální koncept (mockupy / brand kompozice / prezentační vizuály) místo holých
-screenshotů aplikace.
+**Pokračovat ve zlepšování OneMil customer presentation/video konceptu.**
+Surové screenshoty (raw screenshots) působily příliš technicky a nedostatečně premium.
+Další krok: připravit kvalitnější premium vizuální koncept (mockupy / brand kompozice /
+prezentační vizuály) a později rozhodnout, zda implementovat MioCoin reward/statistics
+vrstvu pro doporučovací e-maily obchodům.
+
+---
+
+## SHOP RECOMMENDATION MAILTO CARD — KOMPLETNÍ + PUBLIKOVÁNO (01. 06. 2026)
+
+- **Funkce:** `Doporučit OneMil oblíbenému obchodu`.
+- **Commit na GitHub `main`:** `04e5a73542558804107de9b8a1e0565b1140ae3c`
+  (`feat: add shop recommendation mailto card`).
+- **Soubory:** `src/components/RecommendShopMailtoCard.tsx`, `src/pages/Profile.tsx`.
+- **Umístění:** Profil zákazníka, přímo pod sekcí „Pozvi přátele" a nad kartou „Účet".
+- **Chování:** uživatel zadá e-mail obchodu/prodejce; aplikace otevře jeho vlastní e-mailovou
+  aplikaci přes `mailto:` s předvyplněným adresátem, předmětem a tělem zprávy.
+- **Důležité:** OneMil e-mail neposílá automaticky; uživatel musí e-mail ručně potvrdit/odeslat
+  ve své e-mailové aplikaci.
+- **Bez backend zásahu:** nebyl dotčen Supabase, SQL, databáze, Edge Functions ani deploy.
+- **Ověření:** build prošel, commit byl pushnut na `origin/main`, uživatel potvrdil viditelnost
+  funkce po Lovable Publish.
+
+### Future TODO — reward/statistics layer (NOT IMPLEMENTED YET)
+
+- Odměnit uživatele 1 MioCoinem za odeslání doporučovacího e-mailu obchodu.
+- Odměnu umožnit maximálně 1× denně.
+- Stejný uživatel může získat odměnu pouze 1× pro stejnou cílovou e-mailovou adresu.
+- Trackovat statistiky odeslaných doporučovacích e-mailů.
+- Trackovat, jaké e-mailové adresy obchodů/prodejců uživatelé doporučují OneMil.
+- Trackovat počty podle cílového e-mailu/domény.
+- Zabránit abuse a opakovaným odměnám.
+- Budoucí implementace bude vyžadovat databázovou tabulku, RLS, reward logiku a admin/statistics view.
+- Aktuální mailto karta nic z toho neimplementuje a nic neukládá.
 
 ---
 

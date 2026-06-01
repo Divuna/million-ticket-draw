@@ -71,6 +71,23 @@ Do not execute these without explicit user instruction:
 - Push pipeline: `notifications` → `push_log` → OneSignal
 - Voucher → MioCoin → ticket economic flow
 
+## Customer Profile Mailto Recommendation
+
+- Commit `04e5a73542558804107de9b8a1e0565b1140ae3c` (`feat: add shop recommendation mailto card`) added
+  `Doporučit OneMil oblíbenému obchodu`.
+- Files: `src/components/RecommendShopMailtoCard.tsx` and `src/pages/Profile.tsx`.
+- The card is visible in Profile under `Pozvi přátele`, above `Účet`.
+- Current implementation is mailto-only: the user enters a shop/seller e-mail and their own e-mail app
+  opens with a prefilled recipient, subject, and body. OneMil does not send the e-mail automatically.
+- No Supabase, SQL, database, Edge Function, or deploy was touched for this feature. User confirmed it is
+  visible after Lovable Publish.
+- Future TODO (NOT IMPLEMENTED YET): optionally reward the user with 1 MioCoin for sending a shop
+  recommendation e-mail, claimable at most once per day and only once per target e-mail per user; track
+  sent recommendation statistics, target shop/seller e-mails, counts per e-mail/domain, and prevent abuse.
+  This future layer requires a database table, RLS, reward logic, and admin/statistics view.
+- Current next step: continue improving the OneMil customer presentation/video concept, then later decide
+  whether to implement the MioCoin reward/statistics layer for shop recommendation e-mails.
+
 ## Admin Contest Economy Panel
 
 - PR #26 added a frontend-only read-only **Ekonomika** tab to `src/components/AdminContestManagement.tsx`.
