@@ -28,6 +28,7 @@ import {
 } from '@/components/icons/OneMilIcons';
 import ReferralSection from '@/components/ReferralSection';
 import { RedeemMioCoinCard } from '@/components/RedeemMioCoinCard';
+import RecommendShopMailtoCard from '@/components/RecommendShopMailtoCard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link } from 'react-router-dom';
 import { setPendingPaymentSuccessContext, isSafeInternalPath } from '@/lib/paymentSuccessContext';
@@ -1116,6 +1117,8 @@ const Profile: React.FC = () => {
 
           {/* Pozvi pratele */}
           <ReferralSection isLoaded={pageLoaded} />
+
+          <RecommendShopMailtoCard />
 
           {/* Ucet */}
           <PremiumCard>
