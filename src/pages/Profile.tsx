@@ -27,6 +27,7 @@ import {
   OneMilInfoIcon,
 } from '@/components/icons/OneMilIcons';
 import ReferralSection from '@/components/ReferralSection';
+import { RedeemMioCoinCard } from '@/components/RedeemMioCoinCard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link } from 'react-router-dom';
 import { setPendingPaymentSuccessContext, isSafeInternalPath } from '@/lib/paymentSuccessContext';
@@ -877,6 +878,9 @@ const Profile: React.FC = () => {
               </div>
             </div>
           </PremiumCard>
+
+          {/* MioCoin code redemption — separate from referral code */}
+          <RedeemMioCoinCard onRedeemed={fetchUserWallet} />
 
           {/* Osobni udaje */}
           <PremiumCard>
