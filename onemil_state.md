@@ -4,6 +4,81 @@
 
 ---
 
+## ➡️ CURRENT NEXT STEP (31. 05. 2026)
+
+**Připravit lepší premium vizuální koncept pro OneMil video/prezentační vizuály.**
+Surové screenshoty (raw screenshots) působí příliš technicky a nedostatečně premium.
+Pavel není plně spokojen s raw screenshoty z HeyGen demo přípravy a chce kvalitnější
+premium vizuální koncept (mockupy / brand kompozice / prezentační vizuály) místo holých
+screenshotů aplikace.
+
+---
+
+## CUSTOMER MIOCOIN CODE REDEMPTION — KOMPLETNÍ + NASAZENO (31. 05. 2026)
+
+- **Funkce:** přihlášený zákazník zadá MioCoin kód v Profilu (pod kartou Peněženka) a kredit se
+  bezpečně připíše do peněženky.
+- **Frontend:** `src/components/RedeemMioCoinCard.tsx` (nová komponenta) mountnutá v
+  `src/pages/Profile.tsx` pod kartou Peněženka. Referral kód zůstává odděleně v „Pozvi přátele".
+- **Migrace:** `supabase/migrations/20260531_redeem_miocoin_code.sql` — RPC
+  `redeem_miocoin_code(p_code text) RETURNS jsonb` (SECURITY DEFINER). Zamkne řádek
+  `partner_reward_codes FOR UPDATE`, validuje status=issued / not cancelled / not expired /
+  email match, připíše `wallets.balance_coins`, zapíše `wallet_transactions`, označí kód
+  `activated` (existující trigger `trg_log_partner_coin_activation_reward` zapíše
+  `partner_coin_activations` — RPC ten řádek NEvkládá ručně).
+- **Commit:** `ce76027b` — feat: add customer MioCoin code redemption (na GitHub `main`).
+- **Staging RPC ověřen** (projekt `dxmowysntemfqfnanxua`): kód `HEYGEN-TEST-250` připsal 250 MC,
+  peněženka 2500 → 2750, opakované použití vrátilo `already_used`, `wallet_transactions` vytvořen,
+  `partner_coin_activations` vytvořen triggerem.
+- **Produkční RPC `redeem_miocoin_code` APLIKOVÁN** v projektu `xkzhjldrojjlrkezorey`
+  (SECURITY DEFINER=true, EXECUTE grant pro `authenticated`).
+- **Frontend publikován přes Lovable** a karta funguje v produkci.
+- **UI wording je source-neutral:** titulek „Uplatnit MioCoin kód"; kód může pocházet z partnerské
+  akce, kartičky, QR kódu nebo e-mailu (ne pouze e-mail).
+
+---
+
+## ERROR TOAST CONTRAST FIX — KOMPLETNÍ (31. 05. 2026)
+
+- **Problém:** chybové toasty měly červené pozadí, ale text byl šedý/muted a špatně čitelný.
+- **Oprava obou toast systémů:**
+  - shadcn `useToast` (`variant: 'destructive'`) v `src/components/ui/toast.tsx` — bílý text na červené.
+  - sonner `toast.error()` v `src/components/ui/sonner.tsx` — error varianta má pevné červené pozadí
+    (`!bg-destructive`) + bílý titulek i popis (přepis `[data-title]`/`[data-description]`). `richColors`
+    se NEPOUŽÍVÁ (vedlo k theme-dependent světle růžovému pozadí s šedým textem).
+- **Výsledek:** všechny error toasty mají červené pozadí s bílým čitelným textem. Success/default styling
+  beze změny.
+- **Commit:** `a220d993` — fix: improve error toast contrast (na GitHub `main`).
+- **Pozn.:** vyžaduje Lovable Publish, pokud ještě nebyl publikován.
+
+---
+
+## PROFILE SAVE RLS FIX — KOMPLETNÍ (31. 05. 2026)
+
+- **Problém:** uložení profilu selhávalo, protože `handleProfileSave` v `Profile.tsx` používá `upsert`
+  na `public.profiles`, ale RLS neměla žádnou INSERT policy. `upsert` = `INSERT … ON CONFLICT DO UPDATE`;
+  RLS vyhodnocuje INSERT WITH CHECK první → bez INSERT policy selže celý příkaz s 42501 „new row violates
+  row-level security policy" (i když řádek už existuje a má proběhnout jen UPDATE).
+- **Oprava aplikována ručně na staging i produkci:**
+  `profiles_insert_own FOR INSERT TO authenticated WITH CHECK (id = auth.uid())`
+- **Ukládání profilu v produkci ověřeno funkční.**
+- **Permanentní migrace zaznamenána:** `supabase/migrations/20260531_profiles_insert_own_rls.sql`
+  (idempotentní: `DROP POLICY IF EXISTS` před `CREATE`).
+- **Commit:** `6fceef27` — fix: persist profiles insert RLS policy (na GitHub `main`).
+
+---
+
+## HEYGEN STAGING DEMO — PŘÍPRAVA (31. 05. 2026)
+
+- **Staging projekt** `dxmowysntemfqfnanxua` připraven s demo uživatelem:
+  `heygen.staging@onemil.cz`, UUID `217dc715-8af7-41ac-97e5-00a9617c3a9d`.
+- **Demo storage buckety:** `contest-images`, `voucher-images`.
+- **Demo soutěže mají MioCoin bonusy:** Porsche 575 MC, Dubaj 700 MC, Hodinky 570 MC, Domácí kino 625 MC.
+- **Demo screenshoty vytvořeny**, ale Pavel není plně spokojen — chce kvalitnější premium vizuální koncept
+  (viz „CURRENT NEXT STEP" nahoře).
+
+---
+
 ## SOCIAL LOGIN BUTTON VISIBILITY — AKTUÁLNÍ STAV (31. 05. 2026)
 
 ### Výchozí chování

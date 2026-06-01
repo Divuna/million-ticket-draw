@@ -14,6 +14,47 @@
 
 ---
 
+## 2026-05-31 — Profile save RLS fix: persist profiles INSERT policy (commit `6fceef27`)
+
+- Root cause: `Profile.tsx handleProfileSave` používá `supabase.from('profiles').upsert(...)`; RLS na
+  `public.profiles` měla jen SELECT + UPDATE policy, žádnou INSERT → 42501 při každém uložení.
+- Oprava aplikována ručně na staging i produkci: `profiles_insert_own FOR INSERT TO authenticated
+  WITH CHECK (id = auth.uid())`. Ukládání profilu v produkci ověřeno funkční.
+- Permanentní migrace `supabase/migrations/20260531_profiles_insert_own_rls.sql` (idempotentní).
+
+---
+
+## 2026-05-31 — Error toast contrast fix (commit `a220d993`)
+
+- Opraveny oba toast systémy: shadcn `toast.tsx` (destructive → bílý text na červené) a sonner
+  `sonner.tsx` (error varianta → pevné `!bg-destructive` + bílý titulek/popis; `richColors` nepoužit).
+- Všechny error toasty nyní červené pozadí + bílý čitelný text. Ověřeno na staging preview.
+
+---
+
+## 2026-05-31 — Customer MioCoin code redemption (commit `ce76027b`)
+
+- Nová komponenta `src/components/RedeemMioCoinCard.tsx` mountnutá v `Profile.tsx` pod kartou Peněženka;
+  source-neutral wording „Uplatnit MioCoin kód".
+- Migrace `supabase/migrations/20260531_redeem_miocoin_code.sql` — RPC `redeem_miocoin_code(p_code)`
+  (SECURITY DEFINER): zámek `partner_reward_codes FOR UPDATE`, validace status/expiry/email, kredit
+  `wallets.balance_coins`, ledger `wallet_transactions`, status→activated (trigger zapíše
+  `partner_coin_activations`).
+- Staging ověřeno (`dxmowysntemfqfnanxua`): HEYGEN-TEST-250 → +250 MC (2500→2750), reuse=already_used,
+  ledger + partner_coin_activations vytvořeny.
+- Produkční RPC aplikován v `xkzhjldrojjlrkezorey`; frontend publikován přes Lovable, funkční v produkci.
+
+---
+
+## 2026-05-31 — HeyGen staging demo příprava
+
+- Staging `dxmowysntemfqfnanxua`: demo uživatel `heygen.staging@onemil.cz`
+  (UUID `217dc715-8af7-41ac-97e5-00a9617c3a9d`), buckety `contest-images` + `voucher-images`.
+- Demo soutěže s MioCoin bonusy: Porsche 575 MC, Dubaj 700 MC, Hodinky 570 MC, Domácí kino 625 MC.
+- Raw screenshoty vytvořeny, ale nedostatečně premium → next step: lepší premium vizuální koncept.
+
+---
+
 ## 2026-05-31 — Winners page: unify winner card backgrounds (commit `8197d6ae`)
 
 - `src/pages/Winners.tsx` — přidána `WINNER_BG_ROTATION` (trophy/crown/clean), `.map()` s indexem, `index % 3` pro rotaci

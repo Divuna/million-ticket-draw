@@ -144,6 +144,10 @@ Technical:
 
 ## CURRENT SYSTEM STATUS (31. 05. 2026)
 
+- **➡️ CURRENT NEXT STEP:** Připravit lepší **premium vizuální koncept** pro OneMil video/prezentační vizuály — raw screenshoty působí příliš technicky a nedostatečně premium. (Detail v `onemil_state.md`.)
+- **Customer MioCoin code redemption NASAZENO (31. 05. 2026):** `RedeemMioCoinCard.tsx` v Profilu pod Peněženkou, RPC `redeem_miocoin_code` (migrace `20260531_redeem_miocoin_code.sql`) aplikován na staging i **produkci** (`xkzhjldrojjlrkezorey`), frontend publikován přes Lovable. Source-neutral wording „Uplatnit MioCoin kód". Commit `ce76027b`.
+- **Error toast contrast fix (31. 05. 2026):** shadcn `toast.tsx` + sonner `sonner.tsx` — error toasty červené pozadí + bílý čitelný text. Commit `a220d993`. (Vyžaduje Lovable Publish pokud ještě neproběhl.)
+- **Profile save RLS fix (31. 05. 2026):** `public.profiles` chyběla INSERT policy → `upsert` v `handleProfileSave` selhával (42501). Policy `profiles_insert_own FOR INSERT TO authenticated WITH CHECK (id=auth.uid())` aplikována ručně na staging+produkci, ověřeno funkční. Permanentní migrace `20260531_profiles_insert_own_rls.sql`, commit `6fceef27`.
 - **Winner card backgrounds KOMPLETNÍ (31. 05. 2026):** Rotující brand pozadí (trophy/crown/clean) na kartách výherců. Assets v `src/assets/winner-backgrounds/`. Konstanta `WINNER_BG_ROTATION` + `index % 3` nasazena na Homepage i Winners stránce. Overlay v `WinnerCard.tsx`: opacity `0.42`, gradient levý `0.78` / střed `0.20` / pravý `0.14`. **Pravidlo:** každá nová stránka se `WinnerCard` musí použít `WINNER_BG_ROTATION[index % 3]` — overlay logika je automatická v komponentě. Commity: `7276c254` → `4b127aef` → `9d9c716c` → `8197d6ae`.
 - **GitHub Actions odblokován (31. 05. 2026):** Repo změněno z private na **public** — Actions minuty jsou nyní zdarma neomezeně. Smoke ✅, Staging Full E2E ✅.
 
