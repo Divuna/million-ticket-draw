@@ -2942,3 +2942,42 @@ Invariant:
 - Nebyl menen app kod.
 - Nebyly meneny existujici migrace.
 - Nebyly meneny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele`, B2B partner program ani existujici influencer system.
+
+---
+
+## Affiliate commission rate RPC staging verification (02. 06. 2026)
+
+Testovana migrace `20260602_admin_set_affiliate_commission_rate_rpc.sql` byla commitnuta jako `20f709b7e627beb0a98ff060899ff7fdc4b34336` (`feat: add admin set affiliate commission rate rpc`) a aplikovana pouze na staging Supabase projekt `onemil-staging` (`dxmowysntemfqfnanxua`). Produkce `xkzhjldrojjlrkezorey` nebyla pouzita.
+
+Precheck:
+- Affiliate foundation tabulky existuji.
+- `admin_create_affiliate_partner` existuje.
+- `admin_set_affiliate_commission_rate` pred aplikaci jeste neexistovalo.
+- `public.is_admin()` existuje.
+- Na chranene existujici tabulky nepribyly affiliate triggery.
+
+Postcheck:
+- `admin_set_affiliate_commission_rate(uuid,numeric,timestamptz,text,jsonb)` existuje.
+- Funkce je `SECURITY DEFINER`.
+- Role `authenticated` ma `EXECUTE`.
+- Na chranene existujici tabulky nepribyly affiliate triggery.
+
+Staging test:
+- Testovaci kod: `TESTRATE20260602061042655`.
+- Pres `admin_create_affiliate_partner` vznikl docasny test affiliate partner.
+- Vychozi sazba byla `0.02`.
+- Sazba byla zmenena z `0.02` na `0.05`.
+- Stary interval byl uzavren pres `valid_to`.
+- Novy interval ma `commission_rate = 0.05` a `valid_to IS NULL`.
+- Audit log `affiliate_commission_rate_changed` byl overen.
+- Ocekavane chyby byly overeny: `commission_rate_unchanged`, `commission_rate_valid_from_in_past`, `affiliate_partner_status_invalid_for_rate_change`.
+- Zmena sazby prosla ve stavech `pending`, `active`, `paused`.
+- Zmena sazby neprosla ve stavech `terminated`, `rejected`.
+- Cleanup probehl: testovaci affiliate kody a partneri jsou po cleanupu neprítomni.
+
+Invariant:
+- Nebyla potreba opravna migrace.
+- Nebyl menen app kod.
+- Nebyly meneny existujici migrace.
+- Nebyly meneny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele`, B2B partner program ani existujici influencer system.
+- Affiliate stale neni napojeny na registrace, platby ani vypocty provizi.

@@ -2629,3 +2629,49 @@ Invariant:
 - Nebyly meneny existujici migrace.
 - Nebylo aplikovano nic do produkce.
 - Nebyly meneny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele`, B2B partner program ani existujici influencer system.
+
+---
+
+## 2026-06-02 - Affiliate commission rate RPC staging verification
+
+- Testovana migrace: `20260602_admin_set_affiliate_commission_rate_rpc.sql`.
+- Commit migrace: `20f709b7e627beb0a98ff060899ff7fdc4b34336` (`feat: add admin set affiliate commission rate rpc`).
+- Migrace byla aplikovana pouze na staging Supabase projekt `onemil-staging` (`dxmowysntemfqfnanxua`).
+- Produkce `xkzhjldrojjlrkezorey` nebyla pouzita ani dotcena.
+
+Precheck staging:
+- Affiliate foundation tabulky existuji.
+- `admin_create_affiliate_partner` existuje.
+- `admin_set_affiliate_commission_rate` pred aplikaci jeste neexistovalo.
+- `public.is_admin()` existuje.
+- Na chranene existujici tabulky nepribyly affiliate triggery.
+
+Postcheck staging:
+- `admin_set_affiliate_commission_rate(uuid,numeric,timestamptz,text,jsonb)` existuje.
+- Funkce je `SECURITY DEFINER`.
+- Role `authenticated` ma `EXECUTE`.
+- Na chranene existujici tabulky nepribyly affiliate triggery.
+
+Vysledek rate RPC testu:
+- Testovaci kod: `TESTRATE20260602061042655`.
+- Docasny affiliate partner byl vytvoren pres `admin_create_affiliate_partner`.
+- Vychozi sazba byla `0.02`.
+- `admin_set_affiliate_commission_rate` zmenilo sazbu z `0.02` na `0.05`.
+- Stary rate interval ma nastavene `valid_to`.
+- Novy rate interval ma `commission_rate = 0.05` a `valid_to IS NULL`.
+- Audit log `affiliate_commission_rate_changed` byl overen.
+- Ocekavane validacni chyby byly overeny:
+  - `commission_rate_unchanged`,
+  - `commission_rate_valid_from_in_past`,
+  - `affiliate_partner_status_invalid_for_rate_change`.
+- Zmena sazby je povolena pro `pending`, `active`, `paused`.
+- Zmena sazby je zakazana pro `terminated`, `rejected`.
+- Cleanup probehl: testovaci affiliate kody a partneri jsou po cleanupu `absent`.
+
+Invariant:
+- Nebyla potreba opravna migrace.
+- Nebyl menen app kod.
+- Nebyly meneny existujici migrace.
+- Nebylo aplikovano nic do produkce.
+- Nebyly meneny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele`, B2B partner program ani existujici influencer system.
+- Affiliate zatim neni napojen na registrace, platby ani vypocty provizi.
