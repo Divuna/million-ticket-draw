@@ -3394,3 +3394,14 @@ Invariant:
   `/influencer/register`, `/influencer/dashboard`, Stripe, payments flow a wallet beze změny.
 - Zbývající approved kandidáti (`Test Influencer A`, `trubka`) zůstávají nenapojení.
 - Staging nebyl použit.
+
+### Ruční UI ověření v produkci (02. 06. 2026)
+
+Ověřeno ručně přihlášeným adminem v produkčním UI:
+
+- **`/admin/influencers`** — řádek **Pavel Divis**, sloupec „Affiliate vrstva":
+  „Napojeno na affiliate vrstvu", kód `PAVEL01`, status `active`. ✅
+- **`/admin/affiliate`** — read-only tab **Partneři**:
+  - Pavel Divis, typ **Influencer**, stav **Aktivní**, kód **PAVEL01**, sazba **2 %**.
+  - hodnoty zákazníci / firmy / provize / bonusy = **0** (žádná aktivita zatím).
+  - stránka je **read-only**: žádné tlačítko „Vytvořit partnera", pouze „Obnovit". ✅
