@@ -2865,3 +2865,31 @@ Invariant:
 - Nebyly spusteny migrace.
 - Nebyl zmenen app kod.
 - Nebyla zmenena DB, Supabase data, Stripe, wallet logika, contests, tickets, winners, Partner Offers, routes, tracking, login behavior ani `buy_ticket_atomic`.
+
+---
+
+## Affiliate foundation staging verification (02. 06. 2026)
+
+Affiliate foundation migration `20260602_affiliate_commission_foundation.sql` byla commitnuta do `main` a po odstraneni UTF-8 BOM overena na staging Supabase projektu `onemil-staging` (`dxmowysntemfqfnanxua`).
+
+Vysledek staging aplikace:
+- SQL migration probehla na stagingu bez chyby.
+- Produkce `xkzhjldrojjlrkezorey` nebyla dotcena.
+- Nebyla aplikovana zadna produkcni migrace.
+
+Postcheck:
+- Nove affiliate tabulky existuji.
+- RLS je zapnute.
+- Admin read policies existuji.
+- Neexistuji prime write policies.
+- Admin views existuji a jdou cist bez chyby.
+- CHECK constraint na `affiliate_payouts.period_month` existuje.
+- Nove affiliate tabulky jsou prazdne.
+- Na existujici chranene tabulky nepribyly affiliate triggery.
+- Falesny postcheck `FAIL` u `affiliate_triggers_exist` byl potvrzen jako kontrolni false positive: `information_schema.triggers` vraci `trg_prevent_affiliate_rate_overlap` dvakrat, protoze trigger je definovany pro `BEFORE INSERT OR UPDATE`.
+
+Invariant:
+- Nebyl menen app kod.
+- Nebyla menena SQL migrace po staging aplikaci.
+- Nebyly meneny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele` ani B2B partner program.
+- Affiliate foundation zustava pouze databazovy zaklad bez napojeni na produkcni provizni vypocty.

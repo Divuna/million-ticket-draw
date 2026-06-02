@@ -2540,3 +2540,31 @@ Po kompletním dokončení Phase 4 Economy Persistence bylo zjištěno, že fyzi
 - Kanonicka konfigurace je `src/config/socialAuth.ts`; `Login.tsx` a `Register.tsx` pouze ctou `ENABLED_OAUTH_PROVIDERS`.
 - Nebyla menena Supabase Auth konfigurace, databaze, email/password login, odkazy login/register, profile, wallet, contests, tickets, vouchers, winners, Partner Offers, AI chat ani admin.
 - Build po obou zmenach prosel pres `npm.cmd run build`; zustaly jen existujici Vite/Tailwind warningy.
+
+---
+
+## 2026-06-02 - Affiliate foundation staging verification
+
+- Affiliate foundation migration `20260602_affiliate_commission_foundation.sql` byla pripravena jako bezpecny databazovy foundation navrh pro sjednoceny affiliate provizni system.
+- Commit migrace: `76f623e96a9d87708713c90a8c42cc47507b497d` (`feat: add affiliate commission foundation migration`).
+- Follow-up commit odstranil UTF-8 BOM: `7d38fb3e81b1aae8aab7e4c277c6e45f0a2964e0` (`fix: remove BOM from affiliate foundation migration`).
+- Migrace byla aplikovana pouze na staging Supabase projekt `onemil-staging` (`dxmowysntemfqfnanxua`).
+- Produkce `xkzhjldrojjlrkezorey` nebyla dotcena.
+- SQL probehlo na stagingu bez chyby.
+
+Postcheck staging:
+- Nove affiliate tabulky existuji.
+- RLS je zapnute.
+- Admin read policies existuji.
+- Prime write policies neexistuji.
+- Admin views existuji a jdou cist bez chyby.
+- CHECK constraint na `affiliate_payouts.period_month` existuje.
+- Nove tabulky jsou prazdne.
+- Na existujici chranene tabulky nepribyly affiliate triggery.
+- Jediny `affiliate_triggers_exist` FAIL byl false positive: `information_schema.triggers` vraci `trg_prevent_affiliate_rate_overlap` dvakrat, protoze trigger je `BEFORE INSERT OR UPDATE`.
+
+Invariant:
+- Nebyl menen app kod.
+- Nebyla menena SQL migrace po staging aplikaci.
+- Nebyly meneny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele` ani B2B partner program.
+- Affiliate foundation zatim nic nenapojuje na register, payments, wallet ani produkcni provizni vypocty.
