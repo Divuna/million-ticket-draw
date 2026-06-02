@@ -3060,3 +3060,50 @@ Invariant:
 - Nebyly meneny existujici migrace.
 - Nebyly meneny registrace, `partner/register`, payments, wallet, vypocty provizi, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele`, B2B partner program ani existujici influencer system.
 - Affiliate merchant referral zatim neni napojen na frontend `partner/register`, bonus 500 Kc za firmu, platby ani vypocty provizi.
+
+---
+
+## Manual affiliate commission payment RPC staging verification (02. 06. 2026)
+
+Testovana migrace `20260602_admin_record_affiliate_commission_for_payment_rpc.sql` byla commitnuta jako `5fb14ad4cea514ccb03710ad3c5b5ee1c5666acd` (`feat: add manual affiliate commission payment rpc`) a aplikovana pouze na staging Supabase projekt `onemil-staging` (`dxmowysntemfqfnanxua`). Produkce `xkzhjldrojjlrkezorey` nebyla pouzita.
+
+Precheck:
+- Affiliate foundation tabulky existuji.
+- `admin_create_affiliate_partner` existuje.
+- `admin_update_affiliate_partner_status` existuje.
+- `record_affiliate_customer_attribution` existuje.
+- `admin_record_affiliate_commission_for_payment` pred aplikaci jeste neexistovalo.
+- `public.is_admin()` existuje.
+- `affiliate_commission_events` ma `UNIQUE(payment_id)`.
+- `payments` ma sloupce `id`, `user_id`, `amount`, `method`, `status`, `stripe_session_id`, `created_at`.
+- Na chranene existujici tabulky nepribyly affiliate triggery.
+
+Postcheck:
+- `admin_record_affiliate_commission_for_payment(uuid,numeric,timestamptz,text,jsonb)` existuje.
+- Funkce je `SECURITY DEFINER`.
+- Role `authenticated` ma `EXECUTE`.
+- Na chranene existujici tabulky nepribyly affiliate triggery.
+
+Staging test:
+- Testovaci kod: `TESTCOMM602070452490`.
+- Pres `admin_create_affiliate_partner` vznikl docasny affiliate partner a pres `admin_update_affiliate_partner_status` byl aktivovan.
+- Docasny zakaznik byl vytvoren pouze na stagingu.
+- Zákaznicka attribution byla vytvorena pres `record_affiliate_customer_attribution`.
+- Docasna stripe platba byla pripravena jako testovaci `payments` zaznam.
+- `admin_record_affiliate_commission_for_payment` s `p_paid_amount_czk = 500` vytvorilo zaznam v `affiliate_commission_events`.
+- Overeno: `payment_amount_snapshot = 500`, `payment_amount_source = admin_rpc.p_paid_amount_czk`, `commission_rate_snapshot = 0.02`, `commission_amount_czk = 10.00`, `status = calculated`.
+- Audit log `affiliate_commission_event_recorded` byl overen.
+- Ocekavane chyby byly overeny: `affiliate_commission_event_already_exists`, `payment_method_not_eligible`, `payment_not_completed`, `affiliate_attribution_after_payment`, `affiliate_attribution_not_found`, `affiliate_partner_not_active`, `not_admin`.
+- Cleanup probehl: testovaci commission eventy, audit logy, platby, attribution, affiliate kody, affiliate partneri a docasni auth uzivatele jsou po cleanupu `absent`.
+- Nezavisly cleanup check potvrdil `0 TESTCOMM*` affiliate kodu, `0 cs_test_commission_*` plateb a `0 codex-commission-*` auth uzivatelu.
+
+Invariant:
+- Nebyla potreba opravna migrace.
+- Prvni testovaci beh narazil na existujici staging wallet trigger, ktery pri `INSERT` completed payment sahal na neexistujici `wallets.balance_vouchers`; migrace ani RPC nebyly meneny.
+- Finalni test vlozil platby jako `pending` a status upravil na cilovy stav, aby overeni zustalo izolovane na manual commission RPC a netestovalo wallet trigger.
+- Nebyl pouzit service role key.
+- Nebyl menen app kod.
+- Nebyly meneny existujici migrace.
+- Nevznikl zadny trigger.
+- Nebyly meneny Stripe webhook, payments flow, wallet ani automaticke provize.
+- Nebyly meneny registrace, `partner/register`, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele`, B2B partner program ani existujici influencer system.
