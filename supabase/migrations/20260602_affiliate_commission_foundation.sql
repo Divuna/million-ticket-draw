@@ -1,4 +1,4 @@
-﻿-- Migration proposal: affiliate commission foundation
+-- Migration proposal: affiliate commission foundation
 -- Purpose:
 --   Create a safe, standalone database foundation for the future unified
 --   OneMil Affiliate commission system.
