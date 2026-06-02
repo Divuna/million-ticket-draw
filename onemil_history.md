@@ -2954,3 +2954,23 @@ Invariant:
 - Nebylo spuštěno SQL.
 - Nebyly měněny soubory aplikace.
 - Stripe, payments flow, wallet a starý influencer systém zůstaly beze změny.
+
+---
+
+## 2026-06-02 - Affiliate admin UI changed back to read-only
+
+- Po záchranném auditu bylo potvrzeno, že původní veřejný influencer/affiliate systém zůstává hlavní provozní flow:
+  `/influencer`, `/influencer/register`, `/influencer/dashboard`, `/admin/influencers`,
+  `/admin/influencer-commissions`, `/admin/influencer-campaigns`.
+- Nová affiliate DB/admin vrstva na `/admin/affiliate` byla ponechána pouze jako interní read-only přehled.
+- Ze stránky `/admin/affiliate` bylo odstraněno/skryto tlačítko `Vytvořit partnera`, dialog
+  `Vytvořit affiliate partnera` a UI volání zápisového RPC `admin_create_affiliate_partner`.
+- Další krok má být návrh bridge: starý schválený partner v `partners` → nový záznam v
+  `affiliate_partners` + lidský `affiliate_codes.code`.
+
+Invariant:
+- Nebyla vytvořena žádná produkční data.
+- Nebylo voláno žádné zápisové RPC.
+- Nebylo spuštěno SQL.
+- Nebyly měněny DB migrace, affiliate tabulky ani DB RPC.
+- Nebyly měněny Stripe webhook, payments flow, wallet ani původní influencer systém.

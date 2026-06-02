@@ -2,46 +2,21 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
-import { Banknote, Building2, Handshake, Loader2, Plus, RefreshCw, Users } from "lucide-react";
+import { Banknote, Building2, Handshake, Loader2, RefreshCw, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { NavigateToLogin } from "@/components/NavigateToLogin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 
 type AffiliateStatus = "pending" | "active" | "paused" | "terminated" | "rejected" | string;
-type AffiliateType = "influencer" | "sales_partner" | "agency" | "individual" | "other";
-
-interface CreateAffiliatePartnerForm {
-  displayName: string;
-  code: string;
-  affiliateType: AffiliateType;
-  contactEmail: string;
-  legalName: string;
-  commissionRatePercent: string;
-  contractStartsAt: string;
-  reason: string;
-  notes: string;
-}
 
 interface AffiliatePartnerRow {
   id: string;
@@ -190,26 +165,6 @@ const formatMonth = (value: string | null | undefined) => {
 
 const emptyCell = (value: string | null | undefined) => value || "-";
 
-const affiliateCodePattern = /^[A-Z0-9][A-Z0-9_-]{2,31}$/;
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const toDatetimeLocalValue = (date: Date) => {
-  const offsetMs = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
-};
-
-const createDefaultPartnerForm = (): CreateAffiliatePartnerForm => ({
-  displayName: "",
-  code: "",
-  affiliateType: "other",
-  contactEmail: "",
-  legalName: "",
-  commissionRatePercent: "2",
-  contractStartsAt: toDatetimeLocalValue(new Date()),
-  reason: "Založení affiliate partnera v admin UI",
-  notes: "",
-});
-
 function LoadingRows() {
   return (
     <div className="space-y-3">
@@ -233,9 +188,6 @@ export default function AdminAffiliate() {
   const [commissions, setCommissions] = useState<CommissionEventRow[]>([]);
   const [payouts, setPayouts] = useState<PayoutSummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [createSaving, setCreateSaving] = useState(false);
-  const [createForm, setCreateForm] = useState<CreateAffiliatePartnerForm>(() => createDefaultPartnerForm());
 
   const fetchAffiliateData = async () => {
     setLoading(true);
@@ -310,99 +262,6 @@ export default function AdminAffiliate() {
     );
   }, [partners]);
 
-  const resetCreateForm = () => {
-    setCreateForm(createDefaultPartnerForm());
-  };
-
-  const updateCreateForm = <K extends keyof CreateAffiliatePartnerForm>(
-    field: K,
-    value: CreateAffiliatePartnerForm[K],
-  ) => {
-    setCreateForm((current) => ({ ...current, [field]: value }));
-  };
-
-  const handleCreatePartnerDialogChange = (open: boolean) => {
-    setCreateDialogOpen(open);
-    if (!open && !createSaving) {
-      resetCreateForm();
-    }
-  };
-
-  const handleCreateAffiliatePartner = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    const p_display_name = createForm.displayName.trim();
-    const p_code = createForm.code.trim().toUpperCase();
-    const p_affiliate_type = createForm.affiliateType;
-    const p_contact_email = createForm.contactEmail.trim();
-    const p_legal_name = createForm.legalName.trim();
-    const p_reason = createForm.reason.trim();
-    const p_notes = createForm.notes.trim();
-    const commissionRatePercent = Number(createForm.commissionRatePercent.replace(",", "."));
-
-    if (!p_display_name || !p_code || !p_reason || !createForm.contractStartsAt) {
-      toast.error("Vyplňte povinná pole.");
-      return;
-    }
-
-    if (!affiliateCodePattern.test(p_code)) {
-      toast.error("Affiliate kód může obsahovat jen velká písmena, čísla, pomlčku nebo podtržítko.");
-      return;
-    }
-
-    if (!Number.isFinite(commissionRatePercent) || commissionRatePercent < 0 || commissionRatePercent > 100) {
-      toast.error("Zadejte platnou provizní sazbu.");
-      return;
-    }
-
-    if (p_contact_email && !emailPattern.test(p_contact_email)) {
-      toast.error("Nepodařilo se vytvořit affiliate partnera.");
-      return;
-    }
-
-    setCreateSaving(true);
-    try {
-      const { error } = await (supabase.rpc as any)("admin_create_affiliate_partner", {
-        p_display_name,
-        p_code,
-        p_affiliate_type,
-        p_contact_email: p_contact_email || null,
-        p_legal_name: p_legal_name || null,
-        p_commission_rate: commissionRatePercent / 100,
-        p_contract_starts_at: new Date(createForm.contractStartsAt).toISOString(),
-        p_reason,
-        p_notes: p_notes || null,
-      });
-
-      if (error) throw error;
-
-      toast.success("Affiliate partner byl vytvořen.");
-      setCreateDialogOpen(false);
-      resetCreateForm();
-      await fetchAffiliateData();
-    } catch (error: any) {
-      console.error("Error creating affiliate partner:", error);
-      if (error?.message?.includes("affiliate_code_already_exists")) {
-        toast.error("Tento affiliate kód už existuje.");
-      } else if (error?.message?.includes("affiliate_code_invalid_format")) {
-        toast.error("Affiliate kód může obsahovat jen velká písmena, čísla, pomlčku nebo podtržítko.");
-      } else if (error?.message?.includes("commission_rate_invalid")) {
-        toast.error("Zadejte platnou provizní sazbu.");
-      } else if (
-        error?.message?.includes("display_name_required") ||
-        error?.message?.includes("affiliate_code_required") ||
-        error?.message?.includes("reason_required") ||
-        error?.message?.includes("contract_starts_at_required")
-      ) {
-        toast.error("Vyplňte povinná pole.");
-      } else {
-        toast.error("Nepodařilo se vytvořit affiliate partnera.");
-      }
-    } finally {
-      setCreateSaving(false);
-    }
-  };
-
   if (authLoading || roleLoading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
@@ -427,10 +286,6 @@ export default function AdminAffiliate() {
           <p className="text-sm text-muted-foreground">Read-only přehled nové affiliate vrstvy OneMil.</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Vytvořit partnera
-          </Button>
           <Button variant="outline" size="sm" onClick={fetchAffiliateData} disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
             Obnovit
@@ -750,144 +605,6 @@ export default function AdminAffiliate() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      <Dialog open={createDialogOpen} onOpenChange={handleCreatePartnerDialogChange}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          <form onSubmit={handleCreateAffiliatePartner}>
-            <DialogHeader>
-              <DialogTitle>Vytvořit affiliate partnera</DialogTitle>
-              <DialogDescription>
-                Partner se založí ve stavu pending. Aktivace se řeší samostatně po kontrole smluvních údajů.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="affiliate-display-name">Název partnera *</Label>
-                <Input
-                  id="affiliate-display-name"
-                  value={createForm.displayName}
-                  onChange={(event) => updateCreateForm("displayName", event.target.value)}
-                  disabled={createSaving}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="affiliate-code">Affiliate kód *</Label>
-                <Input
-                  id="affiliate-code"
-                  value={createForm.code}
-                  onChange={(event) => updateCreateForm("code", event.target.value.toUpperCase())}
-                  disabled={createSaving}
-                  placeholder="NOVAK123"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="affiliate-type">Typ</Label>
-                <Select
-                  value={createForm.affiliateType}
-                  onValueChange={(value) => updateCreateForm("affiliateType", value as AffiliateType)}
-                  disabled={createSaving}
-                >
-                  <SelectTrigger id="affiliate-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="influencer">Influencer</SelectItem>
-                    <SelectItem value="sales_partner">Obchodní doporučitel</SelectItem>
-                    <SelectItem value="agency">Agentura</SelectItem>
-                    <SelectItem value="individual">Jednotlivec</SelectItem>
-                    <SelectItem value="other">Jiné</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="affiliate-email">Kontaktní e-mail</Label>
-                <Input
-                  id="affiliate-email"
-                  type="email"
-                  value={createForm.contactEmail}
-                  onChange={(event) => updateCreateForm("contactEmail", event.target.value)}
-                  disabled={createSaving}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="affiliate-legal-name">Právní název / firma</Label>
-                <Input
-                  id="affiliate-legal-name"
-                  value={createForm.legalName}
-                  onChange={(event) => updateCreateForm("legalName", event.target.value)}
-                  disabled={createSaving}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="affiliate-rate">Provizní sazba (%) *</Label>
-                <Input
-                  id="affiliate-rate"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  value={createForm.commissionRatePercent}
-                  onChange={(event) => updateCreateForm("commissionRatePercent", event.target.value)}
-                  disabled={createSaving}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="affiliate-contract-starts">Začátek smlouvy *</Label>
-                <Input
-                  id="affiliate-contract-starts"
-                  type="datetime-local"
-                  value={createForm.contractStartsAt}
-                  onChange={(event) => updateCreateForm("contractStartsAt", event.target.value)}
-                  disabled={createSaving}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="affiliate-reason">Důvod vytvoření *</Label>
-                <Input
-                  id="affiliate-reason"
-                  value={createForm.reason}
-                  onChange={(event) => updateCreateForm("reason", event.target.value)}
-                  disabled={createSaving}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="affiliate-notes">Poznámka</Label>
-                <Textarea
-                  id="affiliate-notes"
-                  value={createForm.notes}
-                  onChange={(event) => updateCreateForm("notes", event.target.value)}
-                  disabled={createSaving}
-                  rows={3}
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="mt-6 gap-2">
-              <Button type="button" variant="outline" onClick={() => handleCreatePartnerDialogChange(false)} disabled={createSaving}>
-                Zrušit
-              </Button>
-              <Button type="submit" disabled={createSaving}>
-                {createSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Vytvořit partnera
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

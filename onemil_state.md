@@ -3218,3 +3218,46 @@ Invariant:
 - Nebylo spuštěno SQL.
 - Nebyly měněny soubory aplikace.
 - Stripe, payments flow, wallet a starý influencer systém zůstaly beze změny.
+
+---
+
+## Affiliate admin safety correction — read-only only (02. 06. 2026)
+
+Po záchranném auditu bylo potvrzeno, že původní veřejný influencer/affiliate systém už existuje
+a zůstává hlavním provozním flow:
+
+- `/influencer`
+- `/influencer/register`
+- `/influencer/dashboard`
+- `/admin/influencers`
+- `/admin/influencer-commissions`
+- `/admin/influencer-campaigns`
+
+Nová affiliate DB/admin vrstva zůstává zatím pouze interní read-only vrstva pro přehled:
+
+- `/admin/affiliate`
+- taby `Partneři`, `Zákazníci`, `Firmy`, `Provize`, `Výplaty`
+- tlačítko `Obnovit`
+- read-only data z affiliate admin views
+
+Bezpečnostní korekce:
+
+- Zápisové tlačítko `Vytvořit partnera` bylo v `/admin/affiliate` odstraněno/skryto.
+- Dialog `Vytvořit affiliate partnera` byl odstraněn/skryt.
+- UI volání RPC `admin_create_affiliate_partner` bylo odstraněno.
+- `/admin/affiliate` nesmí zatím nahrazovat původní veřejnou registraci ani původní admin schvalování.
+
+Další krok:
+
+- Připravit návrh bridge: starý schválený partner v `partners` → nový záznam v `affiliate_partners`
+  a lidský `affiliate_codes.code`, bez přepisování původního flow.
+
+Invariant:
+
+- Nebyla vytvořena žádná produkční data.
+- Nebyl vytvořen affiliate partner.
+- Nebylo voláno žádné zápisové RPC.
+- Nebylo spuštěno SQL.
+- Nebyly měněny DB migrace, affiliate tabulky ani DB RPC.
+- Původní influencer systém zůstal zachovaný.
+- Stripe, payments flow, wallet a starý influencer systém zůstaly beze změny.
