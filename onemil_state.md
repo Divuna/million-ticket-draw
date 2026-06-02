@@ -2981,3 +2981,40 @@ Invariant:
 - Nebyly meneny existujici migrace.
 - Nebyly meneny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele`, B2B partner program ani existujici influencer system.
 - Affiliate stale neni napojeny na registrace, platby ani vypocty provizi.
+
+---
+
+## Affiliate customer attribution RPC staging verification (02. 06. 2026)
+
+Testovana migrace `20260602_record_affiliate_customer_attribution_rpc.sql` byla commitnuta jako `9cd61cb0e1d32b8a8e2b7dc8a007d7ad2e73c3e5` (`feat: add affiliate customer attribution rpc`) a aplikovana pouze na staging Supabase projekt `onemil-staging` (`dxmowysntemfqfnanxua`). Produkce `xkzhjldrojjlrkezorey` nebyla pouzita.
+
+Precheck:
+- Affiliate foundation tabulky existuji.
+- `admin_create_affiliate_partner` existuje.
+- `record_affiliate_customer_attribution` pred aplikaci jeste neexistovalo.
+- `public.is_admin()` existuje.
+- Na chranene existujici tabulky nepribyly affiliate triggery.
+
+Postcheck:
+- `record_affiliate_customer_attribution(text,text,text,jsonb)` existuje.
+- Funkce je `SECURITY DEFINER`.
+- Role `authenticated` ma `EXECUTE`.
+- Na chranene existujici tabulky nepribyly affiliate triggery.
+
+Staging test:
+- Testovaci kod: `TESTATTR20260602062307941`.
+- Pres `admin_create_affiliate_partner` vznikl docasny affiliate partner a pres `admin_update_affiliate_partner_status` byl aktivovan.
+- Docasny zakaznik byl vytvoren pouze na stagingu pro test `auth.uid()` contextu.
+- `record_affiliate_customer_attribution` vytvorilo zaznam v `user_affiliate_attributions`.
+- Overeno: `locked = true`, `source = direct_link`, metadata obsahuji `landing_url` a `client_metadata`.
+- Audit log `affiliate_customer_attribution_recorded` byl overen.
+- Opakovane volani se stejnym uzivatelem a jinym validnim kodem vratilo `existing_attribution_preserved` a puvodni attribution se neprepsala.
+- Ocekavane chyby byly overeny: `affiliate_partner_not_active`, `affiliate_code_not_active`, `source_invalid`, `not_authenticated`.
+- Cleanup probehl: testovaci attribution, audit logy, affiliate kody, affiliate partneri a docasny auth uzivatel jsou po cleanupu neprítomni.
+
+Invariant:
+- Nebyla potreba opravna migrace.
+- Nebyl pouzit service role key.
+- Nebyl menen app kod.
+- Nebyly meneny existujici migrace.
+- Nebyly meneny registrace, frontend registrace, payments, wallet, vypocty provizi, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele`, B2B partner program ani existujici influencer system.
