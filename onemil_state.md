@@ -3405,3 +3405,45 @@ Ověřeno ručně přihlášeným adminem v produkčním UI:
   - Pavel Divis, typ **Influencer**, stav **Aktivní**, kód **PAVEL01**, sazba **2 %**.
   - hodnoty zákazníci / firmy / provize / bonusy = **0** (žádná aktivita zatím).
   - stránka je **read-only**: žádné tlačítko „Vytvořit partnera", pouze „Obnovit". ✅
+
+---
+
+## AFFILIATE TRACKING `aff=KOD` — FRONTEND IMPLEMENTOVÁN (02. 06. 2026)
+
+Implementován **pouze frontendový** tracking pro `aff=KOD`. DB vrstva
+(`record_affiliate_customer_attribution`, `user_affiliate_attributions`,
+`v_admin_affiliate_customer_attributions`) už existovala — žádná migrace, žádné SQL.
+
+Změněné / nové soubory:
+
+- **nový** `src/hooks/useApplyPendingAffiliate.ts`:
+  - sessionStorage klíč `onemil_affiliate_aff` (oddělený od ref klíče `onemil_referral_ref`).
+  - `normalizeAffiliateCode()` — uppercase + regex `^[A-Z0-9][A-Z0-9_-]{2,31}$`; nevalidní → null.
+  - `capturePendingAffiliateFromUrl(search)` — uloží `aff` **jen když URL neobsahuje `ref`**
+    (ref má přednost), jen validní kód, nepřepisuje už uložený (first-touch).
+  - `useApplyPendingAffiliate(userId)` — po přihlášení (vč. OAuth návratu) zavolá RPC
+    `record_affiliate_customer_attribution` s `p_source='direct_link'`, `p_landing_url`,
+    `p_metadata={captured_via:'aff_url'}`; storage smaže; chyby (neznámý/neaktivní kód) jen
+    zaloguje do console, nikdy nerozbije auth flow.
+- `src/pages/Register.tsx`:
+  - nový `useEffect` zachytí `aff` z URL přes `capturePendingAffiliateFromUrl` (ref má přednost).
+  - po e-mail registraci (za starým ref blokem) zavolá `record_affiliate_customer_attribution`
+    pro uložený `aff`, non-blocking. Starý `ref` blok beze změny.
+- `src/App.tsx`:
+  - root `useEffect` zachytí `aff` z `location.search` i mimo `/register` (scénář `/?aff=PAVEL01`).
+  - `useApplyPendingAffiliate(user?.id)` mountnut vedle `useApplyPendingReferral`. Routing/UI beze změny.
+
+Pravidla (zadrátováno):
+
+- `aff` a `ref` jsou **oddělené** (klíče, RPC, tabulky).
+- Při kolizi `ref` i `aff` v URL → **`ref` vyhrává, `aff` se neukládá**.
+- Neznámý/neaktivní `aff` → tiše ignorováno (console log), registrace nespadne.
+- Existující atribuci nepřepisuje (řeší RPC `ON CONFLICT (user_id) DO NOTHING`).
+- Žádná vazba na Stripe, payments, wallet, provize.
+- `/admin/affiliate` zůstává read-only; starý influencer systém beze změny.
+
+Stav:
+
+- `npm run build` ✅ (12.81s, jen předexistující chunk-size varování).
+- Žádné SQL nebylo spuštěno; žádné produkční RPC voláno ručně; žádná produkční data nevznikla.
+- **Produkce zatím NEpublikována** (Lovable Publish neproběhl) — čeká na staging ověření.

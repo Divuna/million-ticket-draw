@@ -92,6 +92,10 @@ import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useApplyPendingReferral } from "@/hooks/useApplyPendingReferral";
+import {
+  useApplyPendingAffiliate,
+  capturePendingAffiliateFromUrl,
+} from "@/hooks/useApplyPendingAffiliate";
 import { useRetentionTriggers } from "@/hooks/useRetentionTriggers";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
 import { GlobalMusicPlayer } from "@/components/GlobalMusicPlayer";
@@ -372,8 +376,16 @@ function AppContent() {
   const partnerData = usePartnerData(isPartnerAccount && !isInfluencerAccount ? user?.id : undefined);
   useOneSignal();
   useApplyPendingReferral(user?.id);
+  useApplyPendingAffiliate(user?.id);
   useRetentionTriggers(user?.id);
   useHeartbeat(user?.id);
+
+  // Capture affiliate code (aff) from any landing URL (e.g. /?aff=PAVEL01), not just
+  // /register. Fully separate from the legacy ref system; ref always wins when both
+  // are present (enforced inside the helper). Does not affect routing or UI.
+  React.useEffect(() => {
+    capturePendingAffiliateFromUrl(location.search);
+  }, [location.search]);
 
   // Hard-block: Redirect accounts away from unauthorized routes
   React.useEffect(() => {
