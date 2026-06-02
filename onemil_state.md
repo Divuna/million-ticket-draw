@@ -3196,3 +3196,25 @@ Invariant:
 Stav:
 - Produkcni affiliate DB vrstva je rolloutovana.
 - Zaklad zustava bez automatickeho napojeni na registrace, Stripe, payments flow, wallet a automaticke provize.
+
+---
+
+## Affiliate production admin UI verification (02. 06. 2026)
+
+Produkční admin UI affiliate systému bylo ověřeno na `https://onemil.cz/admin/affiliate` jako přihlášený produkční admin.
+
+Ověřeno:
+- Stránka `https://onemil.cz/admin/affiliate` se otevřela jako přihlášený admin.
+- Taby `Partneři`, `Zákazníci`, `Firmy`, `Provize`, `Výplaty` fungují a přepínají příslušný obsah.
+- Tlačítko `Vytvořit partnera` je viditelné.
+- Dialog `Vytvořit affiliate partnera` se otevřel.
+- V dialogu jsou přítomná všechna pole: `Název partnera`, `Affiliate kód`, `Typ`, `Kontaktní e-mail`, `Právní název / firma`, `Provizní sazba`, `Začátek smlouvy`, `Důvod vytvoření`, `Poznámka`.
+- Kliknuto bylo pouze na `Zrušit`.
+
+Invariant:
+- Nevznikla žádná produkční data.
+- Nebyl vytvořen affiliate partner.
+- Nebylo voláno zápisové RPC `admin_create_affiliate_partner`.
+- Nebylo spuštěno SQL.
+- Nebyly měněny soubory aplikace.
+- Stripe, payments flow, wallet a starý influencer systém zůstaly beze změny.
