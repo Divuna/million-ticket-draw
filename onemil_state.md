@@ -3527,3 +3527,28 @@ Invariant:
 - Nebyl proveden login ani registrace.
 - Nebylo spuštěno SQL ani RPC; nevznikla žádná affiliate atribuce ani žádná produkční data.
 - Produkční tracking `aff=KOD` je po publishi ověřený i **ručně v prohlížeči**.
+
+### PAVEL01 self-attribution cleanup (02. 06. 2026)
+
+Produkční monitoring PAVEL01 ukázal **1 atribuci**. Detail potvrdil, že šlo o **self-attribution**
+(Pavel testoval vlastní aff link na svém vlastním účtu):
+
+- attribution_id `5dcd316a-6233-4191-9702-30a5bff1d1a9`
+- user_id `c23507eb-081c-4170-89ad-2e78df088103`, user_email `influencer@onemil.cz`
+- affiliate code `PAVEL01`, affiliate display name `Pavel Divis`
+- legacy partner auth_user_id `c23507eb-081c-4170-89ad-2e78df088103` → **is self attribution: YES**
+- source `direct_link`, locked `true`, landing_url `https://onemil.cz/?aff=PAVEL01`
+
+Akce: smazána **pouze tato self-attribution** a její audit log.
+
+Cleanup verification:
+
+- remaining PAVEL01 attributions total = **0**
+- remaining PAVEL01 self attribution rows = **0**
+- remaining audit logs for deleted attribution = **0**
+- ref collision rows = **0**
+
+Invariant:
+
+- PAVEL01 setup zůstal zachovaný (partner `9bf4e8ca…`, code `371c2cd1…` active, link `a50736a9…`).
+- Starý influencer systém, Stripe, payments flow, wallet a `/admin/affiliate` (read-only) beze změny.
