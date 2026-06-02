@@ -3510,3 +3510,20 @@ Invariant:
 
 - Nebyla vytvořena žádná data; nebyl proveden login ani registrace; nebylo spuštěno SQL ani RPC.
 - Stripe, payments flow, wallet, starý influencer systém a `/admin/affiliate` (read-only) beze změny.
+
+### Produkční capture-only smoke test (02. 06. 2026, ruční)
+
+Proběhl **ručně v anonymním okně** na produkci `https://onemil.cz` (capture-only, bez loginu):
+
+- **Test 1** — `https://onemil.cz/?aff=PAVEL01`:
+  `sessionStorage["onemil_affiliate_aff"] = "PAVEL01"`, `onemil_referral_ref = null`. ✅
+- **Test 2** — `https://onemil.cz/?ref=NEJAKYREF&aff=PAVEL01`:
+  `onemil_affiliate_aff` se **neuložil** → ref má správně přednost. ✅
+- **Test 3** — `https://onemil.cz/?aff=x`:
+  `onemil_affiliate_aff` se **neuložil** → nevalidní krátký aff odmítnut (regex). ✅
+
+Invariant:
+
+- Nebyl proveden login ani registrace.
+- Nebylo spuštěno SQL ani RPC; nevznikla žádná affiliate atribuce ani žádná produkční data.
+- Produkční tracking `aff=KOD` je po publishi ověřený i **ručně v prohlížeči**.
