@@ -35,6 +35,7 @@ import {
   UserCheck,
   CreditCard,
   MessageCircle,
+  Link2,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
@@ -99,6 +100,18 @@ interface DetailData {
   campaigns: DetailCampaign[];
 }
 
+/**
+ * Read-only bridge stav z view `v_admin_influencer_affiliate_bridge_candidates`.
+ * Nová affiliate vrstva je pouze evidenční doplněk; starý influencer systém zůstává hlavní flow.
+ */
+interface BridgeStatus {
+  legacy_partner_id: string;
+  is_bridge_eligible: boolean;
+  is_bridged: boolean;
+  affiliate_code: string | null;
+  affiliate_status: string | null;
+}
+
 const statusLabels: Record<InfluencerStatus, string> = {
   pending: "Čeká na schválení",
   approved: "Schváleno",
@@ -137,6 +150,10 @@ const AdminInfluencers = () => {
   const [selectedInfluencer, setSelectedInfluencer] = useState<Influencer | null>(null);
   const [detailData, setDetailData] = useState<DetailData | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // Read-only bridge stav (nová affiliate vrstva) — keyed by legacy partner id
+  const [bridgeMap, setBridgeMap] = useState<Map<string, BridgeStatus>>(new Map());
+  const [bridgeError, setBridgeError] = useState(false);
 
   /* ===================== DATA ===================== */
 
@@ -230,8 +247,35 @@ const AdminInfluencers = () => {
     }
   };
 
+  /**
+   * Read-only načtení bridge stavu z view `v_admin_influencer_affiliate_bridge_candidates`.
+   * Fail-safe: pokud view nejde načíst, starý admin nesmí spadnout — jen se zobrazí neutrální hláška.
+   * Nevolá žádné RPC, nezapisuje žádná data.
+   */
+  const fetchBridgeStatus = async () => {
+    try {
+      const { data, error } = await (supabase as any)
+        .from("v_admin_influencer_affiliate_bridge_candidates")
+        .select("legacy_partner_id, is_bridge_eligible, is_bridged, affiliate_code, affiliate_status");
+
+      if (error) throw error;
+
+      const map = new Map<string, BridgeStatus>();
+      for (const row of (data || []) as BridgeStatus[]) {
+        if (row.legacy_partner_id) map.set(row.legacy_partner_id, row);
+      }
+      setBridgeMap(map);
+      setBridgeError(false);
+    } catch (err) {
+      console.error("Error fetching affiliate bridge status:", err);
+      setBridgeMap(new Map());
+      setBridgeError(true);
+    }
+  };
+
   useEffect(() => {
     fetchInfluencers();
+    fetchBridgeStatus();
   }, []);
 
   /* ===================== DETAIL FETCH ===================== */
@@ -359,6 +403,30 @@ const AdminInfluencers = () => {
   const approvedCount = influencers.filter((i) => i.status === "approved").length;
   const rejectedCount = influencers.filter((i) => i.status === "rejected").length;
 
+  /* ===================== BRIDGE STAV (read-only) ===================== */
+
+  type BridgeView =
+    | { kind: "bridged"; code: string | null; status: string | null }
+    | { kind: "eligible" }
+    | { kind: "not_eligible" };
+
+  const bridgeViewFor = (influencer: Influencer): BridgeView => {
+    const row = bridgeMap.get(influencer.id);
+    const isBridged = row?.is_bridged ?? false;
+    const isEligible = row?.is_bridge_eligible ?? influencer.status === "approved";
+
+    if (isBridged) {
+      return { kind: "bridged", code: row?.affiliate_code ?? null, status: row?.affiliate_status ?? null };
+    }
+    if (isEligible) return { kind: "eligible" };
+    return { kind: "not_eligible" };
+  };
+
+  // Souhrn: jen schválení influenceři jsou vhodní pro bridge
+  const bridgeEligibleCount = influencers.filter((i) => bridgeViewFor(i).kind !== "not_eligible").length;
+  const bridgeLinkedCount = influencers.filter((i) => bridgeViewFor(i).kind === "bridged").length;
+  const bridgeUnlinkedCount = influencers.filter((i) => bridgeViewFor(i).kind === "eligible").length;
+
   /* ===================== RENDER ===================== */
 
   return (
@@ -372,7 +440,15 @@ const AdminInfluencers = () => {
               Affiliate partneři → uživatelé – přehled, provize, výkon
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={fetchInfluencers} disabled={loading}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              fetchInfluencers();
+              fetchBridgeStatus();
+            }}
+            disabled={loading}
+          >
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Obnovit
           </Button>
@@ -415,6 +491,41 @@ const AdminInfluencers = () => {
           </Card>
         </div>
 
+        {/* Bridge stav — read-only přehled napojení na novou affiliate vrstvu */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Link2 className="w-4 h-4" />
+              Napojení na affiliate vrstvu (evidenční)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {bridgeError ? (
+              <p className="text-sm text-muted-foreground">
+                Stav napojení na affiliate vrstvu se teď nepodařilo načíst.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="rounded-lg border border-border bg-muted/30 p-3">
+                  <p className="text-xl font-bold tabular-nums text-foreground">{bridgeEligibleCount}</p>
+                  <p className="text-xs text-muted-foreground">Schválení vhodní pro napojení</p>
+                </div>
+                <div className="rounded-lg border border-border bg-muted/30 p-3">
+                  <p className="text-xl font-bold tabular-nums text-green-600">{bridgeLinkedCount}</p>
+                  <p className="text-xs text-muted-foreground">Napojeno na affiliate vrstvu</p>
+                </div>
+                <div className="rounded-lg border border-border bg-muted/30 p-3">
+                  <p className="text-xl font-bold tabular-nums text-amber-600">{bridgeUnlinkedCount}</p>
+                  <p className="text-xs text-muted-foreground">Nenapojeno</p>
+                </div>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Napojení na novou affiliate vrstvu je zatím pouze evidenční. Původní influencer systém zůstává hlavní.
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Table */}
         <Card>
           <CardHeader>
@@ -437,6 +548,7 @@ const AdminInfluencers = () => {
                       <TableHead>E-mail</TableHead>
                       <TableHead>Web / Sociální sítě</TableHead>
                       <TableHead>Stav</TableHead>
+                      <TableHead>Affiliate vrstva</TableHead>
                       <TableHead className="text-center">Payout</TableHead>
                       <TableHead className="text-right">Validní ref.</TableHead>
                       <TableHead className="text-right">Platící ref.</TableHead>
@@ -500,6 +612,40 @@ const AdminInfluencers = () => {
                               <StatusIcon className="w-3 h-3 mr-1" />
                               {statusLabels[influencer.status as InfluencerStatus] || influencer.status}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const bv = bridgeViewFor(influencer);
+                              if (bv.kind === "bridged") {
+                                return (
+                                  <div className="space-y-1">
+                                    <Badge variant="success" className="text-xs">
+                                      <Link2 className="w-3 h-3 mr-1" />
+                                      Napojeno na affiliate vrstvu
+                                    </Badge>
+                                    {(bv.code || bv.status) && (
+                                      <div className="text-xs text-muted-foreground">
+                                        {bv.code && <span className="font-mono">{bv.code}</span>}
+                                        {bv.code && bv.status && " · "}
+                                        {bv.status && <span>{bv.status}</span>}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              if (bv.kind === "eligible") {
+                                return (
+                                  <Badge variant="outline" className="text-xs">
+                                    Nenapojeno na affiliate vrstvu
+                                  </Badge>
+                                );
+                              }
+                              return (
+                                <Badge variant="secondary" className="text-xs">
+                                  Nelze napojit – není schválený
+                                </Badge>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="text-center">
                             {influencer.payout_ready ? (

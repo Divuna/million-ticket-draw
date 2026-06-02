@@ -3319,3 +3319,35 @@ Invariant:
 - Starý influencer systém zůstává hlavní provozní flow.
 - `/admin/affiliate` zůstává read-only.
 - Stripe, payments flow a wallet nebyly měněny.
+
+---
+
+## /admin/influencers — read-only bridge stav přehled (02. 06. 2026)
+
+Do starého adminu `/admin/influencers` (`src/pages/AdminInfluencers.tsx`) přidán **pouze read-only**
+přehled napojení influencerů na novou affiliate vrstvu. Žádné schvalování, provize ani výplaty
+nebyly změněny.
+
+Co přibylo (jen čtení):
+
+- Načítání view `v_admin_influencer_affiliate_bridge_candidates` přes fail-safe `fetchBridgeStatus`
+  (`supabase as any`, view není v TS typech). Při chybě se starý admin nezhroutí — zobrazí jen
+  neutrální hlášku „Stav napojení na affiliate vrstvu se teď nepodařilo načíst.".
+- Nová read-only souhrnná karta „Napojení na affiliate vrstvu (evidenční)" nad tabulkou:
+  počet schválených vhodných pro napojení, počet napojených, počet nenapojených.
+- Nový sloupec „Affiliate vrstva" v tabulce s bridge stavem:
+  `Napojeno na affiliate vrstvu` (+ affiliate kód + affiliate status), `Nenapojeno na affiliate
+  vrstvu`, nebo `Nelze napojit – není schválený`.
+- UI poznámka: „Napojení na novou affiliate vrstvu je zatím pouze evidenční. Původní influencer
+  systém zůstává hlavní.".
+- Tlačítko „Obnovit" nyní obnoví i bridge stav.
+
+Invariant:
+
+- Žádné tlačítko pro bridge nepřibylo.
+- RPC `admin_bridge_influencer_partner_to_affiliate` se NEVOLÁ.
+- Žádné SQL nebylo spuštěno; žádný bridge link ani produkční data nevznikla.
+- Staré schvalování influencerů beze změny.
+- `/influencer/register`, `/influencer/dashboard`, `/admin/affiliate` (read-only), Stripe,
+  payments flow a wallet nedotčeny.
+- `npm run build` ✅ (13.91s, jen předexistující chunk-size varování).
