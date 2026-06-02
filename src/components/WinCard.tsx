@@ -138,7 +138,7 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', 
             {isMainPrize ? (
               <OneMilTrophyIcon size={64} className="w-16 h-16 text-amber-400/30" />
             ) : (
-              <Gift className="w-16 h-16 text-purple-400/30" />
+              <OneMilGiftIcon size={64} className="w-16 h-16 text-purple-400/30" />
             )}
           </div>
         )}
