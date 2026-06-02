@@ -2720,3 +2720,56 @@ Invariant:
 - Nebyly meneny existujici migrace.
 - Nebylo aplikovano nic do produkce.
 - Nebyly meneny registrace, frontend registrace, payments, wallet, vypocty provizi, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele`, B2B partner program ani existujici influencer system.
+
+---
+
+## 2026-06-02 - Affiliate merchant referral RPC staging verification
+
+- Testovana migrace: `20260602_record_affiliate_merchant_referral_rpc.sql`.
+- Commit migrace: `a82eb153ba1cc08237e04860dbcbebd322cb326b` (`feat: add affiliate merchant referral rpc`).
+- Migrace byla aplikovana pouze na staging Supabase projekt `onemil-staging` (`dxmowysntemfqfnanxua`).
+- Produkce `xkzhjldrojjlrkezorey` nebyla pouzita ani dotcena.
+
+Precheck staging:
+- Affiliate foundation tabulky existuji.
+- `admin_create_affiliate_partner` existuje.
+- `admin_update_affiliate_partner_status` existuje.
+- `record_affiliate_merchant_referral` pred aplikaci jeste neexistovalo.
+- `public.is_admin()` existuje.
+- `partners.auth_user_id` existuje.
+- `merchant_affiliate_referrals` ma `UNIQUE (merchant_partner_id)`.
+- Na chranene existujici tabulky nepribyly affiliate triggery.
+
+Postcheck staging:
+- `record_affiliate_merchant_referral(uuid,text,text,text,jsonb)` existuje.
+- Funkce je `SECURITY DEFINER`.
+- Role `authenticated` ma `EXECUTE`.
+- Na chranene existujici tabulky nepribyly affiliate triggery.
+
+Vysledek merchant referral RPC testu:
+- Testovaci kod: `TESTMREF602063923745`.
+- Docasny affiliate partner byl vytvoren pres `admin_create_affiliate_partner` a aktivovan pres `admin_update_affiliate_partner_status`.
+- Docasny firemni auth uzivatel a docasny zaznam v `partners` byly vytvoreny pouze na stagingu pro test `partners.auth_user_id = auth.uid()`.
+- `record_affiliate_merchant_referral` vytvorilo zaznam v `merchant_affiliate_referrals`.
+- Overeno: `status = registered`, metadata obsahuji `source = partner_register`, `landing_url` a `client_metadata`.
+- Audit log `affiliate_merchant_referral_recorded` byl overen.
+- Opakovane volani pro stejnou firmu s jinym validnim kodem vratilo `existing_merchant_referral_preserved`; puvodni merchant referral se neprepsal.
+- Ocekavane validacni chyby byly overeny:
+  - `merchant_partner_not_owned`,
+  - `merchant_partner_not_found`,
+  - `affiliate_partner_not_active`,
+  - `affiliate_code_not_active`,
+  - `source_invalid`,
+  - `not_authenticated`.
+- Cleanup probehl: testovaci merchant referral, audit logy, affiliate kody, affiliate partneri, test partner firma a docasni auth uzivatele jsou po cleanupu `absent`.
+- Nezavisly cleanup check potvrdil `0 TESTMREF*` affiliate kodu, `0 Codex Merchant Referral` partner firem a `0 codex-merchant-*` auth uzivatelu.
+
+Invariant:
+- Nebyla potreba opravna migrace.
+- Prvni testovaci beh selhal jen kvuli testovacimu predpokladu `affiliate_codes.updated_at`, ktery ve staging schematu neexistuje; migrace ani RPC nebyly meneny.
+- Nebyl pouzit service role key.
+- Nebyl menen app kod.
+- Nebyly meneny existujici migrace.
+- Nebylo aplikovano nic do produkce.
+- Nebyly meneny registrace, `partner/register`, payments, wallet, vypocty provizi, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele`, B2B partner program ani existujici influencer system.
+- Affiliate merchant referral zatim neni napojen na frontend `partner/register`, bonus 500 Kc za firmu, platby ani vypocty provizi.
