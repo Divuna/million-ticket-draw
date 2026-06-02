@@ -2974,3 +2974,17 @@ Invariant:
 - Nebylo spuštěno SQL.
 - Nebyly měněny DB migrace, affiliate tabulky ani DB RPC.
 - Nebyly měněny Stripe webhook, payments flow, wallet ani původní influencer systém.
+
+---
+
+## 2026-06-02 - Affiliate legacy bridge staging test
+
+- Bridge proposal `20260602_affiliate_legacy_partner_bridge_proposal.sql` byl aplikovaný pouze na staging `dxmowysntemfqfnanxua`; produkce `xkzhjldrojjlrkezorey` nebyla použita.
+- RPC `admin_bridge_influencer_partner_to_affiliate` prošlo.
+- Použitý existující staging partner: `E2E Affiliate Test Partner` (`25a79a73-4a8a-4649-ad6c-282c138b207b`).
+- Testovací bridge kód: `BRIDGE20260602143530250`.
+- Vznikl link, `affiliate_partner`, `affiliate_code`, rate history a audit log.
+- Duplicitní bridge správně vrátil `legacy_partner_already_bridged`.
+- Původní `partners` řádek zůstal beze změny.
+- Cleanup smazal test bridge data; po cleanupu je test code/link/affiliate partner/rate history/audit log = `0`.
+- Starý influencer systém nebyl změněn; Stripe, payments flow a wallet nebyly změněny.
