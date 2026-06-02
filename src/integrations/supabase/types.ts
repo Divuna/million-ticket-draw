@@ -194,11 +194,25 @@ export type Database = {
             referencedColumns: ["affiliate_partner_id"]
           },
           {
+            foreignKeyName: "affiliate_bonus_events_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
             foreignKeyName: "affiliate_bonus_events_source_merchant_partner_id_fkey"
             columns: ["source_merchant_partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_bonus_events_source_merchant_partner_id_fkey"
+            columns: ["source_merchant_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
           },
         ]
       }
@@ -250,6 +264,13 @@ export type Database = {
             columns: ["affiliate_partner_id"]
             isOneToOne: false
             referencedRelation: "v_admin_affiliate_payout_summary"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
+            foreignKeyName: "affiliate_codes_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
             referencedColumns: ["affiliate_partner_id"]
           },
         ]
@@ -329,6 +350,13 @@ export type Database = {
             referencedColumns: ["affiliate_partner_id"]
           },
           {
+            foreignKeyName: "affiliate_commission_events_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
             foreignKeyName: "affiliate_commission_events_payment_id_fkey"
             columns: ["payment_id"]
             isOneToOne: true
@@ -389,6 +417,86 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_admin_affiliate_payout_summary"
             referencedColumns: ["affiliate_partner_id"]
+          },
+          {
+            foreignKeyName: "affiliate_commission_rate_history_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+        ]
+      }
+      affiliate_legacy_partner_links: {
+        Row: {
+          affiliate_partner_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          legacy_partner_id: string
+          metadata: Json
+          reason: string
+        }
+        Insert: {
+          affiliate_partner_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          legacy_partner_id: string
+          metadata?: Json
+          reason: string
+        }
+        Update: {
+          affiliate_partner_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          legacy_partner_id?: string
+          metadata?: Json
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_legacy_partner_links_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: true
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_legacy_partner_links_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: true
+            referencedRelation: "v_admin_affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_legacy_partner_links_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: true
+            referencedRelation: "v_admin_affiliate_payout_summary"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
+            foreignKeyName: "affiliate_legacy_partner_links_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: true
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
+            foreignKeyName: "affiliate_legacy_partner_links_legacy_partner_id_fkey"
+            columns: ["legacy_partner_id"]
+            isOneToOne: true
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_legacy_partner_links_legacy_partner_id_fkey"
+            columns: ["legacy_partner_id"]
+            isOneToOne: true
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
           },
         ]
       }
@@ -506,6 +614,13 @@ export type Database = {
             columns: ["affiliate_partner_id"]
             isOneToOne: false
             referencedRelation: "v_admin_affiliate_payout_summary"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
+            foreignKeyName: "affiliate_payouts_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
             referencedColumns: ["affiliate_partner_id"]
           },
         ]
@@ -1488,6 +1603,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "influencer_campaign_bonuses_czk_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
+          },
         ]
       }
       influencer_campaign_events: {
@@ -1527,6 +1649,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "influencer_campaign_events_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
+          },
         ]
       }
       influencer_campaign_partners: {
@@ -1556,6 +1685,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "influencer_campaign_partners_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
           },
         ]
       }
@@ -1628,6 +1764,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "influencer_commissions_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
+          },
         ]
       }
       influencer_referrals: {
@@ -1656,6 +1799,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "influencer_referrals_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
           },
         ]
       }
@@ -1729,11 +1879,25 @@ export type Database = {
             referencedColumns: ["affiliate_partner_id"]
           },
           {
+            foreignKeyName: "merchant_affiliate_referrals_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
             foreignKeyName: "merchant_affiliate_referrals_merchant_partner_id_fkey"
             columns: ["merchant_partner_id"]
             isOneToOne: true
             referencedRelation: "partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_affiliate_referrals_merchant_partner_id_fkey"
+            columns: ["merchant_partner_id"]
+            isOneToOne: true
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
           },
         ]
       }
@@ -1883,6 +2047,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "partner_api_keys_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
+          },
         ]
       }
       partner_api_requests: {
@@ -1954,6 +2125,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_coin_activations_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
           },
         ]
       }
@@ -2118,6 +2296,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "partner_invoices_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
+          },
         ]
       }
       partner_offer_activations: {
@@ -2170,6 +2355,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "partner_offer_activations_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
+          },
+          {
             foreignKeyName: "partner_offer_activations_upo_id_fkey"
             columns: ["upo_id"]
             isOneToOne: true
@@ -2213,6 +2405,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_offer_billing_configs_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: true
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
           },
         ]
       }
@@ -2582,6 +2781,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "partner_offers_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
+          },
         ]
       }
       partner_reward_codes: {
@@ -2637,6 +2843,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_reward_codes_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
           },
         ]
       }
@@ -3331,11 +3544,25 @@ export type Database = {
             referencedColumns: ["affiliate_partner_id"]
           },
           {
+            foreignKeyName: "user_affiliate_attributions_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
             foreignKeyName: "user_affiliate_attributions_source_merchant_partner_id_fkey"
             columns: ["source_merchant_partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_affiliate_attributions_source_merchant_partner_id_fkey"
+            columns: ["source_merchant_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
           },
         ]
       }
@@ -4502,6 +4729,13 @@ export type Database = {
             referencedColumns: ["affiliate_partner_id"]
           },
           {
+            foreignKeyName: "affiliate_commission_events_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
             foreignKeyName: "affiliate_commission_events_payment_id_fkey"
             columns: ["payment_id"]
             isOneToOne: true
@@ -4562,11 +4796,25 @@ export type Database = {
             referencedColumns: ["affiliate_partner_id"]
           },
           {
+            foreignKeyName: "user_affiliate_attributions_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
             foreignKeyName: "user_affiliate_attributions_source_merchant_partner_id_fkey"
             columns: ["source_merchant_partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_affiliate_attributions_source_merchant_partner_id_fkey"
+            columns: ["source_merchant_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
           },
         ]
       }
@@ -4624,11 +4872,25 @@ export type Database = {
             referencedColumns: ["affiliate_partner_id"]
           },
           {
+            foreignKeyName: "merchant_affiliate_referrals_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
             foreignKeyName: "merchant_affiliate_referrals_merchant_partner_id_fkey"
             columns: ["merchant_partner_id"]
             isOneToOne: true
             referencedRelation: "partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_affiliate_referrals_merchant_partner_id_fkey"
+            columns: ["merchant_partner_id"]
+            isOneToOne: true
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
           },
         ]
       }
@@ -4667,6 +4929,31 @@ export type Database = {
         }
         Relationships: []
       }
+      v_admin_influencer_affiliate_bridge_candidates: {
+        Row: {
+          affiliate_code: string | null
+          affiliate_code_status: string | null
+          affiliate_display_name: string | null
+          affiliate_partner_id: string | null
+          affiliate_status: string | null
+          bridge_link_id: string | null
+          bridged_at: string | null
+          bridged_by: string | null
+          is_bridge_eligible: boolean | null
+          is_bridged: boolean | null
+          is_legacy_influencer: boolean | null
+          legacy_approved_at: string | null
+          legacy_auth_user_id: string | null
+          legacy_company_name: string | null
+          legacy_contact_email: string | null
+          legacy_created_at: string | null
+          legacy_name: string | null
+          legacy_notes: string | null
+          legacy_partner_id: string | null
+          legacy_status: string | null
+        }
+        Relationships: []
+      }
       v_first_topup_valid: {
         Row: {
           first_topup_at: string | null
@@ -4697,6 +4984,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "influencer_referrals_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
+          },
         ]
       }
       v_influencer_referrals_valid: {
@@ -4713,6 +5007,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "influencer_referrals_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
           },
         ]
       }
@@ -4757,6 +5058,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_api_keys_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_influencer_affiliate_bridge_candidates"
+            referencedColumns: ["legacy_partner_id"]
           },
         ]
       }
@@ -4876,6 +5184,16 @@ export type Database = {
       admin_block_referrer: {
         Args: { p_blocked: boolean; p_reason?: string; p_user_id: string }
         Returns: undefined
+      }
+      admin_bridge_influencer_partner_to_affiliate: {
+        Args: {
+          p_code: string
+          p_commission_rate?: number
+          p_legacy_partner_id: string
+          p_metadata?: Json
+          p_reason?: string
+        }
+        Returns: Json
       }
       admin_bulk_insert_miocoin_bonuses: {
         Args: { p_bonuses: Json; p_contest_id: string }
