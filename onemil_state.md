@@ -4,16 +4,27 @@
 
 ---
 
-## ✅ AFFILIATE VĚTEV VRÁCENA Z KÓDU — ČÁST A1 DOKONČENA (02. 06. 2026)
+## ✅ ODSTRANĚNÍ AFFILIATE VRSTVY — KOMPLETNÍ (02. 06. 2026)
 
-- Nová affiliate vrstva odstraněna z kódu jedním commitem `revert: remove new affiliate layer`.
-- Smazány: `src/hooks/useApplyPendingAffiliate.ts`, `src/pages/AdminAffiliate.tsx`, všechny `supabase/migrations/20260602_*` (10 migračních souborů).
-- Editovány (jen affiliate části): `src/App.tsx`, `src/pages/Register.tsx`, `src/pages/AdminInfluencers.tsx`, `src/components/admin/adminNavConfig.ts`, `src/integrations/supabase/types.ts` (obnoveno z baseline).
-- Zachováno: `src/components/WinCard.tsx` (Gift → OneMilGiftIcon) a celý původní influencer systém.
-- `npm run build` prošel ✅.
-- DB objekty (`affiliate_*` tabulky/views/RPC) zatím NEsmazány — viz navržený DROP seznam níže.
-- Produkce nepublikována — čeká na ruční Lovable Publish (Část A3).
-- **DALŠÍ KROK:** A2 = schválit a spustit DROP skript DB objektů; A3 = Lovable Publish produkce.
+Všechny tři části (A1 kód, A2 DB, A3 produkce) jsou dokončeny.
+
+### A1 — Kódový revert ✅ (commit `1366535`)
+- Smazány: `src/hooks/useApplyPendingAffiliate.ts`, `src/pages/AdminAffiliate.tsx`, `supabase/migrations/20260602_*` (10 souborů).
+- Editovány (jen affiliate části): `src/App.tsx`, `src/pages/Register.tsx`, `src/pages/AdminInfluencers.tsx`, `src/components/admin/adminNavConfig.ts`, `src/integrations/supabase/types.ts`.
+- Zachováno: `src/components/WinCard.tsx` (OneMilGiftIcon) a celý původní influencer systém.
+- `npm run build` ✅.
+
+### A2 — DB objekty odstraněny ✅
+- Staging `dxmowysntemfqfnanxua`: affiliate objekty = žádné.
+- Produkce `xkzhjldrojjlrkezorey`: affiliate objekty = žádné.
+- Původní systém zachován: `partners`, `influencer_referrals`, `influencer_commissions`, `calculate_influencer_commissions_current_month`, `set_my_referrer_by_code`.
+
+### A3 — Lovable Publish ✅
+- Produkce `onemil.cz` publikována — build neobsahuje `onemil_affiliate_aff`, `record_affiliate_customer_attribution` ani `/admin/affiliate`.
+- Poznámka: řetězce `affiliate_direct` / `affiliate_external` v bundlu jsou enum hodnoty `deployment_mode` v Partner Offers (B2B systém, existuje od začátku) — nesouvisejí s odstraněnou vrstvou.
+
+### ➡️ DALŠÍ KROK
+Zahájit **Část B** — dodělat původní influencer systém jako jeden sjednocený model. Viz sekce „PŮVODNÍ HANDOFF" níže pro plán B.
 
 ---
 

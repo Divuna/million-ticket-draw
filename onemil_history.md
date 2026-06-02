@@ -14,19 +14,29 @@
 
 ---
 
-## 2026-06-02 — Affiliate vrstva vrácena z kódu (Část A1)
+## 2026-06-02 — Odstranění affiliate vrstvy — KOMPLETNÍ (A1 + A2 + A3)
 
+**A1 — Kódový revert (commit `1366535`):**
 - Nová affiliate vrstva (ChatGPT duplikát, ~41 commitů) odstraněna z kódu jedním revert commitem.
-- Smazány 2 nové soubory: `src/hooks/useApplyPendingAffiliate.ts`, `src/pages/AdminAffiliate.tsx`.
-- Smazáno 10 migračních souborů `supabase/migrations/20260602_*`.
+- Smazány: `src/hooks/useApplyPendingAffiliate.ts`, `src/pages/AdminAffiliate.tsx`,
+  `supabase/migrations/20260602_*` (10 souborů).
 - Editovány sdílené soubory (odebrány jen affiliate části): `src/App.tsx`, `src/pages/Register.tsx`,
   `src/pages/AdminInfluencers.tsx`, `src/components/admin/adminNavConfig.ts`,
   `src/integrations/supabase/types.ts` (obnoveno z baseline `5da1059`).
-- Zachováno: `src/components/WinCard.tsx` (Gift → OneMilGiftIcon) a celý původní influencer systém
-  (`/influencer*`, `/admin/influencer*`, `?ref=`, `set_my_referrer_by_code`, provize RPC).
-- `npm run build` ✅. Commit: `revert: remove new affiliate layer`. Push na main.
-- DB objekty `affiliate_*` zatím NEsmazány — čeká na schválení DROP skriptu (Část A2).
-- Produkce nepublikována — čeká na ruční Lovable Publish (Část A3).
+- Zachováno: `src/components/WinCard.tsx` (OneMilGiftIcon) a celý původní influencer systém.
+- `npm run build` ✅.
+
+**A2 — DB objekty odstraněny:**
+- Staging `dxmowysntemfqfnanxua`: žádné affiliate objekty.
+- Produkce `xkzhjldrojjlrkezorey`: žádné affiliate objekty.
+- Původní systém zachován: `partners`, `influencer_referrals`, `influencer_commissions`,
+  `calculate_influencer_commissions_current_month`, `set_my_referrer_by_code`.
+
+**A3 — Lovable Publish:**
+- Produkce `onemil.cz` publikována. Bundle neobsahuje `onemil_affiliate_aff`,
+  `record_affiliate_customer_attribution` ani `/admin/affiliate`.
+- `affiliate_direct`/`affiliate_external` v bundlu = enum hodnoty `deployment_mode` Partner Offers
+  (pre-existující B2B systém, nesouvisí s odstraněnou vrstvou).
 
 ---
 
