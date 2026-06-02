@@ -2988,3 +2988,5 @@ Invariant:
 - Původní `partners` řádek zůstal beze změny.
 - Cleanup smazal test bridge data; po cleanupu je test code/link/affiliate partner/rate history/audit log = `0`.
 - Starý influencer systém nebyl změněn; Stripe, payments flow a wallet nebyly změněny.
+
+**2026-06-02** — Affiliate legacy bridge: produkční STRUKTURA aplikována do `xkzhjldrojjlrkezorey` (`onemil`), read-only postcheck prošel. Ověřeno: `affiliate_legacy_partner_links` existuje s RLS + admin SELECT policy; RPC `admin_bridge_influencer_partner_to_affiliate` existuje, je `SECURITY DEFINER`, `authenticated` má `EXECUTE`; view `v_admin_influencer_affiliate_bridge_candidates` existuje s `security_invoker = true` + `authenticated` SELECT; bridge link table má 0 řádků; 3 approved influencer kandidáti; 0 affiliate/bridge triggerů na partners/payments/wallets/wallet_transactions/tickets/contests/partner_offers. Žádný partner nebyl bridgnutý, žádné bridge RPC nebylo voláno pro konkrétního partnera, žádná produkční testovací data nevznikla. `/admin/affiliate` zůstává read-only; Stripe, payments flow a wallet nedotčeny.

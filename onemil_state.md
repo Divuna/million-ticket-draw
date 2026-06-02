@@ -3287,3 +3287,35 @@ Invariant:
 - Starý influencer systém nebyl změněn.
 - Stripe, payments flow a wallet nebyly změněny.
 - Produkce nebyla použita.
+
+---
+
+## Affiliate legacy bridge — produkční STRUKTURA aplikována + postcheck (02. 06. 2026)
+
+Bridge **struktura** (ne data) byla aplikována do produkce `xkzhjldrojjlrkezorey` (`onemil`).
+Read-only produkční postcheck prošel.
+
+Ověřeno (produkce `xkzhjldrojjlrkezorey`):
+
+- `affiliate_legacy_partner_links` existuje. ✅
+- RLS je zapnuté na bridge tabulce. ✅
+- Existuje admin read (SELECT) policy. ✅
+- RPC `admin_bridge_influencer_partner_to_affiliate` existuje. ✅
+- RPC je `SECURITY DEFINER`. ✅
+- `authenticated` má `EXECUTE` na RPC. ✅
+- View `v_admin_influencer_affiliate_bridge_candidates` existuje. ✅
+- View má `security_invoker = true`. ✅
+- `authenticated` má `SELECT` na view. ✅
+- `affiliate_legacy_partner_links` má **0 řádků** — bridge link table je prázdná. ✅
+- Approved influencer kandidátů v produkci: **3** (informativní).
+- Žádné affiliate/bridge triggery na `partners`, `payments`, `wallets`, `wallet_transactions`,
+  `tickets`, `contests`, `partner_offers` (count = 0). ✅
+
+Invariant:
+
+- Žádný partner nebyl bridgnutý.
+- Žádné bridge RPC `admin_bridge_influencer_partner_to_affiliate` nebylo voláno pro konkrétního partnera.
+- Žádná produkční testovací data nevznikla.
+- Starý influencer systém zůstává hlavní provozní flow.
+- `/admin/affiliate` zůstává read-only.
+- Stripe, payments flow a wallet nebyly měněny.
