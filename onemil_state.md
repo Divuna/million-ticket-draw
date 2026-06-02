@@ -1,6 +1,60 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 01. 06. 2026
+**Aktualizováno:** 02. 06. 2026
+
+---
+
+## 🚨 AKTUÁLNÍ ÚKOL — VRÁTIT NOVOU AFFILIATE VĚTEV (HANDOFF PRO NOVOU SESSION) (02. 06. 2026)
+
+**TENTO BLOK ČTI JAKO PRVNÍ. Je to právě probíhající rozhodnutí a další krok.**
+
+### Co se stalo / PROČ to děláme
+- Dne 02. 06. 2026 byl nad původní (funkční) influencer systém postaven **nový, paralelní
+  affiliate systém** (vlastní tabulky `affiliate_*`, RPC, `/admin/affiliate`, `aff=KOD` tracking,
+  „bridge" most kopírující partnera z `partners` do `affiliate_partners`).
+- **Toto byla chyba / duplikace.** Zakladatel (Pavel) chtěl POUZE dodělat **PŮVODNÍ** systém,
+  ne stavět druhý vedle něj. Původní `partners` systém už BYL jeden sjednocený model
+  (drží B2B partnery i influencery, má fakturace s DPH, sledování i výpočet provize).
+- **ROZHODNUTÍ:** Novou affiliate větev **odstranit** a vrátit projekt do stavu před ní;
+  pak později dodělat **PŮVODNÍ** systém jako jeden sjednocený model.
+
+### Klíčová fakta / rozhodnutí zakladatele (závazná)
+- **Všechny e-maily/účty v celém systému jsou 100% TESTOVACÍ** — lze je smazat. Zachovat se musí
+  POUZE admin: superadmin `divispavel2@gmail.com` (`60f5837e-a280-4ddd-b0dd-f94cc844bb3b`).
+- **DPH: provize budou BEZ DPH** (model odměny / bounty), ne fakturace s DPH.
+- **Rozsah cílového systému:** influenceři **+ firmy** jako **JEDEN sjednocený model**
+  (typ partnera = jen visačka, ne tři oddělené systémy).
+- **Provizní model původního systému:** `calculate_influencer_commissions_current_month` =
+  **2 % z reálných placených dobití** (Stripe `payments.status='paid'`, vyloučeny free MioCoiny)
+  přivedených uživatelů, měsíčně do `influencer_commissions`. PŮVODNÍ systém je netknutý a funkční.
+
+### DALŠÍ KROK (Část A) — odstranit affiliate větev z KÓDU
+- Baseline „před affiliate prací" = commit **`5da1059`** („shop recommendation mailto", 01. 06. 2026 16:11).
+- Rozsah `5da1059..HEAD` = **~41 commitů, prakticky všechny affiliate.**
+- Smazat nové soubory: `src/hooks/useApplyPendingAffiliate.ts`, `src/pages/AdminAffiliate.tsx`,
+  všechny affiliate migrace v `supabase/migrations/20260602_*affiliate*` /
+  `20260602_admin_affiliate*` / `20260602_record_affiliate*`.
+- Editovat (odebrat JEN affiliate části, NEMAZAT celé): `src/App.tsx` (hook + capture + route),
+  `src/pages/Register.tsx` (aff capture + atribuce; ponech starý `ref` blok),
+  `src/pages/AdminInfluencers.tsx` (odebrat bridge sloupec/kartu/fetch),
+  `src/components/admin/adminNavConfig.ts` (odkaz na `/admin/affiliate`),
+  `src/integrations/supabase/types.ts` (affiliate typy — tak, aby build prošel).
+- **ZACHOVAT** nesouvisející drobnost: `src/components/WinCard.tsx` (Gift → OneMilGiftIcon).
+- Postup: **bez hard resetu**, jako jeden nový commit `revert: remove new affiliate layer`.
+
+### CO ZATÍM NEDĚLAT (samostatné, schválené kroky později)
+- **NEMAZAT DB objekty** v produkci/stagingu — `affiliate_*` tabulky/views/RPC stále existují
+  v produkci (`xkzhjldrojjlrkezorey`) i stagingu (`dxmowysntemfqfnanxua`). Jen **připravit návrh
+  DROP skriptu**, nespouštět.
+- **NEPUBLIKOVAT produkci** — `onemil.cz` má `aff` tracking živý, dokud neproběhne ruční Lovable
+  Publish (samostatný krok). Push na main produkci sám nezmění.
+- **Část B (dodělat původní systém)** = až po dokončení a schválení Části A.
+
+### Neměnit za žádných okolností
+- Stripe, payments flow, wallet, `buy_ticket_atomic`, ticket engine, soutěže, výhry, Partner Offers,
+  admin účet, a celý PŮVODNÍ influencer systém (`/influencer*`, `/admin/influencer*`, `partners`,
+  `influencer_referrals/commissions/campaigns`, `?ref=`, `set_my_referrer_by_code`,
+  `calculate_influencer_commissions_current_month`).
 
 ---
 
