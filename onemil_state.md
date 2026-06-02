@@ -3107,3 +3107,31 @@ Invariant:
 - Nevznikl zadny trigger.
 - Nebyly meneny Stripe webhook, payments flow, wallet ani automaticke provize.
 - Nebyly meneny registrace, `partner/register`, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele`, B2B partner program ani existujici influencer system.
+
+---
+
+## Affiliate detail admin views staging verification (02. 06. 2026)
+
+Testovana migrace `20260602_admin_affiliate_detail_views.sql` byla commitnuta jako `23fe6040809e44f596e6199e6f6406368b0e47c1` (`feat: add affiliate admin detail views`) a aplikovana pouze na staging Supabase projekt `onemil-staging` (`dxmowysntemfqfnanxua`). Produkce `xkzhjldrojjlrkezorey` nebyla pouzita.
+
+Precheck:
+- Potrebne affiliate tabulky a sloupce existuji.
+- Detailni views pred aplikaci jeste neexistovaly.
+- `public.users.id`, `public.users.email`, `public.users.name` existuji.
+- `public.profiles.id`, `public.profiles.full_name` existuji.
+
+Postcheck:
+- Views existuji: `v_admin_affiliate_customer_attributions`, `v_admin_affiliate_merchant_referrals`, `v_admin_affiliate_commission_events`.
+- Vsechny tri views maji `security_invoker = true`.
+- Role `authenticated` ma `SELECT` grant na vsechny tri views.
+- Views jdou cist bez chyby; staging pocty byly customer `0`, merchant `0`, commission `0`.
+- Nevzniklo zadne RPC.
+- Nevznikly zadne affiliate detail triggery.
+- Nevznikly zadne policies na detail views.
+
+Invariant:
+- Nebyl menen app kod.
+- Nebyly meneny existujici migrace.
+- Nebylo aplikovano nic do produkce.
+- Nebylo pridano zadne RPC, triggery ani policies.
+- Nebyly meneny Stripe webhook, payments flow, wallet, automaticke provize ani stary influencer system.
