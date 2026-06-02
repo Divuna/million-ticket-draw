@@ -84,6 +84,7 @@ import AdminReferralDashboard from "@/pages/AdminReferralDashboard";
 import AdminInfluencers from "@/pages/AdminInfluencers";
 import AdminInfluencerCommissions from "@/pages/AdminInfluencerCommissions";
 import AdminInfluencerCampaigns from "@/pages/AdminInfluencerCampaigns";
+import AdminAffiliate from "@/pages/AdminAffiliate";
 import AdminNotFound from "@/pages/AdminNotFound";
 import NotFound from "@/pages/NotFound";
 
@@ -553,6 +554,7 @@ function AppContent() {
             <Route path="/admin/influencers" element={<AdminInfluencers />} />
             <Route path="/admin/influencer-commissions" element={<AdminInfluencerCommissions />} />
             <Route path="/admin/influencer-campaigns" element={<AdminInfluencerCampaigns />} />
+            <Route path="/admin/affiliate" element={<AdminAffiliate />} />
             <Route path="/admin/*" element={<AdminNotFound />} />
           </Route>
           <Route path="/partner/login" element={<PartnerLogin />} />
