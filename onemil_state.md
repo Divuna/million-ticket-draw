@@ -3342,7 +3342,7 @@ Co přibylo (jen čtení):
   systém zůstává hlavní.".
 - Tlačítko „Obnovit" nyní obnoví i bridge stav.
 
-Invariant:
+Invariant (UI):
 
 - Žádné tlačítko pro bridge nepřibylo.
 - RPC `admin_bridge_influencer_partner_to_affiliate` se NEVOLÁ.
@@ -3351,3 +3351,46 @@ Invariant:
 - `/influencer/register`, `/influencer/dashboard`, `/admin/affiliate` (read-only), Stripe,
   payments flow a wallet nedotčeny.
 - `npm run build` ✅ (13.91s, jen předexistující chunk-size varování).
+
+---
+
+## PRVNÍ OSTRÝ PRODUKČNÍ BRIDGE — PROVEDEN (02. 06. 2026)
+
+První reálný produkční bridge schváleného influencera do nové affiliate vrstvy byl proveden
+v produkci `xkzhjldrojjlrkezorey` (`onemil`) po výslovném potvrzení uživatele (`SPOUSTIM`).
+
+Vstup:
+
+- legacy_partner_id: `1ef76f65-b028-408b-9a77-ea9d5cad6592` (Pavel Divis, status `approved`)
+- affiliate kód: `PAVEL01`
+- commission_rate: `0.02`
+- RPC: `admin_bridge_influencer_partner_to_affiliate`
+- spuštěno jako přihlášený admin (superadmin `divispavel2@gmail.com`,
+  `60f5837e-a280-4ddd-b0dd-f94cc844bb3b`) — RPC má interní `is_admin()` guard, service role
+  nestačí, proto byl v transakci nastaven admin auth kontext.
+
+Výsledek RPC (`status: bridged`):
+
+- affiliate_partner_id: `80edc966-adc4-455c-b2d8-64e01aa6167e`
+- affiliate_code_id: `a7db63ef-37a4-4922-8858-5d2fc58009d2`
+- link_id: `58f69a9d-00c8-4efc-8731-96c22d4540a4`
+- contract_starts_at: `2026-06-02T15:10:06.211011+00:00`
+
+Postcheck (vše OK):
+
+- bridge link count pro partnera = 1 ✅
+- affiliate_partner status = `active`, type = `influencer` ✅
+- affiliate_code `PAVEL01` status = `active` ✅
+- rate history commission_rate = `0.02` (uloženo jako `0.020000`), valid_to IS NULL ✅
+- audit log `legacy_influencer_partner_bridged` = 1 řádek ✅
+- původní `partners` řádek beze změny: status `approved`, notes influencer JSON, email
+  `influencer@onemil.c`, updated_at `2026-02-10T19:55:10.757743+00:00` ✅
+- total bridge links v produkci = 1 ✅
+
+Invariant:
+
+- Bridgnut pouze Pavel Divis kódem `PAVEL01`; žádný jiný partner.
+- Původní influencer systém, `/admin/influencers`, `/admin/affiliate` (read-only),
+  `/influencer/register`, `/influencer/dashboard`, Stripe, payments flow a wallet beze změny.
+- Zbývající approved kandidáti (`Test Influencer A`, `trubka`) zůstávají nenapojení.
+- Staging nebyl použit.
