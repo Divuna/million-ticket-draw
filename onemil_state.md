@@ -3488,3 +3488,25 @@ předpotvrzení test uživatelé vytvořeni ekvivalentně přes SQL (pgcrypto bc
 **Stav:** produkční `.env` zůstal nedotčený (míří na produkci); produkce nepoužita ani publikována.
 Frontend tracking `aff=KOD` je **funkčně ověřený na stagingu** a připravený na produkční
 **Lovable Publish po schválení**.
+
+---
+
+## AFFILIATE TRACKING `aff=KOD` — PRODUKČNÍ PUBLISH OVĚŘEN (02. 06. 2026)
+
+Produkční **Lovable Publish proběhl**. Ověřeno read-only (jen fetch veřejných assetů).
+
+- **Produkční bundle URL:** `https://onemil.cz/assets/index-ByC__JoZ.js`
+- **Bundle obsahuje** (potvrzeno greppem):
+  - `onemil_affiliate_aff`
+  - `record_affiliate_customer_attribution`
+  - regex `^[A-Z0-9][A-Z0-9_-]{2,31}$`
+  - `direct_link`, `captured_via`, `aff_url`, `p_affiliate_code`
+- Název `useApplyPendingAffiliate` je v produkčním buildu **minifikovaný** (název funkce mangled),
+  ale jeho **funkční obsah je přítomný** (storage konstanta, normalize regex, RPC volání, metadata).
+- Bundle míří na **produkční Supabase** `xkzhjldrojjlrkezorey` (9 výskytů).
+- **Produkční affiliate tracking `aff=KOD` je nasazený a aktivní.**
+
+Invariant:
+
+- Nebyla vytvořena žádná data; nebyl proveden login ani registrace; nebylo spuštěno SQL ani RPC.
+- Stripe, payments flow, wallet, starý influencer systém a `/admin/affiliate` (read-only) beze změny.
