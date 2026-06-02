@@ -3135,3 +3135,64 @@ Invariant:
 - Nebylo aplikovano nic do produkce.
 - Nebylo pridano zadne RPC, triggery ani policies.
 - Nebyly meneny Stripe webhook, payments flow, wallet, automaticke provize ani stary influencer system.
+
+---
+
+## Affiliate DB production rollout (02. 06. 2026)
+
+Affiliate DB vrstva byla dokoncena v produkcnim Supabase projektu `onemil` (`xkzhjldrojjlrkezorey`). Cilem bylo prenest stagingove overenou DB vrstvu do produkce po bezpecnych davkach bez vytvareni produkcnich testovacich dat.
+
+Cilovy projekt:
+- Produkce: `xkzhjldrojjlrkezorey`.
+- Staging `dxmowysntemfqfnanxua` nebyl v rollout behu pouzit.
+- Produkcni projekt byl pred aplikaci znovu potvrzen jako `onemil`, `ACTIVE_HEALTHY`.
+
+Aplikovane zbyvajici migrace v produkci:
+- `20260602_admin_update_affiliate_partner_status_rpc.sql`
+- `20260602_fix_admin_update_affiliate_partner_status_contract_end.sql`
+- `20260602_admin_set_affiliate_commission_rate_rpc.sql`
+- `20260602_record_affiliate_customer_attribution_rpc.sql`
+- `20260602_record_affiliate_merchant_referral_rpc.sql`
+- `20260602_admin_record_affiliate_commission_for_payment_rpc.sql`
+- `20260602_admin_affiliate_detail_views.sql`
+
+Poznamka: produkcni Davka 1 `20260602_affiliate_commission_foundation.sql` a RPC `admin_create_affiliate_partner` byly aplikovane a overene uz pred timto dokoncenim rollout behu.
+
+Kontroly po davkach:
+- Kazde nove RPC existuje.
+- RPC jsou `SECURITY DEFINER`.
+- Role `authenticated` ma `EXECUTE` na RPC.
+- Detailni views maji `security_invoker = true`.
+- Role `authenticated` ma `SELECT` na detailni views.
+- Affiliate tabulky zustaly prazdne.
+- Na chranene existujici tabulky `payments`, `wallets`, `wallet_transactions`, `tickets`, `contests`, `partner_offers`, `partners` nepribyly zadne affiliate triggery.
+
+Finalni produkcni postcheck:
+- 9/9 affiliate tabulek existuje.
+- RLS je zapnute na vsech 9 affiliate tabulkach.
+- 5/5 affiliate admin views existuje.
+- 5/5 views ma `security_invoker = true`.
+- 6/6 affiliate RPC existuje.
+- 4/4 admin RPC jsou `SECURITY DEFINER`.
+- Role `authenticated` ma `EXECUTE` na 6/6 RPC.
+- Role `authenticated` ma `SELECT` na 5/5 views.
+- `affiliate_commission_events` ma `UNIQUE(payment_id)`.
+- `affiliate_payouts` ma CHECK constraint pro `period_month` jako prvni den mesice.
+- Detail views jdou cist bez chyby; produkcni pocty byly customer `0`, merchant `0`, commission `0`.
+- Affiliate tabulky jsou po rollout prazdne.
+- Na chranenych existujicich tabulkach nejsou zadne affiliate triggery.
+- Na chranenych existujicich tabulkach nejsou zadne affiliate policies.
+
+Invariant:
+- Nevznikla zadna produkcni testovaci data.
+- Nebyl zalozen zadny affiliate partner v produkci.
+- Nebyla volana zadna zapisova affiliate RPC v produkci.
+- Nebyl pouzit service role key ve skriptech.
+- Nebyl menen app kod.
+- Nebyly meneny existujici migrace.
+- Nebyl vytvoren trigger na `payments`.
+- Nebyly meneny Stripe webhook, payments flow, wallet ani stary influencer system.
+
+Stav:
+- Produkcni affiliate DB vrstva je rolloutovana.
+- Zaklad zustava bez automatickeho napojeni na registrace, Stripe, payments flow, wallet a automaticke provize.

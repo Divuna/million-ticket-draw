@@ -2870,3 +2870,58 @@ Invariant:
 - Nebylo aplikovano nic do produkce.
 - Nebylo pridano zadne RPC, triggery ani policies.
 - Nebyly meneny Stripe webhook, payments flow, wallet, automaticke provize ani stary influencer system.
+
+---
+
+## 2026-06-02 - Affiliate DB production rollout
+
+- Produkcni rollout affiliate DB vrstvy byl dokoncen v Supabase projektu `onemil` (`xkzhjldrojjlrkezorey`).
+- Staging projekt `dxmowysntemfqfnanxua` nebyl v tomto rollout behu pouzit.
+- Produkcni projekt byl pred aplikaci znovu potvrzen jako `onemil`, `ACTIVE_HEALTHY`.
+
+Aplikovane zbyvajici migrace:
+- `20260602_admin_update_affiliate_partner_status_rpc.sql`
+- `20260602_fix_admin_update_affiliate_partner_status_contract_end.sql`
+- `20260602_admin_set_affiliate_commission_rate_rpc.sql`
+- `20260602_record_affiliate_customer_attribution_rpc.sql`
+- `20260602_record_affiliate_merchant_referral_rpc.sql`
+- `20260602_admin_record_affiliate_commission_for_payment_rpc.sql`
+- `20260602_admin_affiliate_detail_views.sql`
+
+Poznamka:
+- Produkcni Davka 1 `20260602_affiliate_commission_foundation.sql` a `admin_create_affiliate_partner` byly aplikovane a overene uz pred timto dokoncenim rollout behu.
+
+Kontroly po davkach:
+- Ocekavane RPC/view po kazde migraci existovalo.
+- RPC maji `SECURITY DEFINER`.
+- Role `authenticated` ma `EXECUTE` na RPC.
+- Views maji `security_invoker = true`.
+- Role `authenticated` ma `SELECT` na views.
+- Affiliate tabulky zustaly prazdne.
+- Na `payments`, `wallets`, `wallet_transactions`, `tickets`, `contests`, `partner_offers`, `partners` nepribyly zadne affiliate triggery.
+
+Finalni postcheck:
+- 9/9 affiliate tabulek existuje.
+- RLS je zapnute na 9/9 affiliate tabulkach.
+- 5/5 affiliate admin views existuje.
+- 5/5 affiliate admin views ma `security_invoker = true`.
+- 6/6 affiliate RPC existuje.
+- 4/4 admin RPC jsou `SECURITY DEFINER`.
+- `authenticated` ma `EXECUTE` na 6/6 RPC.
+- `authenticated` ma `SELECT` na 5/5 views.
+- `affiliate_commission_events` ma `UNIQUE(payment_id)`.
+- `affiliate_payouts` ma CHECK constraint pro `period_month`.
+- Detail views jdou cist bez chyby; produkcni pocty byly customer `0`, merchant `0`, commission `0`.
+- Affiliate tabulky jsou po rollout prazdne.
+- Neexistuji affiliate triggery ani affiliate policies na chranenych existujicich tabulkach.
+
+Invariant:
+- Nebyla vytvorena zadna produkcni testovaci data.
+- Nebyl zalozen affiliate partner v produkci.
+- Nebyla volana zadna zapisova affiliate RPC v produkci.
+- Nebyl pouzit service role key ve skriptech.
+- Nebyl menen app kod.
+- Nebyly meneny existujici migrace.
+- Nebyl vytvoren trigger na `payments`.
+- Nebyly meneny Stripe webhook, payments flow, wallet ani stary influencer system.
+- Affiliate zatim zustava bez automatickeho napojeni na registrace, Stripe, payments flow, wallet a automaticke provize.
