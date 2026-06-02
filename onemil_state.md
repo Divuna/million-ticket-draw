@@ -3447,3 +3447,44 @@ Stav:
 - `npm run build` ✅ (12.81s, jen předexistující chunk-size varování).
 - Žádné SQL nebylo spuštěno; žádné produkční RPC voláno ručně; žádná produkční data nevznikla.
 - **Produkce zatím NEpublikována** (Lovable Publish neproběhl) — čeká na staging ověření.
+
+---
+
+## AFFILIATE TRACKING `aff=PAVEL01` — STAGING E2E OVĚŘENO (02. 06. 2026)
+
+Staging E2E test proběhl **pouze na stagingu** `dxmowysntemfqfnanxua`. Frontend běžel lokálně
+proti stagingu na **portu 8090** (ověřeno, že servíruje `https://dxmowysntemfqfnanxua.supabase.co`).
+Testovaný commit: **`3f10500`**. Produkce `xkzhjldrojjlrkezorey` nebyla použita ani publikována.
+
+**Pozitivní test PAVEL01 — PROŠEL:**
+- `sessionStorage["onemil_affiliate_aff"] = "PAVEL01"`, `onemil_referral_ref` prázdné.
+- Po přihlášení test uživatele vznikl **1 řádek** v `user_affiliate_attributions`:
+  - affiliate_partner_id `9bf4e8ca-ce12-49cf-8c88-a9aa63ccfb47`
+  - affiliate_code_id `371c2cd1-0fb2-4c0f-9b08-d5fc724aa4d6`
+  - source `direct_link`, locked `true`
+- `/admin/affiliate` → Zákazníci (view `v_admin_affiliate_customer_attributions`) ukázal test
+  uživatele pod **E2E Affiliate Test Partner / PAVEL01**.
+- Starý `influencer_referrals` = **0** (izolace ref ✅).
+
+**Negativní test `NEEXISTUJE` — PROŠEL:**
+- Login nespadl; RPC neznámý kód odmítl; `user_affiliate_attributions` = **0**.
+
+**Kolizní test `?ref=NEJAKYREF&aff=PAVEL01` — PROŠEL:**
+- `aff` se **neuložil** (ref má přednost); affiliate atribuce = **0**; legacy referral = **0**.
+
+**Cleanup:**
+- Test uživatelé `aff-test-*@test.local` smazáni; jejich atribuce, identities, audit logy
+  i profiles/wallets uklizené (0 orphan řádků ověřeno).
+
+**Staging PAVEL01 setup zachován:**
+- affiliate_partner_id `9bf4e8ca-ce12-49cf-8c88-a9aa63ccfb47`
+- affiliate_code_id `371c2cd1-0fb2-4c0f-9b08-d5fc724aa4d6` (active)
+- link_id `a50736a9-d878-4e32-b2d3-fb2949db7be5`
+
+**Pozn. k metodě:** Supabase MCP nevystavuje service_role/admin-create-user, proto byli
+předpotvrzení test uživatelé vytvořeni ekvivalentně přes SQL (pgcrypto bcrypt + `email_confirmed_at`
++ doplnění prázdných GoTrue token sloupců). Vše staging-only a kompletně uklizeno.
+
+**Stav:** produkční `.env` zůstal nedotčený (míří na produkci); produkce nepoužita ani publikována.
+Frontend tracking `aff=KOD` je **funkčně ověřený na stagingu** a připravený na produkční
+**Lovable Publish po schválení**.
