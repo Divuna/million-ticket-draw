@@ -56,6 +56,28 @@
   `influencer_referrals/commissions/campaigns`, `?ref=`, `set_my_referrer_by_code`,
   `calculate_influencer_commissions_current_month`).
 
+### CELKOVÝ PLÁN — pořadí kroků (A → B)
+
+**ČÁST A — ÚKLID (odstranit ChatGPT affiliate duplikát):**
+- A1. Odebrat affiliate z KÓDU (viz „DALŠÍ KROK (Část A)" výše) → commit `revert: remove new affiliate layer`. **Bez hard resetu.**
+- A2. (samostatně, se schválením) Smazat DB objekty `affiliate_*` ze stagingu i produkce dle připraveného DROP návrhu.
+- A3. (samostatně, se schválením) Ruční Lovable Publish produkce, aby `onemil.cz` už neměl `aff` tracking.
+- Po Části A je projekt v čistém stavu = jen původní funkční systém.
+
+**ČÁST B — STAVBA (dodělat PŮVODNÍ systém jako jeden sjednocený model):**
+Cíl: influenceři + firmy v JEDNOM modelu, provize 2 % BEZ DPH, vše nejdřív na stagingu, produkce až s OK Pavla.
+- B1. **Admin ovládání** — v `/admin/influencers` (nebo sjednocené admin partner stránce) umožnit
+  spravovat všechny typy partnerů (influencer/firma) jako jeden model; typ = jen visačka.
+- B2. **Provize ze zákazníků** — využít existující `calculate_influencer_commissions_current_month`
+  (2 % z placených dobití přivedených lidí). Případně udělat sazbu nastavitelnou na partnera.
+- B3. **Odměna za firmu** — přidat „partner přivede firmu" a jednorázovou odměnu při aktivaci firmy.
+  ⚠️ U B3 se MUSÍ Pavla zeptat na konkrétní ČÍSLO odměny za firmu (zatím nezadáno).
+- B4. **Výplaty** — měsíční souhrn na partnera + stav (k vyplacení → vyplaceno), ruční označení. Bez DPH.
+- B5. (volitelně později) portál pro partnery.
+- Body, kde se MUSÍ ptát Pavla: B3 (číslo za firmu) + před každým nasazením do produkce (finální „pusť to").
+
+**DŮLEŽITÉ:** Nejdřív celá Část A (čistý stav), teprve pak Část B (stavět na čistém). Nestavět B na nepořádku z A.
+
 ---
 
 ## ➡️ CURRENT NEXT STEP (01. 06. 2026)
