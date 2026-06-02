@@ -2914,3 +2914,31 @@ Invariant:
 - Nebyla měněna app logika ani SQL migrace.
 - Nebyly měněny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zákaznické `Pozvi přátele`, B2B partner program ani existující influencer systém.
 - RPC zůstává admin-only zápisová vrstva nad affiliate foundation tabulkami; zatím není napojené na registraci, platby, wallet ani provizní výpočty.
+
+---
+
+## Affiliate partner status RPC staging verification (02. 06. 2026)
+
+Opravna migrace `20260602_fix_admin_update_affiliate_partner_status_contract_end.sql` byla vytvorena kvuli staging nalezu u prechodu na `terminated`: pri okamzitem ukonceni partnera ve stejne transakci mohlo `contract_ends_at = now()` vyjit stejne jako `contract_starts_at`, coz spravne narazilo na CHECK constraint `contract_ends_at > contract_starts_at`.
+
+Oprava:
+- Commit opravne migrace: `c2eabf3bfe80e5cba1f90e86f03fa46ad35ba0d1` (`fix: ensure affiliate termination date is after contract start`).
+- Migrace nahrazuje pouze `public.admin_update_affiliate_partner_status(...)`.
+- Pri `terminated` pouziva `clock_timestamp()`, a pokud neni vetsi nez `contract_starts_at`, nastavi `contract_ends_at = contract_starts_at + interval '1 millisecond'`.
+- Audit log uklada `status`, `contract_starts_at` a `contract_ends_at` v `old_data` i `new_data`.
+
+Staging overeni:
+- Opravna migrace byla aplikovana pouze na staging Supabase projekt `onemil-staging` (`dxmowysntemfqfnanxua`).
+- Produkce `xkzhjldrojjlrkezorey` nebyla pouzita.
+- Testovaci kod: `TESTSTAT20260602023104886`.
+- Pres `admin_create_affiliate_partner` vznikl docasny test affiliate partner.
+- Status prechody prosly: `pending -> active`, `active -> paused`, `paused -> active`, `active -> terminated`.
+- `contract_ends_at > contract_starts_at` overeno po `terminated`.
+- 4 status audit logy overeny vcetne `contract_starts_at` a `contract_ends_at`.
+- Zakazany prechod `terminated -> active` vratil `affiliate_status_transition_not_allowed`.
+- Cleanup probehl: `TESTSTAT20260602023104886` i predchozi selhany kod `TESTSTAT20260602022743527` jsou na stagingu neprítomne.
+
+Invariant:
+- Nebyl menen app kod.
+- Nebyly meneny existujici migrace.
+- Nebyly meneny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele`, B2B partner program ani existujici influencer system.

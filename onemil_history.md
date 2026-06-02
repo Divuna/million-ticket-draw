@@ -2599,3 +2599,33 @@ Invariant:
 - Nebyly měněny SQL migrace.
 - Nebylo aplikováno nic do produkce.
 - Nebyly měněny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zákaznické `Pozvi přátele`, B2B partner program ani existující influencer systém.
+
+---
+
+## 2026-06-02 - Affiliate partner status RPC staging verification
+
+- Pri staging testu RPC `admin_update_affiliate_partner_status` selhal okamzity prechod na `terminated`, protoze `affiliate_partners` ma CHECK constraint `contract_ends_at IS NULL OR contract_starts_at IS NULL OR contract_ends_at > contract_starts_at`.
+- Root cause: test vytvoril partnera a ukoncil ho ve stejne transakci, takze puvodni `contract_ends_at = now()` mohlo vyjit stejne jako `contract_starts_at`.
+- Vytvorena opravna migrace `20260602_fix_admin_update_affiliate_partner_status_contract_end.sql`.
+- Commit opravne migrace: `c2eabf3bfe80e5cba1f90e86f03fa46ad35ba0d1` (`fix: ensure affiliate termination date is after contract start`).
+- Oprava nahrazuje pouze `public.admin_update_affiliate_partner_status(...)`.
+- Pri prechodu na `terminated` se pouzije `clock_timestamp()`, a pokud neni vetsi nez `contract_starts_at`, nastavi se `contract_ends_at = contract_starts_at + interval '1 millisecond'`.
+- Audit log nove uklada `status`, `contract_starts_at` a `contract_ends_at` v `old_data` i `new_data`.
+
+Staging aplikace a test:
+- Opravna migrace byla aplikovana pouze na staging Supabase projekt `onemil-staging` (`dxmowysntemfqfnanxua`).
+- Produkce `xkzhjldrojjlrkezorey` nebyla pouzita ani dotcena.
+- Testovaci kod: `TESTSTAT20260602023104886`.
+- Test vytvoril docasneho affiliate partnera pres `admin_create_affiliate_partner`.
+- Overene prechody: `pending -> active`, `active -> paused`, `paused -> active`, `active -> terminated`.
+- Overeno: `contract_ends_at > contract_starts_at`.
+- Overeny 4 audit logy pro status zmeny vcetne `contract_starts_at` a `contract_ends_at`.
+- Zakazany prechod `terminated -> active` vratil `affiliate_status_transition_not_allowed`.
+- Cleanup probehl: `TESTSTAT20260602023104886` je `absent`.
+- Predchozi selhany kod `TESTSTAT20260602022743527` byl zkontrolovan a je take `absent`.
+
+Invariant:
+- Nebyl menen app kod.
+- Nebyly meneny existujici migrace.
+- Nebylo aplikovano nic do produkce.
+- Nebyly meneny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele`, B2B partner program ani existujici influencer system.
