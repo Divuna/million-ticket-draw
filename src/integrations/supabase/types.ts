@@ -86,6 +86,430 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_audit_logs: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_table: string
+          id: string
+          metadata: Json
+          new_data: Json | null
+          old_data: Json | null
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_table: string
+          id?: string
+          metadata?: Json
+          new_data?: Json | null
+          old_data?: Json | null
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_table?: string
+          id?: string
+          metadata?: Json
+          new_data?: Json | null
+          old_data?: Json | null
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      affiliate_bonus_events: {
+        Row: {
+          affiliate_partner_id: string
+          amount_czk: number
+          approved_at: string | null
+          bonus_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          metadata: Json
+          paid_at: string | null
+          reason: string | null
+          source_merchant_partner_id: string | null
+          source_user_id: string | null
+          status: string
+        }
+        Insert: {
+          affiliate_partner_id: string
+          amount_czk: number
+          approved_at?: string | null
+          bonus_type: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          metadata?: Json
+          paid_at?: string | null
+          reason?: string | null
+          source_merchant_partner_id?: string | null
+          source_user_id?: string | null
+          status?: string
+        }
+        Update: {
+          affiliate_partner_id?: string
+          amount_czk?: number
+          approved_at?: string | null
+          bonus_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          metadata?: Json
+          paid_at?: string | null
+          reason?: string | null
+          source_merchant_partner_id?: string | null
+          source_user_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_bonus_events_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_bonus_events_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_bonus_events_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_payout_summary"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
+            foreignKeyName: "affiliate_bonus_events_source_merchant_partner_id_fkey"
+            columns: ["source_merchant_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_codes: {
+        Row: {
+          affiliate_partner_id: string
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          retired_at: string | null
+          status: string
+        }
+        Insert: {
+          affiliate_partner_id: string
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          retired_at?: string | null
+          status?: string
+        }
+        Update: {
+          affiliate_partner_id?: string
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          retired_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_codes_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_codes_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_codes_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_payout_summary"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+        ]
+      }
+      affiliate_commission_events: {
+        Row: {
+          affiliate_partner_id: string
+          approved_at: string | null
+          calculated_at: string
+          commission_amount_czk: number
+          commission_rate_snapshot: number
+          id: string
+          metadata: Json
+          paid_at: string | null
+          payment_amount_snapshot: number
+          payment_amount_source: string
+          payment_id: string
+          reverse_reason: string | null
+          reversed_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          affiliate_partner_id: string
+          approved_at?: string | null
+          calculated_at?: string
+          commission_amount_czk: number
+          commission_rate_snapshot: number
+          id?: string
+          metadata?: Json
+          paid_at?: string | null
+          payment_amount_snapshot: number
+          payment_amount_source?: string
+          payment_id: string
+          reverse_reason?: string | null
+          reversed_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          affiliate_partner_id?: string
+          approved_at?: string | null
+          calculated_at?: string
+          commission_amount_czk?: number
+          commission_rate_snapshot?: number
+          id?: string
+          metadata?: Json
+          paid_at?: string | null
+          payment_amount_snapshot?: number
+          payment_amount_source?: string
+          payment_id?: string
+          reverse_reason?: string | null
+          reversed_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commission_events_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commission_events_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commission_events_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_payout_summary"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
+            foreignKeyName: "affiliate_commission_events_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_commission_rate_history: {
+        Row: {
+          affiliate_partner_id: string
+          commission_rate: number
+          created_at: string
+          created_by: string | null
+          id: string
+          reason: string
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          affiliate_partner_id: string
+          commission_rate?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason: string
+          valid_from: string
+          valid_to?: string | null
+        }
+        Update: {
+          affiliate_partner_id?: string
+          commission_rate?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commission_rate_history_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commission_rate_history_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commission_rate_history_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_payout_summary"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+        ]
+      }
+      affiliate_partners: {
+        Row: {
+          affiliate_type: string
+          auth_user_id: string | null
+          contact_email: string | null
+          contract_ends_at: string | null
+          contract_starts_at: string | null
+          created_at: string
+          created_by: string | null
+          display_name: string
+          id: string
+          legal_name: string | null
+          notes: string | null
+          status: string
+          terms_accepted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          affiliate_type?: string
+          auth_user_id?: string | null
+          contact_email?: string | null
+          contract_ends_at?: string | null
+          contract_starts_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_name: string
+          id?: string
+          legal_name?: string | null
+          notes?: string | null
+          status?: string
+          terms_accepted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          affiliate_type?: string
+          auth_user_id?: string | null
+          contact_email?: string | null
+          contract_ends_at?: string | null
+          contract_starts_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_name?: string
+          id?: string
+          legal_name?: string | null
+          notes?: string | null
+          status?: string
+          terms_accepted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      affiliate_payouts: {
+        Row: {
+          affiliate_partner_id: string
+          approved_at: string | null
+          approved_by: string | null
+          bonus_amount_czk: number
+          commission_amount_czk: number
+          created_at: string
+          id: string
+          paid_at: string | null
+          period_month: string
+          status: string
+          total_amount_czk: number | null
+          updated_at: string
+        }
+        Insert: {
+          affiliate_partner_id: string
+          approved_at?: string | null
+          approved_by?: string | null
+          bonus_amount_czk?: number
+          commission_amount_czk?: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          period_month: string
+          status?: string
+          total_amount_czk?: number | null
+          updated_at?: string
+        }
+        Update: {
+          affiliate_partner_id?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          bonus_amount_czk?: number
+          commission_amount_czk?: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          period_month?: string
+          status?: string
+          total_amount_czk?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_payouts_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_payouts_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_payouts_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_payout_summary"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           created_at: string | null
@@ -450,18 +874,21 @@ export type Database = {
       coming_soon_banners: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           image_url: string
           title: string | null
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           image_url: string
           title?: string | null
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           image_url?: string
           title?: string | null
@@ -1227,6 +1654,84 @@ export type Database = {
             foreignKeyName: "influencer_referrals_influencer_partner_id_fkey"
             columns: ["influencer_partner_id"]
             isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merchant_affiliate_referrals: {
+        Row: {
+          activated_at: string | null
+          affiliate_code_id: string | null
+          affiliate_partner_id: string
+          approved_at: string | null
+          bonus_eligible_at: string | null
+          created_by: string | null
+          id: string
+          merchant_partner_id: string
+          metadata: Json
+          registered_at: string
+          status: string
+        }
+        Insert: {
+          activated_at?: string | null
+          affiliate_code_id?: string | null
+          affiliate_partner_id: string
+          approved_at?: string | null
+          bonus_eligible_at?: string | null
+          created_by?: string | null
+          id?: string
+          merchant_partner_id: string
+          metadata?: Json
+          registered_at?: string
+          status?: string
+        }
+        Update: {
+          activated_at?: string | null
+          affiliate_code_id?: string | null
+          affiliate_partner_id?: string
+          approved_at?: string | null
+          bonus_eligible_at?: string | null
+          created_by?: string | null
+          id?: string
+          merchant_partner_id?: string
+          metadata?: Json
+          registered_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_affiliate_referrals_affiliate_code_id_fkey"
+            columns: ["affiliate_code_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_affiliate_referrals_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_affiliate_referrals_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_affiliate_referrals_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_payout_summary"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
+            foreignKeyName: "merchant_affiliate_referrals_merchant_partner_id_fkey"
+            columns: ["merchant_partner_id"]
+            isOneToOne: true
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
@@ -2759,6 +3264,81 @@ export type Database = {
           },
         ]
       }
+      user_affiliate_attributions: {
+        Row: {
+          affiliate_code_id: string | null
+          affiliate_partner_id: string
+          attributed_at: string
+          created_by: string | null
+          id: string
+          locked: boolean
+          metadata: Json
+          source: string
+          source_merchant_partner_id: string | null
+          user_id: string
+        }
+        Insert: {
+          affiliate_code_id?: string | null
+          affiliate_partner_id: string
+          attributed_at?: string
+          created_by?: string | null
+          id?: string
+          locked?: boolean
+          metadata?: Json
+          source: string
+          source_merchant_partner_id?: string | null
+          user_id: string
+        }
+        Update: {
+          affiliate_code_id?: string | null
+          affiliate_partner_id?: string
+          attributed_at?: string
+          created_by?: string | null
+          id?: string
+          locked?: boolean
+          metadata?: Json
+          source?: string
+          source_merchant_partner_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_affiliate_attributions_affiliate_code_id_fkey"
+            columns: ["affiliate_code_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_affiliate_attributions_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_affiliate_attributions_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_affiliate_attributions_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_payout_summary"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
+            foreignKeyName: "user_affiliate_attributions_source_merchant_partner_id_fkey"
+            columns: ["source_merchant_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_contest_favorites: {
         Row: {
           contest_id: string
@@ -3871,6 +4451,222 @@ export type Database = {
         }
         Relationships: []
       }
+      v_admin_affiliate_commission_events: {
+        Row: {
+          affiliate_display_name: string | null
+          affiliate_partner_id: string | null
+          affiliate_status: string | null
+          affiliate_type: string | null
+          approved_at: string | null
+          calculated_at: string | null
+          commission_amount_czk: number | null
+          commission_event_id: string | null
+          commission_rate_snapshot: number | null
+          metadata: Json | null
+          paid_at: string | null
+          payment_amount_snapshot: number | null
+          payment_amount_source: string | null
+          payment_created_at: string | null
+          payment_id: string | null
+          payment_method: string | null
+          payment_status: string | null
+          payments_amount_miocoins: number | null
+          reverse_reason: string | null
+          reversed_at: string | null
+          status: string | null
+          stripe_session_id: string | null
+          user_display_name: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commission_events_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commission_events_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commission_events_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_payout_summary"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
+            foreignKeyName: "affiliate_commission_events_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_admin_affiliate_customer_attributions: {
+        Row: {
+          affiliate_code: string | null
+          affiliate_code_id: string | null
+          affiliate_code_status: string | null
+          affiliate_display_name: string | null
+          affiliate_partner_id: string | null
+          affiliate_status: string | null
+          affiliate_type: string | null
+          attributed_at: string | null
+          attribution_id: string | null
+          created_by: string | null
+          locked: boolean | null
+          metadata: Json | null
+          source: string | null
+          source_merchant_company_name: string | null
+          source_merchant_name: string | null
+          source_merchant_partner_id: string | null
+          user_display_name: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_affiliate_attributions_affiliate_code_id_fkey"
+            columns: ["affiliate_code_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_affiliate_attributions_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_affiliate_attributions_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_affiliate_attributions_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_payout_summary"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
+            foreignKeyName: "user_affiliate_attributions_source_merchant_partner_id_fkey"
+            columns: ["source_merchant_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_admin_affiliate_merchant_referrals: {
+        Row: {
+          activated_at: string | null
+          affiliate_code: string | null
+          affiliate_code_id: string | null
+          affiliate_code_status: string | null
+          affiliate_display_name: string | null
+          affiliate_partner_id: string | null
+          affiliate_status: string | null
+          affiliate_type: string | null
+          approved_at: string | null
+          bonus_eligible_at: string | null
+          created_by: string | null
+          merchant_auth_user_id: string | null
+          merchant_company_name: string | null
+          merchant_contact_email: string | null
+          merchant_name: string | null
+          merchant_partner_id: string | null
+          merchant_referral_id: string | null
+          merchant_status: Database["public"]["Enums"]["partner_status"] | null
+          metadata: Json | null
+          registered_at: string | null
+          status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_affiliate_referrals_affiliate_code_id_fkey"
+            columns: ["affiliate_code_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_affiliate_referrals_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_affiliate_referrals_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_affiliate_referrals_affiliate_partner_id_fkey"
+            columns: ["affiliate_partner_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_affiliate_payout_summary"
+            referencedColumns: ["affiliate_partner_id"]
+          },
+          {
+            foreignKeyName: "merchant_affiliate_referrals_merchant_partner_id_fkey"
+            columns: ["merchant_partner_id"]
+            isOneToOne: true
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_admin_affiliate_partners: {
+        Row: {
+          affiliate_type: string | null
+          attributed_users_count: number | null
+          bonuses_total_czk: number | null
+          commissions_total_czk: number | null
+          contact_email: string | null
+          created_at: string | null
+          current_commission_rate: number | null
+          display_name: string | null
+          id: string | null
+          legal_name: string | null
+          primary_code: string | null
+          referred_merchants_count: number | null
+          status: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
+      v_admin_affiliate_payout_summary: {
+        Row: {
+          affiliate_partner_id: string | null
+          affiliate_status: string | null
+          approved_at: string | null
+          bonus_amount_czk: number | null
+          commission_amount_czk: number | null
+          display_name: string | null
+          paid_at: string | null
+          payout_status: string | null
+          period_month: string | null
+          total_amount_czk: number | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       v_first_topup_valid: {
         Row: {
           first_topup_at: string | null
@@ -4085,6 +4881,20 @@ export type Database = {
         Args: { p_bonuses: Json; p_contest_id: string }
         Returns: Json
       }
+      admin_create_affiliate_partner: {
+        Args: {
+          p_affiliate_type?: string
+          p_code: string
+          p_commission_rate?: number
+          p_contact_email?: string
+          p_contract_starts_at?: string
+          p_display_name: string
+          p_legal_name?: string
+          p_notes?: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
       admin_finalize_miocoin_save: {
         Args: { p_contest_id: string; p_expected_count: number }
         Returns: Json
@@ -4150,6 +4960,26 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_record_affiliate_commission_for_payment: {
+        Args: {
+          p_metadata?: Json
+          p_paid_amount_czk: number
+          p_paid_at?: string
+          p_payment_id: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
+      admin_set_affiliate_commission_rate: {
+        Args: {
+          p_affiliate_partner_id: string
+          p_commission_rate: number
+          p_metadata?: Json
+          p_reason?: string
+          p_valid_from?: string
+        }
+        Returns: Json
+      }
       admin_set_partner_status: {
         Args: {
           p_notes?: string
@@ -4157,6 +4987,15 @@ export type Database = {
           p_status: Database["public"]["Enums"]["partner_status"]
         }
         Returns: undefined
+      }
+      admin_update_affiliate_partner_status: {
+        Args: {
+          p_affiliate_partner_id: string
+          p_metadata?: Json
+          p_new_status: string
+          p_reason: string
+        }
+        Returns: Json
       }
       admin_update_referral_reward: {
         Args: { p_new_status: string; p_reward_id: string }
@@ -4593,6 +5432,25 @@ export type Database = {
         }[]
       }
       recalculate_bonus_wallet: { Args: never; Returns: undefined }
+      record_affiliate_customer_attribution: {
+        Args: {
+          p_affiliate_code: string
+          p_landing_url?: string
+          p_metadata?: Json
+          p_source?: string
+        }
+        Returns: Json
+      }
+      record_affiliate_merchant_referral: {
+        Args: {
+          p_affiliate_code: string
+          p_landing_url?: string
+          p_merchant_partner_id: string
+          p_metadata?: Json
+          p_source?: string
+        }
+        Returns: Json
+      }
       redeem_miocoin: {
         Args: {
           p_contest_id: string
@@ -4605,6 +5463,7 @@ export type Database = {
           success: boolean
         }[]
       }
+      redeem_miocoin_code: { Args: { p_code: string }; Returns: Json }
       resolve_partner_by_api_key: { Args: { p_key: string }; Returns: string }
       resume_contest: { Args: { contest_id: string }; Returns: undefined }
       revise_partner_offer: { Args: { p_offer_id: string }; Returns: undefined }
