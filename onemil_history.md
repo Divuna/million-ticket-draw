@@ -2568,3 +2568,34 @@ Invariant:
 - Nebyla menena SQL migrace po staging aplikaci.
 - Nebyly meneny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele` ani B2B partner program.
 - Affiliate foundation zatim nic nenapojuje na register, payments, wallet ani produkcni provizni vypocty.
+
+---
+
+## 2026-06-02 - Affiliate admin RPC staging test
+
+- RPC migration `20260602_admin_create_affiliate_partner_rpc.sql` byla ověřena pouze na staging Supabase projektu `onemil-staging` (`dxmowysntemfqfnanxua`).
+- Produkce `xkzhjldrojjlrkezorey` nebyla použita ani dotčena.
+- Dočasný Supabase client script `tmp/staging-test-admin-create-affiliate-partner.mjs` byl připraven a spuštěn proti stagingu, ale klientský Auth bootstrap ručně založeného staging test účtu selhal před voláním RPC:
+  - první běh bez env: `Missing required env var: STAGING_ADMIN_EMAIL`,
+  - po založení SQL test účtů: `Admin login failed: Invalid login credentials`,
+  - po dorovnání Auth metadat: `Admin login failed: Database error querying schema`.
+- Proto bylo samotné RPC ověřeno databázově na stagingu se simulovaným authenticated JWT contextem (`request.jwt.claim.sub`) pro dočasného admin a nonadmin uživatele.
+
+Výsledek RPC testu:
+- Testovací kód: `TESTAFF20260602021409162`.
+- `rpc_create`: OK.
+- `affiliate_partners`: záznam vznikl.
+- `affiliate_codes`: záznam vznikl.
+- `affiliate_commission_rate_history`: první sazba vznikla, `valid_to = null`.
+- `affiliate_audit_logs`: audit záznam vznikl.
+- Druhé volání se stejným kódem vrátilo `affiliate_code_already_exists`.
+- Nonadmin context vrátil `not_admin`.
+- Cleanup proběhl na stagingu: `affiliate_codes.code = TESTAFF20260602021409162` je `absent`.
+- Dočasné staging Auth test účty byly po testu odstraněny.
+- Dočasné lokální skripty z `tmp/` byly smazány a nebyly commitnuty.
+
+Invariant:
+- Nebyl měněn app kód.
+- Nebyly měněny SQL migrace.
+- Nebylo aplikováno nic do produkce.
+- Nebyly měněny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zákaznické `Pozvi přátele`, B2B partner program ani existující influencer systém.

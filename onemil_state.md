@@ -2893,3 +2893,24 @@ Invariant:
 - Nebyla menena SQL migrace po staging aplikaci.
 - Nebyly meneny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zakaznicke `Pozvi pratele` ani B2B partner program.
 - Affiliate foundation zustava pouze databazovy zaklad bez napojeni na produkcni provizni vypocty.
+
+---
+
+## Affiliate admin RPC staging test (02. 06. 2026)
+
+RPC migration `20260602_admin_create_affiliate_partner_rpc.sql` je aplikovana pouze na staging Supabase projektu `onemil-staging` (`dxmowysntemfqfnanxua`). Produkce `xkzhjldrojjlrkezorey` nebyla dotcena.
+
+Ověření:
+- Dočasný Node Supabase client script byl připraven jako `tmp/staging-test-admin-create-affiliate-partner.mjs`, ale klientský login do ručně založeného staging Auth test účtu selhal na GoTrue/Auth bootstrapu (`Invalid login credentials`, později `Database error querying schema`) ještě před voláním RPC.
+- Samotné RPC bylo proto ověřeno na staging DB se simulovaným authenticated JWT contextem přes `request.jwt.claim.sub` pro dočasného admin a nonadmin uživatele.
+- Testovací affiliate kód: `TESTAFF20260602021409162`.
+- RPC `public.admin_create_affiliate_partner(...)` vytvořilo partnera, affiliate kód, první sazbu a audit log.
+- Duplicitní kód vrátil očekávanou chybu `affiliate_code_already_exists`.
+- Nonadmin context vrátil očekávanou chybu `not_admin`.
+- Cleanup na stagingu proběhl: testovací affiliate kód už neexistuje a dočasné auth test účty byly odstraněny.
+
+Invariant:
+- Nebyl použit produkční projekt.
+- Nebyla měněna app logika ani SQL migrace.
+- Nebyly měněny registrace, `partner/register`, payments, wallet, `buy_ticket_atomic`, Partner Offers, zákaznické `Pozvi přátele`, B2B partner program ani existující influencer systém.
+- RPC zůstává admin-only zápisová vrstva nad affiliate foundation tabulkami; zatím není napojené na registraci, platby, wallet ani provizní výpočty.
