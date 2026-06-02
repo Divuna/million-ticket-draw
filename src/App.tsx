@@ -84,7 +84,6 @@ import AdminReferralDashboard from "@/pages/AdminReferralDashboard";
 import AdminInfluencers from "@/pages/AdminInfluencers";
 import AdminInfluencerCommissions from "@/pages/AdminInfluencerCommissions";
 import AdminInfluencerCampaigns from "@/pages/AdminInfluencerCampaigns";
-import AdminAffiliate from "@/pages/AdminAffiliate";
 import AdminNotFound from "@/pages/AdminNotFound";
 import NotFound from "@/pages/NotFound";
 
@@ -92,10 +91,6 @@ import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useApplyPendingReferral } from "@/hooks/useApplyPendingReferral";
-import {
-  useApplyPendingAffiliate,
-  capturePendingAffiliateFromUrl,
-} from "@/hooks/useApplyPendingAffiliate";
 import { useRetentionTriggers } from "@/hooks/useRetentionTriggers";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
 import { GlobalMusicPlayer } from "@/components/GlobalMusicPlayer";
@@ -376,16 +371,8 @@ function AppContent() {
   const partnerData = usePartnerData(isPartnerAccount && !isInfluencerAccount ? user?.id : undefined);
   useOneSignal();
   useApplyPendingReferral(user?.id);
-  useApplyPendingAffiliate(user?.id);
   useRetentionTriggers(user?.id);
   useHeartbeat(user?.id);
-
-  // Capture affiliate code (aff) from any landing URL (e.g. /?aff=PAVEL01), not just
-  // /register. Fully separate from the legacy ref system; ref always wins when both
-  // are present (enforced inside the helper). Does not affect routing or UI.
-  React.useEffect(() => {
-    capturePendingAffiliateFromUrl(location.search);
-  }, [location.search]);
 
   // Hard-block: Redirect accounts away from unauthorized routes
   React.useEffect(() => {
@@ -566,7 +553,6 @@ function AppContent() {
             <Route path="/admin/influencers" element={<AdminInfluencers />} />
             <Route path="/admin/influencer-commissions" element={<AdminInfluencerCommissions />} />
             <Route path="/admin/influencer-campaigns" element={<AdminInfluencerCampaigns />} />
-            <Route path="/admin/affiliate" element={<AdminAffiliate />} />
             <Route path="/admin/*" element={<AdminNotFound />} />
           </Route>
           <Route path="/partner/login" element={<PartnerLogin />} />

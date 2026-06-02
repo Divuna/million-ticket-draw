@@ -11,11 +11,6 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-onemil.png';
 import { PENDING_REFERRAL_STORAGE_KEY } from '@/hooks/useApplyPendingReferral';
-import {
-  PENDING_AFFILIATE_STORAGE_KEY,
-  capturePendingAffiliateFromUrl,
-  normalizeAffiliateCode,
-} from '@/hooks/useApplyPendingAffiliate';
 import { analytics } from '@/lib/analytics';
 import { ENABLED_OAUTH_PROVIDERS, type OAuthProvider } from '@/config/socialAuth';
 
@@ -60,12 +55,6 @@ const Register: React.FC = () => {
         // ignore storage errors
       }
     }
-  }, [searchParams]);
-
-  // Persist affiliate code (aff) from URL — fully separate from the legacy ref system.
-  // If the URL also contains ref, ref wins and aff is ignored (handled inside the helper).
-  useEffect(() => {
-    capturePendingAffiliateFromUrl(window.location.search);
   }, [searchParams]);
 
   const validateAge = (dob: string): boolean => {
@@ -166,25 +155,6 @@ const Register: React.FC = () => {
             // non-blocking; user can add code later in Profile
           }
 
-          // Apply affiliate code (aff) from URL if present (e.g. /?aff=CODE).
-          // Fully separate from ref; never overwrites existing attribution (RPC enforces
-          // first-touch). Unknown/inactive codes are silently ignored. Non-blocking.
-          try {
-            const pendingAff = normalizeAffiliateCode(
-              sessionStorage.getItem(PENDING_AFFILIATE_STORAGE_KEY),
-            );
-            if (pendingAff) {
-              await supabase.rpc('record_affiliate_customer_attribution', {
-                p_affiliate_code: pendingAff,
-                p_source: 'direct_link',
-                p_landing_url: window.location.href.slice(0, 2000),
-                p_metadata: { captured_via: 'aff_url' },
-              });
-            }
-            sessionStorage.removeItem(PENDING_AFFILIATE_STORAGE_KEY);
-          } catch {
-            // non-blocking; affiliate attribution must never break registration
-          }
         }
         analytics.registrationCompleted();
         navigate('/profile');

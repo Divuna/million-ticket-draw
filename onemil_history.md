@@ -14,6 +14,22 @@
 
 ---
 
+## 2026-06-02 — Affiliate vrstva vrácena z kódu (Část A1)
+
+- Nová affiliate vrstva (ChatGPT duplikát, ~41 commitů) odstraněna z kódu jedním revert commitem.
+- Smazány 2 nové soubory: `src/hooks/useApplyPendingAffiliate.ts`, `src/pages/AdminAffiliate.tsx`.
+- Smazáno 10 migračních souborů `supabase/migrations/20260602_*`.
+- Editovány sdílené soubory (odebrány jen affiliate části): `src/App.tsx`, `src/pages/Register.tsx`,
+  `src/pages/AdminInfluencers.tsx`, `src/components/admin/adminNavConfig.ts`,
+  `src/integrations/supabase/types.ts` (obnoveno z baseline `5da1059`).
+- Zachováno: `src/components/WinCard.tsx` (Gift → OneMilGiftIcon) a celý původní influencer systém
+  (`/influencer*`, `/admin/influencer*`, `?ref=`, `set_my_referrer_by_code`, provize RPC).
+- `npm run build` ✅. Commit: `revert: remove new affiliate layer`. Push na main.
+- DB objekty `affiliate_*` zatím NEsmazány — čeká na schválení DROP skriptu (Část A2).
+- Produkce nepublikována — čeká na ruční Lovable Publish (Část A3).
+
+---
+
 ## 2026-06-01 — Shop recommendation mailto card (commit `04e5a73`)
 
 - Přidána customer Profile funkce `Doporučit OneMil oblíbenému obchodu`:

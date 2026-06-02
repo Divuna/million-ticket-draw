@@ -4,7 +4,20 @@
 
 ---
 
-## 🚨 AKTUÁLNÍ ÚKOL — VRÁTIT NOVOU AFFILIATE VĚTEV (HANDOFF PRO NOVOU SESSION) (02. 06. 2026)
+## ✅ AFFILIATE VĚTEV VRÁCENA Z KÓDU — ČÁST A1 DOKONČENA (02. 06. 2026)
+
+- Nová affiliate vrstva odstraněna z kódu jedním commitem `revert: remove new affiliate layer`.
+- Smazány: `src/hooks/useApplyPendingAffiliate.ts`, `src/pages/AdminAffiliate.tsx`, všechny `supabase/migrations/20260602_*` (10 migračních souborů).
+- Editovány (jen affiliate části): `src/App.tsx`, `src/pages/Register.tsx`, `src/pages/AdminInfluencers.tsx`, `src/components/admin/adminNavConfig.ts`, `src/integrations/supabase/types.ts` (obnoveno z baseline).
+- Zachováno: `src/components/WinCard.tsx` (Gift → OneMilGiftIcon) a celý původní influencer systém.
+- `npm run build` prošel ✅.
+- DB objekty (`affiliate_*` tabulky/views/RPC) zatím NEsmazány — viz navržený DROP seznam níže.
+- Produkce nepublikována — čeká na ruční Lovable Publish (Část A3).
+- **DALŠÍ KROK:** A2 = schválit a spustit DROP skript DB objektů; A3 = Lovable Publish produkce.
+
+---
+
+## 🚨 PŮVODNÍ HANDOFF — VRÁTIT NOVOU AFFILIATE VĚTEV (02. 06. 2026)
 
 **TENTO BLOK ČTI JAKO PRVNÍ. Je to právě probíhající rozhodnutí a další krok.**
 

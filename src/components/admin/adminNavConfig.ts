@@ -124,7 +124,6 @@ const USERS_NAV = {
   partnerOffers: { path: "/admin/partner-offers", label: "Nabídky ke schválení", icon: Tag },
   invoices: { path: "/admin/invoices", label: "Faktury", icon: Receipt },
   influencers: { path: "/admin/influencers", label: "Affiliate partneři", icon: Megaphone },
-  affiliateSystem: { path: "/admin/affiliate", label: "Affiliate systém", icon: Megaphone },
   campaigns: { path: "/admin/influencer-campaigns", label: "Affiliate kampaně", icon: CalendarDays },
   commissions: { path: "/admin/influencer-commissions", label: "Affiliate výplaty", icon: Banknote },
   legal: { path: "/admin/legal-acceptances", label: "Souhlasy", icon: FileText },
@@ -245,7 +244,7 @@ export const ADMIN_NAV_SECTIONS: readonly AdminNavSectionDefinition[] = [
         icon: MoreHorizontal,
         sections: [
           { label: "Partneři", items: [USERS_NAV.partnersPortal, USERS_NAV.partnerOffers] },
-          { label: "Affiliate", items: [USERS_NAV.affiliateSystem, USERS_NAV.campaigns, USERS_NAV.commissions] },
+          { label: "Affiliate", items: [USERS_NAV.campaigns, USERS_NAV.commissions] },
           {
             label: "Audit a compliance",
             items: [USERS_NAV.legal, USERS_NAV.auditLogs, USERS_NAV.auditRepair, USERS_NAV.onemilAudit],
@@ -350,7 +349,6 @@ export function getAdminSectionFromPath(pathname: string, search: string = ""): 
     path.startsWith("/admin/partners/") ||
     path === "/admin/partners" ||
     path.startsWith("/admin/influencers") ||
-    path.startsWith("/admin/affiliate") ||
     path.startsWith("/admin/influencer-commissions") ||
     path.startsWith("/admin/influencer-campaigns") ||
     path.startsWith("/admin/legal-acceptances") ||
