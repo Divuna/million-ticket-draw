@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-06-03 - Affiliate v2: registrační/social pole migrace aplikována na PRODUKCI
+
+- Aplikována migrace `supabase/migrations/20260603_affiliate_registration_profile_fields.sql` na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla).
+- Přidáno 6 nullable text sloupců do `affiliate_accounts`: `instagram_url`, `tiktok_url`, `youtube_url`, `facebook_url`, `audience_size`, `content_categories` (additive, `ADD COLUMN IF NOT EXISTS`).
+- Nová 12-arg overload RPC `register_affiliate_account` (SECURITY DEFINER). Stará 5-arg overload ponechána (drop-old-signature migrace neaplikována).
+- Postcheck: sloupce přítomny, oba overloady SECURITY DEFINER, 3 affiliate záznamy nedotčeny (2 approved / 1 rejected), RLS zapnuté.
+- Social pole zobrazena jako čistý text (`ReadonlyItem`/`DetailField` → `<p>`). Žádné iframe/embed/video/autoplay/feed/API.
+- `npm run build` ✅. Lokál fast-forwardnut na `bff3c7e7`.
+- Nezměněno: provize, Partner portal, zákaznický účet, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`.
+
+---
+
 ## 2026-06-03 - Affiliate v2: dashboard přepínač rozšířen na Profil
 
 - `/affiliate/dashboard` má horní přepínač `Influencer` / `Obchodník` / `Profil`.

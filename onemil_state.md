@@ -4,6 +4,46 @@
 
 ---
 
+## ✅ AFFILIATE v2 — REGISTRAČNÍ / SOCIAL POLE NASAZENA V PRODUKCI (03. 06. 2026)
+
+**Migrace `20260603_affiliate_registration_profile_fields.sql` aplikována na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla).**
+
+### Nové sloupce v `affiliate_accounts` (additive, `ADD COLUMN IF NOT EXISTS`)
+| Sloupec | Typ | Popis |
+|---------|-----|-------|
+| `instagram_url` | text nullable | Instagram profil (text) |
+| `tiktok_url` | text nullable | TikTok profil (text) |
+| `youtube_url` | text nullable | YouTube kanál (text) |
+| `facebook_url` | text nullable | Facebook profil (text) |
+| `audience_size` | text nullable | Velikost publika / dosah (text) |
+| `content_categories` | text nullable | Kategorie obsahu (text) |
+
+`website_url` již existoval — ukládá a zobrazuje se beze změny.
+
+### RPC `register_affiliate_account`
+- Nová 12-arg overload (SECURITY DEFINER, `search_path=''`) ukládá všechna registrační/social pole.
+- Stará 5-arg overload **ponechána** (drop-old-signature migrace NEbyla v této akci schválena ani aplikována). Žádná overload ambiguita — liší se počtem argumentů; frontend volá 12-arg verzi.
+- GRANT EXECUTE pouze `authenticated`.
+
+### Produkční postcheck (read-only)
+- 6 nových sloupců + `website_url` přítomny, typ `text` ✅
+- Oba overloady RPC SECURITY DEFINER ✅
+- 3 affiliate záznamy (2 approved, 1 rejected, 0 pending) — **nedotčeny** ✅
+- RLS na `affiliate_accounts` stále zapnuté ✅
+
+### Bezpečnost zobrazení — jen text, žádné embedy
+- Dashboard `AffiliateProfileSection`: `ReadonlyItem` renderuje hodnoty jako `<p>` text.
+- Admin `AdminAffiliateAccounts`: `DetailField` renderuje hodnoty jako `<p>` text.
+- **Žádný `<iframe>`, `<embed>`, `<video>`, autoplay, feed loading ani Instagram/TikTok/YouTube/Facebook API.**
+
+### Build
+- `npm run build` ✅ (exit 0, built in ~17s). Lokál fast-forwardnut na `bff3c7e7`.
+
+### Nezměněno (garantováno)
+- Provizní výpočty, Partner portal, zákaznický účet, platby, tikety, soutěže, peněženka, `buy_ticket_atomic` — beze změny. Žádné Edge Functions ani jiné migrace nenasazeny.
+
+---
+
 ## ✅ AFFILIATE v2 DASHBOARD — KOMPLETNĚ DOKONČENO (03. 06. 2026)
 
 **Stav: NASAZENO, SMOKE OVĚŘENO, E2E ZELENÝ. Žádný další deploy není potřeba.**

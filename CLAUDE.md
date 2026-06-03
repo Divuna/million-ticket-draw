@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## AFFILIATE v2 — REGISTRAČNÍ / SOCIAL POLE V PRODUKCI (03. 06. 2026)
+
+**Migrace `20260603_affiliate_registration_profile_fields.sql` APLIKOVÁNA na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla).**
+
+- `affiliate_accounts` má 6 nových nullable text sloupců: `instagram_url`, `tiktok_url`, `youtube_url`, `facebook_url`, `audience_size`, `content_categories` (+ existující `website_url`).
+- Nová 12-arg overload RPC `register_affiliate_account` (SECURITY DEFINER). Stará 5-arg overload PONECHÁNA — drop-old-signature migrace (`20260603_affiliate_registration_rpc_drop_old_signature.sql`) NEbyla aplikována na produkci v této akci.
+- Social/web pole se ukládají i zobrazují **jen jako text** (`ReadonlyItem` v dashboardu, `DetailField` v adminu — oba `<p>`). ŽÁDNÝ iframe/embed/video/autoplay/feed/Instagram-TikTok-YouTube-Facebook API. Toto pravidlo neměnit.
+- Postcheck OK: sloupce přítomny, RLS zapnuté, 3 affiliate záznamy nedotčeny. `npm run build` ✅.
+- Nezměněno: provize, Partner portal, zákaznický účet, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`. Žádné Edge Functions.
+
 ## AFFILIATE v2 — PRODUKČNÍ STAV (03. 06. 2026)
 
 **Affiliate v2 dashboard a profil jsou KOMPLETNĚ NASAZENY A OVĚŘENY V PRODUKCI (`xkzhjldrojjlrkezorey`).**
