@@ -490,3 +490,26 @@ Detailní setup viz `PAPERCLIP_SETUP_CONTEXT.md`.
 - Show Apple only when `VITE_ENABLE_APPLE_AUTH=true` / `1` and the provider is actually enabled in Supabase.
 - Do not change Supabase Auth config, database, email/password login, registration links, profile, wallet, contests, tickets, vouchers, winners, Partner Offers, AI chat, or admin when adjusting only social button visibility.
 - Related commits: `cdbaec0`, `ec48700`, `3874f20`.
+
+---
+
+## Affiliate v2 staging E2E status (03. 06. 2026)
+
+- Staging token config is fixed.
+- Supabase staging Edge secret `INTERNAL_FUNCTION_TOKEN` and GitHub Actions staging secret `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` are aligned to the same plaintext value.
+- The token value must never be logged or committed.
+- GitHub Actions passes `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` into the staging build as `VITE_INTERNAL_FUNCTION_TOKEN`.
+- `get-pending-partner-registrations` no longer returns `401`.
+- Browser E2E `affiliate company via flow` passed.
+- Verified flow: `/partner/register?via=KOD` → pending registrace → admin schválení → `partner` → `affiliate_company_refs` → `partners.referred_by_affiliate_id`.
+- Run URL: `https://github.com/Divuna/million-ticket-draw/actions/runs/26882872534`
+- Verified commit: `c9d383fc55d118a9cce5b12e67f5fb637cb124f9`
+- Production was not touched.
+
+Rules for follow-up work:
+
+- Do not restore the deleted affiliate branch.
+- Do not touch production without Pavel's explicit confirmation.
+- Do not change customer accounts.
+- Do not change Partner portal except where necessary to verify pending registrations.
+- Do not change payments, tickets, contests, wallet, or `buy_ticket_atomic`.

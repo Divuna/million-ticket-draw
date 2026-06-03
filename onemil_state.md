@@ -3956,3 +3956,33 @@ Invariant:
 
 - PAVEL01 setup zůstal zachovaný (partner `9bf4e8ca…`, code `371c2cd1…` active, link `a50736a9…`).
 - Starý influencer systém, Stripe, payments flow, wallet a `/admin/affiliate` (read-only) beze změny.
+
+---
+
+## AFFILIATE V2 COMPANY VIA FLOW — STAGING BROWSER E2E OVĚŘENO (03. 06. 2026)
+
+Finální staging ověření proběhlo pouze proti staging projektu `dxmowysntemfqfnanxua`.
+Produkce `xkzhjldrojjlrkezorey` nebyla dotčena.
+
+Staging token config je opravený:
+
+- Supabase staging Edge secret `INTERNAL_FUNCTION_TOKEN` je nastavený.
+- GitHub Actions staging secret `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` je nastavený.
+- Obě hodnoty byly sladěné na stejný plaintext token; hodnota tokenu nebyla zapsána do logu ani commitu.
+- Staging workflow předává `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` do buildu jako `VITE_INTERNAL_FUNCTION_TOKEN`.
+
+Ověření:
+
+- `get-pending-partner-registrations` už nevrací `401`.
+- Browser E2E `affiliate company via flow` prošel.
+- Ověřený tok:
+  `/partner/register?via=KOD` → pending registrace → admin schválení → `partner` →
+  `affiliate_company_refs` → `partners.referred_by_affiliate_id`.
+- Run URL: `https://github.com/Divuna/million-ticket-draw/actions/runs/26882872534`
+- Ověřený commit: `c9d383fc55d118a9cce5b12e67f5fb637cb124f9`
+
+Invariant:
+
+- Produkce nebyla dotčena.
+- Nebyl změněn zákaznický účet.
+- Nebyly měněny platby, tikety, soutěže, peněženka ani `buy_ticket_atomic`.
