@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-04 - Affiliate v2: Profil form re-sync po uložení (stale useState)
+
+- Symptom: po uložení social polí se v Profilu data „nezobrazovala správně".
+- Root cause: `AffiliateProfileSection` inicializoval `form` přes `useState({...initial})` jen jednou; po onSaved reloadu rodiče se form neaktualizoval. Data se do DB ukládala správně (youtube v DB, RPC 19-arg, handleSave posílá všech 6 social params).
+- Fix: re-sync form z initial při skutečné změně serializovaných dat (porovnání podle hodnoty, nepřepíše rozeditované hodnoty). Žádná DB migrace. Social = jen text.
+- Spec 28 rozšířen o page.reload() + re-assert. Staging Full E2E run `26916797958`: 53 passed, 0 failed. `npm run build` ✅. Commit `abab6a9c`.
+- Nezměněno: provize, Partner portal, zákaznický účet, platby, tikety, soutěže, peněženka, buy_ticket_atomic.
+
+---
+
 ## 2026-06-03 - Admin messaging: obnovena admin INSERT RLS policy na messages (staging)
 
 - Symptom: admin nemohl poslat zprávu affiliate (ani jinému) uživateli — „Zprávu nelze odeslat".

@@ -4,6 +4,20 @@
 
 ---
 
+## ✅ AFFILIATE v2 — PROFIL FORM RE-SYNC PO ULOŽENÍ (04. 06. 2026)
+
+**Problém:** Po vyplnění a uložení social polí (web/IG/TikTok/YT/FB/dosah/kategorie) se v Profilu (a zdánlivě adminovi) data „nezobrazovala správně".
+
+**Kde přesně byla chyba:** `AffiliateProfileSection` inicializoval `form` přes `useState({...initial})` — **jen jednou při mountu**. Po úspěšném uložení rodič znovu načte data z DB a předá nový `profile` prop, ale `form` zůstal na hodnotách před reloadem (useState pozdější initial ignoruje). **Data se do DB ukládala správně** (ověřeno: `influencer1@onemil.cz` má `youtube_url` v DB, RPC 19-arg, handleSave posílá všech 6 `p_*` social params). Chyba byla jen v **in-app obnovení zobrazení**.
+
+**Ukládala se data do DB:** ANO. **Po reloadu se zobrazují:** ANO (po opravě i in-app onSaved reload; full page reload fungoval i předtím díky remountu). **Admin je vidí:** ANO (admin SELECT/interface/detail správné, fallback odstraněn minule — `2d838dd5`).
+
+**Oprava:** Re-sync `form` z `initial`, když se serializovaná profil data skutečně změní (porovnání podle hodnoty, ne reference → nepřepíše rozeditované hodnoty při běžném re-renderu rodiče). Social pole zůstávají **jen text** (žádné embed/iframe/video/API). **Žádná DB migrace** — RPC už 19-arg, sloupce existují.
+
+**Ověření:** Spec 28 rozšířen o `page.reload()` + re-assert inputů ze saved DB hodnot. Staging Full E2E run `26916797958`: **53 passed · 0 failed** ✅. `npm run build` ✅. Commit `abab6a9c`.
+
+---
+
 ## ✅ AFFILIATE v2 — ADMIN ZPRÁVA AFFILIATE UŽIVATELI: RLS FIX (03. 06. 2026, STAGING)
 
 **Problém 2:** Admin nemohl odeslat zprávu affiliate (ani jinému) uživateli — UI: „Chyba — Zprávu nelze odeslat".
