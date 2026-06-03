@@ -39,9 +39,19 @@ interface AffiliateAccount {
   ref_code: string;
   modes: string[];
   status: string;
+  phone: string | null;
+  vat_id: string | null;
+  ico: string | null;
   commission_rate_customer: number;
   commission_rate_company: number;
   is_vat_payer: boolean;
+  payout_account: string | null;
+  payout_bank: string | null;
+  billing_street: string | null;
+  billing_city: string | null;
+  billing_zip: string | null;
+  billing_country: string | null;
+  website_url: string | null;
   created_at: string;
 }
 
@@ -87,6 +97,22 @@ function commissionStatusBadge(status: string) {
 
 const czk = (n: number) => `${(n ?? 0).toLocaleString("cs-CZ")} Kč`;
 
+const formatModes = (modes?: string[]) => {
+  if (!modes?.length) return "Neuvedeno";
+  return modes.map((mode) => mode === "influencer" ? "Influencer" : mode === "sales_rep" ? "Obchodník" : mode).join(" + ");
+};
+
+const fieldValue = (value?: string | null) => value && value.trim() ? value : "Neuvedeno";
+
+function DetailField({ label, value, mono = false, testId }: { label: string; value?: string | null; mono?: boolean; testId?: string }) {
+  return (
+    <div className="rounded-lg border bg-muted/20 px-3 py-2">
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">{label}</p>
+      <p data-testid={testId} className={`text-sm text-foreground break-words ${mono ? "font-mono" : ""}`}>{fieldValue(value)}</p>
+    </div>
+  );
+}
+
 const AdminAffiliateAccounts = () => {
   const { user } = useAuth();
   const { role, loading: roleLoading } = useUserRole();
@@ -113,7 +139,7 @@ const AdminAffiliateAccounts = () => {
     try {
       const { data: accData, error: accErr } = await (supabase as any)
         .from("affiliate_accounts")
-        .select("id, name, email, ref_code, modes, status, commission_rate_customer, commission_rate_company, is_vat_payer, created_at")
+        .select("id, name, email, phone, ref_code, modes, status, commission_rate_customer, commission_rate_company, is_vat_payer, vat_id, payout_account, payout_bank, ico, billing_street, billing_city, billing_zip, billing_country, website_url, created_at")
         .order("created_at", { ascending: false });
       if (accErr) throw accErr;
 
@@ -372,7 +398,7 @@ const AdminAffiliateAccounts = () => {
                                 </Button>
                               </>
                             )}
-                            <Button variant="ghost" size="icon" onClick={() => openDetail(a)} title="Detail provizí">
+                            <Button variant="ghost" size="icon" onClick={() => openDetail(a)} title="Detail účtu a provizí" data-testid={`detail-affiliate-${a.id}`}>
                               <Eye className="w-4 h-4" />
                             </Button>
                           </div>
@@ -397,10 +423,31 @@ const AdminAffiliateAccounts = () => {
             </DialogTitle>
           </DialogHeader>
           {detailAccount && (
-            <p className="text-xs text-muted-foreground -mt-2 mb-2">
-              Sazby: zákazníci {detailAccount.commission_rate_customer} % · firmy {detailAccount.commission_rate_company} %
-              {detailAccount.is_vat_payer ? " · plátce DPH" : " · neplátce DPH"}
-            </p>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-testid="admin-affiliate-registration-detail">
+                <DetailField label="Jméno / název" value={detailAccount.name} testId="admin-affiliate-detail-name" />
+                <DetailField label="E-mail" value={detailAccount.email} testId="admin-affiliate-detail-email" />
+                <DetailField label="Telefon" value={detailAccount.phone} testId="admin-affiliate-detail-phone" />
+                <DetailField label="Zvolené zaměření" value={formatModes(detailAccount.modes)} testId="admin-affiliate-detail-modes" />
+                <DetailField label="Ref kód" value={detailAccount.ref_code} mono testId="admin-affiliate-detail-ref-code" />
+                <DetailField label="Stav účtu" value={detailAccount.status} testId="admin-affiliate-detail-status" />
+                <DetailField label="Web / sociální síť" value={detailAccount.website_url} testId="admin-affiliate-detail-website" />
+                <DetailField label="IČO" value={detailAccount.ico} testId="admin-affiliate-detail-ico" />
+                <DetailField label="DIČ" value={detailAccount.vat_id} testId="admin-affiliate-detail-vat-id" />
+                <DetailField label="Plátce DPH" value={detailAccount.is_vat_payer ? "Ano" : "Ne"} testId="admin-affiliate-detail-vat-payer" />
+                <DetailField
+                  label="Fakturační adresa"
+                  value={[detailAccount.billing_street, detailAccount.billing_city, detailAccount.billing_zip, detailAccount.billing_country].filter(Boolean).join(", ")}
+                  testId="admin-affiliate-detail-billing"
+                />
+                <DetailField label="Bankovní účet / IBAN" value={detailAccount.payout_account} testId="admin-affiliate-detail-payout-account" />
+                <DetailField label="Banka" value={detailAccount.payout_bank} testId="admin-affiliate-detail-payout-bank" />
+                <DetailField
+                  label="Provizní sazby"
+                  value={`Zákazníci ${detailAccount.commission_rate_customer} % · firmy ${detailAccount.commission_rate_company} %`}
+                />
+              </div>
+            </div>
           )}
           {detailLoading ? (
             <p className="text-sm text-muted-foreground py-8 text-center">Načítám provize…</p>

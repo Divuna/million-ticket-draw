@@ -25,6 +25,9 @@ export interface AffiliateProfileData {
   name: string;
   email: string;
   phone: string | null;
+  ref_code?: string;
+  modes?: string[];
+  status?: string;
   vat_id: string | null;       // DIČ
   ico: string | null;          // IČO — requires migration
   is_vat_payer: boolean;
@@ -58,6 +61,31 @@ const COUNTRIES = [
 
 const inputCls = "w-full bg-[hsl(var(--muted)/0.4)] border border-[hsl(var(--border)/0.5)] rounded-md px-3 py-2 text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-colors";
 const labelCls = "text-[11px] uppercase tracking-wider text-[hsl(var(--text-muted-gray))] flex items-center gap-1.5 mb-1.5";
+const readonlyCls = "rounded-lg border border-[hsl(var(--border)/0.35)] bg-[hsl(var(--muted)/0.18)] px-3 py-2";
+
+const formatModes = (modes?: string[]) => {
+  if (!modes?.length) return 'Neuvedeno';
+  return modes.map(mode => mode === 'influencer' ? 'Influencer' : mode === 'sales_rep' ? 'Obchodník' : mode).join(' + ');
+};
+
+const formatStatus = (status?: string) => {
+  switch (status) {
+    case 'approved': return 'Schváleno';
+    case 'pending': return 'Čeká na schválení';
+    case 'rejected': return 'Zamítnuto';
+    case 'suspended': return 'Pozastaveno';
+    default: return status || 'Neuvedeno';
+  }
+};
+
+function ReadonlyItem({ label, value, testId }: { label: string; value?: string | null; testId?: string }) {
+  return (
+    <div className={readonlyCls}>
+      <p className="text-[11px] uppercase tracking-wider text-[hsl(var(--text-muted-gray))] mb-1">{label}</p>
+      <p data-testid={testId} className="text-sm font-medium text-[hsl(var(--text-silver))] break-words">{value || 'Neuvedeno'}</p>
+    </div>
+  );
+}
 
 function Field({ label, icon: Icon, children }: { label: string; icon: React.ElementType; children: React.ReactNode }) {
   return (
@@ -177,6 +205,17 @@ const AffiliateProfileSection: React.FC<Props> = ({ profile: initial, onSaved })
               <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Profil a výplatní údaje</h3>
               <p className="text-[11px] text-[hsl(var(--text-muted-gray))]">Klikněte na foto pro změnu</p>
             </div>
+          </div>
+        </div>
+
+        {/* Údaje z registrace */}
+        <div>
+          <p className="text-xs font-semibold text-[hsl(var(--text-muted-gray))] uppercase tracking-wider mb-4">Údaje z registrace</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ReadonlyItem label="Zvolené zaměření" value={formatModes(form.modes)} testId="affiliate-profile-modes" />
+            <ReadonlyItem label="Doporučovací kód" value={form.ref_code} testId="affiliate-profile-ref-code" />
+            <ReadonlyItem label="Stav účtu" value={formatStatus(form.status)} testId="affiliate-profile-status" />
+            <ReadonlyItem label="Registrační e-mail" value={form.email} testId="affiliate-profile-email-summary" />
           </div>
         </div>
 

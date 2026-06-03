@@ -373,6 +373,7 @@ const AffiliateDashboard = () => {
   // All profile columns available — migration applied on staging + production.
   const profileData: AffiliateProfileData = {
     id: a.id, name: a.name, email: a.email, phone: a.phone,
+    ref_code: a.ref_code, modes: a.modes, status: a.status,
     vat_id: a.vat_id, ico: (a as any).ico,
     is_vat_payer: a.is_vat_payer,
     payout_account: a.payout_account, payout_bank: a.payout_bank,

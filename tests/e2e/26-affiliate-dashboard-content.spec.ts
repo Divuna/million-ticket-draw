@@ -89,6 +89,16 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
     await expect(page.getByText('Podmínky spolupráce', { exact: true })).toBeVisible();
   });
 
+  test('profile mode shows registration data summary', async ({ page }) => {
+    await page.getByTestId('mode-btn-profile').click();
+    await expect(page.getByText('Údaje z registrace', { exact: true })).toBeVisible({ timeout: 8_000 });
+
+    await expect(page.getByTestId('affiliate-profile-modes')).toContainText(/Influencer|Obchodník/);
+    await expect(page.getByTestId('affiliate-profile-ref-code')).not.toContainText('Neuvedeno');
+    await expect(page.getByTestId('affiliate-profile-status')).toContainText('Schváleno');
+    await expect(page.getByTestId('affiliate-profile-email-summary')).toContainText(AFFILIATE_EMAIL);
+  });
+
   test('influencer and sales modes do not show profile section', async ({ page }) => {
     await page.getByTestId('mode-btn-influencer').click();
     await expect(page.getByText('Profil a výplatní údaje', { exact: true })).toHaveCount(0);

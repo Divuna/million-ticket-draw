@@ -37,6 +37,12 @@ const SERVICE_ROLE_KEY  = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY  ?? '';
 const TEST_EMAIL    = 'spec23-affiliate-e2e@onemil.cz';
 const TEST_REF_CODE = 'SPEC23E2E';
 const TEST_NAME     = 'Spec23 E2E Affiliate';
+const TEST_PHONE    = '+420 777 888 999';
+const TEST_WEBSITE  = 'https://spec23.onemil.test';
+const TEST_ICO      = '12345678';
+const TEST_VAT_ID   = 'CZ12345678';
+const TEST_BANK     = 'Spec23 Banka';
+const TEST_IBAN     = 'CZ6508000000001234567899';
 
 test.describe('Admin — Affiliate account approve (spec 23)', () => {
   test.skip(
@@ -62,12 +68,22 @@ test.describe('Admin — Affiliate account approve (spec 23)', () => {
       .insert({
         name: TEST_NAME,
         email: TEST_EMAIL,
+        phone: TEST_PHONE,
         ref_code: TEST_REF_CODE,
-        modes: ['influencer'],
+        modes: ['influencer', 'sales_rep'],
         status: 'pending',
         commission_rate_customer: 5,
         commission_rate_company: 5,
-        is_vat_payer: false,
+        is_vat_payer: true,
+        website_url: TEST_WEBSITE,
+        ico: TEST_ICO,
+        vat_id: TEST_VAT_ID,
+        billing_street: 'Spec23 ulice 1',
+        billing_city: 'Praha',
+        billing_zip: '11000',
+        billing_country: 'CZ',
+        payout_account: TEST_IBAN,
+        payout_bank: TEST_BANK,
       })
       .select('id')
       .single();
@@ -104,6 +120,24 @@ test.describe('Admin — Affiliate account approve (spec 23)', () => {
     // Wait for the table to load and find our test account
     const approveBtn = page.locator(`[data-testid="approve-affiliate-${affiliateId}"]`);
     await expect(approveBtn).toBeVisible({ timeout: 15_000 });
+
+    // Admin detail must show registration/profile data used to assess the affiliate.
+    await page.getByTestId(`detail-affiliate-${affiliateId}`).click();
+    await expect(page.getByTestId('admin-affiliate-registration-detail')).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByTestId('admin-affiliate-detail-name')).toContainText(TEST_NAME);
+    await expect(page.getByTestId('admin-affiliate-detail-email')).toContainText(TEST_EMAIL);
+    await expect(page.getByTestId('admin-affiliate-detail-phone')).toContainText(TEST_PHONE);
+    await expect(page.getByTestId('admin-affiliate-detail-modes')).toContainText('Influencer');
+    await expect(page.getByTestId('admin-affiliate-detail-modes')).toContainText('Obchodník');
+    await expect(page.getByTestId('admin-affiliate-detail-ref-code')).toContainText(TEST_REF_CODE);
+    await expect(page.getByTestId('admin-affiliate-detail-website')).toContainText(TEST_WEBSITE);
+    await expect(page.getByTestId('admin-affiliate-detail-ico')).toContainText(TEST_ICO);
+    await expect(page.getByTestId('admin-affiliate-detail-vat-id')).toContainText(TEST_VAT_ID);
+    await expect(page.getByTestId('admin-affiliate-detail-billing')).toContainText('Spec23 ulice 1');
+    await expect(page.getByTestId('admin-affiliate-detail-payout-account')).toContainText(TEST_IBAN);
+    await expect(page.getByTestId('admin-affiliate-detail-payout-bank')).toContainText(TEST_BANK);
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('admin-affiliate-registration-detail')).toHaveCount(0);
 
     // Click Schválit
     await approveBtn.click();
