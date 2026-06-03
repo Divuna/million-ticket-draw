@@ -83,6 +83,8 @@ import AdminReferrals from "@/pages/AdminReferrals";
 import AdminReferralDashboard from "@/pages/AdminReferralDashboard";
 import AdminInfluencers from "@/pages/AdminInfluencers";
 import AdminAffiliateAccounts from "@/pages/AdminAffiliateAccounts";
+import AffiliateRegister from "@/pages/AffiliateRegister";
+import AffiliateDashboard from "@/pages/AffiliateDashboard";
 import AdminInfluencerCommissions from "@/pages/AdminInfluencerCommissions";
 import AdminInfluencerCampaigns from "@/pages/AdminInfluencerCampaigns";
 import AdminNotFound from "@/pages/AdminNotFound";
@@ -362,7 +364,7 @@ function GlobalWinnersRealtimeFeed() {
 
 function AppContent() {
   const { user, loading: authLoading } = useAuth();
-  const { isAdmin, isPartner, isPartnerAccount, isInfluencerAccount, loading: roleLoading } = useUserRole();
+  const { isAdmin, isPartner, isPartnerAccount, isInfluencerAccount, isAffiliateAccount, loading: roleLoading } = useUserRole();
   const location = useLocation();
   const navigate = useNavigate();
   const isPartnerRoute = location.pathname.startsWith('/partner');
@@ -396,6 +398,21 @@ function AppContent() {
       }
     }
 
+    // Affiliate v2 accounts (no partners row): confine to /affiliate/* + auth routes.
+    if (isAffiliateAccount && !isPartnerAccount) {
+      const allowedForAffiliate =
+        location.pathname.startsWith('/affiliate') ||
+        location.pathname === '/login' ||
+        location.pathname === '/register' ||
+        location.pathname === '/delete-account' ||
+        location.pathname === '/unsubscribe/marketing';
+
+      if (!allowedForAffiliate) {
+        navigate('/affiliate/dashboard', { replace: true });
+        return;
+      }
+    }
+
     // Non-influencer partner accounts: block customer routes
     if (isPartnerAccount && !isInfluencerAccount && isCustomerBlockedRoute(location.pathname)) {
       navigate('/partner/dashboard', { replace: true });
@@ -411,7 +428,7 @@ function AppContent() {
     ) {
       navigate("/", { replace: true });
     }
-  }, [isAdmin, isPartner, isPartnerAccount, isInfluencerAccount, user, location.pathname, navigate, roleLoading]);
+  }, [isAdmin, isPartner, isPartnerAccount, isInfluencerAccount, isAffiliateAccount, user, location.pathname, navigate, roleLoading]);
 
   if (authLoading) {
     return null;
@@ -423,7 +440,8 @@ function AppContent() {
     location.pathname === "/login" ||
     location.pathname === "/register" ||
     location.pathname === "/partner/login" ||
-    location.pathname === "/partner/register";
+    location.pathname === "/partner/register" ||
+    location.pathname === "/affiliate/register";
 
   if (user && roleLoading && !authEntryPath) {
     return (
@@ -476,6 +494,24 @@ function AppContent() {
     }
   }
 
+  // Affiliate v2: block non-affiliate routes (render guard matches useEffect logic)
+  if (isAffiliateAccount && !isPartnerAccount && user) {
+    const allowedForAffiliate =
+      location.pathname.startsWith('/affiliate') ||
+      location.pathname === '/login' ||
+      location.pathname === '/register' ||
+      location.pathname === '/delete-account' ||
+      location.pathname === '/unsubscribe/marketing';
+
+    if (!allowedForAffiliate) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
+  }
+
   // Render partner header for partner accounts on partner routes (not influencers)
   const renderPartnerHeader = () => {
     if (isPartnerAccount && !isInfluencerAccount && isPartnerRoute && location.pathname !== '/partner/login' && location.pathname !== '/partner/register') {
@@ -489,6 +525,9 @@ function AppContent() {
     // Partners see no navigation - they're confined to partner portal
     if (isPartnerAccount) return null;
     
+    // Affiliate v2 accounts use their own dashboard chrome — no customer bottom nav.
+    if (isAffiliateAccount) return null;
+
     // Bottom navigation for customers only; admins use AdminLayout chrome (primary + context sub-nav).
     return <BottomNavigation />;
   };
@@ -564,6 +603,8 @@ function AppContent() {
             <Route path="/influencer/register" element={<InfluencerRegister />} />
             <Route path="/influencer/dashboard" element={<InfluencerDashboard />} />
             <Route path="/influencer/messages" element={<InfluencerMessages />} />
+            <Route path="/affiliate/register" element={<AffiliateRegister />} />
+            <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
           <Route path="/partner/dashboard" element={<PartnerDashboard />} />
           <Route path="/partner/invoices" element={<PartnerInvoices />} />
           <Route path="/partner/messages" element={<PartnerMessages />} />

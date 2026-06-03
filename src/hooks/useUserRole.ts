@@ -13,20 +13,23 @@ export const useUserRole = (): {
   accountType: AccountType;
   isPartnerAccount: boolean;
   isInfluencerAccount: boolean;
-  loading: boolean 
+  isAffiliateAccount: boolean;
+  loading: boolean
 } => {
   const { user } = useAuth();
   const [role, setRole] = useState<UserRole>('user');
   const [accountType, setAccountType] = useState<AccountType>('customer');
   const [isInfluencerAccount, setIsInfluencerAccount] = useState(false);
+  const [isAffiliateAccount, setIsAffiliateAccount] = useState(false);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
     const fetchUserData = async () => {
       if (!user?.id) {
         setRole('user');
         setAccountType('customer');
         setIsInfluencerAccount(false);
+        setIsAffiliateAccount(false);
         setLoading(false);
         return;
       }
@@ -50,9 +53,24 @@ export const useUserRole = (): {
           setIsInfluencerAccount(
             partnerData.status === 'approved' && notesStr.toLowerCase().includes('influencer')
           );
+          // Legacy partner row takes precedence; affiliate v2 only applies to
+          // users WITHOUT a partners row (keeps legacy system running in parallel).
+          setIsAffiliateAccount(false);
         } else {
           setAccountType('customer');
           setIsInfluencerAccount(false);
+
+          // Affiliate v2: detect standalone affiliate account (no partners row).
+          try {
+            const { data: affData } = await (supabase as any)
+              .from('affiliate_accounts')
+              .select('id')
+              .eq('auth_user_id', user.id)
+              .maybeSingle();
+            setIsAffiliateAccount(!!affData);
+          } catch {
+            setIsAffiliateAccount(false);
+          }
         }
 
         // Also fetch role from user_roles table
@@ -75,6 +93,7 @@ export const useUserRole = (): {
         setRole('user');
         setAccountType('customer');
         setIsInfluencerAccount(false);
+        setIsAffiliateAccount(false);
       } finally {
         setLoading(false);
       }
@@ -88,5 +107,5 @@ export const useUserRole = (): {
   const isPartner = role === 'partner';
   const isPartnerAccount = accountType === 'partner';
   
-  return { role, isAdmin, isSuperAdmin, isPartner, accountType, isPartnerAccount, isInfluencerAccount, loading };
+  return { role, isAdmin, isSuperAdmin, isPartner, accountType, isPartnerAccount, isInfluencerAccount, isAffiliateAccount, loading };
 };

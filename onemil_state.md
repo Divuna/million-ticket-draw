@@ -4,6 +4,34 @@
 
 ---
 
+## 🟢 AFFILIATE PROGRAM v2 — UŽIVATELSKÝ FRONTEND (03. 06. 2026, krok 7)
+
+Veřejná affiliate registrace + uživatelský dashboard + route guard. Staging-compatible.
+
+- **Migrace (staging):** `supabase/migrations/20260603_affiliate_self_registration_rpc.sql` — RPC
+  `register_affiliate_account(p_name,p_email,p_phone,p_modes,p_ref_code)` SECURITY DEFINER, `search_path=''`,
+  bind na `auth.uid()`, status `pending`, sazby 5/5, normalizace + kolizní řešení `ref_code`, idempotentní per user.
+  `REVOKE PUBLIC` + `GRANT authenticated`.
+- **Nové stránky:** `src/pages/AffiliateRegister.tsx` (`/affiliate/register`), `src/pages/AffiliateDashboard.tsx`
+  (`/affiliate/dashboard`).
+- **Změněné soubory:** `src/App.tsx` (importy, routes, useEffect + render guard, authEntryPath, hide bottom nav),
+  `src/hooks/useUserRole.ts` (nový `isAffiliateAccount` — detekován jen když uživatel NEMÁ partners řádek).
+- **Registrace:** signUp → RPC `register_affiliate_account` → signOut → „čeká na schválení". Režimy Influencer /
+  Obchodník / obojí (checkboxy), návrh `ref_code` z názvu (editovatelný), texty CZ.
+- **Dashboard:** zobrazí účet, `ref_code`, režimy, odkazy (zákazníci `/?ref=KOD`, firmy
+  `/partner/register?via=KOD`) s kopírováním, provize z `affiliate_commissions` (vypočteno/schváleno/vyplaceno
+  souhrny + tabulka). Bez automatické výplaty. RLS chrání data (vlastní řádky).
+- **Route guard:** affiliate (bez partners řádku) je omezen na `/affiliate/*` + auth routes → redirect na
+  `/affiliate/dashboard`. **Nepadá do Partner portalu** (nemá partners řádek → accountType zůstává customer,
+  partner-blok ho nepřesměruje do /partner). Legacy influenceři (mají partners řádek) zůstávají v `/influencer/*` beze změny.
+- **Build:** `npm run build` ✅. **Staging test:** RPC registrace (registered/already_exists/invalid_modes) +
+  dashboard dotazy ověřeny proti `dxmowysntemfqfnanxua` (test data uklizena, migrovaný účet `E2EAFFIL25A7` čitelný).
+- Nezměněno: zákazník, Partner portal, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`, produkční DB, staré influencer tabulky.
+- **DALŠÍ BEZPEČNÝ KROK:** zachycení `?ref=`/`?via=` ve frontend registracích → volání atribučních RPC (krok 2);
+  volitelně cron pro měsíční výpočet; QR kód v dashboardu. Produkční nasazení celé v2 vrstvy až po potvrzení Pavla.
+
+---
+
 ## 🟢 AFFILIATE PROGRAM v2 — MIGRACE INFLUENCERŮ (03. 06. 2026, krok 6)
 
 Datová migrace stávajících influencerů z `partners` do `affiliate_accounts`. Staging only.

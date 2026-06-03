@@ -14,6 +14,20 @@
 
 ---
 
+## 2026-06-03 — Affiliate program v2: uživatelský frontend (krok 7)
+
+- Migrace (staging) `supabase/migrations/20260603_affiliate_self_registration_rpc.sql`:
+  RPC register_affiliate_account SECURITY DEFINER (auth.uid bind, pending, sazby 5/5, unikátní ref_code).
+- Nové stránky: src/pages/AffiliateRegister.tsx (/affiliate/register), src/pages/AffiliateDashboard.tsx
+  (/affiliate/dashboard). Změněno: src/App.tsx (routes+guard+authEntryPath+nav), src/hooks/useUserRole.ts
+  (isAffiliateAccount jen pro uživatele bez partners řádku).
+- Registrace: signUp → RPC → signOut → čeká na schválení; režimy Influencer/Obchodník/obojí; CZ texty.
+- Dashboard: ref_code, režimy, odkazy /?ref= a /partner/register?via= s kopírováním, provize z affiliate_commissions.
+- Guard: affiliate omezen na /affiliate/*; nepadá do Partner portalu; legacy influenceři beze změny.
+- npm run build ✅. Staging RPC+dashboard dotazy ověřeny (data uklizena). Produkce a staré tabulky nedotčeny.
+
+---
+
 ## 2026-06-03 — Affiliate program v2: migrace influencerů (staging, krok 6)
 
 - Migrace `supabase/migrations/20260603_migrate_influencers_to_affiliate_accounts.sql`. Staging only.
