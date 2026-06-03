@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+## ADMIN AFFILIATE SOCIAL — DVĚ ADMIN STRÁNKY, ZDROJ = affiliate_accounts (04. 06. 2026)
+
+**Existují DVĚ admin stránky pro affiliate/influencery:**
+- `/admin/influencers` (`AdminInfluencers.tsx`, nav „Affiliate partneři") — legacy, čte `partners`. **Social NOVĚ čte z `affiliate_accounts`** (přes `auth_user_id`, `openDetail` → `fetchAffiliateProfile`), fallback `partners.notes.social_networks` / `partners.website_url`.
+- `/admin/affiliate-accounts` (`AdminAffiliateAccounts.tsx`, nav „Affiliate účty (v2)") — Affiliate v2, čte `affiliate_accounts` přímo.
+
+**Zdroj pravdy pro affiliate social je `affiliate_accounts`** (affiliate edituje v `/affiliate/dashboard`). Pokud admin vidí social prázdné, ověř, že stránka čte affiliate_accounts, ne partners.notes. Social = klikací odkazy, žádné embed/iframe/video/API. Zamčeno spec 30. Commit `fb3dab91`.
+
 ## ADMIN MESSAGING — OBNOVENA ADMIN INSERT RLS POLICY (03. 06. 2026, STAGING)
 
 **Admin nemohl poslat zprávu (affiliate ani jinému) uživateli — „Zprávu nelze odeslat".**

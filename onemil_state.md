@@ -4,6 +4,20 @@
 
 ---
 
+## ✅ AFFILIATE v2 — ADMIN `/influencers` DETAIL ČTE SOCIAL Z affiliate_accounts (04. 06. 2026)
+
+**Skutečná příčina, proč admin viděl social prázdné** (screenshot „Detail Affiliate partnera"): Admin používal stránku **`/admin/influencers`** (`AdminInfluencers.tsx`, nav „Affiliate partneři"), NE `/admin/affiliate-accounts`. Tato legacy stránka četla social z **`partners.notes.social_networks`** (JSON), zatímco affiliate je edituje v `/affiliate/dashboard` → ukládá do **`affiliate_accounts`**. Dva oddělené datové modely → admin viděl „—" (Web fungoval, protože je sloupec `partners.website_url`).
+
+**Ověřeno v DB** (`influencer@onemil.c`): `partners.notes.social_networks` = vše null; `affiliate_accounts` = instagram=`www.instagram.cz`, tiktok=`www.tiktok.com`, youtube=`youtube`, web=`www.onemil.cz`. **Data se ukládala** — admin jen četl špatný zdroj.
+
+**Oprava (display-only, žádná DB změna):** `AdminInfluencers.openDetail` nyní načte `affiliate_accounts` řádek podle `auth_user_id` a detail **preferuje** affiliate_accounts hodnoty (instagram/tiktok/youtube/facebook/website/audience/categories), fallback na partners.notes / partners.website_url. Social zůstávají klikací odkazy (`<a target=_blank rel=noopener noreferrer>`) — žádné embed/iframe/video/API.
+
+**Pozn.:** Existují dvě admin stránky — `/admin/influencers` (legacy partners, „Affiliate partneři") a `/admin/affiliate-accounts` („Affiliate účty (v2)", čte affiliate_accounts, opraveno dříve). Uživatel byl na první.
+
+**Ověření:** Spec 30 (seeduje partner + linked affiliate_accounts s prázdnými notes, ověří detail zobrazí affiliate hodnoty). Staging Full E2E run `26917798377`: **54 passed · 0 failed** ✅. `npm run build` ✅. Commit `fb3dab91`.
+
+---
+
 ## ✅ AFFILIATE v2 — PROFIL FORM RE-SYNC PO ULOŽENÍ (04. 06. 2026)
 
 **Problém:** Po vyplnění a uložení social polí (web/IG/TikTok/YT/FB/dosah/kategorie) se v Profilu (a zdánlivě adminovi) data „nezobrazovala správně".

@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-04 - Admin /influencers detail čte social z affiliate_accounts
+
+- Skutečná příčina admin „—" u social: admin používal `/admin/influencers` (AdminInfluencers, legacy partners), který četl social z `partners.notes.social_networks`, ne z `affiliate_accounts` (kam affiliate ukládá). Ověřeno: partners.notes vše null, affiliate_accounts má data.
+- Fix (display-only): openDetail načte affiliate_accounts podle auth_user_id; detail preferuje affiliate_accounts (instagram/tiktok/youtube/facebook/website/audience/categories), fallback partners.notes. Klikací odkazy, žádné embed/video/API. Žádná DB změna.
+- Spec 30 ověřuje. Staging Full E2E run `26917798377`: 54 passed, 0 failed. `npm run build` ✅. Commit `fb3dab91`.
+- Nezměněno: provize, zákaznický účet, platby, tikety, soutěže, peněženka, buy_ticket_atomic.
+
+---
+
 ## 2026-06-04 - Affiliate v2: Profil form re-sync po uložení (stale useState)
 
 - Symptom: po uložení social polí se v Profilu data „nezobrazovala správně".
