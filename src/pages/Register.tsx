@@ -11,6 +11,9 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-onemil.png';
 import { PENDING_REFERRAL_STORAGE_KEY } from '@/hooks/useApplyPendingReferral';
+
+// Affiliate v2: pending affiliate ref code captured from ?ref= (separate from legacy referral).
+const PENDING_AFFILIATE_REF_KEY = 'onemil_affiliate_ref';
 import { analytics } from '@/lib/analytics';
 import { ENABLED_OAUTH_PROVIDERS, type OAuthProvider } from '@/config/socialAuth';
 
@@ -51,6 +54,9 @@ const Register: React.FC = () => {
     if (ref) {
       try {
         sessionStorage.setItem(PENDING_REFERRAL_STORAGE_KEY, ref);
+        // Affiliate v2: same ?ref= value may also be an affiliate ref_code.
+        // Stored separately; legacy player-referral flow is untouched.
+        sessionStorage.setItem(PENDING_AFFILIATE_REF_KEY, ref);
       } catch {
         // ignore storage errors
       }
@@ -153,6 +159,19 @@ const Register: React.FC = () => {
             }
           } catch {
             // non-blocking; user can add code later in Profile
+          }
+
+          // Affiliate v2: attribute customer to an affiliate (first-touch). Fully
+          // non-fatal — invalid_code / already_attributed / not_eligible / errors
+          // must never break registration. Separate from the legacy referral above.
+          try {
+            const pendingAff = sessionStorage.getItem(PENDING_AFFILIATE_REF_KEY);
+            if (pendingAff) {
+              await (supabase as any).rpc('record_affiliate_customer_ref', { p_ref_code: pendingAff });
+              sessionStorage.removeItem(PENDING_AFFILIATE_REF_KEY);
+            }
+          } catch {
+            // non-blocking; affiliate attribution must never break registration
           }
 
         }

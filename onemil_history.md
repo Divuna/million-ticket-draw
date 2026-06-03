@@ -14,6 +14,21 @@
 
 ---
 
+## 2026-06-03 — Affiliate program v2: zachycení ?ref= / ?via= (krok 8)
+
+- Zákazník ?ref=: Register.tsx ukládá kód (sessionStorage onemil_affiliate_ref) + po registraci volá
+  record_affiliate_customer_ref (non-fatal, first-touch). Legacy referral nedotčen.
+- Firma ?via=: PartnerRegister.tsx → signUp metadata affiliate_via_code. AdminPartnersPortal
+  handleApproveRegistration po schválení dohledá partner_id a volá record_affiliate_company_ref (non-fatal,
+  mirror jen když NULL). Edge get-pending-partner-registrations surface affiliate_via_code (repo; stack zatím
+  není na stagingu, nenasazeno zvlášť).
+- Staging RPC end-to-end ověřeno (data uklizena): zákazník recorded/nepřepsal/invalid_code; firma
+  recorded/nepřepsal/mirror-only-if-null/invalid_code.
+- npm run build ✅. Nezměněno: platby, tikety, soutěže, peněženka, buy_ticket_atomic, produkční DB,
+  starý zákaznický referral, staré influencer tabulky.
+
+---
+
 ## 2026-06-03 — Affiliate program v2: uživatelský frontend (krok 7)
 
 - Migrace (staging) `supabase/migrations/20260603_affiliate_self_registration_rpc.sql`:

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import '@/components/ContestCard.css';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,10 @@ import logo from '@/assets/logo-onemil.png';
 
 const PartnerRegister = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Affiliate v2: optional sales_rep referral code from /partner/register?via=KOD.
+  // Stored in signUp metadata; admin attributes the company after approval.
+  const viaCode = (searchParams.get('via') || '').trim();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
@@ -65,6 +69,7 @@ const PartnerRegister = () => {
             contact_phone: formData.contactPhone || null,
             ico: formData.ico || null,
             dic: formData.dic || null,
+            affiliate_via_code: viaCode || null,
           },
         },
       });

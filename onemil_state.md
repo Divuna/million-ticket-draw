@@ -4,6 +4,35 @@
 
 ---
 
+## 🟢 AFFILIATE PROGRAM v2 — ZACHYCENÍ ?ref= / ?via= (03. 06. 2026, krok 8)
+
+Napojení atribučních RPC na frontend. Staging-compatible.
+
+- **Zákazník `?ref=KOD`** (`src/pages/Register.tsx`): kód z URL uložen do `sessionStorage` (nový klíč
+  `onemil_affiliate_ref`, oddělený od legacy `onemil_referral_ref`). Po registraci voláno
+  `record_affiliate_customer_ref(p_ref_code)` — **non-fatal** (invalid_code/already_attributed/not_eligible/chyba
+  registraci nerozbijí). First-touch (existující atribuce se nepřepíše). Legacy player-referral flow nedotčen.
+- **Firma `?via=KOD`** (`src/pages/PartnerRegister.tsx`): kód uložen do signUp metadata `affiliate_via_code`.
+  Partner řádek vzniká až admin schválením → atribuce se volá tam.
+- **Admin flow** (`src/pages/AdminPartnersPortal.tsx` → `handleApproveRegistration`): po úspěšném schválení
+  dohledá partner_id přes `auth_user_id`, a pokud má registrace `affiliate_via_code`, zavolá
+  `record_affiliate_company_ref(p_via_code, p_partner_id)` — **non-fatal**, mirror `partners.referred_by_affiliate_id`
+  jen když NULL.
+- **Edge funkce** `supabase/functions/get-pending-partner-registrations/index.ts`: surface `affiliate_via_code`
+  z user_metadata (repo změna; partner-approval edge stack zatím NENÍ nasazen na stagingu — nasadí se s celým
+  stackem, nenasazoval jsem jeden kus zvlášť).
+- **Oddělení zachováno:** zákazník = customer app, firma = Partner portal, affiliate = samostatné prostředí.
+- **Staging test (RPC end-to-end, data uklizena):** zákazník valid→recorded, jiný kód nepřepsal (not_influencer),
+  invalid→invalid_code, atribuce zůstala first-touch; firma valid→recorded, jiný kód nepřepsal (not_sales_rep),
+  mirror nastaven jen když NULL, invalid→invalid_code (non-fatal).
+- **Build:** `npm run build` ✅. Nezměněno: platby, tikety, soutěže, peněženka, `buy_ticket_atomic`,
+  Partner portal dashboard chování, produkční DB, starý zákaznický referral, staré influencer tabulky.
+- **DALŠÍ BEZPEČNÝ KROK:** volitelně QR kód v affiliate dashboardu, cron pro měsíční výpočet provizí, a poté
+  produkční nasazení CELÉ v2 vrstvy (DB 1–4 + self-reg + admin UI + frontend + migrace + edge funkce) —
+  až po výslovném potvrzení Pavla.
+
+---
+
 ## 🟢 AFFILIATE PROGRAM v2 — UŽIVATELSKÝ FRONTEND (03. 06. 2026, krok 7)
 
 Veřejná affiliate registrace + uživatelský dashboard + route guard. Staging-compatible.

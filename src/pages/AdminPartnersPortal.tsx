@@ -85,6 +85,7 @@ interface PendingRegistration {
   contact_phone: string | null;
   ico: string | null;
   dic: string | null;
+  affiliate_via_code?: string | null;
   created_at: string;
 }
 
@@ -263,9 +264,28 @@ const AdminPartnersPortal = () => {
       }
 
       toast.success(action === 'approve' ? 'Partner byl schválen' : 'Registrace byla zamítnuta');
-      
+
       // Reload partners list if approved
       if (action === 'approve') {
+        // Affiliate v2: if this company arrived via a sales_rep ?via= code, attribute
+        // it (first-touch). Fully non-fatal — must never break partner approval.
+        if (registration.affiliate_via_code) {
+          try {
+            const { data: createdPartner } = await supabase
+              .from('partners')
+              .select('id')
+              .eq('auth_user_id', registration.id)
+              .maybeSingle();
+            if (createdPartner?.id) {
+              await (supabase as any).rpc('record_affiliate_company_ref', {
+                p_via_code: registration.affiliate_via_code,
+                p_partner_id: createdPartner.id,
+              });
+            }
+          } catch (affErr) {
+            console.warn('Affiliate company attribution skipped:', affErr);
+          }
+        }
         loadPartners();
       }
     } catch (error) {

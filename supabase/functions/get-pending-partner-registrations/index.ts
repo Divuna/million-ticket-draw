@@ -14,6 +14,7 @@ interface PendingRegistration {
   contact_phone: string | null;
   ico: string | null;
   dic: string | null;
+  affiliate_via_code: string | null;
   created_at: string;
 }
 
@@ -91,6 +92,7 @@ serve(async (req) => {
         contact_phone: u.user_metadata?.contact_phone || null,
         ico: u.user_metadata?.ico || null,
         dic: u.user_metadata?.dic || null,
+        affiliate_via_code: u.user_metadata?.affiliate_via_code || null,
         created_at: u.created_at,
       }))
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
