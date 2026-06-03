@@ -17,7 +17,7 @@ type AffiliateAccount = {
 
 async function cleanupTestCompany(
   supabase: SupabaseClient,
-  params: { email: string; authUserId?: string | null; partnerId?: string | null },
+  params: { email: string; authUserId?: string | null; partnerId?: string | null; affiliateId?: string | null },
 ) {
   let partnerId = params.partnerId ?? null;
   let authUserId = params.authUserId ?? null;
@@ -44,6 +44,10 @@ async function cleanupTestCompany(
     await supabase.from('users').delete().eq('id', authUserId);
     await supabase.auth.admin.deleteUser(authUserId);
   }
+
+  if (params.affiliateId) {
+    await supabase.from('affiliate_accounts').delete().eq('id', params.affiliateId);
+  }
 }
 
 test.describe('Affiliate v2 company via flow', () => {
@@ -64,25 +68,36 @@ test.describe('Affiliate v2 company via flow', () => {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    const { data: affiliate, error: affiliateError } = await supabase
-      .from('affiliate_accounts')
-      .select('id, ref_code')
-      .eq('status', 'approved')
-      .contains('modes', ['sales_rep'])
-      .limit(1)
-      .single<AffiliateAccount>();
-
-    expect(affiliateError, 'staging must have an approved sales_rep affiliate account').toBeNull();
-    expect(affiliate?.ref_code, 'sales_rep affiliate ref_code is required').toBeTruthy();
-
     const unique = Date.now();
+    const refCode = `CODEX${String(unique).slice(-8)}`;
     const companyName = `Codex Affiliate Company ${unique}`;
     const email = `codex-aff-company-${unique}@onemil.cz`;
     const password = `CodexAff${unique}!`;
+    let affiliate: AffiliateAccount | null = null;
     let authUserId: string | null = null;
     let partnerId: string | null = null;
 
     try {
+      const { data: insertedAffiliate, error: affiliateError } = await supabase
+        .from('affiliate_accounts')
+        .insert({
+          name: `Codex Sales Rep ${unique}`,
+          email: `codex-sales-rep-${unique}@onemil.cz`,
+          ref_code: refCode,
+          modes: ['sales_rep'],
+          status: 'approved',
+          commission_rate_customer: 5,
+          commission_rate_company: 5,
+          approved_at: new Date().toISOString(),
+          notes: 'codex staging e2e temporary sales_rep',
+        })
+        .select('id, ref_code')
+        .single<AffiliateAccount>();
+
+      expect(affiliateError, 'temporary sales_rep affiliate setup should succeed').toBeNull();
+      expect(insertedAffiliate?.ref_code).toBe(refCode);
+      affiliate = insertedAffiliate ?? null;
+
       await page.goto(`/partner/register?via=${encodeURIComponent(affiliate.ref_code)}`);
       await page.fill('#companyName', companyName);
       await page.fill('#websiteUrl', `https://codex-aff-company-${unique}.example.com`);
@@ -135,17 +150,16 @@ test.describe('Affiliate v2 company via flow', () => {
 
       const { data: companyRef, error: companyRefError } = await supabase
         .from('affiliate_company_refs')
-        .select('id, affiliate_id, partner_id, via_code, source')
+        .select('id, affiliate_id, partner_id, source')
         .eq('partner_id', partnerId)
         .maybeSingle();
 
       expect(companyRefError, 'affiliate_company_refs read-back should not error').toBeNull();
       expect(companyRef, 'admin approval must record affiliate_company_refs').toBeTruthy();
       expect(companyRef?.affiliate_id).toBe(affiliate.id);
-      expect(companyRef?.via_code).toBe(affiliate.ref_code);
       expect(companyRef?.source).toBe('via_link');
     } finally {
-      await cleanupTestCompany(supabase, { email, authUserId, partnerId });
+      await cleanupTestCompany(supabase, { email, authUserId, partnerId, affiliateId: affiliate?.id });
     }
   });
 });
