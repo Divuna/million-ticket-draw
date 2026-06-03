@@ -4,6 +4,30 @@
 
 ---
 
+## 🟢 AFFILIATE PROGRAM v2 — ADMIN WORKFLOW PROVIZÍ (03. 06. 2026, krok 4)
+
+Čtvrtý bezpečný DB krok: admin schválení a výplata affiliate provizí. Staging only.
+
+- **Migrace:** `supabase/migrations/20260603_affiliate_commission_status_workflow.sql` (idempotentní DDL).
+- **Aplikováno POUZE na staging** `dxmowysntemfqfnanxua`. **Produkce NEDOTČENA.**
+- **`admin_set_affiliate_commission_status(p_commission_id uuid, p_new_status text)`** — SECURITY DEFINER,
+  `SET search_path=''`, **admin only** (`is_admin()`).
+  - Povolené přechody (jen vpřed): `calculated → approved`, `approved → paid`.
+  - Zakázáno: návrat zpět, skok `calculated → paid`, neznámý status.
+  - Při `paid` nastaví `paid_at = now()`. Řádek zamčen `FOR UPDATE`.
+  - Vrací jsonb: `forbidden` / `not_found` / `invalid_status` / `invalid_transition` / `updated`.
+  - `REVOKE ALL FROM PUBLIC` + `GRANT EXECUTE TO authenticated`.
+- **Ověřeno na stagingu (8 scénářů, test data uklizena):** calculated→approved ✅, approved→paid ✅,
+  paid_at set ✅, paid→approved invalid_transition ✅, calculated→paid invalid_transition ✅,
+  →rejected invalid_status ✅, neexistující not_found ✅, non-admin forbidden ✅.
+- **Build:** `npm run build` ✅.
+- **DB vrstva affiliate v2 KOMPLETNÍ na stagingu (kroky 1–4):** tabulky + atribuční RPC + měsíční výpočet +
+  status workflow. **DALŠÍ BEZPEČNÝ KROK:** frontend `/affiliate/*` (registrace, dashboard s ref kódem/QR,
+  přehled provizí) + admin přehledové UI nad `affiliate_commissions` + datová migrace influencerů z `partners`.
+  Volitelně cron pro měsíční běh výpočtu. **Produkční migrace všech kroků (1–4) až po výslovném potvrzení Pavla.**
+
+---
+
 ## 🟢 AFFILIATE PROGRAM v2 — MĚSÍČNÍ VÝPOČET PROVIZÍ (03. 06. 2026, krok 3)
 
 Třetí bezpečný DB krok: měsíční výpočet affiliate provizí. Staging only.

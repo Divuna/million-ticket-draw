@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-06-03 — Affiliate program v2: admin workflow provizí (staging, krok 4)
+
+- Migrace `supabase/migrations/20260603_affiliate_commission_status_workflow.sql`. Staging only.
+- `admin_set_affiliate_commission_status(p_commission_id, p_new_status)`: SECURITY DEFINER,
+  search_path='', admin only. Přechody jen vpřed: calculated→approved, approved→paid.
+  Při paid nastaví paid_at=now(). Vrací forbidden/not_found/invalid_status/invalid_transition/updated.
+- Ověřeno 8 scénářů na stagingu (test data uklizena): oba přechody, paid_at, návrat zpět blokován,
+  skok blokován, invalid_status, not_found, non-admin forbidden. npm run build ✅. Produkce nedotčena.
+- DB vrstva affiliate v2 kompletní na stagingu (kroky 1–4): tabulky, atribuce, výpočet, status workflow.
+
+---
+
 ## 2026-06-03 — Affiliate program v2: měsíční výpočet provizí (staging, krok 3)
 
 - Migrace `supabase/migrations/20260603_affiliate_monthly_commissions.sql`. Staging only.
