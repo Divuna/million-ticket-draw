@@ -1,5 +1,20 @@
 # CLAUDE.md
 
+## AFFILIATE v2 - CURRENT STAGING STATUS AFTER SECURITY MODEL CHANGE (03. 06. 2026)
+
+- Affiliate v2 no longer uses `VITE_INTERNAL_FUNCTION_TOKEN` in the Lovable/browser build.
+- Reason: the Lovable workspace does not have Build Secrets, and we do not want to expose an internal token in the browser.
+- Edge Functions `get-pending-partner-registrations` and `approve-partner-registration` are protected by:
+  `Authorization: Bearer <user JWT>`, `supabaseAdmin.auth.getUser(token)`, and `user_roles` check for
+  `admin` / `superadmin`.
+- Security model commit: `9f3f53b55f89a3f0c2b16637af32335376fede1d`.
+- CORS/staging verification commit: `9bf059d1cf712db36dbc70309dc735e451899d97`.
+- Staging E2E passed: `https://github.com/Divuna/million-ticket-draw/actions/runs/26887279500`.
+- Verified flow: `/partner/register?via=KOD` -> pending registrace -> admin schvaleni -> partner ->
+  `affiliate_company_refs` -> `partners.referred_by_affiliate_id`.
+- Production has not been touched.
+- Before production deployment, Lovable `VITE_INTERNAL_FUNCTION_TOKEN` is no longer required.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## 🚨 AFFILIATE v2 — HANDOFF PRO CODEX (03. 06. 2026)
@@ -493,18 +508,22 @@ Detailní setup viz `PAPERCLIP_SETUP_CONTEXT.md`.
 
 ---
 
-## Affiliate v2 staging E2E status (03. 06. 2026)
+## Affiliate v2 staging E2E status after security model change (03. 06. 2026)
 
-- Staging token config is fixed.
-- Supabase staging Edge secret `INTERNAL_FUNCTION_TOKEN` and GitHub Actions staging secret `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` are aligned to the same plaintext value.
-- The token value must never be logged or committed.
-- GitHub Actions passes `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` into the staging build as `VITE_INTERNAL_FUNCTION_TOKEN`.
+- Affiliate v2 no longer uses `VITE_INTERNAL_FUNCTION_TOKEN` in the Lovable/browser build.
+- Reason: the Lovable workspace does not have Build Secrets, and we do not want to expose an internal token in the browser.
+- Edge Functions `get-pending-partner-registrations` and `approve-partner-registration` are protected by
+  `Authorization: Bearer <user JWT>`, `supabaseAdmin.auth.getUser(token)`, and `user_roles` check for
+  `admin` / `superadmin`.
+- Security model commit: `9f3f53b55f89a3f0c2b16637af32335376fede1d`.
+- CORS/staging verification commit: `9bf059d1cf712db36dbc70309dc735e451899d97`.
 - `get-pending-partner-registrations` no longer returns `401`.
 - Browser E2E `affiliate company via flow` passed.
-- Verified flow: `/partner/register?via=KOD` → pending registrace → admin schválení → `partner` → `affiliate_company_refs` → `partners.referred_by_affiliate_id`.
-- Run URL: `https://github.com/Divuna/million-ticket-draw/actions/runs/26882872534`
-- Verified commit: `c9d383fc55d118a9cce5b12e67f5fb637cb124f9`
+- Verified flow: `/partner/register?via=KOD` -> pending registrace -> admin schvaleni -> `partner` ->
+  `affiliate_company_refs` -> `partners.referred_by_affiliate_id`.
+- Run URL: `https://github.com/Divuna/million-ticket-draw/actions/runs/26887279500`.
 - Production was not touched.
+- Before production deployment, Lovable `VITE_INTERNAL_FUNCTION_TOKEN` is no longer required.
 
 Rules for follow-up work:
 

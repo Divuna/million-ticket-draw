@@ -14,6 +14,22 @@
 
 ---
 
+## 2026-06-03 - Affiliate v2: staging security model update and browser E2E verification
+
+- Affiliate v2 no longer uses `VITE_INTERNAL_FUNCTION_TOKEN` in the Lovable/browser build.
+- Reason: Lovable workspace has no Build Secrets and the internal token should not be exposed in the browser.
+- Edge Functions `get-pending-partner-registrations` and `approve-partner-registration` now rely on
+  `Authorization: Bearer <user JWT>`, `supabaseAdmin.auth.getUser(token)`, and `user_roles` check for
+  `admin` / `superadmin`.
+- Security model commit: `9f3f53b55f89a3f0c2b16637af32335376fede1d`.
+- CORS/staging verification commit: `9bf059d1cf712db36dbc70309dc735e451899d97`.
+- Staging E2E passed: `https://github.com/Divuna/million-ticket-draw/actions/runs/26887279500`.
+- Verified flow: `/partner/register?via=KOD` -> pending registrace -> admin schvaleni -> partner ->
+  `affiliate_company_refs` -> `partners.referred_by_affiliate_id`.
+- Production was not touched. Before production deployment, Lovable `VITE_INTERNAL_FUNCTION_TOKEN` is no longer required.
+
+---
+
 ## 2026-06-03 — Affiliate v2: HANDOFF pro Codex
 
 Stav: kompletní affiliate v2 vrstva hotová a ověřená NA STAGINGU (dxmowysntemfqfnanxua); produkce nedotčena.

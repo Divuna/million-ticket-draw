@@ -20,7 +20,9 @@ Kompletní samostatná affiliate vrstva (oddělená od zákazníka i Partner por
   `PartnerRegister.tsx` (metadata) → admin schválení v `AdminPartnersPortal.tsx` volá `record_affiliate_company_ref`.
 - **Migrace dat:** 1 legacy influencer migrován do `affiliate_accounts` (ref_code `E2EAFFIL25A7`). Starý systém běží paralelně.
 - **Edge funkce nasazené na staging:** `approve-partner-registration`, `get-pending-partner-registrations`
-  (surface `affiliate_via_code`). `get-pending` se nyní volá s `x-internal-token` (fix v kroku 10).
+  (surface `affiliate_via_code`). Po změně bezpečnostního modelu už NEPOUŽÍVAJÍ
+  `VITE_INTERNAL_FUNCTION_TOKEN` v Lovable/browser buildu. Chrání je uživatelský JWT a admin/superadmin role check.
+  Důvod: Lovable workspace nemá Build Secrets a nechceme vystavit interní token v browseru.
 
 ### 2. Commity od začátku Affiliate v2 (chronologicky)
 - `2f62d69` — DB základ (tabulky + RLS + partners FK)
@@ -33,6 +35,10 @@ Kompletní samostatná affiliate vrstva (oddělená od zákazníka i Partner por
 - `aa484ec` — zapojení `?ref=` (zákazník) a `?via=` (firma) atribuce
 - `ea592d6` — deploy partner-approval edge stacku na staging + CORS sync
 - `2b00696` — fix: `x-internal-token` při načítání pending registrací
+- `9f3f53b55f89a3f0c2b16637af32335376fede1d` — změna bezpečnostního modelu: dvě browser-facing admin Edge Functions
+  už nevyžadují `x-internal-token` / `INTERNAL_FUNCTION_TOKEN`, zůstává JWT + admin/superadmin role check
+- `9bf059d1cf712db36dbc70309dc735e451899d97` — CORS/staging ověření: legacy `x-internal-token` header je povolený
+  v CORS allow headers, ale server ho ignoruje; staging E2E prošel
 
 ### 3. Produkce
 **Produkce `xkzhjldrojjlrkezorey` NEBYLA dotčena** — žádné migrace, žádný deploy, žádná data. Vše jen staging.
@@ -41,50 +47,55 @@ Kompletní samostatná affiliate vrstva (oddělená od zákazníka i Partner por
 Zákaznický účet, Partner portal dashboard logika (mimo nutný token na load pending), platby, tikety, soutěže,
 peněženka a `buy_ticket_atomic` se NEMĚNILY.
 
-### 5. Cíl pro Codex
-Dokončit ověření **staging token configu** a **browser E2E firemního toku `?via=KOD`**.
+### 5. Aktuální bezpečnostní model pro browser-facing admin Edge Functions
+`get-pending-partner-registrations` a `approve-partner-registration` jsou chráněné přes:
+- `Authorization: Bearer <user JWT>`
+- `supabaseAdmin.auth.getUser(token)`
+- kontrolu `user_roles` na `admin` / `superadmin`
 
-### 6. Nejdřív ověřit token config
-- Staging Supabase secret `INTERNAL_FUNCTION_TOKEN` (Edge Functions → Secrets) musí existovat.
-- Staging Lovable build `VITE_INTERNAL_FUNCTION_TOKEN` musí mít STEJNOU hodnotu jako staging secret.
-- Pozn.: lokální `.env` míří na produkci; produkční anon klíč není platný pro staging gateway
-  (`UNAUTHORIZED_LEGACY_JWT`), proto HTTP probe staging funkcí nešel z předchozí code session.
+`VITE_INTERNAL_FUNCTION_TOKEN` se pro Affiliate v2 v Lovable/browser buildu už NEPOUŽÍVÁ.
+Před produkčním nasazením už NENÍ potřeba nastavovat Lovable `VITE_INTERNAL_FUNCTION_TOKEN`.
+`INTERNAL_FUNCTION_TOKEN` secret může v Supabase zůstat pro jiné funkce, ale tyto dvě funkce ho nečtou.
 
-### 7. Potom browser E2E
+### 6. Staging browser E2E ověřeno
+Run URL: `https://github.com/Divuna/million-ticket-draw/actions/runs/26887279500`
+
+Ověřený tok:
 `/partner/register?via=KOD` → pending registrace → admin schválení (`AdminPartnersPortal`) → vytvořený partner →
-`affiliate_company_refs` → `partners.referred_by_affiliate_id`. (DB chain už ověřen; chybí jen UI/HTTP průchod.)
+`affiliate_company_refs` → `partners.referred_by_affiliate_id`.
 
-### 8. Codex NESMÍ obnovovat starou smazanou affiliate větev (ChatGPT duplikát z 02. 06. 2026).
-### 9. Codex NESMÍ jít na produkci bez výslovného potvrzení Pavla.
+### 7. Codex NESMÍ obnovovat starou smazanou affiliate větev (ChatGPT duplikát z 02. 06. 2026).
+### 8. Codex NESMÍ jít na produkci bez výslovného potvrzení Pavla.
 
 ---
 
-## 🟢 AFFILIATE PROGRAM v2 — GET-PENDING TOKEN FIX (03. 06. 2026, krok 10)
+## 🟢 AFFILIATE PROGRAM v2 — GET-PENDING TOKEN FIX (03. 06. 2026, krok 10; PŘEKRYTO NOVÝM MODELEM)
 
-Oprava token nesouladu pro načtení pending partnerských registrací.
+Historický krok: oprava token nesouladu pro načtení pending partnerských registrací.
+Aktuální stav po commitech `9f3f53b55f89a3f0c2b16637af32335376fede1d` a
+`9bf059d1cf712db36dbc70309dc735e451899d97`: tyto dvě browser-facing admin Edge Functions už
+`x-internal-token` / `INTERNAL_FUNCTION_TOKEN` guard nepoužívají. Zůstává JWT + admin/superadmin role check.
+Lovable/browser build `VITE_INTERNAL_FUNCTION_TOKEN` pro Affiliate v2 už není potřeba.
 
 - **Změněný soubor:** `src/pages/AdminPartnersPortal.tsx` — `loadPendingRegistrations` volá
   `get-pending-partner-registrations` nyní přes `withEdgeInternalToken({...})` (stejně jako
   `approve-partner-registration`). Tím se přidá `x-internal-token`, který funkce vyžaduje.
-- **Frontend token:** `withEdgeInternalToken` čte `VITE_INTERNAL_FUNCTION_TOKEN` (potvrzeno; v `.env` nastaven).
-  Lokální `.env` míří na produkci; staging Lovable build si bere vlastní staging token (`.env.staging.example`).
-- **Staging funkce live:** probe bez tokenu → HTTP 401 (guard aktivní, funkce nasazená).
+- **Historický frontend token:** `withEdgeInternalToken` uměl číst `VITE_INTERNAL_FUNCTION_TOKEN`, ale aktuální server-side
+  model ho pro `get-pending-partner-registrations` / `approve-partner-registration` už nevyžaduje.
+- **Staging funkce live:** probe bez JWT padá na chybějící/neplatný `Authorization`, ne na internal-token `401`.
 - **Firemní tok (DB E2E, data uklizena):** partner z metadat → `record_affiliate_company_ref` →
   `affiliate_company_refs` (source `via_link`) → `partners.referred_by_affiliate_id`=SALESK9. ✅
 - **Build:** `npm run build` ✅.
-- **⚠️ Ověření, které NEJDE z code session (vyžaduje staging credentials/build env):**
-  - potvrdit, že staging secret `INTERNAL_FUNCTION_TOKEN` == staging `VITE_INTERNAL_FUNCTION_TOKEN` v Lovable buildu;
-  - browser E2E `/partner/register?via=KOD` → pending list → approve → partner → atribuce.
-  - Pozn.: produkční anon klíč není platný pro staging gateway (`UNAUTHORIZED_LEGACY_JWT`), proto HTTP probe
-    s admin JWT nešlo z této session dokončit. Ověřit v dashboardu/Lovable staging buildu.
+- **Browser E2E ověřeno:** `/partner/register?via=KOD` → pending list → approve → partner → atribuce.
+  Run URL: `https://github.com/Divuna/million-ticket-draw/actions/runs/26887279500`.
 - Nezměněno: produkce, zákazník, Partner portal dashboard logika (mimo nutný token na load), platby, tikety,
   soutěže, peněženka, `buy_ticket_atomic`.
-- **DALŠÍ BEZPEČNÝ KROK:** v Lovable staging buildu nastavit `VITE_INTERNAL_FUNCTION_TOKEN` = staging secret,
-  pak browser E2E firemního toku; poté QR/cron a produkční nasazení celé v2 po potvrzení Pavla.
+- **DALŠÍ BEZPEČNÝ KROK:** produkční nasazení celé v2 vrstvy pouze po výslovném potvrzení Pavla;
+  Lovable `VITE_INTERNAL_FUNCTION_TOKEN` už před produkcí nenastavovat.
 
 ---
 
-## 🟢 AFFILIATE PROGRAM v2 — STAGING PARTNER APPROVAL STACK (03. 06. 2026, krok 9)
+## 🟢 AFFILIATE PROGRAM v2 — STAGING PARTNER APPROVAL STACK (03. 06. 2026, krok 9; HISTORICKÝ STAV)
 
 Nasazen chybějící partner-approval edge stack na staging + ověřen firemní `?via=` tok.
 
@@ -99,15 +110,10 @@ Nasazen chybějící partner-approval edge stack na staging + ověřen firemní 
   `affiliate_company_refs` (source `via_link`, attributed_to SALESE2E) → `partners.referred_by_affiliate_id`
   nastaveno → re-attribute `already_attributed` (first-touch, nepřepsáno).
 - **Build:** `npm run build` ✅.
-- **⚠️ Zbývající config pro PLNÝ UI E2E v prohlížeči (mimo code session):**
-  1. Nastavit secret `INTERNAL_FUNCTION_TOKEN` na stagingu.
-  2. Nastavit `VITE_INTERNAL_FUNCTION_TOKEN` v Lovable staging buildu (musí se shodovat se secretem).
-  3. Pre-existující nesoulad: `loadPendingRegistrations` ve frontendu volá `get-pending` BEZ
-     `x-internal-token`, ale funkce ho vyžaduje → admin seznam pending registrací se nenačte, dokud se
-     buď do volání nepřidá token, nebo neupraví guard. (Pre-existující, mimo affiliate scope — nebráno do ruky.)
+- **Aktualizace po změně bezpečnostního modelu:** plný UI E2E už prošel a Lovable `VITE_INTERNAL_FUNCTION_TOKEN`
+  není potřeba. `get-pending-partner-registrations` a `approve-partner-registration` chrání JWT + admin/superadmin role check.
 - Nezměněno: zákazník, Partner portal dashboard chování, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`, produkce.
-- **DALŠÍ BEZPEČNÝ KROK:** vyřešit `INTERNAL_FUNCTION_TOKEN` (secret + VITE) a get-pending token nesoulad pro UI
-  E2E; volitelně QR v dashboardu + cron pro měsíční výpočet; poté produkční nasazení celé v2 vrstvy po potvrzení Pavla.
+- **DALŠÍ BEZPEČNÝ KROK:** produkční nasazení celé v2 vrstvy pouze po potvrzení Pavla.
 
 ---
 
@@ -3959,17 +3965,21 @@ Invariant:
 
 ---
 
-## AFFILIATE V2 COMPANY VIA FLOW — STAGING BROWSER E2E OVĚŘENO (03. 06. 2026)
+## AFFILIATE V2 COMPANY VIA FLOW — STAGING BROWSER E2E OVĚŘENO PO ZMĚNĚ BEZPEČNOSTNÍHO MODELU (03. 06. 2026)
 
 Finální staging ověření proběhlo pouze proti staging projektu `dxmowysntemfqfnanxua`.
 Produkce `xkzhjldrojjlrkezorey` nebyla dotčena.
 
-Staging token config je opravený:
+Aktuální bezpečnostní model:
 
-- Supabase staging Edge secret `INTERNAL_FUNCTION_TOKEN` je nastavený.
-- GitHub Actions staging secret `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` je nastavený.
-- Obě hodnoty byly sladěné na stejný plaintext token; hodnota tokenu nebyla zapsána do logu ani commitu.
-- Staging workflow předává `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` do buildu jako `VITE_INTERNAL_FUNCTION_TOKEN`.
+- U Affiliate v2 se už NEPOUŽÍVÁ `VITE_INTERNAL_FUNCTION_TOKEN` v Lovable/browser buildu.
+- Důvod: Lovable workspace nemá Build Secrets a nechceme vystavit interní token v browseru.
+- Edge Functions `get-pending-partner-registrations` a `approve-partner-registration` jsou chráněné přes:
+  `Authorization: Bearer <user JWT>`, `supabaseAdmin.auth.getUser(token)` a kontrolu `user_roles`
+  na `admin` / `superadmin`.
+- Commit změny bezpečnostního modelu: `9f3f53b55f89a3f0c2b16637af32335376fede1d`
+- Commit CORS/staging ověření: `9bf059d1cf712db36dbc70309dc735e451899d97`
+- Před produkčním nasazením už NENÍ potřeba nastavovat Lovable `VITE_INTERNAL_FUNCTION_TOKEN`.
 
 Ověření:
 
@@ -3978,8 +3988,7 @@ Ověření:
 - Ověřený tok:
   `/partner/register?via=KOD` → pending registrace → admin schválení → `partner` →
   `affiliate_company_refs` → `partners.referred_by_affiliate_id`.
-- Run URL: `https://github.com/Divuna/million-ticket-draw/actions/runs/26882872534`
-- Ověřený commit: `c9d383fc55d118a9cce5b12e67f5fb637cb124f9`
+- Run URL: `https://github.com/Divuna/million-ticket-draw/actions/runs/26887279500`
 
 Invariant:
 
