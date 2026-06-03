@@ -72,6 +72,10 @@ interface PartnerInfo { id: string; name: string; company_name: string | null; }
 /* ── Helpers ─────────────────────────────────────────────────────────────────── */
 
 const STORAGE_KEY = 'affiliate_active_mode';
+const AFFILIATE_ACCOUNT_SELECT =
+  'id,name,email,phone,ref_code,modes,status,commission_rate_customer,commission_rate_company,is_vat_payer,vat_id,payout_account,payout_bank,ico,billing_street,billing_city,billing_zip,billing_country,website_url,instagram_url,tiktok_url,youtube_url,facebook_url,audience_size,content_categories';
+const AFFILIATE_ACCOUNT_SELECT_FALLBACK =
+  'id,name,email,phone,ref_code,modes,status,commission_rate_customer,commission_rate_company,is_vat_payer,vat_id,payout_account,payout_bank,ico,billing_street,billing_city,billing_zip,billing_country,website_url';
 const czk = (n: number) =>
   `${(n ?? 0).toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Kč`;
 
@@ -278,13 +282,22 @@ const AffiliateDashboard = () => {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const { data: acc, error: accErr } = await (supabase as any)
+      let { data: acc, error: accErr } = await (supabase as any)
         .from('affiliate_accounts')
-        // Migration 20260603_affiliate_profile_update.sql applied on both staging + production.
-        // All profile columns are now available.
-        .select('id,name,email,phone,ref_code,modes,status,commission_rate_customer,commission_rate_company,is_vat_payer,vat_id,payout_account,payout_bank,ico,billing_street,billing_city,billing_zip,billing_country,website_url')
+        .select(AFFILIATE_ACCOUNT_SELECT)
         .eq('auth_user_id', user.id)
         .maybeSingle();
+
+      if (accErr?.code === 'PGRST204' || accErr?.message?.includes('Could not find')) {
+        const fallback = await (supabase as any)
+          .from('affiliate_accounts')
+          .select(AFFILIATE_ACCOUNT_SELECT_FALLBACK)
+          .eq('auth_user_id', user.id)
+          .maybeSingle();
+        acc = fallback.data;
+        accErr = fallback.error;
+      }
+
       if (accErr) throw accErr;
       if (!acc) { setNotAffiliate(true); setLoading(false); return; }
       setAccount(acc as AffiliateAccount);
@@ -380,6 +393,9 @@ const AffiliateDashboard = () => {
     billing_street: (a as any).billing_street, billing_city: (a as any).billing_city,
     billing_zip: (a as any).billing_zip, billing_country: (a as any).billing_country,
     website_url: (a as any).website_url,
+    instagram_url: (a as any).instagram_url, tiktok_url: (a as any).tiktok_url,
+    youtube_url: (a as any).youtube_url, facebook_url: (a as any).facebook_url,
+    audience_size: (a as any).audience_size, content_categories: (a as any).content_categories,
   };
 
   return (

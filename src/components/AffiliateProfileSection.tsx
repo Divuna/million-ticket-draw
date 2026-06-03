@@ -38,6 +38,12 @@ export interface AffiliateProfileData {
   billing_zip: string | null;      // requires migration
   billing_country: string | null;  // requires migration (default CZ)
   website_url: string | null;      // requires migration
+  instagram_url?: string | null;
+  tiktok_url?: string | null;
+  youtube_url?: string | null;
+  facebook_url?: string | null;
+  audience_size?: string | null;
+  content_categories?: string | null;
 }
 
 interface Props {
@@ -208,10 +214,17 @@ const AffiliateProfileSection: React.FC<Props> = ({ profile: initial, onSaved })
           </div>
         </div>
 
-        {/* Údaje z registrace */}
+        {/* Registrační údaje */}
         <div>
-          <p className="text-xs font-semibold text-[hsl(var(--text-muted-gray))] uppercase tracking-wider mb-4">Údaje z registrace</p>
+          <p className="text-xs font-semibold text-[hsl(var(--text-muted-gray))] uppercase tracking-wider mb-4">Registrační údaje</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ReadonlyItem label="Hlavní kanál / web / profil" value={form.website_url} testId="affiliate-profile-website" />
+            <ReadonlyItem label="Instagram" value={form.instagram_url} testId="affiliate-profile-instagram" />
+            <ReadonlyItem label="TikTok" value={form.tiktok_url} testId="affiliate-profile-tiktok" />
+            <ReadonlyItem label="YouTube" value={form.youtube_url} testId="affiliate-profile-youtube" />
+            <ReadonlyItem label="Facebook" value={form.facebook_url} testId="affiliate-profile-facebook" />
+            <ReadonlyItem label="Velikost publika / dosah" value={form.audience_size} testId="affiliate-profile-audience" />
+            <ReadonlyItem label="Kategorie obsahu" value={form.content_categories} testId="affiliate-profile-categories" />
             <ReadonlyItem label="Zvolené zaměření" value={formatModes(form.modes)} testId="affiliate-profile-modes" />
             <ReadonlyItem label="Doporučovací kód" value={form.ref_code} testId="affiliate-profile-ref-code" />
             <ReadonlyItem label="Stav účtu" value={formatStatus(form.status)} testId="affiliate-profile-status" />

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -26,7 +27,19 @@ const AffiliateRegister = () => {
   const [submitted, setSubmitted] = useState(false);
   const [finalCode, setFinalCode] = useState<string | null>(null);
   const [form, setForm] = useState({
-    name: '', email: '', password: '', confirmPassword: '', phone: '', refCode: '',
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    phone: '',
+    websiteUrl: '',
+    instagramUrl: '',
+    tiktokUrl: '',
+    youtubeUrl: '',
+    facebookUrl: '',
+    audienceSize: '',
+    contentCategories: '',
+    refCode: '',
   });
   const [modeInfluencer, setModeInfluencer] = useState(true);
   const [modeSalesRep, setModeSalesRep] = useState(false);
@@ -35,6 +48,10 @@ const AffiliateRegister = () => {
     const next = { ...form, [e.target.name]: e.target.value };
     if (e.target.name === 'name' && !form.refCode) next.refCode = proposeRefCode(e.target.value);
     setForm(next);
+  };
+
+  const onTextAreaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,13 +87,32 @@ const AffiliateRegister = () => {
         throw new Error('Tento e-mail je již zaregistrován.');
       }
 
-      const { data: rpcData, error: rpcError } = await (supabase as any).rpc('register_affiliate_account', {
+      let { data: rpcData, error: rpcError } = await (supabase as any).rpc('register_affiliate_account', {
         p_name: form.name.trim(),
         p_email: email,
         p_phone: form.phone.trim() || null,
         p_modes: modes,
         p_ref_code: form.refCode.trim() || null,
+        p_website_url: form.websiteUrl.trim() || null,
+        p_instagram_url: form.instagramUrl.trim() || null,
+        p_tiktok_url: form.tiktokUrl.trim() || null,
+        p_youtube_url: form.youtubeUrl.trim() || null,
+        p_facebook_url: form.facebookUrl.trim() || null,
+        p_audience_size: form.audienceSize.trim() || null,
+        p_content_categories: form.contentCategories.trim() || null,
       });
+
+      if (rpcError?.code === 'PGRST202' || rpcError?.message?.includes('Could not find')) {
+        const fallback = await (supabase as any).rpc('register_affiliate_account', {
+          p_name: form.name.trim(),
+          p_email: email,
+          p_phone: form.phone.trim() || null,
+          p_modes: modes,
+          p_ref_code: form.refCode.trim() || null,
+        });
+        rpcData = fallback.data;
+        rpcError = fallback.error;
+      }
 
       if (rpcError) throw new Error(rpcError.message || 'Registrace affiliate účtu selhala.');
 
@@ -133,7 +169,7 @@ const AffiliateRegister = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-[hsl(222_40%_8%)] p-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-2xl">
         <img src={logo} alt="OneMil logo" className="h-16 w-auto mx-auto mb-4 object-contain onemil-logo-animated" />
         <Card className="w-full rounded-[20px] border border-border">
           <CardHeader className="space-y-1 text-center">
@@ -168,6 +204,48 @@ const AffiliateRegister = () => {
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefon</Label>
                 <Input id="phone" name="phone" value={form.phone} onChange={onChange} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="websiteUrl">Hlavní kanál / web / profil</Label>
+                <Input id="websiteUrl" name="websiteUrl" value={form.websiteUrl} onChange={onChange}
+                       placeholder="https://..." />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="instagramUrl">Instagram</Label>
+                  <Input id="instagramUrl" name="instagramUrl" value={form.instagramUrl} onChange={onChange}
+                         placeholder="https://instagram.com/..." />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tiktokUrl">TikTok</Label>
+                  <Input id="tiktokUrl" name="tiktokUrl" value={form.tiktokUrl} onChange={onChange}
+                         placeholder="https://tiktok.com/@..." />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="youtubeUrl">YouTube</Label>
+                  <Input id="youtubeUrl" name="youtubeUrl" value={form.youtubeUrl} onChange={onChange}
+                         placeholder="https://youtube.com/..." />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="facebookUrl">Facebook</Label>
+                  <Input id="facebookUrl" name="facebookUrl" value={form.facebookUrl} onChange={onChange}
+                         placeholder="https://facebook.com/..." />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="audienceSize">Velikost publika / dosah</Label>
+                <Input id="audienceSize" name="audienceSize" value={form.audienceSize} onChange={onChange}
+                       placeholder="např. 25 000 sledujících, 100 000 měsíční dosah" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contentCategories">Kategorie obsahu</Label>
+                <Textarea id="contentCategories" name="contentCategories" value={form.contentCategories}
+                          onChange={onTextAreaChange}
+                          placeholder="např. lifestyle, luxusní produkty, cestování, automotive, e-commerce..." />
               </div>
 
               <div className="space-y-2">

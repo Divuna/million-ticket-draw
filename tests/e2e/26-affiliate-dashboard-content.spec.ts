@@ -91,8 +91,15 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
 
   test('profile mode shows registration data summary', async ({ page }) => {
     await page.getByTestId('mode-btn-profile').click();
-    await expect(page.getByText('Údaje z registrace', { exact: true })).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText('Registrační údaje', { exact: true })).toBeVisible({ timeout: 8_000 });
 
+    await expect(page.getByText('Hlavní kanál / web / profil', { exact: true })).toBeVisible();
+    await expect(page.getByText('Instagram', { exact: true })).toBeVisible();
+    await expect(page.getByText('TikTok', { exact: true })).toBeVisible();
+    await expect(page.getByText('YouTube', { exact: true })).toBeVisible();
+    await expect(page.getByText('Facebook', { exact: true })).toBeVisible();
+    await expect(page.getByText('Velikost publika / dosah', { exact: true })).toBeVisible();
+    await expect(page.getByText('Kategorie obsahu', { exact: true })).toBeVisible();
     await expect(page.getByTestId('affiliate-profile-modes')).toContainText(/Influencer|Obchodník/);
     await expect(page.getByTestId('affiliate-profile-ref-code')).not.toContainText('Neuvedeno');
     await expect(page.getByTestId('affiliate-profile-status')).toContainText('Schváleno');

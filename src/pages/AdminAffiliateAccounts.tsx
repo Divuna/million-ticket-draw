@@ -52,6 +52,12 @@ interface AffiliateAccount {
   billing_zip: string | null;
   billing_country: string | null;
   website_url: string | null;
+  instagram_url: string | null;
+  tiktok_url: string | null;
+  youtube_url: string | null;
+  facebook_url: string | null;
+  audience_size: string | null;
+  content_categories: string | null;
   created_at: string;
 }
 
@@ -75,6 +81,10 @@ interface AccountAgg {
 }
 
 const NEXT_STATUS: Record<string, string> = { calculated: "approved", approved: "paid" };
+const AFFILIATE_ACCOUNT_SELECT =
+  "id, name, email, phone, ref_code, modes, status, commission_rate_customer, commission_rate_company, is_vat_payer, vat_id, payout_account, payout_bank, ico, billing_street, billing_city, billing_zip, billing_country, website_url, instagram_url, tiktok_url, youtube_url, facebook_url, audience_size, content_categories, created_at";
+const AFFILIATE_ACCOUNT_SELECT_FALLBACK =
+  "id, name, email, phone, ref_code, modes, status, commission_rate_customer, commission_rate_company, is_vat_payer, vat_id, payout_account, payout_bank, ico, billing_street, billing_city, billing_zip, billing_country, website_url, created_at";
 
 function statusBadge(status: string) {
   switch (status) {
@@ -137,10 +147,20 @@ const AdminAffiliateAccounts = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data: accData, error: accErr } = await (supabase as any)
+      let { data: accData, error: accErr } = await (supabase as any)
         .from("affiliate_accounts")
-        .select("id, name, email, phone, ref_code, modes, status, commission_rate_customer, commission_rate_company, is_vat_payer, vat_id, payout_account, payout_bank, ico, billing_street, billing_city, billing_zip, billing_country, website_url, created_at")
+        .select(AFFILIATE_ACCOUNT_SELECT)
         .order("created_at", { ascending: false });
+
+      if (accErr?.code === "PGRST204" || accErr?.message?.includes("Could not find")) {
+        const fallback = await (supabase as any)
+          .from("affiliate_accounts")
+          .select(AFFILIATE_ACCOUNT_SELECT_FALLBACK)
+          .order("created_at", { ascending: false });
+        accData = fallback.data;
+        accErr = fallback.error;
+      }
+
       if (accErr) throw accErr;
 
       const { data: commData, error: commErr } = await (supabase as any)
@@ -431,7 +451,13 @@ const AdminAffiliateAccounts = () => {
                 <DetailField label="Zvolené zaměření" value={formatModes(detailAccount.modes)} testId="admin-affiliate-detail-modes" />
                 <DetailField label="Ref kód" value={detailAccount.ref_code} mono testId="admin-affiliate-detail-ref-code" />
                 <DetailField label="Stav účtu" value={detailAccount.status} testId="admin-affiliate-detail-status" />
-                <DetailField label="Web / sociální síť" value={detailAccount.website_url} testId="admin-affiliate-detail-website" />
+                <DetailField label="Hlavní kanál / web / profil" value={detailAccount.website_url} testId="admin-affiliate-detail-website" />
+                <DetailField label="Instagram" value={detailAccount.instagram_url} testId="admin-affiliate-detail-instagram" />
+                <DetailField label="TikTok" value={detailAccount.tiktok_url} testId="admin-affiliate-detail-tiktok" />
+                <DetailField label="YouTube" value={detailAccount.youtube_url} testId="admin-affiliate-detail-youtube" />
+                <DetailField label="Facebook" value={detailAccount.facebook_url} testId="admin-affiliate-detail-facebook" />
+                <DetailField label="Velikost publika / dosah" value={detailAccount.audience_size} testId="admin-affiliate-detail-audience" />
+                <DetailField label="Kategorie obsahu" value={detailAccount.content_categories} testId="admin-affiliate-detail-categories" />
                 <DetailField label="IČO" value={detailAccount.ico} testId="admin-affiliate-detail-ico" />
                 <DetailField label="DIČ" value={detailAccount.vat_id} testId="admin-affiliate-detail-vat-id" />
                 <DetailField label="Plátce DPH" value={detailAccount.is_vat_payer ? "Ano" : "Ne"} testId="admin-affiliate-detail-vat-payer" />

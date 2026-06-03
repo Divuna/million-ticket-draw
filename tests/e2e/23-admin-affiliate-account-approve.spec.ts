@@ -39,6 +39,12 @@ const TEST_REF_CODE = 'SPEC23E2E';
 const TEST_NAME     = 'Spec23 E2E Affiliate';
 const TEST_PHONE    = '+420 777 888 999';
 const TEST_WEBSITE  = 'https://spec23.onemil.test';
+const TEST_INSTAGRAM = 'https://instagram.com/spec23';
+const TEST_TIKTOK = 'https://tiktok.com/@spec23';
+const TEST_YOUTUBE = 'https://youtube.com/@spec23';
+const TEST_FACEBOOK = 'https://facebook.com/spec23';
+const TEST_AUDIENCE = '25 000 sledujících';
+const TEST_CATEGORIES = 'lifestyle, premium rewards';
 const TEST_ICO      = '12345678';
 const TEST_VAT_ID   = 'CZ12345678';
 const TEST_BANK     = 'Spec23 Banka';
@@ -76,6 +82,12 @@ test.describe('Admin — Affiliate account approve (spec 23)', () => {
         commission_rate_company: 5,
         is_vat_payer: true,
         website_url: TEST_WEBSITE,
+        instagram_url: TEST_INSTAGRAM,
+        tiktok_url: TEST_TIKTOK,
+        youtube_url: TEST_YOUTUBE,
+        facebook_url: TEST_FACEBOOK,
+        audience_size: TEST_AUDIENCE,
+        content_categories: TEST_CATEGORIES,
         ico: TEST_ICO,
         vat_id: TEST_VAT_ID,
         billing_street: 'Spec23 ulice 1',
@@ -131,6 +143,12 @@ test.describe('Admin — Affiliate account approve (spec 23)', () => {
     await expect(page.getByTestId('admin-affiliate-detail-modes')).toContainText('Obchodník');
     await expect(page.getByTestId('admin-affiliate-detail-ref-code')).toContainText(TEST_REF_CODE);
     await expect(page.getByTestId('admin-affiliate-detail-website')).toContainText(TEST_WEBSITE);
+    await expect(page.getByTestId('admin-affiliate-detail-instagram')).toContainText(TEST_INSTAGRAM);
+    await expect(page.getByTestId('admin-affiliate-detail-tiktok')).toContainText(TEST_TIKTOK);
+    await expect(page.getByTestId('admin-affiliate-detail-youtube')).toContainText(TEST_YOUTUBE);
+    await expect(page.getByTestId('admin-affiliate-detail-facebook')).toContainText(TEST_FACEBOOK);
+    await expect(page.getByTestId('admin-affiliate-detail-audience')).toContainText(TEST_AUDIENCE);
+    await expect(page.getByTestId('admin-affiliate-detail-categories')).toContainText(TEST_CATEGORIES);
     await expect(page.getByTestId('admin-affiliate-detail-ico')).toContainText(TEST_ICO);
     await expect(page.getByTestId('admin-affiliate-detail-vat-id')).toContainText(TEST_VAT_ID);
     await expect(page.getByTestId('admin-affiliate-detail-billing')).toContainText('Spec23 ulice 1');
