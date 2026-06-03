@@ -4,6 +4,24 @@
 
 ---
 
+## ✅ AFFILIATE v2 — ADMIN SOCIAL ZOBRAZENÍ: ODSTRANĚN TICHÝ FALLBACK (03. 06. 2026)
+
+**Problém:** Admin v `/admin/affiliate-accounts` detailu viděl YouTube (a další social) prázdné/„Neuvedeno", ačkoliv hodnota byla v DB uložená.
+
+**Diagnóza (kde byla chyba):** Data se **ukládala správně** — ověřeno v produkční DB (`influencer1@onemil.cz` / `TRUBKA89A0` měl `youtube_url = https://studio.youtube.com/video/...`). Chyba byla **jen v zobrazení adminovi**: `AdminAffiliateAccounts.tsx` (i `AffiliateDashboard.tsx`) měl `AFFILIATE_ACCOUNT_SELECT_FALLBACK`, který **tiše vynechával** všechna social pole. Když primární SELECT selhal (např. stale PostgREST schema cache hned po migraci přidávající sloupce, nebo transientní chyba), aktivoval se fallback → social data zmizela z UI, ačkoliv v DB byla.
+
+**Oprava:** Fallback **odstraněn** v obou souborech — sloupce teď trvale existují na staging i produkci, takže obě stránky vždy SELECTují plnou sadu social sloupců. Žádná DB/RPC/migrace změna (sloupce i RPC už existují). Social pole zůstávají **jen text** (`DetailField`/`ReadonlyItem` = `<p>`), žádné iframe/embed/video/API.
+
+**Ověření:**
+- Admin detail social zobrazení (YouTube/Instagram/web/audience/…) je zamčeno **spec 23** (řádky 145–156).
+- Dashboard save → readback (vč. YouTube/Instagram/web/audience) zamčeno **spec 28**.
+- Staging Full E2E run `26914578757`: **52 passed · 0 failed** ✅ (spec 23 ✅, spec 28 ✅).
+- `npm run build` ✅. Commit `2d838dd5`.
+
+**Pozn.:** Pokud admin v produkci stále vidí prázdno, jde o stale Lovable build — stačí Publish; kód na `main` je správný.
+
+---
+
 ## ✅ AFFILIATE v2 — SOCIAL/PROFIL POLE EDITOVATELNÁ V DASHBOARDU (03. 06. 2026, PRODUKCE)
 
 **Stav: NASAZENO NA STAGING I PRODUKCI. Migrace aplikována na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla). Žádný další deploy není potřeba.**

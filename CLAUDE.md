@@ -1,5 +1,14 @@
 # CLAUDE.md
 
+## AFFILIATE v2 — ADMIN SOCIAL ZOBRAZENÍ: ODSTRANĚN TICHÝ FALLBACK (03. 06. 2026)
+
+**Admin viděl social pole (YouTube aj.) prázdné, ač byla v DB. Data se ukládala správně — chyba byla jen v zobrazení.**
+
+- Root cause: `AFFILIATE_ACCOUNT_SELECT_FALLBACK` v `AdminAffiliateAccounts.tsx` a `AffiliateDashboard.tsx` tiše vynechával social sloupce; aktivoval se při selhání primárního SELECTu (stale PostgREST schema cache po migraci).
+- Fix: fallback **odstraněn** — obě stránky vždy SELECTují plnou sadu social sloupců. Sloupce trvale existují (staging+produkce). Žádná DB/RPC/migrace změna. Social = jen text (`<p>`), žádné embed/iframe/video/API.
+- **Pravidlo:** nevracet SELECT fallback, který vynechává social sloupce — tiše skrývá uložená data.
+- Zamčeno spec 23 (admin detail social) + spec 28 (dashboard save/readback). Staging E2E `26914578757`: 52 passed. Commit `2d838dd5`.
+
 ## AFFILIATE v2 — SOCIAL/PROFIL POLE EDITOVATELNÁ (03. 06. 2026, PRODUKCE)
 
 **`/affiliate/dashboard → Profil` umožňuje editovat všechna profilová/social pole. Nasazeno na STAGING I PRODUKCI (`xkzhjldrojjlrkezorey`). E2E zelený.**

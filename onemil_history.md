@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-06-03 - Affiliate v2: oprava admin social zobrazení (odstraněn tichý fallback)
+
+- Symptom: admin v `/admin/affiliate-accounts` detailu viděl YouTube prázdné, ač DB hodnota existovala (`influencer1@onemil.cz`/`TRUBKA89A0` → `youtube_url` vyplněno).
+- Chyba byla jen v zobrazení, NE v ukládání — data v DB byla správně.
+- Root cause: `AFFILIATE_ACCOUNT_SELECT_FALLBACK` v `AdminAffiliateAccounts.tsx` a `AffiliateDashboard.tsx` tiše vynechával social sloupce; aktivoval se při selhání primárního SELECTu (stale PostgREST schema cache po migraci) → social data zmizela z UI.
+- Fix: fallback odstraněn v obou souborech; vždy plný SELECT. Žádná DB/RPC/migrace změna. Social = jen text.
+- Pokrytí: spec 23 (admin detail social) + spec 28 (dashboard save/readback) — oba zelené.
+- Staging Full E2E run `26914578757`: 52 passed, 0 failed. `npm run build` ✅. Commit `2d838dd5`.
+- Nezměněno: provize, Partner portal, zákaznický účet, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`.
+
+---
+
 ## 2026-06-03 - Affiliate v2: social profile update migrace APLIKOVÁNA na PRODUKCI
 
 - Aplikována migrace `supabase/migrations/20260603_affiliate_profile_update_social_fields.sql` na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla).
