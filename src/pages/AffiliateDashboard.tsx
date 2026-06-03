@@ -157,6 +157,7 @@ function ModeSwitcher({ modes, active, onSwitch }: {
               key={id}
               onClick={() => handleClick(id, has)}
               data-testid={`mode-btn-${id}`}
+              data-has-role={has ? 'true' : 'false'}
               aria-pressed={isActive}
               className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all
                 ${isActive

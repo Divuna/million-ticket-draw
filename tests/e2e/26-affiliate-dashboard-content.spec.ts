@@ -126,14 +126,16 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
     const salesBtn = page.getByTestId('mode-btn-sales_rep');
     await expect(salesBtn).toBeVisible({ timeout: 10_000 });
 
-    // Click sales_rep mode if enabled; if disabled (not in modes), skip this check
-    const isDisabled = await salesBtn.isDisabled();
-    if (!isDisabled) {
+    // Check via data-has-role attribute whether this account actually has sales_rep mode
+    const hasRole = await salesBtn.getAttribute('data-has-role');
+
+    if (hasRole === 'true') {
+      // Account has sales_rep → clicking switches and stores 'sales_rep'
       await salesBtn.click();
       const storedMode = await page.evaluate(() => localStorage.getItem('affiliate_active_mode'));
       expect(storedMode).toBe('sales_rep');
     } else {
-      // Influencer-only account — verify influencer is stored
+      // Influencer-only account → clicking shows inactive message, localStorage stays 'influencer'
       await page.getByTestId('mode-btn-influencer').click();
       const storedMode = await page.evaluate(() => localStorage.getItem('affiliate_active_mode'));
       expect(storedMode).toBe('influencer');
