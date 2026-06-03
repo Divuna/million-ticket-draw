@@ -1,6 +1,61 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 02. 06. 2026
+**Aktualizováno:** 03. 06. 2026
+
+---
+
+## 🚨 HANDOFF PRO CODEX — AFFILIATE v2 (03. 06. 2026, ČTI JAKO PRVNÍ)
+
+### 1. Aktuální stav Affiliate v2 na stagingu (`dxmowysntemfqfnanxua`)
+Kompletní samostatná affiliate vrstva (oddělená od zákazníka i Partner portalu) je hotová a ověřená NA STAGINGU:
+- **DB tabulky:** `affiliate_accounts`, `affiliate_customer_refs`, `affiliate_company_refs`,
+  `affiliate_commissions` + nullable `partners.referred_by_affiliate_id`. RLS: affiliate vidí svá data, admin vše.
+- **RPC:** `record_affiliate_customer_ref`, `record_affiliate_company_ref`,
+  `calculate_affiliate_commissions_for_month`, `admin_set_affiliate_commission_status`,
+  `register_affiliate_account` (vše SECURITY DEFINER, `search_path=''`).
+- **Provize:** customer 5 % + company 5 %, základ bez DPH; plátce DPH → total = base×1.21. First-touch (UNIQUE).
+- **Admin UI:** `/admin/affiliate-accounts` (`AdminAffiliateAccounts.tsx`).
+- **Uživatelský frontend:** `/affiliate/register`, `/affiliate/dashboard` + route guard (affiliate nepadá do Partner portalu).
+- **Atribuce zapojena:** zákazník `?ref=` v `Register.tsx` (non-fatal, first-touch); firma `?via=` v
+  `PartnerRegister.tsx` (metadata) → admin schválení v `AdminPartnersPortal.tsx` volá `record_affiliate_company_ref`.
+- **Migrace dat:** 1 legacy influencer migrován do `affiliate_accounts` (ref_code `E2EAFFIL25A7`). Starý systém běží paralelně.
+- **Edge funkce nasazené na staging:** `approve-partner-registration`, `get-pending-partner-registrations`
+  (surface `affiliate_via_code`). `get-pending` se nyní volá s `x-internal-token` (fix v kroku 10).
+
+### 2. Commity od začátku Affiliate v2 (chronologicky)
+- `2f62d69` — DB základ (tabulky + RLS + partners FK)
+- `6357762` — atribuční RPC (customer + company, first-touch)
+- `6e32fc4` — měsíční výpočet provizí (2 roviny, DPH, idempotence)
+- `150711a` — admin status workflow (calculated→approved→paid)
+- `769d6f2` — admin UI `/admin/affiliate-accounts`
+- `b429cf0` — migrace legacy influencerů do `affiliate_accounts`
+- `f646e7b` — veřejná registrace + uživatelský dashboard + route guard
+- `aa484ec` — zapojení `?ref=` (zákazník) a `?via=` (firma) atribuce
+- `ea592d6` — deploy partner-approval edge stacku na staging + CORS sync
+- `2b00696` — fix: `x-internal-token` při načítání pending registrací
+
+### 3. Produkce
+**Produkce `xkzhjldrojjlrkezorey` NEBYLA dotčena** — žádné migrace, žádný deploy, žádná data. Vše jen staging.
+
+### 4. Nezměněné oblasti
+Zákaznický účet, Partner portal dashboard logika (mimo nutný token na load pending), platby, tikety, soutěže,
+peněženka a `buy_ticket_atomic` se NEMĚNILY.
+
+### 5. Cíl pro Codex
+Dokončit ověření **staging token configu** a **browser E2E firemního toku `?via=KOD`**.
+
+### 6. Nejdřív ověřit token config
+- Staging Supabase secret `INTERNAL_FUNCTION_TOKEN` (Edge Functions → Secrets) musí existovat.
+- Staging Lovable build `VITE_INTERNAL_FUNCTION_TOKEN` musí mít STEJNOU hodnotu jako staging secret.
+- Pozn.: lokální `.env` míří na produkci; produkční anon klíč není platný pro staging gateway
+  (`UNAUTHORIZED_LEGACY_JWT`), proto HTTP probe staging funkcí nešel z předchozí code session.
+
+### 7. Potom browser E2E
+`/partner/register?via=KOD` → pending registrace → admin schválení (`AdminPartnersPortal`) → vytvořený partner →
+`affiliate_company_refs` → `partners.referred_by_affiliate_id`. (DB chain už ověřen; chybí jen UI/HTTP průchod.)
+
+### 8. Codex NESMÍ obnovovat starou smazanou affiliate větev (ChatGPT duplikát z 02. 06. 2026).
+### 9. Codex NESMÍ jít na produkci bez výslovného potvrzení Pavla.
 
 ---
 

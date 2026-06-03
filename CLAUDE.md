@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 AFFILIATE v2 — HANDOFF PRO CODEX (03. 06. 2026)
+
+- **Stav:** kompletní samostatná Affiliate v2 vrstva hotová a ověřená **NA STAGINGU**
+  (`dxmowysntemfqfnanxua`): DB tabulky `affiliate_*` + `partners.referred_by_affiliate_id`, RPC
+  (`record_affiliate_customer_ref`, `record_affiliate_company_ref`, `calculate_affiliate_commissions_for_month`,
+  `admin_set_affiliate_commission_status`, `register_affiliate_account`), admin UI `/admin/affiliate-accounts`,
+  uživatelský frontend `/affiliate/register` + `/affiliate/dashboard`, zapojené `?ref=`/`?via=`, migrace 1 legacy
+  influencera, nasazený partner-approval edge stack. Provize 5 %/5 %, základ bez DPH, first-touch.
+- **Commity affiliate v2:** `2f62d69`, `6357762`, `6e32fc4`, `150711a`, `769d6f2`, `b429cf0`, `f646e7b`,
+  `aa484ec`, `ea592d6`, `2b00696`.
+- **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA** (žádné migrace/deploy/data). Vše jen staging.
+- **Neměnily se:** zákaznický účet, Partner portal, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`.
+- **Cíl pro Codex:** (1) ověřit staging `INTERNAL_FUNCTION_TOKEN` (Edge secret) == `VITE_INTERNAL_FUNCTION_TOKEN`
+  (staging Lovable build); (2) browser E2E firemního toku
+  `/partner/register?via=KOD` → pending registrace → admin schválení → partner → `affiliate_company_refs` →
+  `partners.referred_by_affiliate_id`.
+- **Zákazy:** NEOBNOVOVAT starou smazanou affiliate větev (ChatGPT duplikát z 02. 06. 2026);
+  NEJÍT na produkci bez výslovného potvrzení Pavla.
+- Detailní handoff blok je na začátku `onemil_state.md`.
+
 ## Before Starting Any Task
 
 Always read these files first — they are the source of truth for current system state, known bugs, and next steps:

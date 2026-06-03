@@ -14,6 +14,19 @@
 
 ---
 
+## 2026-06-03 — Affiliate v2: HANDOFF pro Codex
+
+Stav: kompletní affiliate v2 vrstva hotová a ověřená NA STAGINGU (dxmowysntemfqfnanxua); produkce nedotčena.
+Commity affiliate v2 (chronologicky): 2f62d69, 6357762, 6e32fc4, 150711a, 769d6f2, b429cf0, f646e7b,
+aa484ec, ea592d6, 2b00696.
+Nezměněno: zákazník, Partner portal, platby, tikety, soutěže, peněženka, buy_ticket_atomic, produkce.
+Další cíl (Codex): ověřit staging INTERNAL_FUNCTION_TOKEN + VITE_INTERNAL_FUNCTION_TOKEN, pak browser E2E
+firemního toku /partner/register?via=KOD → pending → admin schválení → partner → affiliate_company_refs →
+partners.referred_by_affiliate_id. Detailní handoff blok v onemil_state.md (nahoře).
+Pravidla: neobnovovat starou smazanou affiliate větev; nejít na produkci bez potvrzení Pavla.
+
+---
+
 ## 2026-06-03 — Affiliate program v2: get-pending token fix (krok 10)
 
 - src/pages/AdminPartnersPortal.tsx: loadPendingRegistrations volá get-pending-partner-registrations
