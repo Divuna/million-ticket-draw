@@ -158,8 +158,17 @@ test.describe('Affiliate v2 company via flow', () => {
 
       await page.evaluate(() => localStorage.clear());
       await loginViaUI(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+      const pendingResponsePromise = page.waitForResponse(
+        (response) => response.url().includes('/functions/v1/get-pending-partner-registrations'),
+        { timeout: 20_000 },
+      );
       await page.goto('/admin/partners-portal');
       await expect(page.getByRole('heading', { name: /Spr.va partner/i })).toBeVisible({ timeout: 20_000 });
+      const pendingResponse = await pendingResponsePromise;
+      expect(
+        pendingResponse.status(),
+        'get-pending-partner-registrations must accept the staging VITE_INTERNAL_FUNCTION_TOKEN',
+      ).toBe(200);
 
       const pendingCard = page.getByText(companyName).locator('xpath=ancestor::div[contains(@class,"rounded")][1]');
       await expect(pendingCard, 'pending registration must be visible in admin portal').toBeVisible({ timeout: 30_000 });
