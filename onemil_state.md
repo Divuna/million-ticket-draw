@@ -4,7 +4,71 @@
 
 ---
 
-## ✅ AFFILIATE v2 — PRODUKČNÍ NASAZENÍ DOKONČENO (03. 06. 2026)
+## ✅ AFFILIATE v2 — PRODUKČNÍ NASAZENÍ + SMOKE KONTROLA KOMPLETNÍ (03. 06. 2026)
+
+**Stav: NASAZENO A OVĚŘENO V PRODUKCI. Žádný další deploy není potřeba.**
+
+### Produkční projekt: `xkzhjldrojjlrkezorey`
+
+### DB vrstva
+
+| Objekt | Stav |
+|--------|------|
+| `affiliate_accounts` (4 sloupce, UNIQUE `auth_user_id`, UNIQUE `ref_code`) | ✅ EXISTS |
+| `affiliate_customer_refs` (UNIQUE `user_id` = first-touch) | ✅ EXISTS |
+| `affiliate_company_refs` (UNIQUE `partner_id` = first-touch) | ✅ EXISTS |
+| `affiliate_commissions` (calculated → approved → paid) | ✅ EXISTS |
+| `partners.referred_by_affiliate_id` (nullable FK) | ✅ EXISTS |
+| RLS zapnuté na všech 4 affiliate tabulkách | ✅ (8 politik) |
+| `record_affiliate_customer_ref(text)` | ✅ SECURITY DEFINER |
+| `record_affiliate_company_ref(text, uuid)` | ✅ SECURITY DEFINER |
+| `calculate_affiliate_commissions_for_month(date)` | ✅ SECURITY DEFINER |
+| `admin_set_affiliate_commission_status(uuid, text)` | ✅ SECURITY DEFINER |
+| `register_affiliate_account(text, text, text, text[], text)` | ✅ SECURITY DEFINER |
+
+**Migrovaní legacy influenceři: 3** (ref_codes: `TRUBKA89A0`, `PAVELDIV1EF7`, `EDRSG49AC`; statusy: approved, approved, rejected)
+
+### Edge Functions
+
+| Funkce | Verze | Status | Ochrana |
+|--------|-------|--------|---------|
+| `get-pending-partner-registrations` | v129 | ACTIVE ✅ | JWT + admin/superadmin role check |
+| `approve-partner-registration` | v128 | ACTIVE ✅ | JWT + admin/superadmin role check |
+
+`VITE_INTERNAL_FUNCTION_TOKEN` se **nepoužívá** — není potřeba nastavovat v Lovable.
+
+### Produkční smoke kontrola ✅
+
+| Route | Výsledek |
+|-------|----------|
+| `/admin/affiliate-accounts` | ✅ route existuje, chráněno `useUserRole` |
+| `/affiliate/register` | ✅ route existuje, přihlášení potřeba pro submit |
+| `/affiliate/dashboard` | ✅ route existuje, RLS — vidí jen vlastní data |
+
+### Nezměněno (garantováno)
+- `buy_ticket_atomic` — nedotčeno
+- platby, tikety, soutěže, peněženka — nedotčeno
+- zákaznický účet — nedotčeno
+- Partner portal — nedotčeno (mimo schválený affiliate tok)
+
+### DB migrace aplikované na produkci (v pořadí)
+| # | Soubor | Výsledek |
+|---|--------|----------|
+| 1 | `20260603_affiliate_accounts_foundation.sql` | ✅ |
+| 2 | `20260603_affiliate_attribution_rpcs.sql` | ✅ |
+| 3 | `20260603_affiliate_monthly_commissions.sql` | ✅ |
+| 4 | `20260603_affiliate_commission_status_workflow.sql` | ✅ |
+| 5 | `20260603_affiliate_self_registration_rpc.sql` | ✅ |
+| 6 | `20260603_migrate_influencers_to_affiliate_accounts.sql` | ✅ — 3 influenceři |
+
+---
+
+## ➡️ CURRENT NEXT STEP (03. 06. 2026)
+
+**Affiliate v2 je kompletně nasazeno v produkci a smoke ověřeno.**
+Další krok: **připravit premium vizuální koncept pro OneMil video/prezentační vizuály** (surové screenshoty působí příliš technicky — viz sekce níže).
+
+---
 
 **Produkční projekt:** `xkzhjldrojjlrkezorey`
 
@@ -38,68 +102,11 @@ Lovable Publish není potřeba (žádná frontend změna v tomto deployi). Produ
 
 ---
 
-## 🚨 HANDOFF PRO CODEX — AFFILIATE v2 (03. 06. 2026, ČTI JAKO PRVNÍ)
+## ✅ AFFILIATE v2 — HISTORICKÝ STAGING HANDOFF (PŘEKRYTO — produkce nasazena 03. 06. 2026)
 
-### 1. Aktuální stav Affiliate v2 na stagingu (`dxmowysntemfqfnanxua`)
-Kompletní samostatná affiliate vrstva (oddělená od zákazníka i Partner portalu) je hotová a ověřená NA STAGINGU:
-- **DB tabulky:** `affiliate_accounts`, `affiliate_customer_refs`, `affiliate_company_refs`,
-  `affiliate_commissions` + nullable `partners.referred_by_affiliate_id`. RLS: affiliate vidí svá data, admin vše.
-- **RPC:** `record_affiliate_customer_ref`, `record_affiliate_company_ref`,
-  `calculate_affiliate_commissions_for_month`, `admin_set_affiliate_commission_status`,
-  `register_affiliate_account` (vše SECURITY DEFINER, `search_path=''`).
-- **Provize:** customer 5 % + company 5 %, základ bez DPH; plátce DPH → total = base×1.21. First-touch (UNIQUE).
-- **Admin UI:** `/admin/affiliate-accounts` (`AdminAffiliateAccounts.tsx`).
-- **Uživatelský frontend:** `/affiliate/register`, `/affiliate/dashboard` + route guard (affiliate nepadá do Partner portalu).
-- **Atribuce zapojena:** zákazník `?ref=` v `Register.tsx` (non-fatal, first-touch); firma `?via=` v
-  `PartnerRegister.tsx` (metadata) → admin schválení v `AdminPartnersPortal.tsx` volá `record_affiliate_company_ref`.
-- **Migrace dat:** 1 legacy influencer migrován do `affiliate_accounts` (ref_code `E2EAFFIL25A7`). Starý systém běží paralelně.
-- **Edge funkce nasazené na staging:** `approve-partner-registration`, `get-pending-partner-registrations`
-  (surface `affiliate_via_code`). Po změně bezpečnostního modelu už NEPOUŽÍVAJÍ
-  `VITE_INTERNAL_FUNCTION_TOKEN` v Lovable/browser buildu. Chrání je uživatelský JWT a admin/superadmin role check.
-  Důvod: Lovable workspace nemá Build Secrets a nechceme vystavit interní token v browseru.
-
-### 2. Commity od začátku Affiliate v2 (chronologicky)
-- `2f62d69` — DB základ (tabulky + RLS + partners FK)
-- `6357762` — atribuční RPC (customer + company, first-touch)
-- `6e32fc4` — měsíční výpočet provizí (2 roviny, DPH, idempotence)
-- `150711a` — admin status workflow (calculated→approved→paid)
-- `769d6f2` — admin UI `/admin/affiliate-accounts`
-- `b429cf0` — migrace legacy influencerů do `affiliate_accounts`
-- `f646e7b` — veřejná registrace + uživatelský dashboard + route guard
-- `aa484ec` — zapojení `?ref=` (zákazník) a `?via=` (firma) atribuce
-- `ea592d6` — deploy partner-approval edge stacku na staging + CORS sync
-- `2b00696` — fix: `x-internal-token` při načítání pending registrací
-- `9f3f53b55f89a3f0c2b16637af32335376fede1d` — změna bezpečnostního modelu: dvě browser-facing admin Edge Functions
-  už nevyžadují `x-internal-token` / `INTERNAL_FUNCTION_TOKEN`, zůstává JWT + admin/superadmin role check
-- `9bf059d1cf712db36dbc70309dc735e451899d97` — CORS/staging ověření: legacy `x-internal-token` header je povolený
-  v CORS allow headers, ale server ho ignoruje; staging E2E prošel
-
-### 3. Produkce
-**Produkce `xkzhjldrojjlrkezorey` NEBYLA dotčena** — žádné migrace, žádný deploy, žádná data. Vše jen staging.
-
-### 4. Nezměněné oblasti
-Zákaznický účet, Partner portal dashboard logika (mimo nutný token na load pending), platby, tikety, soutěže,
-peněženka a `buy_ticket_atomic` se NEMĚNILY.
-
-### 5. Aktuální bezpečnostní model pro browser-facing admin Edge Functions
-`get-pending-partner-registrations` a `approve-partner-registration` jsou chráněné přes:
-- `Authorization: Bearer <user JWT>`
-- `supabaseAdmin.auth.getUser(token)`
-- kontrolu `user_roles` na `admin` / `superadmin`
-
-`VITE_INTERNAL_FUNCTION_TOKEN` se pro Affiliate v2 v Lovable/browser buildu už NEPOUŽÍVÁ.
-Před produkčním nasazením už NENÍ potřeba nastavovat Lovable `VITE_INTERNAL_FUNCTION_TOKEN`.
-`INTERNAL_FUNCTION_TOKEN` secret může v Supabase zůstat pro jiné funkce, ale tyto dvě funkce ho nečtou.
-
-### 6. Staging browser E2E ověřeno
-Run URL: `https://github.com/Divuna/million-ticket-draw/actions/runs/26887279500`
-
-Ověřený tok:
-`/partner/register?via=KOD` → pending registrace → admin schválení (`AdminPartnersPortal`) → vytvořený partner →
-`affiliate_company_refs` → `partners.referred_by_affiliate_id`.
-
-### 7. Codex NESMÍ obnovovat starou smazanou affiliate větev (ChatGPT duplikát z 02. 06. 2026).
-### 8. Codex NESMÍ jít na produkci bez výslovného potvrzení Pavla.
+Viz sekci „AFFILIATE v2 — PRODUKČNÍ NASAZENÍ + SMOKE KONTROLA KOMPLETNÍ" nahoře.
+Staging E2E run: `https://github.com/Divuna/million-ticket-draw/actions/runs/26887279500`
+Security model commity: `9f3f53b` (JWT model), `9bf059d` (CORS staging fix), `f17cd3ef` (docs).
 
 ---
 

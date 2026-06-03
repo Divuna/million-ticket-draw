@@ -1,41 +1,20 @@
 # CLAUDE.md
 
-## AFFILIATE v2 - CURRENT STAGING STATUS AFTER SECURITY MODEL CHANGE (03. 06. 2026)
+## AFFILIATE v2 — PRODUKČNÍ STAV (03. 06. 2026)
 
-- Affiliate v2 no longer uses `VITE_INTERNAL_FUNCTION_TOKEN` in the Lovable/browser build.
-- Reason: the Lovable workspace does not have Build Secrets, and we do not want to expose an internal token in the browser.
-- Edge Functions `get-pending-partner-registrations` and `approve-partner-registration` are protected by:
-  `Authorization: Bearer <user JWT>`, `supabaseAdmin.auth.getUser(token)`, and `user_roles` check for
-  `admin` / `superadmin`.
-- Security model commit: `9f3f53b55f89a3f0c2b16637af32335376fede1d`.
-- CORS/staging verification commit: `9bf059d1cf712db36dbc70309dc735e451899d97`.
-- Staging E2E passed: `https://github.com/Divuna/million-ticket-draw/actions/runs/26887279500`.
-- Verified flow: `/partner/register?via=KOD` -> pending registrace -> admin schvaleni -> partner ->
-  `affiliate_company_refs` -> `partners.referred_by_affiliate_id`.
-- Production has not been touched.
-- Before production deployment, Lovable `VITE_INTERNAL_FUNCTION_TOKEN` is no longer required.
+**Affiliate v2 je NASAZENO A SMOKE OVĚŘENO V PRODUKCI (`xkzhjldrojjlrkezorey`).**
+
+- DB: `affiliate_accounts`, `affiliate_customer_refs`, `affiliate_company_refs`, `affiliate_commissions`,
+  `partners.referred_by_affiliate_id`. RLS zapnuté. 5 SECURITY DEFINER RPC.
+- 3 legacy influenceři migrováni.
+- Edge Functions `get-pending-partner-registrations` (v129) a `approve-partner-registration` (v128) — ACTIVE.
+  Ochrana: `Authorization: Bearer <JWT>` + `user_roles` check pro `admin`/`superadmin`.
+  `VITE_INTERNAL_FUNCTION_TOKEN` se **nepoužívá** a není potřeba nastavovat v Lovable.
+- Staging E2E: `https://github.com/Divuna/million-ticket-draw/actions/runs/26887279500` ✅
+- Nezměněno: `buy_ticket_atomic`, platby, tikety, soutěže, peněženka, zákaznický účet, Partner portal.
+- NEOBNOVOVAT starou smazanou affiliate větev (ChatGPT duplikát z 02. 06. 2026).
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## 🚨 AFFILIATE v2 — HANDOFF PRO CODEX (03. 06. 2026)
-
-- **Stav:** kompletní samostatná Affiliate v2 vrstva hotová a ověřená **NA STAGINGU**
-  (`dxmowysntemfqfnanxua`): DB tabulky `affiliate_*` + `partners.referred_by_affiliate_id`, RPC
-  (`record_affiliate_customer_ref`, `record_affiliate_company_ref`, `calculate_affiliate_commissions_for_month`,
-  `admin_set_affiliate_commission_status`, `register_affiliate_account`), admin UI `/admin/affiliate-accounts`,
-  uživatelský frontend `/affiliate/register` + `/affiliate/dashboard`, zapojené `?ref=`/`?via=`, migrace 1 legacy
-  influencera, nasazený partner-approval edge stack. Provize 5 %/5 %, základ bez DPH, first-touch.
-- **Commity affiliate v2:** `2f62d69`, `6357762`, `6e32fc4`, `150711a`, `769d6f2`, `b429cf0`, `f646e7b`,
-  `aa484ec`, `ea592d6`, `2b00696`.
-- **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA** (žádné migrace/deploy/data). Vše jen staging.
-- **Neměnily se:** zákaznický účet, Partner portal, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`.
-- **Cíl pro Codex:** (1) ověřit staging `INTERNAL_FUNCTION_TOKEN` (Edge secret) == `VITE_INTERNAL_FUNCTION_TOKEN`
-  (staging Lovable build); (2) browser E2E firemního toku
-  `/partner/register?via=KOD` → pending registrace → admin schválení → partner → `affiliate_company_refs` →
-  `partners.referred_by_affiliate_id`.
-- **Zákazy:** NEOBNOVOVAT starou smazanou affiliate větev (ChatGPT duplikát z 02. 06. 2026);
-  NEJÍT na produkci bez výslovného potvrzení Pavla.
-- Detailní handoff blok je na začátku `onemil_state.md`.
 
 ## Before Starting Any Task
 

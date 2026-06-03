@@ -14,6 +14,21 @@
 
 ---
 
+## 2026-06-03 - Affiliate v2: produkční nasazení dokončeno + smoke kontrola ✅
+
+- Affiliate v2 DB vrstva nasazena na produkci `xkzhjldrojjlrkezorey` přes 6 idempotentních migrací.
+- Tabulky: `affiliate_accounts`, `affiliate_customer_refs`, `affiliate_company_refs`, `affiliate_commissions`.
+- Sloupec: `partners.referred_by_affiliate_id` (nullable FK).
+- 5 SECURITY DEFINER RPC: `record_affiliate_customer_ref`, `record_affiliate_company_ref`,
+  `calculate_affiliate_commissions_for_month`, `admin_set_affiliate_commission_status`, `register_affiliate_account`.
+- RLS zapnuté na všech 4 affiliate tabulkách (8 politik).
+- 3 legacy influenceři migrováni do `affiliate_accounts` (ref_codes: TRUBKA89A0, PAVELDIV1EF7, EDRSG49AC).
+- Edge Functions `get-pending-partner-registrations` (v129) a `approve-partner-registration` (v128) nasazeny — ACTIVE.
+  Ochrana: JWT + admin/superadmin role check. `VITE_INTERNAL_FUNCTION_TOKEN` se nepoužívá.
+- Smoke kontrola prošla: `/admin/affiliate-accounts`, `/affiliate/register`, `/affiliate/dashboard` vše funkční.
+- Nezměněno: `buy_ticket_atomic`, platby, tikety, soutěže, peněženka, zákaznický účet, Partner portal.
+- Commit: `9e8daca0` (docs state po nasazení).
+
 ## 2026-06-03 - Affiliate v2: staging security model update and browser E2E verification
 
 - Affiliate v2 no longer uses `VITE_INTERNAL_FUNCTION_TOKEN` in the Lovable/browser build.
