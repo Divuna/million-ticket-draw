@@ -4,6 +4,34 @@
 
 ---
 
+## 🟢 AFFILIATE PROGRAM v2 — MĚSÍČNÍ VÝPOČET PROVIZÍ (03. 06. 2026, krok 3)
+
+Třetí bezpečný DB krok: měsíční výpočet affiliate provizí. Staging only.
+
+- **Migrace:** `supabase/migrations/20260603_affiliate_monthly_commissions.sql` (idempotentní DDL).
+- **Aplikováno POUZE na staging** `dxmowysntemfqfnanxua`. **Produkce NEDOTČENA.**
+- **`calculate_affiliate_commissions_for_month(p_month date)`** — SECURITY DEFINER, `SET search_path=''`.
+  - **Zákaznická rovina:** `SUM(payments.amount)` reálně zaplacených (`status='paid'`, amount>0, method ∉
+    bonus/partner/api) zákazníků z `affiliate_customer_refs`, × `commission_rate_customer` (default 5 %).
+  - **Firemní rovina:** `SUM(partner_invoices.amount_ex_vat)` kde `status='paid'`, firmy s
+    `partners.referred_by_affiliate_id`, × `commission_rate_company` (default 5 %). Doživotně.
+  - **DPH:** plátce (`is_vat_payer=true`) → `amount_total_czk = amount_base_czk × 1.21`, vat_rate=21;
+    neplátce → total = base, vat_rate=0. Základ vždy bez DPH.
+  - **Idempotence:** partial UNIQUE index `uq_affiliate_commissions_month (affiliate_id, commission_type,
+    period_month)`; re-run maže jen `calculated` řádky a přepočítá, `approved`/`paid` zamčené (ON CONFLICT
+    DO NOTHING). Status na začátku `calculated`.
+  - **Autorizace:** admin (`is_admin()`) nebo backend/cron (auth.uid NULL); jiný uživatel → `forbidden`.
+  - `REVOKE ALL FROM PUBLIC` + `GRANT EXECUTE TO authenticated`.
+- **Ověřeno na stagingu (test data uklizena, 0 zbytků):** zákazník 1000×5%=50 (neplátce, total 50);
+  firma 10000×5%=500 (plátce, total 605); pending platba i draft faktura vyloučeny; run1=run2 (idempotence);
+  non-admin → forbidden.
+- **Build:** `npm run build` ✅.
+- **DALŠÍ BEZPEČNÝ KROK:** admin akce nad `affiliate_commissions` (approve → paid) jako RPC/UI, případně
+  cron pro měsíční běh. Pak teprve frontend `/affiliate/*`, admin přehled a migrace influencerů z `partners`.
+  Produkční migrace všech tří kroků (1–3) až po výslovném potvrzení Pavla.
+
+---
+
 ## 🟢 AFFILIATE PROGRAM v2 — ATRIBUČNÍ RPC NA STAGINGU (03. 06. 2026, krok 2)
 
 Druhý bezpečný DB krok: dvě SECURITY DEFINER RPC pro first-touch atribuci. Staging only.

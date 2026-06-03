@@ -14,6 +14,20 @@
 
 ---
 
+## 2026-06-03 — Affiliate program v2: měsíční výpočet provizí (staging, krok 3)
+
+- Migrace `supabase/migrations/20260603_affiliate_monthly_commissions.sql`. Staging only.
+- `calculate_affiliate_commissions_for_month(p_month date)`: SECURITY DEFINER, search_path=''.
+  Zákaznická rovina (payments paid × commission_rate_customer) + firemní rovina
+  (partner_invoices.amount_ex_vat status=paid × commission_rate_company). Default 5 %.
+- DPH: plátce total=base×1.21 (vat 21), neplátce total=base. Status start 'calculated'.
+- Idempotence: partial UNIQUE (affiliate_id, commission_type, period_month); re-run maže jen
+  'calculated', 'approved'/'paid' zamčené. Autorizace admin/cron, jinak forbidden.
+- Ověřeno na stagingu (test data uklizena): cust 1000×5%=50; comp 10000×5%=605 (plátce);
+  pending/draft vyloučeny; run1=run2; non-admin forbidden. npm run build ✅. Produkce nedotčena.
+
+---
+
 ## 2026-06-03 — Affiliate program v2: atribuční RPC (staging, krok 2)
 
 - Migrace `supabase/migrations/20260603_affiliate_attribution_rpcs.sql`. Staging `dxmowysntemfqfnanxua` only.
