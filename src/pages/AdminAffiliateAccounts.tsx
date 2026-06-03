@@ -13,7 +13,7 @@
  * so queries use `(supabase as any)` casts on purpose.
  */
 import React, { useEffect, useState, useCallback } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { NavigateToLogin } from "@/components/NavigateToLogin";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,13 +27,14 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { RefreshCw, Eye, CheckCircle, Banknote, Loader2, Megaphone, Briefcase, Users, UserCheck, XCircle } from "lucide-react";
+import { RefreshCw, Eye, CheckCircle, Banknote, Loader2, Megaphone, Briefcase, Users, UserCheck, XCircle, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { toast } from "sonner";
 
 interface AffiliateAccount {
   id: string;
+  auth_user_id: string | null;
   name: string;
   email: string;
   ref_code: string;
@@ -85,7 +86,7 @@ const NEXT_STATUS: Record<string, string> = { calculated: "approved", approved: 
 // No fallback: a fallback that omits social columns would silently show admins
 // empty Instagram/TikTok/YouTube/Facebook/audience/categories despite saved data.
 const AFFILIATE_ACCOUNT_SELECT =
-  "id, name, email, phone, ref_code, modes, status, commission_rate_customer, commission_rate_company, is_vat_payer, vat_id, payout_account, payout_bank, ico, billing_street, billing_city, billing_zip, billing_country, website_url, instagram_url, tiktok_url, youtube_url, facebook_url, audience_size, content_categories, created_at";
+  "id, auth_user_id, name, email, phone, ref_code, modes, status, commission_rate_customer, commission_rate_company, is_vat_payer, vat_id, payout_account, payout_bank, ico, billing_street, billing_city, billing_zip, billing_country, website_url, instagram_url, tiktok_url, youtube_url, facebook_url, audience_size, content_categories, created_at";
 
 function statusBadge(status: string) {
   switch (status) {
@@ -127,6 +128,7 @@ function DetailField({ label, value, mono = false, testId }: { label: string; va
 const AdminAffiliateAccounts = () => {
   const { user } = useAuth();
   const { role, loading: roleLoading } = useUserRole();
+  const navigate = useNavigate();
 
   const [accounts, setAccounts] = useState<AffiliateAccount[]>([]);
   const [aggByAffiliate, setAggByAffiliate] = useState<Map<string, AccountAgg>>(new Map());
@@ -464,6 +466,23 @@ const AdminAffiliateAccounts = () => {
                   label="Provizní sazby"
                   value={`Zákazníci ${detailAccount.commission_rate_customer} % · firmy ${detailAccount.commission_rate_company} %`}
                 />
+              </div>
+              <div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/20 px-3 py-2">
+                <span className="text-xs text-muted-foreground">
+                  {detailAccount.auth_user_id
+                    ? "Napište affiliate partnerovi přímo do jeho schránky zpráv."
+                    : "Účet zatím nemá přihlášení (auth) — zprávu nelze zaslat."}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!detailAccount.auth_user_id}
+                  data-testid="admin-affiliate-detail-message"
+                  onClick={() => { if (detailAccount.auth_user_id) navigate(`/admin/messages/${detailAccount.auth_user_id}`); }}
+                >
+                  <Mail className="w-4 h-4 mr-1.5" />
+                  Napsat zprávu
+                </Button>
               </div>
             </div>
           )}
