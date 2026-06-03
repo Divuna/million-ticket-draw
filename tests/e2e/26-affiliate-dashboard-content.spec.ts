@@ -65,6 +65,30 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
 
     await expect(page.getByTestId('mode-btn-influencer')).toBeVisible();
     await expect(page.getByTestId('mode-btn-sales_rep')).toBeVisible();
+
+    // Neither button should be disabled (inactive mode is NOT disabled, it shows a message instead)
+    const infBtn = page.getByTestId('mode-btn-influencer');
+    const salesBtn = page.getByTestId('mode-btn-sales_rep');
+    expect(await infBtn.isDisabled(), 'Influencer btn must not be disabled').toBe(false);
+    expect(await salesBtn.isDisabled(), 'Obchodník btn must not be disabled').toBe(false);
+  });
+
+  test('clicking inactive mode shows Czech explanatory message', async ({ page }) => {
+    // affiliate-e2e@onemil.cz has modes=['influencer'] only → sales_rep is inactive
+    const salesBtn = page.getByTestId('mode-btn-sales_rep');
+    await expect(salesBtn).toBeVisible({ timeout: 10_000 });
+
+    // Click the inactive mode button
+    await salesBtn.click();
+
+    // Should show the explanatory message (not just a tooltip)
+    const msg = page.getByTestId('mode-inactive-message');
+    await expect(msg).toBeVisible({ timeout: 5_000 });
+    await expect(msg).toContainText('Tento režim zatím nemáte aktivní');
+    await expect(msg).toContainText('administrátora');
+
+    // Clicking should NOT switch to sales_rep mode (influencer link still present)
+    await expect(page.getByTestId('affiliate-customer-link')).toBeVisible({ timeout: 5_000 });
   });
 
   test('influencer mode shows customer link with /?ref=', async ({ page }) => {
