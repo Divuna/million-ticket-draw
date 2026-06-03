@@ -8,12 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Search, Bell, Plus, Send } from 'lucide-react';
+import { Search, Bell, Plus, Send, AlertTriangle } from 'lucide-react';
 
 interface Notification {
   id: string;
@@ -38,6 +42,8 @@ const AdminNotifications: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('všechny');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
+  const [isBulkSending, setIsBulkSending] = useState(false);
   const [newNotification, setNewNotification] = useState({
     userEmail: '',
     type: 'info',
@@ -134,6 +140,7 @@ const AdminNotifications: React.FC = () => {
   };
 
   const sendBulkNotification = async () => {
+    setIsBulkSending(true);
     try {
       // Get all users
       const { data: users, error: usersError } = await supabase
@@ -172,8 +179,9 @@ const AdminNotifications: React.FC = () => {
 
       await fetchNotifications();
       setIsCreateModalOpen(false);
+      setIsBulkConfirmOpen(false);
       setNewNotification({ userEmail: '', type: 'info', title: '', message: '' });
-      
+
       toast({
         title: "Úspěch",
         description: `Notifikace byla odeslána ${users.length} uživatelům`,
@@ -185,6 +193,8 @@ const AdminNotifications: React.FC = () => {
         description: "Nepodařilo se odeslat hromadnou notifikaci",
         variant: "destructive",
       });
+    } finally {
+      setIsBulkSending(false);
     }
   };
 
@@ -360,12 +370,13 @@ const AdminNotifications: React.FC = () => {
                         Odeslat
                       </Button>
                     ) : (
-                      <Button 
-                        onClick={sendBulkNotification}
+                      <Button
+                        onClick={() => setIsBulkConfirmOpen(true)}
                         disabled={!newNotification.message}
-                        variant="secondary"
+                        variant="destructive"
+                        data-testid="bulk-notify-open-confirm"
                       >
-                        <Send className="h-4 w-4 mr-2" />
+                        <AlertTriangle className="h-4 w-4 mr-2" />
                         Odeslat všem
                       </Button>
                     )}
@@ -443,6 +454,61 @@ const AdminNotifications: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+      {/* Bulk send confirmation — guard against accidental mass push */}
+      <AlertDialog
+        open={isBulkConfirmOpen}
+        onOpenChange={(o) => { if (!isBulkSending) setIsBulkConfirmOpen(o); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Odeslat notifikaci všem uživatelům?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  Tato akce odešle push notifikaci <strong>všem registrovaným uživatelům</strong> OneMil.
+                  Akci nelze vzít zpět.
+                </p>
+                {newNotification.title && (
+                  <p className="text-sm">
+                    <span className="font-medium">Nadpis:</span> {newNotification.title}
+                  </p>
+                )}
+                <p className="text-sm">
+                  <span className="font-medium">Zpráva:</span> {newNotification.message}
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBulkSending} data-testid="bulk-notify-cancel">
+              Zrušit
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isBulkSending}
+              onClick={sendBulkNotification}
+              className="bg-destructive hover:bg-destructive/90"
+              data-testid="bulk-notify-confirm"
+            >
+              {isBulkSending ? (
+                <span className="flex items-center gap-2">
+                  <Send className="h-4 w-4 animate-pulse" />
+                  Odesílám…
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Send className="h-4 w-4" />
+                  Ano, odeslat všem
+                </span>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       </div>
   );
 };
