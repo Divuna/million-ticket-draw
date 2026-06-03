@@ -278,9 +278,11 @@ const AffiliateDashboard = () => {
     try {
       const { data: acc, error: accErr } = await (supabase as any)
         .from('affiliate_accounts')
-        // NOTE: ico, billing_*, website_url are NOT selected here because those columns
-        // do not exist until migration 20260603_affiliate_profile_update.sql is applied.
-        // They are passed as null to AffiliateProfileSection and the RPC handles them gracefully.
+        // NOTE: ico, billing_*, website_url columns require migration
+        // 20260603_affiliate_profile_update.sql (applied on staging, NOT yet on production).
+        // These columns are intentionally excluded from SELECT until production migration runs.
+        // profileData passes null for them → AffiliateProfileSection shows empty editable fields.
+        // RPC update_affiliate_own_profile saves them when migration is applied.
         .select('id,name,email,phone,ref_code,modes,status,commission_rate_customer,commission_rate_company,is_vat_payer,vat_id,payout_account,payout_bank')
         .eq('auth_user_id', user.id)
         .maybeSingle();
