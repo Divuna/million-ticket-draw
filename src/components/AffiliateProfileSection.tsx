@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import {
   User, Mail, Phone, Globe, Building, Landmark, CreditCard,
   Save, Loader2, CheckCircle2, AlertTriangle, Camera, FileDigit,
-  Banknote, Receipt,
+  Banknote, Receipt, Instagram, Youtube, Facebook, Music2, Users, Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -133,6 +133,12 @@ const AffiliateProfileSection: React.FC<Props> = ({ profile: initial, onSaved })
         p_billing_zip:     form.billing_zip || '',
         p_billing_country: form.billing_country || 'CZ',
         p_website_url:     form.website_url || '',
+        p_instagram_url:      form.instagram_url ?? '',
+        p_tiktok_url:         form.tiktok_url ?? '',
+        p_youtube_url:        form.youtube_url ?? '',
+        p_facebook_url:       form.facebook_url ?? '',
+        p_audience_size:      form.audience_size ?? '',
+        p_content_categories: form.content_categories ?? '',
       });
 
       if (error) throw error;
@@ -214,21 +220,47 @@ const AffiliateProfileSection: React.FC<Props> = ({ profile: initial, onSaved })
           </div>
         </div>
 
-        {/* Registrační údaje */}
+        {/* Účet — read-only souhrn (nelze měnit) */}
         <div>
-          <p className="text-xs font-semibold text-[hsl(var(--text-muted-gray))] uppercase tracking-wider mb-4">Registrační údaje</p>
+          <p className="text-xs font-semibold text-[hsl(var(--text-muted-gray))] uppercase tracking-wider mb-4">Účet</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <ReadonlyItem label="Hlavní kanál / web / profil" value={form.website_url} testId="affiliate-profile-website" />
-            <ReadonlyItem label="Instagram" value={form.instagram_url} testId="affiliate-profile-instagram" />
-            <ReadonlyItem label="TikTok" value={form.tiktok_url} testId="affiliate-profile-tiktok" />
-            <ReadonlyItem label="YouTube" value={form.youtube_url} testId="affiliate-profile-youtube" />
-            <ReadonlyItem label="Facebook" value={form.facebook_url} testId="affiliate-profile-facebook" />
-            <ReadonlyItem label="Velikost publika / dosah" value={form.audience_size} testId="affiliate-profile-audience" />
-            <ReadonlyItem label="Kategorie obsahu" value={form.content_categories} testId="affiliate-profile-categories" />
             <ReadonlyItem label="Zvolené zaměření" value={formatModes(form.modes)} testId="affiliate-profile-modes" />
             <ReadonlyItem label="Doporučovací kód" value={form.ref_code} testId="affiliate-profile-ref-code" />
             <ReadonlyItem label="Stav účtu" value={formatStatus(form.status)} testId="affiliate-profile-status" />
             <ReadonlyItem label="Registrační e-mail" value={form.email} testId="affiliate-profile-email-summary" />
+          </div>
+        </div>
+
+        {/* Sociální sítě a dosah — editovatelné (jen text, žádné embedy) */}
+        <div>
+          <p className="text-xs font-semibold text-[hsl(var(--text-muted-gray))] uppercase tracking-wider mb-1">Sociální sítě a dosah</p>
+          <p className="text-xs text-[hsl(var(--text-muted-gray))] mb-4">
+            Zadejte odkazy na své profily jako text. Pomohou nám posoudit váš dosah.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Hlavní kanál / web / profil" icon={Globe}>
+              <input className={inputCls} value={form.website_url || ''} onChange={e => set('website_url', e.target.value)} placeholder="https://..." data-testid="affiliate-profile-website" />
+            </Field>
+            <Field label="Instagram" icon={Instagram}>
+              <input className={inputCls} value={form.instagram_url || ''} onChange={e => set('instagram_url', e.target.value)} placeholder="https://instagram.com/uzivatel" data-testid="affiliate-profile-instagram" />
+            </Field>
+            <Field label="TikTok" icon={Music2}>
+              <input className={inputCls} value={form.tiktok_url || ''} onChange={e => set('tiktok_url', e.target.value)} placeholder="https://tiktok.com/@uzivatel" data-testid="affiliate-profile-tiktok" />
+            </Field>
+            <Field label="YouTube" icon={Youtube}>
+              <input className={inputCls} value={form.youtube_url || ''} onChange={e => set('youtube_url', e.target.value)} placeholder="https://youtube.com/@kanal" data-testid="affiliate-profile-youtube" />
+            </Field>
+            <Field label="Facebook" icon={Facebook}>
+              <input className={inputCls} value={form.facebook_url || ''} onChange={e => set('facebook_url', e.target.value)} placeholder="https://facebook.com/profil" data-testid="affiliate-profile-facebook" />
+            </Field>
+            <Field label="Velikost publika / dosah" icon={Users}>
+              <input className={inputCls} value={form.audience_size || ''} onChange={e => set('audience_size', e.target.value)} placeholder="Např. 25 000 sledujících" data-testid="affiliate-profile-audience" />
+            </Field>
+            <div className="sm:col-span-2">
+              <Field label="Kategorie obsahu" icon={Tag}>
+                <input className={inputCls} value={form.content_categories || ''} onChange={e => set('content_categories', e.target.value)} placeholder="Např. lifestyle, móda, technologie" data-testid="affiliate-profile-categories" />
+              </Field>
+            </div>
           </div>
         </div>
 
@@ -257,9 +289,6 @@ const AffiliateProfileSection: React.FC<Props> = ({ profile: initial, onSaved })
             </Field>
             <Field label="Telefon" icon={Phone}>
               <input className={inputCls} value={form.phone || ''} onChange={e => set('phone', e.target.value)} placeholder="+420 … nebo +421 …" />
-            </Field>
-            <Field label="Web / Sociální síť" icon={Globe}>
-              <input className={inputCls} value={form.website_url || ''} onChange={e => set('website_url', e.target.value)} placeholder="https://..." />
             </Field>
           </div>
         </div>

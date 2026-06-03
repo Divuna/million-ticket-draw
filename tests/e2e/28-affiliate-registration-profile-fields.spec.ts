@@ -160,17 +160,54 @@ test.describe('Affiliate v2 — registration profile fields (spec 28)', () => {
     await page.waitForURL(/\/affiliate\/dashboard/, { timeout: 20_000 });
     await page.getByTestId('mode-btn-profile').click();
 
-    await expect(page.getByText('Registrační údaje', { exact: true })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('affiliate-profile-website')).toContainText(TEST_WEBSITE);
-    await expect(page.getByTestId('affiliate-profile-instagram')).toContainText(TEST_INSTAGRAM);
-    await expect(page.getByTestId('affiliate-profile-tiktok')).toContainText(TEST_TIKTOK);
-    await expect(page.getByTestId('affiliate-profile-youtube')).toContainText(TEST_YOUTUBE);
-    await expect(page.getByTestId('affiliate-profile-facebook')).toContainText(TEST_FACEBOOK);
-    await expect(page.getByTestId('affiliate-profile-audience')).toContainText(TEST_AUDIENCE);
-    await expect(page.getByTestId('affiliate-profile-categories')).toContainText(TEST_CATEGORIES);
+    await expect(page.getByText('Sociální sítě a dosah', { exact: true })).toBeVisible({ timeout: 10_000 });
+    // Social/registration fields are now editable inputs prefilled with registration values
+    await expect(page.getByTestId('affiliate-profile-website')).toHaveValue(TEST_WEBSITE);
+    await expect(page.getByTestId('affiliate-profile-instagram')).toHaveValue(TEST_INSTAGRAM);
+    await expect(page.getByTestId('affiliate-profile-tiktok')).toHaveValue(TEST_TIKTOK);
+    await expect(page.getByTestId('affiliate-profile-youtube')).toHaveValue(TEST_YOUTUBE);
+    await expect(page.getByTestId('affiliate-profile-facebook')).toHaveValue(TEST_FACEBOOK);
+    await expect(page.getByTestId('affiliate-profile-audience')).toHaveValue(TEST_AUDIENCE);
+    await expect(page.getByTestId('affiliate-profile-categories')).toHaveValue(TEST_CATEGORIES);
     await expect(page.getByTestId('affiliate-profile-modes')).toContainText('Influencer');
     await expect(page.getByTestId('affiliate-profile-modes')).toContainText('Obchodník');
     await expect(page.getByTestId('affiliate-profile-ref-code')).toContainText(TEST_REF_CODE);
     await expect(page.locator('body')).not.toContainText(TEST_PASSWORD);
+
+    // Edit social fields in the dashboard and save via update_affiliate_own_profile
+    const EDIT_INSTAGRAM = `https://instagram.com/spec28edit_${unique.toLowerCase()}`;
+    const EDIT_AUDIENCE = '50 000 sledujících / 200 000 měsíční dosah';
+    await page.getByTestId('affiliate-profile-instagram').fill(EDIT_INSTAGRAM);
+    await page.getByTestId('affiliate-profile-audience').fill(EDIT_AUDIENCE);
+
+    const saveBtn = page.getByRole('button', { name: 'Uložit změny' }).first();
+    await saveBtn.scrollIntoViewIfNeeded();
+    await saveBtn.click();
+    await expect(page.locator('[data-sonner-toast]'))
+      .toContainText('úspěšně uložen', { timeout: 10_000 });
+
+    // DB readback — confirm edited social fields persisted, others untouched
+    let edited: any = null;
+    for (let i = 0; i < 20; i += 1) {
+      const { data } = await (admin as any)
+        .from('affiliate_accounts')
+        .select('instagram_url, audience_size, tiktok_url, youtube_url, facebook_url, website_url, content_categories')
+        .eq('id', affiliateId)
+        .maybeSingle();
+      if (data?.instagram_url === EDIT_INSTAGRAM) {
+        edited = data;
+        break;
+      }
+      await page.waitForTimeout(500);
+    }
+    expect(edited, 'edited social fields must persist via update_affiliate_own_profile').toBeTruthy();
+    expect(edited.instagram_url).toBe(EDIT_INSTAGRAM);
+    expect(edited.audience_size).toBe(EDIT_AUDIENCE);
+    // NULL-preserving / unchanged fields stay intact
+    expect(edited.tiktok_url).toBe(TEST_TIKTOK);
+    expect(edited.youtube_url).toBe(TEST_YOUTUBE);
+    expect(edited.facebook_url).toBe(TEST_FACEBOOK);
+    expect(edited.website_url).toBe(TEST_WEBSITE);
+    expect(edited.content_categories).toBe(TEST_CATEGORIES);
   });
 });
