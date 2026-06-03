@@ -27,6 +27,22 @@ const seedCookieConsent = () => {
   );
 };
 
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function pollUntil<T>(read: () => Promise<T | null>, timeoutMs: number, message: string): Promise<T> {
+  const deadline = Date.now() + timeoutMs;
+  let lastValue: T | null = null;
+
+  while (Date.now() < deadline) {
+    lastValue = await read();
+    if (lastValue) return lastValue;
+    await wait(500);
+  }
+
+  expect(lastValue, message).toBeTruthy();
+  throw new Error(message);
+}
+
 async function cleanupTestCompany(
   supabase: SupabaseClient,
   params: { email: string; authUserId?: string | null; partnerId?: string | null; affiliateId?: string | null },
@@ -173,30 +189,48 @@ test.describe('Affiliate v2 company via flow', () => {
       const pendingCard = page.getByText(companyName).locator('xpath=ancestor::div[contains(@class,"rounded")][1]');
       await expect(pendingCard, 'pending registration must be visible in admin portal').toBeVisible({ timeout: 30_000 });
 
+      const approveResponsePromise = page.waitForResponse(
+        (response) => response.url().includes('/functions/v1/approve-partner-registration'),
+        { timeout: 20_000 },
+      );
       await pendingCard.getByRole('button', { name: /Schv/i }).click();
+      const approveResponse = await approveResponsePromise;
+      expect(approveResponse.status(), 'approve-partner-registration should succeed').toBe(200);
       await expect(pendingCard, 'approved pending registration should leave the pending list').toBeHidden({ timeout: 30_000 });
 
-      const { data: partner, error: partnerError } = await supabase
-        .from('partners')
-        .select('id, auth_user_id, referred_by_affiliate_id, status, contact_email')
-        .eq('auth_user_id', authUserId)
-        .maybeSingle();
+      const partner = await pollUntil(
+        async () => {
+          const { data, error } = await supabase
+            .from('partners')
+            .select('id, auth_user_id, referred_by_affiliate_id, status, contact_email')
+            .eq('auth_user_id', authUserId)
+            .maybeSingle();
+          if (error) throw error;
+          return data;
+        },
+        20_000,
+        'admin approval must create a partner row',
+      );
 
-      expect(partnerError, 'partner read-back should not error').toBeNull();
-      expect(partner, 'admin approval must create a partner row').toBeTruthy();
       partnerId = partner?.id ?? null;
       expect(partner?.status).toBe('approved');
       expect(partner?.contact_email).toBe(email);
       expect(partner?.referred_by_affiliate_id).toBe(affiliate.id);
 
-      const { data: companyRef, error: companyRefError } = await supabase
-        .from('affiliate_company_refs')
-        .select('id, affiliate_id, partner_id, source')
-        .eq('partner_id', partnerId)
-        .maybeSingle();
+      const companyRef = await pollUntil(
+        async () => {
+          const { data, error } = await supabase
+            .from('affiliate_company_refs')
+            .select('id, affiliate_id, partner_id, source')
+            .eq('partner_id', partnerId)
+            .maybeSingle();
+          if (error) throw error;
+          return data;
+        },
+        20_000,
+        'admin approval must record affiliate_company_refs',
+      );
 
-      expect(companyRefError, 'affiliate_company_refs read-back should not error').toBeNull();
-      expect(companyRef, 'admin approval must record affiliate_company_refs').toBeTruthy();
       expect(companyRef?.affiliate_id).toBe(affiliate.id);
       expect(companyRef?.source).toBe('via_link');
     } finally {
