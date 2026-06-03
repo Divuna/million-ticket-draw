@@ -81,10 +81,11 @@ interface AccountAgg {
 }
 
 const NEXT_STATUS: Record<string, string> = { calculated: "approved", approved: "paid" };
+// Full column set — all profile/social columns exist on staging + production.
+// No fallback: a fallback that omits social columns would silently show admins
+// empty Instagram/TikTok/YouTube/Facebook/audience/categories despite saved data.
 const AFFILIATE_ACCOUNT_SELECT =
   "id, name, email, phone, ref_code, modes, status, commission_rate_customer, commission_rate_company, is_vat_payer, vat_id, payout_account, payout_bank, ico, billing_street, billing_city, billing_zip, billing_country, website_url, instagram_url, tiktok_url, youtube_url, facebook_url, audience_size, content_categories, created_at";
-const AFFILIATE_ACCOUNT_SELECT_FALLBACK =
-  "id, name, email, phone, ref_code, modes, status, commission_rate_customer, commission_rate_company, is_vat_payer, vat_id, payout_account, payout_bank, ico, billing_street, billing_city, billing_zip, billing_country, website_url, created_at";
 
 function statusBadge(status: string) {
   switch (status) {
@@ -147,19 +148,10 @@ const AdminAffiliateAccounts = () => {
     setLoading(true);
     setError(null);
     try {
-      let { data: accData, error: accErr } = await (supabase as any)
+      const { data: accData, error: accErr } = await (supabase as any)
         .from("affiliate_accounts")
         .select(AFFILIATE_ACCOUNT_SELECT)
         .order("created_at", { ascending: false });
-
-      if (accErr?.code === "PGRST204" || accErr?.message?.includes("Could not find")) {
-        const fallback = await (supabase as any)
-          .from("affiliate_accounts")
-          .select(AFFILIATE_ACCOUNT_SELECT_FALLBACK)
-          .order("created_at", { ascending: false });
-        accData = fallback.data;
-        accErr = fallback.error;
-      }
 
       if (accErr) throw accErr;
 

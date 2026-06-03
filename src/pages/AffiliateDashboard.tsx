@@ -72,10 +72,10 @@ interface PartnerInfo { id: string; name: string; company_name: string | null; }
 /* ── Helpers ─────────────────────────────────────────────────────────────────── */
 
 const STORAGE_KEY = 'affiliate_active_mode';
+// Full column set — all profile/social columns exist on staging + production.
+// No fallback: a fallback that omits social columns would silently hide data.
 const AFFILIATE_ACCOUNT_SELECT =
   'id,name,email,phone,ref_code,modes,status,commission_rate_customer,commission_rate_company,is_vat_payer,vat_id,payout_account,payout_bank,ico,billing_street,billing_city,billing_zip,billing_country,website_url,instagram_url,tiktok_url,youtube_url,facebook_url,audience_size,content_categories';
-const AFFILIATE_ACCOUNT_SELECT_FALLBACK =
-  'id,name,email,phone,ref_code,modes,status,commission_rate_customer,commission_rate_company,is_vat_payer,vat_id,payout_account,payout_bank,ico,billing_street,billing_city,billing_zip,billing_country,website_url';
 const czk = (n: number) =>
   `${(n ?? 0).toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Kč`;
 
@@ -282,21 +282,11 @@ const AffiliateDashboard = () => {
     if (!user?.id) return;
     setLoading(true);
     try {
-      let { data: acc, error: accErr } = await (supabase as any)
+      const { data: acc, error: accErr } = await (supabase as any)
         .from('affiliate_accounts')
         .select(AFFILIATE_ACCOUNT_SELECT)
         .eq('auth_user_id', user.id)
         .maybeSingle();
-
-      if (accErr?.code === 'PGRST204' || accErr?.message?.includes('Could not find')) {
-        const fallback = await (supabase as any)
-          .from('affiliate_accounts')
-          .select(AFFILIATE_ACCOUNT_SELECT_FALLBACK)
-          .eq('auth_user_id', user.id)
-          .maybeSingle();
-        acc = fallback.data;
-        accErr = fallback.error;
-      }
 
       if (accErr) throw accErr;
       if (!acc) { setNotAffiliate(true); setLoading(false); return; }
