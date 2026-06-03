@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+## AFFILIATE v2 — PRODUKČNÍ STAV (03. 06. 2026, aktualizováno)
+
+**Profil migrace nasazena v produkci (`xkzhjldrojjlrkezorey`) 03. 06. 2026.**
+- `affiliate_accounts` má sloupce: `ico`, `billing_street`, `billing_city`, `billing_zip`, `billing_country`, `website_url`.
+- RPC `update_affiliate_own_profile` — SECURITY DEFINER, affiliate upravuje jen vlastní profil.
+- `/affiliate/dashboard` zobrazuje a ukládá kompletní profil (IČO, DIČ, adresa CZ/SK, IBAN).
+- Spec 27 (staging E2E): profil sekce renderuje, ukládání přes RPC funguje ✅.
+
 ## AFFILIATE v2 — PRODUKČNÍ STAV (03. 06. 2026)
 
 **Affiliate v2 je NASAZENO A SMOKE OVĚŘENO V PRODUKCI (`xkzhjldrojjlrkezorey`).**

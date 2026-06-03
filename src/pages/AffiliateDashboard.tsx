@@ -278,12 +278,9 @@ const AffiliateDashboard = () => {
     try {
       const { data: acc, error: accErr } = await (supabase as any)
         .from('affiliate_accounts')
-        // NOTE: ico, billing_*, website_url columns require migration
-        // 20260603_affiliate_profile_update.sql (applied on staging, NOT yet on production).
-        // These columns are intentionally excluded from SELECT until production migration runs.
-        // profileData passes null for them → AffiliateProfileSection shows empty editable fields.
-        // RPC update_affiliate_own_profile saves them when migration is applied.
-        .select('id,name,email,phone,ref_code,modes,status,commission_rate_customer,commission_rate_company,is_vat_payer,vat_id,payout_account,payout_bank')
+        // Migration 20260603_affiliate_profile_update.sql applied on both staging + production.
+        // All profile columns are now available.
+        .select('id,name,email,phone,ref_code,modes,status,commission_rate_customer,commission_rate_company,is_vat_payer,vat_id,payout_account,payout_bank,ico,billing_street,billing_city,billing_zip,billing_country,website_url')
         .eq('auth_user_id', user.id)
         .maybeSingle();
       if (accErr) throw accErr;
@@ -376,16 +373,15 @@ const AffiliateDashboard = () => {
   const partnerMap = new Map(partnerNames.map(p => [p.id, p]));
 
   // Profile data for AffiliateProfileSection
-  // Columns not yet in DB (require migration 20260603_affiliate_profile_update.sql) are null.
-  // AffiliateProfileSection renders them as empty editable fields; save RPC handles gracefully.
+  // All profile columns available — migration applied on staging + production.
   const profileData: AffiliateProfileData = {
     id: a.id, name: a.name, email: a.email, phone: a.phone,
-    vat_id: a.vat_id, ico: null,
+    vat_id: a.vat_id, ico: (a as any).ico,
     is_vat_payer: a.is_vat_payer,
     payout_account: a.payout_account, payout_bank: a.payout_bank,
-    billing_street: null, billing_city: null,
-    billing_zip: null, billing_country: null,
-    website_url: null,
+    billing_street: (a as any).billing_street, billing_city: (a as any).billing_city,
+    billing_zip: (a as any).billing_zip, billing_country: (a as any).billing_country,
+    website_url: (a as any).website_url,
   };
 
   return (

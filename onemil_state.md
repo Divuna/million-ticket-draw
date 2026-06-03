@@ -4,6 +4,41 @@
 
 ---
 
+## ✅ AFFILIATE v2 — PROFIL MIGRACE NASAZENA V PRODUKCI (03. 06. 2026)
+
+**Migrace `20260603_affiliate_profile_update.sql` aplikována na produkci `xkzhjldrojjlrkezorey`.**
+
+### Nové sloupce v `affiliate_accounts`
+| Sloupec | Typ | Popis |
+|---------|-----|-------|
+| `ico` | text nullable | IČO (CZ i SK formát) |
+| `billing_street` | text nullable | Fakturační ulice |
+| `billing_city` | text nullable | Fakturační město |
+| `billing_zip` | text nullable | PSČ |
+| `billing_country` | text DEFAULT 'CZ' | Země (CZ/SK/...) |
+| `website_url` | text nullable | Web / sociální síť |
+
+### RPC `update_affiliate_own_profile`
+- SECURITY DEFINER — affiliate mění jen vlastní řádek (ověřuje `auth.uid()`)
+- Nelze měnit: `ref_code`, `modes`, `status`, `commission_rate_*`, `approved_at`, `rejected_at`
+- Lze měnit: kontakt, adresa, IČO, DIČ, bankovní účet, DPH flag, web
+- Staging: aplikováno + ověřeno (spec 27 zelený)
+- Produkce: aplikováno 03. 06. 2026
+
+### Postcheck produkce
+- 6 nových sloupců: ✅
+- RPC funkce: ✅
+- 3 existující affiliate záznamy: nedotčeny ✅
+- RLS stále zapnuté: ✅
+
+### Affiliate dashboard (`/affiliate/dashboard`)
+- SELECT dotaz nyní načítá všechna profil pole (ico, billing_*, website_url)
+- `AffiliateProfileSection` zobrazuje a ukládá kompletní profil
+- Payout status: „Připraveno k výplatě" / „Chybí údaje"
+- Podpora CZ i SK (country selector, IČO/DIČ formáty)
+
+---
+
 ## ✅ AFFILIATE v2 — PRODUKČNÍ NASAZENÍ + SMOKE KONTROLA KOMPLETNÍ (03. 06. 2026)
 
 **Stav: NASAZENO A OVĚŘENO V PRODUKCI. Žádný další deploy není potřeba.**

@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-03 - Affiliate v2: profil migrace nasazena na produkci
+
+- Migrace `20260603_affiliate_profile_update.sql` aplikována na produkci `xkzhjldrojjlrkezorey`.
+- Přidány sloupce: `ico`, `billing_street`, `billing_city`, `billing_zip`, `billing_country`, `website_url`.
+- Přidán RPC `update_affiliate_own_profile` — SECURITY DEFINER, affiliate mění jen vlastní řádek.
+- 3 existující affiliate záznamy nedotčeny, RLS stále zapnuté.
+- Staging verifikace: spec 27 zelený (phone save via RPC).
+- AffiliateDashboard SELECT rozšířen o všechna profil pole.
+- Build ✅. Commit: viz níže.
+
 ## 2026-06-03 - Affiliate v2: produkční nasazení dokončeno + smoke kontrola ✅
 
 - Affiliate v2 DB vrstva nasazena na produkci `xkzhjldrojjlrkezorey` přes 6 idempotentních migrací.
