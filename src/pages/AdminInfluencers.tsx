@@ -99,6 +99,16 @@ interface DetailData {
   campaigns: DetailCampaign[];
 }
 
+interface AffiliateSocialProfile {
+  instagram_url: string | null;
+  tiktok_url: string | null;
+  youtube_url: string | null;
+  facebook_url: string | null;
+  website_url: string | null;
+  audience_size: string | null;
+  content_categories: string | null;
+}
+
 const statusLabels: Record<InfluencerStatus, string> = {
   pending: "Čeká na schválení",
   approved: "Schváleno",
@@ -137,6 +147,10 @@ const AdminInfluencers = () => {
   const [selectedInfluencer, setSelectedInfluencer] = useState<Influencer | null>(null);
   const [detailData, setDetailData] = useState<DetailData | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  // Affiliate v2 self-profile (affiliate_accounts) for the selected partner.
+  // This is where the affiliate edits social links in /affiliate/dashboard;
+  // the legacy partners.notes.social_networks is no longer the source of truth.
+  const [affiliateProfile, setAffiliateProfile] = useState<AffiliateSocialProfile | null>(null);
 
   /* ===================== DATA ===================== */
 
@@ -332,8 +346,26 @@ const AdminInfluencers = () => {
   const openDetail = (influencer: Influencer) => {
     setSelectedInfluencer(influencer);
     setDetailOpen(true);
+    setAffiliateProfile(null);
     fetchDetailData(influencer.id);
+    fetchAffiliateProfile(influencer.auth_user_id);
   };
+
+  // Pull the affiliate's self-edited social links from affiliate_accounts
+  // (matched by auth_user_id). This is the source of truth shown in the detail.
+  const fetchAffiliateProfile = useCallback(async (authUserId: string | null) => {
+    if (!authUserId) return;
+    const { data, error } = await (supabase as any)
+      .from("affiliate_accounts")
+      .select("instagram_url, tiktok_url, youtube_url, facebook_url, website_url, audience_size, content_categories")
+      .eq("auth_user_id", authUserId)
+      .maybeSingle();
+    if (error) {
+      console.error("Error fetching affiliate profile:", error);
+      return;
+    }
+    if (data) setAffiliateProfile(data as AffiliateSocialProfile);
+  }, []);
 
   /* ===================== LOADING / AUTH ===================== */
 
@@ -533,6 +565,7 @@ const AdminInfluencers = () => {
                                 size="icon"
                                 onClick={() => openDetail(influencer)}
                                 title="Detail"
+                                data-testid={`open-influencer-detail-${influencer.id}`}
                               >
                                 <Eye className="w-4 h-4" />
                               </Button>
@@ -717,13 +750,18 @@ const AdminInfluencers = () => {
 
                 const socialNetworks = parsed?.social_networks as Record<string, string | null> | undefined;
 
+                // Prefer the affiliate's self-edited values (affiliate_accounts),
+                // fall back to legacy partners.notes / partners.website_url.
                 const socialEntries: { key: string; label: string; icon: React.ReactNode; value: string | null }[] = [
-                  { key: "instagram", label: "Instagram", icon: <Instagram className="w-3.5 h-3.5" />, value: socialNetworks?.instagram || null },
-                  { key: "tiktok", label: "TikTok", icon: <span className="text-xs font-bold">TT</span>, value: socialNetworks?.tiktok || null },
-                  { key: "youtube", label: "YouTube", icon: <Youtube className="w-3.5 h-3.5" />, value: socialNetworks?.youtube || null },
-                  { key: "facebook", label: "Facebook", icon: <Facebook className="w-3.5 h-3.5" />, value: socialNetworks?.facebook || null },
-                  { key: "website", label: "Web", icon: <Globe className="w-3.5 h-3.5" />, value: selectedInfluencer.website_url || null },
+                  { key: "instagram", label: "Instagram", icon: <Instagram className="w-3.5 h-3.5" />, value: affiliateProfile?.instagram_url || socialNetworks?.instagram || null },
+                  { key: "tiktok", label: "TikTok", icon: <span className="text-xs font-bold">TT</span>, value: affiliateProfile?.tiktok_url || socialNetworks?.tiktok || null },
+                  { key: "youtube", label: "YouTube", icon: <Youtube className="w-3.5 h-3.5" />, value: affiliateProfile?.youtube_url || socialNetworks?.youtube || null },
+                  { key: "facebook", label: "Facebook", icon: <Facebook className="w-3.5 h-3.5" />, value: affiliateProfile?.facebook_url || socialNetworks?.facebook || null },
+                  { key: "website", label: "Web", icon: <Globe className="w-3.5 h-3.5" />, value: affiliateProfile?.website_url || selectedInfluencer.website_url || null },
                 ];
+
+                const followerRange = affiliateProfile?.audience_size || parsed?.follower_range || null;
+                const contentCategory = affiliateProfile?.content_categories || parsed?.content_category || null;
 
                 const readOnlyField = (label: string, value: string | null | undefined, icon?: React.ReactNode) => (
                   <div className="space-y-1">
@@ -749,13 +787,13 @@ const AdminInfluencers = () => {
                       </div>
                     </div>
 
-                    {/* Influencer profile from notes */}
-                    {parsed && (parsed.follower_range || parsed.content_category) && (
+                    {/* Affiliate profile — prefers affiliate_accounts, falls back to notes */}
+                    {(followerRange || contentCategory) && (
                       <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
                         <p className="text-xs font-semibold text-foreground uppercase tracking-wider">Profil Affiliate partnera</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {parsed.follower_range && readOnlyField("Rozsah sledujících", parsed.follower_range)}
-                          {parsed.content_category && readOnlyField("Kategorie obsahu", parsed.content_category)}
+                          {followerRange && readOnlyField("Rozsah sledujících", followerRange)}
+                          {contentCategory && readOnlyField("Kategorie obsahu", contentCategory)}
                         </div>
                       </div>
                     )}
@@ -774,12 +812,13 @@ const AdminInfluencers = () => {
                                 href={entry.value.startsWith("http") ? entry.value : `https://${entry.value}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                data-testid={`admin-influencer-social-${entry.key}`}
                                 className="block text-sm bg-muted/20 border border-border/30 rounded-md px-3 py-2 text-primary hover:underline truncate"
                               >
                                 {entry.value}
                               </a>
                             ) : (
-                              <p className="text-sm bg-muted/20 border border-border/30 rounded-md px-3 py-2 text-muted-foreground">—</p>
+                              <p data-testid={`admin-influencer-social-${entry.key}`} className="text-sm bg-muted/20 border border-border/30 rounded-md px-3 py-2 text-muted-foreground">—</p>
                             )}
                           </div>
                         ))}
