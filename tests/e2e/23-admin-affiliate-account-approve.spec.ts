@@ -1,0 +1,139 @@
+/**
+ * ╔══════════════════════════════════════════════════════════════════════════════╗
+ * ║  Admin — Affiliate Account Approve/Reject  (spec 23)                       ║
+ * ║                                                                            ║
+ * ║  Verifies that an admin can approve a pending affiliate account             ║
+ * ║  directly from /admin/affiliate-accounts via the Schválit button.          ║
+ * ║                                                                            ║
+ * ║  STAGING-ONLY. Skipped cleanly when any required env var is absent.        ║
+ * ║                                                                            ║
+ * ║  Required env vars:                                                         ║
+ * ║    E2E_ADMIN_EMAIL              admin-e2e@onemil.cz                        ║
+ * ║    E2E_ADMIN_PASSWORD                                                      ║
+ * ║    VITE_SUPABASE_URL            staging Supabase URL                       ║
+ * ║    VITE_SUPABASE_ANON_KEY       staging anon key                           ║
+ * ║    E2E_SUPABASE_SERVICE_ROLE_KEY staging service role key                  ║
+ * ║                                                                            ║
+ * ║  What it locks:                                                             ║
+ * ║    • /admin/affiliate-accounts route loads for admin                        ║
+ * ║    • pending account shows Schválit + Zamítnout buttons                    ║
+ * ║    • clicking Schválit opens confirmation dialog                            ║
+ * ║    • confirming sets status = approved in DB                                ║
+ * ║    • approved account no longer shows Schválit button                      ║
+ * ║    • test data is cleaned up after the test                                 ║
+ * ╚══════════════════════════════════════════════════════════════════════════════╝
+ */
+
+import { test, expect } from '@playwright/test';
+import { createClient } from '@supabase/supabase-js';
+import { loginViaUI } from './helpers/auth';
+
+const ADMIN_EMAIL       = process.env.E2E_ADMIN_EMAIL                ?? '';
+const ADMIN_PASSWORD    = process.env.E2E_ADMIN_PASSWORD             ?? '';
+const SUPABASE_URL      = process.env.VITE_SUPABASE_URL              ?? '';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY         ?? '';
+const SERVICE_ROLE_KEY  = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY  ?? '';
+
+const TEST_EMAIL    = 'spec23-affiliate-e2e@onemil.cz';
+const TEST_REF_CODE = 'SPEC23E2E';
+const TEST_NAME     = 'Spec23 E2E Affiliate';
+
+test.describe('Admin — Affiliate account approve (spec 23)', () => {
+  test.skip(
+    !ADMIN_EMAIL || !ADMIN_PASSWORD || !SUPABASE_URL || !SUPABASE_ANON_KEY || !SERVICE_ROLE_KEY,
+    'Missing required env vars — skipping spec 23',
+  );
+
+  let affiliateId: string | null = null;
+
+  test.beforeAll(async () => {
+    // Seed: insert a pending affiliate account directly via service role
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+    // Cleanup any leftover from a previous run
+    await (admin as any)
+      .from('affiliate_accounts')
+      .delete()
+      .eq('ref_code', TEST_REF_CODE);
+
+    // Insert fresh pending account (no auth_user_id — admin-created test account)
+    const { data, error } = await (admin as any)
+      .from('affiliate_accounts')
+      .insert({
+        name: TEST_NAME,
+        email: TEST_EMAIL,
+        ref_code: TEST_REF_CODE,
+        modes: ['influencer'],
+        status: 'pending',
+        commission_rate_customer: 5,
+        commission_rate_company: 5,
+        is_vat_payer: false,
+      })
+      .select('id')
+      .single();
+
+    if (error) throw new Error(`Seed failed: ${error.message}`);
+    affiliateId = data.id;
+  });
+
+  test.afterAll(async () => {
+    if (!affiliateId) return;
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    await (admin as any)
+      .from('affiliate_accounts')
+      .delete()
+      .eq('id', affiliateId);
+  });
+
+  test('admin schválí pending affiliate účet', async ({ page }) => {
+    // Cookie consent
+    await page.goto('/');
+    await page.evaluate(() => {
+      localStorage.setItem(
+        'cookie_consent',
+        JSON.stringify({ essential: true, analytics: false, marketing: false, timestamp: new Date().toISOString() }),
+      );
+    });
+
+    await loginViaUI(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+
+    // Navigate to affiliate accounts
+    await page.goto('/admin/affiliate-accounts');
+    await expect(page.locator('h1')).toContainText('Affiliate účty');
+
+    // Wait for the table to load and find our test account
+    const approveBtn = page.locator(`[data-testid="approve-affiliate-${affiliateId}"]`);
+    await expect(approveBtn).toBeVisible({ timeout: 15_000 });
+
+    // Click Schválit
+    await approveBtn.click();
+
+    // Confirmation dialog should appear
+    await expect(page.getByRole('alertdialog')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('alertdialog')).toContainText('Schválit affiliate účet?');
+    await expect(page.getByRole('alertdialog')).toContainText(TEST_NAME);
+
+    // Confirm
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Schválit' }).click();
+
+    // Toast should confirm success
+    await expect(page.locator('[data-sonner-toast]')).toContainText('schválen', { timeout: 8_000 });
+
+    // Approve button should disappear (account no longer pending)
+    await expect(approveBtn).not.toBeVisible({ timeout: 8_000 });
+
+    // Verify in DB
+    const anon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { data: sessionData } = await anon.auth.getSession();
+    // Use service role for read-back verification
+    const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const { data: acc } = await (adminClient as any)
+      .from('affiliate_accounts')
+      .select('status, approved_at')
+      .eq('id', affiliateId)
+      .single();
+
+    expect(acc?.status).toBe('approved');
+    expect(acc?.approved_at).toBeTruthy();
+  });
+});

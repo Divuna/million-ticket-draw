@@ -1,13 +1,15 @@
 /**
  * AFFILIATE v2 (Admin) — read + status workflow over the standalone affiliate model.
- * Reads:  affiliate_accounts, affiliate_commissions (staging DB layer, steps 1–4).
- * Writes: ONLY via RPC admin_set_affiliate_commission_status (calculated→approved→paid).
+ * Reads:  affiliate_accounts, affiliate_commissions.
+ * Writes: ONLY via RPC admin_set_affiliate_commission_status (calculated→approved→paid)
+ *         and direct UPDATE on affiliate_accounts for pending→approved / pending→rejected
+ *         (allowed by aff_accounts_admin_write RLS policy FOR ALL TO authenticated USING is_admin()).
  *
  * Intentionally separate from the legacy influencer pages (partners table).
  * Does not touch customer accounts, Partner portal, payments, tickets, contests,
  * wallet, or buy_ticket_atomic.
  *
- * NOTE: affiliate_* tables are not yet in generated Supabase types (staging-only),
+ * NOTE: affiliate_* tables are not yet in generated Supabase types,
  * so queries use `(supabase as any)` casts on purpose.
  */
 import React, { useEffect, useState, useCallback } from "react";
@@ -25,7 +27,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { RefreshCw, Eye, CheckCircle, Banknote, Loader2, Megaphone, Briefcase, Users } from "lucide-react";
+import { RefreshCw, Eye, CheckCircle, Banknote, Loader2, Megaphone, Briefcase, Users, UserCheck, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { toast } from "sonner";
@@ -100,6 +102,10 @@ const AdminAffiliateAccounts = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [confirmPaid, setConfirmPaid] = useState<CommissionRow | null>(null);
+
+  // Account approval / rejection
+  const [accountActionTarget, setAccountActionTarget] = useState<{ account: AffiliateAccount; action: "approve" | "reject" } | null>(null);
+  const [accountActionLoading, setAccountActionLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -187,6 +193,37 @@ const AdminAffiliateAccounts = () => {
     }
   };
 
+  const runAccountAction = async () => {
+    if (!accountActionTarget) return;
+    const { account, action } = accountActionTarget;
+    setAccountActionLoading(true);
+    try {
+      const now = new Date().toISOString();
+      const patch = action === "approve"
+        ? { status: "approved", approved_at: now }
+        : { status: "rejected", rejected_at: now };
+
+      const { error: err } = await (supabase as any)
+        .from("affiliate_accounts")
+        .update(patch)
+        .eq("id", account.id);
+
+      if (err) throw err;
+
+      toast.success(action === "approve"
+        ? `Affiliate účet ${account.name} byl schválen.`
+        : `Affiliate účet ${account.name} byl zamítnut.`);
+
+      setAccountActionTarget(null);
+      fetchData();
+    } catch (err: any) {
+      console.error("Error updating affiliate account status:", err);
+      toast.error(err.message || "Nepodařilo se změnit stav účtu");
+    } finally {
+      setAccountActionLoading(false);
+    }
+  };
+
   const handleAction = (row: CommissionRow) => {
     const next = NEXT_STATUS[row.status];
     if (!next) return;
@@ -226,10 +263,16 @@ const AdminAffiliateAccounts = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <Card><CardContent className="py-4">
           <p className="text-2xl font-bold tabular-nums">{accounts.length}</p>
           <p className="text-xs text-muted-foreground">Affiliate účtů</p>
+        </CardContent></Card>
+        <Card><CardContent className="py-4">
+          <p className="text-2xl font-bold tabular-nums text-amber-600">
+            {accounts.filter((a) => a.status === "pending").length}
+          </p>
+          <p className="text-xs text-muted-foreground">Čeká na schválení</p>
         </CardContent></Card>
         <Card><CardContent className="py-4">
           <p className="text-2xl font-bold tabular-nums text-green-600">
@@ -239,7 +282,7 @@ const AdminAffiliateAccounts = () => {
         </CardContent></Card>
         <Card><CardContent className="py-4">
           <p className="text-2xl font-bold tabular-nums text-amber-600">{totalCalculatedCount}</p>
-          <p className="text-xs text-muted-foreground">Provizí ke schválení (calculated)</p>
+          <p className="text-xs text-muted-foreground">Provizí ke schválení</p>
         </CardContent></Card>
       </div>
 
@@ -302,9 +345,37 @@ const AdminAffiliateAccounts = () => {
                         <TableCell className="text-right tabular-nums">{czk(agg?.approvedTotal || 0)}</TableCell>
                         <TableCell className="text-right tabular-nums">{czk(agg?.paidTotal || 0)}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => openDetail(a)} title="Detail provizí">
-                            <Eye className="w-4 h-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            {a.status === "pending" && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-green-600 border-green-600 hover:bg-green-50"
+                                  onClick={() => setAccountActionTarget({ account: a, action: "approve" })}
+                                  title="Schválit affiliate účet"
+                                  data-testid={`approve-affiliate-${a.id}`}
+                                >
+                                  <UserCheck className="w-4 h-4 mr-1" />
+                                  Schválit
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-destructive border-destructive hover:bg-destructive/10"
+                                  onClick={() => setAccountActionTarget({ account: a, action: "reject" })}
+                                  title="Zamítnout affiliate účet"
+                                  data-testid={`reject-affiliate-${a.id}`}
+                                >
+                                  <XCircle className="w-4 h-4 mr-1" />
+                                  Zamítnout
+                                </Button>
+                              </>
+                            )}
+                            <Button variant="ghost" size="icon" onClick={() => openDetail(a)} title="Detail provizí">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -390,6 +461,42 @@ const AdminAffiliateAccounts = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confirm account approve / reject */}
+      <AlertDialog
+        open={!!accountActionTarget}
+        onOpenChange={(o) => { if (!o && !accountActionLoading) setAccountActionTarget(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {accountActionTarget?.action === "approve" ? "Schválit affiliate účet?" : "Zamítnout affiliate účet?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {accountActionTarget?.action === "approve"
+                ? `Účet ${accountActionTarget?.account.name} (${accountActionTarget?.account.ref_code}) bude nastaven na schváleno. Affiliate bude moci přijímat atribuce.`
+                : `Účet ${accountActionTarget?.account.name} (${accountActionTarget?.account.ref_code}) bude zamítnut. Akci lze v případě potřeby vrátit ručně.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={accountActionLoading}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={accountActionLoading}
+              onClick={runAccountAction}
+              className={accountActionTarget?.action === "reject" ? "bg-destructive hover:bg-destructive/90" : ""}
+            >
+              {accountActionLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : accountActionTarget?.action === "approve" ? (
+                <UserCheck className="w-4 h-4 mr-2" />
+              ) : (
+                <XCircle className="w-4 h-4 mr-2" />
+              )}
+              {accountActionTarget?.action === "approve" ? "Schválit" : "Zamítnout"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Confirm paid */}
       <AlertDialog open={!!confirmPaid} onOpenChange={(o) => { if (!o) setConfirmPaid(null); }}>
