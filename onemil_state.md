@@ -4,6 +4,40 @@
 
 ---
 
+## ✅ AFFILIATE v2 — PRODUKČNÍ NASAZENÍ DOKONČENO (03. 06. 2026)
+
+**Produkční projekt:** `xkzhjldrojjlrkezorey`
+
+### DB migrace aplikované na produkci (v pořadí)
+| # | Soubor | Výsledek |
+|---|--------|----------|
+| 1 | `20260603_affiliate_accounts_foundation.sql` | ✅ OK — 4 tabulky, RLS, triggery |
+| 2 | `20260603_affiliate_attribution_rpcs.sql` | ✅ OK — `record_affiliate_customer_ref`, `record_affiliate_company_ref` |
+| 3 | `20260603_affiliate_monthly_commissions.sql` | ✅ OK — `calculate_affiliate_commissions_for_month`, unikátní index |
+| 4 | `20260603_affiliate_commission_status_workflow.sql` | ✅ OK — `admin_set_affiliate_commission_status` |
+| 5 | `20260603_affiliate_self_registration_rpc.sql` | ✅ OK — `register_affiliate_account` |
+| 6 | `20260603_migrate_influencers_to_affiliate_accounts.sql` | ✅ OK — **3 legacy influenceři migrováni** |
+
+### Postcheck výsledky
+- 4 tabulky: `affiliate_accounts`, `affiliate_customer_refs`, `affiliate_company_refs`, `affiliate_commissions` ✅
+- `partners.referred_by_affiliate_id` sloupec ✅
+- 5 RPC funkcí ✅
+- 8 RLS politik ✅
+- `affiliate_accounts` obsahuje 3 záznamy (migrovaní influenceři) ✅
+
+### Edge Functions nasazeny na produkci
+| Funkce | Verze | Status |
+|--------|-------|--------|
+| `get-pending-partner-registrations` | v129 | ACTIVE ✅ |
+| `approve-partner-registration` | v128 | ACTIVE ✅ |
+
+Ochrana: user JWT + admin/superadmin role check. `VITE_INTERNAL_FUNCTION_TOKEN` se **nepoužívá**.
+
+### Další bezpečný krok
+Lovable Publish není potřeba (žádná frontend změna v tomto deployi). Produkce je plně funkční.
+
+---
+
 ## 🚨 HANDOFF PRO CODEX — AFFILIATE v2 (03. 06. 2026, ČTI JAKO PRVNÍ)
 
 ### 1. Aktuální stav Affiliate v2 na stagingu (`dxmowysntemfqfnanxua`)
