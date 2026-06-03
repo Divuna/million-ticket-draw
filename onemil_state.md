@@ -4,6 +4,29 @@
 
 ---
 
+## ✅ AFFILIATE v2 — ADMIN ZPRÁVA AFFILIATE UŽIVATELI: RLS FIX (03. 06. 2026, STAGING)
+
+**Problém 2:** Admin nemohl odeslat zprávu affiliate (ani jinému) uživateli — UI: „Chyba — Zprávu nelze odeslat".
+
+**Kde byla chyba:** Produkční `public.messages` INSERT policies byly zkonsolidovány jen na:
+- `messages_insert` (role `authenticated`, `WITH CHECK auth.uid() = user_id`) — jen vlastní zprávy
+- `messages_insert_system` (role `service_role`, `true`)
+
+**Chyběla policy, která by adminovi (authenticated) dovolila vložit zprávu s `user_id ≠ auth.uid()`.** `AdminMessageThread.handleSend` vkládá `user_id=<příjemce>, sender='admin'` → jediná platná policy `messages_insert` vyžaduje `auth.uid()=user_id` → RLS odmítne → toast „Zprávu nelze odeslat". Postihovalo **všechny** admin reply, ne jen affiliate. (Stará admin-insert policy byla nahrazena a ztracena; poslední funkční admin zpráva 2026-02-10.)
+
+**Příjemce = `affiliate_accounts.auth_user_id`** (= `public.users.id` = `auth.users.id`); `messages.user_id` má FK na `auth.users`. NE `affiliate_accounts.id`. Affiliate `influencer1@onemil.cz` má auth_user_id `4bab81c9…`, existuje v auth.users/public.users/profiles, 4 zprávy.
+
+**Oprava:**
+- Migrace `supabase/migrations/20260603_messages_admin_insert_policy.sql` — přidána policy `messages_insert_admin` (authenticated, admin/superadmin přes `user_roles`). INSERT-only, additivní, žádná data mutation. **Aplikováno na STAGING `dxmowysntemfqfnanxua`** ✅. **Produkce: NEAPLIKOVÁNO — čeká na schválení.**
+- `AdminAffiliateAccounts.tsx`: SELECT `auth_user_id`, nové tlačítko **„Napsat zprávu"** v detailu → `/admin/messages/<auth_user_id>` (správné ID příjemce; disabled pokud účet nemá auth).
+- Spec 29: admin pošle zprávu seedovanému affiliate auth uživateli → žádný error toast + bublina + DB readback.
+
+**Ověření:** Staging Full E2E run `26915631607`: **53 passed · 0 failed** ✅ (spec 29 ✅). `npm run build` ✅. Commit `ee17440e`.
+
+**Nezměněno:** provize, zákaznický účet, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`, Partner portal (mimo sdílenou messages RLS, která opravuje i partner/uživatel zprávy). Žádné Edge Functions.
+
+---
+
 ## ✅ AFFILIATE v2 — ADMIN SOCIAL ZOBRAZENÍ: ODSTRANĚN TICHÝ FALLBACK (03. 06. 2026)
 
 **Problém:** Admin v `/admin/affiliate-accounts` detailu viděl YouTube (a další social) prázdné/„Neuvedeno", ačkoliv hodnota byla v DB uložená.

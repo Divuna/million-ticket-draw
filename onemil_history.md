@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-06-03 - Admin messaging: obnovena admin INSERT RLS policy na messages (staging)
+
+- Symptom: admin nemohl poslat zprávu affiliate (ani jinému) uživateli — „Zprávu nelze odeslat".
+- Root cause: `public.messages` INSERT policies měly jen `messages_insert` (authenticated, auth.uid()=user_id) a `messages_insert_system` (service_role). Chyběla admin policy → admin reply s user_id≠auth.uid() RLS odmítl. Postihovalo všechny admin reply.
+- Příjemce = `affiliate_accounts.auth_user_id` (FK messages.user_id → auth.users), ne affiliate_accounts.id.
+- Fix: migrace `20260603_messages_admin_insert_policy.sql` (policy `messages_insert_admin`, authenticated admin/superadmin přes user_roles) — aplikováno na STAGING. Produkce čeká na schválení.
+- Frontend: AdminAffiliateAccounts SELECTuje auth_user_id + tlačítko „Napsat zprávu" → /admin/messages/<auth_user_id>.
+- Spec 29 ověřuje admin→affiliate zprávu. Staging Full E2E run `26915631607`: 53 passed, 0 failed. `npm run build` ✅. Commit `ee17440e`.
+- Nezměněno: provize, zákaznický účet, platby, tikety, soutěže, peněženka, buy_ticket_atomic. Žádné Edge Functions.
+
+---
+
 ## 2026-06-03 - Affiliate v2: oprava admin social zobrazení (odstraněn tichý fallback)
 
 - Symptom: admin v `/admin/affiliate-accounts` detailu viděl YouTube prázdné, ač DB hodnota existovala (`influencer1@onemil.cz`/`TRUBKA89A0` → `youtube_url` vyplněno).

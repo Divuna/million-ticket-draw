@@ -1,5 +1,16 @@
 # CLAUDE.md
 
+## ADMIN MESSAGING — OBNOVENA ADMIN INSERT RLS POLICY (03. 06. 2026, STAGING)
+
+**Admin nemohl poslat zprávu (affiliate ani jinému) uživateli — „Zprávu nelze odeslat".**
+
+- Root cause: `public.messages` INSERT policies měly jen `messages_insert` (authenticated, `auth.uid()=user_id`) + `messages_insert_system` (service_role). Chyběla admin policy → admin reply s `user_id≠auth.uid()` RLS odmítl. Postihovalo VŠECHNY admin reply.
+- Fix: migrace `20260603_messages_admin_insert_policy.sql` → policy `messages_insert_admin` (authenticated admin/superadmin přes `user_roles`). **STAGING aplikováno ✅, PRODUKCE čeká na schválení.**
+- Příjemce admin zprávy affiliate = `affiliate_accounts.auth_user_id` (= `auth.users.id`, FK target `messages.user_id`), NE `affiliate_accounts.id`.
+- Frontend: `AdminAffiliateAccounts` SELECTuje `auth_user_id` + tlačítko „Napsat zprávu" → `/admin/messages/<auth_user_id>`.
+- **Pravidlo:** nemazat/nenahrazovat `messages_insert_admin` policy — bez ní selže veškeré admin odesílání zpráv.
+- Zamčeno spec 29. Staging E2E `26915631607`: 53 passed. Commit `ee17440e`.
+
 ## AFFILIATE v2 — ADMIN SOCIAL ZOBRAZENÍ: ODSTRANĚN TICHÝ FALLBACK (03. 06. 2026)
 
 **Admin viděl social pole (YouTube aj.) prázdné, ač byla v DB. Data se ukládala správně — chyba byla jen v zobrazení.**
