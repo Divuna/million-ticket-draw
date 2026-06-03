@@ -2,7 +2,7 @@
  * AFFILIATE v2 — Uživatelský dashboard (/affiliate/dashboard).
  *
  * Přepínač Influencer | Obchodník — uživatel přepíná sám, volba se ukládá
- * do localStorage. Oba módy jsou vidět — nedostupný mód má zámek + vysvětlení.
+ * do localStorage. Oba módy jsou vždy dostupné; `modes` je jen původní zaměření pro admina.
  *
  * Sekce:
  *  1. Hero + přepínač
@@ -34,7 +34,7 @@ import {
   Loader2, Star, Users, UserPlus, Banknote, CalendarDays,
   Copy, Check, Link2, TrendingUp, Clock, User,
   Megaphone, Briefcase, Wallet, Sparkles, Zap,
-  LogOut, Building2, ChevronRight, MessageCircle, Lock,
+  LogOut, Building2, ChevronRight, MessageCircle,
   ShieldCheck, AlertCircle, FileText,
 } from 'lucide-react';
 import { format, isToday, isThisMonth, subDays } from 'date-fns';
@@ -126,71 +126,36 @@ function CopyInput({ value, testId }: { value: string; testId?: string }) {
 
 /* ── Mode Switcher ───────────────────────────────────────────────────────────── */
 
-function ModeSwitcher({ modes, active, onSwitch }: {
-  modes: string[]; active: ActiveMode; onSwitch: (m: ActiveMode) => void;
+function ModeSwitcher({ active, onSwitch }: {
+  active: ActiveMode; onSwitch: (m: ActiveMode) => void;
 }) {
-  const [inactiveClicked, setInactiveClicked] = useState<ActiveMode | null>(null);
-
   const items: { id: ActiveMode; label: string; Icon: React.ElementType }[] = [
     { id: 'influencer', label: 'Influencer', Icon: Megaphone },
     { id: 'sales_rep',  label: 'Obchodník',  Icon: Briefcase },
   ];
 
-  const handleClick = (id: ActiveMode, has: boolean) => {
-    if (has) {
-      setInactiveClicked(null);
-      onSwitch(id);
-    } else {
-      // Show explanatory message instead of silently doing nothing
-      setInactiveClicked(id);
-    }
-  };
-
   return (
     <div className="space-y-2">
       <div className="flex gap-1 rounded-xl border border-[hsl(var(--border)/0.5)] p-1 bg-black/30 w-fit" data-testid="mode-switcher">
         {items.map(({ id, label, Icon }) => {
-          const has = modes.includes(id);
           const isActive = active === id;
           return (
             <button
               key={id}
-              onClick={() => handleClick(id, has)}
+              onClick={() => onSwitch(id)}
               data-testid={`mode-btn-${id}`}
-              data-has-role={has ? 'true' : 'false'}
               aria-pressed={isActive}
               className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all
                 ${isActive
                   ? 'bg-[hsl(var(--neon-gold))] text-[hsl(220_45%_8%)] shadow-sm'
-                  : has
-                    ? 'text-[hsl(var(--text-muted-gray))] hover:text-[hsl(var(--text-silver))] hover:bg-white/5'
-                    : 'text-[hsl(var(--text-muted-gray)/0.4)] cursor-pointer opacity-60'}`}
+                  : 'text-[hsl(var(--text-muted-gray))] hover:text-[hsl(var(--text-silver))] hover:bg-white/5'}`}
             >
-              {has ? <Icon className="w-4 h-4" /> : <Lock className="w-3.5 h-3.5" />}
+              <Icon className="w-4 h-4" />
               {label}
-              {!has && <span className="text-[10px] font-normal ml-0.5">– není aktivní</span>}
             </button>
           );
         })}
       </div>
-
-      {/* Visible explanatory message when user clicks an inactive mode */}
-      {inactiveClicked && (
-        <p
-          data-testid="mode-inactive-message"
-          className="text-xs text-amber-400 flex items-center gap-1.5 pl-1"
-        >
-          <Lock className="w-3 h-3 shrink-0" />
-          Tento režim zatím nemáte aktivní. O aktivaci požádejte administrátora.
-          <button
-            onClick={() => setInactiveClicked(null)}
-            className="ml-1 text-[hsl(var(--text-muted-gray))] hover:text-foreground"
-            aria-label="Zavřít"
-          >
-            ×
-          </button>
-        </p>
-      )}
     </div>
   );
 }
@@ -323,11 +288,8 @@ const AffiliateDashboard = () => {
       if (!acc) { setNotAffiliate(true); setLoading(false); return; }
       setAccount(acc as AffiliateAccount);
 
-      const modes = (acc as AffiliateAccount).modes;
       const saved = localStorage.getItem(STORAGE_KEY) as ActiveMode | null;
-      if (saved && modes.includes(saved)) setActiveMode(saved);
-      else if (modes.includes('influencer')) setActiveMode('influencer');
-      else if (modes.includes('sales_rep'))  setActiveMode('sales_rep');
+      setActiveMode(saved === 'sales_rep' ? 'sales_rep' : 'influencer');
 
       const aid = (acc as AffiliateAccount).id;
       const [custR, compR, commR] = await Promise.all([
@@ -384,8 +346,6 @@ const AffiliateDashboard = () => {
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://onemil.cz';
   const customerLink = `${origin}/?ref=${a.ref_code}`;
   const companyLink  = `${origin}/partner/register?via=${a.ref_code}`;
-  const isInfluencer = a.modes.includes('influencer');
-  const isSalesRep   = a.modes.includes('sales_rep');
 
   const ago30 = subDays(new Date(), 30);
   const custToday     = customerRefs.filter(r => isToday(new Date(r.created_at))).length;
@@ -475,9 +435,8 @@ const AffiliateDashboard = () => {
         )}
 
         {/* ══ STAT CARDS ════════════════════════════════════════════════════
-            Guard: use effectiveMode so stats always match actual account role.
-            activeMode can only equal a role the account actually has (init + guard below). */}
-        {activeMode === 'influencer' && isInfluencer ? (
+            Both sections are available for every approved Affiliate account; modes are informational only. */}
+        {activeMode === 'influencer' ? (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard icon={Banknote}   label="Celkem vyděláno"        value={czk(totalEarnedCzk)}   accent />
             <StatCard icon={TrendingUp} label="Tento měsíc"            value={czk(currentMonthCzk)}  accent />
@@ -486,7 +445,7 @@ const AffiliateDashboard = () => {
             <StatCard icon={Users}      label="Registrace (30 dní)"    value={cust30d}                />
             <StatCard icon={Users}      label="Celkem zákazníků"       value={customerRefs.length}    />
           </div>
-        ) : activeMode === 'sales_rep' && isSalesRep ? (
+        ) : (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard icon={Banknote}   label="Celkem vyděláno"    value={czk(totalEarnedCzk)}  accent />
             <StatCard icon={TrendingUp} label="Tento měsíc"        value={czk(currentMonthCzk)} accent />
@@ -495,35 +454,28 @@ const AffiliateDashboard = () => {
             <StatCard icon={Building2}  label="Celkem firem"       value={companyRefs.length}    />
             <StatCard icon={Wallet}     label="Schváleno k výplatě" value={czk(totals.approved)} />
           </div>
-        ) : (
-          // Fallback: show common totals (shouldn't happen with correct init, but safety net)
-          <div className="grid grid-cols-2 gap-4">
-            <StatCard icon={Banknote}   label="Celkem vyděláno" value={czk(totalEarnedCzk)}  accent />
-            <StatCard icon={TrendingUp} label="Tento měsíc"     value={czk(currentMonthCzk)} accent />
-          </div>
         )}
 
         {/* ══ ODKAZ ═════════════════════════════════════════════════════════
-            NEVER show company link if account doesn't have sales_rep role.
-            NEVER show customer link if account doesn't have influencer role. */}
+            One ref_code powers both sections: /?ref=KOD and /partner/register?via=KOD. */}
         <div className="luxury-card overflow-hidden">
           <div className="p-6 space-y-4">
             <div className="flex items-center gap-2">
               <Link2 className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
               <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">
-                {activeMode === 'influencer' && isInfluencer
+                {activeMode === 'influencer'
                   ? 'Váš Affiliate odkaz pro zákazníky'
                   : 'Váš odkaz pro firmy a e-shopy'}
               </h3>
             </div>
             <CopyInput
-              value={activeMode === 'influencer' && isInfluencer ? customerLink : companyLink}
-              testId={activeMode === 'influencer' && isInfluencer ? 'affiliate-customer-link' : 'affiliate-company-link'}
+              value={activeMode === 'influencer' ? customerLink : companyLink}
+              testId={activeMode === 'influencer' ? 'affiliate-customer-link' : 'affiliate-company-link'}
             />
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pt-2">
               <div className="rounded-xl border border-[hsl(var(--border)/0.4)] bg-white p-3 shadow-sm">
                 <QRCodeSVG
-                  value={activeMode === 'influencer' && isInfluencer ? customerLink : companyLink}
+                  value={activeMode === 'influencer' ? customerLink : companyLink}
                   size={140}
                   data-testid="affiliate-qr-code"
                 />
@@ -531,10 +483,10 @@ const AffiliateDashboard = () => {
               <div className="rounded-xl border border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.2)] p-4 space-y-2 flex-1">
                 <p className="text-sm font-medium text-[hsl(var(--text-silver))] flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
-                  {activeMode === 'influencer' && isInfluencer ? 'Jak funguje Influencer odkaz?' : 'Jak funguje Obchodník odkaz?'}
+                  {activeMode === 'influencer' ? 'Jak funguje Influencer odkaz?' : 'Jak funguje Obchodník odkaz?'}
                 </p>
                 <p className="text-sm text-[hsl(var(--text-muted-gray))] leading-relaxed">
-                  {activeMode === 'influencer' && isInfluencer
+                  {activeMode === 'influencer'
                     ? 'Sdílejte tento odkaz. Zákazník, který se přes váš odkaz zaregistruje, zůstane vám přiřazen trvale (first-touch). Z jeho plateb budete dostávat provizi každý měsíc.'
                     : 'Sdílejte tento odkaz s firmami. Pokud se firma zaregistruje a admin ji schválí jako partnera, bude vám přiřazena. Z její fakturace OneMil budete dostávat provizi.'}
                 </p>
@@ -544,7 +496,7 @@ const AffiliateDashboard = () => {
         </div>
 
         {/* ══ VÝSLEDKY ══════════════════════════════════════════════════════ */}
-        {activeMode === 'influencer' && customerRefs.length > 0 && (
+        {activeMode === 'influencer' && (
           <div className="luxury-card overflow-hidden">
             <div className="p-6 space-y-3">
               <div className="flex items-center gap-2">
@@ -557,11 +509,16 @@ const AffiliateDashboard = () => {
                   Poslední registrace: {format(new Date(customerRefs[0].created_at), 'd. MMMM yyyy', { locale: cs })}
                 </p>
               )}
+              {customerRefs.length === 0 && (
+                <p className="text-sm text-[hsl(var(--text-muted-gray))]">
+                  Zatím nemáte žádné přivedené zákazníky.
+                </p>
+              )}
             </div>
           </div>
         )}
 
-        {activeMode === 'sales_rep' && companyRefs.length > 0 && (
+        {activeMode === 'sales_rep' && (
           <div className="luxury-card overflow-hidden">
             <div className="p-6 space-y-3">
               <div className="flex items-center gap-2">
@@ -569,18 +526,24 @@ const AffiliateDashboard = () => {
                 <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Moje firmy</h3>
                 <Badge className="bg-[hsl(var(--neon-gold)/0.15)] text-[hsl(var(--neon-gold))] border-[hsl(var(--neon-gold)/0.3)]">{companyRefs.length}</Badge>
               </div>
-              <ul className="space-y-2" data-testid="company-list">
-                {companyRefs.map(cr => {
-                  const p = partnerMap.get(cr.partner_id);
-                  return (
-                    <li key={cr.id} className="flex items-center gap-2 text-sm rounded-lg border border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.15)] px-3 py-2">
-                      <ChevronRight className="w-3.5 h-3.5 text-[hsl(var(--text-muted-gray))] shrink-0" />
-                      <span className="flex-1 text-[hsl(var(--text-silver))]">{p ? (p.company_name || p.name) : `Firma ${cr.partner_id.slice(0, 8)}…`}</span>
-                      <span className="text-xs text-[hsl(var(--text-muted-gray))]">{format(new Date(cr.created_at), 'd. M. yyyy', { locale: cs })}</span>
-                    </li>
-                  );
-                })}
-              </ul>
+              {companyRefs.length === 0 ? (
+                <p className="text-sm text-[hsl(var(--text-muted-gray))]">
+                  Zatím nemáte žádné přivedené firmy.
+                </p>
+              ) : (
+                <ul className="space-y-2" data-testid="company-list">
+                  {companyRefs.map(cr => {
+                    const p = partnerMap.get(cr.partner_id);
+                    return (
+                      <li key={cr.id} className="flex items-center gap-2 text-sm rounded-lg border border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.15)] px-3 py-2">
+                        <ChevronRight className="w-3.5 h-3.5 text-[hsl(var(--text-muted-gray))] shrink-0" />
+                        <span className="flex-1 text-[hsl(var(--text-silver))]">{p ? (p.company_name || p.name) : `Firma ${cr.partner_id.slice(0, 8)}…`}</span>
+                        <span className="text-xs text-[hsl(var(--text-muted-gray))]">{format(new Date(cr.created_at), 'd. M. yyyy', { locale: cs })}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           </div>
         )}
@@ -670,7 +633,7 @@ const AffiliateDashboard = () => {
         </div>
 
         {/* ══ PRAVIDLA (Influencer) ═════════════════════════════════════════ */}
-        {isInfluencer && <InfluencerRules />}
+        {activeMode === 'influencer' && <InfluencerRules />}
 
         {/* ══ PROFIL A VÝPLATNÍ ÚDAJE ═══════════════════════════════════════ */}
         <AffiliateProfileSection profile={profileData} onSaved={load} />

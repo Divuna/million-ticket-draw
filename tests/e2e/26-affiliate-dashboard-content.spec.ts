@@ -7,6 +7,8 @@
  * ║    • "Aktivní Affiliate partner" badge visible                             ║
  * ║    • mode switcher rendered (Influencer | Obchodník)                       ║
  * ║    • influencer mode: affiliate link contains /?ref=                       ║
+ * ║    • sales mode: company link contains /partner/register?via=              ║
+ * ║    • both links use the same ref_code                                      ║
  * ║    • influencer mode: QR code rendered locally (no external API)           ║
  * ║    • copy button present                                                   ║
  * ║    • stat cards visible                                                    ║
@@ -28,6 +30,8 @@ import { loginViaUI } from './helpers/auth';
 const AFFILIATE_EMAIL    = process.env.E2E_AFFILIATE_EMAIL    ?? '';
 const AFFILIATE_PASSWORD = process.env.E2E_AFFILIATE_PASSWORD ?? '';
 const SUPABASE_URL       = process.env.VITE_SUPABASE_URL      ?? '';
+
+const getParam = (value: string, param: 'ref' | 'via') => new URL(value).searchParams.get(param);
 
 test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
   test.skip(
@@ -66,29 +70,24 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
     await expect(page.getByTestId('mode-btn-influencer')).toBeVisible();
     await expect(page.getByTestId('mode-btn-sales_rep')).toBeVisible();
 
-    // Neither button should be disabled (inactive mode is NOT disabled, it shows a message instead)
+    // Both sections are always available for every approved Affiliate account.
     const infBtn = page.getByTestId('mode-btn-influencer');
     const salesBtn = page.getByTestId('mode-btn-sales_rep');
     expect(await infBtn.isDisabled(), 'Influencer btn must not be disabled').toBe(false);
     expect(await salesBtn.isDisabled(), 'Obchodník btn must not be disabled').toBe(false);
   });
 
-  test('clicking inactive mode shows Czech explanatory message', async ({ page }) => {
-    // affiliate-e2e@onemil.cz has modes=['influencer'] only → sales_rep is inactive
+  test('sales mode shows company link with /partner/register?via= and no inactive message', async ({ page }) => {
     const salesBtn = page.getByTestId('mode-btn-sales_rep');
     await expect(salesBtn).toBeVisible({ timeout: 10_000 });
 
-    // Click the inactive mode button
     await salesBtn.click();
 
-    // Should show the explanatory message (not just a tooltip)
-    const msg = page.getByTestId('mode-inactive-message');
-    await expect(msg).toBeVisible({ timeout: 5_000 });
-    await expect(msg).toContainText('Tento režim zatím nemáte aktivní');
-    await expect(msg).toContainText('administrátora');
-
-    // Clicking should NOT switch to sales_rep mode (influencer link still present)
-    await expect(page.getByTestId('affiliate-customer-link')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId('mode-inactive-message')).toHaveCount(0);
+    const linkInput = page.getByTestId('affiliate-company-link');
+    await expect(linkInput).toBeVisible({ timeout: 8_000 });
+    const val = await linkInput.inputValue();
+    expect(val, 'Company link must contain /partner/register?via=').toMatch(/\/partner\/register\?via=/);
   });
 
   test('influencer mode shows customer link with /?ref=', async ({ page }) => {
@@ -101,6 +100,22 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
     await expect(linkInput).toBeVisible({ timeout: 8_000 });
     const val = await linkInput.inputValue();
     expect(val, 'Customer link must contain /?ref=').toMatch(/\/\?ref=/);
+  });
+
+  test('customer and company sections use the same ref_code', async ({ page }) => {
+    await page.getByTestId('mode-btn-influencer').click();
+    const customerLink = await page.getByTestId('affiliate-customer-link').inputValue();
+    const customerCode = getParam(customerLink, 'ref');
+
+    await page.getByTestId('mode-btn-sales_rep').click();
+    const companyInput = page.getByTestId('affiliate-company-link');
+    await expect(companyInput).toBeVisible({ timeout: 8_000 });
+    const companyLink = await companyInput.inputValue();
+    const companyCode = getParam(companyLink, 'via');
+
+    expect(customerCode, 'Customer ref code must exist').toBeTruthy();
+    expect(companyCode, 'Company via code must exist').toBeTruthy();
+    expect(companyCode).toBe(customerCode);
   });
 
   test('QR code is rendered by local qrcode.react (SVG element, no external request)', async ({ page }) => {
@@ -122,24 +137,28 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
     await expect(page.getByText('Celkem zákazníků')).toBeVisible();
   });
 
+  test('sales mode shows company stats and Moje firmy section', async ({ page }) => {
+    await page.getByTestId('mode-btn-sales_rep').click();
+
+    await expect(page.getByText('Firmy dnes')).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText('Firmy (30 dní)')).toBeVisible();
+    await expect(page.getByText('Celkem firem')).toBeVisible();
+    await expect(page.getByText('Moje firmy')).toBeVisible();
+  });
+
   test('mode preference is stored in localStorage', async ({ page }) => {
     const salesBtn = page.getByTestId('mode-btn-sales_rep');
     await expect(salesBtn).toBeVisible({ timeout: 10_000 });
 
-    // Check via data-has-role attribute whether this account actually has sales_rep mode
-    const hasRole = await salesBtn.getAttribute('data-has-role');
+    await salesBtn.click();
+    await expect(page.getByTestId('affiliate-company-link')).toBeVisible({ timeout: 8_000 });
+    let storedMode = await page.evaluate(() => localStorage.getItem('affiliate_active_mode'));
+    expect(storedMode).toBe('sales_rep');
 
-    if (hasRole === 'true') {
-      // Account has sales_rep → clicking switches and stores 'sales_rep'
-      await salesBtn.click();
-      const storedMode = await page.evaluate(() => localStorage.getItem('affiliate_active_mode'));
-      expect(storedMode).toBe('sales_rep');
-    } else {
-      // Influencer-only account → clicking shows inactive message, localStorage stays 'influencer'
-      await page.getByTestId('mode-btn-influencer').click();
-      const storedMode = await page.evaluate(() => localStorage.getItem('affiliate_active_mode'));
-      expect(storedMode).toBe('influencer');
-    }
+    await page.getByTestId('mode-btn-influencer').click();
+    await expect(page.getByTestId('affiliate-customer-link')).toBeVisible({ timeout: 8_000 });
+    storedMode = await page.evaluate(() => localStorage.getItem('affiliate_active_mode'));
+    expect(storedMode).toBe('influencer');
   });
 
   test('/influencer/dashboard redirects to /affiliate/dashboard', async ({ page }) => {
