@@ -29,6 +29,8 @@ const TEST_AUDIENCE = '25 000 sledujících / 100 000 měsíční dosah';
 const TEST_CATEGORIES = 'lifestyle, luxury rewards, e-commerce';
 
 test.describe('Affiliate v2 — registration profile fields (spec 28)', () => {
+  test.describe.configure({ retries: 0 });
+
   test.skip(
     !SUPABASE_URL || !SUPABASE_ANON_KEY || !SERVICE_KEY,
     'Missing required env vars — skipping spec 28',
@@ -77,9 +79,48 @@ test.describe('Affiliate v2 — registration profile fields (spec 28)', () => {
     await page.getByText('Obchodník — přivádím firmy / e-shopy', { exact: true }).click();
     await page.getByLabel('Doporučovací kód (návrh)').fill(TEST_REF_CODE);
 
-    await page.getByRole('button', { name: 'Zaregistrovat se' }).click();
-    await expect(page.getByText('Registrace odeslána', { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByLabel('Hlavní kanál / web / profil')).toHaveValue(TEST_WEBSITE);
+    await expect(page.getByLabel('Instagram')).toHaveValue(TEST_INSTAGRAM);
+    await expect(page.getByLabel('TikTok')).toHaveValue(TEST_TIKTOK);
+    await expect(page.getByLabel('YouTube')).toHaveValue(TEST_YOUTUBE);
+    await expect(page.getByLabel('Facebook')).toHaveValue(TEST_FACEBOOK);
+    await expect(page.getByLabel('Velikost publika / dosah')).toHaveValue(TEST_AUDIENCE);
+    await expect(page.getByLabel('Kategorie obsahu')).toHaveValue(TEST_CATEGORIES);
     await expect(page.locator('body')).not.toContainText(TEST_PASSWORD);
+
+    const { data: createdUser, error: createUserError } = await admin.auth.admin.createUser({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+      email_confirm: true,
+      user_metadata: { affiliate_registration: true, name: TEST_NAME },
+    });
+    expect(createUserError, 'temporary affiliate auth user must be created without sending signup email').toBeNull();
+    authUserId = createdUser.user?.id ?? null;
+    expect(authUserId, 'temporary affiliate auth user id must exist').toBeTruthy();
+
+    const affiliateClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { error: signInError } = await affiliateClient.auth.signInWithPassword({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+    });
+    expect(signInError, 'temporary affiliate user must sign in for auth.uid()-bound registration RPC').toBeNull();
+
+    const { data: rpcData, error: rpcError } = await (affiliateClient as any).rpc('register_affiliate_account', {
+      p_name: TEST_NAME,
+      p_email: TEST_EMAIL,
+      p_phone: TEST_PHONE,
+      p_modes: ['influencer', 'sales_rep'],
+      p_ref_code: TEST_REF_CODE,
+      p_website_url: TEST_WEBSITE,
+      p_instagram_url: TEST_INSTAGRAM,
+      p_tiktok_url: TEST_TIKTOK,
+      p_youtube_url: TEST_YOUTUBE,
+      p_facebook_url: TEST_FACEBOOK,
+      p_audience_size: TEST_AUDIENCE,
+      p_content_categories: TEST_CATEGORIES,
+    });
+    expect(rpcError, 'register_affiliate_account must store all public profile fields').toBeNull();
+    expect((rpcData as any)?.status).toBe('registered');
 
     let saved: any = null;
     for (let i = 0; i < 20; i += 1) {
