@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -450,18 +450,21 @@ export type Database = {
       coming_soon_banners: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           image_url: string
           title: string | null
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           image_url: string
           title?: string | null
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           image_url?: string
           title?: string | null
@@ -1227,6 +1230,56 @@ export type Database = {
             foreignKeyName: "influencer_referrals_influencer_partner_id_fkey"
             columns: ["influencer_partner_id"]
             isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merchant_affiliate_referrals: {
+        Row: {
+          activated_at: string | null
+          affiliate_code_id: string | null
+          affiliate_partner_id: string
+          approved_at: string | null
+          bonus_eligible_at: string | null
+          created_by: string | null
+          id: string
+          merchant_partner_id: string
+          metadata: Json
+          registered_at: string
+          status: string
+        }
+        Insert: {
+          activated_at?: string | null
+          affiliate_code_id?: string | null
+          affiliate_partner_id: string
+          approved_at?: string | null
+          bonus_eligible_at?: string | null
+          created_by?: string | null
+          id?: string
+          merchant_partner_id: string
+          metadata?: Json
+          registered_at?: string
+          status?: string
+        }
+        Update: {
+          activated_at?: string | null
+          affiliate_code_id?: string | null
+          affiliate_partner_id?: string
+          approved_at?: string | null
+          bonus_eligible_at?: string | null
+          created_by?: string | null
+          id?: string
+          merchant_partner_id?: string
+          metadata?: Json
+          registered_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_affiliate_referrals_merchant_partner_id_fkey"
+            columns: ["merchant_partner_id"]
+            isOneToOne: true
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
@@ -4605,6 +4658,7 @@ export type Database = {
           success: boolean
         }[]
       }
+      redeem_miocoin_code: { Args: { p_code: string }; Returns: Json }
       resolve_partner_by_api_key: { Args: { p_key: string }; Returns: string }
       resume_contest: { Args: { contest_id: string }; Returns: undefined }
       revise_partner_offer: { Args: { p_offer_id: string }; Returns: undefined }
