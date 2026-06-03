@@ -15,6 +15,18 @@ type AffiliateAccount = {
   ref_code: string;
 };
 
+const seedCookieConsent = () => {
+  localStorage.setItem(
+    'cookie_consent',
+    JSON.stringify({
+      essential: true,
+      analytics: false,
+      marketing: false,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+};
+
 async function cleanupTestCompany(
   supabase: SupabaseClient,
   params: { email: string; authUserId?: string | null; partnerId?: string | null; affiliateId?: string | null },
@@ -78,6 +90,7 @@ test.describe('Affiliate v2 company via flow', () => {
     let partnerId: string | null = null;
 
     try {
+      await page.addInitScript(seedCookieConsent);
       const { data: insertedAffiliate, error: affiliateError } = await supabase
         .from('affiliate_accounts')
         .insert({
