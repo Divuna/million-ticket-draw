@@ -4,6 +4,33 @@
 
 ---
 
+## 🟢 AFFILIATE PROGRAM v2 — STAGING PARTNER APPROVAL STACK (03. 06. 2026, krok 9)
+
+Nasazen chybějící partner-approval edge stack na staging + ověřen firemní `?via=` tok.
+
+- **Chyběly na stagingu:** `approve-partner-registration`, `get-pending-partner-registrations` (staging měl jen
+  sofinity-noop, upload-ticket-share, distribute-bonus-prizes).
+- **Nasazeno POUZE na staging** `dxmowysntemfqfnanxua` (verify_jwt=true, ACTIVE v1). Produkce
+  `xkzhjldrojjlrkezorey` NEDOTČENA (deploy je scoped na projekt).
+- **Repo sync:** do CORS allow-headers obou funkcí přidán `x-internal-token` (oprava preflightu);
+  `get-pending` surface `affiliate_via_code` (z kroku 8).
+- **E2E firemní tok ověřen na úrovni DB/funkce (data uklizena):** vytvoření partnera (replika
+  approve INSERTu z metadat s `affiliate_via_code`) → admin atribuce `record_affiliate_company_ref` →
+  `affiliate_company_refs` (source `via_link`, attributed_to SALESE2E) → `partners.referred_by_affiliate_id`
+  nastaveno → re-attribute `already_attributed` (first-touch, nepřepsáno).
+- **Build:** `npm run build` ✅.
+- **⚠️ Zbývající config pro PLNÝ UI E2E v prohlížeči (mimo code session):**
+  1. Nastavit secret `INTERNAL_FUNCTION_TOKEN` na stagingu.
+  2. Nastavit `VITE_INTERNAL_FUNCTION_TOKEN` v Lovable staging buildu (musí se shodovat se secretem).
+  3. Pre-existující nesoulad: `loadPendingRegistrations` ve frontendu volá `get-pending` BEZ
+     `x-internal-token`, ale funkce ho vyžaduje → admin seznam pending registrací se nenačte, dokud se
+     buď do volání nepřidá token, nebo neupraví guard. (Pre-existující, mimo affiliate scope — nebráno do ruky.)
+- Nezměněno: zákazník, Partner portal dashboard chování, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`, produkce.
+- **DALŠÍ BEZPEČNÝ KROK:** vyřešit `INTERNAL_FUNCTION_TOKEN` (secret + VITE) a get-pending token nesoulad pro UI
+  E2E; volitelně QR v dashboardu + cron pro měsíční výpočet; poté produkční nasazení celé v2 vrstvy po potvrzení Pavla.
+
+---
+
 ## 🟢 AFFILIATE PROGRAM v2 — ZACHYCENÍ ?ref= / ?via= (03. 06. 2026, krok 8)
 
 Napojení atribučních RPC na frontend. Staging-compatible.

@@ -14,6 +14,20 @@
 
 ---
 
+## 2026-06-03 — Affiliate program v2: staging partner approval stack (krok 9)
+
+- Chyběly na stagingu: approve-partner-registration, get-pending-partner-registrations.
+- Nasazeno POUZE na staging dxmowysntemfqfnanxua (verify_jwt=true, v1). Produkce nedotčena.
+- Repo sync: CORS allow-headers obou funkcí + x-internal-token; get-pending surface affiliate_via_code.
+- E2E firemní tok (DB/funkce, data uklizena): partner z metadat → record_affiliate_company_ref →
+  affiliate_company_refs (via_link) + partners.referred_by_affiliate_id; re-attribute already_attributed.
+- npm run build ✅.
+- Plný UI E2E v prohlížeči vyžaduje config mimo code session: secret INTERNAL_FUNCTION_TOKEN na stagingu,
+  VITE_INTERNAL_FUNCTION_TOKEN v Lovable buildu, a vyřešení pre-existujícího nesouladu (get-pending vyžaduje
+  x-internal-token, ale loadPendingRegistrations ho neposílá).
+
+---
+
 ## 2026-06-03 — Affiliate program v2: zachycení ?ref= / ?via= (krok 8)
 
 - Zákazník ?ref=: Register.tsx ukládá kód (sessionStorage onemil_affiliate_ref) + po registraci volá
