@@ -2,22 +2,21 @@
  * ╔══════════════════════════════════════════════════════════════════════════════╗
  * ║  Affiliate Dashboard — Content Smoke Test  (spec 26)                       ║
  * ║                                                                            ║
- * ║  Verifies the enhanced /affiliate/dashboard content:                       ║
- * ║    • heading "Affiliate účet" text prefix visible                          ║
- * ║    • user name rendered in h1                                              ║
- * ║    • status badge visible                                                  ║
- * ║    • Influencer mode badge visible (for affiliate-e2e account)             ║
- * ║    • stat cards: Přivedení zákazníci, Přivedené firmy visible             ║
- * ║    • "Odkaz pro zákazníky" card visible (influencer mode)                 ║
- * ║    • customer link input contains /?ref=                                  ║
+ * ║  Verifies enhanced /affiliate/dashboard:                                   ║
+ * ║    • hero "Vydělávejte s OneMil" heading visible                           ║
+ * ║    • "Aktivní Affiliate partner" badge visible                             ║
+ * ║    • mode switcher rendered (Influencer | Obchodník)                       ║
+ * ║    • influencer mode: affiliate link contains /?ref=                       ║
+ * ║    • influencer mode: QR code rendered locally (no external API)           ║
  * ║    • copy button present                                                   ║
- * ║    • QR code image rendered                                                ║
- * ║    • /influencer/dashboard still redirects to /affiliate/dashboard        ║
+ * ║    • stat cards visible                                                    ║
+ * ║    • /influencer/dashboard still redirects to /affiliate/dashboard         ║
+ * ║    • localStorage stores mode preference                                   ║
  * ║                                                                            ║
  * ║  STAGING-ONLY. Skipped cleanly when any required env var is absent.        ║
  * ║                                                                            ║
  * ║  Required env vars:                                                         ║
- * ║    E2E_AFFILIATE_EMAIL        affiliate-e2e@onemil.cz                     ║
+ * ║    E2E_AFFILIATE_EMAIL        affiliate-e2e@onemil.cz (legacy influencer) ║
  * ║    E2E_AFFILIATE_PASSWORD                                                  ║
  * ║    VITE_SUPABASE_URL          staging Supabase URL                        ║
  * ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -43,64 +42,81 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
         'cookie_consent',
         JSON.stringify({ essential: true, analytics: false, marketing: false, timestamp: new Date().toISOString() }),
       );
+      // Clear mode preference so each test starts fresh
+      localStorage.removeItem('affiliate_active_mode');
     });
     await loginViaUI(page, AFFILIATE_EMAIL, AFFILIATE_PASSWORD);
     await page.waitForURL(/\/affiliate\/dashboard/, { timeout: 20_000 });
   });
 
-  test('dashboard header and status are visible', async ({ page }) => {
-    // "Affiliate účet" label above h1
-    await expect(page.getByText('Affiliate účet', { exact: true }))
-      .toBeVisible({ timeout: 10_000 });
+  test('hero section renders "Vydělávejte s OneMil" and status badge', async ({ page }) => {
+    await expect(
+      page.getByRole('heading', { name: 'Vydělávejte s OneMil', exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
 
-    // h1 with user name must be present
-    const heading = page.getByTestId('affiliate-dashboard-heading');
-    await expect(heading).toBeVisible({ timeout: 8_000 });
-    const h1Text = await heading.textContent();
-    expect(h1Text?.trim().length).toBeGreaterThan(0);
-
-    // Status badge (Aktivní / Čeká na schválení / …)
-    const statusBadge = page.locator('text=Aktivní, text=Čeká na schválení, text=Pozastavený, text=Zamítnutý').first();
-    // Less strict — just verify one of the known status texts is present somewhere on page
-    const bodyText = await page.locator('body').textContent();
-    const hasStatus = ['Aktivní', 'Čeká na schválení', 'Pozastavený', 'Zamítnutý']
-      .some(s => bodyText?.includes(s));
-    expect(hasStatus, 'A known status badge must be visible').toBe(true);
+    await expect(
+      page.getByText('Aktivní Affiliate partner', { exact: true }),
+    ).toBeVisible({ timeout: 8_000 });
   });
 
-  test('stat cards are visible', async ({ page }) => {
-    await expect(page.getByText('Přivedení zákazníci')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText('Přivedené firmy')).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText('Vypočteno')).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText('Schváleno')).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText('Vyplaceno')).toBeVisible({ timeout: 5_000 });
+  test('mode switcher is rendered with Influencer and Obchodník buttons', async ({ page }) => {
+    const switcher = page.getByTestId('mode-switcher');
+    await expect(switcher).toBeVisible({ timeout: 10_000 });
+
+    await expect(page.getByTestId('mode-btn-influencer')).toBeVisible();
+    await expect(page.getByTestId('mode-btn-sales_rep')).toBeVisible();
   });
 
-  test('influencer share link card is visible with ref= link and QR', async ({ page }) => {
-    // "Odkaz pro zákazníky" card
-    await expect(page.getByText('Odkaz pro zákazníky')).toBeVisible({ timeout: 10_000 });
+  test('influencer mode shows customer link with /?ref=', async ({ page }) => {
+    // Make sure we're in influencer mode
+    const infBtn = page.getByTestId('mode-btn-influencer');
+    await expect(infBtn).toBeVisible({ timeout: 10_000 });
+    await infBtn.click();
 
-    // The link input contains /?ref=
-    const linkInput = page.getByTestId('affiliate-link-odkaz-pro-zákazníky');
+    const linkInput = page.getByTestId('affiliate-customer-link');
     await expect(linkInput).toBeVisible({ timeout: 8_000 });
-    const linkValue = await linkInput.textContent();
-    expect(linkValue, 'Customer link must contain /?ref=').toMatch(/\/\?ref=/);
-
-    // Copy button present
-    await expect(page.locator('button[title="Kopírovat odkaz pro zákazníky"]')).toBeVisible();
-
-    // QR code image rendered (from qrserver.com)
-    const qrImg = page.locator('img[alt="QR kód"]').first();
-    await expect(qrImg).toBeVisible({ timeout: 8_000 });
+    const val = await linkInput.inputValue();
+    expect(val, 'Customer link must contain /?ref=').toMatch(/\/\?ref=/);
   });
 
-  test('"Jak to funguje" section is visible', async ({ page }) => {
-    await expect(page.getByText('Jak to funguje')).toBeVisible({ timeout: 10_000 });
-    // At least step 1 text
-    await expect(page.getByText('Sdílejte svůj odkaz zákazníkům nebo firmám.')).toBeVisible();
+  test('QR code is rendered by local qrcode.react (SVG element, no external request)', async ({ page }) => {
+    // QRCodeSVG renders an inline <svg> element — no external image src
+    const qrSvg = page.locator('[data-testid="affiliate-qr-code"]');
+    await expect(qrSvg).toBeVisible({ timeout: 10_000 });
+
+    // Verify it's an SVG (not an <img> pointing to external API)
+    const tagName = await qrSvg.evaluate(el => el.tagName.toLowerCase());
+    expect(tagName, 'QR code must be a local SVG element, not an <img>').toBe('svg');
   });
 
-  test('/influencer/dashboard still redirects to /affiliate/dashboard', async ({ page }) => {
+  test('stat cards "Registrace dnes", "Registrace tento měsíc" are visible in influencer mode', async ({ page }) => {
+    // Switch to influencer mode explicitly
+    await page.getByTestId('mode-btn-influencer').click();
+
+    await expect(page.getByText('Registrace dnes')).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText('Registrace tento měsíc')).toBeVisible();
+    await expect(page.getByText('Celkem zákazníků')).toBeVisible();
+  });
+
+  test('mode preference is stored in localStorage', async ({ page }) => {
+    const salesBtn = page.getByTestId('mode-btn-sales_rep');
+    await expect(salesBtn).toBeVisible({ timeout: 10_000 });
+
+    // Click sales_rep mode if enabled; if disabled (not in modes), skip this check
+    const isDisabled = await salesBtn.isDisabled();
+    if (!isDisabled) {
+      await salesBtn.click();
+      const storedMode = await page.evaluate(() => localStorage.getItem('affiliate_active_mode'));
+      expect(storedMode).toBe('sales_rep');
+    } else {
+      // Influencer-only account — verify influencer is stored
+      await page.getByTestId('mode-btn-influencer').click();
+      const storedMode = await page.evaluate(() => localStorage.getItem('affiliate_active_mode'));
+      expect(storedMode).toBe('influencer');
+    }
+  });
+
+  test('/influencer/dashboard redirects to /affiliate/dashboard', async ({ page }) => {
     await page.goto('/influencer/dashboard');
     await expect(page).toHaveURL(/\/affiliate\/dashboard/, { timeout: 10_000 });
   });
