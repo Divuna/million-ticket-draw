@@ -4,6 +4,28 @@
 
 ---
 
+## 🟢 AFFILIATE PROGRAM v2 — ADMIN UI (03. 06. 2026, krok 5)
+
+První admin UI nad staging DB vrstvou Affiliate v2. Pouze čtení + status workflow přes RPC.
+
+- **Nový soubor:** `src/pages/AdminAffiliateAccounts.tsx` (nová čistá stránka, NE obnovená stará větev).
+- **Route:** `/admin/affiliate-accounts` (App.tsx). **Nav:** `USERS_NAV.affiliateAccounts` v menu „Affiliate"
+  + `getAdminSectionFromPath`. Změněné soubory: `src/App.tsx`, `src/components/admin/adminNavConfig.ts`.
+- **Admin vidí:** seznam `affiliate_accounts` (jméno, e-mail, ref_code, režimy Influencer/Obchodník jako badge,
+  stav účtu), agregované provize z `affiliate_commissions` (schváleno CZK, vyplaceno CZK), počet provizí ve stavu
+  `calculated` (badge), souhrnné statistiky. Detail dialog: provize účtu po měsících/typech s tlačítky.
+- **Workflow přes RPC** `admin_set_affiliate_commission_status`: Schválit (`calculated→approved`), Vyplatit
+  (`approved→paid`, s potvrzením). Žádný přímý UPDATE na tabulku z UI.
+- affiliate_* tabulky nejsou v generovaných types → `(supabase as any)` casts (záměrně, staging-only).
+- **Build:** `npm run build` ✅. **Staging test:** dotazy stránky + RPC přechod ověřeny proti
+  `dxmowysntemfqfnanxua` (test data uklizena).
+- Nezměněno: zákazník, Partner portal, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`, produkční DB.
+- **DALŠÍ BEZPEČNÝ KROK:** datová migrace influencerů z `partners` do `affiliate_accounts` (staging),
+  volitelně cron pro měsíční výpočet, pak veřejná affiliate registrace + uživatelský dashboard.
+  Produkční nasazení (DB kroky 1–4 + tato UI) až po výslovném potvrzení Pavla.
+
+---
+
 ## 🟢 AFFILIATE PROGRAM v2 — ADMIN WORKFLOW PROVIZÍ (03. 06. 2026, krok 4)
 
 Čtvrtý bezpečný DB krok: admin schválení a výplata affiliate provizí. Staging only.

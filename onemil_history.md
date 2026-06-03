@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-06-03 — Affiliate program v2: admin UI (krok 5)
+
+- Nový soubor `src/pages/AdminAffiliateAccounts.tsx` (route `/admin/affiliate-accounts`).
+- Změněno: `src/App.tsx` (import+route), `src/components/admin/adminNavConfig.ts` (nav položka + section path).
+- Admin vidí affiliate_accounts (jméno, e-mail, ref_code, režimy, stav), agregované provize z
+  affiliate_commissions (schváleno/vyplaceno CZK, počet calculated) + detail dialog s workflow tlačítky.
+- Status změny jen přes RPC admin_set_affiliate_commission_status (calculated→approved→paid).
+- affiliate_* nejsou v types → (supabase as any). npm run build ✅. Staging dotazy+RPC ověřeny (data uklizena).
+- Nezměněno: zákazník, Partner portal, platby, tikety, soutěže, peněženka, buy_ticket_atomic, produkční DB.
+
+---
+
 ## 2026-06-03 — Affiliate program v2: admin workflow provizí (staging, krok 4)
 
 - Migrace `supabase/migrations/20260603_affiliate_commission_status_workflow.sql`. Staging only.
