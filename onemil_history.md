@@ -14,6 +14,21 @@
 
 ---
 
+## 2026-06-03 — Affiliate program v2: samostatný DB základ (staging)
+
+- Nový samostatný Affiliate model (oddělený od Partner portalu i zákazníka). První bezpečný DB krok.
+- Migrace `supabase/migrations/20260603_affiliate_accounts_foundation.sql` (additivní, idempotentní).
+- Aplikováno POUZE na staging `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` nedotčena.
+- Vytvořeno: `affiliate_accounts`, `affiliate_customer_refs`, `affiliate_company_refs`,
+  `affiliate_commissions` + nullable `partners.referred_by_affiliate_id`.
+- First-touch vynuceno DB (UNIQUE user_id / partner_id). Výchozí provize customer/company = 5 %.
+- RLS: affiliate vidí jen svá data, admin vše; zápis affiliate tabulek zatím admin/DB funkce.
+- Trigger `affiliate_touch_updated_at` (search_path='') na accounts + commissions.
+- Ověřeno na stagingu: 4 tabulky s RLS, 8 policies, sloupec přidán, provize 5.00/5.00.
+- `npm run build` ✅. Security advisor: žádné RLS varování pro nové tabulky.
+
+---
+
 ## 2026-06-02 — Odstranění affiliate vrstvy — KOMPLETNÍ (A1 + A2 + A3)
 
 **A1 — Kódový revert (commit `1366535`):**

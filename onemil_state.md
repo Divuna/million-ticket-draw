@@ -4,6 +4,29 @@
 
 ---
 
+## 🟢 AFFILIATE PROGRAM v2 — DB ZÁKLAD NA STAGINGU (03. 06. 2026)
+
+Nový **samostatný** Affiliate model (oddělený od Partner portalu i zákazníka). První bezpečný DB krok.
+
+- **Migrace:** `supabase/migrations/20260603_affiliate_accounts_foundation.sql` (additivní, idempotentní).
+- **Aplikováno POUZE na staging** `dxmowysntemfqfnanxua`. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+- **Nové tabulky:** `affiliate_accounts`, `affiliate_customer_refs`, `affiliate_company_refs`, `affiliate_commissions`.
+- **Nový sloupec:** `partners.referred_by_affiliate_id` (nullable FK, default NULL — žádný existující řádek nedotčen).
+- **First-touch vynuceno DB:** `affiliate_customer_refs.user_id` UNIQUE, `affiliate_company_refs.partner_id` UNIQUE.
+- **Výchozí provize:** customer = 5 %, company = 5 % (`commission_rate_customer/company` DEFAULT 5.00).
+- **DPH:** `is_vat_payer` + `vat_rate` + `amount_base_czk` (ex-VAT základ) + `amount_total_czk`.
+- **RLS (ověřeno, 8 policies):** affiliate vidí jen svá data (`auth_user_id = auth.uid()`), admin vše (`is_admin()`);
+  zápis do všech affiliate tabulek zatím **pouze admin / DB funkce**.
+- **Jeden kód:** `affiliate_accounts.ref_code` UNIQUE — sdílený pro zákazníky (`?ref=`) i firmy (`?via=`).
+- **Trigger:** `affiliate_touch_updated_at` (SET search_path='') na accounts + commissions.
+- **Build:** `npm run build` ✅. **Security advisor:** žádné RLS varování pro nové tabulky.
+- Stará affiliate větev NEobnovena. Zákazník, Partner portal, platby, tikety, soutěže, peněženka, `buy_ticket_atomic` netknuty.
+- **DALŠÍ BEZPEČNÝ KROK:** SECURITY DEFINER RPC pro (a) registraci/atribuci affiliate kódu (first-touch INSERT ON CONFLICT
+  DO NOTHING) a (b) měsíční výpočet provizí — vše nejdřív na stagingu. Pak teprve frontend `/affiliate/*` a admin UI.
+  Produkční migrace až po výslovném potvrzení Pavla.
+
+---
+
 ## ✅ ODSTRANĚNÍ AFFILIATE VRSTVY — KOMPLETNÍ (02. 06. 2026)
 
 Všechny tři části (A1 kód, A2 DB, A3 produkce) jsou dokončeny.
