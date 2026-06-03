@@ -4,6 +4,31 @@
 
 ---
 
+## 🟢 AFFILIATE PROGRAM v2 — GET-PENDING TOKEN FIX (03. 06. 2026, krok 10)
+
+Oprava token nesouladu pro načtení pending partnerských registrací.
+
+- **Změněný soubor:** `src/pages/AdminPartnersPortal.tsx` — `loadPendingRegistrations` volá
+  `get-pending-partner-registrations` nyní přes `withEdgeInternalToken({...})` (stejně jako
+  `approve-partner-registration`). Tím se přidá `x-internal-token`, který funkce vyžaduje.
+- **Frontend token:** `withEdgeInternalToken` čte `VITE_INTERNAL_FUNCTION_TOKEN` (potvrzeno; v `.env` nastaven).
+  Lokální `.env` míří na produkci; staging Lovable build si bere vlastní staging token (`.env.staging.example`).
+- **Staging funkce live:** probe bez tokenu → HTTP 401 (guard aktivní, funkce nasazená).
+- **Firemní tok (DB E2E, data uklizena):** partner z metadat → `record_affiliate_company_ref` →
+  `affiliate_company_refs` (source `via_link`) → `partners.referred_by_affiliate_id`=SALESK9. ✅
+- **Build:** `npm run build` ✅.
+- **⚠️ Ověření, které NEJDE z code session (vyžaduje staging credentials/build env):**
+  - potvrdit, že staging secret `INTERNAL_FUNCTION_TOKEN` == staging `VITE_INTERNAL_FUNCTION_TOKEN` v Lovable buildu;
+  - browser E2E `/partner/register?via=KOD` → pending list → approve → partner → atribuce.
+  - Pozn.: produkční anon klíč není platný pro staging gateway (`UNAUTHORIZED_LEGACY_JWT`), proto HTTP probe
+    s admin JWT nešlo z této session dokončit. Ověřit v dashboardu/Lovable staging buildu.
+- Nezměněno: produkce, zákazník, Partner portal dashboard logika (mimo nutný token na load), platby, tikety,
+  soutěže, peněženka, `buy_ticket_atomic`.
+- **DALŠÍ BEZPEČNÝ KROK:** v Lovable staging buildu nastavit `VITE_INTERNAL_FUNCTION_TOKEN` = staging secret,
+  pak browser E2E firemního toku; poté QR/cron a produkční nasazení celé v2 po potvrzení Pavla.
+
+---
+
 ## 🟢 AFFILIATE PROGRAM v2 — STAGING PARTNER APPROVAL STACK (03. 06. 2026, krok 9)
 
 Nasazen chybějící partner-approval edge stack na staging + ověřen firemní `?via=` tok.

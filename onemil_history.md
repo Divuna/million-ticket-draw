@@ -14,6 +14,20 @@
 
 ---
 
+## 2026-06-03 — Affiliate program v2: get-pending token fix (krok 10)
+
+- src/pages/AdminPartnersPortal.tsx: loadPendingRegistrations volá get-pending-partner-registrations
+  přes withEdgeInternalToken (přidá x-internal-token, který funkce vyžaduje). Sjednoceno s approve.
+- withEdgeInternalToken čte VITE_INTERNAL_FUNCTION_TOKEN (potvrzeno). Staging funkce live (probe bez tokenu=401).
+- Firemní tok DB E2E (data uklizena): partner z metadat → record_affiliate_company_ref →
+  affiliate_company_refs (via_link) + partners.referred_by_affiliate_id=SALESK9.
+- npm run build ✅.
+- Mimo code session: potvrdit staging secret == staging VITE token v Lovable buildu + browser E2E
+  (prod anon klíč není platný pro staging gateway). Nezměněno: produkce, platby, tikety, soutěže,
+  peněženka, buy_ticket_atomic.
+
+---
+
 ## 2026-06-03 — Affiliate program v2: staging partner approval stack (krok 9)
 
 - Chyběly na stagingu: approve-partner-registration, get-pending-partner-registrations.

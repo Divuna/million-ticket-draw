@@ -209,9 +209,9 @@ const AdminPartnersPortal = () => {
       }
 
       const response = await supabase.functions.invoke('get-pending-partner-registrations', {
-        headers: {
+        headers: withEdgeInternalToken({
           Authorization: `Bearer ${sessionData.session.access_token}`,
-        },
+        }),
       });
 
       if (response.error) {
