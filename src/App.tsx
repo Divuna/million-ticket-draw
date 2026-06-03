@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, useNavigate, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, Link } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/components/AuthProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -381,10 +381,12 @@ function AppContent() {
   React.useEffect(() => {
     if (roleLoading || !user) return;
     
-    // Influencer accounts: customer app + influencer/partner auth entry routes only
+    // Influencer accounts: redirect to Affiliate v2 UI.
+    // /influencer/* routes remain mounted for backward compat but the default landing is /affiliate/dashboard.
     if (isInfluencerAccount) {
       const allowedForInfluencer =
-        location.pathname.startsWith('/influencer') ||
+        location.pathname.startsWith('/affiliate') ||   // Affiliate v2 — primary UI
+        location.pathname.startsWith('/influencer') ||  // Legacy routes still allowed (backward compat)
         location.pathname === '/partner/login' ||
         location.pathname === '/partner/register' ||
         location.pathname === '/login' ||
@@ -393,7 +395,7 @@ function AppContent() {
         location.pathname === '/unsubscribe/marketing';
 
       if (!allowedForInfluencer) {
-        navigate('/influencer/dashboard', { replace: true });
+        navigate('/affiliate/dashboard', { replace: true });
         return;
       }
     }
@@ -474,10 +476,11 @@ function AppContent() {
     );
   }
 
-  // Influencer: block all non-influencer routes (render guard matches useEffect logic)
+  // Influencer: block all non-influencer/affiliate routes (render guard mirrors useEffect logic)
   if (isInfluencerAccount && user) {
     const allowedForInfluencer =
-      location.pathname.startsWith('/influencer') ||
+      location.pathname.startsWith('/affiliate') ||   // Affiliate v2 — primary UI
+      location.pathname.startsWith('/influencer') ||  // Legacy routes still allowed (backward compat)
       location.pathname === '/partner/login' ||
       location.pathname === '/partner/register' ||
       location.pathname === '/login' ||
@@ -598,10 +601,11 @@ function AppContent() {
           </Route>
           <Route path="/partner/login" element={<PartnerLogin />} />
             <Route path="/partner/register" element={<PartnerRegister />} />
-            <Route path="/influencer" element={<InfluencerLanding />} />
+            {/* Legacy /influencer/* routes — redirect primary entry points to Affiliate v2 UI */}
+            <Route path="/influencer" element={<Navigate to="/affiliate/register" replace />} />
             <Route path="/influencer/how-to-earn" element={<InfluencerHowToEarn />} />
             <Route path="/influencer/register" element={<InfluencerRegister />} />
-            <Route path="/influencer/dashboard" element={<InfluencerDashboard />} />
+            <Route path="/influencer/dashboard" element={<Navigate to="/affiliate/dashboard" replace />} />
             <Route path="/influencer/messages" element={<InfluencerMessages />} />
             <Route path="/affiliate/register" element={<AffiliateRegister />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
