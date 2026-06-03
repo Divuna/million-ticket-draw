@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## AFFILIATE v2 — SOCIAL/PROFIL POLE EDITOVATELNÁ (03. 06. 2026, STAGING)
+
+**`/affiliate/dashboard → Profil` nyní umožňuje editovat všechna profilová/social pole. Nasazeno na STAGING + E2E zelený. Produkční aplikace migrace ČEKÁ NA SCHVÁLENÍ.**
+
+- Frontend `src/components/AffiliateProfileSection.tsx`: sekce „Sociální sítě a dosah" s editovatelnými inputy (web/IG/TikTok/YT/FB/velikost publika/kategorie). Read-only jen „Účet" souhrn (zaměření, ref kód, stav, registrační e-mail). Social pole = **jen text, žádné embed/iframe/video/API/autoplay** — neměnit.
+- RPC `update_affiliate_own_profile` rozšířeno na **19-arg** (+6 NULL-preserving social params: NULL=ponech, ''=smaž). Stará 13-arg signatura dropnuta. Migrace `20260603_affiliate_profile_update_social_fields.sql`.
+- **Staging `dxmowysntemfqfnanxua`:** aplikováno ✅. **Produkce `xkzhjldrojjlrkezorey`:** RPC stále 13-arg, migrace NEAPLIKOVÁNA.
+- Staging Full E2E run `26913262729`: 52 passed, 0 failed. Commits `09f01916`, `e2f5e24c`.
+- Nezměněno: provize, Partner portal, zákaznický účet, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`. Žádné Edge Functions.
+
 ## AFFILIATE v2 — REGISTRAČNÍ / SOCIAL POLE V PRODUKCI (03. 06. 2026)
 
 **Migrace `20260603_affiliate_registration_profile_fields.sql` APLIKOVÁNA na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla).**

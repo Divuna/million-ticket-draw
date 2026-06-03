@@ -4,6 +4,37 @@
 
 ---
 
+## ✅ AFFILIATE v2 — SOCIAL/PROFIL POLE EDITOVATELNÁ V DASHBOARDU (03. 06. 2026, STAGING)
+
+**Stav: NASAZENO NA STAGING + STAGING E2E ZELENÝ. Produkční aplikace migrace čeká na schválení Pavla.**
+
+### Problém (proč to nešlo editovat)
+- V `/affiliate/dashboard → Profil` byla social pole (`instagram_url`, `tiktok_url`, `youtube_url`, `facebook_url`, `audience_size`, `content_categories`) jen **read-only** (`ReadonlyItem` → `<p>`), bez inputu.
+- RPC `update_affiliate_own_profile` (13-arg) tato pole **vůbec neukládalo** — chyběly v signatuře i UPDATE.
+
+### Oprava
+- **Frontend** `src/components/AffiliateProfileSection.tsx`: nová editovatelná sekce **„Sociální sítě a dosah"** s inputy pro web/Instagram/TikTok/YouTube/Facebook/velikost publika/kategorie obsahu. Read-only zůstává jen „Účet" souhrn (zaměření, ref kód, stav, registrační e-mail). `website_url` přesunut z Kontaktních údajů sem (odstraněn duplikát). Social = **jen text**, žádné embed/iframe/video/API/autoplay.
+- **RPC** rozšířeno na 19-arg (`update_affiliate_own_profile`): +6 social parametrů, **NULL-preserving** (NULL = ponech, '' = smaž). Stará 13-arg signatura dropnuta (žádná overload ambiguita). Migrace `supabase/migrations/20260603_affiliate_profile_update_social_fields.sql`.
+- Editovatelná pole v Profilu: jméno, kontaktní e-mail, telefon, web, Instagram, TikTok, YouTube, Facebook, velikost publika, kategorie obsahu, IČO, DIČ, plátce DPH, fakturační adresa (ulice/město/PSČ/země CZ-SK-…), číslo účtu/IBAN, banka. Jedno tlačítko „Uložit změny" → český toast → reload dat.
+
+### DB stav
+- **Staging `dxmowysntemfqfnanxua`:** migrace aplikována, RPC = jediná 19-arg SECURITY DEFINER funkce ✅
+- **Produkce `xkzhjldrojjlrkezorey`:** RPC stále 13-arg — migrace **NEAPLIKOVÁNA** (čeká na schválení).
+
+### Co vidí admin
+- `/admin/affiliate-accounts` detail: stejná pole přes `DetailField` jako **text** (beze změny). Žádné embedy.
+
+### Testy
+- Staging Full E2E run `26913262729`: **52 passed · 0 failed** ✅ (Telegram OK, message_id 928).
+- Spec 28 rozšířen: registrace → profil inputy (`toHaveValue`) → editace Instagram+audience → Uložit → DB readback (editovaná pole uložena, ostatní nedotčena).
+- Spec 26 řádek 94 opraven na nadpis „Sociální sítě a dosah". Spec 27 (phone save) zelený.
+- `npm run build` ✅.
+
+### Nezměněno (garantováno)
+- Provize, Partner portal, zákaznický účet, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`. Žádné Edge Functions. Legacy influencer soubory nesmazány.
+
+---
+
 ## ✅ AFFILIATE v2 — REGISTRAČNÍ / SOCIAL POLE NASAZENA V PRODUKCI (03. 06. 2026)
 
 **Migrace `20260603_affiliate_registration_profile_fields.sql` aplikována na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla).**

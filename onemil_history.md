@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-06-03 - Affiliate v2: social/profil pole editovatelná v dashboardu (staging)
+
+- Příčina: social pole v `/affiliate/dashboard → Profil` byla jen read-only (`ReadonlyItem`), a RPC `update_affiliate_own_profile` (13-arg) je neukládalo.
+- Frontend `src/components/AffiliateProfileSection.tsx`: nová editovatelná sekce „Sociální sítě a dosah" (web/IG/TikTok/YT/FB/velikost publika/kategorie), read-only jen „Účet" souhrn. Social = jen text, žádné embed/iframe/video/API.
+- RPC rozšířeno na 19-arg (+6 NULL-preserving social params), stará 13-arg signatura dropnuta. Migrace `supabase/migrations/20260603_affiliate_profile_update_social_fields.sql` aplikována na STAGING (`dxmowysntemfqfnanxua`). Produkce zatím neaplikována (čeká na schválení).
+- Spec 28 rozšířen (toHaveValue + edit/save/readback), spec 26 nadpis opraven.
+- Staging Full E2E run `26913262729`: 52 passed, 0 failed (Telegram OK, message_id 928). `npm run build` ✅.
+- Commits: `09f01916` (feat), `e2f5e24c` (spec 26 fix).
+- Nezměněno: provize, Partner portal, zákaznický účet, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`.
+
+---
+
 ## 2026-06-03 - Affiliate v2: registrační/social pole migrace aplikována na PRODUKCI
 
 - Aplikována migrace `supabase/migrations/20260603_affiliate_registration_profile_fields.sql` na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla).
