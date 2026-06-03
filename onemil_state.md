@@ -12,11 +12,13 @@
 
 #### Dashboard `/affiliate/dashboard`
 - Premium luxury UI (gold akcenty, `luxury-card` styl, tmavé pozadí)
-- **Přepínač Influencer / Obchodník** — uživatel přepíná sám; volba uložena v `localStorage`
-- Pokud má účet jen jednu roli, druhá je zobrazena se 🔒 a vysvětlením
+- **Horní přepínač Influencer / Obchodník / Profil** — uživatel přepíná sám; volba uložena v `localStorage`
+- `Profil a výplatní údaje` jsou pouze v samostatné sekci `Profil` (už se neduplikují pod Influencerem ani Obchodníkem)
 - **Legacy `/influencer/dashboard` → přesměrovává na `/affiliate/dashboard`** (route-level `<Navigate>`)
 - Statistiky per-mód: registrace dnes / tento měsíc / 30 dní (influencer); firmy dnes / 30 dní (obchodník)
-- Sdílecí odkaz + lokální QR kód (`qrcode.react`, žádný external API)
+- Sekce Influencer obsahuje zákaznický odkaz `/?ref=KOD` + lokální QR kód (`qrcode.react`, žádný external API)
+- Sekce Obchodník obsahuje firemní odkaz `/partner/register?via=KOD` + lokální QR kód (`qrcode.react`, žádný external API)
+- Obě sekce používají stejný `ref_code`
 - Moje zákazníci / Moje firmy (s názvy firem pokud RLS dovolí)
 - Provize tabulka per-mód + payout status
 - Kampaně (placeholder, brzy)
@@ -43,6 +45,8 @@
 | 3 affiliate záznamy (2 approved, 1 rejected) | ✅ nedotčeny |
 
 #### Staging E2E
+- Run `26907560666`: **49 passed · 3 skipped · 0 failed** — spec 26 + spec 27 prošly ✅
+- Commit ověřeného dashboard přepínače: `0272a3ac2937cae8dd5c7cdfa820a4340d6eff99`
 - Run `26902106200`: **45 passed · 3 skipped · 0 failed**
 - Spec 14: affiliate login → `/affiliate/dashboard` ✅
 - Spec 25: `/influencer/dashboard` redirect ✅

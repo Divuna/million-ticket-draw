@@ -4,12 +4,17 @@
 
 **Affiliate v2 dashboard a profil jsou KOMPLETNĚ NASAZENY A OVĚŘENY V PRODUKCI (`xkzhjldrojjlrkezorey`).**
 
-- Dashboard `/affiliate/dashboard`: přepínač Influencer/Obchodník, luxury UI, statistiky, QR kód (lokální), pravidla.
+- Dashboard `/affiliate/dashboard`: horní přepínač `Influencer` / `Obchodník` / `Profil`, luxury UI, statistiky, QR kód (lokální), pravidla.
+- `Profil a výplatní údaje` jsou pouze v samostatné sekci `Profil`.
+- Sekce Influencer obsahuje zákaznický odkaz `/?ref=KOD`.
+- Sekce Obchodník obsahuje firemní odkaz `/partner/register?via=KOD`.
+- Obě sekce používají stejný `ref_code`.
 - `/influencer/dashboard` → přesměruje na `/affiliate/dashboard` (route-level `<Navigate>`).
 - Profilová sekce: IČO, DIČ, web, telefon, fakturační adresa CZ/SK, IBAN/bankovní účet, payout status.
 - DB: `affiliate_accounts` + sloupce `ico`, `billing_*`, `website_url`, RLS zapnuté.
 - RPC: `update_affiliate_own_profile` (SECURITY DEFINER) — affiliate mění jen vlastní řádek.
-- Staging E2E: run `26902106200` — **45 passed · 3 skipped · 0 failed** ✅.
+- Staging E2E: run `26907560666` — **49 passed · 3 skipped · 0 failed** ✅. Spec 26 a spec 27 prošly.
+- Commit: `0272a3ac2937cae8dd5c7cdfa820a4340d6eff99`.
 - Nezměněno: `buy_ticket_atomic`, platby, tikety, soutěže, peněženka, zákaznický účet, Partner portal.
 - NEOBNOVOVAT starou smazanou affiliate větev.
 

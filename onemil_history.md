@@ -14,6 +14,19 @@
 
 ---
 
+## 2026-06-03 - Affiliate v2: dashboard přepínač rozšířen na Profil
+
+- `/affiliate/dashboard` má horní přepínač `Influencer` / `Obchodník` / `Profil`.
+- `Profil a výplatní údaje` jsou pouze v samostatné sekci `Profil`, už se neduplikují pod Influencerem ani Obchodníkem.
+- Sekce Influencer obsahuje zákaznický odkaz `/?ref=KOD`.
+- Sekce Obchodník obsahuje firemní odkaz `/partner/register?via=KOD`.
+- Obě sekce používají stejný `ref_code`.
+- Testy spec 26 a spec 27 prošly.
+- Staging E2E run `26907560666`: 49 passed, 3 skipped.
+- Commit: `0272a3ac2937cae8dd5c7cdfa820a4340d6eff99`.
+
+---
+
 ## 2026-06-03 - Affiliate v2: dashboard a profil kompletně dokončeny
 
 - Dashboard `/affiliate/dashboard` dokončen: přepínač Influencer/Obchodník, luxury UI, statistiky, QR kódy.
