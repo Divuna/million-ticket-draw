@@ -206,10 +206,10 @@ test.describe('Affiliate v2 company via flow', () => {
             .eq('auth_user_id', authUserId)
             .maybeSingle();
           if (error) throw error;
-          return data;
+          return data?.referred_by_affiliate_id === affiliate.id ? data : null;
         },
         20_000,
-        'admin approval must create a partner row',
+        'admin approval must create a partner row with affiliate mirror',
       );
 
       partnerId = partner?.id ?? null;
