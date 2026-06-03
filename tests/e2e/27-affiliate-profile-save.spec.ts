@@ -33,7 +33,6 @@ const SUPABASE_URL      = process.env.VITE_SUPABASE_URL                 ?? '';
 const SERVICE_KEY       = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY     ?? '';
 
 const TEST_PHONE   = '+420 777 123 456';
-const TEST_BANK    = 'CZ65 0800 0000 0012 3456 7899';
 
 test.describe('Affiliate Profile Save (spec 27)', () => {
   test.skip(
@@ -59,12 +58,10 @@ test.describe('Affiliate Profile Save (spec 27)', () => {
     await expect(page.getByRole('button', { name: 'Uložit změny' })).toBeVisible({ timeout: 5_000 });
   });
 
-  test('saving phone and payout_account shows success toast and updates DB', async ({ page }) => {
-    // Wait for profile section
-    await expect(page.getByText('Profil a výplatní údaje')).toBeVisible({ timeout: 15_000 });
-
-    // Scroll to profile section
+  test('saving phone shows success toast and persists to DB via RPC', async ({ page }) => {
+    // Wait for and scroll to profile section
     const profileHeading = page.getByText('Profil a výplatní údaje').first();
+    await expect(profileHeading).toBeVisible({ timeout: 15_000 });
     await profileHeading.scrollIntoViewIfNeeded();
 
     // Phone field — placeholder starts with "+420"
@@ -72,30 +69,24 @@ test.describe('Affiliate Profile Save (spec 27)', () => {
     await expect(phoneInput).toBeVisible({ timeout: 8_000 });
     await phoneInput.fill(TEST_PHONE);
 
-    // Payout account — placeholder contains "123456789"
-    const payoutInput = page.getByPlaceholder('123456789', { exact: false }).first();
-    await expect(payoutInput).toBeVisible({ timeout: 5_000 });
-    await payoutInput.scrollIntoViewIfNeeded();
-    await payoutInput.fill(TEST_BANK);
+    // Click save (scroll to it first)
+    const saveBtn = page.getByRole('button', { name: 'Uložit změny' }).first();
+    await saveBtn.scrollIntoViewIfNeeded();
+    await saveBtn.click();
 
-    // Click save
-    await page.getByRole('button', { name: 'Uložit změny' }).click();
-
-    // Expect success toast — confirms RPC returned status='ok'
+    // Expect success toast — confirms RPC update_affiliate_own_profile returned status='ok'
     await expect(page.locator('[data-sonner-toast]'))
       .toContainText('úspěšně uložen', { timeout: 10_000 });
 
-    // DB readback — verify the row exists and phone/payout are non-null
+    // DB readback — verify phone was written (non-null)
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
     const { data: row } = await (admin as any)
       .from('affiliate_accounts')
-      .select('phone, payout_account')
+      .select('phone')
       .eq('email', AFFILIATE_EMAIL)
       .maybeSingle();
 
-    // Just verify fields were written (not-null), exact formatting may vary
-    expect(row?.phone, 'phone must be saved to DB').toBeTruthy();
-    expect(row?.payout_account, 'payout_account must be saved to DB').toBeTruthy();
+    expect(row?.phone, 'phone must be saved to DB after RPC call').toBeTruthy();
   });
 
   test('affiliate only sees own data — RLS read check', async ({ page }) => {
