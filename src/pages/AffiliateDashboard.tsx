@@ -1,8 +1,8 @@
 /**
  * AFFILIATE v2 — Uživatelský dashboard (/affiliate/dashboard).
  *
- * Přepínač Influencer | Obchodník — uživatel přepíná sám, volba se ukládá
- * do localStorage. Oba módy jsou vždy dostupné; `modes` je jen původní zaměření pro admina.
+ * Přepínač Influencer | Obchodník | Profil — uživatel přepíná sám, volba se ukládá
+ * do localStorage. Oba obchodní módy jsou vždy dostupné; `modes` je jen původní zaměření pro admina.
  *
  * Sekce:
  *  1. Hero + přepínač
@@ -12,8 +12,8 @@
  *  5. Provize
  *  6. Kampaně (placeholder)
  *  7. Pravidla spolupráce (Influencer)
- *  8. Profil a výplatní údaje
- *  9. Podmínky spolupráce
+ *  8. Profil a výplatní údaje (samostatná sekce Profil)
+ *  9. Podmínky spolupráce (samostatná sekce Profil)
  *
  * Migrace potřebná pro úplné ukládání profilu:
  *  supabase/migrations/20260603_affiliate_profile_update.sql (APLIKOVAT RUČNĚ)
@@ -44,7 +44,7 @@ import type { AffiliateProfileData } from '@/components/AffiliateProfileSection'
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 
-type ActiveMode = 'influencer' | 'sales_rep';
+type ActiveMode = 'influencer' | 'sales_rep' | 'profile';
 
 interface AffiliateAccount extends AffiliateProfileData {
   ref_code: string;
@@ -132,6 +132,7 @@ function ModeSwitcher({ active, onSwitch }: {
   const items: { id: ActiveMode; label: string; Icon: React.ElementType }[] = [
     { id: 'influencer', label: 'Influencer', Icon: Megaphone },
     { id: 'sales_rep',  label: 'Obchodník',  Icon: Briefcase },
+    { id: 'profile',    label: 'Profil',     Icon: User },
   ];
 
   return (
@@ -289,7 +290,7 @@ const AffiliateDashboard = () => {
       setAccount(acc as AffiliateAccount);
 
       const saved = localStorage.getItem(STORAGE_KEY) as ActiveMode | null;
-      setActiveMode(saved === 'sales_rep' ? 'sales_rep' : 'influencer');
+      setActiveMode(saved === 'sales_rep' || saved === 'profile' ? saved : 'influencer');
 
       const aid = (acc as AffiliateAccount).id;
       const [custR, compR, commR] = await Promise.all([
@@ -413,16 +414,20 @@ const AffiliateDashboard = () => {
                 <p className="text-sm text-[hsl(var(--text-muted-gray))] max-w-md">
                   {activeMode === 'influencer'
                     ? 'Sdílejte svůj Affiliate odkaz, přivádějte zákazníky a sledujte provize.'
-                    : 'Doporučujte OneMil firmám, přivádějte partnery a získávejte provize z jejich fakturace.'}
+                    : activeMode === 'sales_rep'
+                      ? 'Doporučujte OneMil firmám, přivádějte partnery a získávejte provize z jejich fakturace.'
+                      : 'Spravujte profil, fakturační údaje, výplatní údaje a podmínky spolupráce.'}
                 </p>
-                <ModeSwitcher modes={a.modes} active={activeMode} onSwitch={handleModeSwitch} />
+                <ModeSwitcher active={activeMode} onSwitch={handleModeSwitch} />
               </div>
-              <div className="shrink-0 rounded-xl border border-[hsl(var(--neon-gold)/0.3)] bg-[hsl(var(--neon-gold)/0.08)] px-6 py-4 text-center sm:text-right">
-                <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--neon-gold)/0.7)] mb-1">Tento měsíc</p>
-                <p className="text-3xl font-extrabold tabular-nums text-[hsl(var(--neon-gold))]">
-                  {currentMonthCzk.toLocaleString('cs-CZ')} <span className="text-lg">Kč</span>
-                </p>
-              </div>
+              {activeMode !== 'profile' && (
+                <div className="shrink-0 rounded-xl border border-[hsl(var(--neon-gold)/0.3)] bg-[hsl(var(--neon-gold)/0.08)] px-6 py-4 text-center sm:text-right">
+                  <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--neon-gold)/0.7)] mb-1">Tento měsíc</p>
+                  <p className="text-3xl font-extrabold tabular-nums text-[hsl(var(--neon-gold))]">
+                    {currentMonthCzk.toLocaleString('cs-CZ')} <span className="text-lg">Kč</span>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -434,6 +439,16 @@ const AffiliateDashboard = () => {
           </div>
         )}
 
+        {activeMode === 'profile' ? (
+          <>
+            {/* ══ PROFIL A VÝPLATNÍ ÚDAJE ═══════════════════════════════════════ */}
+            <AffiliateProfileSection profile={profileData} onSaved={load} />
+
+            {/* ══ PODMÍNKY SPOLUPRÁCE ═══════════════════════════════════════════ */}
+            {user && <InfluencerTermsSection partnerId={a.id} onAccepted={load} />}
+          </>
+        ) : (
+          <>
         {/* ══ STAT CARDS ════════════════════════════════════════════════════
             Both sections are available for every approved Affiliate account; modes are informational only. */}
         {activeMode === 'influencer' ? (
@@ -634,12 +649,8 @@ const AffiliateDashboard = () => {
 
         {/* ══ PRAVIDLA (Influencer) ═════════════════════════════════════════ */}
         {activeMode === 'influencer' && <InfluencerRules />}
-
-        {/* ══ PROFIL A VÝPLATNÍ ÚDAJE ═══════════════════════════════════════ */}
-        <AffiliateProfileSection profile={profileData} onSaved={load} />
-
-        {/* ══ PODMÍNKY SPOLUPRÁCE ═══════════════════════════════════════════ */}
-        {user && <InfluencerTermsSection partnerId={a.id} onAccepted={load} />}
+          </>
+        )}
 
         {/* ══ FOOTER ════════════════════════════════════════════════════════ */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.15)] px-5 py-4 text-sm text-[hsl(var(--text-muted-gray))]">

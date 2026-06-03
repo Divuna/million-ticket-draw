@@ -5,7 +5,7 @@
  * ║  Verifies enhanced /affiliate/dashboard:                                   ║
  * ║    • hero "Vydělávejte s OneMil" heading visible                           ║
  * ║    • "Aktivní Affiliate partner" badge visible                             ║
- * ║    • mode switcher rendered (Influencer | Obchodník)                       ║
+ * ║    • mode switcher rendered (Influencer | Obchodník | Profil)              ║
  * ║    • influencer mode: affiliate link contains /?ref=                       ║
  * ║    • sales mode: company link contains /partner/register?via=              ║
  * ║    • both links use the same ref_code                                      ║
@@ -63,18 +63,40 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
     ).toBeVisible({ timeout: 8_000 });
   });
 
-  test('mode switcher is rendered with Influencer and Obchodník buttons', async ({ page }) => {
+  test('mode switcher is rendered with Influencer, Obchodník and Profil buttons', async ({ page }) => {
     const switcher = page.getByTestId('mode-switcher');
     await expect(switcher).toBeVisible({ timeout: 10_000 });
 
     await expect(page.getByTestId('mode-btn-influencer')).toBeVisible();
     await expect(page.getByTestId('mode-btn-sales_rep')).toBeVisible();
+    await expect(page.getByTestId('mode-btn-profile')).toBeVisible();
 
     // Both sections are always available for every approved Affiliate account.
     const infBtn = page.getByTestId('mode-btn-influencer');
     const salesBtn = page.getByTestId('mode-btn-sales_rep');
+    const profileBtn = page.getByTestId('mode-btn-profile');
     expect(await infBtn.isDisabled(), 'Influencer btn must not be disabled').toBe(false);
     expect(await salesBtn.isDisabled(), 'Obchodník btn must not be disabled').toBe(false);
+    expect(await profileBtn.isDisabled(), 'Profil btn must not be disabled').toBe(false);
+  });
+
+  test('profile mode shows profile section exactly once', async ({ page }) => {
+    await page.getByTestId('mode-btn-profile').click();
+
+    const profileTitle = page.getByText('Profil a výplatní údaje', { exact: true });
+    await expect(profileTitle).toBeVisible({ timeout: 8_000 });
+    await expect(profileTitle).toHaveCount(1);
+    await expect(page.getByText('Podmínky spolupráce', { exact: true })).toBeVisible();
+  });
+
+  test('influencer and sales modes do not show profile section', async ({ page }) => {
+    await page.getByTestId('mode-btn-influencer').click();
+    await expect(page.getByText('Profil a výplatní údaje', { exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('affiliate-customer-link')).toBeVisible({ timeout: 8_000 });
+
+    await page.getByTestId('mode-btn-sales_rep').click();
+    await expect(page.getByText('Profil a výplatní údaje', { exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('affiliate-company-link')).toBeVisible({ timeout: 8_000 });
   });
 
   test('sales mode shows company link with /partner/register?via= and no inactive message', async ({ page }) => {
@@ -159,6 +181,11 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
     await expect(page.getByTestId('affiliate-customer-link')).toBeVisible({ timeout: 8_000 });
     storedMode = await page.evaluate(() => localStorage.getItem('affiliate_active_mode'));
     expect(storedMode).toBe('influencer');
+
+    await page.getByTestId('mode-btn-profile').click();
+    await expect(page.getByText('Profil a výplatní údaje', { exact: true })).toBeVisible({ timeout: 8_000 });
+    storedMode = await page.evaluate(() => localStorage.getItem('affiliate_active_mode'));
+    expect(storedMode).toBe('profile');
   });
 
   test('/influencer/dashboard redirects to /affiliate/dashboard', async ({ page }) => {
