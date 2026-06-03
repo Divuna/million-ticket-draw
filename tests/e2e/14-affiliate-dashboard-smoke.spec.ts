@@ -74,11 +74,11 @@ test.describe('Affiliate Dashboard — Login Smoke', () => {
     // ── 4. Affiliate v2 dashboard must render ────────────────────────────────
     // If user is in affiliate_accounts (approved): shows "Vydělávejte s OneMil" hero h1.
     // If user is NOT in affiliate_accounts (e.g. staging without migration): "Affiliate program".
-    // Accept either — covers both staging and production scenarios.
-    const bodyText = await page.locator('body').textContent({ timeout: 15_000 }) ?? '';
-    const knownTexts = ['Vydělávejte s OneMil', 'Affiliate program', 'Affiliate dashboard'];
-    const hasKnownText = knownTexts.some(t => bodyText.includes(t));
-    expect(hasKnownText, `Page must show one of: ${knownTexts.join(', ')}`).toBe(true);
+    // Wait up to 20s for the loading spinner to disappear and page to settle.
+    // Use Promise.race to accept whichever known text appears first.
+    const body = page.locator('body');
+    await expect(body.getByText('Vydělávejte s OneMil').or(body.getByText('Affiliate program')).or(body.getByText('Affiliate dashboard')).first())
+      .toBeVisible({ timeout: 20_000 });
 
     // Page must not show a generic error or 404
     await expect(page.locator('body')).not.toContainText('404');
