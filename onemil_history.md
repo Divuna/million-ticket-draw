@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-06-03 - Affiliate v2: social profile update migrace APLIKOVÁNA na PRODUKCI
+
+- Aplikována migrace `supabase/migrations/20260603_affiliate_profile_update_social_fields.sql` na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla).
+- RPC `update_affiliate_own_profile` rozšířeno z 13-arg na 19-arg (+6 NULL-preserving social params); stará 13-arg signatura dropnuta.
+- Postcheck: jediná 19-arg SECURITY DEFINER funkce (overload_count=1), `authenticated` EXECUTE ✅, 7 social/web sloupců, 3 affiliate záznamy nedotčeny, RLS zapnuté.
+- Editace social/profil polí v `/affiliate/dashboard → Profil` nyní funguje i v produkci. Social = jen text, žádné embed/video/API.
+- `npm run build` ✅.
+- Nezměněno: provize, Partner portal, zákaznický účet, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`. Žádné Edge Functions ani jiné migrace.
+
+---
+
 ## 2026-06-03 - Affiliate v2: social/profil pole editovatelná v dashboardu (staging)
 
 - Příčina: social pole v `/affiliate/dashboard → Profil` byla jen read-only (`ReadonlyItem`), a RPC `update_affiliate_own_profile` (13-arg) je neukládalo.

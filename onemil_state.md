@@ -4,9 +4,9 @@
 
 ---
 
-## ✅ AFFILIATE v2 — SOCIAL/PROFIL POLE EDITOVATELNÁ V DASHBOARDU (03. 06. 2026, STAGING)
+## ✅ AFFILIATE v2 — SOCIAL/PROFIL POLE EDITOVATELNÁ V DASHBOARDU (03. 06. 2026, PRODUKCE)
 
-**Stav: NASAZENO NA STAGING + STAGING E2E ZELENÝ. Produkční aplikace migrace čeká na schválení Pavla.**
+**Stav: NASAZENO NA STAGING I PRODUKCI. Migrace aplikována na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla). Žádný další deploy není potřeba.**
 
 ### Problém (proč to nešlo editovat)
 - V `/affiliate/dashboard → Profil` byla social pole (`instagram_url`, `tiktok_url`, `youtube_url`, `facebook_url`, `audience_size`, `content_categories`) jen **read-only** (`ReadonlyItem` → `<p>`), bez inputu.
@@ -19,7 +19,7 @@
 
 ### DB stav
 - **Staging `dxmowysntemfqfnanxua`:** migrace aplikována, RPC = jediná 19-arg SECURITY DEFINER funkce ✅
-- **Produkce `xkzhjldrojjlrkezorey`:** RPC stále 13-arg — migrace **NEAPLIKOVÁNA** (čeká na schválení).
+- **Produkce `xkzhjldrojjlrkezorey`:** migrace **APLIKOVÁNA** (03. 06. 2026). Postcheck: RPC = jediná 19-arg SECURITY DEFINER funkce (overload_count=1) ✅, `authenticated` má EXECUTE ✅, 7 social/web sloupců přítomno ✅, 3 affiliate záznamy nedotčeny ✅, RLS zapnuté ✅. `npm run build` ✅.
 
 ### Co vidí admin
 - `/admin/affiliate-accounts` detail: stejná pole přes `DetailField` jako **text** (beze změny). Žádné embedy.
