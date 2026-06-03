@@ -4,6 +4,28 @@
 
 ---
 
+## 🟢 AFFILIATE PROGRAM v2 — ATRIBUČNÍ RPC NA STAGINGU (03. 06. 2026, krok 2)
+
+Druhý bezpečný DB krok: dvě SECURITY DEFINER RPC pro first-touch atribuci. Staging only.
+
+- **Migrace:** `supabase/migrations/20260603_affiliate_attribution_rpcs.sql` (idempotentní, `CREATE OR REPLACE`).
+- **Aplikováno POUZE na staging** `dxmowysntemfqfnanxua`. **Produkce NEDOTČENA.**
+- **`record_affiliate_customer_ref(p_ref_code)`** — volá přihlášený zákazník (`auth.uid()`); ověří affiliate
+  `approved` + režim `influencer`; zapíše do `affiliate_customer_refs`; first-touch (existující se nepřepíše);
+  self-referral blokován. Vrací jsonb status.
+- **`record_affiliate_company_ref(p_via_code, p_partner_id)`** — **admin only** (`is_admin()`); ověří affiliate
+  `approved` + režim `sales_rep`; zapíše do `affiliate_company_refs`; zrcadlí `partners.referred_by_affiliate_id`
+  jen když je NULL; first-touch. Vrací jsonb status.
+- Obě: `SECURITY DEFINER`, `SET search_path=''`, `REVOKE ALL FROM PUBLIC` + `GRANT EXECUTE TO authenticated`.
+- **Ověřeno na stagingu (7 scénářů, test data uklizena):** customer recorded → already_attributed → invalid_code;
+  company recorded → already_attributed → partners mirror nastaveno → forbidden (non-admin). Vše OK.
+- **Build:** `npm run build` ✅.
+- **DALŠÍ BEZPEČNÝ KROK:** SECURITY DEFINER RPC pro měsíční výpočet provizí (zákaznická rovina z plateb + firemní
+  rovina z `partner_invoices.amount_ex_vat` status='paid', s respektem k `is_vat_payer`), zapis do
+  `affiliate_commissions`. Stále staging only. Pak teprve frontend `/affiliate/*` + admin UI + migrace influencerů.
+
+---
+
 ## 🟢 AFFILIATE PROGRAM v2 — DB ZÁKLAD NA STAGINGU (03. 06. 2026)
 
 Nový **samostatný** Affiliate model (oddělený od Partner portalu i zákazníka). První bezpečný DB krok.

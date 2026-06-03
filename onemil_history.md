@@ -14,6 +14,19 @@
 
 ---
 
+## 2026-06-03 — Affiliate program v2: atribuční RPC (staging, krok 2)
+
+- Migrace `supabase/migrations/20260603_affiliate_attribution_rpcs.sql`. Staging `dxmowysntemfqfnanxua` only.
+- `record_affiliate_customer_ref(p_ref_code)`: zákazník (auth.uid), affiliate approved + influencer,
+  first-touch INSERT do affiliate_customer_refs, self-referral blok, jsonb status.
+- `record_affiliate_company_ref(p_via_code, p_partner_id)`: admin only, affiliate approved + sales_rep,
+  first-touch INSERT do affiliate_company_refs + zrcadlení partners.referred_by_affiliate_id (jen když NULL).
+- Obě SECURITY DEFINER, SET search_path='', REVOKE PUBLIC + GRANT authenticated.
+- Ověřeno 7 scénářů na stagingu (test data uklizena): recorded/already_attributed/invalid_code/forbidden + mirror.
+- npm run build ✅. Produkce nedotčena.
+
+---
+
 ## 2026-06-03 — Affiliate program v2: samostatný DB základ (staging)
 
 - Nový samostatný Affiliate model (oddělený od Partner portalu i zákazníka). První bezpečný DB krok.
