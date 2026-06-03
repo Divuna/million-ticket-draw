@@ -278,7 +278,10 @@ const AffiliateDashboard = () => {
     try {
       const { data: acc, error: accErr } = await (supabase as any)
         .from('affiliate_accounts')
-        .select('id,name,email,phone,ref_code,modes,status,commission_rate_customer,commission_rate_company,is_vat_payer,vat_id,payout_account,payout_bank,ico,billing_street,billing_city,billing_zip,billing_country,website_url')
+        // NOTE: ico, billing_*, website_url are NOT selected here because those columns
+        // do not exist until migration 20260603_affiliate_profile_update.sql is applied.
+        // They are passed as null to AffiliateProfileSection and the RPC handles them gracefully.
+        .select('id,name,email,phone,ref_code,modes,status,commission_rate_customer,commission_rate_company,is_vat_payer,vat_id,payout_account,payout_bank')
         .eq('auth_user_id', user.id)
         .maybeSingle();
       if (accErr) throw accErr;
@@ -371,14 +374,16 @@ const AffiliateDashboard = () => {
   const partnerMap = new Map(partnerNames.map(p => [p.id, p]));
 
   // Profile data for AffiliateProfileSection
+  // Columns not yet in DB (require migration 20260603_affiliate_profile_update.sql) are null.
+  // AffiliateProfileSection renders them as empty editable fields; save RPC handles gracefully.
   const profileData: AffiliateProfileData = {
     id: a.id, name: a.name, email: a.email, phone: a.phone,
-    vat_id: a.vat_id, ico: (a as any).ico,
+    vat_id: a.vat_id, ico: null,
     is_vat_payer: a.is_vat_payer,
     payout_account: a.payout_account, payout_bank: a.payout_bank,
-    billing_street: (a as any).billing_street, billing_city: (a as any).billing_city,
-    billing_zip: (a as any).billing_zip, billing_country: (a as any).billing_country,
-    website_url: (a as any).website_url,
+    billing_street: null, billing_city: null,
+    billing_zip: null, billing_country: null,
+    website_url: null,
   };
 
   return (
