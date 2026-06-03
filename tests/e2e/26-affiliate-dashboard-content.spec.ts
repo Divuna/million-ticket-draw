@@ -91,7 +91,7 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
 
   test('profile mode shows registration data summary', async ({ page }) => {
     await page.getByTestId('mode-btn-profile').click();
-    await expect(page.getByText('Registrační údaje', { exact: true })).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText('Sociální sítě a dosah', { exact: true })).toBeVisible({ timeout: 8_000 });
 
     await expect(page.getByText('Hlavní kanál / web / profil', { exact: true })).toBeVisible();
     await expect(page.getByText('Instagram', { exact: true })).toBeVisible();
