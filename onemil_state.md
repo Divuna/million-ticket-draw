@@ -4,6 +4,27 @@
 
 ---
 
+## 🟢 AFFILIATE PROGRAM v2 — MIGRACE INFLUENCERŮ (03. 06. 2026, krok 6)
+
+Datová migrace stávajících influencerů z `partners` do `affiliate_accounts`. Staging only.
+
+- **Migrace:** `supabase/migrations/20260603_migrate_influencers_to_affiliate_accounts.sql` (idempotentní).
+- **Aplikováno POUZE na staging** `dxmowysntemfqfnanxua`. **Produkce NEDOTČENA.**
+- **Zdroj:** `partners` kde `notes ILIKE '%influencer%'` + `auth_user_id IS NOT NULL` + `contact_email IS NOT NULL`.
+- **Nalezeno:** 1 influencer. **Migrováno:** 1 (`E2E Affiliate Test Partner` → ref_code `E2EAFFIL25A7`).
+- **Pravidla:** `modes='{influencer}'`, `commission_rate_customer=5.00`, `commission_rate_company=5.00`,
+  status 1:1 z `partners.status`, `ref_code` = až 8 alfanum znaků z názvu (bez diakritiky/symbolů, uppercase) +
+  4 hex z partner id; fallback `AFF`. `notes='migrated_from_partners:<id>'` (provenience).
+- **Idempotence:** `NOT EXISTS` na `auth_user_id` — re-run nepřidá duplikát (ověřeno: eligible=1, migrated=1 i po 2. běhu).
+- **Starý systém ZACHOVÁN a běží paralelně** — `partners`, `influencer_referrals/commissions/campaigns` nedotčeny.
+- **Staging ověření:** migrovaný účet se zobrazuje v dotazu admin stránky `/admin/affiliate-accounts`.
+- **Build:** `npm run build` ✅.
+- **DALŠÍ BEZPEČNÝ KROK:** veřejná affiliate registrace + uživatelský dashboard `/affiliate/*` (ref kód, QR,
+  přehled provizí), volitelně cron pro měsíční výpočet. Produkční nasazení (DB kroky 1–4 + admin UI + migrace)
+  až po výslovném potvrzení Pavla.
+
+---
+
 ## 🟢 AFFILIATE PROGRAM v2 — ADMIN UI (03. 06. 2026, krok 5)
 
 První admin UI nad staging DB vrstvou Affiliate v2. Pouze čtení + status workflow přes RPC.

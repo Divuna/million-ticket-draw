@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-06-03 — Affiliate program v2: migrace influencerů (staging, krok 6)
+
+- Migrace `supabase/migrations/20260603_migrate_influencers_to_affiliate_accounts.sql`. Staging only.
+- Zdroj partners (notes ILIKE '%influencer%', auth_user_id + email not null) → affiliate_accounts.
+- Nalezeno 1, migrováno 1 (ref_code E2EAFFIL25A7). modes='{influencer}', sazby 5/5, status 1:1.
+- ref_code = 8 alfanum z názvu (uppercase, bez diakritiky) + 4 hex z id; provenience v notes.
+- Idempotentní (NOT EXISTS na auth_user_id) — re-run nepřidá duplikát (ověřeno eligible=1, migrated=1).
+- Starý influencer systém zachován a běží paralelně (nic nedropnuto). npm run build ✅. Produkce nedotčena.
+
+---
+
 ## 2026-06-03 — Affiliate program v2: admin UI (krok 5)
 
 - Nový soubor `src/pages/AdminAffiliateAccounts.tsx` (route `/admin/affiliate-accounts`).
