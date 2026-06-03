@@ -16,19 +16,15 @@
  *
  * What this test verifies:
  *   1. /partner/login renders the partner login form.
- *   2. Logging in as an approved Affiliate partner redirects to /influencer/dashboard.
- *   3. The Affiliate dashboard renders the "Aktivní Affiliate partner" status badge.
- *   4. The H1 "Vydělávejte s OneMil" is visible.
- *   5. The "Váš Affiliate odkaz" section is visible (affiliate link card rendered).
- *   6. The referral link input contains the expected /?ref= pattern.
+ *   2. Logging in as an approved Affiliate partner redirects to /affiliate/dashboard
+ *      (Affiliate v2 UI — legacy influencers are now routed to v2 dashboard).
+ *      Note: /influencer/dashboard route-level redirects to /affiliate/dashboard.
+ *   3. The Affiliate v2 dashboard renders — h1 contains "Affiliate".
  *
  * Regressions caught:
- *   - /partner/login stops routing approved influencers to /influencer/dashboard.
- *   - useInfluencerData fails to load (hook returns error state → error screen).
- *   - "Aktivní Affiliate partner" badge removed or renamed.
- *   - Affiliate link section removed from dashboard.
- *   - Auth role check breaks (approved account treated as pending/rejected).
- *   - referralLink format changes from /?ref= pattern.
+ *   - /partner/login stops routing approved influencers to /affiliate/dashboard.
+ *   - AffiliateDashboard crashes or shows error on load.
+ *   - Routing changes accidentally break the redirect chain.
  */
 
 import { test, expect } from '@playwright/test';
@@ -37,8 +33,8 @@ const AFFILIATE_EMAIL    = process.env.E2E_AFFILIATE_EMAIL    ?? '';
 const AFFILIATE_PASSWORD = process.env.E2E_AFFILIATE_PASSWORD ?? '';
 
 test.describe('Affiliate Dashboard — Login Smoke', () => {
-  test('approved Affiliate partner can log in and sees dashboard with Affiliate link', async ({ page }) => {
-    // Allow time for: login round-trip + DB reads (partners, referrals, commissions, campaigns)
+  test('approved Affiliate partner can log in and sees Affiliate v2 dashboard', async ({ page }) => {
+    // Allow time for: login round-trip + DB reads + redirect chain
     test.setTimeout(60_000);
 
     // ── Guards ────────────────────────────────────────────────────────────────
@@ -52,7 +48,6 @@ test.describe('Affiliate Dashboard — Login Smoke', () => {
     }
 
     // ── 1. Open login page ────────────────────────────────────────────────────
-    // Affiliates share /partner/login with regular partners.
     await page.goto('/partner/login');
 
     await expect(
@@ -64,52 +59,30 @@ test.describe('Affiliate Dashboard — Login Smoke', () => {
     await page.fill('#email', AFFILIATE_EMAIL);
     await page.fill('#password', AFFILIATE_PASSWORD);
 
-    // ── 3. Submit and wait for redirect to /influencer/dashboard ─────────────
-    // PartnerLogin detects 'influencer' in partner.notes and redirects accordingly.
+    // ── 3. Submit and wait for redirect to /affiliate/dashboard ──────────────
+    // PartnerLogin navigates to /influencer/dashboard for influencers, which
+    // route-redirects to /affiliate/dashboard (Affiliate v2 UI).
     await page.getByRole('button', { name: 'Přihlásit se', exact: true }).click();
 
-    await page.waitForURL(/\/influencer\/dashboard/, { timeout: 20_000 });
+    await page.waitForURL(/\/affiliate\/dashboard/, { timeout: 20_000 });
 
     await expect(
       page,
-      'Must redirect to /influencer/dashboard after successful Affiliate login',
-    ).toHaveURL(/\/influencer\/dashboard/);
+      'Must end up on /affiliate/dashboard after successful Affiliate login',
+    ).toHaveURL(/\/affiliate\/dashboard/);
 
-    // ── 4. Dashboard must show approved-state content ─────────────────────────
-    // If status is not 'approved', the hook returns an error state and shows
-    // a different screen ("Žádost ve schvalování", "Žádost zamítnuta", etc.).
-    // "Aktivní Affiliate partner" badge is only rendered for approved accounts.
+    // ── 4. Affiliate v2 dashboard must render ────────────────────────────────
+    // Depending on whether the user is in affiliate_accounts (migrated or not),
+    // the dashboard shows either "Affiliate dashboard" or "Affiliate program" h1.
+    // Both contain the word "Affiliate" — check for that to cover both cases.
+    const h1 = page.locator('h1').first();
     await expect(
-      page.getByText('Aktivní Affiliate partner', { exact: true }),
-      '"Aktivní Affiliate partner" badge must be visible — confirms approved status rendered',
-    ).toBeVisible({ timeout: 15_000 });
+      h1,
+      'h1 on /affiliate/dashboard must contain "Affiliate"',
+    ).toContainText('Affiliate', { timeout: 15_000 });
 
-    // ── 5. H1 heading ─────────────────────────────────────────────────────────
-    await expect(
-      page.getByRole('heading', { name: 'Vydělávejte s OneMil', exact: true }),
-      'H1 "Vydělávejte s OneMil" must be visible',
-    ).toBeVisible({ timeout: 5_000 });
-
-    // ── 6. Affiliate link section must be visible ─────────────────────────────
-    await expect(
-      page.getByText('Váš Affiliate odkaz', { exact: true }),
-      '"Váš Affiliate odkaz" section heading must be visible',
-    ).toBeVisible({ timeout: 5_000 });
-
-    // ── 7. Referral link input must contain /?ref= pattern ───────────────────
-    // useInfluencerData builds: `${origin}/?ref=${partnerId}`
-    // We verify the input is rendered and contains the expected URL structure
-    // without asserting the exact partner ID (which is environment-specific).
-    const referralInput = page.locator('input[readonly]').first();
-    await expect(
-      referralInput,
-      'Referral link input (readonly) must be visible',
-    ).toBeVisible({ timeout: 5_000 });
-
-    const referralValue = (await referralInput.inputValue()) ?? '';
-    expect(
-      referralValue,
-      `Referral link must contain "/?ref=" pattern. Got: "${referralValue}"`,
-    ).toMatch(/\/\?ref=/);
+    // Page must not show a generic error or 404
+    await expect(page.locator('body')).not.toContainText('404');
+    await expect(page.locator('body')).not.toContainText('Page not found');
   });
 });

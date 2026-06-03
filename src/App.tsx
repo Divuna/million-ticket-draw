@@ -601,8 +601,8 @@ function AppContent() {
           </Route>
           <Route path="/partner/login" element={<PartnerLogin />} />
             <Route path="/partner/register" element={<PartnerRegister />} />
-            {/* Legacy /influencer/* routes — redirect primary entry points to Affiliate v2 UI */}
-            <Route path="/influencer" element={<Navigate to="/affiliate/register" replace />} />
+            {/* Legacy /influencer/* routes — /dashboard redirects to Affiliate v2 UI; public pages unchanged */}
+            <Route path="/influencer" element={<InfluencerLanding />} />
             <Route path="/influencer/how-to-earn" element={<InfluencerHowToEarn />} />
             <Route path="/influencer/register" element={<InfluencerRegister />} />
             <Route path="/influencer/dashboard" element={<Navigate to="/affiliate/dashboard" replace />} />
