@@ -63,15 +63,20 @@ test.describe('Affiliate Profile Save (spec 27)', () => {
     // Wait for profile section
     await expect(page.getByText('Profil a výplatní údaje')).toBeVisible({ timeout: 15_000 });
 
-    // Fill phone field
-    const phoneInput = page.locator('input[placeholder*="+420"]').first();
+    // Scroll to profile section
+    const profileHeading = page.getByText('Profil a výplatní údaje').first();
+    await profileHeading.scrollIntoViewIfNeeded();
+
+    // Phone field — placeholder starts with "+420"
+    const phoneInput = page.getByPlaceholder('+420', { exact: false }).first();
     await expect(phoneInput).toBeVisible({ timeout: 8_000 });
     await phoneInput.fill(TEST_PHONE);
 
-    // Fill payout account (IBAN)
-    const ibanInput = page.locator('input[placeholder*="IBAN"]').first();
-    await expect(ibanInput).toBeVisible({ timeout: 5_000 });
-    await ibanInput.fill(TEST_BANK);
+    // Payout account — placeholder contains "123456789"
+    const payoutInput = page.getByPlaceholder('123456789', { exact: false }).first();
+    await expect(payoutInput).toBeVisible({ timeout: 5_000 });
+    await payoutInput.scrollIntoViewIfNeeded();
+    await payoutInput.fill(TEST_BANK);
 
     // Click save
     await page.getByRole('button', { name: 'Uložit změny' }).click();
