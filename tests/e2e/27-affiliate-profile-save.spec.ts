@@ -23,7 +23,7 @@
  * ╚══════════════════════════════════════════════════════════════════════════════╝
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { loginViaUI } from './helpers/auth';
 
@@ -33,6 +33,11 @@ const SUPABASE_URL      = process.env.VITE_SUPABASE_URL                 ?? '';
 const SERVICE_KEY       = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY     ?? '';
 
 const TEST_PHONE   = '+420 777 123 456';
+
+async function openProfileSection(page: Page) {
+  await page.getByTestId('mode-btn-profile').click();
+  await expect(page.getByText('Profil a výplatní údaje').first()).toBeVisible({ timeout: 15_000 });
+}
 
 test.describe('Affiliate Profile Save (spec 27)', () => {
   test.skip(
@@ -54,14 +59,15 @@ test.describe('Affiliate Profile Save (spec 27)', () => {
   });
 
   test('profile section renders with "Uložit změny" button', async ({ page }) => {
-    await expect(page.getByText('Profil a výplatní údaje')).toBeVisible({ timeout: 15_000 });
+    await openProfileSection(page);
     await expect(page.getByRole('button', { name: 'Uložit změny' })).toBeVisible({ timeout: 5_000 });
   });
 
   test('saving phone shows success toast and persists to DB via RPC', async ({ page }) => {
+    await openProfileSection(page);
+
     // Wait for and scroll to profile section
     const profileHeading = page.getByText('Profil a výplatní údaje').first();
-    await expect(profileHeading).toBeVisible({ timeout: 15_000 });
     await profileHeading.scrollIntoViewIfNeeded();
 
     // Phone field — placeholder starts with "+420"
@@ -90,7 +96,7 @@ test.describe('Affiliate Profile Save (spec 27)', () => {
   });
 
   test('affiliate only sees own data — RLS read check', async ({ page }) => {
-    await expect(page.getByText('Profil a výplatní údaje')).toBeVisible({ timeout: 15_000 });
+    await openProfileSection(page);
 
     // The page loads without errors (RLS SELECT works for own row)
     await expect(page.locator('body')).not.toContainText('Nepodařilo se načíst');
