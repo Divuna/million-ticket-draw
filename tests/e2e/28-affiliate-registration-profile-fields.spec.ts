@@ -209,5 +209,16 @@ test.describe('Affiliate v2 — registration profile fields (spec 28)', () => {
     expect(edited.facebook_url).toBe(TEST_FACEBOOK);
     expect(edited.website_url).toBe(TEST_WEBSITE);
     expect(edited.content_categories).toBe(TEST_CATEGORIES);
+
+    // After a full page reload the Profil inputs must show the saved DB values
+    // (locks the form re-sync from freshly fetched data — not stale state).
+    await page.reload();
+    await page.waitForURL(/\/affiliate\/dashboard/, { timeout: 20_000 });
+    await page.getByTestId('mode-btn-profile').click();
+    await expect(page.getByText('Sociální sítě a dosah', { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('affiliate-profile-instagram')).toHaveValue(EDIT_INSTAGRAM);
+    await expect(page.getByTestId('affiliate-profile-audience')).toHaveValue(EDIT_AUDIENCE);
+    await expect(page.getByTestId('affiliate-profile-youtube')).toHaveValue(TEST_YOUTUBE);
+    await expect(page.getByTestId('affiliate-profile-website')).toHaveValue(TEST_WEBSITE);
   });
 });

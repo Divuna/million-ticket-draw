@@ -111,6 +111,21 @@ const AffiliateProfileSection: React.FC<Props> = ({ profile: initial, onSaved })
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
+  // Re-sync the form when the incoming profile data actually changes (e.g. after
+  // a successful save triggers the parent to re-fetch from the DB). useState only
+  // reads `initial` once on mount, so without this the form would keep showing the
+  // pre-reload values. Compared by serialized value — not object reference — so a
+  // parent re-render with identical data does NOT clobber in-progress edits.
+  const initialSig = JSON.stringify(initial);
+  const lastSigRef = React.useRef(initialSig);
+  React.useEffect(() => {
+    if (lastSigRef.current !== initialSig) {
+      lastSigRef.current = initialSig;
+      setForm({ ...initial });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSig]);
+
   const set = (field: keyof AffiliateProfileData, value: unknown) =>
     setForm(prev => ({ ...prev, [field]: value }));
 
