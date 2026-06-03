@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-06-03 - Affiliate v2: dashboard a profil kompletně dokončeny
+
+- Dashboard `/affiliate/dashboard` dokončen: přepínač Influencer/Obchodník, luxury UI, statistiky, QR kódy.
+- `/influencer/dashboard` → route-level redirect na `/affiliate/dashboard`.
+- Profilová sekce: IČO, DIČ, web, telefon, fakturační adresa CZ/SK, IBAN/bankovní účet.
+- Migrace `20260603_affiliate_profile_update.sql` aplikována na staging i produkci.
+- RPC `update_affiliate_own_profile` (SECURITY DEFINER) — affiliate mění jen vlastní řádek.
+- Produkční smoke: DB postcheck ✅, build ✅.
+- Staging E2E run `26902106200`: 45 passed, 3 skipped, 0 failed.
+- Nezměněno: platby, tikety, soutěže, peněženka, buy_ticket_atomic, Partner portal.
+
 ## 2026-06-03 - Affiliate v2: profil migrace nasazena na produkci
 
 - Migrace `20260603_affiliate_profile_update.sql` aplikována na produkci `xkzhjldrojjlrkezorey`.

@@ -4,6 +4,56 @@
 
 ---
 
+## ✅ AFFILIATE v2 DASHBOARD — KOMPLETNĚ DOKONČENO (03. 06. 2026)
+
+**Stav: NASAZENO, SMOKE OVĚŘENO, E2E ZELENÝ. Žádný další deploy není potřeba.**
+
+### Produkce `xkzhjldrojjlrkezorey` — finální stav
+
+#### Dashboard `/affiliate/dashboard`
+- Premium luxury UI (gold akcenty, `luxury-card` styl, tmavé pozadí)
+- **Přepínač Influencer / Obchodník** — uživatel přepíná sám; volba uložena v `localStorage`
+- Pokud má účet jen jednu roli, druhá je zobrazena se 🔒 a vysvětlením
+- **Legacy `/influencer/dashboard` → přesměrovává na `/affiliate/dashboard`** (route-level `<Navigate>`)
+- Statistiky per-mód: registrace dnes / tento měsíc / 30 dní (influencer); firmy dnes / 30 dní (obchodník)
+- Sdílecí odkaz + lokální QR kód (`qrcode.react`, žádný external API)
+- Moje zákazníci / Moje firmy (s názvy firem pokud RLS dovolí)
+- Provize tabulka per-mód + payout status
+- Kampaně (placeholder, brzy)
+- **Pravidla spolupráce Influencer** — co smí/nesmí, povolená slova
+
+#### Profilová sekce `AffiliateProfileSection`
+- Jméno, e-mail, telefon, web / sociální síť
+- IČO (CZ i SK formát — 8 číslic)
+- DIČ (`vat_id`)
+- Plátce DPH toggle
+- Fakturační adresa: ulice, město, PSČ, **country selector CZ/SK/DE/AT/PL/HU/other**
+- Bankovní účet / IBAN (CZ, SK, mezinárodní formát)
+- Payout status: „Připraveno k výplatě" / „Chybí údaje"
+- Uložení přes RPC `update_affiliate_own_profile` (SECURITY DEFINER)
+
+#### DB — produkce
+| Objekt | Stav |
+|--------|------|
+| `affiliate_accounts.ico` | ✅ EXISTS |
+| `affiliate_accounts.billing_street/city/zip/country` | ✅ EXISTS |
+| `affiliate_accounts.website_url` | ✅ EXISTS |
+| `update_affiliate_own_profile` RPC | ✅ EXISTS |
+| RLS stále zapnuté | ✅ |
+| 3 affiliate záznamy (2 approved, 1 rejected) | ✅ nedotčeny |
+
+#### Staging E2E
+- Run `26902106200`: **45 passed · 3 skipped · 0 failed**
+- Spec 14: affiliate login → `/affiliate/dashboard` ✅
+- Spec 25: `/influencer/dashboard` redirect ✅
+- Spec 26 (7 testů): hero, přepínač, odkaz+QR, stat karty, localStorage ✅
+- Spec 27 (3 testy): profil renderuje, ukládání RPC, RLS check ✅
+
+#### Nezměněno (garantováno)
+- `buy_ticket_atomic`, platby, tikety, soutěže, peněženka, zákaznický účet, Partner portal (mimo schválený affiliate tok)
+
+---
+
 ## ✅ AFFILIATE v2 — PROFIL MIGRACE NASAZENA V PRODUKCI (03. 06. 2026)
 
 **Migrace `20260603_affiliate_profile_update.sql` aplikována na produkci `xkzhjldrojjlrkezorey`.**
