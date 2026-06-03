@@ -72,14 +72,13 @@ test.describe('Affiliate Dashboard — Login Smoke', () => {
     ).toHaveURL(/\/affiliate\/dashboard/);
 
     // ── 4. Affiliate v2 dashboard must render ────────────────────────────────
-    // Depending on whether the user is in affiliate_accounts (migrated or not),
-    // the dashboard shows either "Affiliate dashboard" or "Affiliate program" h1.
-    // Both contain the word "Affiliate" — check for that to cover both cases.
-    const h1 = page.locator('h1').first();
-    await expect(
-      h1,
-      'h1 on /affiliate/dashboard must contain "Affiliate"',
-    ).toContainText('Affiliate', { timeout: 15_000 });
+    // If user is in affiliate_accounts (approved): shows "Vydělávejte s OneMil" hero h1.
+    // If user is NOT in affiliate_accounts (e.g. staging without migration): "Affiliate program".
+    // Accept either — covers both staging and production scenarios.
+    const bodyText = await page.locator('body').textContent({ timeout: 15_000 }) ?? '';
+    const knownTexts = ['Vydělávejte s OneMil', 'Affiliate program', 'Affiliate dashboard'];
+    const hasKnownText = knownTexts.some(t => bodyText.includes(t));
+    expect(hasKnownText, `Page must show one of: ${knownTexts.join(', ')}`).toBe(true);
 
     // Page must not show a generic error or 404
     await expect(page.locator('body')).not.toContainText('404');
