@@ -255,7 +255,7 @@ export default function AdminMessages() {
       {loading ? (
         <p className="text-muted-foreground">Načítání…</p>
       ) : threads.length === 0 ? (
-        <p className="text-muted-foreground">Žádné otevřené požadavky na podporu.</p>
+        <p className="text-muted-foreground">Žádné zprávy.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {threads.map((thread) => {
