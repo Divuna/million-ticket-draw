@@ -86,6 +86,259 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_accounts: {
+        Row: {
+          approved_at: string | null
+          audience_size: string | null
+          auth_user_id: string | null
+          billing_city: string | null
+          billing_country: string | null
+          billing_street: string | null
+          billing_zip: string | null
+          commission_rate_company: number
+          commission_rate_customer: number
+          content_categories: string | null
+          created_at: string
+          email: string
+          facebook_url: string | null
+          ico: string | null
+          id: string
+          instagram_url: string | null
+          is_vat_payer: boolean
+          modes: string[]
+          name: string
+          notes: string | null
+          payout_account: string | null
+          payout_bank: string | null
+          phone: string | null
+          ref_code: string
+          rejected_at: string | null
+          status: string
+          tiktok_url: string | null
+          updated_at: string
+          vat_id: string | null
+          website_url: string | null
+          youtube_url: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          audience_size?: string | null
+          auth_user_id?: string | null
+          billing_city?: string | null
+          billing_country?: string | null
+          billing_street?: string | null
+          billing_zip?: string | null
+          commission_rate_company?: number
+          commission_rate_customer?: number
+          content_categories?: string | null
+          created_at?: string
+          email: string
+          facebook_url?: string | null
+          ico?: string | null
+          id?: string
+          instagram_url?: string | null
+          is_vat_payer?: boolean
+          modes?: string[]
+          name: string
+          notes?: string | null
+          payout_account?: string | null
+          payout_bank?: string | null
+          phone?: string | null
+          ref_code: string
+          rejected_at?: string | null
+          status?: string
+          tiktok_url?: string | null
+          updated_at?: string
+          vat_id?: string | null
+          website_url?: string | null
+          youtube_url?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          audience_size?: string | null
+          auth_user_id?: string | null
+          billing_city?: string | null
+          billing_country?: string | null
+          billing_street?: string | null
+          billing_zip?: string | null
+          commission_rate_company?: number
+          commission_rate_customer?: number
+          content_categories?: string | null
+          created_at?: string
+          email?: string
+          facebook_url?: string | null
+          ico?: string | null
+          id?: string
+          instagram_url?: string | null
+          is_vat_payer?: boolean
+          modes?: string[]
+          name?: string
+          notes?: string | null
+          payout_account?: string | null
+          payout_bank?: string | null
+          phone?: string | null
+          ref_code?: string
+          rejected_at?: string | null
+          status?: string
+          tiktok_url?: string | null
+          updated_at?: string
+          vat_id?: string | null
+          website_url?: string | null
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
+      affiliate_commissions: {
+        Row: {
+          affiliate_id: string
+          amount_base_czk: number
+          amount_total_czk: number
+          commission_type: string
+          company_ref_id: string | null
+          created_at: string
+          customer_ref_id: string | null
+          id: string
+          paid_at: string | null
+          period_month: string | null
+          source_invoice_id: string | null
+          status: string
+          updated_at: string
+          vat_rate: number
+        }
+        Insert: {
+          affiliate_id: string
+          amount_base_czk: number
+          amount_total_czk: number
+          commission_type: string
+          company_ref_id?: string | null
+          created_at?: string
+          customer_ref_id?: string | null
+          id?: string
+          paid_at?: string | null
+          period_month?: string | null
+          source_invoice_id?: string | null
+          status?: string
+          updated_at?: string
+          vat_rate?: number
+        }
+        Update: {
+          affiliate_id?: string
+          amount_base_czk?: number
+          amount_total_czk?: number
+          commission_type?: string
+          company_ref_id?: string | null
+          created_at?: string
+          customer_ref_id?: string | null
+          id?: string
+          paid_at?: string | null
+          period_month?: string | null
+          source_invoice_id?: string | null
+          status?: string
+          updated_at?: string
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commissions_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_company_ref_id_fkey"
+            columns: ["company_ref_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_company_refs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_customer_ref_id_fkey"
+            columns: ["customer_ref_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_customer_refs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_source_invoice_id_fkey"
+            columns: ["source_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_company_refs: {
+        Row: {
+          affiliate_id: string
+          created_at: string
+          id: string
+          partner_id: string
+          source: string | null
+        }
+        Insert: {
+          affiliate_id: string
+          created_at?: string
+          id?: string
+          partner_id: string
+          source?: string | null
+        }
+        Update: {
+          affiliate_id?: string
+          created_at?: string
+          id?: string
+          partner_id?: string
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_company_refs_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_company_refs_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: true
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_customer_refs: {
+        Row: {
+          affiliate_id: string
+          created_at: string
+          id: string
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          affiliate_id: string
+          created_at?: string
+          id?: string
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          affiliate_id?: string
+          created_at?: string
+          id?: string
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_customer_refs_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           created_at: string | null
@@ -2215,6 +2468,7 @@ export type Database = {
           payout_ready: boolean
           payout_updated_at: string | null
           price_per_coin: number
+          referred_by_affiliate_id: string | null
           rejected_at: string | null
           reward_base_czk: number
           reward_mc: number
@@ -2251,6 +2505,7 @@ export type Database = {
           payout_ready?: boolean
           payout_updated_at?: string | null
           price_per_coin?: number
+          referred_by_affiliate_id?: string | null
           rejected_at?: string | null
           reward_base_czk?: number
           reward_mc?: number
@@ -2287,6 +2542,7 @@ export type Database = {
           payout_ready?: boolean
           payout_updated_at?: string | null
           price_per_coin?: number
+          referred_by_affiliate_id?: string | null
           rejected_at?: string | null
           reward_base_czk?: number
           reward_mc?: number
@@ -2297,7 +2553,15 @@ export type Database = {
           vat_rate?: number
           website_url?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "partners_referred_by_affiliate_id_fkey"
+            columns: ["referred_by_affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {
@@ -4203,6 +4467,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_set_affiliate_commission_status: {
+        Args: { p_commission_id: string; p_new_status: string }
+        Returns: Json
+      }
       admin_set_partner_status: {
         Args: {
           p_notes?: string
@@ -4236,6 +4504,10 @@ export type Database = {
       }
       buy_voucher_atomic: {
         Args: { p_user_id: string; p_voucher_id: string }
+        Returns: Json
+      }
+      calculate_affiliate_commissions_for_month: {
+        Args: { p_month: string }
         Returns: Json
       }
       calculate_influencer_commissions_current_month: {
@@ -4646,6 +4918,14 @@ export type Database = {
         }[]
       }
       recalculate_bonus_wallet: { Args: never; Returns: undefined }
+      record_affiliate_company_ref: {
+        Args: { p_partner_id: string; p_via_code: string }
+        Returns: Json
+      }
+      record_affiliate_customer_ref: {
+        Args: { p_ref_code: string }
+        Returns: Json
+      }
       redeem_miocoin: {
         Args: {
           p_contest_id: string
@@ -4659,6 +4939,34 @@ export type Database = {
         }[]
       }
       redeem_miocoin_code: { Args: { p_code: string }; Returns: Json }
+      register_affiliate_account:
+        | {
+            Args: {
+              p_email: string
+              p_modes: string[]
+              p_name: string
+              p_phone: string
+              p_ref_code: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_audience_size: string
+              p_content_categories: string
+              p_email: string
+              p_facebook_url: string
+              p_instagram_url: string
+              p_modes: string[]
+              p_name: string
+              p_phone: string
+              p_ref_code: string
+              p_tiktok_url: string
+              p_website_url: string
+              p_youtube_url: string
+            }
+            Returns: Json
+          }
       resolve_partner_by_api_key: { Args: { p_key: string }; Returns: string }
       resume_contest: { Args: { contest_id: string }; Returns: undefined }
       revise_partner_offer: { Args: { p_offer_id: string }; Returns: undefined }
@@ -4741,6 +5049,30 @@ export type Database = {
         | { Args: { p_amount_mc: number; p_user_id: string }; Returns: boolean }
       unlock_ticket: {
         Args: { contest_id: string; user_id: string }
+        Returns: Json
+      }
+      update_affiliate_own_profile: {
+        Args: {
+          p_audience_size?: string
+          p_billing_city: string
+          p_billing_country: string
+          p_billing_street: string
+          p_billing_zip: string
+          p_content_categories?: string
+          p_email: string
+          p_facebook_url?: string
+          p_ico: string
+          p_instagram_url?: string
+          p_is_vat_payer: boolean
+          p_name: string
+          p_payout_account: string
+          p_payout_bank: string
+          p_phone: string
+          p_tiktok_url?: string
+          p_vat_id: string
+          p_website_url: string
+          p_youtube_url?: string
+        }
         Returns: Json
       }
       update_bonus_prize_delivery_status: {
