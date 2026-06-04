@@ -30,10 +30,16 @@ const NAME    = `Spec30 Affiliate ${unique}`;
 const REF_CODE = `SPEC30${unique}`.slice(0, 12);
 
 const AFF_INSTAGRAM = `https://instagram.com/spec30_${unique}`;
+const AFF_TIKTOK    = `https://tiktok.com/@spec30_${unique}`;
 const AFF_YOUTUBE   = `https://youtube.com/@spec30_${unique}`;
+const AFF_FACEBOOK  = `https://facebook.com/spec30.${unique}`;
 const AFF_WEBSITE   = `https://spec30-${unique}.onemil.test`;
 const AFF_AUDIENCE  = '12k-30k';
 const AFF_CATEGORY  = 'spec30 fitness';
+const AFF_ICO       = '87654321';
+const AFF_VAT_ID    = 'CZ87654321';
+const AFF_IBAN      = 'CZ6508000000001234567890';
+const AFF_BANK      = 'Spec30 Banka';
 const LEGACY_WEBSITE = 'https://legacy-partner.onemil.test';
 
 test.describe('Admin /influencers detail shows affiliate social (spec 30)', () => {
@@ -77,10 +83,14 @@ test.describe('Admin /influencers detail shows affiliate social (spec 30)', () =
       .from('affiliate_accounts')
       .insert({
         auth_user_id: authUserId, name: NAME, email: EMAIL, ref_code: REF_CODE,
-        modes: ['influencer'], status: 'approved',
-        commission_rate_customer: 5, commission_rate_company: 5,
-        instagram_url: AFF_INSTAGRAM, youtube_url: AFF_YOUTUBE, website_url: AFF_WEBSITE,
+        modes: ['influencer', 'sales_rep'], status: 'approved',
+        commission_rate_customer: 7, commission_rate_company: 9,
+        instagram_url: AFF_INSTAGRAM, tiktok_url: AFF_TIKTOK, youtube_url: AFF_YOUTUBE,
+        facebook_url: AFF_FACEBOOK, website_url: AFF_WEBSITE,
         audience_size: AFF_AUDIENCE, content_categories: AFF_CATEGORY,
+        ico: AFF_ICO, vat_id: AFF_VAT_ID, is_vat_payer: true,
+        billing_street: 'Spec30 ulice 1', billing_city: 'Praha', billing_zip: '11000', billing_country: 'CZ',
+        payout_account: AFF_IBAN, payout_bank: AFF_BANK,
       })
       .select('id').single();
     if (aErr) throw new Error(`affiliate seed failed: ${aErr.message}`);
@@ -112,15 +122,39 @@ test.describe('Admin /influencers detail shows affiliate social (spec 30)', () =
     await expect(detailBtn).toBeVisible({ timeout: 15_000 });
     await detailBtn.click();
 
+    // Account identity (affiliate_accounts)
+    await expect(page.getByTestId('admin-influencer-ref-code')).toHaveText(REF_CODE, { timeout: 10_000 });
+    await expect(page.getByTestId('admin-influencer-modes')).toContainText('Influencer');
+    await expect(page.getByTestId('admin-influencer-modes')).toContainText('Obchodník');
+    await expect(page.getByTestId('admin-influencer-account-status')).toContainText('Schváleno');
+    await expect(page.getByTestId('admin-influencer-commission-rates')).toContainText('7');
+    await expect(page.getByTestId('admin-influencer-commission-rates')).toContainText('9');
+
     // Social links come from affiliate_accounts (not the empty partners.notes)
-    await expect(page.getByTestId('admin-influencer-social-instagram')).toHaveText(AFF_INSTAGRAM, { timeout: 10_000 });
+    await expect(page.getByTestId('admin-influencer-social-instagram')).toHaveText(AFF_INSTAGRAM);
+    await expect(page.getByTestId('admin-influencer-social-tiktok')).toHaveText(AFF_TIKTOK);
     await expect(page.getByTestId('admin-influencer-social-youtube')).toHaveText(AFF_YOUTUBE);
+    await expect(page.getByTestId('admin-influencer-social-facebook')).toHaveText(AFF_FACEBOOK);
     // website prefers affiliate_accounts.website_url over legacy partners.website_url
     await expect(page.getByTestId('admin-influencer-social-website')).toHaveText(AFF_WEBSITE);
     await expect(page.getByTestId('admin-influencer-social-website')).not.toHaveText(LEGACY_WEBSITE);
 
     // Affiliate profile (audience / category) also prefers affiliate_accounts
-    await expect(page.getByText(AFF_AUDIENCE, { exact: false })).toBeVisible();
-    await expect(page.getByText(AFF_CATEGORY, { exact: false })).toBeVisible();
+    await expect(page.getByTestId('admin-influencer-audience')).toHaveText(AFF_AUDIENCE);
+    await expect(page.getByTestId('admin-influencer-category')).toHaveText(AFF_CATEGORY);
+
+    // Billing & payout (affiliate_accounts)
+    await expect(page.getByTestId('admin-influencer-ico')).toHaveText(AFF_ICO);
+    await expect(page.getByTestId('admin-influencer-vat-id')).toHaveText(AFF_VAT_ID);
+    await expect(page.getByTestId('admin-influencer-vat-payer')).toHaveText('Ano');
+    await expect(page.getByTestId('admin-influencer-payout-account')).toHaveText(AFF_IBAN);
+    await expect(page.getByTestId('admin-influencer-payout-bank')).toHaveText(AFF_BANK);
+
+    // Social fields are plain anchors/text — no embed/iframe/video/player
+    await expect(page.locator('iframe')).toHaveCount(0);
+    await expect(page.locator('video')).toHaveCount(0);
+    const igLink = page.getByTestId('admin-influencer-social-instagram');
+    await expect(igLink).toHaveAttribute('target', '_blank');
+    await expect(igLink).toHaveAttribute('rel', 'noopener noreferrer');
   });
 });

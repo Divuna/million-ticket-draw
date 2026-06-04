@@ -100,6 +100,9 @@ interface DetailData {
 }
 
 interface AffiliateSocialProfile {
+  ref_code: string | null;
+  modes: string[] | null;
+  status: string | null;
   instagram_url: string | null;
   tiktok_url: string | null;
   youtube_url: string | null;
@@ -107,7 +110,35 @@ interface AffiliateSocialProfile {
   website_url: string | null;
   audience_size: string | null;
   content_categories: string | null;
+  ico: string | null;
+  vat_id: string | null;
+  is_vat_payer: boolean | null;
+  billing_street: string | null;
+  billing_city: string | null;
+  billing_zip: string | null;
+  billing_country: string | null;
+  payout_account: string | null;
+  payout_bank: string | null;
+  commission_rate_customer: number | null;
+  commission_rate_company: number | null;
 }
+
+const formatAffiliateModes = (modes?: string[] | null): string | null => {
+  if (!modes?.length) return null;
+  return modes
+    .map((m) => (m === "influencer" ? "Influencer" : m === "sales_rep" ? "Obchodník" : m))
+    .join(" + ");
+};
+
+const formatAffiliateStatus = (status?: string | null): string | null => {
+  switch (status) {
+    case "approved":  return "Schváleno";
+    case "pending":   return "Čeká na schválení";
+    case "rejected":  return "Zamítnuto";
+    case "suspended": return "Pozastaveno";
+    default:          return status || null;
+  }
+};
 
 const statusLabels: Record<InfluencerStatus, string> = {
   pending: "Čeká na schválení",
@@ -357,7 +388,7 @@ const AdminInfluencers = () => {
     if (!authUserId) return;
     const { data, error } = await (supabase as any)
       .from("affiliate_accounts")
-      .select("instagram_url, tiktok_url, youtube_url, facebook_url, website_url, audience_size, content_categories")
+      .select("ref_code, modes, status, instagram_url, tiktok_url, youtube_url, facebook_url, website_url, audience_size, content_categories, ico, vat_id, is_vat_payer, billing_street, billing_city, billing_zip, billing_country, payout_account, payout_bank, commission_rate_customer, commission_rate_company")
       .eq("auth_user_id", authUserId)
       .maybeSingle();
     if (error) {
@@ -763,12 +794,35 @@ const AdminInfluencers = () => {
                 const followerRange = affiliateProfile?.audience_size || parsed?.follower_range || null;
                 const contentCategory = affiliateProfile?.content_categories || parsed?.content_category || null;
 
-                const readOnlyField = (label: string, value: string | null | undefined, icon?: React.ReactNode) => (
+                // Affiliate v2 account identity (affiliate_accounts), legacy fallbacks where sensible
+                const refCode = affiliateProfile?.ref_code || null;
+                const focusModes = formatAffiliateModes(affiliateProfile?.modes);
+                const accountStatus = formatAffiliateStatus(affiliateProfile?.status)
+                  || statusLabels[selectedInfluencer.status as InfluencerStatus]
+                  || selectedInfluencer.status;
+                const commCustomer = affiliateProfile?.commission_rate_customer ?? null;
+                const commCompany = affiliateProfile?.commission_rate_company ?? null;
+                const ico = affiliateProfile?.ico || null;
+                const vatId = affiliateProfile?.vat_id || null;
+                const vatPayer = affiliateProfile?.is_vat_payer == null
+                  ? null
+                  : (affiliateProfile.is_vat_payer ? "Ano" : "Ne");
+                const billingAddress = [
+                  affiliateProfile?.billing_street,
+                  affiliateProfile?.billing_city,
+                  affiliateProfile?.billing_zip,
+                ].filter(Boolean).join(", ") || null;
+                const billingCountry = affiliateProfile?.billing_country || null;
+                const payoutAccount = affiliateProfile?.payout_account || null;
+                const payoutBank = affiliateProfile?.payout_bank || null;
+                const hasBilling = !!(ico || vatId || vatPayer || billingAddress || billingCountry || payoutAccount || payoutBank);
+
+                const readOnlyField = (label: string, value: string | null | undefined, icon?: React.ReactNode, testId?: string) => (
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground flex items-center gap-1">
                       {icon} {label}
                     </Label>
-                    <p className="text-sm bg-muted/20 border border-border/30 rounded-md px-3 py-2 text-muted-foreground">
+                    <p data-testid={testId} className="text-sm bg-muted/20 border border-border/30 rounded-md px-3 py-2 text-muted-foreground">
                       {value || "—"}
                     </p>
                   </div>
@@ -787,13 +841,31 @@ const AdminInfluencers = () => {
                       </div>
                     </div>
 
+                    {/* Affiliate account identity (affiliate_accounts) */}
+                    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                      <p className="text-xs font-semibold text-foreground uppercase tracking-wider">Affiliate účet</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {readOnlyField("Doporučovací kód (ref)", refCode, undefined, "admin-influencer-ref-code")}
+                        {readOnlyField("Zaměření", focusModes, undefined, "admin-influencer-modes")}
+                        {readOnlyField("Stav účtu", accountStatus, undefined, "admin-influencer-account-status")}
+                        {readOnlyField(
+                          "Provizní sazby",
+                          (commCustomer != null || commCompany != null)
+                            ? `Zákazníci ${commCustomer ?? "—"} % · firmy ${commCompany ?? "—"} %`
+                            : null,
+                          undefined,
+                          "admin-influencer-commission-rates",
+                        )}
+                      </div>
+                    </div>
+
                     {/* Affiliate profile — prefers affiliate_accounts, falls back to notes */}
                     {(followerRange || contentCategory) && (
                       <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
                         <p className="text-xs font-semibold text-foreground uppercase tracking-wider">Profil Affiliate partnera</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {followerRange && readOnlyField("Rozsah sledujících", followerRange)}
-                          {contentCategory && readOnlyField("Kategorie obsahu", contentCategory)}
+                          {followerRange && readOnlyField("Rozsah sledujících", followerRange, undefined, "admin-influencer-audience")}
+                          {contentCategory && readOnlyField("Kategorie obsahu", contentCategory, undefined, "admin-influencer-category")}
                         </div>
                       </div>
                     )}
@@ -824,6 +896,22 @@ const AdminInfluencers = () => {
                         ))}
                       </div>
                     </div>
+
+                    {/* Billing & payout (affiliate_accounts) */}
+                    {hasBilling && (
+                      <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                        <p className="text-xs font-semibold text-foreground uppercase tracking-wider">Fakturační a výplatní údaje</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {readOnlyField("IČO", ico, undefined, "admin-influencer-ico")}
+                          {readOnlyField("DIČ", vatId, undefined, "admin-influencer-vat-id")}
+                          {readOnlyField("Plátce DPH", vatPayer, undefined, "admin-influencer-vat-payer")}
+                          {readOnlyField("Fakturační adresa", billingAddress, undefined, "admin-influencer-billing")}
+                          {readOnlyField("Země", billingCountry, undefined, "admin-influencer-country")}
+                          {readOnlyField("Bankovní účet / IBAN", payoutAccount, undefined, "admin-influencer-payout-account")}
+                          {readOnlyField("Banka", payoutBank, undefined, "admin-influencer-payout-bank")}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Profile image + dates */}
                     <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
