@@ -161,30 +161,27 @@ export default function AdminMessages() {
         msg.content !== SUPPORT_REQUEST_MARKER;
 
       const markerRows = userMessages.filter(isExactSupportRequestRow);
-      if (markerRows.length === 0) {
-        return null;
-      }
 
-      const lastMarkerAt = markerRows.reduce((latest, m) => {
-        const t = new Date(m.created_at).getTime();
-        return t > new Date(latest).getTime() ? m.created_at : latest;
-      }, markerRows[0].created_at);
+      const lastMarkerAt = markerRows.length > 0
+        ? markerRows.reduce((latest, m) => {
+            const t = new Date(m.created_at).getTime();
+            return t > new Date(latest).getTime() ? m.created_at : latest;
+          }, markerRows[0].created_at)
+        : null;
 
-      const lastMarkerMs = new Date(lastMarkerAt).getTime();
-
-      const hasLaterNonMarkerAdmin = userMessages.some((m) => {
-        if (!isAdminNonMarkerReply(m)) return false;
-        return new Date(m.created_at).getTime() > lastMarkerMs;
-      });
-
-      const supportActive = !hasLaterNonMarkerAdmin;
+      const supportActive = lastMarkerAt
+        ? !userMessages.some((m) => {
+            if (!isAdminNonMarkerReply(m)) return false;
+            return new Date(m.created_at).getTime() > new Date(lastMarkerAt).getTime();
+          })
+        : false;
 
       const lastSender = senderNorm(userMessages[0]?.sender);
       const userInfo = userMap[uid] || { email: null, name: null };
       const partner = partnerMap[uid];
       const isInfluencer = partner?.isInfluencer ?? false;
       const isPartner = !!partner && !isInfluencer;
-      
+
       return {
         user_id: uid,
         user_email: userInfo.email,
@@ -202,7 +199,7 @@ export default function AdminMessages() {
     })
       .filter((t): t is Thread => Boolean(t));
 
-    // Base sort: keep existing heuristics, then by date
+    // Base sort: unread + role weighting, then by date
     const baseSorted = [...result].sort((a, b) => {
       const aScore = (a.has_unread ? 2 : 0) + (a.is_influencer || a.is_partner ? 1 : 0);
       const bScore = (b.has_unread ? 2 : 0) + (b.is_influencer || b.is_partner ? 1 : 0);
@@ -210,7 +207,7 @@ export default function AdminMessages() {
       return new Date(b.last_date).getTime() - new Date(a.last_date).getTime();
     });
 
-    // Only open tickets: exact SUPPORT REQUEST row with no later admin non-marker message.
+    // Open support tickets first (oldest marker first), then everything else.
     const activeSupport = baseSorted
       .filter((t) => t.support_active)
       .sort((a, b) => {
@@ -218,8 +215,9 @@ export default function AdminMessages() {
         const bt = b.support_active_at ?? b.last_date;
         return new Date(at).getTime() - new Date(bt).getTime();
       });
+    const others = baseSorted.filter((t) => !t.support_active);
 
-    setThreads(activeSupport);
+    setThreads([...activeSupport, ...others]);
     setLoading(false);
   }, []);
 
@@ -257,7 +255,7 @@ export default function AdminMessages() {
       {loading ? (
         <p className="text-muted-foreground">Načítání…</p>
       ) : threads.length === 0 ? (
-        <p className="text-muted-foreground">Žádné otevřené požadavky na podporu.</p>
+        <p className="text-muted-foreground">Žádné zprávy.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {threads.map((thread) => {
