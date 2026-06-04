@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## BOB ON/OFF PŘEPÍNAČ — FÁZE 1 V PRODUKCI (04. 06. 2026)
+
+**Admin globálně vypíná/zapíná Boba. Migrace `20260604_get_bob_enabled_rpc.sql` APLIKOVÁNA na produkci `xkzhjldrojjlrkezorey`.**
+
+- Flag `settings.bob_enabled` ('true'/'false', default true) + RPC `get_bob_enabled()` (SECURITY DEFINER, vrací JEN boolean, žádné secrety, EXECUTE authenticated). Customer čte přes RPC; admin zapisuje přes settings upsert.
+- Frontend: `useBobEnabled.ts`, Switch v `/admin/messages`, oranžový pulz na nav „Zprávy" při OFF, `Messages.tsx` při OFF routuje na admin (ai-chat se NEvolá) + sonner handoff toast.
+- **Bob prompt / CTA routing / handlery / `{ text, cta }` formát ani ai-chat kód NEMĚNIT** — přepínač Boba nesahá do AI logiky, jen routuje mimo něj.
+- **Pravidlo:** handoff hláška v `Messages.tsx` používá sonner (`toast as sonnerToast`), ne shadcn — shadcn `use-toast` se tam nerenderoval. Neměnit zpět.
+- Zamčeno spec 31 (serial — sdílí globální flag). Staging E2E `26977917782`: 57 passed. Commit `c0842894`. Vyžaduje Lovable Publish.
+
 ## ADMIN AFFILIATE SOCIAL — DVĚ ADMIN STRÁNKY, ZDROJ = affiliate_accounts (04. 06. 2026)
 
 **Existují DVĚ admin stránky pro affiliate/influencery:**

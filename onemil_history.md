@@ -43,6 +43,15 @@
 
 ---
 
+## 2026-06-04 - Bob ON/OFF přepínač Fáze 1 APLIKOVÁNA na PRODUKCI
+
+- Migrace `20260604_get_bob_enabled_rpc.sql` aplikována na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla).
+- Postcheck: `settings.bob_enabled='true'`, `get_bob_enabled()` vrací boolean (pg_typeof=boolean), SECURITY DEFINER, 0 args, authenticated EXECUTE, čte jen bob_enabled (žádné secrety).
+- ai-chat / Bob prompt / CTA / `{ text, cta }` beze změny. `npm run build` ✅. Frontend na main `c0842894` — vyžaduje Lovable Publish.
+- Žádné Edge Functions, žádné jiné migrace.
+
+---
+
 ## 2026-06-04 - Bob ON/OFF přepínač Fáze 1 (staging)
 
 - Přidán globální admin přepínač Boba: `settings.bob_enabled` + SECURITY DEFINER RPC `get_bob_enabled()` (vrací jen boolean, žádné secrety). Migrace `20260604_get_bob_enabled_rpc.sql` aplikována na STAGING.

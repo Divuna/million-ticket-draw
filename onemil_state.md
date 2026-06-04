@@ -43,9 +43,15 @@
 
 ---
 
-## ✅ BOB ON/OFF PŘEPÍNAČ — FÁZE 1 (04. 06. 2026, STAGING)
+## ✅ BOB ON/OFF PŘEPÍNAČ — FÁZE 1 NASAZENA V PRODUKCI (04. 06. 2026)
 
-**Admin může globálně vypnout/zapnout Boba. Nasazeno na STAGING, E2E zelený. Produkce čeká na schválení.**
+**Admin může globálně vypnout/zapnout Boba. Nasazeno na STAGING I PRODUKCI (`xkzhjldrojjlrkezorey`). E2E zelený.**
+
+### Produkční postcheck (read-only)
+- `settings.bob_enabled` = `true` (default) ✅
+- `get_bob_enabled()` → vrací `true`, `pg_typeof` = **boolean** ✅ (jen boolean, žádné jiné settings/secrety — funkce čte pouze řádek `bob_enabled`)
+- SECURITY DEFINER ✅, 0 argumentů ✅, `authenticated` EXECUTE ✅
+- ai-chat / Bob kód **beze změny** (git log prázdný). `npm run build` ✅.
 
 - **DB:** flag `settings.bob_enabled` ('true'/'false') + RPC `get_bob_enabled()` (SECURITY DEFINER, vrací JEN boolean, žádné secrety, EXECUTE authenticated). Migrace `20260604_get_bob_enabled_rpc.sql` — **jen staging**.
 - **Hook** `useBobEnabled.ts`: čte flag přes RPC; admin zápis přes `settings` upsert.
@@ -55,7 +61,7 @@
 - **Bob prompt / CTA routing / handlery / `{ text, cta }` formát beze změny.** ai-chat kód nezměněn.
 - **Pozn.:** handoff hláška přepnuta na **sonner** (shadcn `use-toast` se v Messages nerenderoval spolehlivě).
 - **E2E spec 31** (serial — sdílí globální flag): RPC vrací boolean; admin toggle + nav pulz; Bob OFF → bob-state='off' + zpráva uložena + 0 ai řádků + sonner toast. Staging Full E2E run `26977917782`: **57 passed · 0 failed** ✅. `npm run build` ✅.
-- Commits: `de8dd07b` (feat) … `e82b89d6` (sonner toast). Produkční migrace zatím NEAPLIKOVÁNA.
+- Commits: `de8dd07b` (feat) … `e82b89d6` (sonner toast). **Produkční migrace APLIKOVÁNA 04. 06. 2026** ✅. Frontend na `main` (`c0842894`) — vyžaduje Lovable Publish.
 
 ---
 
