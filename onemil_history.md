@@ -43,6 +43,17 @@
 
 ---
 
+## 2026-06-04 - Bob ON/OFF přepínač Fáze 1 (staging)
+
+- Přidán globální admin přepínač Boba: `settings.bob_enabled` + SECURITY DEFINER RPC `get_bob_enabled()` (vrací jen boolean, žádné secrety). Migrace `20260604_get_bob_enabled_rpc.sql` aplikována na STAGING.
+- Hook `useBobEnabled`, admin Switch v `/admin/messages` (+ český toast), oranžový pulz na nav „Zprávy" při Bob OFF, customer `Messages.tsx` při OFF routuje na admin (ai-chat se nevolá) + sonner handoff toast.
+- Bob prompt/CTA/handlery/`{ text, cta }` formát ani ai-chat kód nezměněn.
+- Spec 31 (serial) zelený. Staging Full E2E run `26977917782`: 57 passed, 0 failed. `npm run build` ✅.
+- Commits `de8dd07b` … `e82b89d6`. Produkční migrace zatím neaplikována (čeká na schválení).
+- Nezměněno: platby, soutěže, tikety, peněženka, buy_ticket_atomic, affiliate provize.
+
+---
+
 ## 2026-06-04 - Admin messaging RLS: migrace aplikována na PRODUKCI
 
 - Aplikována migrace `20260603_messages_admin_insert_policy.sql` na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla). Policy `messages_insert_admin` (authenticated admin/superadmin přes user_roles).

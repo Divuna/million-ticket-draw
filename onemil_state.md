@@ -43,6 +43,22 @@
 
 ---
 
+## ✅ BOB ON/OFF PŘEPÍNAČ — FÁZE 1 (04. 06. 2026, STAGING)
+
+**Admin může globálně vypnout/zapnout Boba. Nasazeno na STAGING, E2E zelený. Produkce čeká na schválení.**
+
+- **DB:** flag `settings.bob_enabled` ('true'/'false') + RPC `get_bob_enabled()` (SECURITY DEFINER, vrací JEN boolean, žádné secrety, EXECUTE authenticated). Migrace `20260604_get_bob_enabled_rpc.sql` — **jen staging**.
+- **Hook** `useBobEnabled.ts`: čte flag přes RPC; admin zápis přes `settings` upsert.
+- **Admin přepínač** v `/admin/messages`: Switch „Bob aktivní/vypnutý" + český toast.
+- **AdminPrimaryNav:** decentní oranžový pulz + tooltip „Bob je vypnutý – zprávy jdou přímo adminovi." u „Zprávy" když Bob OFF (projeví se po reloadu — nav má vlastní instanci hooku).
+- **Customer `Messages.tsx`:** Bob OFF → vynutí admin route (ai-chat se NEvolá), zpráva uložena, sonner toast „Zprávu jsme předali podpoře. Ozveme se co nejdříve." Skrytý `data-testid="bob-state"` (on/off) pro E2E.
+- **Bob prompt / CTA routing / handlery / `{ text, cta }` formát beze změny.** ai-chat kód nezměněn.
+- **Pozn.:** handoff hláška přepnuta na **sonner** (shadcn `use-toast` se v Messages nerenderoval spolehlivě).
+- **E2E spec 31** (serial — sdílí globální flag): RPC vrací boolean; admin toggle + nav pulz; Bob OFF → bob-state='off' + zpráva uložena + 0 ai řádků + sonner toast. Staging Full E2E run `26977917782`: **57 passed · 0 failed** ✅. `npm run build` ✅.
+- Commits: `de8dd07b` (feat) … `e82b89d6` (sonner toast). Produkční migrace zatím NEAPLIKOVÁNA.
+
+---
+
 ## ✅ ADMIN MESSAGING RLS — APLIKOVÁNO V PRODUKCI (04. 06. 2026)
 
 **Migrace `20260603_messages_admin_insert_policy.sql` aplikována na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla).** Policy `messages_insert_admin` (authenticated admin/superadmin přes `user_roles`) přidána k `public.messages`.
