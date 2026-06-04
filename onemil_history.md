@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-04 - Admin /influencers detail: kompletní Affiliate v2 data
+
+- `/admin/influencers` detail rozšířen o kompletní `affiliate_accounts` data (přes auth_user_id): ref_code, modes (Influencer/Obchodník), stav, provizní sazby, IČO, DIČ, DPH, fakturační adresa, země, IBAN, banka — nad rámec social/web/audience/kategorie.
+- affiliate_accounts = primární zdroj, fallback partners.notes/website_url, „—" jinak. Social = klikací odkazy, žádné embed/video/API. Žádná DB změna.
+- /admin/affiliate-accounts nezměněno, nesmazáno, neskryto.
+- Spec 30 rozšířen. Staging Full E2E run `26933791136`: 54 passed, 0 failed. `npm run build` ✅. Commit `b79a821e`.
+- Nezměněno: provize, Partner portal, zákaznický účet, platby, tikety, soutěže, peněženka, buy_ticket_atomic.
+
+---
+
 ## 2026-06-04 - Admin /influencers detail čte social z affiliate_accounts
 
 - Skutečná příčina admin „—" u social: admin používal `/admin/influencers` (AdminInfluencers, legacy partners), který četl social z `partners.notes.social_networks`, ne z `affiliate_accounts` (kam affiliate ukládá). Ověřeno: partners.notes vše null, affiliate_accounts má data.

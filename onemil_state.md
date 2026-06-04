@@ -4,6 +4,17 @@
 
 ---
 
+## ✅ AFFILIATE v2 — ADMIN `/influencers` DETAIL: KOMPLETNÍ v2 DATA (04. 06. 2026)
+
+**`/admin/influencers` (hlavní admin stránka) detail nyní zobrazuje kompletní Affiliate v2 profil z `affiliate_accounts`** (přes `auth_user_id`). Rozšířeno nad rámec social: ref_code, zaměření (Influencer/Obchodník), stav účtu, provizní sazby (zákazníci/firmy), IČO, DIČ, plátce DPH, fakturační adresa, země, IBAN/účet, banka. `affiliate_accounts` = primární zdroj; fallback legacy `partners.notes` / `partners.website_url`; „—" když chybí všude.
+
+- Nové sekce v detailu: „Affiliate účet" (ref/zaměření/stav/provize) + „Fakturační a výplatní údaje" (IČO/DIČ/DPH/adresa/země/IBAN/banka).
+- Social = klikací odkazy (`target=_blank rel=noopener noreferrer`), žádné embed/iframe/video/API. „Napsat zprávu" ponecháno.
+- `/admin/affiliate-accounts` **nezměněno, nesmazáno, neskryto** (technický záložní v2 přehled, jediný kompletní seznam vč. čistých Obchodníků).
+- Spec 30 rozšířen (ref_code, modes, stav, provize, IG/TikTok/YT/FB, audience, kategorie, IČO, DIČ, DPH, IBAN, banka, no iframe/video). Staging Full E2E run `26933791136`: **54 passed · 0 failed** ✅. `npm run build` ✅. Commit `b79a821e`.
+
+---
+
 ## ✅ AFFILIATE v2 — ADMIN `/influencers` DETAIL ČTE SOCIAL Z affiliate_accounts (04. 06. 2026)
 
 **Skutečná příčina, proč admin viděl social prázdné** (screenshot „Detail Affiliate partnera"): Admin používal stránku **`/admin/influencers`** (`AdminInfluencers.tsx`, nav „Affiliate partneři"), NE `/admin/affiliate-accounts`. Tato legacy stránka četla social z **`partners.notes.social_networks`** (JSON), zatímco affiliate je edituje v `/affiliate/dashboard` → ukládá do **`affiliate_accounts`**. Dva oddělené datové modely → admin viděl „—" (Web fungoval, protože je sloupec `partners.website_url`).
