@@ -113,8 +113,8 @@ test.describe('Admin Bob on/off toggle (spec 31)', () => {
     await input.fill(text);
     await input.press('Enter');
 
-    // Czech handoff notice appears immediately (assert before it auto-dismisses).
-    await expect(page.getByText('Zprávu jsme předali podpoře. Ozveme se co nejdříve.').first())
+    // Czech handoff notice (sonner toast) appears immediately.
+    await expect(page.locator('[data-sonner-toast]').filter({ hasText: 'předali podpoře' }).first())
       .toBeVisible({ timeout: 10_000 });
 
     // Core requirement: user message saved, NO ai reply created after tStart.

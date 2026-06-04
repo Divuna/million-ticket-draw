@@ -11,6 +11,7 @@ import { useMessages } from "@/hooks/useMessages";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { useBobEnabled } from "@/hooks/useBobEnabled";
 import { toast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeSupportHandoff } from "@/integrations/supabase/supportHandoffInvoke";
 import { capAfterTailGrowth, CHAT_PAGE_SIZE } from "@/lib/chatMessagesStateCap";
@@ -874,7 +875,7 @@ export default function MessagesPage() {
 
       const result = await sendMessageToAdmin(messageContent, { supportActive: mode === "admin" });
       if (!bobEnabled) {
-        toast({ title: "Zprávu jsme předali podpoře. Ozveme se co nejdříve." });
+        sonnerToast("Zprávu jsme předali podpoře. Ozveme se co nejdříve.");
       }
       console.log("RESULT", result);
 
