@@ -70,7 +70,10 @@ export const AdminPrimaryNav: React.FC = () => {
                 </span>
               )}
               {(showMessagesBadge || showWinsBadge || showOffersBadge) && (
-                <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground px-0.5">
+                <span
+                  data-testid={entry.id === "messages" ? "admin-messages-unread-badge" : undefined}
+                  className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground px-0.5"
+                >
                   {badgeCount > 99 ? "99+" : badgeCount}
                 </span>
               )}

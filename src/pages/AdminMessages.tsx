@@ -312,6 +312,7 @@ export default function AdminMessages() {
             return (
               <div
                 key={thread.user_id}
+                data-testid={`admin-thread-${thread.user_id}`}
                 onClick={() => navigate(`/admin/messages/${thread.user_id}`)}
                 className={`
                   relative rounded-2xl cursor-pointer 

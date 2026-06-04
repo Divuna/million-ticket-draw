@@ -83,14 +83,22 @@ const fetchCount = async () => {
     _isCurrentUserAdmin = isAdmin;
 
     if (isAdmin) {
-      const { count, error } = await supabase
+      // Count conversations waiting for an admin reply: any unread message from a
+      // user (customer, partner, affiliate) — NOT only the SUPPORT REQUEST marker.
+      // Admin opening a thread marks its user messages read (AdminMessageThread),
+      // so the badge drops as conversations are handled. Distinct user_id = number
+      // of waiting conversations.
+      const { data, error } = await supabase
         .from("messages")
-        .select("*", { count: "exact", head: true })
+        .select("user_id")
         .eq("read", false)
-        .eq("sender", "admin")
-        .eq("content", SUPPORT_REQUEST_MARKER);
+        .eq("sender", "user");
       if (error) throw error;
-      setUnreadCount(count ?? 0);
+      const distinct = new Set<string>();
+      for (const row of data || []) {
+        if (row?.user_id) distinct.add(row.user_id as string);
+      }
+      setUnreadCount(distinct.size);
       return;
     }
 
@@ -134,7 +142,7 @@ const handleRealtimeMessage = (payload: any) => {
   if (eventType === "INSERT" && newRecord) {
     const messageUserId = newRecord.user_id;
 
-    // Play sound ONLY for support requests (admin marker messages).
+    // Play sound for support requests (admin marker messages).
     if (isSupportSoundTriggerMessage(newRecord)) {
       // User receives sound only for their own support request marker.
       if (!_isCurrentUserAdmin && _currentUserId === messageUserId) {
@@ -145,6 +153,12 @@ const handleRealtimeMessage = (payload: any) => {
       if (_isCurrentUserAdmin) {
         playNotificationSound();
       }
+    }
+
+    // Admin also gets a sound for any new incoming user message (customer,
+    // partner, affiliate), not only support markers.
+    if (_isCurrentUserAdmin && newRecord?.sender === "user") {
+      playNotificationSound();
     }
   }
 
