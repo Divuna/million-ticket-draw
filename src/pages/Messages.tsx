@@ -1185,6 +1185,7 @@ export default function MessagesPage() {
                 </div>
               )}
 
+              <span data-testid="bob-state" className="sr-only">{bobEnabled ? "on" : "off"}</span>
               <input
                 ref={inputRef}
                 value={newMessage}
