@@ -105,6 +105,9 @@ test.describe('Admin Bob on/off toggle (spec 31)', () => {
 
     const input = page.getByPlaceholder('Napište zprávu...');
     await expect(input).toBeVisible({ timeout: 15_000 });
+    // Let useBobEnabled() resolve the flag (defaults to true until the RPC returns)
+    // so the send deterministically routes to admin. A real user never types this fast.
+    await page.waitForTimeout(3000);
     await input.fill(text);
     await input.press('Enter');
 
