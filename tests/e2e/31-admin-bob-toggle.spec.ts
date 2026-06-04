@@ -34,7 +34,9 @@ async function setBob(value: boolean) {
 }
 
 test.describe('Admin Bob on/off toggle (spec 31)', () => {
-  test.describe.configure({ retries: 0 });
+  // Serial: these tests share the global settings.bob_enabled flag, so they must
+  // not run in parallel (otherwise the admin-toggle test races the Bob-off test).
+  test.describe.configure({ mode: 'serial', retries: 0 });
 
   test.skip(
     !ADMIN_EMAIL || !ADMIN_PASSWORD || !TEST_EMAIL || !TEST_PASSWORD || !SUPABASE_URL || !ANON_KEY || !SERVICE_KEY,
