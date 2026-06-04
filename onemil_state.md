@@ -43,6 +43,20 @@
 
 ---
 
+## ✅ ADMIN MESSAGING RLS — APLIKOVÁNO V PRODUKCI (04. 06. 2026)
+
+**Migrace `20260603_messages_admin_insert_policy.sql` aplikována na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla).** Policy `messages_insert_admin` (authenticated admin/superadmin přes `user_roles`) přidána k `public.messages`.
+
+**Postcheck (read-only, RLS simulace přes SET ROLE authenticated + jwt claims, transakce abortovány):**
+- 3 INSERT policies: `messages_insert` (authenticated, auth.uid()=user_id), `messages_insert_admin` (authenticated admin/superadmin), `messages_insert_system` (service_role) ✅
+- **Test 1:** admin → affiliate (`4bab81c9…`) insert `sender='admin'` → `admin_insert_allowed=t` ✅
+- **Test 2:** běžný uživatel insert `sender='admin'` jinému user_id → `normal_user_admin_insert_allowed=f` ✅ (RLS odmítl)
+- Nic se neuložilo (oba testy RAISE EXCEPTION → rollback).
+
+**Admin zpráva affiliate uživateli funguje** (RLS povoluje). `npm run build` ✅. Commit dokumentace níže.
+
+---
+
 ## ✅ AFFILIATE v2 — ADMIN ZPRÁVA AFFILIATE UŽIVATELI: RLS FIX (03. 06. 2026, STAGING)
 
 **Problém 2:** Admin nemohl odeslat zprávu affiliate (ani jinému) uživateli — UI: „Chyba — Zprávu nelze odeslat".

@@ -13,7 +13,7 @@
 **Admin nemohl poslat zprávu (affiliate ani jinému) uživateli — „Zprávu nelze odeslat".**
 
 - Root cause: `public.messages` INSERT policies měly jen `messages_insert` (authenticated, `auth.uid()=user_id`) + `messages_insert_system` (service_role). Chyběla admin policy → admin reply s `user_id≠auth.uid()` RLS odmítl. Postihovalo VŠECHNY admin reply.
-- Fix: migrace `20260603_messages_admin_insert_policy.sql` → policy `messages_insert_admin` (authenticated admin/superadmin přes `user_roles`). **STAGING aplikováno ✅, PRODUKCE čeká na schválení.**
+- Fix: migrace `20260603_messages_admin_insert_policy.sql` → policy `messages_insert_admin` (authenticated admin/superadmin přes `user_roles`). **STAGING ✅ + PRODUKCE ✅ APLIKOVÁNO 04. 06. 2026** (postcheck: admin insert affiliate = povolen, běžný uživatel za admina = odmítnut).
 - Příjemce admin zprávy affiliate = `affiliate_accounts.auth_user_id` (= `auth.users.id`, FK target `messages.user_id`), NE `affiliate_accounts.id`.
 - Frontend: `AdminAffiliateAccounts` SELECTuje `auth_user_id` + tlačítko „Napsat zprávu" → `/admin/messages/<auth_user_id>`.
 - **Pravidlo:** nemazat/nenahrazovat `messages_insert_admin` policy — bez ní selže veškeré admin odesílání zpráv.

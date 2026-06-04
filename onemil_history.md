@@ -43,6 +43,15 @@
 
 ---
 
+## 2026-06-04 - Admin messaging RLS: migrace aplikována na PRODUKCI
+
+- Aplikována migrace `20260603_messages_admin_insert_policy.sql` na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla). Policy `messages_insert_admin` (authenticated admin/superadmin přes user_roles).
+- Postcheck (RLS simulace, transakce abortovány): admin→affiliate insert povolen (t), běžný uživatel za admina odmítnut (f). 3 INSERT policies přítomny.
+- Admin zpráva affiliate uživateli nyní funguje v produkci. `npm run build` ✅.
+- Nezměněno: provize, affiliate výpočty, Partner portal, zákaznický účet, platby, tikety, soutěže, peněženka, buy_ticket_atomic. Žádné jiné migrace ani Edge Functions.
+
+---
+
 ## 2026-06-03 - Admin messaging: obnovena admin INSERT RLS policy na messages (staging)
 
 - Symptom: admin nemohl poslat zprávu affiliate (ani jinému) uživateli — „Zprávu nelze odeslat".
