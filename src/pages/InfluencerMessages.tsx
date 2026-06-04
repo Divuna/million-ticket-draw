@@ -11,6 +11,7 @@ import { MessageCircle, Send, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { AI_ASSISTANT_BOB_LABEL } from "@/constants/messagesUi";
+import { BottomNavigation } from "@/components/BottomNavigation";
 
 function parseMessageContent(content: string): { text: string; cta?: { label: string; action: string } } {
   try {
@@ -261,8 +262,8 @@ export default function InfluencerMessages() {
           )}
         </div>
 
-        {/* Input */}
-        <div className="p-6 pt-4">
+        {/* Input — extra bottom padding so the fixed BottomNavigation never covers it */}
+        <div className="px-6 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
           <div
             className="relative overflow-hidden rounded-2xl p-4"
             style={{
@@ -300,6 +301,9 @@ export default function InfluencerMessages() {
           </div>
         </div>
       </div>
+
+      {/* Shared bottom navigation (fixed) — visible on desktop and mobile */}
+      <BottomNavigation />
     </div>
   );
 }
