@@ -43,6 +43,20 @@
 
 ---
 
+## ✅ ADMIN UNREAD BADGE — POČÍTÁ I BĚŽNÉ USER ZPRÁVY (04. 06. 2026, STAGING)
+
+**Chyba:** Admin badge u „Zprávy" počítal **jen** nepřečtené `SUPPORT_REQUEST_MARKER` řádky (`useUnreadMessagesCount.ts`), takže běžná nepřečtená zpráva od zákazníka/partnera/affiliate (bez handoffu) se vůbec nezapočítala.
+
+**Oprava (jen frontend, žádná DB/migrace):**
+- Admin unread = **počet konverzací s jakoukoliv nepřečtenou `sender='user'` zprávou** (distinct `user_id`). Pokrývá zákazníky, partnery, affiliate i zprávy bez markeru. Klesá, jak admin otevírá thready (AdminMessageThread označí user zprávy `read`).
+- Admin dostane **zvuk** i u nové běžné user zprávy (ne jen u markeru).
+- `/admin/messages` už zobrazuje „Čeká na odpověď" / „Vyřešeno" dle posledního odesílatele (Lovable).
+- Testidy: `admin-messages-unread-badge` (nav), `admin-thread-<uid>` (karta).
+- **Bob / ai-chat / prompt / CTA beze změny.** Žádná DB migrace.
+- E2E spec 32: seed nepřečtené user zprávy bez markeru → objeví se v adminu + badge → po otevření threadu `read=true`. Staging Full E2E run `26979723827`: **58 passed · 0 failed** ✅. `npm run build` ✅. Commit `42f29729`.
+
+---
+
 ## ✅ BOB ON/OFF PŘEPÍNAČ — FÁZE 1 NASAZENA V PRODUKCI (04. 06. 2026)
 
 **Admin může globálně vypnout/zapnout Boba. Nasazeno na STAGING I PRODUKCI (`xkzhjldrojjlrkezorey`). E2E zelený.**

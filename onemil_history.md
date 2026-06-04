@@ -43,6 +43,15 @@
 
 ---
 
+## 2026-06-04 - Admin unread badge: počítá i běžné user zprávy (staging)
+
+- Chyba: `useUnreadMessagesCount` admin větev počítala jen nepřečtené SUPPORT_REQUEST_MARKER → běžné user zprávy (zákazník/partner/affiliate bez handoffu) se v badge neobjevily.
+- Fix (jen frontend): admin unread = distinct konverzace s nepřečtenou sender='user' zprávou; admin zvuk i u běžné user zprávy; testidy pro nav badge + kartu. Žádná DB migrace, Bob/ai-chat beze změny.
+- `/admin/messages` už má „Čeká na odpověď"/„Vyřešeno" (Lovable).
+- Spec 32 zelený. Staging Full E2E run `26979723827`: 58 passed, 0 failed. `npm run build` ✅. Commit `42f29729`.
+
+---
+
 ## 2026-06-04 - Bob ON/OFF přepínač Fáze 1 APLIKOVÁNA na PRODUKCI
 
 - Migrace `20260604_get_bob_enabled_rpc.sql` aplikována na produkci `xkzhjldrojjlrkezorey` (výslovné schválení Pavla).
