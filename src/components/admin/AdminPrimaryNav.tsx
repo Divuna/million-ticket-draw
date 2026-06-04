@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { useUnseenWinsCount } from "@/hooks/useUnseenWinsCount";
 import { usePendingOffersCount } from "@/hooks/usePendingOffersCount";
+import { useBobEnabled } from "@/hooks/useBobEnabled";
 import {
   ADMIN_BOTTOM_NAV,
   adminBottomNavLinkEnd,
@@ -15,6 +16,7 @@ export const AdminPrimaryNav: React.FC = () => {
   const { unreadCount } = useUnreadMessagesCount();
   const { unseenCount: unseenWinsCount } = useUnseenWinsCount();
   const { pendingCount: pendingOffersCount } = usePendingOffersCount();
+  const { bobEnabled } = useBobEnabled();
 
   const activeSection = getAdminSectionFromPath(location.pathname, location.search);
 
@@ -25,6 +27,7 @@ export const AdminPrimaryNav: React.FC = () => {
           const Icon = entry.icon;
           const active = entry.id === activeSection;
           const showMessagesBadge = entry.id === "messages" && unreadCount > 0;
+          const bobOffOnMessages = entry.id === "messages" && !bobEnabled;
           const showWinsBadge = entry.id === "wins" && unseenWinsCount > 0;
           const showOffersBadge = entry.id === "users" && pendingOffersCount > 0;
           const badgeCount =
@@ -37,12 +40,19 @@ export const AdminPrimaryNav: React.FC = () => {
               to={entry.to}
               end={adminBottomNavLinkEnd(entry.to)}
               aria-current={active ? "page" : undefined}
+              title={bobOffOnMessages ? "Bob je vypnutý – zprávy jdou přímo adminovi." : undefined}
+              data-testid={bobOffOnMessages ? "admin-nav-messages-bob-off" : undefined}
               className={() =>
                 `inline-flex items-center relative h-8 shrink-0 rounded-full px-3 gap-1.5 text-[12px] font-semibold tracking-tight transition-all duration-200 no-underline
                     ${
                       active
                         ? "bg-muted/80 text-foreground border border-border/60 shadow-sm"
                         : "text-muted-foreground/90 border border-transparent hover:bg-muted/50 hover:text-foreground"
+                    }
+                    ${
+                      bobOffOnMessages
+                        ? "ring-2 ring-[hsl(35,90%,55%,0.7)] shadow-[0_0_10px_hsl(35,90%,55%,0.5)] animate-pulse"
+                        : ""
                     }`
               }
             >

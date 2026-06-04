@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Star, Building2, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useBobEnabled } from "@/hooks/useBobEnabled";
+import { Switch } from "@/components/ui/switch";
 import { SUPPORT_REQUEST_MARKER } from "@/constants/supportRequestMarker";
 
 interface Thread {
@@ -51,9 +53,22 @@ export default function AdminMessages() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
+  const { bobEnabled, setBobEnabledRemote } = useBobEnabled();
+  const [bobSaving, setBobSaving] = useState(false);
 
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const handleToggleBob = async (next: boolean) => {
+    setBobSaving(true);
+    const { error } = await setBobEnabledRemote(next);
+    setBobSaving(false);
+    if (error) {
+      toast({ title: "Chyba", description: "Nepodařilo se přepnout Boba.", variant: "destructive" });
+      return;
+    }
+    toast({ title: next ? "Bob aktivní" : "Bob vypnutý" });
+  };
 
   const loadThreads = useCallback(async () => {
     setLoading(true);
@@ -250,7 +265,34 @@ export default function AdminMessages() {
 
   return (
     <div className="flex flex-col p-6 gap-6">
-      <h2 className="text-xl font-bold text-foreground">Zprávy uživatelů</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xl font-bold text-foreground">Zprávy uživatelů</h2>
+        <div
+          className={`flex items-center gap-3 rounded-xl border px-4 py-2 ${
+            bobEnabled
+              ? "border-border/50 bg-card/60"
+              : "border-[hsl(35,90%,55%,0.5)] bg-[hsl(35,90%,12%)]"
+          }`}
+          data-testid="admin-bob-toggle"
+        >
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-foreground" data-testid="admin-bob-status">
+              {bobEnabled ? "Bob aktivní" : "Bob vypnutý"}
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              {bobEnabled
+                ? "AI odpovídá zákazníkům"
+                : "Zprávy jdou přímo adminovi"}
+            </span>
+          </div>
+          <Switch
+            checked={bobEnabled}
+            disabled={bobSaving}
+            onCheckedChange={handleToggleBob}
+            aria-label="Přepnout Boba"
+          />
+        </div>
+      </div>
 
       {loading ? (
         <p className="text-muted-foreground">Načítání…</p>

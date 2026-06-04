@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { LoggedOutScreen } from "@/components/LoggedOutScreen";
 import { useMessages } from "@/hooks/useMessages";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
+import { useBobEnabled } from "@/hooks/useBobEnabled";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeSupportHandoff } from "@/integrations/supabase/supportHandoffInvoke";
@@ -380,6 +381,7 @@ export default function MessagesPage() {
   const { user } = useAuth();
   const { sendMessageToAdmin } = useMessages();
   const { refresh: refreshUnreadCount } = useUnreadMessagesCount();
+  const { bobEnabled } = useBobEnabled();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -853,7 +855,8 @@ export default function MessagesPage() {
         return sorted;
       });
       setLastUserMessageAt(optimisticCreatedAt);
-      setIsAwaitingReply(chatModeRef.current === 'ai');
+      // When Bob is globally disabled the message goes straight to admin — no AI typing indicator.
+      setIsAwaitingReply(bobEnabled && chatModeRef.current === 'ai');
     });
 
     setFlyingMessage({ id: Date.now(), content: messageContent });
@@ -862,11 +865,17 @@ export default function MessagesPage() {
 
     try {
       console.log("SEND START");
-      const mode = chatModeRef.current;
+      // Global Bob switch (admin-controlled via settings.bob_enabled): when OFF,
+      // force the admin route so ai-chat is never called and the message goes
+      // straight to support. Bob prompt / CTA / format are untouched.
+      const mode = !bobEnabled ? "admin" : chatModeRef.current;
       // Single routing decision — exactly one send path per message
       console.log(`ROUTE: ${mode === "admin" ? "ADMIN" : "AI"}`);
 
       const result = await sendMessageToAdmin(messageContent, { supportActive: mode === "admin" });
+      if (!bobEnabled) {
+        toast({ title: "Zprávu jsme předali podpoře. Ozveme se co nejdříve." });
+      }
       console.log("RESULT", result);
 
       if (result) {
