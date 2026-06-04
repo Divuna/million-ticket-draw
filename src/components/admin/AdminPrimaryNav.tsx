@@ -51,16 +51,24 @@ export const AdminPrimaryNav: React.FC = () => {
                     }
                     ${
                       bobOffOnMessages
-                        ? "ring-2 ring-[hsl(35,90%,55%,0.7)] shadow-[0_0_10px_hsl(35,90%,55%,0.5)] animate-pulse"
+                        ? "border-[hsl(35,90%,55%,0.55)] bg-[hsl(35,90%,55%,0.08)] text-[hsl(35,90%,72%)] shadow-[0_0_14px_hsl(35,90%,55%,0.28)]"
                         : ""
                     }`
               }
             >
               <Icon
-                className={`h-3.5 w-3.5 shrink-0 ${active ? "opacity-100 text-primary" : "opacity-75"}`}
+                className={`h-3.5 w-3.5 shrink-0 ${
+                  bobOffOnMessages ? "opacity-100 text-[hsl(35,90%,62%)]" : active ? "opacity-100 text-primary" : "opacity-75"
+                }`}
                 aria-hidden
               />
               <span className="whitespace-nowrap">{entry.label}</span>
+              {bobOffOnMessages && (
+                <span className="relative flex h-2 w-2 ml-0.5" aria-hidden>
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-[hsl(35,90%,55%)] opacity-60 animate-ping" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[hsl(35,90%,58%)] shadow-[0_0_6px_hsl(35,90%,55%,0.9)]" />
+                </span>
+              )}
               {(showMessagesBadge || showWinsBadge || showOffersBadge) && (
                 <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground px-0.5">
                   {badgeCount > 99 ? "99+" : badgeCount}
