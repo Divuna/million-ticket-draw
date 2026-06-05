@@ -84,6 +84,7 @@ import AdminReferralDashboard from "@/pages/AdminReferralDashboard";
 import AdminInfluencers from "@/pages/AdminInfluencers";
 import AdminAffiliateAccounts from "@/pages/AdminAffiliateAccounts";
 import AffiliateRegister from "@/pages/AffiliateRegister";
+import AffiliateLogin from "@/pages/AffiliateLogin";
 import AffiliateDashboard from "@/pages/AffiliateDashboard";
 import AdminInfluencerCommissions from "@/pages/AdminInfluencerCommissions";
 import AdminInfluencerCampaigns from "@/pages/AdminInfluencerCampaigns";
@@ -607,6 +608,7 @@ function AppContent() {
             <Route path="/influencer/register" element={<InfluencerRegister />} />
             <Route path="/influencer/dashboard" element={<Navigate to="/affiliate/dashboard" replace />} />
             <Route path="/influencer/messages" element={<InfluencerMessages />} />
+            <Route path="/affiliate/login" element={<AffiliateLogin />} />
             <Route path="/affiliate/register" element={<AffiliateRegister />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
           <Route path="/partner/dashboard" element={<PartnerDashboard />} />

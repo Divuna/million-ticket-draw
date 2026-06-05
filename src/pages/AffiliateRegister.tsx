@@ -159,7 +159,7 @@ const AffiliateRegister = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full" onClick={() => navigate('/login')}>Přejít na přihlášení</Button>
+              <Button className="w-full" onClick={() => navigate('/affiliate/login')}>Přejít na přihlášení</Button>
             </CardContent>
           </Card>
         </div>
@@ -276,7 +276,7 @@ const AffiliateRegister = () => {
             </form>
 
             <div className="mt-4 text-center">
-              <Link to="/login" className="text-sm text-primary hover:underline inline-flex items-center gap-1">
+              <Link to="/affiliate/login" className="text-sm text-primary hover:underline inline-flex items-center gap-1">
                 <ArrowLeft className="w-3 h-3" /> Už mám účet — přihlásit se
               </Link>
             </div>
