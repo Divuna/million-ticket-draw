@@ -44,7 +44,7 @@ const PartnerLogin = () => {
 
       if (partnerError || !partner) {
         await supabase.auth.signOut();
-        toast.error('Tento účet nemá partnerský přístup');
+        toast.error('Tady zatím nemáte firemní Partner účet. Pokud chcete zapojit firmu, nejdříve ji zaregistrujte.');
         return;
       }
 
