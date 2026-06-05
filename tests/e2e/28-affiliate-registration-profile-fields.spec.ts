@@ -8,7 +8,7 @@
 
 import { test, expect } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
-import { loginViaUI } from './helpers/auth';
+import { loginAffiliateViaUI } from './helpers/auth';
 
 const SUPABASE_URL      = process.env.VITE_SUPABASE_URL                 ?? '';
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY            ?? '';
@@ -156,7 +156,7 @@ test.describe('Affiliate v2 — registration profile fields (spec 28)', () => {
       .update({ status: 'approved', approved_at: new Date().toISOString() })
       .eq('id', affiliateId);
 
-    await loginViaUI(page, TEST_EMAIL, TEST_PASSWORD);
+    await loginAffiliateViaUI(page, TEST_EMAIL, TEST_PASSWORD);
     await page.waitForURL(/\/affiliate\/dashboard/, { timeout: 20_000 });
     await page.getByTestId('mode-btn-profile').click();
 
@@ -183,8 +183,8 @@ test.describe('Affiliate v2 — registration profile fields (spec 28)', () => {
     const saveBtn = page.getByRole('button', { name: 'Uložit změny' }).first();
     await saveBtn.scrollIntoViewIfNeeded();
     await saveBtn.click();
-    await expect(page.locator('[data-sonner-toast]'))
-      .toContainText('úspěšně uložen', { timeout: 10_000 });
+    await expect(page.locator('[data-sonner-toast]').filter({ hasText: 'úspěšně uložen' }).first())
+      .toBeVisible({ timeout: 10_000 });
 
     // DB readback — confirm edited social fields persisted, others untouched
     let edited: any = null;

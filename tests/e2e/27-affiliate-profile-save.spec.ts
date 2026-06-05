@@ -81,8 +81,9 @@ test.describe('Affiliate Profile Save (spec 27)', () => {
     await saveBtn.click();
 
     // Expect success toast — confirms RPC update_affiliate_own_profile returned status='ok'
-    await expect(page.locator('[data-sonner-toast]'))
-      .toContainText('úspěšně uložen', { timeout: 10_000 });
+    // (filter: a lingering "Úspěšně přihlášeno" login toast may also be present)
+    await expect(page.locator('[data-sonner-toast]').filter({ hasText: 'úspěšně uložen' }).first())
+      .toBeVisible({ timeout: 10_000 });
 
     // DB readback — verify phone was written (non-null)
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
