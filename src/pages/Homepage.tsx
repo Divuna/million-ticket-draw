@@ -753,60 +753,36 @@ const Homepage = () => {
 
         {/* Premium value message — MioCoiny jako odměna */}
         <section className="w-full">
-          <div
-            className="relative max-w-[720px] mx-auto rounded-2xl p-6 md:p-8 overflow-hidden"
-            style={{
-              background: 'linear-gradient(180deg, rgba(29,33,40,0.92), rgba(10,11,15,0.96))',
-              border: '1px solid rgba(255,138,0,0.25)',
-              boxShadow: '0 0 28px rgba(255,138,0,0.12), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,181,71,0.08)',
-            }}
-          >
-            <div
-              className="absolute inset-x-0 top-0 h-[1px]"
-              style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.5) 20%, rgba(255,181,71,0.8) 50%, rgba(255,138,0,0.5) 80%, transparent 100%)',
-              }}
-            />
-            <div className="relative flex flex-col items-center text-center gap-4">
-              <div className="flex flex-col items-center gap-3">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(255,138,0,0.2), rgba(255,138,0,0.05))',
-                    border: '1px solid rgba(255,138,0,0.3)',
-                    boxShadow: '0 0 16px rgba(255,138,0,0.15)',
-                  }}
-                >
-                  <OneMilGiftIcon size={28} className="w-7 h-7" color="#FFB547" />
-                </div>
-                <h3
-                  className="text-lg md:text-xl font-bold tracking-tight"
-                  style={{
-                    fontFamily: 'var(--om-font-heading)',
-                    background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                  }}
-                >
-                  MioCoiny jako odměna za nákupy
-                </h3>
-              </div>
-              <div
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+          <div className="max-w-[720px] mx-auto px-4 py-2 text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <OneMilGiftIcon size={18} className="w-[18px] h-[18px] shrink-0" color="#FFB547" />
+              <h3
+                className="text-base md:text-lg font-bold tracking-tight"
                 style={{
-                  background: 'rgba(255,138,0,0.1)',
-                  border: '1px solid rgba(255,138,0,0.3)',
-                  color: '#FFB547',
+                  fontFamily: 'var(--om-font-heading)',
+                  background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
                 }}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FF8A00] shadow-[0_0_6px_rgba(255,138,0,0.6)]" />
-                Dobití je volitelné
-              </div>
-              <p className="text-sm md:text-base leading-relaxed max-w-[560px]" style={{ color: '#BFC6CF' }}>
-                Největší radost máme, když MioCoiny získáváte jako odměnu za nákupy u našich partnerů. Právě na tom je OneMil postavený. Dobití berte jen jako další možnost, když se chcete do soutěže zapojit hned a nechcete čekat na další odměnu z nákupu.
-              </p>
+                MioCoiny jako odměna za nákupy
+              </h3>
             </div>
+            <div
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold mb-2"
+              style={{
+                background: 'rgba(255,138,0,0.1)',
+                border: '1px solid rgba(255,138,0,0.25)',
+                color: '#FFB547',
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FF8A00] shadow-[0_0_6px_rgba(255,138,0,0.6)]" />
+              Dobití je volitelné
+            </div>
+            <p className="text-sm leading-relaxed max-w-[600px] mx-auto" style={{ color: '#8E98A6' }}>
+              Největší radost máme, když MioCoiny získáváte jako odměnu za nákupy u našich partnerů. Právě na tom je OneMil postavený. Dobití berte jen jako další možnost, když se chcete do soutěže zapojit hned a nechcete čekat na další odměnu z nákupu.
+            </p>
           </div>
         </section>
 
