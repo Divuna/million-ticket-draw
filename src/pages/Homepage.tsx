@@ -751,35 +751,6 @@ const Homepage = () => {
           </div>
         </div>
 
-        {/* Dynamic Banners */}
-        {(voucherBanner || gamesBanner) && (
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Voucher Banner */}
-            {voucherBanner && (
-              <div
-                className="relative rounded-lg overflow-hidden transition-all duration-200 cursor-pointer hover:scale-105"
-                onClick={() => navigate("/vouchers")}
-              >
-                <img
-                  src={voucherBanner.image_url}
-                  alt={voucherBanner.title}
-                  className="w-full h-64 md:h-80 object-cover"
-                />
-              </div>
-            )}
-
-            {/* Games Banner */}
-            {gamesBanner && (
-              <div
-                className="relative rounded-lg overflow-hidden transition-all duration-200 cursor-pointer hover:scale-105"
-                onClick={() => navigate("/games")}
-              >
-                <img src={gamesBanner.image_url} alt={gamesBanner.title} className="w-full h-64 md:h-80 object-cover" />
-              </div>
-            )}
-          </section>
-        )}
-
         {/* Premium value message — MioCoiny jako odměna */}
         <section className="w-full">
           <div
@@ -790,16 +761,13 @@ const Homepage = () => {
               boxShadow: '0 0 28px rgba(255,138,0,0.12), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,181,71,0.08)',
             }}
           >
-            {/* Subtle orange glow top edge */}
             <div
               className="absolute inset-x-0 top-0 h-[1px]"
               style={{
                 background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.5) 20%, rgba(255,181,71,0.8) 50%, rgba(255,138,0,0.5) 80%, transparent 100%)',
               }}
             />
-
             <div className="relative flex flex-col items-center text-center gap-4">
-              {/* Icon + Headline row */}
               <div className="flex flex-col items-center gap-3">
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center"
@@ -824,8 +792,6 @@ const Homepage = () => {
                   MioCoiny jako odměna za nákupy
                 </h3>
               </div>
-
-              {/* Badge */}
               <div
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
                 style={{
@@ -837,14 +803,39 @@ const Homepage = () => {
                 <span className="w-1.5 h-1.5 rounded-full bg-[#FF8A00] shadow-[0_0_6px_rgba(255,138,0,0.6)]" />
                 Dobití je volitelné
               </div>
-
-              {/* Body text */}
               <p className="text-sm md:text-base leading-relaxed max-w-[560px]" style={{ color: '#BFC6CF' }}>
                 Největší radost máme, když MioCoiny získáváte jako odměnu za nákupy u našich partnerů. Právě na tom je OneMil postavený. Dobití berte jen jako další možnost, když se chcete do soutěže zapojit hned a nechcete čekat na další odměnu z nákupu.
               </p>
             </div>
           </div>
         </section>
+
+        {/* Dynamic Banners */}
+        {(voucherBanner || gamesBanner) && (
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {voucherBanner && (
+              <div
+                className="relative rounded-lg overflow-hidden transition-all duration-200 cursor-pointer hover:scale-105"
+                onClick={() => navigate("/vouchers")}
+              >
+                <img
+                  src={voucherBanner.image_url}
+                  alt={voucherBanner.title}
+                  className="w-full h-64 md:h-80 object-cover"
+                />
+              </div>
+            )}
+            {gamesBanner && (
+              <div
+                className="relative rounded-lg overflow-hidden transition-all duration-200 cursor-pointer hover:scale-105"
+                onClick={() => navigate("/games")}
+              >
+                <img src={gamesBanner.image_url} alt={gamesBanner.title} className="w-full h-64 md:h-80 object-cover" />
+              </div>
+            )}
+          </section>
+        )}
+
 
         {/* Golden separator line - premium, animated */}
         <div className="relative w-full overflow-hidden py-3">
