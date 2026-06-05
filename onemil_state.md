@@ -43,6 +43,23 @@
 
 ---
 
+## ✅ LOGIN — KONEC AUTO-BOUNCE AFFILIATE/PARTNER Z /login (05. 06. 2026, STAGING)
+
+**`/login` už automaticky nehází affiliate/partner do jejich dashboardu. Admin vždy první.**
+
+- **Redirect problém:** po auth na herním `/login` byl affiliate/partner (vč. multi-role `influencer@onemil.cz`) tiše hozen do `/affiliate/dashboard` (Login.tsx influencer/partner větve + globální App guard confinement). Špatné dveře → tiché přihlášení do affiliate prostoru místo hlášky.
+- **Oprava `Login.tsx` (inline, deterministicky po signIn, bez race s guardem):**
+  1. **ADMIN/superadmin VŽDY první** → `/admin` (nikdy blokován kvůli partner/affiliate záznamu);
+  2. jakýkoliv `partners` NEBO `affiliate_accounts` záznam → `signOut` + **sonner** hláška „Tento účet není registrovaný jako soutěžící. Přihlaste se ve správné části aplikace.", **zůstane na /login** (žádný bounce — `/login` není v `CUSTOMER_BLOCKED_ROUTES`, takže guard nebounceuje);
+  3. jinak zákazník → `/profile` (nebo redirect target).
+  Žádná DB/migrace; Bob/ai-chat/provize netknuté.
+- `/affiliate/login` a `/partner/login` gatují na svůj záznam (beze změny).
+- **Affiliate E2E (multi-role) se nově přihlašuje přes `/affiliate/login`** — nový helper `loginAffiliateViaUI`; specy 25/26/27/28 upraveny; toast asserty `.filter` (login toast „Úspěšně přihlášeno" už nekoliduje).
+- Spec 33 (6 testů): affiliate→/affiliate/login projde; affiliate→/partner/login blokován; zákazník→/affiliate/login blokován; **affiliate→/login blokován + zůstane**; **zákazník→/login projde**; **admin→/login → /admin**. Staging Full E2E run `26999704712`: **64 passed · 0 failed** ✅. `npm run build` ✅. Commity `6f2d43e0`, `dd8defa7`, `4612d294`.
+- **Pozn.:** `/login` blokuje účet s partners/affiliate záznamem (chybí signál „soutěžící") — multi-role soutěžící bez vlastního signálu by byl taky blokován; čisté oddělení čeká na schválený signál (viz rozhodnutí níže). Admin je chráněn pořadím.
+
+---
+
 ## ✅ LOGIN GATING DLE TYPU ÚČTU — /affiliate/login + /partner/login (05. 06. 2026)
 
 **Affiliate/partner se nepřihlásí přes špatný vstup. `/login` ponechán (chybí signál „soutěžící").**

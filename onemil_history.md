@@ -43,6 +43,17 @@
 
 ---
 
+## 2026-06-05 - Login: konec auto-bounce affiliate/partner z /login (admin first)
+
+- Login.tsx: inline routing po signIn — admin/superadmin VŽDY první → /admin; jakýkoliv partners/affiliate_accounts záznam → signOut + sonner hláška, zůstane na /login (žádný bounce); jinak zákazník → /profile.
+- /login není v CUSTOMER_BLOCKED_ROUTES → setrvání na /login neaktivuje globální guard bounce.
+- Affiliate E2E se přihlašuje přes /affiliate/login (nový helper loginAffiliateViaUI); specy 25/26/27/28 upraveny; toast asserty filter.
+- Spec 30 ref_code fix (truncation collision). Spec 33 rozšířen na 6 testů.
+- Staging Full E2E run `26999704712`: 64 passed, 0 failed. `npm run build` ✅. Commity `6f2d43e0`, `dd8defa7`, `4612d294`.
+- Nezměněno: DB/migrace, platby, tikety, soutěže, peněženka, buy_ticket_atomic, Bob, ai-chat, provize.
+
+---
+
 ## 2026-06-05 - Rozhodnutí o přihlašování (dokumentace)
 
 - `/affiliate/login` = samostatný vstup pro Affiliate (gate na affiliate_accounts).
