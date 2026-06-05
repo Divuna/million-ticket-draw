@@ -25,7 +25,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaUI } from './helpers/auth';
+import { loginAffiliateViaUI } from './helpers/auth';
 
 const AFFILIATE_EMAIL    = process.env.E2E_AFFILIATE_EMAIL    ?? '';
 const AFFILIATE_PASSWORD = process.env.E2E_AFFILIATE_PASSWORD ?? '';
@@ -48,7 +48,7 @@ test.describe('Legacy influencer → Affiliate v2 UI routing (spec 25)', () => {
   });
 
   test('legacy influencer login lands on /affiliate/dashboard', async ({ page }) => {
-    await loginViaUI(page, AFFILIATE_EMAIL, AFFILIATE_PASSWORD);
+    await loginAffiliateViaUI(page, AFFILIATE_EMAIL, AFFILIATE_PASSWORD);
 
     // Should be redirected to /affiliate/dashboard — NOT /influencer/dashboard
     await expect(page).toHaveURL(/\/affiliate\/dashboard/, { timeout: 15_000 });
@@ -65,7 +65,7 @@ test.describe('Legacy influencer → Affiliate v2 UI routing (spec 25)', () => {
   });
 
   test('/influencer/dashboard redirects to /affiliate/dashboard', async ({ page }) => {
-    await loginViaUI(page, AFFILIATE_EMAIL, AFFILIATE_PASSWORD);
+    await loginAffiliateViaUI(page, AFFILIATE_EMAIL, AFFILIATE_PASSWORD);
 
     // Force navigation to old URL
     await page.goto('/influencer/dashboard');

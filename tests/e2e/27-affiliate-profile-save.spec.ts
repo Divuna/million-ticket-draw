@@ -25,7 +25,7 @@
 
 import { test, expect, type Page } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
-import { loginViaUI } from './helpers/auth';
+import { loginAffiliateViaUI } from './helpers/auth';
 
 const AFFILIATE_EMAIL   = process.env.E2E_AFFILIATE_EMAIL              ?? '';
 const AFFILIATE_PASSWORD= process.env.E2E_AFFILIATE_PASSWORD            ?? '';
@@ -54,7 +54,7 @@ test.describe('Affiliate Profile Save (spec 27)', () => {
       );
       localStorage.removeItem('affiliate_active_mode');
     });
-    await loginViaUI(page, AFFILIATE_EMAIL, AFFILIATE_PASSWORD);
+    await loginAffiliateViaUI(page, AFFILIATE_EMAIL, AFFILIATE_PASSWORD);
     await page.waitForURL(/\/affiliate\/dashboard/, { timeout: 20_000 });
   });
 

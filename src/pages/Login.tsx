@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { useUserRole } from "@/hooks/useUserRole";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import logo from "@/assets/logo-onemil.png";
 import { ENABLED_OAUTH_PROVIDERS, type OAuthProvider } from "@/config/socialAuth";
 
@@ -44,47 +45,10 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [pendingEmailLoginNav, setPendingEmailLoginNav] = useState(false);
   const [searchParams] = useSearchParams();
   const redirectRaw = searchParams.get("redirect");
-  const { signIn, signInWithOAuth, user, loading: authLoading } = useAuth();
-  const {
-    isAdmin,
-    isPartnerAccount,
-    isInfluencerAccount,
-    loading: roleLoading,
-  } = useUserRole();
+  const { signIn, signInWithOAuth } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!pendingEmailLoginNav) return;
-    if (authLoading || !user) return;
-    if (roleLoading) return;
-
-    const redirectTarget = safeRedirectPath(redirectRaw);
-    if (redirectTarget) {
-      navigate(redirectTarget, { replace: true });
-    } else if (isAdmin) {
-      navigate("/admin", { replace: true });
-    } else if (isInfluencerAccount) {
-      navigate("/influencer/dashboard", { replace: true });
-    } else if (isPartnerAccount) {
-      navigate("/partner/dashboard", { replace: true });
-    } else {
-      navigate("/profile", { replace: true });
-    }
-    setPendingEmailLoginNav(false);
-  }, [
-    pendingEmailLoginNav,
-    authLoading,
-    user,
-    roleLoading,
-    isAdmin,
-    isPartnerAccount,
-    isInfluencerAccount,
-    redirectRaw,
-    navigate,
-  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,9 +68,43 @@ const Login: React.FC = () => {
             : error.message,
           variant: "destructive",
         });
-      } else {
-        setPendingEmailLoginNav(true);
+        return;
       }
+
+      // Inline routing — deterministic, avoids the global guard auto-bouncing
+      // affiliate/partner accounts into their dashboards from the game login.
+      const { data: { user: signedUser } } = await supabase.auth.getUser();
+      if (!signedUser) return;
+
+      // 1) ADMIN ALWAYS FIRST — never blocked by any partner/affiliate record.
+      const { data: adminRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", signedUser.id)
+        .in("role", ["admin", "superadmin"])
+        .maybeSingle();
+      if (adminRole) {
+        navigate("/admin", { replace: true });
+        return;
+      }
+
+      // 2) Partner / Affiliate accounts have dedicated logins (/partner/login,
+      //    /affiliate/login). Do NOT auto-route them into their dashboards from
+      //    the game login. No reliable "competitor" signal exists, so we stop
+      //    the silent bounce and show a clear message instead.
+      const [{ data: partnerRow }, { data: affiliateRow }] = await Promise.all([
+        supabase.from("partners").select("id").eq("auth_user_id", signedUser.id).maybeSingle(),
+        (supabase as any).from("affiliate_accounts").select("id").eq("auth_user_id", signedUser.id).maybeSingle(),
+      ]);
+      if (partnerRow || affiliateRow) {
+        await supabase.auth.signOut();
+        sonnerToast.error("Tento účet není registrovaný jako soutěžící. Přihlaste se ve správné části aplikace.");
+        return;
+      }
+
+      // 3) Customer / competitor — proceed into the game app.
+      const redirectTarget = safeRedirectPath(redirectRaw);
+      navigate(redirectTarget || "/profile", { replace: true });
     } catch (error) {
       toast({
         title: "Chyba",

@@ -19,6 +19,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const TEST_EMAIL    = process.env.E2E_TEST_EMAIL              ?? '';
 const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD           ?? '';
+const ADMIN_EMAIL   = process.env.E2E_ADMIN_EMAIL            ?? '';
+const ADMIN_PASSWORD= process.env.E2E_ADMIN_PASSWORD         ?? '';
 const SUPABASE_URL  = process.env.VITE_SUPABASE_URL          ?? '';
 const SERVICE_KEY   = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? '';
 
@@ -92,5 +94,28 @@ test.describe('Login gating by account type (spec 33)', () => {
     await expect(page.locator('[data-sonner-toast]').filter({ hasText: 'nemáte Affiliate účet' }).first())
       .toBeVisible({ timeout: 10_000 });
     await expect(page).toHaveURL(/\/affiliate\/login/);
+  });
+
+  test('affiliate via game /login is blocked, stays on /login (not bounced to dashboard)', async ({ page }) => {
+    await page.goto('/login');
+    await fillLogin(page, AFF_EMAIL, AFF_PASSWORD);
+    await expect(page.locator('[data-sonner-toast]').filter({ hasText: 'není registrovaný jako soutěžící' }).first())
+      .toBeVisible({ timeout: 10_000 });
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test('customer via game /login passes', async ({ page }) => {
+    await page.goto('/login');
+    await fillLogin(page, TEST_EMAIL, TEST_PASSWORD);
+    await page.waitForURL((url) => !url.pathname.endsWith('/login'), { timeout: 20_000 });
+    expect(page.url()).not.toContain('/affiliate/dashboard');
+  });
+
+  test('admin via game /login goes to /admin', async ({ page }) => {
+    test.skip(!ADMIN_EMAIL || !ADMIN_PASSWORD, 'Admin creds not set');
+    await page.goto('/login');
+    await fillLogin(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+    await page.waitForURL(/\/admin/, { timeout: 20_000 });
+    expect(page.url()).toContain('/admin');
   });
 });
