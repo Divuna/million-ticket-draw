@@ -53,8 +53,13 @@
 - **Multi-role:** každý login gatuje na svůj záznam; účet s více registracemi projde jen tam, kde má odpovídající řádek.
 - Spec 33 (3 testy): affiliate→/affiliate/login projde; affiliate→/partner/login blokován; zákazník→/affiliate/login blokován. Staging Full E2E run `26996683970`: **61 passed · 0 failed** ✅. `npm run build` ✅. Commit `4748042d` (+ `48413dee` partner hláška).
 
-### Návrh pro `/login` (čeká na rozhodnutí Pavla)
-Aby šel `/login` striktně uzavřít pro čisté partner/affiliate, je potřeba **explicitní signál „soutěžící"** (dnes neexistuje). Bezpečné varianty: (a) nový flag/sloupec `is_competitor`/`registered_as_customer` (= **migrace**, kterou bez schválení nedělám), nebo (b) marker při zákaznické registraci. Bez něj by jakékoliv blokování na `/login` zamklo multi-role účty.
+### ROZHODNUTÍ o `/login` (05. 06. 2026, závazné)
+- `/affiliate/login` = samostatný vstup pro Affiliate účet (gate na `affiliate_accounts`).
+- `/partner/login` = samostatný vstup pro Partner účet (gate na `partners`).
+- **`/login` zůstává SDÍLENÝ**, protože přes něj chodí také **admin**. **Nesmí se uzavřít jen pro soutěžící**, dokud neexistuje spolehlivý DB signál „soutěžící účet".
+- **Admin check VŽDY první**; admin **nikdy neblokovat** kvůli partner/affiliate záznamu (multi-role admin musí projít).
+- **`profiles`/`wallets` nejsou spolehlivý signál** soutěžícího — mají je i partneři i affiliate.
+- **Budoucí oddělení `/login`** vyžaduje **samostatně schválenou migraci/signál** (role `competitor` nebo flag `registered_as_customer`) **+ backfill** existujících účtů PŘED zapnutím blokování.
 
 ---
 

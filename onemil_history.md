@@ -43,6 +43,18 @@
 
 ---
 
+## 2026-06-05 - Rozhodnutí o přihlašování (dokumentace)
+
+- `/affiliate/login` = samostatný vstup pro Affiliate (gate na affiliate_accounts).
+- `/partner/login` = samostatný vstup pro Partner (gate na partners).
+- `/login` zůstává sdílený — chodí přes něj i admin; nesmí se uzavřít jen pro soutěžící, dokud neexistuje spolehlivý DB signál „soutěžící účet".
+- Admin check vždy první; admin nikdy neblokovat kvůli partner/affiliate záznamu.
+- profiles/wallets nejsou spolehlivý signál (mají je i partneři i affiliate).
+- Budoucí oddělení /login vyžaduje samostatně schválenou migraci/signál + backfill existujících účtů.
+- Pouze dokumentace, žádná změna kódu/DB.
+
+---
+
 ## 2026-06-05 - Login gating dle typu účtu (/affiliate/login + /partner/login)
 
 - Nový `/affiliate/login` (gate na affiliate_accounts, jinak hláška + signOut); affiliate registrace vede na něj.

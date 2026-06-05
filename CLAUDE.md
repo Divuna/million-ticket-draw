@@ -1,5 +1,17 @@
 # CLAUDE.md
 
+## LOGIN — ROZHODNUTÍ O VSTUPECH DLE TYPU ÚČTU (05. 06. 2026)
+
+**Závazná pravidla pro přihlašování. Neměnit bez výslovného schválení Pavla.**
+
+- `/affiliate/login` (`AffiliateLogin.tsx`) = **samostatný vstup pro Affiliate účet** — pustí jen účet s `affiliate_accounts` řádkem, jinak hláška + signOut.
+- `/partner/login` (`PartnerLogin.tsx`) = **samostatný vstup pro Partner účet** — pustí jen účet s `partners` řádkem, jinak hláška + signOut.
+- `/login` (`Login.tsx`) = **zůstává SDÍLENÝ**, protože přes něj chodí také **admin/superadmin**. **NESMÍ se uzavřít jen pro soutěžící**, dokud neexistuje spolehlivý DB signál „soutěžící účet".
+- **Admin check MUSÍ být VŽDY první** (po signIn, před jakoukoliv partner/affiliate/competitor kontrolou) a **admin nesmí být NIKDY blokován** kvůli partners/affiliate záznamu (multi-role admin musí projít).
+- **`profiles`/`wallets` NEJSOU spolehlivý signál soutěžícího** — mají je i partneři (4/4) i affiliate (3/3); na `auth.users` není trigger. Signál „soutěžící" zatím **neexistuje a nevymýšlí se**.
+- **Budoucí oddělení `/login`** (striktní competitor-only) vyžaduje **samostatně schválenou migraci/signál** (např. role `competitor` v `user_roles` nebo flag `profiles.registered_as_customer`) **+ backfill** existujících soutěžících PŘED zapnutím blokování.
+- Multi-role: každý login gatuje na svůj záznam; účet projde jen tam, kde má odpovídající registraci. Zamčeno spec 33. Commity `48413dee`, `4748042d`.
+
 ## BOB ON/OFF PŘEPÍNAČ — FÁZE 1 V PRODUKCI (04. 06. 2026)
 
 **Admin globálně vypíná/zapíná Boba. Migrace `20260604_get_bob_enabled_rpc.sql` APLIKOVÁNA na produkci `xkzhjldrojjlrkezorey`.**
