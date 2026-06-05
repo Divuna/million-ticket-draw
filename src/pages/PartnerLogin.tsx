@@ -48,6 +48,20 @@ const PartnerLogin = () => {
         return;
       }
 
+      // Legacy influencers / affiliates are ALSO stored in `partners` (notes.type =
+      // 'influencer'), but they are NOT company partners. Only a real company /
+      // e-shop partner may enter the partner portal — influencers use /affiliate/login.
+      const notesStr =
+        typeof partner.notes === 'string'
+          ? partner.notes
+          : partner.notes ? JSON.stringify(partner.notes) : '';
+      const isInfluencer = notesStr.toLowerCase().includes('influencer');
+      if (isInfluencer) {
+        await supabase.auth.signOut();
+        toast.error('Tady zatím nemáte firemní Partner účet. Pokud chcete zapojit firmu, nejdříve ji zaregistrujte.');
+        return;
+      }
+
       if (partner.status !== 'approved') {
         await supabase.auth.signOut();
         toast.error('Váš partnerský účet čeká na schválení');
@@ -55,12 +69,7 @@ const PartnerLogin = () => {
       }
 
       toast.success('Úspěšně přihlášeno');
-
-      // Redirect approved influencers to their dashboard
-      const notesStr = typeof partner.notes === 'string' ? partner.notes : '';
-      const isInfluencer = notesStr.toLowerCase().includes('influencer');
-      
-      navigate(isInfluencer ? '/influencer/dashboard' : '/partner/dashboard');
+      navigate('/partner/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
       toast.error(error.message || 'Nepodařilo se přihlásit');
