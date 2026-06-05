@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Header } from '@/components/Header';
 import { Separator } from '@/components/ui/separator';
@@ -6,7 +6,12 @@ import { Building2, Mail, Phone, MapPin, FileText, User, Quote, Sparkles } from 
 
 const GOLD = 'hsl(var(--heading-gold))';
 
+// Founder photo lives in /public so it can be dropped in without a code change.
+const FOUNDER_PHOTO_SRC = '/founder-pavel-divis.jpg';
+
 const Kontakt: React.FC = () => {
+  const [photoFailed, setPhotoFailed] = useState(false);
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <Helmet>
@@ -46,15 +51,25 @@ const Kontakt: React.FC = () => {
 
           <div className="p-6 sm:p-9 md:p-12">
             <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-              {/* Photo placeholder (no generated image) */}
+              {/* Founder photo (falls back to a premium PD placeholder until added) */}
               <div className="shrink-0 mx-auto sm:mx-0">
                 <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-2xl bg-gradient-to-br from-[hsl(45_80%_45%)] via-[hsl(35_85%_38%)] to-[hsl(30_80%_30%)] p-[2px] shadow-[0_8px_30px_rgba(255,138,0,0.28)]">
-                  <div className="w-full h-full rounded-2xl bg-[hsl(220_25%_10%)] flex flex-col items-center justify-center gap-1">
-                    <span className="font-heading font-bold text-2xl md:text-3xl bg-gradient-to-br from-[#FFB547] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent">
-                      PD
-                    </span>
-                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60">Foto brzy</span>
-                  </div>
+                  {!photoFailed ? (
+                    <img
+                      src={FOUNDER_PHOTO_SRC}
+                      alt="Pavel Diviš — jednatel a zakladatel OneMil"
+                      onError={() => setPhotoFailed(true)}
+                      className="w-full h-full rounded-2xl object-cover object-top"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-2xl bg-[hsl(220_25%_10%)] flex flex-col items-center justify-center gap-1">
+                      <span className="font-heading font-bold text-2xl md:text-3xl bg-gradient-to-br from-[#FFB547] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent">
+                        PD
+                      </span>
+                      <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60">Foto brzy</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
