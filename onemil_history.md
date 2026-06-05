@@ -43,6 +43,17 @@
 
 ---
 
+## 2026-06-05 - Login gating dle typu účtu (/affiliate/login + /partner/login)
+
+- Nový `/affiliate/login` (gate na affiliate_accounts, jinak hláška + signOut); affiliate registrace vede na něj.
+- `/partner/login` gate na partners (hláška upravena); čistý affiliate blokován, ne přesměrován.
+- `/login` NEZMĚNĚN: ověřeno, že spolehlivý signál „soutěžící" neexistuje (žádný auth trigger; partneři i affiliate mají wallets). Signál nevymýšlen, vrácen návrh (flag = migrace, čeká na schválení).
+- Multi-role: každý login gatuje na svůj záznam.
+- Spec 33 zelený, specy 26/27 bez regrese. Staging Full E2E run `26996683970`: 61 passed, 0 failed. `npm run build` ✅. Commits `48413dee`, `4748042d`.
+- Nezměněno: DB/migrace, platby, tikety, soutěže, peněženka, buy_ticket_atomic, Bob, ai-chat, provize.
+
+---
+
 ## 2026-06-04 - Admin unread badge: počítá i běžné user zprávy (staging)
 
 - Chyba: `useUnreadMessagesCount` admin větev počítala jen nepřečtené SUPPORT_REQUEST_MARKER → běžné user zprávy (zákazník/partner/affiliate bez handoffu) se v badge neobjevily.

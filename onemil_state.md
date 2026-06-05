@@ -43,6 +43,21 @@
 
 ---
 
+## ✅ LOGIN GATING DLE TYPU ÚČTU — /affiliate/login + /partner/login (05. 06. 2026)
+
+**Affiliate/partner se nepřihlásí přes špatný vstup. `/login` ponechán (chybí signál „soutěžící").**
+
+- **Nový `/affiliate/login`** (`AffiliateLogin.tsx`): pustí jen účet s `affiliate_accounts` řádkem; jinak signOut + „Tady zatím nemáte Affiliate účet…". Multi-role účet s affiliate záznamem projde. Affiliate registrace vede nově na `/affiliate/login`.
+- **`/partner/login`**: gatuje na `partners` (+ stav); jinak signOut + „Tady zatím nemáte firemní Partner účet…". Čistý affiliate na partner loginu = **zablokován, NE přesměrován** do affiliate dashboardu.
+- **`/login` (zákaznický): NEZMĚNĚN.** Ověřeno, že **spolehlivý signál „soutěžící účet" NEEXISTUJE** — žádný trigger na auth.users; všichni partneři (4/4) i affiliate (3/3) v produkci mají `wallets` řádek, takže wallet/profile nerozlišuje. Dle zadání signál nevymýšlím; `/login` zůstává sdílený (affiliate přes /login dál funguje → /affiliate/dashboard, specy 26/27 zelené).
+- **Multi-role:** každý login gatuje na svůj záznam; účet s více registracemi projde jen tam, kde má odpovídající řádek.
+- Spec 33 (3 testy): affiliate→/affiliate/login projde; affiliate→/partner/login blokován; zákazník→/affiliate/login blokován. Staging Full E2E run `26996683970`: **61 passed · 0 failed** ✅. `npm run build` ✅. Commit `4748042d` (+ `48413dee` partner hláška).
+
+### Návrh pro `/login` (čeká na rozhodnutí Pavla)
+Aby šel `/login` striktně uzavřít pro čisté partner/affiliate, je potřeba **explicitní signál „soutěžící"** (dnes neexistuje). Bezpečné varianty: (a) nový flag/sloupec `is_competitor`/`registered_as_customer` (= **migrace**, kterou bez schválení nedělám), nebo (b) marker při zákaznické registraci. Bez něj by jakékoliv blokování na `/login` zamklo multi-role účty.
+
+---
+
 ## ✅ ADMIN UNREAD BADGE — POČÍTÁ I BĚŽNÉ USER ZPRÁVY (04. 06. 2026, STAGING)
 
 **Chyba:** Admin badge u „Zprávy" počítal **jen** nepřečtené `SUPPORT_REQUEST_MARKER` řádky (`useUnreadMessagesCount.ts`), takže běžná nepřečtená zpráva od zákazníka/partnera/affiliate (bez handoffu) se vůbec nezapočítala.
