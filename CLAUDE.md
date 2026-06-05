@@ -1,5 +1,37 @@
 # CLAUDE.md
 
+## OCHRANA PROTI REGRESÍM — ZÁVAZNÉ SYSTÉMOVÉ PRAVIDLO (05. 06. 2026)
+
+**OneMil se NEHLÍDÁ ručně. Každá větší změna MUSÍ být chráněná testem, smoke testem nebo vědomě schválenou výjimkou Pavla.**
+
+### 1. Definition of Done — změna NENÍ hotová, dokud:
+1. `npm run build` projde (exit 0);
+2. proběhl **relevantní E2E/smoke test** podle oblasti změny (zeleně, staging);
+3. je **ověřeno, že se nerozbily související části** (sousední oblasti v mapě níže);
+4. **DB / migrace / Edge Functions / Bob prompt** mají **samostatné výslovné potvrzení Pavla** (+ produkční postcheck);
+5. **dokumentace** (`onemil_state.md`, `onemil_history.md`, `CLAUDE.md`) je aktualizovaná;
+6. **commit je pushnutý**. (Produkce se projeví až po **Lovable Publish** — live build ≠ `main`, dokud se nepublikuje.)
+
+### 2. Minimální P0 smoke PŘED každým Lovable Publish:
+- registrace / login (spec 01, 02),
+- login gating dle typu účtu (spec 33, 14),
+- nákup ticketu (spec 04),
+- výhra (spec 05),
+- peněženka / balance (spec 09, 03-voucher),
+- zprávy admin ↔ uživatel (spec 29, 32),
+- Bob ON/OFF kontrakt (spec 31).
+Pokud se měnila konkrétní oblast → **+ celý blok té oblasti**.
+
+### 3. Každá kritická oblast MUSÍ mít test NEBO vědomě schválenou výjimku:
+přihlášení · soutěže · hraní · dobíjení · peněženka · výhry · zprávy · Bob · affiliate · partneři · admin.
+
+### 4. Bob pravidlo (neměnné bez samostatného schválení):
+- **neměnit prompt**, **neměnit CTA routing**, **neměnit formát `{ text, cta }`**;
+- testovat pouze **kontrakt** (formát, CTA jen na povolené cesty `/games`,`/wins`,`/vouchers`,`/profile`, OFF→ai-chat se nevolá), **nikdy přesný text odpovědi**.
+
+### 5. Pravidlo přístupu k cizím oblastem
+`buy_ticket_atomic`, platby, event/push pipeline, provize a Bob prompt se **nemění bez výslovné instrukce**. Neznámou oblast nejdřív zmapuj (mapa kritických oblastí v `onemil_state.md`), pak měň.
+
 ## LOGIN — ROZHODNUTÍ O VSTUPECH DLE TYPU ÚČTU (05. 06. 2026)
 
 **Závazná pravidla pro přihlašování. Neměnit bez výslovného schválení Pavla.**

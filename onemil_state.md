@@ -1,6 +1,35 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 03. 06. 2026
+**Aktualizováno:** 05. 06. 2026
+
+---
+
+## 🛡️ OCHRANA PROTI REGRESÍM — ZÁVAZNÉ PRAVIDLO (05. 06. 2026)
+
+**OneMil se NEHLÍDÁ ručně. Každá větší změna MUSÍ být chráněná testem, smoke testem nebo vědomě schválenou výjimkou Pavla.** (Plné znění v `CLAUDE.md`.)
+
+### Definition of Done
+Změna není hotová, dokud: (1) `npm run build` ✅; (2) relevantní E2E/smoke zeleně; (3) ověřeno, že nerozbila související oblasti; (4) DB/migrace/Edge/Bob-prompt mají samostatné potvrzení Pavla + postcheck; (5) dokumentace aktualizovaná; (6) commit pushnutý (produkce až po Lovable Publish).
+
+### P0 smoke před každým Publish
+registrace/login (01,02) · login gating (33,14) · nákup ticketu (04) · výhra (05) · peněženka/balance (09,03-voucher) · zprávy admin↔uživatel (29,32) · Bob ON/OFF kontrakt (31). Měněná oblast → + celý její blok.
+
+### Mapa kritických oblastí (každá musí mít test nebo schválenou výjimku)
+| Oblast | Pokrytí E2E |
+|---|---|
+| přihlášení / role | 01,02,14,25,33 |
+| soutěže / tikety | 03,04,05 |
+| dobíjení / platby | 03-voucher,10,11 |
+| peněženka | 09,10 |
+| výhry | 05,06,07,08 |
+| zprávy | 12,29,32 |
+| Bob | 31 (jen kontrakt) |
+| affiliate | 13,22,26,27,28,30 |
+| partneři | 06,07,08,15 |
+| admin | 15,16,18,19,20,21,23,24 |
+
+### Bob pravidlo
+Neměnit prompt / CTA routing / formát `{ text, cta }`. Testovat jen kontrakt, ne přesný text odpovědi.
 
 ---
 

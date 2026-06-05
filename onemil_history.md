@@ -43,6 +43,17 @@
 
 ---
 
+## 2026-06-05 - Zapsáno systémové pravidlo ochrany proti regresím
+
+- Definition of Done: build ✅ + relevantní E2E/smoke + ověření nerozbití souvisejících oblastí + samostatné schválení DB/migrace/Edge/Bob-prompt + aktualizovaná dokumentace + pushnutý commit (produkce po Lovable Publish).
+- P0 smoke před každým Publish: registrace/login, login gating, nákup ticketu, výhra, peněženka/balance, zprávy admin↔uživatel, Bob ON/OFF kontrakt.
+- Každá kritická oblast (přihlášení, soutěže, hraní, dobíjení, peněženka, výhry, zprávy, Bob, affiliate, partneři, admin) musí mít test nebo schválenou výjimku.
+- Bob: neměnit prompt/CTA/formát {text,cta}; testovat jen kontrakt, ne přesný text.
+- „OneMil se nehlídá ručně — každá větší změna musí být chráněná testem, smoke testem nebo schválenou výjimkou."
+- Pouze dokumentace (CLAUDE.md, onemil_state.md, onemil_history.md). Žádná změna kódu/DB.
+
+---
+
 ## 2026-06-05 - Login: /partner/login blokuje legacy influencery (firemní partner only)
 
 - Proč to šlo: /partner/login kontroloval jen existenci partners řádku; legacy influenceři jsou taky v partners (notes.type=influencer) → považováni za firemního partnera, routováni na /affiliate/dashboard.
