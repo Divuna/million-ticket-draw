@@ -1,0 +1,267 @@
+name: OneMil Staging P0 Smoke
+
+# Fast pre-Publish critical check against the SAME staging environment and the
+# SAME staging secrets as the full E2E. Runs ONLY the P0 specs (not the full
+# suite). Manual trigger only — run before every Lovable Publish.
+on:
+  workflow_dispatch:
+
+jobs:
+  p0:
+    name: P0 Smoke (Chromium) — Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Seed win contest
+        id: seed-win-contest
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            "${SUPABASE_URL}/rest/v1/contests" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{
+              "title": "P0 staging win contest auto",
+              "description": "Automatic staging win-flow contest for P0 smoke.",
+              "main_prize": "Staging main prize",
+              "ticket_count": 100,
+              "ticket_price": 10,
+              "status": "active",
+              "next_ticket_number": 100,
+              "fast_game": false,
+              "created_at": "2020-01-01T00:00:00Z"
+            }')
+          echo "PostgREST response: $RESPONSE"
+          WIN_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
+          if [ -z "$WIN_ID" ] || [ "$WIN_ID" = "null" ]; then
+            echo "ERROR: win contest seed failed — see PostgREST response above" >&2
+            exit 1
+          fi
+          echo "win_contest_id=$WIN_ID" >> $GITHUB_OUTPUT
+          echo "Seeded win contest: $WIN_ID"
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Reset test user wallet
+        run: |
+          curl -s -X PATCH \
+            "${SUPABASE_URL}/rest/v1/wallets?user_id=eq.7822a82e-f1d3-45ee-827b-679640ce6b65" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d '{"balance_coins": 5000, "bonus_balance_coins": 0}'
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Reset test user vouchers
+        run: |
+          curl -s -X DELETE \
+            "${SUPABASE_URL}/rest/v1/user_vouchers?user_id=eq.7822a82e-f1d3-45ee-827b-679640ce6b65" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Prefer: return=minimal"
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Seed P0 Spec03 voucher
+        # Fresh voucher (created_at = now) so it appears FIRST in Dostupné — spec
+        # 03-voucher-purchase uses .first() and always picks this newest entry.
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            "${SUPABASE_URL}/rest/v1/vouchers" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{
+              "name": "P0 Spec03 Voucher",
+              "is_public": true,
+              "max_quantity": null,
+              "redeemed_count": 0,
+              "start_date": null,
+              "end_date": null,
+              "image_url": "https://placehold.co/200x200/1D2128/E7EBF0?text=P003",
+              "banner_url": "https://placehold.co/400x200/1D2128/E7EBF0?text=P0+Spec03"
+            }')
+          echo "Seed P0 spec03 voucher response: $RESPONSE"
+          VOUCHER_ID=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
+          if [ -z "$VOUCHER_ID" ] || [ "$VOUCHER_ID" = "null" ]; then
+            echo "WARNING: P0 spec03 voucher seed failed. Response: $RESPONSE" >&2
+          else
+            echo "Seeded P0 Spec03 voucher: $VOUCHER_ID"
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Ensure staging admin E2E user has admin role
+        # Specs 29, 31, 32, 33 log in as the admin E2E account. Idempotent — finds
+        # (or creates) the auth user, then upserts public.users(role=admin),
+        # user_roles, profiles, wallets. Credentials flow only via env + jq --arg.
+        run: |
+          ADMIN_API="${SUPABASE_URL}/auth/v1/admin/users"
+          REST_API="${SUPABASE_URL}/rest/v1"
+
+          LIST=$(curl -sf \
+            "${ADMIN_API}?page=1&per_page=1000" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}")
+          ADMIN_UUID=$(echo "$LIST" | jq -r --arg e "${ADMIN_EMAIL}" \
+            '.users[]? | select(.email == $e) | .id' | head -1)
+
+          if [ -z "$ADMIN_UUID" ] || [ "$ADMIN_UUID" = "null" ]; then
+            echo "Admin E2E user not found — creating (credentials masked)"
+            PAYLOAD=$(jq -n --arg em "${ADMIN_EMAIL}" --arg pw "${ADMIN_PASSWORD}" \
+              '{email: $em, password: $pw, email_confirm: true}')
+            CREATE=$(curl -sf -X POST "${ADMIN_API}" \
+              -H "apikey: ${SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+              -H "Content-Type: application/json" \
+              -d "${PAYLOAD}")
+            ADMIN_UUID=$(echo "$CREATE" | jq -r '.id // empty')
+            if [ -z "$ADMIN_UUID" ]; then
+              echo "ERROR: failed to create admin E2E user." >&2
+              exit 1
+            fi
+          fi
+
+          PU=$(jq -n --arg id "$ADMIN_UUID" --arg em "${ADMIN_EMAIL}" \
+            '{id: $id, email: $em, name: "Admin E2E", role: "admin"}')
+          PU_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${REST_API}/users" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates,return=minimal" \
+            -d "${PU}")
+          if [ "$PU_STATUS" -lt 200 ] || [ "$PU_STATUS" -ge 300 ]; then
+            echo "ERROR: public.users upsert failed (HTTP ${PU_STATUS})" >&2
+            exit 1
+          fi
+
+          UR=$(jq -n --arg uid "$ADMIN_UUID" '{user_id: $uid, role: "admin"}')
+          curl -s -o /dev/null -X POST "${REST_API}/user_roles" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=ignore-duplicates,return=minimal" \
+            -d "${UR}"
+
+          PR=$(jq -n --arg id "$ADMIN_UUID" '{id: $id, full_name: "Admin E2E"}')
+          curl -s -o /dev/null -X POST "${REST_API}/profiles" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=ignore-duplicates,return=minimal" \
+            -d "${PR}"
+
+          WA=$(jq -n --arg uid "$ADMIN_UUID" '{user_id: $uid, balance_coins: 0, bonus_balance_coins: 0}')
+          curl -s -o /dev/null -X POST "${REST_API}/wallets" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=ignore-duplicates,return=minimal" \
+            -d "${WA}"
+
+          echo "Admin E2E user seed complete"
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          ADMIN_EMAIL: ${{ secrets.STAGING_E2E_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.STAGING_E2E_ADMIN_PASSWORD }}
+
+      - name: Run P0 smoke specs
+        id: p0_tests
+        # P0 critical areas only — registration/login, login gating, ticket
+        # purchase, win, wallet/balance, admin↔user messages, Bob ON/OFF contract.
+        run: >
+          npx playwright test
+          tests/e2e/01-registration.spec.ts
+          tests/e2e/02-login.spec.ts
+          tests/e2e/03-voucher-purchase.spec.ts
+          tests/e2e/04-ticket-purchase.spec.ts
+          tests/e2e/05-win-flow.spec.ts
+          tests/e2e/09-wallet-balance.spec.ts
+          tests/e2e/14-affiliate-dashboard-smoke.spec.ts
+          tests/e2e/29-admin-message-to-affiliate.spec.ts
+          tests/e2e/31-admin-bob-toggle.spec.ts
+          tests/e2e/32-admin-unread-no-marker.spec.ts
+          tests/e2e/33-login-gating-by-account-type.spec.ts
+        env:
+          CI: true
+          VITE_SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.STAGING_VITE_SUPABASE_ANON_KEY }}
+          VITE_INTERNAL_FUNCTION_TOKEN: ${{ secrets.STAGING_VITE_INTERNAL_FUNCTION_TOKEN }}
+          E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          E2E_TEST_EMAIL: ${{ secrets.STAGING_E2E_TEST_EMAIL }}
+          E2E_TEST_PASSWORD: ${{ secrets.STAGING_E2E_TEST_PASSWORD }}
+          E2E_CONTEST_ID: ${{ secrets.STAGING_E2E_CONTEST_ID }}
+          E2E_WIN_CONTEST_ID: ${{ steps.seed-win-contest.outputs.win_contest_id }}
+          E2E_AFFILIATE_EMAIL: ${{ secrets.STAGING_E2E_AFFILIATE_EMAIL }}
+          E2E_AFFILIATE_PASSWORD: ${{ secrets.STAGING_E2E_AFFILIATE_PASSWORD }}
+          E2E_ADMIN_EMAIL: ${{ secrets.STAGING_E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.STAGING_E2E_ADMIN_PASSWORD }}
+
+      - name: P0 status — OK
+        if: success()
+        run: |
+          echo "## ✅ OneMil STAGING P0 Smoke OK" >> $GITHUB_STEP_SUMMARY
+          echo "All P0 specs passed against staging. Safe to Lovable Publish (run area tests too if a specific area changed)." >> $GITHUB_STEP_SUMMARY
+
+      - name: Telegram — OK
+        if: success()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d '{"chat_id":"${{ secrets.TELEGRAM_CHAT_ID }}","text":"✅ OneMil STAGING P0 Smoke OK — pre-Publish check passed"}'
+
+      - name: P0 status — FAILED
+        if: failure()
+        run: |
+          echo "## ❌ OneMil STAGING P0 Smoke FAILED" >> $GITHUB_STEP_SUMMARY
+          echo "Do NOT Lovable Publish. Check the report artifact and screenshots." >> $GITHUB_STEP_SUMMARY
+
+      - name: Telegram — FAILED
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d '{"chat_id":"${{ secrets.TELEGRAM_CHAT_ID }}","text":"❌ OneMil STAGING P0 Smoke FAILED — do NOT Publish\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}'
+
+      - name: Upload HTML report
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-p0-report-${{ github.run_id }}
+          path: playwright-report/
+          retention-days: 3
+
+      - name: Upload failure screenshots
+        if: failure()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-p0-screenshots-${{ github.run_id }}
+          path: test-results/
+          retention-days: 3

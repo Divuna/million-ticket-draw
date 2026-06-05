@@ -22,6 +22,11 @@
 - Bob ON/OFF kontrakt (spec 31).
 Pokud se měnila konkrétní oblast → **+ celý blok té oblasti**.
 
+#### Dva GitHub Actions workflow proti stagingu (stejné staging secrets):
+- **`playwright-staging.yml` — „Playwright Staging Full E2E"** = KOMPLETNÍ kontrola (všech 33 speců). `workflow_dispatch` + 3×/den.
+- **`playwright-staging-p0.yml` — „OneMil Staging P0 Smoke"** = RYCHLÁ kontrola PŘED Lovable Publish. `workflow_dispatch` only. Spouští jen P0 specy: `01,02` (registrace/login), `33,14` (login gating), `04` (ticket), `05` (výhra), `09,03-voucher` (peněženka/balance), `29,32` (zprávy admin↔uživatel), `31` (Bob ON/OFF kontrakt).
+- **Před každým Publish běží minimálně P0 Smoke.** Pokud se měnila konkrétní oblast, pustí se k tomu navíc relevantní testy té oblasti (mapa v `onemil_state.md`), případně celý Full E2E.
+
 ### 3. Každá kritická oblast MUSÍ mít test NEBO vědomě schválenou výjimku:
 přihlášení · soutěže · hraní · dobíjení · peněženka · výhry · zprávy · Bob · affiliate · partneři · admin.
 
