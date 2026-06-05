@@ -4698,6 +4698,7 @@ export type Database = {
           value: number
         }[]
       }
+      get_bob_enabled: { Args: never; Returns: boolean }
       get_contest_bonus_stats: {
         Args: { contest_id: string }
         Returns: {
