@@ -43,6 +43,21 @@
 
 ---
 
+## ✅ LOGIN — /partner/login BLOKUJE LEGACY INFLUENCERY (05. 06. 2026, STAGING)
+
+**`/partner/login` pustí jen skutečného firemního partnera. Legacy influencer (uložený v `partners`) je blokován.**
+
+- **Proč to pořád šlo:** `/partner/login` kontroloval **jen existenci `partners` řádku**, ale legacy influenceři jsou taky v `partners` (`notes.type='influencer'`). Influencer byl omylem považován za firemního partnera a routován na `/affiliate/dashboard`.
+- **Jak se pozná skutečný partner:** `partners` řádek, jehož `notes` **NEobsahuje** „influencer" (firemní partneři mají typicky `company_name`, `notes` NULL; influenceři mají `notes` JSON `"type":"influencer"`).
+- **Oprava `PartnerLogin.tsx`:** po nalezení `partners` řádku se navíc testuje `notes` — pokud je to influencer → `signOut` + „Tady zatím nemáte firemní Partner účet…", **zůstane na /partner/login**. Jen firemní partner (bez influencer notes, approved) → `/partner/dashboard`. Influencer→/influencer/dashboard redirect ODSTRANĚN.
+- **`/login`:** influencer (má `partners`) i affiliate jsou blokováni už od commitu `6f2d43e0` (admin první). Beze změny v této iteraci.
+- **Footer:** „Přihlášení Affiliate partnera" opraveno na `/affiliate/login` (bylo `/partner/login`). „Přihlášení partnera" → `/partner/login` (správně).
+- **Globální App guard** nepřebíjí — login stránka odhlásí a zůstane (žádný bounce na /affiliate/dashboard).
+- Spec 14 přepsán: influencer blokován na /partner/login + affiliate přes /affiliate/login → dashboard. Staging Full E2E run `27000493579`: **65 passed · 0 failed** ✅. `npm run build` ✅. Commit `eb2f42ac`.
+- **Commity `6f2d43e0`, `dd8defa7`, `4612d294`, `811e176c` ověřeny na `origin/main`** ✅. Produkce vyžaduje **Lovable Publish** (proto se to v produkci „pořád" dělo — live build byl starší).
+
+---
+
 ## ✅ LOGIN — KONEC AUTO-BOUNCE AFFILIATE/PARTNER Z /login (05. 06. 2026, STAGING)
 
 **`/login` už automaticky nehází affiliate/partner do jejich dashboardu. Admin vždy první.**

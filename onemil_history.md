@@ -43,6 +43,18 @@
 
 ---
 
+## 2026-06-05 - Login: /partner/login blokuje legacy influencery (firemní partner only)
+
+- Proč to šlo: /partner/login kontroloval jen existenci partners řádku; legacy influenceři jsou taky v partners (notes.type=influencer) → považováni za firemního partnera, routováni na /affiliate/dashboard.
+- Skutečný partner = partners řádek bez „influencer" v notes (firemní mají company_name).
+- PartnerLogin: pokud notes označí influencera → signOut + „nemáte firemní Partner účet", zůstane na /partner/login. Jen firemní partner → /partner/dashboard.
+- Footer „Přihlášení Affiliate partnera" opraveno na /affiliate/login.
+- Spec 14 přepsán. Staging Full E2E run `27000493579`: 65 passed, 0 failed. `npm run build` ✅. Commit `eb2f42ac`.
+- Commity 6f2d43e0/dd8defa7/4612d294/811e176c ověřeny na origin/main; produkce vyžaduje Lovable Publish.
+- Nezměněno: DB/migrace, platby, tikety, soutěže, peněženka, buy_ticket_atomic, Bob, ai-chat, provize.
+
+---
+
 ## 2026-06-05 - Login: konec auto-bounce affiliate/partner z /login (admin first)
 
 - Login.tsx: inline routing po signIn — admin/superadmin VŽDY první → /admin; jakýkoliv partners/affiliate_accounts záznam → signOut + sonner hláška, zůstane na /login (žádný bounce); jinak zákazník → /profile.
