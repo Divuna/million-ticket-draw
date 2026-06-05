@@ -769,18 +769,7 @@ const Homepage = () => {
                 MioCoiny jako odměna za nákupy
               </h3>
             </div>
-            <div
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold mb-2"
-              style={{
-                background: 'rgba(255,138,0,0.1)',
-                border: '1px solid rgba(255,138,0,0.25)',
-                color: '#FFB547',
-              }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FF8A00] shadow-[0_0_6px_rgba(255,138,0,0.6)]" />
-              Dobití je volitelné
-            </div>
-            <p className="text-sm leading-relaxed max-w-[600px] mx-auto" style={{ color: '#8E98A6' }}>
+            <p className="text-sm leading-relaxed max-w-[600px] mx-auto mt-2" style={{ color: '#8E98A6' }}>
               Největší radost máme, když MioCoiny získáváte jako odměnu za nákupy u našich partnerů. Právě na tom je OneMil postavený. Dobití berte jen jako další možnost, když se chcete do soutěže zapojit hned a nechcete čekat na další odměnu z nákupu.
             </p>
           </div>
