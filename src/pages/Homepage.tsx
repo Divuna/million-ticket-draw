@@ -27,7 +27,7 @@ const WINNER_BG_ROTATION = [winnerBgTrophy, winnerBgCrown, winnerBgClean];
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { ContestCard } from "@/components/ContestCard";
 import { Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, X } from "lucide-react";
-import { OneMilMioCoinIcon, OneMilVoucherIcon, OneMilInfoIcon, OneMilTrophyIcon } from "@/components/icons/OneMilIcons";
+import { OneMilMioCoinIcon, OneMilVoucherIcon, OneMilInfoIcon, OneMilTrophyIcon, OneMilGiftIcon } from "@/components/icons/OneMilIcons";
 import { Footer } from "@/components/Footer";
 import { toast } from "sonner";
 import { logMonitoringEvent, logStripeCheckoutClientFailure } from "@/lib/monitoring";
