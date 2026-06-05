@@ -27,7 +27,8 @@ const unique = Date.now().toString(36).toLowerCase();
 const EMAIL   = `spec30-aff-${unique}@onemil.cz`;
 const PASSWORD = `Spec30${unique}!`;
 const NAME    = `Spec30 Affiliate ${unique}`;
-const REF_CODE = `SPEC30${unique}`.slice(0, 12);
+// Keep the full (per-run) unique so the ref_code never collides with a leftover.
+const REF_CODE = `S30${unique}`.toUpperCase().slice(0, 12);
 
 const AFF_INSTAGRAM = `https://instagram.com/spec30_${unique}`;
 const AFF_TIKTOK    = `https://tiktok.com/@spec30_${unique}`;
