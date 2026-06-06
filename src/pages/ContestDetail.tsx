@@ -128,6 +128,8 @@ export default function ContestDetail() {
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   /** Sum of `bonus_prizes.amount` for coin rows (amount > 0); physical rows use null/0 amount */
   const [miocoinBonusPoolTotal, setMiocoinBonusPoolTotal] = useState(0);
+  /** Count of MioCoin bonus prize positions (bonus_prizes rows with amount > 0) */
+  const [miocoinBonusPositions, setMiocoinBonusPositions] = useState(0);
   const [myWins, setMyWins] = useState<Winner[]>([]);
   const [balance, setBalance] = useState(0);
   const [balanceLoaded, setBalanceLoaded] = useState(false);
@@ -495,6 +497,19 @@ export default function ContestDetail() {
         const rpcMiocoinTotal = Number(poolSum ?? 0);
         const storedMiocoinTotal = Number((contestData as any).total_miocoin_bonus ?? 0);
         setMiocoinBonusPoolTotal(rpcMiocoinTotal > 0 ? rpcMiocoinTotal : storedMiocoinTotal);
+
+        // Count of MioCoin bonus positions (amount > 0). head:true count is exact,
+        // not capped by the 1000-row PostgREST limit. Partner Offers are NOT in
+        // bonus_prizes, so this never includes them.
+        const { count: coinCount, error: coinCountError } = await supabase
+          .from("bonus_prizes")
+          .select("id", { count: "exact", head: true })
+          .eq("contest_id", id)
+          .gt("amount", 0);
+        if (coinCountError) {
+          console.error('[ContestDetail] miocoin positions count error:', coinCountError);
+        }
+        setMiocoinBonusPositions(coinCount ?? 0);
 
         // === Fyzické bonusové ceny — stránkované načtení VŠECH řádků, BEZ stropu ===
         // Může jich být klidně 10 000 nebo 50 000; načítáme po stránkách dokud chodí data.
@@ -953,11 +968,17 @@ export default function ContestDetail() {
 
         {/* Box 2: Bonusové MioCoiny v soutěži */}
         <section className="voucher-card-glow bg-gradient-to-br from-[rgba(255,138,0,0.08)] to-[rgba(255,181,71,0.04)] rounded-[20px] p-5 border-[2px] border-[rgba(255,138,0,0.25)] flex items-center gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-          <div className="flex-1 flex flex-col justify-center">
-            <p className="text-sm text-gray-200 leading-relaxed">
-              Do této soutěže jsme navíc přidali{" "}
-              <span className="text-[#FFB547] font-bold text-2xl md:text-3xl">{miocoinBonusPoolTotal.toLocaleString("cs-CZ")}</span>{" "}
-              MioCoinů jako bonusové výhry, které můžete během soutěže získat.
+          <div className="flex-1 flex flex-col justify-center gap-1.5">
+            <p className="text-sm md:text-base text-gray-200 leading-relaxed">
+              V této soutěži je celkem{" "}
+              <span className="text-[#FFB547] font-bold text-2xl md:text-3xl">
+                {(miocoinBonusPositions + bonusPrizes.length).toLocaleString("cs-CZ")}
+              </span>{" "}
+              dalších výher.
+            </p>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Z toho <span className="text-[#FFB547] font-semibold">{miocoinBonusPoolTotal.toLocaleString("cs-CZ")} MioCoinů</span>,
+              které vám mohou otevřít cestu k dalším soutěžím nebo k nákupu voucherů na krásné slevy u našich partnerů.
             </p>
           </div>
           <TooltipProvider>
