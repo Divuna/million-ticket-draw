@@ -489,7 +489,12 @@ export default function ContestDetail() {
         if (poolError) {
           console.error('[ContestDetail] miocoin pool RPC error:', poolError);
         }
-        setMiocoinBonusPoolTotal(Number(poolSum ?? 0));
+        // Fall back to the contest's stored total (contests.total_miocoin_bonus,
+        // kept in sync after bulk MioCoin save) when the RPC returns 0/null/errors,
+        // so the box never shows 0 MioCoins when bonuses are actually configured.
+        const rpcMiocoinTotal = Number(poolSum ?? 0);
+        const storedMiocoinTotal = Number((contestData as any).total_miocoin_bonus ?? 0);
+        setMiocoinBonusPoolTotal(rpcMiocoinTotal > 0 ? rpcMiocoinTotal : storedMiocoinTotal);
 
         // === Fyzické bonusové ceny — stránkované načtení VŠECH řádků, BEZ stropu ===
         // Může jich být klidně 10 000 nebo 50 000; načítáme po stránkách dokud chodí data.
