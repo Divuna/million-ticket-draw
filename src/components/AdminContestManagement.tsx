@@ -2018,6 +2018,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
   const isEditing = !!editingContest;
   const totalMioCoins = mioCoinBonuses.reduce((sum, b) => sum + b.amount, 0);
+  // Summary display totals (frontend-only). Fall back to the configured input
+  // when preview positions aren't generated/loaded yet, so the summary never
+  // shows 0 MioCoins when a MioCoin bonus amount is configured.
+  const summaryMioCoinTotal = totalMioCoins > 0 ? totalMioCoins : (totalMioCoinsInput || 0);
+  const summaryMioCoinPositions = mioCoinBonuses.length > 0 ? mioCoinBonuses.length : computedPositionCount;
+  // Total secondary (non-main) rewards = MioCoin prize positions + physical bonus items.
+  const summaryTotalPrizes = summaryMioCoinPositions + physicalPrizes.length;
   // Effective MioCoin cost for Economy calculations:
   //   1. If MioCoin bonuses are configured → use their actual total (totalMioCoins)
   //   2. Else if the bulk MioCoin input field has a value → use that
@@ -2963,13 +2970,17 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                   <span className="font-medium">{form.ticket_price} MC</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">MioCoin bonusy:</span>
+                  <span className="text-muted-foreground">Celkem výher v soutěži:</span>
+                  <span className="font-medium">{summaryTotalPrizes.toLocaleString("cs-CZ")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Z toho MioCoin výhry:</span>
                   <span className="font-medium">
-                    {totalMioCoins.toLocaleString("cs-CZ")} MC ({mioCoinBonuses.length} pozic)
+                    {summaryMioCoinTotal.toLocaleString("cs-CZ")} MioCoinů ({summaryMioCoinPositions.toLocaleString("cs-CZ")} pozic)
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Věcné výhry:</span>
+                  <span className="text-muted-foreground">Z toho věcné výhry:</span>
                   <span className="font-medium">{physicalPrizes.length} položek</span>
                 </div>
                 <div className="flex justify-between">
