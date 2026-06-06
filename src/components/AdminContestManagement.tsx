@@ -169,6 +169,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     fast_game: false,
   });
   const [saving, setSaving] = useState(false);
+  // Success confirmation after a new contest is created (CREATE mode only).
+  const [showCreatedDialog, setShowCreatedDialog] = useState(false);
   const [generatingDescription, setGeneratingDescription] = useState(false);
   const [generatingBanner, setGeneratingBanner] = useState(false);
   const [regeneratingHero, setRegeneratingHero] = useState(false);
@@ -1975,8 +1977,18 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         setMioCoinGeneratorTouched(false);
       }
 
+      // Refresh the contest list immediately so the new/updated contest shows.
       onSaved();
-      onClose();
+      if (isEditing) {
+        onClose();
+      } else {
+        // New contest created: end loading right away and show an explicit
+        // confirmation the admin must acknowledge (OK), instead of silently
+        // closing. setSaving(false) here guarantees the button stops spinning
+        // even before the finally block runs.
+        setSaving(false);
+        setShowCreatedDialog(true);
+      }
     } catch (err: any) {
       console.error("Error saving contest:", err);
       // If a contest was already persisted in CREATE mode and a later step threw,
@@ -3025,6 +3037,28 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           <AlertDialogFooter>
             <AlertDialogCancel>Zrušit</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDiscardAndClose}>Zavřít</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Success confirmation after a new contest is created */}
+      <AlertDialog open={showCreatedDialog} onOpenChange={setShowCreatedDialog}>
+        <AlertDialogContent className="bg-card border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Soutěž byla vytvořena</AlertDialogTitle>
+            <AlertDialogDescription>
+              Nová soutěž byla úspěšně vytvořena a zobrazí se v seznamu soutěží i na úvodní stránce.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowCreatedDialog(false);
+                onClose();
+              }}
+            >
+              OK
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
