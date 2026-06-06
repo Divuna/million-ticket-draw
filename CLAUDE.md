@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SPRÁVA SOUTĚŽÍ — statistické karty jen z `active` (06. 06. 2026, admin UI invariant)
+
+Pět statistických karet v `AdminContestManagement.tsx` (`Tikety prodány`, `Tikety zbývají`, `Prodáno %`, `Výnos (MC)`, `Tikety za 24h`) počítá **`summaryTotals` pouze ze soutěží `status === 'active'`** (`contests.filter(c => c.status === 'active')`). pending/draft/paused/closed/archiv se nezapočítávají; bez active soutěže = 0. Taby a tabulka soutěží beze změny. Commit `d212dff7`.
+
 ## DETAIL SOUTĚŽE — badge věcných výher (06. 06. 2026, UI invariant)
 
 Karty věcných bonusových výher (`src/pages/ContestDetail.tsx`) mají badge počtu (`N× v soutěži`) jako **pill s přesahem přes horní pravý roh**: Energy Orange→Warm Amber gradient, tmavý kontrastní bold text, stín/glow + ring, `z-10`. Karta proto **nemá `overflow-hidden`** (přesah by se ořízl); pozadí karty klipuje `border-radius`, vnitřní obrázek má vlastní rounded wrapper. Vizuál only. Commit `dafe0064`.

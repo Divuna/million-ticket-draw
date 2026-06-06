@@ -43,6 +43,16 @@
 
 ---
 
+## 2026-06-06 - Správa soutěží: statistické karty jen z active soutěží
+
+- Pět karet v adminu „Správa soutěží" (`Tikety prodány`, `Tikety zbývají`, `Prodáno %`, `Výnos (MC)`, `Tikety za 24h`) počítá nově pouze ze soutěží se statusem `active`.
+- pending/draft/paused/closed, archiv test, ukončené i nezahájené soutěže jsou z těchto pěti statistik vyloučeny.
+- Když není žádná active soutěž, karty ukazují nulové hodnoty.
+- Změněný soubor: `src/components/AdminContestManagement.tsx`. Commit `d212dff7`. `npm run build` ✅. Po Lovable Publish ověřeno Pavlem.
+- Beze změny tabů, tabulky soutěží, DB, ticket logiky, ekonomiky, vytváření soutěží, bonusů, grafiky.
+
+---
+
 ## 2026-06-06 - Detail soutěže: výraznější badge počtu věcných výher
 
 - Karty věcných bonusových výher (veřejný detail soutěže) mají badge počtu (např. `295× v soutěži`) v OneMil orange/amber pill stylu.
