@@ -4,6 +4,21 @@
 
 ---
 
+## ✅ DETAIL SOUTĚŽE — MioCoin/bonus souhrn (06. 06. 2026)
+
+**Veřejný detail soutěže (`src/pages/ContestDetail.tsx`) zobrazuje souhrn bonusů takto:**
+- Hlavní text: `V této soutěži je celkem X dalších výher.`
+- Pod tím: `Z toho Y MioCoinů, které vám mohou otevřít cestu k dalším soutěžím nebo k nákupu voucherů na krásné slevy u našich partnerů.`
+
+**Výpočet:**
+- **X** = počet MioCoin bonus pozic z `bonus_prizes` kde `amount > 0` (přesný `head:true` count) + počet věcných bonusových výher z `bonus_prizes` kde `amount` je null nebo 0.
+- **Y** = celková nakonfigurovaná částka MioCoinů (z existující MioCoin total logiky — RPC `get_contest_miocoin_bonus`, fallback `contests.total_miocoin_bonus`).
+- **Partner Offers jsou z počtu vyloučeny** — nejsou fixní součástí prize poolu soutěže a mohou se přidávat během soutěže; nejsou v `bonus_prizes`, takže se nezapočítávají.
+
+Frontend display/counting only. Změněný soubor: `src/pages/ContestDetail.tsx`. Commit `208434d0`. `npm run build` ✅.
+
+---
+
 ## 🛡️ OCHRANA PROTI REGRESÍM — ZÁVAZNÉ PRAVIDLO (05. 06. 2026)
 
 **OneMil se NEHLÍDÁ ručně. Každá větší změna MUSÍ být chráněná testem, smoke testem nebo vědomě schválenou výjimkou Pavla.** (Plné znění v `CLAUDE.md`.)

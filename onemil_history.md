@@ -43,6 +43,18 @@
 
 ---
 
+## 2026-06-06 - Detail soutěže: MioCoin/bonus souhrn (počet výher + MioCoin podtotal)
+
+- Veřejný detail soutěže (`src/pages/ContestDetail.tsx`) MioCoin box nově zobrazuje:
+  „V této soutěži je celkem X dalších výher." + „Z toho Y MioCoinů, které vám mohou otevřít cestu k dalším soutěžím nebo k nákupu voucherů na krásné slevy u našich partnerů."
+- X = počet MioCoin pozic (`bonus_prizes` amount>0, exact head count) + počet věcných výher (`bonus_prizes` amount null/0).
+- Y = celková nakonfigurovaná částka MioCoinů (RPC `get_contest_miocoin_bonus`, fallback `contests.total_miocoin_bonus`).
+- Partner Offers vyloučeny (nejsou v `bonus_prizes`, mohou přibývat během soutěže).
+- Změněný soubor: `src/pages/ContestDetail.tsx`. Commit `208434d0`. `npm run build` ✅.
+- Frontend display/counting only — beze změny DB, ticket/wallet logiky, ekonomiky, generování bonusů, admin create flow, grafiky.
+
+---
+
 ## 2026-06-05 - Zapsáno systémové pravidlo ochrany proti regresím
 
 - Definition of Done: build ✅ + relevantní E2E/smoke + ověření nerozbití souvisejících oblastí + samostatné schválení DB/migrace/Edge/Bob-prompt + aktualizovaná dokumentace + pushnutý commit (produkce po Lovable Publish).

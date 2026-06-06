@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## DETAIL SOUTĚŽE — MioCoin/bonus souhrn (06. 06. 2026, invariant)
+
+`src/pages/ContestDetail.tsx` MioCoin box: „V této soutěži je celkem **X** dalších výher." + „Z toho **Y** MioCoinů…". **X** = count `bonus_prizes` (amount>0) + count `bonus_prizes` (amount null/0). **Y** = celková MioCoin částka (RPC `get_contest_miocoin_bonus`, fallback `contests.total_miocoin_bonus`). **Partner Offers se do X ani Y nezapočítávají** (nejsou v `bonus_prizes`, mohou přibývat během soutěže). Frontend display/counting only. Commit `208434d0`.
+
 ## OCHRANA PROTI REGRESÍM — ZÁVAZNÉ SYSTÉMOVÉ PRAVIDLO (05. 06. 2026)
 
 **OneMil se NEHLÍDÁ ručně. Každá větší změna MUSÍ být chráněná testem, smoke testem nebo vědomě schválenou výjimkou Pavla.**
