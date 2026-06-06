@@ -3508,7 +3508,12 @@ export const AdminContestManagement: React.FC = () => {
   };
 
   // Aggregate totals across all contests for the summary strip
-  const summaryTotals = contests.reduce(
+  // The five summary stat cards reflect ONLY running contests (status === 'active').
+  // pending/draft/paused/closed (and any archived/cancelled) are excluded; if there
+  // is no active contest, every card is 0 via the reduce initial value.
+  const summaryTotals = contests
+    .filter((c) => c.status === "active")
+    .reduce(
     (acc, c) => {
       const s = statsMap[c.contest_id];
       return {
