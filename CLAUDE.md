@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## DETAIL SOUTĚŽE — badge věcných výher (06. 06. 2026, UI invariant)
+
+Karty věcných bonusových výher (`src/pages/ContestDetail.tsx`) mají badge počtu (`N× v soutěži`) jako **pill s přesahem přes horní pravý roh**: Energy Orange→Warm Amber gradient, tmavý kontrastní bold text, stín/glow + ring, `z-10`. Karta proto **nemá `overflow-hidden`** (přesah by se ořízl); pozadí karty klipuje `border-radius`, vnitřní obrázek má vlastní rounded wrapper. Vizuál only. Commit `dafe0064`.
+
 ## DETAIL SOUTĚŽE — MioCoin/bonus souhrn (06. 06. 2026, invariant)
 
 `src/pages/ContestDetail.tsx` MioCoin box: „V této soutěži je celkem **X** dalších výher." + „Z toho **Y** MioCoinů…". **X** = count `bonus_prizes` (amount>0) + count `bonus_prizes` (amount null/0). **Y** = celková MioCoin částka (RPC `get_contest_miocoin_bonus`, fallback `contests.total_miocoin_bonus`). **Partner Offers se do X ani Y nezapočítávají** (nejsou v `bonus_prizes`, mohou přibývat během soutěže). Frontend display/counting only. Commit `208434d0`.

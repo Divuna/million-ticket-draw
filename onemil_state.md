@@ -4,6 +4,16 @@
 
 ---
 
+## ✅ DETAIL SOUTĚŽE — badge počtu věcných výher (06. 06. 2026)
+
+**Karty věcných bonusových výher na veřejném detailu soutěže zobrazují badge počtu** (např. `295× v soutěži`) v premium OneMil stylu:
+- Lehký **přesah přes horní pravý roh** karty.
+- Větší, **bold**, čitelný; **Energy Orange → Warm Amber gradient**, tmavý vysoce kontrastní text, jemný stín/glow + ring.
+- Změněný soubor: `src/pages/ContestDetail.tsx`. Commit `dafe0064`. `npm run build` ✅. Po Lovable Publish ověřeno Pavlem jako funkční a dobře viditelné.
+- Vizuál badge only — beze změny dat, počítání výher, ticket/bonus logiky, DB, adminu, ekonomiky, grafiky.
+
+---
+
 ## ✅ DETAIL SOUTĚŽE — MioCoin/bonus souhrn (06. 06. 2026)
 
 **Veřejný detail soutěže (`src/pages/ContestDetail.tsx`) zobrazuje souhrn bonusů takto:**
