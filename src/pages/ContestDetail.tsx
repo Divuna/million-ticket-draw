@@ -1082,7 +1082,7 @@ export default function ContestDetail() {
                     console.log('[DEBUG ContestDetail] setSelectedBonusPrize:', b.id);
                     setSelectedBonusPrize({ ...b, image_url: bonusImageUrl });
                   }}
-                  className="p-3 rounded-xl border border-white/5 hover:border-[rgba(255,138,0,0.35)] transition-colors text-left cursor-pointer relative overflow-hidden"
+                  className="p-3 rounded-xl border border-white/5 hover:border-[rgba(255,138,0,0.35)] transition-colors text-left cursor-pointer relative"
                   style={{
                     backgroundImage: starryBackgroundUrl ? `url(${starryBackgroundUrl})` : undefined,
                     backgroundSize: 'cover',
@@ -1091,7 +1091,10 @@ export default function ContestDetail() {
                   }}
                 >
                   {count > 1 && (
-                    <span className="absolute top-2 right-2 text-xs font-semibold bg-[rgba(255,138,0,0.15)] text-[#FFB547] border border-[rgba(255,138,0,0.3)] px-2 py-0.5 rounded-full">
+                    <span
+                      className="absolute -top-2.5 -right-2.5 z-10 inline-flex items-center text-[11px] md:text-xs font-bold whitespace-nowrap text-[hsl(220,30%,10%)] px-2.5 py-1 rounded-full ring-1 ring-white/40 shadow-[0_4px_14px_rgba(255,138,0,0.45)]"
+                      style={{ backgroundImage: 'linear-gradient(135deg, #FF8A00 0%, #FFB547 100%)' }}
+                    >
                       {count}× v soutěži
                     </span>
                   )}
