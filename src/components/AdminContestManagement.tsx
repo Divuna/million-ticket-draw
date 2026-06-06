@@ -302,6 +302,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   const isNewContest = !editingContest;
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const draftHydratedRef = React.useRef(false);
+  // After a successful create we remove the draft + reset the form. Skip exactly
+  // one autosave so the reset doesn't immediately re-create the cleared draft.
+  const skipNextDraftSaveRef = React.useRef(false);
 
   // Restore draft on open (new contest only)
   useEffect(() => {
@@ -332,6 +335,12 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   // Save draft on every form change (new contest only)
   useEffect(() => {
     if (!open || !isNewContest || !draftHydratedRef.current) return;
+    // Skip the single autosave triggered by the post-create form reset, so the
+    // just-cleared draft is not resurrected. Autosave during editing is untouched.
+    if (skipNextDraftSaveRef.current) {
+      skipNextDraftSaveRef.current = false;
+      return;
+    }
     try {
       const { rules_pdf_file, main_image_file, banner_image_file, detail_image_file, ...serializable } = form;
       localStorage.setItem(DRAFT_KEY, JSON.stringify(serializable));
@@ -1949,6 +1958,8 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         try {
           localStorage.removeItem(DRAFT_KEY);
         } catch {}
+        // Prevent the reset below from re-saving (resurrecting) the cleared draft.
+        skipNextDraftSaveRef.current = true;
         setForm({
           title: "",
           description: "",
