@@ -17,6 +17,26 @@ Commit `b54fbb0e`. Happy-path staging test ✅ (07. 06. 2026).
 Spec 34 (`tests/e2e/34-affiliate-company-lead-backend.spec.ts`) ✅ — Staging Full E2E run `27100946115`: 68 passed · 3 skipped · 0 failed. Commit `1ec3a127`.
 **Před stavbou UI `Přidat firmu` musí spec 34 zůstat zelený. Produkční nasazení vyžaduje výslovné schválení Pavla.**
 
+## B2B LEADS — PHASE 2B UI DESIGN (07. 06. 2026, schváleno, implementace čeká)
+
+UI design schválen Pavlem. Implementace neprobíhá. Kód, DB, Edge Functions ani produkce nebyly změněny.
+
+**Závazná pravidla platná při implementaci:**
+- `Přidat firmu` NIKDY na `/affiliate/login`. Patří pouze do `/affiliate/dashboard`, `sales_rep` / `Obchodník` mode.
+- Zobrazit POUZE pokud `activeMode === 'sales_rep' && account.modes.includes('sales_rep')`.
+- UI musí volat POUZE Edge Function `create-affiliate-company-lead` — žádný přímý INSERT do `affiliate_company_leads` z klienta.
+- Po odeslání formuláře: pouze toast + refresh leadů. Žádný zápis do `affiliate_company_refs`, žádná provize.
+- „Žádosti o registraci firem" (sekce leadů) čte z `affiliate_company_leads`. „Moje firmy (schválené)" čte z `affiliate_company_refs`. Datové zdroje musí zůstat striktně odděleny.
+- Spec 34 musí zůstat zelený po každém commitu Phase 2B.
+- Produkce vyžaduje výslovné schválení Pavla + postcheck.
+
+**Plánované komponenty (dosud neexistují):**
+- `src/components/AddCompanyLeadDialog.tsx` — formulář; povinná: company_name, company_email; volitelná: ico, dic, website (https://), contact_person, contact_phone, sales_rep_note (max 2000 znaků).
+- `src/components/CompanyLeadSection.tsx` — seznam leadů, badge stavů, trigger pro dialog.
+
+**Plánovaný spec 35** (`tests/e2e/35-affiliate-company-lead-ui.spec.ts`): musí být zelený před mergem Phase 2B.
+- sales_rep vidí sekci + tlačítko; influencer-only je nevidí; formulář se odešle → lead vznikne se stavem „Odesláno firmě"; duplicitní email → error toast; spec 34 zůstává zelený.
+
 ## SPRÁVA SOUTĚŽÍ — statistické karty jen z `active` (06. 06. 2026, admin UI invariant)
 
 Pět statistických karet v `AdminContestManagement.tsx` (`Tikety prodány`, `Tikety zbývají`, `Prodáno %`, `Výnos (MC)`, `Tikety za 24h`) počítá **`summaryTotals` pouze ze soutěží `status === 'active'`** (`contests.filter(c => c.status === 'active')`). pending/draft/paused/closed/archiv se nezapočítávají; bez active soutěže = 0. Taby a tabulka soutěží beze změny. Commit `d212dff7`.

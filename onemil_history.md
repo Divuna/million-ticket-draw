@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-07 - Phase 2B UI design: `Přidat firmu` schválen (implementace čeká)
+
+- UI design pro B2B company lead workflow v `/affiliate/dashboard` navržen a schválen Pavlem.
+- Placement: `sales_rep` mode, mezi odkaz/QR a „Moje firmy (schválené)". Nová sekce „Žádosti o registraci firem" čte z `affiliate_company_leads`; stávající „Moje firmy" čte z `affiliate_company_refs` — datové zdroje striktně odděleny.
+- Nové plánované komponenty: `AddCompanyLeadDialog`, `CompanyLeadSection`.
+- Plánovaný spec 35 (`35-affiliate-company-lead-ui.spec.ts`) — dosud neexistuje.
+- Žádný kód, DB, Edge Function ani produkce nebyly změněny. Pouze dokumentace.
+
+---
+
 ## 2026-06-07 - Spec 34: create-affiliate-company-lead E2E pokrytí (staging CI zelený)
 
 - Nový spec `tests/e2e/34-affiliate-company-lead-backend.spec.ts` — backend API test (bez UI), 3 testy, 9 invariantů. Commit `1ec3a127`.

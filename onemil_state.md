@@ -136,6 +136,75 @@
 - Staging verification: table exists, RLS enabled, policies exist, `anon` has no access, `authenticated` has SELECT only through RLS, normal users have no INSERT/UPDATE/DELETE, and the admin reviewer index exists.
 - Not yet implemented: UI, Edge Functions, emails, admin approval flow, password setup, commission changes, partner registration changes, ticket/wallet changes, graphics, or production apply.
 
+### Phase 2B UI — `Přidat firmu` design schválen (07. 06. 2026, implementace čeká)
+
+**UI design pro B2B lead workflow v `/affiliate/dashboard` je navržen a schválen. Implementace NEPROBÍHÁ — čeká na zahájení Pavlem.**
+
+#### Umístění v dashboardu (sales_rep mode)
+```
+[stat cards]
+[firemní odkaz + QR]
+[Žádosti o registraci firem]   ← NOVÉ — affiliate_company_leads
+[Moje firmy (schválené)]       ← beze změny — affiliate_company_refs
+[Provize a výplaty]
+[Kampaně placeholder]
+```
+
+#### Podmínka zobrazení
+```tsx
+activeMode === 'sales_rep' && account.modes.includes('sales_rep')
+```
+Influencer-only účty (bez `sales_rep` v `modes`) sekci ani tlačítko `+ Přidat firmu` nevidí.
+
+#### Nové komponenty (plánované, dosud neexistují)
+- `src/components/AddCompanyLeadDialog.tsx` — formulář (shadcn Dialog), volá pouze Edge Function `create-affiliate-company-lead` přes user JWT.
+- `src/components/CompanyLeadSection.tsx` — seznam leadů z `affiliate_company_leads`, trigger pro AddCompanyLeadDialog.
+
+#### Formulářová pole
+| Pole | Povinné |
+|---|---|
+| Název firmy | ✅ |
+| E-mail firmy | ✅ |
+| IČO | volitelné |
+| DIČ | volitelné |
+| Web firmy | volitelné (https://) |
+| Kontaktní osoba | volitelné |
+| Telefon | volitelné |
+| Poznámka pro OneMil | volitelné (max 2000 znaků) |
+
+#### Lead stavy (CZ labels)
+| DB status | Zobrazení | Barva |
+|---|---|---|
+| `sent_to_company` | Odesláno firmě | Amber |
+| `company_confirmed` | Firma potvrdila | Teal |
+| `company_rejected` | Firma zamítla | Červená |
+| `pending_admin_approval` | Čeká na schválení adminem | Modrá |
+| `approved` | Schváleno | Zelená |
+| `admin_rejected` | Zamítnuto adminem | Tmavá červená |
+| `expired` | Expirováno | Muted |
+
+#### Oddělení datových zdrojů
+- **„Žádosti o registraci firem"** → `affiliate_company_leads` (pipeline, v procesu)
+- **„Moje firmy (schválené)"** → `affiliate_company_refs` (finální attribution, beze změny)
+- Tyto dvě sekce nesmí sdílet datový zdroj ani se vizuálně splývat.
+
+#### E2E pokrytí (plánované, dosud neexistuje)
+Spec `35-affiliate-company-lead-ui.spec.ts` musí pokrývat:
+- a) sales_rep vidí sekci a tlačítko `+ Přidat firmu`
+- b) influencer-only účet tlačítko nevidí
+- c) formulář se otevře, pole jsou vyplnitelná, odeslání vrátí toast + nový lead v seznamu se stavem „Odesláno firmě"
+- d) duplicitní company_email → error toast „Žádost již existuje"
+- e) spec 34 zůstává zelený (regrese)
+
+#### Invarianty (platné při implementaci)
+- `Přidat firmu` nikdy na `/affiliate/login` ani v jiném mode než `sales_rep`.
+- UI volá **pouze** Edge Function `create-affiliate-company-lead` — žádný přímý INSERT do `affiliate_company_leads` z klienta.
+- Po úspěchu: toast + refresh leadů. Žádný zápis do `affiliate_company_refs`, žádná provize.
+- Spec 34 musí zůstat zelený po každém commitu Phase 2B.
+- Produkční nasazení vyžaduje výslovné schválení Pavla + postcheck.
+
+---
+
 ### Phase 2A backend — `create-affiliate-company-lead` (STAGING HOTOVO, 07. 06. 2026)
 
 - Edge Function `create-affiliate-company-lead` je implementována a deployována na **STAGING ONLY** (`onemil-staging`, ref `dxmowysntemfqfnanxua`), status **ACTIVE**, version 1.
