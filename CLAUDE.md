@@ -1,5 +1,20 @@
 # CLAUDE.md
 
+## B2B LEADS — `create-affiliate-company-lead` INVARIANTY (07. 06. 2026)
+
+Edge Function `create-affiliate-company-lead` je deployována na **STAGING ONLY** (`dxmowysntemfqfnanxua`). Produkce `xkzhjldrojjlrkezorey` nebyla dotčena.
+
+**Závazná pravidla (neměnit bez výslovného schválení Pavla):**
+- Funkce nesmí nikdy zapsat do `affiliate_company_refs` ani vytvořit provizi (`affiliate_commissions`).
+- Do DB se ukládá **pouze hash tokenu** (`company_confirmation_token_hash`, SHA-256, 64 znaků); raw token se nikdy neperzistuje.
+- Response nesmí obsahovat raw token — pouze `{ success, lead_id, status }`.
+- Funkce vyžaduje: platný JWT (`supabaseAdmin.auth.getUser`), `affiliate_accounts.status = 'approved'`, `'sales_rep' = ANY(modes)`.
+- Vytvoření leadu, potvrzení firmou ani schválení adminem nevytváří provizi. Provize vzniká pouze z placené aktivity firmy.
+- Před nasazením na produkci: E2E/smoke spec pro backend flow + výslovné schválení Pavla.
+- Staging testovací účet: `sales-rep-test@onemil.cz`, ref `TESTSR2026`, modes `["sales_rep"]` — pouze staging, nesahat.
+
+Commit `b54fbb0e`. Happy-path staging test ✅ (07. 06. 2026).
+
 ## SPRÁVA SOUTĚŽÍ — statistické karty jen z `active` (06. 06. 2026, admin UI invariant)
 
 Pět statistických karet v `AdminContestManagement.tsx` (`Tikety prodány`, `Tikety zbývají`, `Prodáno %`, `Výnos (MC)`, `Tikety za 24h`) počítá **`summaryTotals` pouze ze soutěží `status === 'active'`** (`contests.filter(c => c.status === 'active')`). pending/draft/paused/closed/archiv se nezapočítávají; bez active soutěže = 0. Taby a tabulka soutěží beze změny. Commit `d212dff7`.

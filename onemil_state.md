@@ -114,8 +114,30 @@
 - Staging verification: table exists, RLS enabled, policies exist, `anon` has no access, `authenticated` has SELECT only through RLS, normal users have no INSERT/UPDATE/DELETE, and the admin reviewer index exists.
 - Not yet implemented: UI, Edge Functions, emails, admin approval flow, password setup, commission changes, partner registration changes, ticket/wallet changes, graphics, or production apply.
 
+### Phase 2A backend — `create-affiliate-company-lead` (STAGING HOTOVO, 07. 06. 2026)
+
+- Edge Function `create-affiliate-company-lead` je implementována a deployována na **STAGING ONLY** (`onemil-staging`, ref `dxmowysntemfqfnanxua`), status **ACTIVE**, version 1.
+- Commit: `b54fbb0e6c015f0bf25706b2994472d236cc2bbb`. `npm run build` ✅. Lokální repo synchronizováno (`git pull`).
+- Soubory: `supabase/functions/create-affiliate-company-lead/index.ts`, `supabase/config.toml`.
+- Staging happy-path test prošel (07. 06. 2026):
+  - Testovací účet: `sales-rep-test@onemil.cz`, ref `TESTSR2026`, status `approved`, modes `["sales_rep"]` — pouze staging.
+  - Response: `{ "success": true, "lead_id": "3147d6ce-83b6-40d4-ad3f-89e60fc9a276", "status": "sent_to_company" }`.
+  - Lead vzniklý v `affiliate_company_leads` ✅.
+  - `company_confirmation_token_hash` = 64-char SHA-256 hash ✅.
+  - Raw token není v response ani v DB ✅.
+  - `company_confirmation_sent_at` a `company_confirmation_expires_at` nastaveny ✅.
+  - Sales rep snapshots (ref_code, email, name) správné ✅.
+  - `email_queue` záznam s confirm/reject URL vzniklý ✅.
+  - `affiliate_company_refs` — žádný zápis ✅.
+  - `affiliate_commissions` — žádná provize ✅.
+  - Produkce `xkzhjldrojjlrkezorey` nedotčena ✅.
+- Security audit prošel: JWT auth ✅, approved check ✅, sales_rep mode check ✅, token hash only ✅, žádný raw token v logu ✅.
+- **Invariant:** `create-affiliate-company-lead` nesmí nikdy zapsat do `affiliate_company_refs` ani vytvořit provizi.
+- **Před nasazením na produkci:** E2E/smoke spec pro tento backend flow + výslovné schválení Pavla.
+
 ### Phase 2 backend design for B2B company leads
-- Phase 2 backend is approved as design only; it is not implemented yet.
+- Phase 2A (`create-affiliate-company-lead`) je implementována na staging — viz výše.
+- Zbývající backend jednotky jsou approved jako design, ne implementovány.
 - Production must not be touched.
 - Approved backend unit `create-affiliate-company-lead`:
   - authenticated Edge Function called from `/affiliate/dashboard`,

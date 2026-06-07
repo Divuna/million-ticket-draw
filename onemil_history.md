@@ -14,6 +14,32 @@
 
 ---
 
+## 2026-06-07 - Phase 2A backend: create-affiliate-company-lead (staging)
+
+- Edge Function `create-affiliate-company-lead` implementována a deployována na staging (`dxmowysntemfqfnanxua`), status ACTIVE, version 1. Commit `b54fbb0e`.
+- Staging happy-path test prošel: `{ "success": true, "lead_id": "3147d6ce-83b6-40d4-ad3f-89e60fc9a276", "status": "sent_to_company" }`.
+- Ověřeno: lead v `affiliate_company_leads`, token hash 64-char SHA-256, raw token mimo response/DB, email_queue záznam s confirm/reject URL, žádný zápis do `affiliate_company_refs`, žádná provize. Security audit: JWT auth, approved + sales_rep mode check, token-hash-only.
+- Testovací staging účet: `sales-rep-test@onemil.cz`, ref `TESTSR2026`, modes `["sales_rep"]`, pouze staging.
+- Produkce `xkzhjldrojjlrkezorey` nedotčena. `npm run build` ✅. Lokální repo synchronizováno (`git pull`).
+- Nezměněno: provize, Partner portal, zákaznický účet, platby, tikety, soutěže, peněženka, `buy_ticket_atomic`, UI.
+
+---
+
+## 2026-06-07 - Admin navigace: badge čekajících partnerských registrací
+
+- `AdminContextSubNav.tsx` zobrazuje červený badge u `Partneři` s počtem čekajících registrací z `get-pending-partner-registrations`. Badge jen při count > 0.
+- Commit `0339cd4a`. `npm run build` ✅. GitHub Playwright Smoke Tests ✅. Beze změny DB, schvalování, affiliate.
+
+---
+
+## 2026-06-07 - Affiliate/referral: bezpečná veřejná doména (publicAppUrl.ts)
+
+- Nový helper `src/lib/publicAppUrl.ts`: akceptuje `VITE_APP_URL` jen pokud je `https` a není localhost/Lovable/preview doména; jinak fallback `https://onemil.cz`.
+- Aplikován v AffiliateDashboard, useInfluencerData, ReferralSection. Spec 26 aktualizován.
+- Commit `d2b12504`. `npm run build` ✅. Staging Full E2E ✅. Beze změny DB, provizí, registrace partnerů, ticket logiky.
+
+---
+
 ## 2026-06-04 - Admin /influencers detail: kompletní Affiliate v2 data
 
 - `/admin/influencers` detail rozšířen o kompletní `affiliate_accounts` data (přes auth_user_id): ref_code, modes (Influencer/Obchodník), stav, provizní sazby, IČO, DIČ, DPH, fakturační adresa, země, IBAN, banka — nad rámec social/web/audience/kategorie.
