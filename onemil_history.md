@@ -3522,3 +3522,15 @@ Invariant:
 - Pouze dokumentační rozhodnutí. Nebyla napsána migrace a nebyl měněn app kód, DB, provize, registrace partnerů, ticket/wallet logika, UI grafika ani nesouvisející dokumentace.
 
 ---
+
+## 2026-06-07 - B2B company leads Phase 1 DB aplikováno na STAGING
+
+- Phase 1 DB foundation pro `affiliate_company_leads` byla aplikována pouze na staging projekt `onemil-staging` (`dxmowysntemfqfnanxua`).
+- Produkční projekt `xkzhjldrojjlrkezorey` nebyl použit ani dotčen.
+- Hlavní staging migrace `affiliate_company_leads_phase1` proběhla úspěšně.
+- Follow-up index migrace `supabase/migrations/20260607173746_affiliate_company_leads_admin_reviewed_by_index.sql` proběhla úspěšně; commit `3260b1c60f1a01e7c524443ce1c413c739891621`.
+- Přidán index `idx_affiliate_company_leads_admin_reviewed_by`.
+- Ověřeno na stagingu: tabulka existuje, RLS je zapnuté, policies existují, `anon` nemá přístup, `authenticated` má pouze SELECT přes RLS, běžní uživatelé nemají INSERT/UPDATE/DELETE a index existuje.
+- Nebyl měněn app kód, UI, Edge Functions, e-maily, admin approval flow, provize, partner registration logic, ticket/wallet logika, grafika ani nesouvisející dokumentace.
+
+---

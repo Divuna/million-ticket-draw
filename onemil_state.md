@@ -107,7 +107,12 @@
 - After admin approval, the final `affiliate_company_refs.source` value should be `company_lead`.
 - Public company confirmation/rejection must happen through an Edge Function or `SECURITY DEFINER` RPC using a hashed token.
 - No commission is created from lead creation, company confirmation or admin approval. Commission remains only from paid / invoiced company activity.
-- This is approved DB design only; migration is not written yet.
+- Phase 1 DB foundation is applied on STAGING only (`onemil-staging`, ref `dxmowysntemfqfnanxua`); production `xkzhjldrojjlrkezorey` was not touched.
+- Staging applied migration: `affiliate_company_leads_phase1`.
+- Staging follow-up index migration: `supabase/migrations/20260607173746_affiliate_company_leads_admin_reviewed_by_index.sql`, commit `3260b1c60f1a01e7c524443ce1c413c739891621`.
+- Added staging index: `idx_affiliate_company_leads_admin_reviewed_by`.
+- Staging verification: table exists, RLS enabled, policies exist, `anon` has no access, `authenticated` has SELECT only through RLS, normal users have no INSERT/UPDATE/DELETE, and the admin reviewer index exists.
+- Not yet implemented: UI, Edge Functions, emails, admin approval flow, password setup, commission changes, partner registration changes, ticket/wallet changes, graphics, or production apply.
 
 ---
 
