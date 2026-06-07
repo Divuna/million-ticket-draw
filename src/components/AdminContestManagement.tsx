@@ -149,6 +149,35 @@ const getStatusBadgeClass = (status: string) => {
   return option?.color || "bg-gray-500/20 text-gray-300 border-gray-500/30";
 };
 
+/**
+ * Thumbnail for a physical prize. Creates the object URL for a local File in an
+ * effect and revokes it on unmount/change, so we never leak blob URLs (the old
+ * inline URL.createObjectURL(...) in render allocated a new blob on every render
+ * and never revoked it → memory leak / crash on repeated heavy create flows).
+ */
+const PrizeThumb: React.FC<{ file: File | null; fallbackUrl?: string | null; alt: string; className?: string }> = ({
+  file,
+  fallbackUrl,
+  alt,
+  className,
+}) => {
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file) {
+      setObjectUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setObjectUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const src = objectUrl || fallbackUrl || null;
+  if (!src) return null;
+  return <img src={src} alt={alt} className={className} />;
+};
+
 const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, editingContest }) => {
   const [form, setForm] = useState<ContestFormData>({
     title: "",
@@ -281,6 +310,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setMioCoinGeneratorTouched(false);
       // New contest starts with fresh economy defaults.
       setEconomyAssumptions(DEFAULT_ECONOMY_ASSUMPTIONS);
+      // Release heavy base64 image state so it isn't retained across create cycles.
+      setProductImageBase64(null);
+      setAiGeneratedImages({});
     }
     setActiveTab("basic");
   }, [editingContest, open]);
@@ -1986,6 +2018,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         setStepValue(0);
         setDistributionType("even");
         setMioCoinGeneratorTouched(false);
+        // Release heavy base64 image state after a successful create.
+        setProductImageBase64(null);
+        setAiGeneratedImages({});
       }
 
       // Refresh the contest list immediately so the new/updated contest shows.
@@ -2595,21 +2630,15 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 <div className="space-y-2">
                   <Label>Přidané výhry ({physicalPrizes.length})</Label>
                 {physicalPrizes.map((prize, index) => {
-                    const thumbnailSrc =
-                      (prize.image_file ? URL.createObjectURL(prize.image_file) : null) ||
-                      prize.image_url ||
-                      null;
-
                     return (
                       <div key={index} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
                         <div className="flex items-center gap-3">
-                          {thumbnailSrc && (
-                            <img
-                              src={thumbnailSrc}
-                              alt={prize.description}
-                              className="w-10 h-10 rounded object-cover border border-white/10"
-                            />
-                          )}
+                          <PrizeThumb
+                            file={prize.image_file ?? null}
+                            fallbackUrl={prize.image_url ?? null}
+                            alt={prize.description}
+                            className="w-10 h-10 rounded object-cover border border-white/10"
+                          />
                           <div className="flex flex-col">
                             <div>
                               <span className="font-medium">{prize.description}</span>
