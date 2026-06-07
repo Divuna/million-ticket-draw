@@ -3534,3 +3534,17 @@ Invariant:
 - Nebyl měněn app kód, UI, Edge Functions, e-maily, admin approval flow, provize, partner registration logic, ticket/wallet logika, grafika ani nesouvisející dokumentace.
 
 ---
+
+## 2026-06-07 - Rozhodnutí: Phase 2 backend design pro B2B company leads
+
+- Schválen backend design pouze jako návrh, bez implementace kódu, DB, Edge Functions nebo UI.
+- `create-affiliate-company-lead`: authenticated Edge Function z `/affiliate/dashboard`, jen pro approved affiliate account s `'sales_rep' = ANY(modes)`, vytvoří lead, vygeneruje secure confirmation token, uloží jen token hash, pošle firmě potvrzovací e-mail a vrátí `{ success: true, lead_id, status: "sent_to_company" }`.
+- `confirm-affiliate-company-lead`: public token endpoint, validuje token hash, expiraci a nepoužitý token; `confirm` nastaví `pending_admin_approval`, `reject` nastaví `company_rejected`; nesmí vytvořit partnera, atribuci ani provizi.
+- `approve-affiliate-company-lead`: admin-only Edge Function, volitelně backed by RPC; schvaluje pouze `pending_admin_approval`, vytvoří/aktivuje partner účet, zapíše `affiliate_company_refs.source = 'company_lead'`, zrcadlí do `partners.referred_by_affiliate_id`, pošle secure password setup link, nikdy neposílá vygenerované heslo a nesmí vytvořit provizi.
+- Povolené status transitions: `sent_to_company -> pending_admin_approval`, `sent_to_company -> company_rejected`, `sent_to_company -> expired`, `pending_admin_approval -> approved`, `pending_admin_approval -> admin_rejected`.
+- Blokováno: žádné přímé `sent_to_company -> approved`, žádné schválení po rejected/expired, `approved` je finální, žádná atribuce před admin approval.
+- Email events: company confirmation email, admin notification after company confirmation, company rejection notification to sales rep, admin approval email with password setup link, optional admin rejection email.
+- Test coverage má zahrnout sales rep create, influencer-only block, anonymous block, token hash only, confirm/reject transitions, expired/used token block, admin approval creates partner + attribution, normal user cannot approve, no commission until paid/factured company activity.
+- Produkce se nesmí dotknout. Beze změny ticket, wallet, payment, `buy_ticket_atomic`, graphics, login placement, commission logic, partner registration logic a finální atribuce zůstává `affiliate_company_refs` + `partners.referred_by_affiliate_id`.
+
+---

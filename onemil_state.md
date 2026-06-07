@@ -114,6 +114,39 @@
 - Staging verification: table exists, RLS enabled, policies exist, `anon` has no access, `authenticated` has SELECT only through RLS, normal users have no INSERT/UPDATE/DELETE, and the admin reviewer index exists.
 - Not yet implemented: UI, Edge Functions, emails, admin approval flow, password setup, commission changes, partner registration changes, ticket/wallet changes, graphics, or production apply.
 
+### Phase 2 backend design for B2B company leads
+- Phase 2 backend is approved as design only; it is not implemented yet.
+- Production must not be touched.
+- Approved backend unit `create-affiliate-company-lead`:
+  - authenticated Edge Function called from `/affiliate/dashboard`,
+  - only for approved affiliate accounts with `'sales_rep' = ANY(modes)`,
+  - creates lead in `affiliate_company_leads`,
+  - generates secure company confirmation token,
+  - stores only token hash,
+  - sends company confirmation email,
+  - returns `{ success: true, lead_id, status: "sent_to_company" }`.
+- Approved backend unit `confirm-affiliate-company-lead`:
+  - public token endpoint,
+  - validates token hash, expiry and unused token,
+  - supports `confirm` and `reject`,
+  - `confirm` moves lead to `pending_admin_approval`,
+  - `reject` moves lead to `company_rejected`,
+  - must not create partner, attribution or commission.
+- Approved backend unit `approve-affiliate-company-lead`:
+  - admin-only Edge Function, optionally backed by RPC,
+  - approves only `pending_admin_approval`,
+  - creates/activates partner account,
+  - writes `affiliate_company_refs.source = 'company_lead'`,
+  - mirrors to `partners.referred_by_affiliate_id`,
+  - sends secure password setup link,
+  - never emails generated password,
+  - must not create commission.
+- Allowed status transitions: `sent_to_company -> pending_admin_approval`, `sent_to_company -> company_rejected`, `sent_to_company -> expired`, `pending_admin_approval -> approved`, `pending_admin_approval -> admin_rejected`.
+- Blocked transitions: no direct `sent_to_company -> approved`, no approval after rejected/expired, `approved` is final, and no attribution before admin approval.
+- Required email events: company confirmation email, admin notification after company confirmation, company rejection notification to sales rep, admin approval email with password setup link, optional admin rejection email.
+- Required tests: sales rep can create lead; influencer-only cannot create lead; anonymous cannot create lead; token hash only and no raw token stored; confirm/reject token transitions; expired/used token blocked; admin approval creates partner and attribution; normal user cannot approve; no commission until paid/factured company activity.
+- Must stay unchanged: no production apply; no commission from lead creation, confirmation or admin approval; no changes to ticket, wallet, payment, `buy_ticket_atomic`, graphics or login placement; `Přidat firmu` remains only inside `/affiliate/dashboard` for approved `sales_rep`; final attribution remains `affiliate_company_refs` + `partners.referred_by_affiliate_id`.
+
 ---
 
 ## ✅ SPRÁVA SOUTĚŽÍ — statistické karty jen z `active` soutěží (06. 06. 2026)
