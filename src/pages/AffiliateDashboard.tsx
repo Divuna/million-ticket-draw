@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { NavigateToLogin } from '@/components/NavigateToLogin';
 import AffiliateProfileSection from '@/components/AffiliateProfileSection';
 import InfluencerTermsSection from '@/components/InfluencerTermsSection';
+import { CompanyLeadSection } from '@/components/CompanyLeadSection';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -540,17 +541,21 @@ const AffiliateDashboard = () => {
           </div>
         )}
 
+        {activeMode === 'sales_rep' && a.modes.includes('sales_rep') && (
+          <CompanyLeadSection affiliateId={a.id} />
+        )}
+
         {activeMode === 'sales_rep' && (
           <div className="luxury-card overflow-hidden">
             <div className="p-6 space-y-3">
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
-                <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Moje firmy</h3>
+                <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Moje firmy (schválené)</h3>
                 <Badge className="bg-[hsl(var(--neon-gold)/0.15)] text-[hsl(var(--neon-gold))] border-[hsl(var(--neon-gold)/0.3)]">{companyRefs.length}</Badge>
               </div>
               {companyRefs.length === 0 ? (
                 <p className="text-sm text-[hsl(var(--text-muted-gray))]">
-                  Zatím nemáte žádné přivedené firmy.
+                  Zatím nemáte žádné schválené firmy.
                 </p>
               ) : (
                 <ul className="space-y-2" data-testid="company-list">
