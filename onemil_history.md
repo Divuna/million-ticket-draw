@@ -14,13 +14,14 @@
 
 ---
 
-## 2026-06-07 - Phase 2B UI: `Přidat firmu` implementováno v affiliate dashboardu
+## 2026-06-07 - Phase 2B UI: `Přidat firmu` implementováno + spec 35 zelený
 
 - Nové komponenty: `src/components/AddCompanyLeadDialog.tsx`, `src/components/CompanyLeadSection.tsx`.
 - `AffiliateDashboard.tsx` — přidána `CompanyLeadSection` (podmínka: `activeMode === 'sales_rep' && account.modes.includes('sales_rep')`), před „Moje firmy (schválené)"; „Moje firmy" přejmenováno.
-- Nový spec `tests/e2e/35-affiliate-company-lead-ui.spec.ts` — staging-only, skips bez `E2E_SALES_REP_AFFILIATE_EMAIL`.
-- `AddCompanyLeadDialog` volá pouze Edge Function `create-affiliate-company-lead` přes user JWT — žádný přímý INSERT z klienta.
-- Commit `aaa2e092`. `npm run build` ✅. Produkce nedotčena. Spec 34 nedotčen.
+- `AddCompanyLeadDialog` volá pouze Edge Function `create-affiliate-company-lead` přes user JWT — žádný přímý INSERT z klienta. Commit `aaa2e092`.
+- Spec 35 přepsán jako self-contained test (dynamické vytváření testovacích uživatelů, žádné fixed password secrets). Commits `bc419720`, `4fb39968`, `fd8f4921`.
+- Staging Full E2E run `27102532004`: **71 passed · 3 skipped · 0 failed**. Spec 34 ✅ + spec 35 (35a+35b+35c) ✅.
+- Telegram `✅ OneMil STAGING full E2E OK` doručen (message_id 1054). Produkce nedotčena.
 
 ---
 

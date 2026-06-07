@@ -156,7 +156,7 @@ activeMode === 'sales_rep' && account.modes.includes('sales_rep')
 ```
 Influencer-only účty (bez `sales_rep` v `modes`) sekci ani tlačítko `+ Přidat firmu` nevidí.
 
-#### Nové komponenty (plánované, dosud neexistují)
+#### Nové komponenty (IMPLEMENTOVÁNY, commit `aaa2e092`)
 - `src/components/AddCompanyLeadDialog.tsx` — formulář (shadcn Dialog), volá pouze Edge Function `create-affiliate-company-lead` přes user JWT.
 - `src/components/CompanyLeadSection.tsx` — seznam leadů z `affiliate_company_leads`, trigger pro AddCompanyLeadDialog.
 
@@ -188,13 +188,15 @@ Influencer-only účty (bez `sales_rep` v `modes`) sekci ani tlačítko `+ Přid
 - **„Moje firmy (schválené)"** → `affiliate_company_refs` (finální attribution, beze změny)
 - Tyto dvě sekce nesmí sdílet datový zdroj ani se vizuálně splývat.
 
-#### E2E pokrytí
-Spec `tests/e2e/35-affiliate-company-lead-ui.spec.ts` — vytvořen, staging-only, skips pokud chybí `E2E_SALES_REP_AFFILIATE_EMAIL` / `E2E_SALES_REP_AFFILIATE_PASSWORD`. Pokrývá:
-- a) sales_rep vidí sekci a tlačítko `+ Přidat firmu`
-- b) influencer-only účet tlačítko nevidí
-- c) formulář se otevře, pole jsou vyplnitelná, odeslání vrátí toast + nový lead v seznamu se stavem „Odesláno firmě"
-- d) duplicitní company_email → error toast „Žádost již existuje"
-- e) spec 34 zůstává zelený (regrese)
+#### E2E pokrytí — Spec 35 ✅ ZELENÝ (07. 06. 2026)
+Spec `tests/e2e/35-affiliate-company-lead-ui.spec.ts` — self-contained, staging-only, dynamicky vytváří dočasné testovací uživatele přes service role key (žádné fixed password secrets). Commit `fd8f4921`.
+
+**Staging Full E2E run `27102532004`: 71 passed · 3 skipped · 0 failed.** Spec 34 ✅ + spec 35 (35a + 35b + 35c) ✅. Telegram `✅ OneMil STAGING full E2E OK` (message_id 1054).
+
+Pokrývá:
+- 35a) sales_rep vidí `company-lead-section` a `add-company-lead-btn`
+- 35b) dialog `Pozvat firmu do OneMil` s 8 poli, Zrušit zavírá
+- 35c) influencer-only účet → `company-lead-section` není viditelná (activeMode=sales_rep ale modes=['influencer'])
 
 #### Invarianty (platné při implementaci)
 - `Přidat firmu` nikdy na `/affiliate/login` ani v jiném mode než `sales_rep`.
