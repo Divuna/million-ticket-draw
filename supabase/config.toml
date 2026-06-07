@@ -72,6 +72,9 @@ verify_jwt = false
 [functions.create-affiliate-company-lead]
 verify_jwt = false
 
+[functions.confirm-affiliate-company-lead]
+verify_jwt = false
+
 [functions.rotate-partner-api-key]
 verify_jwt = false
 

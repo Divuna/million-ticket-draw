@@ -90,6 +90,7 @@ import AdminInfluencerCommissions from "@/pages/AdminInfluencerCommissions";
 import AdminInfluencerCampaigns from "@/pages/AdminInfluencerCampaigns";
 import AdminNotFound from "@/pages/AdminNotFound";
 import NotFound from "@/pages/NotFound";
+import CompanyLeadConfirm from "@/pages/CompanyLeadConfirm";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -390,6 +391,7 @@ function AppContent() {
         location.pathname.startsWith('/influencer') ||  // Legacy routes still allowed (backward compat)
         location.pathname === '/partner/login' ||
         location.pathname === '/partner/register' ||
+        location.pathname === '/partner/invite' ||
         location.pathname === '/login' ||
         location.pathname === '/register' ||
         location.pathname === '/delete-account' ||
@@ -405,6 +407,7 @@ function AppContent() {
     if (isAffiliateAccount && !isPartnerAccount) {
       const allowedForAffiliate =
         location.pathname.startsWith('/affiliate') ||
+        location.pathname === '/partner/invite' ||
         location.pathname === '/login' ||
         location.pathname === '/register' ||
         location.pathname === '/delete-account' ||
@@ -484,6 +487,7 @@ function AppContent() {
       location.pathname.startsWith('/influencer') ||  // Legacy routes still allowed (backward compat)
       location.pathname === '/partner/login' ||
       location.pathname === '/partner/register' ||
+      location.pathname === '/partner/invite' ||
       location.pathname === '/login' ||
       location.pathname === '/register' ||
       location.pathname === '/delete-account' ||
@@ -502,6 +506,7 @@ function AppContent() {
   if (isAffiliateAccount && !isPartnerAccount && user) {
     const allowedForAffiliate =
       location.pathname.startsWith('/affiliate') ||
+      location.pathname === '/partner/invite' ||
       location.pathname === '/login' ||
       location.pathname === '/register' ||
       location.pathname === '/delete-account' ||
@@ -602,6 +607,7 @@ function AppContent() {
           </Route>
           <Route path="/partner/login" element={<PartnerLogin />} />
             <Route path="/partner/register" element={<PartnerRegister />} />
+            <Route path="/partner/invite" element={<CompanyLeadConfirm />} />
             {/* Legacy /influencer/* routes — /dashboard redirects to Affiliate v2 UI; public pages unchanged */}
             <Route path="/influencer" element={<InfluencerLanding />} />
             <Route path="/influencer/how-to-earn" element={<InfluencerHowToEarn />} />

@@ -158,8 +158,8 @@ function buildConfirmationEmail(params: {
 }): string {
   const baseUrl = getSafePublicAppUrl();
   const token = encodeURIComponent(params.token);
-  const confirmUrl = `${baseUrl}/affiliate/company-lead/confirm?token=${token}&action=confirm`;
-  const rejectUrl = `${baseUrl}/affiliate/company-lead/confirm?token=${token}&action=reject`;
+  const confirmUrl = `${baseUrl}/partner/invite?token=${token}&action=confirm`;
+  const rejectUrl = `${baseUrl}/partner/invite?token=${token}&action=reject`;
   const companyName = escapeHtml(params.companyName);
   const salesRepName = escapeHtml(params.salesRepName);
 
