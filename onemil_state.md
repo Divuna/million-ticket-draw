@@ -29,6 +29,55 @@
 
 ---
 
+## 🎯 CÍLOVÝ B2B WORKFLOW — Obchodník / agentura přidává firmu (07. 06. 2026)
+
+**Schválený cílový model pro přidávání firem přes obchodníka / agenturu v Affiliate v2.**
+
+### Target B2B workflow
+1. V `/affiliate/dashboard`, v režimu `Obchodník`, může sales rep / agentura použít `Přidat firmu`.
+2. Sales rep vyplní údaje firmy:
+   - company name
+   - IČO
+   - DIČ
+   - company email
+   - website
+   - contact person / phone
+   - sales rep note
+3. Firma dostane e-mail s vysvětlením, že sales rep / agentura požádal o registraci firmy do OneMil.
+4. E-mail musí obsahovat:
+   - kdo žádost poslal,
+   - co je OneMil,
+   - tlačítko `Potvrzuji žádost`,
+   - možnost/odkaz `Zamítnout žádost`.
+5. Dokud firma žádost nepotvrdí, jde jen o invitation/lead a nesmí vzniknout plnohodnotná admin partnerská registrace.
+6. Po potvrzení firmou se žádost přesune do admin schvalování.
+7. Sales rep dashboard musí ukazovat stavy leadu:
+   - `odesláno firmě`
+   - `firma potvrdila`
+   - `firma zamítla`
+   - `čeká na schválení adminem`
+   - `schváleno`
+   - `zamítnuto adminem`
+8. Po schválení adminem systém:
+   - vytvoří/aktivuje firemní partner účet,
+   - přiřadí firmu pod sales rep / agenturu,
+   - zapíše `affiliate_company_refs`,
+   - zrcadlí vazbu do `partners.referred_by_affiliate_id`,
+   - pošle firmě bezpečný e-mailový odkaz pro nastavení hesla.
+9. Nikdy neposílat firmám vygenerovaná hesla e-mailem. Nastavení hesla musí proběhnout přes bezpečný jednorázový odkaz s expirací.
+10. Provize nevzniká vytvořením leadu, potvrzením firmy ani schválením adminem. Provize vzniká pouze z placené / fakturované aktivity firmy, například ze zaplacených `partner_invoices`.
+
+### Rules
+- Influencer codes remain mainly for customers.
+- B2B company attribution must not rely only on public shared links.
+- Sales rep cannot claim a company without company confirmation.
+- Company must be able to reject the request.
+- Admin approves only company-confirmed requests.
+- Final attribution source remains `affiliate_company_refs` + `partners.referred_by_affiliate_id`.
+- Existing commission calculation should remain based on paid/factured activity.
+
+---
+
 ## ✅ SPRÁVA SOUTĚŽÍ — statistické karty jen z `active` soutěží (06. 06. 2026)
 
 **Pět statistických karet v adminu „Správa soutěží" počítá pouze ze soutěží se statusem `active`.**

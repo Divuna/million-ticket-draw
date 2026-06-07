@@ -3480,3 +3480,17 @@ Invariant:
 - Nezměněno: DB, affiliate tracking, provize, partner registration logic, ticket logic, wallet logic a UI grafika.
 
 ---
+## 2026-06-07 - Rozhodnutí: cílový B2B workflow pro `Přidat firmu`
+
+- Schválen cílový model pro sales reps / agentury v `/affiliate/dashboard` režimu `Obchodník`: akce `Přidat firmu`.
+- Sales rep vyplní company name, IČO, DIČ, company email, website, contact person / phone a sales rep note.
+- Firma dostane e-mail, že sales rep / agentura požádal o registraci firmy do OneMil; e-mail musí říkat, kdo žádost poslal, co je OneMil, a obsahovat `Potvrzuji žádost` + možnost `Zamítnout žádost`.
+- Dokud firma nepotvrdí, jde jen o invitation/lead a nesmí vzniknout plnohodnotná admin partnerská registrace.
+- Po potvrzení firmou se žádost přesune do admin schvalování. Dashboard obchodníka má ukazovat stavy `odesláno firmě`, `firma potvrdila`, `firma zamítla`, `čeká na schválení adminem`, `schváleno`, `zamítnuto adminem`.
+- Po schválení adminem systém vytvoří/aktivuje firemní partner účet, přiřadí firmu pod sales rep / agenturu, zapíše `affiliate_company_refs`, zrcadlí do `partners.referred_by_affiliate_id` a pošle firmě bezpečný jednorázový odkaz s expirací pro nastavení hesla.
+- Nikdy neposílat firmám vygenerovaná hesla e-mailem.
+- Provize nevzniká z vytvoření leadu, potvrzení firmy ani admin schválení; vzniká pouze z placené / fakturované aktivity firmy, například ze zaplacených `partner_invoices`.
+- Pravidla: influencer codes zůstávají hlavně pro zákazníky; B2B atribuce se nesmí opírat jen o veřejně sdílené odkazy; sales rep nemůže claimnout firmu bez potvrzení firmy; firma musí mít možnost odmítnout; admin schvaluje jen firmou potvrzené žádosti; finální zdroj atribuce zůstává `affiliate_company_refs` + `partners.referred_by_affiliate_id`; existující výpočet provizí má zůstat podle paid/factured aktivity.
+- Pouze dokumentační rozhodnutí. Nebyl měněn app kód, DB, provize, registrace partnerů, ticket/wallet logika, UI grafika ani nesouvisející dokumentace.
+
+---
