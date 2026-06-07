@@ -3506,3 +3506,19 @@ Invariant:
 - Pouze dokumentace; app kód, DB, auth, provize, partner registration logic, UI grafika a nesouvisející dokumentace nebyly měněny.
 
 ---
+
+## 2026-06-07 - Rozhodnutí: Phase 1 DB design pro B2B company leads
+
+- Schválený název budoucí tabulky: `affiliate_company_leads`.
+- Tabulka bude pre-attribution workflow vrstva pro B2B company leady vytvořené schválenými sales reps / agenturami.
+- Finální atribuce zůstává pouze v `affiliate_company_refs` a `partners.referred_by_affiliate_id`.
+- `affiliate_id` má být nullable FK na `affiliate_accounts(id)` s `ON DELETE SET NULL`, ne cascade.
+- Lead musí mít snapshoty obchodníka: `sales_rep_affiliate_id_snapshot`, `sales_rep_ref_code_snapshot`, `sales_rep_email_snapshot`, `sales_rep_name_snapshot`.
+- Eligibility sales rep účtu: `affiliate_accounts.status = 'approved'`, `'sales_rep' = ANY(modes)` a `affiliate_accounts.auth_user_id = auth.uid()`.
+- Povolené stavy leadu: `sent_to_company`, `company_confirmed`, `company_rejected`, `pending_admin_approval`, `approved`, `admin_rejected`, `expired`.
+- Po admin schválení má finální `affiliate_company_refs.source` používat hodnotu `company_lead`.
+- Potvrzení/zamítnutí firmou má jít přes Edge Function nebo `SECURITY DEFINER` RPC s hashed tokenem.
+- Provize nevzniká z vytvoření leadu, potvrzení firmy ani admin schválení; zůstává pouze z placené / fakturované aktivity firmy.
+- Pouze dokumentační rozhodnutí. Nebyla napsána migrace a nebyl měněn app kód, DB, provize, registrace partnerů, ticket/wallet logika, UI grafika ani nesouvisející dokumentace.
+
+---

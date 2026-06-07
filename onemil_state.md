@@ -85,6 +85,30 @@
 - Influencer-only accounts without `sales_rep` must not see this function.
 - Public B2B company claim must not originate from the login page or unauthenticated flow.
 
+### Phase 1 DB design for B2B company leads
+- Approved table name: `affiliate_company_leads`.
+- Purpose: pre-attribution workflow layer for B2B company leads created by approved sales reps / agencies.
+- Final attribution remains only in `affiliate_company_refs` and `partners.referred_by_affiliate_id`.
+- `affiliate_id` must be nullable and reference `affiliate_accounts(id)` with `ON DELETE SET NULL`, not cascade, so lead history survives affiliate account deletion.
+- Lead rows must keep readable sales rep snapshots:
+  - `sales_rep_affiliate_id_snapshot`
+  - `sales_rep_ref_code_snapshot`
+  - `sales_rep_email_snapshot`
+  - `sales_rep_name_snapshot`
+- Sales rep eligibility must require `affiliate_accounts.status = 'approved'`, `'sales_rep' = ANY(modes)` and `affiliate_accounts.auth_user_id = auth.uid()`.
+- Allowed lead statuses:
+  - `sent_to_company`
+  - `company_confirmed`
+  - `company_rejected`
+  - `pending_admin_approval`
+  - `approved`
+  - `admin_rejected`
+  - `expired`
+- After admin approval, the final `affiliate_company_refs.source` value should be `company_lead`.
+- Public company confirmation/rejection must happen through an Edge Function or `SECURITY DEFINER` RPC using a hashed token.
+- No commission is created from lead creation, company confirmation or admin approval. Commission remains only from paid / invoiced company activity.
+- This is approved DB design only; migration is not written yet.
+
 ---
 
 ## ✅ SPRÁVA SOUTĚŽÍ — statistické karty jen z `active` soutěží (06. 06. 2026)
