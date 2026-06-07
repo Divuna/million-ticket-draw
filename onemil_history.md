@@ -3494,3 +3494,15 @@ Invariant:
 - Pouze dokumentační rozhodnutí. Nebyl měněn app kód, DB, provize, registrace partnerů, ticket/wallet logika, UI grafika ani nesouvisející dokumentace.
 
 ---
+
+## 2026-06-07 - Rozhodnutí: umístění B2B funkce `Přidat firmu`
+
+- `/affiliate/login` zůstává pouze pro přihlášení Affiliate účtu.
+- `Přidat firmu` nesmí být umístěno na Affiliate login stránce a patří pouze do `/affiliate/dashboard`.
+- Funkce je viditelná jen pro schválené affiliate účty, jejichž `modes` obsahuje `sales_rep`.
+- Umístění: sales rep / `Obchodník` část dashboardu poblíž `Moje firmy`, leadů, stavů žádostí a firemních provizních dat.
+- Influencer-only účty bez `sales_rep` funkci nesmí vidět.
+- Veřejný B2B company claim nesmí vznikat z login stránky ani z nepřihlášeného flow.
+- Pouze dokumentace; app kód, DB, auth, provize, partner registration logic, UI grafika a nesouvisející dokumentace nebyly měněny.
+
+---

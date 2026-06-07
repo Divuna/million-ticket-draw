@@ -76,6 +76,15 @@
 - Final attribution source remains `affiliate_company_refs` + `partners.referred_by_affiliate_id`.
 - Existing commission calculation should remain based on paid/factured activity.
 
+### Placement rule for `Přidat firmu`
+- `/affiliate/login` remains only for Affiliate account login.
+- `Přidat firmu` must not be placed on the Affiliate login page.
+- `Přidat firmu` belongs only inside `/affiliate/dashboard`.
+- It is visible only for approved affiliate accounts whose `modes` includes `sales_rep`.
+- It belongs in the sales rep / `Obchodník` section near `Moje firmy`, leads, request statuses and company commission data.
+- Influencer-only accounts without `sales_rep` must not see this function.
+- Public B2B company claim must not originate from the login page or unauthenticated flow.
+
 ---
 
 ## ✅ SPRÁVA SOUTĚŽÍ — statistické karty jen z `active` soutěží (06. 06. 2026)
