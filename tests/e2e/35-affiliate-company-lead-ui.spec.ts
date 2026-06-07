@@ -2,9 +2,9 @@
  * Spec 35 — Affiliate dashboard: Přidat firmu UI (Phase 2B)
  *
  * Self-contained staging-only test.
- * Creates temporary test users via service role key, injects their session into
- * the browser, and navigates directly to /affiliate/dashboard.
- * No fixed password secrets required — only the existing service role secret.
+ * Creates temporary test users via service role key, then logs them in through
+ * the affiliate login UI (/affiliate/login). Password is generated at runtime
+ * and lives only in memory — never in secrets, logs, or commits.
  *
  * Required env vars (all already present in playwright-staging.yml):
  *   VITE_SUPABASE_URL               — must contain staging ref dxmowysntemfqfnanxua
@@ -20,6 +20,7 @@
 
 import { test, expect } from '@playwright/test';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { loginAffiliateViaUI } from './helpers/auth';
 
 const STAGING_REF    = 'dxmowysntemfqfnanxua';
 const SUPABASE_URL   = process.env.VITE_SUPABASE_URL              ?? '';
@@ -80,15 +81,6 @@ async function createTestUser(
   return { authUserId, affiliateId: aff.id as string };
 }
 
-async function getSession(email: string, password: string) {
-  const anon = createClient(SUPABASE_URL, SUPABASE_ANON, {
-    auth: { persistSession: false },
-  });
-  const { data, error } = await anon.auth.signInWithPassword({ email, password });
-  if (error || !data.session) throw new Error(`signIn: ${error?.message ?? 'no session'}`);
-  return data.session;
-}
-
 async function cleanup(
   admin: SupabaseClient,
   opts: { authUserId?: string | null; affiliateId?: string | null },
@@ -108,46 +100,19 @@ async function cleanup(
   }
 }
 
-/**
- * Inject Supabase session into the browser's localStorage before first navigation.
- * addInitScript runs on every navigation in this page — the session stays fresh.
- */
-async function injectSessionAndNavigate(
+async function goToDashboard(
   page: import('@playwright/test').Page,
-  session: object,
+  email: string,
+  password: string,
 ) {
-  // Extract project ref from the Supabase URL hostname
-  let ref = STAGING_REF;
-  try { ref = new URL(SUPABASE_URL).hostname.split('.')[0]; } catch { /* keep default */ }
-
-  const storageKey = `sb-${ref}-auth-token`;
-
-  await page.addInitScript(
-    ({ key, data }) => {
-      localStorage.setItem(key, JSON.stringify(data));
-      localStorage.setItem(
-        'cookie_consent',
-        JSON.stringify({
-          essential: true,
-          analytics: false,
-          marketing: false,
-          timestamp: new Date().toISOString(),
-        }),
-      );
-      localStorage.removeItem('affiliate_active_mode');
-    },
-    { key: storageKey, data: session },
-  );
-
-  await page.goto('/affiliate/dashboard');
-  await page.waitForURL(/\/affiliate\/dashboard/, { timeout: 20_000 });
+  // loginAffiliateViaUI handles navigation + waitForURL(/\/affiliate\/dashboard/)
+  await loginAffiliateViaUI(page, email, password);
 }
 
 async function switchToSalesRepMode(page: import('@playwright/test').Page) {
   const btn = page.getByTestId('mode-btn-sales_rep');
-  await expect(btn).toBeVisible({ timeout: 10_000 });
+  await expect(btn).toBeVisible({ timeout: 15_000 });
   await btn.click();
-  // Let mode switcher animation settle and data fetch begin
   await page.waitForTimeout(600);
 }
 
@@ -161,7 +126,7 @@ test.describe('Phase 2B UI — Přidat firmu (spec 35)', () => {
 
   test('35a: approved sales_rep sees lead section and + Přidat firmu button', async ({ page }) => {
     skipIfNotStaging();
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -180,8 +145,7 @@ test.describe('Phase 2B UI — Přidat firmu (spec 35)', () => {
         email, password, modes: ['sales_rep'], refCode,
       }));
 
-      const session = await getSession(email, password);
-      await injectSessionAndNavigate(page, session);
+      await goToDashboard(page, email, password);
       await switchToSalesRepMode(page);
 
       // Lead section heading
@@ -207,7 +171,7 @@ test.describe('Phase 2B UI — Přidat firmu (spec 35)', () => {
 
   test('35b: dialog opens with all 8 form fields and Zrušit closes it', async ({ page }) => {
     skipIfNotStaging();
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -226,8 +190,7 @@ test.describe('Phase 2B UI — Přidat firmu (spec 35)', () => {
         email, password, modes: ['sales_rep'], refCode,
       }));
 
-      const session = await getSession(email, password);
-      await injectSessionAndNavigate(page, session);
+      await goToDashboard(page, email, password);
       await switchToSalesRepMode(page);
 
       const addBtn = page.getByTestId('add-company-lead-btn').first();
@@ -269,7 +232,7 @@ test.describe('Phase 2B UI — Přidat firmu (spec 35)', () => {
 
   test('35c: influencer-only account does not see lead section in Obchodník mode', async ({ page }) => {
     skipIfNotStaging();
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -288,8 +251,9 @@ test.describe('Phase 2B UI — Přidat firmu (spec 35)', () => {
         email, password, modes: ['influencer'], refCode,
       }));
 
-      const session = await getSession(email, password);
-      await injectSessionAndNavigate(page, session);
+      await goToDashboard(page, email, password);
+      // mode-btn-sales_rep is always rendered for all affiliate accounts;
+      // switching to it does NOT show the lead section when modes=['influencer']
       await switchToSalesRepMode(page);
 
       // Allow data load to settle
