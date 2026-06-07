@@ -136,6 +136,116 @@
 - Staging verification: table exists, RLS enabled, policies exist, `anon` has no access, `authenticated` has SELECT only through RLS, normal users have no INSERT/UPDATE/DELETE, and the admin reviewer index exists.
 - Not yet implemented: UI, Edge Functions, emails, admin approval flow, password setup, commission changes, partner registration changes, ticket/wallet changes, graphics, or production apply.
 
+### Phase 2C — Company Confirmation/Rejection DESIGN SCHVÁLEN (07. 06. 2026, není implementováno)
+
+**Design company confirmation/rejection workflow schválen Pavlem. Není implementováno — produkce nedotčena.**
+
+#### Edge Function: `confirm-affiliate-company-lead`
+
+- **Soubor (plánovaný):** `supabase/functions/confirm-affiliate-company-lead/index.ts`
+- **Přístup:** PUBLIC — bez JWT. Firma kliká link z e-mailu jako neautentizovaný návštěvník.
+- **CORS:** `Access-Control-Allow-Origin: *`
+
+**GET `?token=RAW_TOKEN`** — načti informace o žádosti (bez změny stavu):
+1. Vypočítej `sha256Hex(token)`.
+2. Najdi lead přes `company_confirmation_token_hash`.
+3. Ověř: nenalezen → 404; expirovaný → 410; `status ≠ 'sent_to_company'` → 409.
+4. Vrať: `{ success: true, company_name, sales_rep_name, expires_at }`.
+
+**POST `{ token, action: "confirm" | "reject" }`** — proveď akci:
+1. Stejná validace jako GET (404 / 410 / 409).
+2. Atomická UPDATE: `WHERE id = $lead_id AND status = 'sent_to_company'`.
+3. Při `confirm`:
+   - `status = 'pending_admin_approval'`
+   - `company_confirmed_at = now()`
+   - `company_confirmation_used_at = now()`
+   - `submitted_to_admin_at = now()`
+   - `company_confirmation_token_hash = NULL`
+4. Při `reject`:
+   - `status = 'company_rejected'`
+   - `company_rejected_at = now()`
+   - `company_confirmation_used_at = now()`
+   - `company_confirmation_token_hash = NULL`
+5. Pokud UPDATE vrátí 0 řádků (race condition) → HTTP 409.
+6. Vrať: `{ success: true, action, status: new_status, company_name }`.
+
+**Absolutní zákazy (nikdy nesmí):**
+- INSERT do `affiliate_company_refs`
+- INSERT do `affiliate_commissions`
+- Vytváření partner účtu
+- Vracet raw token ani token hash v response
+
+#### Status transitions
+
+```
+sent_to_company  →  pending_admin_approval  (confirm)
+sent_to_company  →  company_rejected        (reject)
+```
+
+#### HTTP stavové kódy
+
+| Situace | Kód |
+|---|---|
+| Úspěch | 200 |
+| Neplatný token | 404 |
+| Expirovaný token | 410 |
+| Již zpracovaný token | 409 |
+| Chybný `action` parametr | 400 |
+
+#### Frontend stránka: `src/pages/CompanyLeadConfirm.tsx`
+
+- **Route (plánovaná):** `/partner/invite` — public, bez auth
+- **Přidání do App.tsx:** nová `<Route path="/partner/invite" element={<CompanyLeadConfirm />} />` + `/partner/invite` do allowed listů pro affiliate/influencer render guard.
+- **Chování:** mount → GET token info → spinner → zobraz summary + tlačítka → klik → POST → success/error state.
+- **Success:** ✅ confirm = „Žádost potvrzena. Čeká na schválení adminem." / reject = „Žádost zamítnuta."
+- **Error states:** 404 → „Neplatný odkaz" / 410 → „Platnost vypršela. Kontaktujte odesílatele." / 409 → „Žádost byla již zpracována."
+- Design: OneMil dark premium, centrovaná karta, bez dashboard chromi, bez bottom nav.
+
+#### Email URL aktualizace
+
+Phase 2A `create-affiliate-company-lead` generuje URL: `/affiliate/company-lead/confirm?token=X&action=confirm`.  
+Po implementaci Phase 2C se změní na: `/partner/invite?token=X&action=confirm`.  
+Phase 2A je staging-only → žádné produkční e-maily v oběhu → bezpečná změna.
+
+#### DB migrace
+
+**Žádná nová migrace není potřeba.** Phase 1 schema obsahuje všechny potřebné sloupce:
+`company_confirmation_token_hash`, `company_confirmation_expires_at`, `company_confirmation_used_at`, `company_confirmed_at`, `company_rejected_at`, `company_rejection_reason`, `submitted_to_admin_at`, `updated_at` (auto-trigger).
+Unique partial index `uq_affiliate_company_leads_token_hash` existuje pro O(log n) lookup.
+
+#### Plánovaný spec 36
+
+Soubor: `tests/e2e/36-affiliate-company-lead-confirm.spec.ts` — staging-only, self-contained.
+
+Backend testy (bez browseru):
+- 36a) Platný `confirm` → 200, `pending_admin_approval`, `company_confirmed_at` set, token hash NULL
+- 36b) Platný `reject` → 200, `company_rejected`, `company_rejected_at` set, token hash NULL
+- 36c) Expirovaný token → 410
+- 36d) Použitý token (druhý volání) → 409
+- 36e) Neplatný token → 404
+- 36f) Confirm NESMÍ vytvořit `affiliate_company_refs`, `affiliate_commissions`, ani partner účet
+- 36g) GET platný token → 200, `company_name` a `sales_rep_name` v response
+
+UI testy (browser):
+- 36h) `/partner/invite?token=VALID&action=confirm` → summary viditelné, klik Potvrzuji → success state
+- 36i) `/partner/invite?token=VALID&action=reject` → klik Zamítnout → success state
+- 36j) `/partner/invite?token=EXPIRED` → error state „Platnost vypršela"
+- 36k) `/partner/invite?token=INVALID` → error state „Neplatný odkaz"
+
+#### Implementační pořadí
+
+1. Aktualizovat email URL v `create-affiliate-company-lead` (2 řádky) → deploy na staging
+2. Nová Edge Function `confirm-affiliate-company-lead` → deploy na staging
+3. Smoke test EF z CLI/curl (confirm, reject, expired, invalid)
+4. Nová stránka `CompanyLeadConfirm.tsx` + route v `App.tsx`
+5. `npm run build` ✅
+6. Spec 36 (backend testy dříve, UI testy po nasazení)
+7. Staging Full E2E — spec 34 ✅, spec 35 ✅, spec 36 ✅, 0 regresí
+8. Dokumentace + commit + push
+9. **Produkce: výslovné schválení Pavla + Lovable Publish + postcheck**
+
+---
+
 ### Phase 2B UI — `Přidat firmu` IMPLEMENTOVÁNO (07. 06. 2026, staging only)
 
 **UI pro B2B lead workflow v `/affiliate/dashboard` je implementováno. Commit `aaa2e092`. `npm run build` ✅. Produkce nedotčena — produkční nasazení vyžaduje výslovné schválení Pavla + Lovable Publish.**

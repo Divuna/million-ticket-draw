@@ -14,6 +14,19 @@
 
 ---
 
+## 2026-06-07 - Phase 2C design: company confirmation/rejection (schválen, není implementováno)
+
+- Design schválen pro Edge Function `confirm-affiliate-company-lead` (public, bez JWT, GET+POST).
+- GET: validuje token hash, vrací bezpečné info o žádosti (bez citlivých dat).
+- POST: atomická UPDATE s podmínkou `WHERE status='sent_to_company'`; confirm → `pending_admin_approval`; reject → `company_rejected`. Nastaví `company_confirmation_used_at`, smaže token hash.
+- Plánovaná veřejná route: `/partner/invite` (místo `/affiliate/company-lead/confirm`); email URL v Phase 2A EF bude aktualizována (2 řádky).
+- Plánovaná frontend stránka: `src/pages/CompanyLeadConfirm.tsx` — centrovaná karta, bez dashboard chromi, success/error stavy.
+- Žádná nová DB migrace — Phase 1 schema obsahuje všechny potřebné sloupce (token hash, expiry, used_at, confirmed_at, rejected_at, submitted_to_admin_at).
+- Plánovaný spec 36: 7 backend testů + 4 UI testy (valid confirm/reject, expired, used, invalid token, no partner/attribution/commission).
+- Produkce nedotčena. Produkční nasazení vyžaduje výslovné schválení Pavla.
+
+---
+
 ## 2026-06-07 - Phase 2B UI: `Přidat firmu` implementováno + spec 35 zelený
 
 - Nové komponenty: `src/components/AddCompanyLeadDialog.tsx`, `src/components/CompanyLeadSection.tsx`.

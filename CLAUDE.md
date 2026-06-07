@@ -17,27 +17,48 @@ Commit `b54fbb0e`. Happy-path staging test ✅ (07. 06. 2026).
 Spec 34 (`tests/e2e/34-affiliate-company-lead-backend.spec.ts`) ✅ — Staging Full E2E run `27100946115`: 68 passed · 3 skipped · 0 failed. Commit `1ec3a127`.
 **Před stavbou UI `Přidat firmu` musí spec 34 zůstat zelený. Produkční nasazení vyžaduje výslovné schválení Pavla.**
 
-## B2B LEADS — PHASE 2B UI DESIGN (07. 06. 2026, schváleno, implementace čeká)
+## B2B LEADS — PHASE 2B UI (07. 06. 2026, implementováno, staging only)
 
+UI design schválen Pavlem. Implementováno v commitu `aaa2e092`. Spec 35 zelený — Staging Full E2E run `27102532004`: 71 passed · 3 skipped · 0 failed. Commit `fd8f4921`. DB, Edge Functions ani produkce nebyly změněny.
 
-
-UI design schválen Pavlem. Implementováno v commitu `aaa2e092`. DB, Edge Functions ani produkce nebyly změněny.
-
-**Závazná pravidla platná při implementaci:**
+**Závazná pravidla:**
 - `Přidat firmu` NIKDY na `/affiliate/login`. Patří pouze do `/affiliate/dashboard`, `sales_rep` / `Obchodník` mode.
 - Zobrazit POUZE pokud `activeMode === 'sales_rep' && account.modes.includes('sales_rep')`.
 - UI musí volat POUZE Edge Function `create-affiliate-company-lead` — žádný přímý INSERT do `affiliate_company_leads` z klienta.
 - Po odeslání formuláře: pouze toast + refresh leadů. Žádný zápis do `affiliate_company_refs`, žádná provize.
 - „Žádosti o registraci firem" (sekce leadů) čte z `affiliate_company_leads`. „Moje firmy (schválené)" čte z `affiliate_company_refs`. Datové zdroje musí zůstat striktně odděleny.
-- Spec 34 musí zůstat zelený po každém commitu Phase 2B.
-- Produkce vyžaduje výslovné schválení Pavla + postcheck.
+- Spec 34 a spec 35 musí zůstat zelené. Produkce vyžaduje výslovné schválení Pavla + postcheck.
 
-**Plánované komponenty (dosud neexistují):**
+**Implementované komponenty:**
 - `src/components/AddCompanyLeadDialog.tsx` — formulář; povinná: company_name, company_email; volitelná: ico, dic, website (https://), contact_person, contact_phone, sales_rep_note (max 2000 znaků).
 - `src/components/CompanyLeadSection.tsx` — seznam leadů, badge stavů, trigger pro dialog.
 
-**Plánovaný spec 35** (`tests/e2e/35-affiliate-company-lead-ui.spec.ts`): musí být zelený před mergem Phase 2B.
-- sales_rep vidí sekci + tlačítko; influencer-only je nevidí; formulář se odešle → lead vznikne se stavem „Odesláno firmě"; duplicitní email → error toast; spec 34 zůstává zelený.
+**Spec 35** (`tests/e2e/35-affiliate-company-lead-ui.spec.ts`) ✅ — zelený. Self-contained (dynamické testovací uživatele). Pokrývá: 35a sales_rep vidí sekci; 35b dialog 8 polí + Zrušit; 35c influencer-only nevidí sekci.
+
+## B2B LEADS — PHASE 2C DESIGN (07. 06. 2026, schváleno, není implementováno)
+
+Design company confirmation/rejection workflow schválen Pavlem. **Není implementováno. Produkce nedotčena.**
+
+**Plánovaná Edge Function `confirm-affiliate-company-lead`:**
+- PUBLIC — bez JWT; firma kliká link z e-mailu jako neautentizovaný návštěvník.
+- GET `?token=RAW_TOKEN` → validuje hash, vrátí `{ company_name, sales_rep_name, expires_at }`.
+- POST `{ token, action: "confirm" | "reject" }` → atomická UPDATE `WHERE status='sent_to_company'`:
+  - confirm: `status = 'pending_admin_approval'`, nastaví `company_confirmed_at`, `submitted_to_admin_at`, `company_confirmation_used_at`, smaže token hash.
+  - reject: `status = 'company_rejected'`, nastaví `company_rejected_at`, `company_confirmation_used_at`, smaže token hash.
+- Race condition ochrana: UPDATE vrátí 0 řádků → HTTP 409.
+- NIKDY: INSERT do `affiliate_company_refs`, `affiliate_commissions`, vytváření partner účtu, vracení raw tokenu.
+
+**Plánovaná veřejná stránka `src/pages/CompanyLeadConfirm.tsx`:**
+- Route: `/partner/invite` — public (přidat do App.tsx + do allowed listů pro affiliate/influencer render guard).
+- Zobrazí summary žádosti, tlačítka `Potvrzuji žádost` / `Zamítnout žádost`, success/error stavy.
+
+**Email URL**: Phase 2A generuje `/affiliate/company-lead/confirm?token=X`. Po Phase 2C se změní na `/partner/invite?token=X` (2 řádky v create-affiliate-company-lead/index.ts).
+
+**Žádná nová DB migrace** — Phase 1 schema obsahuje všechny potřebné sloupce.
+
+**Plánovaný spec 36** (`tests/e2e/36-affiliate-company-lead-confirm.spec.ts`): staging-only, self-contained. 7 backend testů (confirm, reject, expired, used, invalid, no-partner/refs/commission, GET info) + 4 UI testy (confirm page, reject page, expired page, invalid page). Spec 34 a spec 35 musí zůstat zelené.
+
+**Implementační pořadí:** aktualizovat email URL v EF → deploy `confirm-affiliate-company-lead` na staging → frontend stránka + route → build ✅ → spec 36 → Staging Full E2E → dokumentace → commit/push → produkce jen se schválením Pavla.
 
 ## SPRÁVA SOUTĚŽÍ — statistické karty jen z `active` (06. 06. 2026, admin UI invariant)
 
