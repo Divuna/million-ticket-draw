@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { usePendingOffersCount } from "@/hooks/usePendingOffersCount";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   ADMIN_PERSISTENT_SUBNAV_SEGMENTS,
@@ -61,9 +62,46 @@ export const AdminContextSubNav: React.FC = () => {
   const location = useLocation();
   const { unreadCount } = useUnreadMessagesCount();
   const { pendingCount: pendingOffersCount } = usePendingOffersCount();
+  const [pendingPartnerRegistrationsCount, setPendingPartnerRegistrationsCount] = useState(0);
 
   const activeSection = getAdminSectionFromPath(location.pathname, location.search);
   const meta = ADMIN_SECTION_META[activeSection];
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPendingPartnerRegistrationsCount = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData.session) {
+          if (!cancelled) setPendingPartnerRegistrationsCount(0);
+          return;
+        }
+
+        const res = await supabase.functions.invoke("get-pending-partner-registrations", {
+          headers: {
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+          },
+        });
+
+        if (res.error) throw res.error;
+
+        const data = res.data as { success?: boolean; registrations?: unknown[] };
+        if (!cancelled) {
+          setPendingPartnerRegistrationsCount(data.success ? data.registrations?.length ?? 0 : 0);
+        }
+      } catch (error) {
+        console.error("Error loading pending partner registrations count:", error);
+        if (!cancelled) setPendingPartnerRegistrationsCount(0);
+      }
+    };
+
+    loadPendingPartnerRegistrationsCount();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const renderMenuSections = (sections: AdminContextMenuSection[], menuKey: string) =>
     sections.map((sec, si) => (
@@ -111,6 +149,8 @@ export const AdminContextSubNav: React.FC = () => {
       const Icon = item.icon;
       const active = isAdminSubNavItemActive(item, location.pathname, location.search);
       const showBadge = item.path === "/admin/messages" && unreadCount > 0;
+      const showPendingPartnerBadge =
+        item.path === "/admin/partners" && pendingPartnerRegistrationsCount > 0;
       const to = subNavItemTo(item);
       const end = !item.matchPrefix;
       return (
@@ -129,6 +169,11 @@ export const AdminContextSubNav: React.FC = () => {
           {showBadge && (
             <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-0.5">
               {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+          {showPendingPartnerBadge && (
+            <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-0.5">
+              {pendingPartnerRegistrationsCount > 99 ? "99+" : pendingPartnerRegistrationsCount}
             </span>
           )}
         </NavLink>
