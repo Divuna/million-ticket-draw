@@ -136,9 +136,9 @@
 - Staging verification: table exists, RLS enabled, policies exist, `anon` has no access, `authenticated` has SELECT only through RLS, normal users have no INSERT/UPDATE/DELETE, and the admin reviewer index exists.
 - Not yet implemented: UI, Edge Functions, emails, admin approval flow, password setup, commission changes, partner registration changes, ticket/wallet changes, graphics, or production apply.
 
-### Phase 2B UI — `Přidat firmu` design schválen (07. 06. 2026, implementace čeká)
+### Phase 2B UI — `Přidat firmu` IMPLEMENTOVÁNO (07. 06. 2026, staging only)
 
-**UI design pro B2B lead workflow v `/affiliate/dashboard` je navržen a schválen. Implementace NEPROBÍHÁ — čeká na zahájení Pavlem.**
+**UI pro B2B lead workflow v `/affiliate/dashboard` je implementováno. Commit `aaa2e092`. `npm run build` ✅. Produkce nedotčena — produkční nasazení vyžaduje výslovné schválení Pavla + Lovable Publish.**
 
 #### Umístění v dashboardu (sales_rep mode)
 ```
@@ -188,8 +188,8 @@ Influencer-only účty (bez `sales_rep` v `modes`) sekci ani tlačítko `+ Přid
 - **„Moje firmy (schválené)"** → `affiliate_company_refs` (finální attribution, beze změny)
 - Tyto dvě sekce nesmí sdílet datový zdroj ani se vizuálně splývat.
 
-#### E2E pokrytí (plánované, dosud neexistuje)
-Spec `35-affiliate-company-lead-ui.spec.ts` musí pokrývat:
+#### E2E pokrytí
+Spec `tests/e2e/35-affiliate-company-lead-ui.spec.ts` — vytvořen, staging-only, skips pokud chybí `E2E_SALES_REP_AFFILIATE_EMAIL` / `E2E_SALES_REP_AFFILIATE_PASSWORD`. Pokrývá:
 - a) sales_rep vidí sekci a tlačítko `+ Přidat firmu`
 - b) influencer-only účet tlačítko nevidí
 - c) formulář se otevře, pole jsou vyplnitelná, odeslání vrátí toast + nový lead v seznamu se stavem „Odesláno firmě"

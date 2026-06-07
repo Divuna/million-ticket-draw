@@ -14,13 +14,13 @@
 
 ---
 
-## 2026-06-07 - Phase 2B UI design: `Přidat firmu` schválen (implementace čeká)
+## 2026-06-07 - Phase 2B UI: `Přidat firmu` implementováno v affiliate dashboardu
 
-- UI design pro B2B company lead workflow v `/affiliate/dashboard` navržen a schválen Pavlem.
-- Placement: `sales_rep` mode, mezi odkaz/QR a „Moje firmy (schválené)". Nová sekce „Žádosti o registraci firem" čte z `affiliate_company_leads`; stávající „Moje firmy" čte z `affiliate_company_refs` — datové zdroje striktně odděleny.
-- Nové plánované komponenty: `AddCompanyLeadDialog`, `CompanyLeadSection`.
-- Plánovaný spec 35 (`35-affiliate-company-lead-ui.spec.ts`) — dosud neexistuje.
-- Žádný kód, DB, Edge Function ani produkce nebyly změněny. Pouze dokumentace.
+- Nové komponenty: `src/components/AddCompanyLeadDialog.tsx`, `src/components/CompanyLeadSection.tsx`.
+- `AffiliateDashboard.tsx` — přidána `CompanyLeadSection` (podmínka: `activeMode === 'sales_rep' && account.modes.includes('sales_rep')`), před „Moje firmy (schválené)"; „Moje firmy" přejmenováno.
+- Nový spec `tests/e2e/35-affiliate-company-lead-ui.spec.ts` — staging-only, skips bez `E2E_SALES_REP_AFFILIATE_EMAIL`.
+- `AddCompanyLeadDialog` volá pouze Edge Function `create-affiliate-company-lead` přes user JWT — žádný přímý INSERT z klienta.
+- Commit `aaa2e092`. `npm run build` ✅. Produkce nedotčena. Spec 34 nedotčen.
 
 ---
 

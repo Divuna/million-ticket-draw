@@ -19,7 +19,9 @@ Spec 34 (`tests/e2e/34-affiliate-company-lead-backend.spec.ts`) ✅ — Staging 
 
 ## B2B LEADS — PHASE 2B UI DESIGN (07. 06. 2026, schváleno, implementace čeká)
 
-UI design schválen Pavlem. Implementace neprobíhá. Kód, DB, Edge Functions ani produkce nebyly změněny.
+
+
+UI design schválen Pavlem. Implementováno v commitu `aaa2e092`. DB, Edge Functions ani produkce nebyly změněny.
 
 **Závazná pravidla platná při implementaci:**
 - `Přidat firmu` NIKDY na `/affiliate/login`. Patří pouze do `/affiliate/dashboard`, `sales_rep` / `Obchodník` mode.
