@@ -1226,26 +1226,47 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
    * "even"   – evenly spaced indices across the pool (deterministic, easy to audit).
    * "random" – Fisher-Yates shuffle, first count results, returned sorted.
    */
+  // Scalable position picker — NEVER allocates an array over the whole ticket
+  // range (the old version built a 1..ticketCount array + a full shuffle copy,
+  // which caused Out-of-Memory on 1,000,000-ticket contests). Works directly
+  // with the ticket count + an `occupied` Set, using O(count) memory.
+  // Returns `count` unique positions in [1, ticketCount-1] excluding `occupied`.
   const pickPositions = (
     strategy: "even" | "random",
     count: number,
-    available: number[]
+    ticketCount: number,
+    occupied: Set<number>,
   ): number[] => {
-    if (count === 1) {
-      // Single prize: return the middle of the pool so it sits roughly in the middle.
-      return [available[Math.floor(available.length / 2)]];
-    }
+    const maxPos = ticketCount - 1; // final ticket reserved for the main prize
+    const chosen = new Set<number>();
+
     if (strategy === "even") {
-      const step = (available.length - 1) / (count - 1);
-      return Array.from({ length: count }, (_, i) => available[Math.round(i * step)]);
+      const spacing = Math.max(1, Math.floor(maxPos / (count + 1)));
+      for (let i = 1; i <= count; i++) {
+        let pos = Math.min(maxPos, Math.max(1, spacing * i));
+        let guard = 0;
+        while ((occupied.has(pos) || chosen.has(pos)) && guard <= maxPos) {
+          pos = pos >= maxPos ? 1 : pos + 1;
+          guard++;
+        }
+        if (pos >= 1 && pos <= maxPos && !occupied.has(pos) && !chosen.has(pos)) chosen.add(pos);
+      }
+    } else {
+      let attempts = 0;
+      const maxAttempts = count * 20 + 100;
+      while (chosen.size < count && attempts < maxAttempts) {
+        const pos = Math.floor(Math.random() * maxPos) + 1;
+        if (!occupied.has(pos) && !chosen.has(pos)) chosen.add(pos);
+        attempts++;
+      }
+      // Dense-pool fallback (no full-range allocation): linear scan, stops at count.
+      if (chosen.size < count) {
+        for (let pos = 1; pos <= maxPos && chosen.size < count; pos++) {
+          if (!occupied.has(pos) && !chosen.has(pos)) chosen.add(pos);
+        }
+      }
     }
-    // random
-    const shuffled = [...available];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled.slice(0, count).sort((a, b) => a - b);
+    return Array.from(chosen).sort((a, b) => a - b);
   };
 
   const addPhysicalPrize = () => {
@@ -1312,27 +1333,28 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       return;
     }
 
-    const occupied = new Set([
+    const occupied = new Set<number>([
       ...mioCoinBonuses.map((b) => b.ticket_position),
       ...physicalPrizes.map((p) => p.ticket_position),
     ]);
 
-    // Available = 1..(ticketCount-1) excluding occupied
-    const available: number[] = [];
-    for (let pos = 1; pos < ticketCount; pos++) {
-      if (!occupied.has(pos)) available.push(pos);
-    }
+    // Count free positions in 1..(ticketCount-1) WITHOUT allocating the full range
+    // (allocating a 1,000,000-element array here caused Out-of-Memory crashes).
+    const maxPos = ticketCount - 1;
+    let occupiedInRange = 0;
+    occupied.forEach((p) => { if (p >= 1 && p <= maxPos) occupiedInRange++; });
+    const freeCount = maxPos - occupiedInRange;
 
-    if (available.length < qty) {
+    if (freeCount < qty) {
       toast({
         title: "Nedostatek volných pozic",
-        description: `V rozsahu 1–${ticketCount - 1} je pouze ${available.length} volných pozic. Snižte počet kusů nebo zkontrolujte obsazené pozice.`,
+        description: `V rozsahu 1–${maxPos} je pouze ${freeCount} volných pozic. Snižte počet kusů nebo zkontrolujte obsazené pozice.`,
         variant: "destructive",
       });
       return;
     }
 
-    const positions = pickPositions(physicalPrizeDistribution, qty, available);
+    const positions = pickPositions(physicalPrizeDistribution, qty, ticketCount, occupied);
     const base = { ...newPhysicalPrize };
     const newPrizes: PhysicalPrize[] = positions.map((pos) => ({
       ...base,
