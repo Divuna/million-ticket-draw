@@ -3459,3 +3459,24 @@ Invariant:
 
 **2026-06-02** — Affiliate legacy bridge: produkční STRUKTURA aplikována do `xkzhjldrojjlrkezorey` (`onemil`), read-only postcheck prošel. Ověřeno: `affiliate_legacy_partner_links` existuje s RLS + admin SELECT policy; RPC `admin_bridge_influencer_partner_to_affiliate` existuje, je `SECURITY DEFINER`, `authenticated` má `EXECUTE`; view `v_admin_influencer_affiliate_bridge_candidates` existuje s `security_invoker = true` + `authenticated` SELECT; bridge link table má 0 řádků; 3 approved influencer kandidáti; 0 affiliate/bridge triggerů na partners/payments/wallets/wallet_transactions/tickets/contests/partner_offers. Žádný partner nebyl bridgnutý, žádné bridge RPC nebylo voláno pro konkrétního partnera, žádná produkční testovací data nevznikla. `/admin/affiliate` zůstává read-only; Stripe, payments flow a wallet nedotčeny.
 - **2026-06-03** — Affiliate v2 staging browser E2E final verification completed. Staging token config was fixed: Supabase staging `INTERNAL_FUNCTION_TOKEN` and GitHub Actions staging `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` were aligned to the same plaintext value without logging or committing the token. `get-pending-partner-registrations` no longer returns 401. Browser E2E `affiliate company via flow` passed and verified `/partner/register?via=KOD` → pending registrace → admin schválení → partner → `affiliate_company_refs` → `partners.referred_by_affiliate_id`. Run URL: `https://github.com/Divuna/million-ticket-draw/actions/runs/26882872534`. Verified commit: `c9d383fc55d118a9cce5b12e67f5fb637cb124f9`. Production was not touched.
+## 2026-06-07 - Admin navigace: badge čekajících partnerských registrací
+
+- Admin kontextová podlišta v sekci `Uživatelé a partneři` nově zobrazuje u položky `Partneři` červený badge s počtem čekajících partnerských registrací.
+- Badge se zobrazuje jen při počtu `> 0`; při kliknutí se dál otevírá stávající `/admin/partners`.
+- Počet se načítá read-only přes existující `get-pending-partner-registrations`.
+- Změněný soubor: `src/components/admin/AdminContextSubNav.tsx`. Commit `0339cd4a6775bb8dc34f395aa16f302d9fc61034`. `npm run build` prošel. GitHub Playwright Smoke Tests prošly.
+- Nezměněno: DB, schvalování partnerů, affiliate logika, onboarding, zprávy a ostatní admin oblasti.
+
+---
+
+## 2026-06-07 - Affiliate/referral odkazy: bezpečná veřejná doména
+
+- Přidán bezpečný helper pro veřejnou base URL affiliate/referral/partner odkazů.
+- Helper použije `VITE_APP_URL` jen když je HTTPS a není localhost, Lovable ani preview; jinak fallback `https://onemil.cz`.
+- Affiliate dashboard generuje zákaznický/social odkaz `https://onemil.cz/?ref=CODE` a obchodnický odkaz `https://onemil.cz/partner/register?via=CODE`.
+- Helper použit také pro legacy influencer referral link a hráčský referral link; spec 26 rozšířen o kontrolu produkční domény a zákaz Lovable/localhost.
+- Změněné soubory: `src/lib/publicAppUrl.ts`, `src/pages/AffiliateDashboard.tsx`, `src/hooks/useInfluencerData.ts`, `src/components/ReferralSection.tsx`, `tests/e2e/26-affiliate-dashboard-content.spec.ts`.
+- Commit `d2b125045848d0baffbef2d4de8abff362097d5b`. `npm run build` prošel. GitHub Playwright Smoke Tests prošly. GitHub Playwright Staging Full E2E prošel.
+- Nezměněno: DB, affiliate tracking, provize, partner registration logic, ticket logic, wallet logic a UI grafika.
+
+---

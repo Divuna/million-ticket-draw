@@ -648,3 +648,10 @@ Rules for follow-up work:
 - Do not change customer accounts.
 - Do not change Partner portal except where necessary to verify pending registrations.
 - Do not change payments, tickets, contests, wallet, or `buy_ticket_atomic`.
+## ADMIN NAVIGACE — PARTNEŘI PENDING BADGE (07. 06. 2026, invariant)
+
+`AdminContextSubNav.tsx` zobrazuje u položky `/admin/partners` (`Partneři`) červený číselný badge s počtem čekajících partnerských registrací. Počet se načítá read-only přes existující `get-pending-partner-registrations`; badge se zobrazuje jen když count > 0. Kliknutí zůstává `/admin/partners`. Neměnit schvalování partnerů, DB, affiliate logiku, onboarding ani zprávy. Commit `0339cd4a`.
+
+## AFFILIATE / REFERRAL PUBLIC LINKS — BEZ LOVABLE/LOCALHOST (07. 06. 2026, invariant)
+
+Veřejné affiliate/referral/partner odkazy používat přes `src/lib/publicAppUrl.ts`. `VITE_APP_URL` je povolené jen jako HTTPS a nesmí být localhost, Lovable ani preview; jinak fallback `https://onemil.cz`. Správné odkazy: `https://onemil.cz/?ref=CODE` a `https://onemil.cz/partner/register?via=CODE`. Neměnit DB, tracking, provize, partner registration logic, ticket/wallet logic ani UI grafiku. Commit `d2b12504`.

@@ -1,6 +1,31 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 05. 06. 2026
+**Aktualizováno:** 07. 06. 2026
+
+---
+
+## ✅ ADMIN NAVIGACE — badge čekajících partnerských registrací (07. 06. 2026)
+
+**Admin kontextová podlišta v sekci „Uživatelé a partneři" zobrazuje u položky `Partneři` červený badge s počtem čekajících partnerských registrací.**
+- Badge se zobrazí pouze když je počet `> 0`; při `0` se nezobrazuje.
+- Zdroj počtu je stávající read-only Edge Function `get-pending-partner-registrations`.
+- Kliknutí na `Partneři` dál otevírá stávající `/admin/partners`.
+- Změněný soubor: `src/components/admin/AdminContextSubNav.tsx`. Commit `0339cd4a6775bb8dc34f395aa16f302d9fc61034`. `npm run build` ✅. GitHub Playwright Smoke Tests ✅.
+- Beze změny DB, schvalování partnerů, affiliate logiky, onboardingu, zpráv a jiných částí adminu.
+
+---
+
+## ✅ AFFILIATE / REFERRAL ODKAZY — bezpečná veřejná doména (07. 06. 2026)
+
+**Affiliate, referral a partner odkazy se generují přes bezpečný public URL helper.**
+- Helper akceptuje `VITE_APP_URL` pouze když je `https` a není `localhost`, Lovable doména ani preview doména.
+- Pokud env hodnota není bezpečná, fallback je vždy `https://onemil.cz`.
+- Správné produkční odkazy:
+  - zákazník/social: `https://onemil.cz/?ref=CODE`
+  - obchodník/firma: `https://onemil.cz/partner/register?via=CODE`
+- Změněné soubory: `src/lib/publicAppUrl.ts`, `src/pages/AffiliateDashboard.tsx`, `src/hooks/useInfluencerData.ts`, `src/components/ReferralSection.tsx`, `tests/e2e/26-affiliate-dashboard-content.spec.ts`.
+- Commit `d2b125045848d0baffbef2d4de8abff362097d5b`. `npm run build` ✅. GitHub Playwright Smoke Tests ✅. GitHub Playwright Staging Full E2E ✅.
+- Beze změny DB, affiliate trackingu, provizí, registrace partnerů, ticket logiky, wallet logiky a UI grafiky.
 
 ---
 
