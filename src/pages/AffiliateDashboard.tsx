@@ -41,6 +41,7 @@ import { format, isToday, isThisMonth, subDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
 import type { AffiliateProfileData } from '@/components/AffiliateProfileSection';
+import { buildPublicUrl } from '@/lib/publicAppUrl';
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 
@@ -347,9 +348,8 @@ const AffiliateDashboard = () => {
     if (b) return b;
   }
 
-  const origin = (import.meta.env.VITE_APP_URL || 'https://onemil.cz').replace(/\/$/, '');
-  const customerLink = `${origin}/?ref=${a.ref_code}`;
-  const companyLink  = `${origin}/partner/register?via=${a.ref_code}`;
+  const customerLink = buildPublicUrl(`/?ref=${encodeURIComponent(a.ref_code)}`);
+  const companyLink  = buildPublicUrl(`/partner/register?via=${encodeURIComponent(a.ref_code)}`);
 
   const ago30 = subDays(new Date(), 30);
   const custToday     = customerRefs.filter(r => isToday(new Date(r.created_at))).length;

@@ -21,6 +21,7 @@
  */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { buildPublicUrl } from '@/lib/publicAppUrl';
 
 interface InfluencerStats {
   totalReferrals: number;
@@ -219,8 +220,7 @@ export const useInfluencerData = () => {
         // Next payout date: first day of next month
         const nextPayoutDate = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
-        const origin = window.location.origin;
-        const referralLink = `${origin}/?ref=${partnerId}`;
+        const referralLink = buildPublicUrl(`/?ref=${encodeURIComponent(partnerId)}`);
 
         setData({
           partnerId,

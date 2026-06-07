@@ -23,6 +23,7 @@ import { cs } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { buildPublicUrl } from '@/lib/publicAppUrl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -70,7 +71,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
   const [alreadyHasReferrer, setAlreadyHasReferrer] = useState(false);
 
   const referralLink = referralCode
-    ? `${window.location.origin}/register?ref=${referralCode}`
+    ? buildPublicUrl(`/register?ref=${encodeURIComponent(referralCode)}`)
     : '';
 
   useEffect(() => {

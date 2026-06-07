@@ -30,6 +30,7 @@ import { loginAffiliateViaUI } from './helpers/auth';
 const AFFILIATE_EMAIL    = process.env.E2E_AFFILIATE_EMAIL    ?? '';
 const AFFILIATE_PASSWORD = process.env.E2E_AFFILIATE_PASSWORD ?? '';
 const SUPABASE_URL       = process.env.VITE_SUPABASE_URL      ?? '';
+const PUBLIC_APP_URL     = 'https://onemil.cz';
 
 const getParam = (value: string, param: 'ref' | 'via') => new URL(value).searchParams.get(param);
 
@@ -126,7 +127,8 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
     const linkInput = page.getByTestId('affiliate-company-link');
     await expect(linkInput).toBeVisible({ timeout: 8_000 });
     const val = await linkInput.inputValue();
-    expect(val, 'Company link must contain /partner/register?via=').toMatch(/\/partner\/register\?via=/);
+    expect(val, 'Company link must use production origin').toMatch(/^https:\/\/onemil\.cz\/partner\/register\?via=/);
+    expect(val, 'Company link must not use Lovable preview or localhost').not.toMatch(/lovable|preview--|localhost|127\.0\.0\.1/i);
   });
 
   test('influencer mode shows customer link with /?ref=', async ({ page }) => {
@@ -138,7 +140,8 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
     const linkInput = page.getByTestId('affiliate-customer-link');
     await expect(linkInput).toBeVisible({ timeout: 8_000 });
     const val = await linkInput.inputValue();
-    expect(val, 'Customer link must contain /?ref=').toMatch(/\/\?ref=/);
+    expect(val, 'Customer link must use production origin').toMatch(/^https:\/\/onemil\.cz\/\?ref=/);
+    expect(val, 'Customer link must not use Lovable preview or localhost').not.toMatch(/lovable|preview--|localhost|127\.0\.0\.1/i);
   });
 
   test('customer and company sections use the same ref_code', async ({ page }) => {
@@ -155,6 +158,8 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
     expect(customerCode, 'Customer ref code must exist').toBeTruthy();
     expect(companyCode, 'Company via code must exist').toBeTruthy();
     expect(companyCode).toBe(customerCode);
+    expect(customerLink).toBe(`${PUBLIC_APP_URL}/?ref=${customerCode}`);
+    expect(companyLink).toBe(`${PUBLIC_APP_URL}/partner/register?via=${companyCode}`);
   });
 
   test('QR code is rendered by local qrcode.react (SVG element, no external request)', async ({ page }) => {
