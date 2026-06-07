@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-07 - Spec 34: create-affiliate-company-lead E2E pokrytí (staging CI zelený)
+
+- Nový spec `tests/e2e/34-affiliate-company-lead-backend.spec.ts` — backend API test (bez UI), 3 testy, 9 invariantů. Commit `1ec3a127`.
+- Staging Full E2E run `27100946115`: **68 passed · 3 skipped · 0 failed**. Spec 34 prošel: sales_rep success (3.4s), influencer 403 (1.7s), anonymous 401 (0.23s).
+- Telegram `✅ OneMil STAGING full E2E OK — all specs passed` doručen (message_id 1043).
+- Produkce nedotčena. `npm run build` ✅.
+
+---
+
 ## 2026-06-07 - Phase 2A backend: create-affiliate-company-lead (staging)
 
 - Edge Function `create-affiliate-company-lead` implementována a deployována na staging (`dxmowysntemfqfnanxua`), status ACTIVE, version 1. Commit `b54fbb0e`.

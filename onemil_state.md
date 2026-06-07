@@ -4,6 +4,28 @@
 
 ---
 
+## ✅ PHASE 2A E2E — spec 34 `create-affiliate-company-lead` (07. 06. 2026)
+
+**Staging Full E2E run `27100946115`: 68 passed · 3 skipped · 0 failed. Spec 34 prošel všemi 3 testy.**
+
+- Spec soubor: `tests/e2e/34-affiliate-company-lead-backend.spec.ts`. Commit `1ec3a127`.
+- Staging-only, backend API test (bez UI), volá Edge Function přímo přes fetch.
+- Pokrývá 9 invariantů Phase 2A:
+  1. Approved sales_rep vytvoří lead (success)
+  2. Influencer-only affiliate → 403
+  3. Anonymous request → 401
+  4. Lead má status `sent_to_company`
+  5. DB ukládá pouze token hash (64-char SHA-256 hex)
+  6. Raw token není v response
+  7. `email_queue` záznam vznikl s confirm/reject URL
+  8. `affiliate_company_refs` — žádný zápis
+  9. `affiliate_commissions` — žádná provize
+- Telegram: `✅ OneMil STAGING full E2E OK — all specs passed` (message_id 1043).
+- Produkce nedotčena.
+- **Invariant:** před stavbou UI `Přidat firmu` musí spec 34 zůstat zelený. `create-affiliate-company-lead` nesmí nikdy vytvářet partner účet, attribution ani provizi. Produkční nasazení vyžaduje výslovné schválení Pavla.
+
+---
+
 ## ✅ ADMIN NAVIGACE — badge čekajících partnerských registrací (07. 06. 2026)
 
 **Admin kontextová podlišta v sekci „Uživatelé a partneři" zobrazuje u položky `Partneři` červený badge s počtem čekajících partnerských registrací.**

@@ -14,6 +14,8 @@ Edge Function `create-affiliate-company-lead` je deployována na **STAGING ONLY*
 - Staging testovací účet: `sales-rep-test@onemil.cz`, ref `TESTSR2026`, modes `["sales_rep"]` — pouze staging, nesahat.
 
 Commit `b54fbb0e`. Happy-path staging test ✅ (07. 06. 2026).
+Spec 34 (`tests/e2e/34-affiliate-company-lead-backend.spec.ts`) ✅ — Staging Full E2E run `27100946115`: 68 passed · 3 skipped · 0 failed. Commit `1ec3a127`.
+**Před stavbou UI `Přidat firmu` musí spec 34 zůstat zelený. Produkční nasazení vyžaduje výslovné schválení Pavla.**
 
 ## SPRÁVA SOUTĚŽÍ — statistické karty jen z `active` (06. 06. 2026, admin UI invariant)
 
