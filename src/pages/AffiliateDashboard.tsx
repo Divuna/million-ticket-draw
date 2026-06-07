@@ -347,7 +347,7 @@ const AffiliateDashboard = () => {
     if (b) return b;
   }
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://onemil.cz';
+  const origin = (import.meta.env.VITE_APP_URL || 'https://onemil.cz').replace(/\/$/, '');
   const customerLink = `${origin}/?ref=${a.ref_code}`;
   const companyLink  = `${origin}/partner/register?via=${a.ref_code}`;
 
