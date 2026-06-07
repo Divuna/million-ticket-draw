@@ -148,9 +148,9 @@ test.describe('Phase 2B UI — Přidat firmu (spec 35)', () => {
       await goToDashboard(page, email, password);
       await switchToSalesRepMode(page);
 
-      // Lead section heading
+      // Lead section container
       await expect(
-        page.getByText('Žádosti o registraci firem'),
+        page.getByTestId('company-lead-section'),
       ).toBeVisible({ timeout: 15_000 });
 
       // "+ Přidat firmu" button (may appear twice: header + empty state CTA)
