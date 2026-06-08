@@ -73,7 +73,10 @@ export function AddCompanyLeadDialog({ open, onOpenChange, onSuccess }: Props) {
       };
       if (form.ico.trim())            payload.ico            = form.ico.trim();
       if (form.dic.trim())            payload.dic            = form.dic.trim();
-      if (form.website.trim())        payload.website        = form.website.trim();
+      if (form.website.trim()) {
+        const raw = form.website.trim();
+        payload.website = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+      }
       if (form.contact_person.trim()) payload.contact_person = form.contact_person.trim();
       if (form.contact_phone.trim())  payload.contact_phone  = form.contact_phone.trim();
       if (form.sales_rep_note.trim()) payload.sales_rep_note = form.sales_rep_note.trim();
@@ -211,7 +214,7 @@ export function AddCompanyLeadDialog({ open, onOpenChange, onSuccess }: Props) {
             </Label>
             <Input
               id="acl-website"
-              type="url"
+              type="text"
               value={form.website}
               onChange={set('website')}
               placeholder="https://acme.cz"
