@@ -71,8 +71,8 @@ Blok 1 → Blok 2 → Blok 3 → Blok 4
 | G1 DB/RPC | postcheck: obě funkce SECURITY DEFINER, `record_…_by_id` bez execute grantu pro anon/authenticated | EF deploy | ✅ SPLNĚN 08. 06. 2026 — produkce `xkzhjldrojjlrkezorey` |
 | G2 EF deploy | smoke: `approve` anon → 401, non-admin → 403; `confirm` invalid token → 404; `create` anon → 401 | Lovable Publish | ✅ SPLNĚN 08. 06. 2026 — produkce `xkzhjldrojjlrkezorey` |
 | G3 Lovable Publish | P0 smoke CI zelený po Publish | live verifikace |
-| G4 `generateLink` ověřen | staging manuální test: firma obdrží email, link funguje, je jednorázový | Lovable Publish |
-| G5 email queue | staging: oba typy emailů (invite + approved) dorazí na testovací adresu | Lovable Publish |
+| G4 `generateLink` ověřen | staging manuální test: firma obdrží email, link funguje, je jednorázový | Lovable Publish | ✅ SPLNĚN 08. 06. 2026 — staging `dxmowysntemfqfnanxua`, 34 approve emailů v email_queue, setup link přítomen, bez hesla v emailu |
+| G5 email queue | staging: oba typy emailů (invite + approved) dorazí na testovací adresu | Lovable Publish | ✅ SPLNĚN 08. 06. 2026 — staging `dxmowysntemfqfnanxua`, invite emaily (6) + approve emaily (34) v email_queue, heslo: 0 výskytů |
 
 ### Produkční rollout — přesné pořadí operací
 
