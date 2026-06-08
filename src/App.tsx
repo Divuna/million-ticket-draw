@@ -374,6 +374,15 @@ function AppContent() {
   const isPartnerRoute = location.pathname.startsWith('/partner');
   const isInfluencerRoute = location.pathname.startsWith('/influencer');
 
+  // Detect PASSWORD_RECOVERY synchronously from URL hash at mount time.
+  // Supabase appends #access_token=...&type=recovery to the redirect URL.
+  // We read this ONCE before any effects run so the route guard can be blocked
+  // immediately — preventing the race condition where the partner route guard
+  // redirects to /partner/dashboard before PASSWORD_RECOVERY fires.
+  const isPasswordRecoveryMode = React.useRef(
+    typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
+  );
+
   // All hooks MUST be called unconditionally (React rules of hooks).
   const partnerData = usePartnerData(isPartnerAccount && !isInfluencerAccount ? user?.id : undefined);
   useOneSignal();
@@ -388,6 +397,7 @@ function AppContent() {
   React.useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
+        isPasswordRecoveryMode.current = true;
         navigate('/partner/set-password', { replace: true });
       }
     });
@@ -397,6 +407,9 @@ function AppContent() {
   // Hard-block: Redirect accounts away from unauthorized routes
   React.useEffect(() => {
     if (roleLoading || !user) return;
+    // Never redirect during a password-recovery flow — let PASSWORD_RECOVERY
+    // handler navigate to /partner/set-password uninterrupted.
+    if (isPasswordRecoveryMode.current) return;
     
     // Influencer accounts: redirect to Affiliate v2 UI.
     // /influencer/* routes remain mounted for backward compat but the default landing is /affiliate/dashboard.
@@ -477,7 +490,8 @@ function AppContent() {
   }
 
   // Hard-block: If partner/influencer tries to access blocked route, show spinner (redirect in effect)
-  if (isPartnerAccount && user && !isInfluencerAccount && isCustomerBlockedRoute(location.pathname)) {
+  if (isPartnerAccount && user && !isInfluencerAccount && isCustomerBlockedRoute(location.pathname)
+      && !isPasswordRecoveryMode.current) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
