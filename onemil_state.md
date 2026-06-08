@@ -4,9 +4,9 @@
 
 ---
 
-## 🟡 PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, Blok 1 ✅ + Blok 2 ✅ + Blok 3 ✅ na staging, zbývá Blok 4)
+## 🟢 PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, KOMPLETNÍ na staging — Spec 37 ✅, čeká produkční schválení Pavla)
 
-**Phase 2D — Blok 1 DB/RPC + Blok 2 EF + Blok 3 Admin UI implementovány. Zbývá Blok 4 (Spec 37). Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
+**Phase 2D — Bloky 1–4 kompletní. Staging Full E2E run `27139244907`: 95 passed · 3 skipped · 0 failed. Spec 34 ✅, 35 ✅, 36 ✅, 37 ✅ (13/13). Commit `468ecfc8`. Produkce `xkzhjldrojjlrkezorey` nedotčena. Produkční rollout vyžaduje výslovné schválení Pavla.**
 
 **Cíl:** admin schvaluje/zamítá company leady ve stavu `pending_admin_approval` (po company confirm z Phase 2C).
 
@@ -50,11 +50,12 @@
 - Žádný přímý INSERT/UPDATE z klienta — vše přes EF. Zobrazuje pouze `pending_admin_approval`.
 - `npm run build` ✅ exit 0. **Produkce nedotčena.**
 
-**Blok 4 — Spec 37** (`tests/e2e/37-affiliate-company-lead-admin-approval.spec.ts`, po blocích 1–3)
-- Staging-only, self-contained, vzor identický se spec 36 (`insertLeadDirect` via service-role REST, dynamické testovací účty).
+**Blok 4 — Spec 37 ✅ ZELENÝ (08. 06. 2026, commit `468ecfc8`)**
+- `tests/e2e/37-affiliate-company-lead-admin-approval.spec.ts` — staging-only, self-contained, 13 testů (37a–37m). Vzor identický se spec 36.
 - **Backend testy (37a–37j):** approve → 200/status/partner_id; partner záznam v `partners`; `affiliate_company_refs` se `source='company_lead'`; approve bez `affiliate_id` (nullable) → uspěje bez refs; reject → 200/`admin_rejected`/reason; reject → žádný partner/refs/provize; druhý approve → 409; approve `company_rejected` lead → 409; non-admin JWT → 403; anonymous → 401.
-- **Admin UI testy (37k–37m):** admin vidí lead v seznamu; Schválit → toast + lead zmizí; Zamítnout s důvodem → toast + lead zmizí.
-- Spec 34/35/36 musí zůstat zelené — spec 37 nesdílí leady s jinými spec soubory.
+- **Admin UI testy (37k–37m):** admin vidí lead v seznamu; Schválit → `Promise.all([waitForResponse POST EF, click])` → 200 → lead zmizí; Zamítnout s důvodem → totéž.
+- **Klíčové invarianty spec 37:** `loginAsAdmin` volá `waitForLoadState('networkidle')` po redirectu na `/admin` (zajišťuje, že Supabase session je v localStorage před `callApproveEF`). UI testy 37l/37m používají `Promise.all([waitForResponse(...POST...), click])` pro explicitní čekání na EF odpověď. Neměnit tyto vzory zpět.
+- Staging Full E2E run `27139244907`: **95 passed · 3 skipped · 0 failed**. Spec 34 ✅, 35 ✅, 36 ✅, 37 ✅.
 
 ### Staging rollout pořadí
 

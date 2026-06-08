@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-08 - Phase 2D Blok 4 Spec 37 zelený — Phase 2D KOMPLETNÍ na staging
+
+- `tests/e2e/37-affiliate-company-lead-admin-approval.spec.ts` vytvořen a uzamčen — 13 testů (37a–37m), staging-only, self-contained. Commit `468ecfc8`.
+- Testy 37a–37j (backend): approve/reject EF kontrakt, partner vznik, refs `source='company_lead'`, nullable affiliate_id, 409 duplicate/wrong-status, 403 non-admin, 401 anonymous — vše ✅.
+- Testy 37k–37m (Admin UI): admin vidí lead, Schválit → lead zmizí (12.2s), Zamítnout s důvodem → lead zmizí (11.1s) — vše ✅.
+- `loginAsAdmin` invariant: `waitForLoadState('networkidle')` po redirectu — zajišťuje Supabase session v localStorage před `callApproveEF`.
+- 37l/37m invariant: `Promise.all([page.waitForResponse(...POST..., {timeout:20s}), click])` — explicitní čekání na EF odpověď před assertionem.
+- Staging Full E2E run `27139244907`: **95 passed · 3 skipped · 0 failed** ✅ (9m). Spec 34 ✅, 35 ✅, 36 ✅, 37 ✅. Telegram doručen.
+- **Produkce `xkzhjldrojjlrkezorey` nedotčena.** Produkční rollout Phase 2D vyžaduje výslovné schválení Pavla.
+
 ## 2026-06-08 - Phase 2D Blok 3 Admin UI implementováno
 
 - `src/pages/AdminCompanyLeads.tsx` vytvořena — zobrazuje `affiliate_company_leads WHERE status='pending_admin_approval'`. **Produkce nedotčena.**
