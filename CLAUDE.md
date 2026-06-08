@@ -8,7 +8,7 @@
 
 **Skutečné sloupce `affiliate_commissions`:** `amount_base_czk` (čistá provize), `vat_rate`, `amount_total_czk` (vč. DPH). Sloupce `amount_czk` a `commission_rate` NEEXISTUJÍ — nepoužívat.
 
-**Fáze 1 neobsahuje:** schvalování, výplaty, ABO export. To bude fáze 2 — vyžaduje výslovné schválení Pavla.
+**Fáze 2 (commit `508474fe`):** Schválit (`calculated→approved`) + Označit jako vyplacené (`approved→paid`) přes RPC `admin_set_affiliate_commission_status`. AlertDialog potvrzení před každou akcí. Přeskočení přechodu nebo rollback RPC odmítne. ABO export NENÍ součástí — vyžaduje schválení Pavla.
 
 **Spec 39** (`tests/e2e/39-admin-affiliate-commissions.spec.ts`) — staging-only, 3 testy (39a stránka načte, 39b nadpis, 39c banner).
 

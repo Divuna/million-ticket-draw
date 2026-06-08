@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-06-09 - Admin stránka `Provize obchodníků` fáze 2 — schvalování + vyplácení B2B provizí
+
+- **Commit:** `508474fe` — přidány akční tlačítka Schválit (calculated→approved) a Označit jako vyplacené (approved→paid) s AlertDialog potvrzením.
+- RPC `admin_set_affiliate_commission_status` zapojena — SECURITY DEFINER, is_admin() guard, FOR UPDATE lock, jednosměrné přechody.
+- Spec 39 rozšířen o testy 39e/39f/39g (akční tlačítka dle statusu, seeding přes service role).
+- **Production smoke run `27171517921`** ✅ — 5 passed, 0 failed.
+- DB/EF/provizní logika nezměněna. ABO export není součástí.
+
 ## 2026-06-09 - Admin stránka `Provize obchodníků` fáze 1 live
 
 - **Commit implementace:** `156519d5` — nová stránka `src/pages/AdminAffiliateCommissions.tsx`, route `/admin/affiliate-commissions`, nav entry „Provize obchodníků" (sekce Affiliate), spec 39 (staging-only, 3 testy).

@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 09. 06. 2026 — Admin stránka `Provize obchodníků` (`/admin/affiliate-commissions`) fáze 1 live. Production smoke run `27170849002` ✅ success (commit `e2e673e1`).
+**Aktualizováno:** 09. 06. 2026 — Admin stránka `Provize obchodníků` fáze 2 live — schvalování + vyplácení B2B provizí. Production smoke run `27171517921` ✅ success (commit `508474fe`).
 
 ## 🟢 B2B WORKFLOW ONÉMIL — PRODUKČNĚ OVĚŘENO (08. 06. 2026)
 
@@ -81,12 +81,21 @@ Prázdný stav: zobrazí „Žádné B2B provize obchodníků zatím nebyly vypo
 
 Nav: sekce Uživatelé → Více → Affiliate → **Provize obchodníků**
 
-### Co fáze 1 neobsahuje (bude v další fázi)
+### Fáze 2 — akce (commit `508474fe`, production smoke `27171517921` ✅)
 
-- Schvalování (`calculated → approved`)
-- Označení jako vyplaceno (`approved → paid`)
-- ABO export
-- Změny provizní logiky
+- **Schválit** (`calculated → approved`) — tlačítko Schválit + AlertDialog „Opravdu chcete schválit tuto provizi?"
+- **Označit jako vyplacenou** (`approved → paid`) — tlačítko + AlertDialog „Opravdu chcete označit tuto provizi jako vyplacenou?"
+- **paid** — žádné tlačítko, pouze pomlčka
+- RPC: `admin_set_affiliate_commission_status(p_commission_id, p_new_status)` — SECURITY DEFINER, is_admin() guard, FOR UPDATE lock
+- Přeskočení `calculated → paid` není povoleno (RPC to odmítne: `invalid_transition`)
+- Toasty: `Provize byla schválena.` / `Provize byla označena jako vyplacená.` / `Provizi se nepodařilo aktualizovat.`
+- DB/EF/provizní logika nezměněna. ABO export zatím není součástí.
+
+### Co není součástí žádné fáze (vyžaduje schválení Pavla)
+
+- ABO export (čeká na doplnění IBAN affiliate obchodníků)
+- Hromadné akce
+- Změna provizní logiky
 
 ### Oprava PostgREST sloupců (commit `e2e673e1`)
 
