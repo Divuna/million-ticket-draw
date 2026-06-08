@@ -1,10 +1,34 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 08. 06. 2026 — G1 ✅ G2 ✅ G4 ✅ G5 ✅ splněny, G3 Lovable Publish čeká na schválení Pavla
+**Aktualizováno:** 08. 06. 2026 — Phase 2A–2D KOMPLETNÍ v produkci. Partner password setup flow funkční. Lovable Publish ✅.
 
 ---
 
-## 🟢 PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, KOMPLETNÍ na staging — Spec 37 ✅, G1+G2+G4+G5 ✅ splněny na produkci/stagingu — čeká G3 Lovable Publish, výslovné schválení Pavla)
+## ✅ PHASE 2A–2D — B2B Company Lead Workflow KOMPLETNÍ V PRODUKCI (08. 06. 2026)
+
+**Celý B2B company lead workflow (Phase 2A–2D) je nasazen a ověřen v produkci `xkzhjldrojjlrkezorey`. Lovable Publish ✅. Pavel úspěšně otestoval celý flow v produkci (09. 06. 2026).**
+
+### Partner password setup flow (09. 06. 2026)
+
+Po admin approve firma obdrží email s jednorázovým Supabase recovery linkem. Kliknutím přistane na `/partner/set-password` (ne rovnou na dashboard). Opraveny dva problémy:
+
+1. **`redirectTo` v `generateLink`** — EF `approve-affiliate-company-lead` generuje link s `options: { redirectTo: PARTNER_SET_PASSWORD_URL }` (commit `c36410eb`). `SITE_URL` env var pro staging override.
+2. **Race condition** — route guard redirectoval na `/partner/dashboard` dřív než PASSWORD_RECOVERY handler. Opraveno přidáním `isPasswordRecovery: boolean` do `AuthContext` (nastaveno v `onAuthStateChange` batchem s `user`). Commit `0759c04f`.
+3. **Redirect loop po úspěšném updateUser** — Supabase po `updateUser` vypálí `USER_UPDATED` event, `isPasswordRecovery` zůstávala `true` → App.tsx efekt vrátil uživatele zpět na set-password. Opraveno: `USER_UPDATED` event resetuje `isPasswordRecovery = false`. Commit `f1236405`.
+
+**Nové soubory:**
+- `src/pages/PartnerSetPassword.tsx` — route `/partner/set-password`, states: `checking | ready | no_session | success`, `data-testid="psp-password/psp-confirm/psp-submit"`.
+- `tests/e2e/38-partner-set-password.spec.ts` — 5 staging-only testů (38a–38e).
+
+**Invarianty:**
+- Po approve: firma dostane email → klikne → `/partner/set-password` → nastaví heslo → `/partner/dashboard`.
+- Recovery link je jednorázový. Nikdy se neloguje ani nevrací v API response.
+- `isPasswordRecovery` se resetuje na `USER_UPDATED` (nikoli při navigaci).
+- `PartnerSetPassword` a `/partner/set-password` route musí zůstat v allowed lists všech guard bloků (influencer useEffect/render, affiliate useEffect/render).
+
+---
+
+## 🟢 PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, KOMPLETNÍ na staging — Spec 37 ✅, G1+G2+G4+G5 ✅ splněny na produkci/stagingu — Lovable Publish ✅, PRODUKCE AKTIVNÍ)
 
 **Phase 2D — Bloky 1–4 kompletní. Staging Full E2E run `27139244907`: 95 passed · 3 skipped · 0 failed. Spec 34 ✅, 35 ✅, 36 ✅, 37 ✅ (13/13). Commit `468ecfc8`. Produkce `xkzhjldrojjlrkezorey` nedotčena. Produkční rollout vyžaduje výslovné schválení Pavla.**
 

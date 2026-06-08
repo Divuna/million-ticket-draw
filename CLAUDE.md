@@ -119,7 +119,22 @@ Company confirmation/rejection workflow **implementován a uzamčen zeleným sta
 
 **Rollback staging:** EF delete + git revert UI + DROP FUNCTION. Data leadů nedotčena.
 
-**G3 Lovable Publish — jediný zbývající krok před live provozem Phase 2A–2D. Vyžaduje výslovné schválení Pavla.** Žádný Lovable Publish bez schválení.
+**Phase 2A–2D KOMPLETNÍ V PRODUKCI (09. 06. 2026). Lovable Publish ✅. Pavel ověřil celý flow v produkci.**
+
+## PARTNER PASSWORD SETUP FLOW — INVARIANTY (09. 06. 2026)
+
+Po admin approve firma dostane email s jednorázovým Supabase recovery linkem (`type: "recovery"`, `redirectTo: PARTNER_SET_PASSWORD_URL`). Kliknutím přistane na `/partner/set-password`.
+
+**Závazná pravidla (neměnit bez výslovného schválení Pavla):**
+- `isPasswordRecovery: boolean` je součástí `AuthContext` (nastaveno v `onAuthStateChange` batchem s `user` — React 18 batch zajišťuje viditelnost ve stejném renderu jako `user`).
+- `isPasswordRecovery` se nastavuje na `true` při `PASSWORD_RECOVERY` eventu.
+- `isPasswordRecovery` se resetuje na `false` při `USER_UPDATED` eventu (po úspěšném `updateUser` — jinak App.tsx efekt opakovaně redirectuje zpět na set-password).
+- Route guard (`useEffect` i render guard) musí vracet/přeskočit redirect dokud `isPasswordRecovery === true`.
+- `/partner/set-password` musí být v allowed lists všech guard bloků v `App.tsx` (influencer useEffect/render, affiliate useEffect/render).
+- Recovery link se nikdy neloguje ani nevrací v API response — pouze se vloží do `email_queue`.
+- `SITE_URL` env var v EF `approve-affiliate-company-lead` umožňuje staging override (default `https://onemil.cz`).
+
+Commity: `7ec4253a` (stránka + spec 38), `0759c04f` (race condition fix), `f1236405` (USER_UPDATED reset).
 
 ## SPRÁVA SOUTĚŽÍ — statistické karty jen z `active` (06. 06. 2026, admin UI invariant)
 
