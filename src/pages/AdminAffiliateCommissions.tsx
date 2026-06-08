@@ -1,9 +1,14 @@
 /**
- * AdminAffiliateCommissions — fáze 1 (read-only)
+ * AdminAffiliateCommissions — fáze 2 (schvalování + vyplácení)
  *
  * Zobrazuje B2B provize obchodníků z affiliate_commissions kde commission_type = 'company_invoice'.
- * Fáze 1: pouze přehled, žádné schvalování, žádné vyplácení, žádný ABO export.
+ * Fáze 2 přidává akční tlačítka: Schválit (calculated→approved) a Označit jako vyplacené (approved→paid).
  * Provize se počítají automaticky 2. každého měsíce (pg_cron job 25).
+ *
+ * RPC: admin_set_affiliate_commission_status(p_commission_id uuid, p_new_status text) → jsonb
+ *   SECURITY DEFINER, is_admin() guard, FOR UPDATE lock
+ *   Povolené přechody: calculated→approved, approved→paid (jednosměrné, nelze vrátit zpět)
+ *   Vrací: {status:'updated'|'forbidden'|'not_found'|'invalid_transition'|'invalid_status', ...}
  *
  * Skutečné sloupce affiliate_commissions (ověřeno na produkci):
  *   id, affiliate_id, commission_type, customer_ref_id, company_ref_id, source_invoice_id,
@@ -25,7 +30,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Info, RefreshCw, Banknote } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Info, RefreshCw, Banknote, CheckCircle, Loader2 } from "lucide-react";
 import { format, startOfMonth, subMonths } from "date-fns";
 import { cs } from "date-fns/locale";
 import { toast } from "sonner";
@@ -37,9 +52,9 @@ interface CommissionRow {
   affiliate_id: string;
   commission_type: string;
   period_month: string | null;
-  amount_base_czk: number;   // čistá provize bez DPH
+  amount_base_czk: number;
   vat_rate: number | null;
-  amount_total_czk: number;  // provize včetně DPH
+  amount_total_czk: number;
   source_invoice_id: string | null;
   company_ref_id: string | null;
   status: string;
@@ -49,6 +64,11 @@ interface CommissionRow {
   affiliate_ref_code: string | null;
   company_name: string | null;
 }
+
+type PendingAction = {
+  id: string;
+  newStatus: "approved" | "paid";
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -79,7 +99,6 @@ function formatCzk(value: number | null | undefined): string {
   return new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK" }).format(value);
 }
 
-/** Generuj seznam posledních N měsíců (YYYY-MM-DD string pro period_month). */
 function lastMonths(n: number): { label: string; value: string }[] {
   const result: { label: string; value: string }[] = [];
   for (let i = 0; i < n; i++) {
@@ -101,6 +120,10 @@ export default function AdminAffiliateCommissions() {
   const [rows, setRows] = useState<CommissionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null); // commission id being updated
+
+  // Potvrzovací dialog
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
   // Filtry
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -116,9 +139,6 @@ export default function AdminAffiliateCommissions() {
     else setRefreshing(true);
 
     try {
-      // 1. Načti affiliate_commissions (commission_type='company_invoice')
-      //    + join affiliate_accounts přes FK affiliate_commissions_affiliate_id_fkey
-      //    Sloupce: name (NE full_name), ref_code
       const { data: commissions, error: commErr } = await supabase
         .from("affiliate_commissions")
         .select(
@@ -143,22 +163,14 @@ export default function AdminAffiliateCommissions() {
 
       if (commErr) throw commErr;
 
-      // Prázdný výsledek je v pořádku — zobrazit prázdnou tabulku
       if (!commissions || commissions.length === 0) {
         setRows([]);
         return;
       }
 
-      // 2. Firmu dohledej pouze pokud máme source_invoice_id nebo company_ref_id
-      const invoiceIds = commissions
-        .map((r: any) => r.source_invoice_id)
-        .filter(Boolean) as string[];
+      const invoiceIds = commissions.map((r: any) => r.source_invoice_id).filter(Boolean) as string[];
+      const refIds = commissions.map((r: any) => r.company_ref_id).filter(Boolean) as string[];
 
-      const refIds = commissions
-        .map((r: any) => r.company_ref_id)
-        .filter(Boolean) as string[];
-
-      // Batch load partner names from partner_invoices
       const invoicePartnerMap: Record<string, string> = {};
       if (invoiceIds.length > 0) {
         const { data: invData } = await supabase
@@ -167,13 +179,10 @@ export default function AdminAffiliateCommissions() {
           .in("id", invoiceIds);
         for (const inv of invData ?? []) {
           const p = (inv as any).partners;
-          if (p) {
-            invoicePartnerMap[inv.id] = p.company_name || p.name || "Neuvedeno";
-          }
+          if (p) invoicePartnerMap[inv.id] = p.company_name || p.name || "Neuvedeno";
         }
       }
 
-      // Batch load partner names from affiliate_company_refs
       const refPartnerMap: Record<string, string> = {};
       if (refIds.length > 0) {
         const { data: refData } = await supabase
@@ -182,13 +191,10 @@ export default function AdminAffiliateCommissions() {
           .in("id", refIds);
         for (const ref of refData ?? []) {
           const p = (ref as any).partners;
-          if (p) {
-            refPartnerMap[ref.id] = p.company_name || p.name || "Neuvedeno";
-          }
+          if (p) refPartnerMap[ref.id] = p.company_name || p.name || "Neuvedeno";
         }
       }
 
-      // 3. Sestavení výsledných řádků
       const result: CommissionRow[] = commissions.map((r: any) => {
         const aa = r.affiliate_accounts;
         let companyName: string | null = null;
@@ -222,6 +228,45 @@ export default function AdminAffiliateCommissions() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  // ─── Action — volání RPC ─────────────────────────────────────────────────────
+
+  const executeAction = async (commissionId: string, newStatus: "approved" | "paid") => {
+    setActionLoading(commissionId);
+    try {
+      const { data, error } = await supabase.rpc("admin_set_affiliate_commission_status", {
+        p_commission_id: commissionId,
+        p_new_status: newStatus,
+      });
+
+      if (error) throw error;
+
+      const result = data as { status: string; from?: string; to?: string };
+
+      if (result?.status === "updated") {
+        if (newStatus === "approved") {
+          toast.success("Provize byla schválena.");
+        } else {
+          toast.success("Provize byla označena jako vyplacená.");
+        }
+        // Optimisticky aktualizuj řádek v lokálním state, pak obnoví data
+        setRows((prev) =>
+          prev.map((r) => (r.id === commissionId ? { ...r, status: newStatus } : r))
+        );
+        // Tiché obnovení pro synchronizaci se serverem
+        fetchData(true);
+      } else {
+        console.error("admin_set_affiliate_commission_status unexpected result:", result);
+        toast.error("Provizi se nepodařilo aktualizovat.");
+      }
+    } catch (err: any) {
+      console.error("admin_set_affiliate_commission_status error:", err);
+      toast.error("Provizi se nepodařilo aktualizovat.");
+    } finally {
+      setActionLoading(null);
+      setPendingAction(null);
     }
   };
 
@@ -259,15 +304,55 @@ export default function AdminAffiliateCommissions() {
     return true;
   });
 
-  // Unique affiliates for filter dropdown
   const affiliateOptions = Array.from(
     new Map(rows.map((r) => [r.affiliate_id, r.affiliate_name ?? r.affiliate_id])).entries()
   );
+
+  // ─── Dialog texts ────────────────────────────────────────────────────────────
+
+  const dialogConfig = pendingAction?.newStatus === "approved"
+    ? {
+        title: "Schválit provizi?",
+        description: "Opravdu chcete schválit tuto provizi? Stav se změní z Vypočteno na Schváleno. Tato akce je nevratná.",
+        actionLabel: "Schválit",
+      }
+    : {
+        title: "Označit jako vyplacenou?",
+        description: "Opravdu chcete označit tuto provizi jako vyplacenou? Stav se změní z Schváleno na Vyplaceno. Tato akce je nevratná.",
+        actionLabel: "Označit jako vyplacenou",
+      };
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      {/* Potvrzovací dialog */}
+      <AlertDialog open={!!pendingAction} onOpenChange={(open) => { if (!open) setPendingAction(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{dialogConfig.title}</AlertDialogTitle>
+            <AlertDialogDescription>{dialogConfig.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!actionLoading}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!!actionLoading}
+              onClick={() => {
+                if (pendingAction) {
+                  executeAction(pendingAction.id, pendingAction.newStatus);
+                }
+              }}
+            >
+              {actionLoading ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" />{dialogConfig.actionLabel}…</>
+              ) : (
+                dialogConfig.actionLabel
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
@@ -308,7 +393,6 @@ export default function AdminAffiliateCommissions() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
-            {/* Stav */}
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-44">
                 <SelectValue placeholder="Stav" />
@@ -321,7 +405,6 @@ export default function AdminAffiliateCommissions() {
               </SelectContent>
             </Select>
 
-            {/* Obchodník */}
             <Select value={filterAffiliate} onValueChange={setFilterAffiliate}>
               <SelectTrigger className="w-52">
                 <SelectValue placeholder="Obchodník" />
@@ -336,7 +419,6 @@ export default function AdminAffiliateCommissions() {
               </SelectContent>
             </Select>
 
-            {/* Měsíc */}
             <Select value={filterMonth} onValueChange={setFilterMonth}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Měsíc" />
@@ -351,7 +433,6 @@ export default function AdminAffiliateCommissions() {
               </SelectContent>
             </Select>
 
-            {/* Reset */}
             {(filterStatus !== "all" || filterAffiliate !== "all" || filterMonth !== "all") && (
               <Button
                 variant="ghost"
@@ -380,7 +461,9 @@ export default function AdminAffiliateCommissions() {
               </span>
             )}
           </CardTitle>
-          <CardDescription>Read-only přehled. Schvalování a výplaty budou v další fázi.</CardDescription>
+          <CardDescription>
+            Status flow: Vypočteno → Schválit → Označit jako vyplacené. Každý přechod je nevratný.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -404,12 +487,12 @@ export default function AdminAffiliateCommissions() {
                     <TableHead>Obchodník</TableHead>
                     <TableHead>Ref kód</TableHead>
                     <TableHead>Firma</TableHead>
-                    <TableHead>Typ provize</TableHead>
                     <TableHead className="text-right">Základ (bez DPH)</TableHead>
                     <TableHead className="text-right">DPH</TableHead>
                     <TableHead className="text-right">Celkem</TableHead>
                     <TableHead>Stav</TableHead>
                     <TableHead>Vytvořeno</TableHead>
+                    <TableHead className="text-center">Akce</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -418,6 +501,8 @@ export default function AdminAffiliateCommissions() {
                     const vatLabel = row.vat_rate != null
                       ? `DPH ${Math.round(row.vat_rate * 100)} %`
                       : "DPH";
+                    const isActioning = actionLoading === row.id;
+
                     return (
                       <TableRow key={row.id}>
                         <TableCell className="whitespace-nowrap">
@@ -442,11 +527,6 @@ export default function AdminAffiliateCommissions() {
                             <span className="text-muted-foreground text-xs italic">Neuvedeno</span>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <code className="text-xs bg-muted px-1 py-0.5 rounded">
-                            {row.commission_type}
-                          </code>
-                        </TableCell>
                         <TableCell className="text-right font-mono text-sm">
                           {formatCzk(row.amount_base_czk)}
                         </TableCell>
@@ -459,6 +539,45 @@ export default function AdminAffiliateCommissions() {
                         <TableCell>{statusBadge(row.status)}</TableCell>
                         <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                           {format(new Date(row.created_at), "d. M. yyyy HH:mm", { locale: cs })}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {row.status === "calculated" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 text-xs"
+                              disabled={isActioning}
+                              data-testid={`btn-approve-${row.id}`}
+                              onClick={() => setPendingAction({ id: row.id, newStatus: "approved" })}
+                            >
+                              {isActioning ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <CheckCircle className="h-3 w-3" />
+                              )}
+                              Schválit
+                            </Button>
+                          )}
+                          {row.status === "approved" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 text-xs"
+                              disabled={isActioning}
+                              data-testid={`btn-pay-${row.id}`}
+                              onClick={() => setPendingAction({ id: row.id, newStatus: "paid" })}
+                            >
+                              {isActioning ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Banknote className="h-3 w-3" />
+                              )}
+                              Označit jako vyplacené
+                            </Button>
+                          )}
+                          {row.status === "paid" && (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
