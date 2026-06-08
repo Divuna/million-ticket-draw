@@ -64,6 +64,33 @@ Company confirmation/rejection workflow **implementován a uzamčen zeleným sta
 - **Pravidlo (neměnit zpět):** spec 36i reject UI používá `dispatchEvent('click')` uvnitř `expect(...).toPass()` retry bloku — `.click()` čeká na stabilitu a re-rendery stránky klik nikdy nedispatchly; `dispatchEvent('click')` vystřelí bublající event okamžitě, React 18 root-delegated listener ho chytí.
 - Spec 34 email assertion opravena na `/partner/invite`. Spec 34 a spec 35 musí zůstat zelené.
 
+## PHASE 2D DESIGN — Admin approval flow for confirmed B2B company leads, approved design, not implemented (08. 06. 2026)
+
+**Phase 2D je POUZE design. Nic se neimplementuje. Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
+
+**Cíl:** admin schvaluje/zamítá company leady ve stavu `pending_admin_approval` (po company confirm z Phase 2C).
+
+1. Admin vidí **pouze** leady se stavem `pending_admin_approval`.
+2. Admin může **approve** nebo **reject**.
+3. **Approve musí:** vytvořit/aktivovat company partner účet; propojit lead na `partner_id`; nastavit lead status `approved`; nastavit `approved_at`, `admin_reviewed_by`, `admin_reviewed_at`; zapsat finální atribuci do `affiliate_company_refs` se `source = 'company_lead'`; zrcadlit do `partners.referred_by_affiliate_id`; poslat bezpečný password setup link; **NIKDY** neposílat vygenerované heslo.
+4. **Reject musí:** nastavit status `admin_rejected`; uložit `admin_rejection_reason`; nastavit `admin_reviewed_by` a `admin_reviewed_at`; **NE**vytvořit partnera; **NE**vytvořit atribuci; **NE**vytvořit provizi.
+5. **Provize** zůstává **pouze z placené/fakturované aktivity firmy** (`partner_invoices` → `affiliate_commissions.commission_type='company_invoice'`), nikdy z approve.
+
+**Přesné přechody:** `pending_admin_approval → approved` (approve), `pending_admin_approval → admin_rejected` (reject). Jen z `pending_admin_approval` (guard `WHERE status='pending_admin_approval'`, 0 řádků → 409). Zakázáno: `sent_to_company → approved`, approve z `company_rejected`/`expired`/`admin_rejected`, mutace po `approved`.
+
+**Phase 2D může potřebovat:**
+- Edge Function **`approve-affiliate-company-lead`** (admin JWT gating dle vzoru `approve-partner-registration`: `auth.getUser` + `user_roles IN ('admin','superadmin')`); řeší auth `createUser` firmy, volání RPC, `generateLink` + zápis do `email_queue`.
+- **SECURITY DEFINER RPC** pro atomickou DB část approve (status guard + partner create/link + lead `approved` + refs + mirror), `SET search_path=''`.
+- možné bezpečné rozšíření **`record_affiliate_company_ref`** o param `source` pro `source='company_lead'` (dnes `'via_link'`); CREATE OR REPLACE, beze změny chování. **DB změna vyžaduje samostatné schválení Pavla.**
+- admin UI pro confirmed company leady (např. `src/pages/AdminCompanyLeads.tsx` + nav), filtr jen `pending_admin_approval`, volá pouze EF.
+- **spec 37** (`tests/e2e/37-affiliate-company-lead-admin-approval.spec.ts`), staging-only, self-contained.
+
+**Žádná nová DB migrace na sloupce** — `affiliate_company_leads` (Phase 1) už má `partner_id`, `admin_reviewed_by`, `admin_reviewed_at`, `admin_rejection_reason`, `approved_at` a status CHECK s `approved`/`admin_rejected`.
+
+**Rizika:** `affiliate_company_refs.affiliate_id` NOT NULL vs. `lead.affiliate_id` nullable → approve musí proběhnout i bez atribuce (best-effort, nikdy neshodit approve); auth účet firmy = nová operace (kolize emailu); atomicita napříč auth+DB+email (email best-effort poslední krok); typ `generateLink` ověřit na stagingu bez změny produkční Auth konfigurace.
+
+**Produkční rollout Phase 2D vyžaduje výslovné schválení Pavla.** Žádný Lovable Publish bez schválení.
+
 ## SPRÁVA SOUTĚŽÍ — statistické karty jen z `active` (06. 06. 2026, admin UI invariant)
 
 Pět statistických karet v `AdminContestManagement.tsx` (`Tikety prodány`, `Tikety zbývají`, `Prodáno %`, `Výnos (MC)`, `Tikety za 24h`) počítá **`summaryTotals` pouze ze soutěží `status === 'active'`** (`contests.filter(c => c.status === 'active')`). pending/draft/paused/closed/archiv se nezapočítávají; bez active soutěže = 0. Taby a tabulka soutěží beze změny. Commit `d212dff7`.

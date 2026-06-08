@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-06-08 - Phase 2D design: admin approval flow for confirmed B2B company leads (schválen, není implementováno)
+
+- Design schválen pro admin approve/reject company leadů ve stavu `pending_admin_approval`. **Pouze design — nic neimplementováno. Produkce nedotčena.**
+- Přechody: `pending_admin_approval → approved` (approve), `pending_admin_approval → admin_rejected` (reject); jen z `pending_admin_approval` (guard, jinak 409).
+- Approve: create/aktivace company partner účtu, lead→`partner_id`, status `approved` (+`approved_at`/`admin_reviewed_by`/`admin_reviewed_at`), atribuce `affiliate_company_refs.source='company_lead'`, mirror `partners.referred_by_affiliate_id`, password setup link (nikdy heslo).
+- Reject: status `admin_rejected` (+`admin_rejection_reason`/`admin_reviewed_by`/`admin_reviewed_at`), žádný partner/atribuce/provize.
+- Provize i nadále jen z placené/fakturované aktivity firmy.
+- Plánované jednotky: EF `approve-affiliate-company-lead`, SECURITY DEFINER RPC pro atomickou DB část, možné bezpečné rozšíření `record_affiliate_company_ref` o `source='company_lead'`, admin UI pro confirmed leady, spec 37.
+- Žádná nová DB migrace na sloupce — `affiliate_company_leads` (Phase 1) už má `partner_id`, `admin_reviewed_by`, `admin_reviewed_at`, `admin_rejection_reason`, `approved_at`, status CHECK s `approved`/`admin_rejected`.
+- Spec 34, 35, 36 musí zůstat zelené. Produkční rollout vyžaduje výslovné schválení Pavla.
+
 ## 2026-06-08 - Phase 2C implementováno + spec 36 zelený, mergnuto do `main`
 
 - Phase 2C (company confirmation/rejection) implementována: Edge Function `supabase/functions/confirm-affiliate-company-lead/index.ts` (public, GET+POST, SHA-256 token hash, confirm `sent_to_company → pending_admin_approval`, reject `sent_to_company → company_rejected`, race guard, žádný partner/refs/provize/raw token).

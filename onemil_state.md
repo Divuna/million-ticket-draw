@@ -4,6 +4,48 @@
 
 ---
 
+## 🟡 PHASE 2D DESIGN — Admin approval flow for confirmed B2B company leads (08. 06. 2026, schváleno, NENÍ implementováno)
+
+**Phase 2D je POUZE design. Nic se neimplementuje. Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
+
+**Cíl:** admin schvaluje/zamítá company leady ve stavu `pending_admin_approval` (po company confirm z Phase 2C).
+
+**Pravidla:**
+1. Admin vidí **pouze** leady se stavem `pending_admin_approval`.
+2. Admin může **approve** nebo **reject**.
+3. **Approve musí:**
+   - vytvořit nebo aktivovat company partner účet,
+   - propojit lead na `partner_id`,
+   - nastavit lead status `approved`,
+   - nastavit `approved_at`, `admin_reviewed_by`, `admin_reviewed_at`,
+   - zapsat finální atribuci do `affiliate_company_refs` se `source = 'company_lead'`,
+   - zrcadlit do `partners.referred_by_affiliate_id`,
+   - poslat bezpečný password setup link,
+   - **NIKDY** neposílat vygenerované heslo.
+4. **Reject musí:**
+   - nastavit status `admin_rejected`,
+   - uložit `admin_rejection_reason`,
+   - nastavit `admin_reviewed_by` a `admin_reviewed_at`,
+   - **NE**vytvořit partnera, **NE**vytvořit atribuci, **NE**vytvořit provizi.
+5. **Provize** i nadále vzniká **pouze z placené/fakturované aktivity firmy** (`partner_invoices` → `affiliate_commissions.commission_type='company_invoice'`), nikdy z approve.
+
+**Přesné status přechody:** `pending_admin_approval → approved` (approve), `pending_admin_approval → admin_rejected` (reject). Povolené jen z `pending_admin_approval` (guard `WHERE status='pending_admin_approval'`, 0 řádků → 409). Zakázáno: `sent_to_company → approved`, approve z `company_rejected`/`expired`/`admin_rejected`, mutace po `approved`.
+
+**Plánované jednotky (nutno postavit):**
+- Edge Function **`approve-affiliate-company-lead`** (admin JWT gating dle vzoru `approve-partner-registration`: `auth.getUser` + `user_roles IN ('admin','superadmin')`); řeší auth `createUser` firmy, volání RPC, `generateLink` (recovery/invite) + zápis do `email_queue`.
+- SECURITY DEFINER RPC (např. **`approve_affiliate_company_lead_txn`**, `SET search_path=''`) pro atomickou DB část approve (status guard + partner create/link + lead `approved` + refs + mirror).
+- Možné bezpečné rozšíření **`record_affiliate_company_ref`** o param `source` (aby šlo zapsat `source='company_lead'`; dnes používá `'via_link'`) — CREATE OR REPLACE, beze změny chování. **DB změna vyžaduje samostatné schválení Pavla.**
+- Admin UI (např. `src/pages/AdminCompanyLeads.tsx` + nav), filtr jen `pending_admin_approval`, volá pouze EF (žádný přímý client INSERT/UPDATE).
+- **Spec 37** (`tests/e2e/37-affiliate-company-lead-admin-approval.spec.ts`), staging-only, self-contained.
+
+**Žádná nová DB migrace na sloupce** — `affiliate_company_leads` (Phase 1) už má `partner_id`, `admin_reviewed_by`, `admin_reviewed_at`, `admin_rejection_reason`, `approved_at` a status CHECK s `approved`/`admin_rejected`.
+
+**Rizika (k ošetření při implementaci):** `affiliate_company_refs.affiliate_id` je NOT NULL, ale `lead.affiliate_id` nullable → approve musí proběhnout i bez atribuce (best-effort, nikdy neshodit approve); vytvoření auth účtu firmy je nová operace (kolize emailu); atomicita napříč auth+DB+email (email best-effort poslední krok, možnost „znovu odeslat link"); typ `generateLink` ověřit na stagingu bez změny produkční Auth konfigurace.
+
+**Produkční rollout Phase 2D vyžaduje výslovné schválení Pavla** (EF deploy + případná RPC migrace + ověření password-link flow + postcheck). Žádný Lovable Publish bez schválení.
+
+---
+
 ## ✅ PHASE 2C — confirm/reject workflow + spec 36 ZELENÝ, MERGNUTO DO `main` (08. 06. 2026)
 
 **Phase 2C (company confirmation/rejection) je implementována a uzamčena zeleným staging E2E. Mergnuto do `main`. Produkce nedotčena.**
