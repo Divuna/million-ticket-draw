@@ -68,7 +68,7 @@ Blok 1 → Blok 2 → Blok 3 → Blok 4
 
 | Gate | Podmínka | Blokuje |
 |------|----------|---------|
-| G1 DB/RPC | postcheck: obě funkce SECURITY DEFINER, `record_…_by_id` bez execute grantu pro anon/authenticated | EF deploy |
+| G1 DB/RPC | postcheck: obě funkce SECURITY DEFINER, `record_…_by_id` bez execute grantu pro anon/authenticated | EF deploy | ✅ SPLNĚN 08. 06. 2026 — produkce `xkzhjldrojjlrkezorey` |
 | G2 EF deploy | smoke: `approve` anon → 401, non-admin → 403; `confirm` invalid token → 404; `create` anon → 401 | Lovable Publish |
 | G3 Lovable Publish | P0 smoke CI zelený po Publish | live verifikace |
 | G4 `generateLink` ověřen | staging manuální test: firma obdrží email, link funguje, je jednorázový | Lovable Publish |
