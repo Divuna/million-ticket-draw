@@ -5,6 +5,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const MAX_REJECTION_REASON_LENGTH = 1000;
 
+// Site URL for the recovery link redirectTo — partner set-password page.
+// SITE_URL env var allows overriding on staging; defaults to production.
+const SITE_URL = Deno.env.get("SITE_URL") ?? "https://onemil.cz";
+const PARTNER_SET_PASSWORD_URL = `${SITE_URL}/partner/set-password`;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -295,6 +300,7 @@ serve(async (req: Request) => {
         await supabaseAdmin.auth.admin.generateLink({
           type: "recovery",
           email: companyEmail,
+          options: { redirectTo: PARTNER_SET_PASSWORD_URL },
         });
 
       if (linkError || !linkData?.properties?.action_link) {

@@ -92,6 +92,7 @@ import AdminNotFound from "@/pages/AdminNotFound";
 import NotFound from "@/pages/NotFound";
 import CompanyLeadConfirm from "@/pages/CompanyLeadConfirm";
 import AdminCompanyLeads from "@/pages/AdminCompanyLeads";
+import PartnerSetPassword from "@/pages/PartnerSetPassword";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -380,6 +381,19 @@ function AppContent() {
   useRetentionTriggers(user?.id);
   useHeartbeat(user?.id);
 
+  // PASSWORD_RECOVERY: when a partner clicks the one-time setup link from approval
+  // email, Supabase fires PASSWORD_RECOVERY via onAuthStateChange. Intercept it
+  // and send the user to the dedicated set-password page before any route guard
+  // can redirect them away to /partner/dashboard.
+  React.useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/partner/set-password', { replace: true });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
   // Hard-block: Redirect accounts away from unauthorized routes
   React.useEffect(() => {
     if (roleLoading || !user) return;
@@ -393,6 +407,7 @@ function AppContent() {
         location.pathname === '/partner/login' ||
         location.pathname === '/partner/register' ||
         location.pathname === '/partner/invite' ||
+        location.pathname === '/partner/set-password' ||
         location.pathname === '/login' ||
         location.pathname === '/register' ||
         location.pathname === '/delete-account' ||
@@ -409,6 +424,7 @@ function AppContent() {
       const allowedForAffiliate =
         location.pathname.startsWith('/affiliate') ||
         location.pathname === '/partner/invite' ||
+        location.pathname === '/partner/set-password' ||
         location.pathname === '/login' ||
         location.pathname === '/register' ||
         location.pathname === '/delete-account' ||
@@ -421,7 +437,9 @@ function AppContent() {
     }
 
     // Non-influencer partner accounts: block customer routes
-    if (isPartnerAccount && !isInfluencerAccount && isCustomerBlockedRoute(location.pathname)) {
+    // Allow /partner/set-password so newly approved partners can set their password
+    if (isPartnerAccount && !isInfluencerAccount && isCustomerBlockedRoute(location.pathname)
+        && location.pathname !== '/partner/set-password') {
       navigate('/partner/dashboard', { replace: true });
       return;
     }
@@ -489,6 +507,7 @@ function AppContent() {
       location.pathname === '/partner/login' ||
       location.pathname === '/partner/register' ||
       location.pathname === '/partner/invite' ||
+      location.pathname === '/partner/set-password' ||
       location.pathname === '/login' ||
       location.pathname === '/register' ||
       location.pathname === '/delete-account' ||
@@ -508,6 +527,7 @@ function AppContent() {
     const allowedForAffiliate =
       location.pathname.startsWith('/affiliate') ||
       location.pathname === '/partner/invite' ||
+      location.pathname === '/partner/set-password' ||
       location.pathname === '/login' ||
       location.pathname === '/register' ||
       location.pathname === '/delete-account' ||
@@ -610,6 +630,7 @@ function AppContent() {
           <Route path="/partner/login" element={<PartnerLogin />} />
             <Route path="/partner/register" element={<PartnerRegister />} />
             <Route path="/partner/invite" element={<CompanyLeadConfirm />} />
+            <Route path="/partner/set-password" element={<PartnerSetPassword />} />
             {/* Legacy /influencer/* routes — /dashboard redirects to Affiliate v2 UI; public pages unchanged */}
             <Route path="/influencer" element={<InfluencerLanding />} />
             <Route path="/influencer/how-to-earn" element={<InfluencerHowToEarn />} />
