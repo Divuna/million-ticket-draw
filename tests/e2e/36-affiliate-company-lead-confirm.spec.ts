@@ -569,38 +569,47 @@ test.describe('Phase 2C — confirm-affiliate-company-lead (spec 36)', () => {
   });
 
   // ── 36i: /partner/invite reject UI ───────────────────────────────────────
-  // Uses insertLeadDirect to avoid auth.admin.createUser (9th consecutive user creation
-  // hits staging Auth rate limits and hangs indefinitely). The test only needs a valid
-  // lead row with a known token hash — no full user flow required.
+  // Uses raw fetch with AbortSignal.timeout throughout to prevent any network
+  // call from hanging indefinitely (avoid "Test timeout exceeded" on slow staging).
+  // Inserts lead directly via PostgREST REST API — no auth user creation needed.
 
   test('36i: /partner/invite page — reject button works → success state', async ({ page }) => {
     skipIfNotStaging();
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
 
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false, autoRefreshToken: false } });
     const ts = Date.now();
     const fakeRaw = `spec36i-reject-${ts}`;
     const tokenHash = await sha256Hex(fakeRaw);
     const companyEmail = `spec36i-co-${ts}@example.com`;
 
-    try {
-      // Insert lead directly with a pre-computed token hash — no auth user needed
-      const { error: insErr } = await (admin as any)
-        .from('affiliate_company_leads')
-        .insert({
-          affiliate_id: null,
-          company_name: `Spec36I Firma ${ts}`,
-          company_email: companyEmail,
-          status: 'sent_to_company',
-          company_confirmation_token_hash: tokenHash,
-          company_confirmation_expires_at: new Date(Date.now() + 86400_000).toISOString(),
-          company_confirmation_sent_at: new Date().toISOString(),
-          sales_rep_name_snapshot: 'E2E Spec36I',
-        });
-      if (insErr) throw new Error(`insertLead: ${insErr.message}`);
+    const restHeaders = {
+      apikey: SERVICE_ROLE,
+      Authorization: `Bearer ${SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    };
 
+    // Insert lead via direct REST — AbortSignal prevents hanging
+    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/affiliate_company_leads`, {
+      method: 'POST',
+      headers: restHeaders,
+      body: JSON.stringify({
+        affiliate_id: null,
+        company_name: `Spec36I Firma ${ts}`,
+        company_email: companyEmail,
+        status: 'sent_to_company',
+        company_confirmation_token_hash: tokenHash,
+        company_confirmation_expires_at: new Date(Date.now() + 86400_000).toISOString(),
+        company_confirmation_sent_at: new Date().toISOString(),
+        sales_rep_name_snapshot: 'E2E Spec36I',
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!insertRes.ok) throw new Error(`insertLead failed: ${insertRes.status}`);
+
+    try {
       await page.goto(`/partner/invite?token=${encodeURIComponent(fakeRaw)}&action=reject`);
-      await expect(page.getByTestId('clc-ready')).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByTestId('clc-ready')).toBeVisible({ timeout: 20_000 });
 
       const rejectBtn = page.getByTestId('clc-reject-btn');
       await expect(rejectBtn).toBeVisible();
@@ -611,10 +620,16 @@ test.describe('Phase 2C — confirm-affiliate-company-lead (spec 36)', () => {
 
       // Confirm rejection
       await page.getByTestId('clc-reject-confirm-btn').click();
-      await expect(page.getByTestId('clc-success')).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByTestId('clc-success')).toBeVisible({ timeout: 20_000 });
 
     } finally {
-      await (admin as any).from('affiliate_company_leads').delete().ilike('company_email', companyEmail);
+      // Best-effort cleanup — never hangs (AbortSignal + swallowed errors)
+      try {
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/affiliate_company_leads?company_email=ilike.${encodeURIComponent(companyEmail)}`,
+          { method: 'DELETE', headers: restHeaders, signal: AbortSignal.timeout(8_000) },
+        );
+      } catch (_) { /* cleanup is best-effort */ }
     }
   });
 
