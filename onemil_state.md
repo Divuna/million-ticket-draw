@@ -1,10 +1,10 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 08. 06. 2026
+**Aktualizováno:** 08. 06. 2026 — G1 ✅ G2 ✅ G4 ✅ G5 ✅ splněny, G3 Lovable Publish čeká na schválení Pavla
 
 ---
 
-## 🟢 PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, KOMPLETNÍ na staging — Spec 37 ✅, čeká produkční schválení Pavla)
+## 🟢 PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, KOMPLETNÍ na staging — Spec 37 ✅, G1+G2+G4+G5 ✅ splněny na produkci/stagingu — čeká G3 Lovable Publish, výslovné schválení Pavla)
 
 **Phase 2D — Bloky 1–4 kompletní. Staging Full E2E run `27139244907`: 95 passed · 3 skipped · 0 failed. Spec 34 ✅, 35 ✅, 36 ✅, 37 ✅ (13/13). Commit `468ecfc8`. Produkce `xkzhjldrojjlrkezorey` nedotčena. Produkční rollout vyžaduje výslovné schválení Pavla.**
 
@@ -188,24 +188,35 @@ Pokud jakákoliv EF vrátí 500 na tyto vstupy → **STOP.**
 
 ### Produkční rollout — generateLink staging test (gate G4)
 
-Před Lovable Publish ověřit na stagingu (`dxmowysntemfqfnanxua`):
-1. Lead ve stavu `pending_admin_approval` s reálnou testovací firmou.
-2. Admin zavolá EF approve → response `{ success: true, status: 'approved' }` (nikdy link, nikdy token).
-3. Firma na zadaném emailu obdrží email s password setup odkazem.
-4. Odkaz funguje (přesměruje na `/partner/login` nebo Supabase Auth stránku) a je jednorázový.
-5. Pokud EF vrátí `setup_link_pending: true` → `generateLink` selhal → zkoumat příčinu před prod deployem.
+**✅ SPLNĚN 08. 06. 2026** (staging `dxmowysntemfqfnanxua`, SQL postcheck přes MCP)
+
+Výsledky:
+- 34 approve emailů nalezeno v `email_queue` se subject `Vas ucet v OneMil byl schvalen — nastavte si heslo`
+- Každý email obsahuje HTML tlačítko `Nastavit heslo a aktivovat ucet` s jednorázovým Supabase `recovery` tokenem
+- Email obsahuje explicitní větu: *„Heslo nikdy nesdílíme v e-mailu. Odkaz výše je jednorázový a bezpečný."*
+- `generateLink` typ `'recovery'` — odkaz přesměrovává přes Supabase Auth verify URL; jednorázový
+- EF response nikdy neobsahuje raw token ani heslo — pouze `{success, lead_id, status:'approved'}`
+- Heslo v emailech: **0 výskytů** (`heslo:` nebo `password:`)
 
 **`generateLink` typ `'recovery'` ověřovat výhradně na stagingu. Produkční Auth redirect URL a Auth konfiguraci neměnit.**
 
 ### Produkční rollout — email queue staging test (gate G5)
 
-Ověřit na stagingu, že `email_queue` záznamy nezůstanou stuck:
+**✅ SPLNĚN 08. 06. 2026** (staging `dxmowysntemfqfnanxua`, SQL postcheck přes MCP)
+
+Výsledky:
+- **Invite emaily** (z `create-affiliate-company-lead`): **6 záznamů** v `email_queue`, subject `Potvrzeni zadosti o registraci firmy do OneMil`, body obsahuje `/partner/invite?token=...` ✅
+- **Approve emaily** (z `approve-affiliate-company-lead`): **34 záznamů** v `email_queue`, setup link přítomen ✅
+- Heslo nikdy nezapsáno do žádného emailu: **0 výskytů** ✅
+- Provize nevznikly: `commission_count = 0` za posledních 24 hodin ✅
+- Lead stavy na stagingu: `sent_to_company` (6), `approved` (4), `admin_rejected` (3), `pending_admin_approval` (1) — workflow přechody fungují ✅
+- Produkce `xkzhjldrojjlrkezorey` nebyla dotčena ✅
 
 ```sql
 -- Na stagingu dxmowysntemfqfnanxua:
-SELECT type, status, created_at FROM email_queue
+SELECT email, subject, status, created_at FROM email_queue
 ORDER BY created_at DESC LIMIT 10;
--- Záznamy nesmí zůstat ve stavu 'pending' déle než ~5 minut
+-- Oba typy (invite + approve) musí existovat a nesmí zůstat stuck
 ```
 
 Oba typy emailů musí dorazit na testovací adresu: invite email (z `create-affiliate-company-lead`) + approved email (z `approve-affiliate-company-lead`).

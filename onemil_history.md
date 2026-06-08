@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-08 - G4+G5 staging email testy splněny — produkční rollout připraven na G3
+
+- **Gate G4 `generateLink` ✅ SPLNĚN** — staging `dxmowysntemfqfnanxua`. SQL postcheck potvrdil: 34 approve emailů v `email_queue` s jednorázovým Supabase recovery tokenem; tělo emailu obsahuje `Nastavit heslo a aktivovat ucet` tlačítko; `heslo:` nebo `password:` — **0 výskytů**; EF response nikdy neobsahuje raw token.
+- **Gate G5 email queue ✅ SPLNĚN** — staging `dxmowysntemfqfnanxua`. 6 invite emailů (`/partner/invite?token=`) + 34 approve emailů. Oba typy v `email_queue`. `commission_count = 0`. Produkce nedotčena.
+- **Gate G1 DB/RPC ✅** (aplikováno dříve 08. 06. 2026) — 4 migrace na produkci `xkzhjldrojjlrkezorey`, postcheck 11/11 zelených bodů.
+- **Gate G2 EF smoke ✅** (ověřeno dříve 08. 06. 2026) — všechny 3 EF na produkci: bez JWT → 401, neplatný JWT → 401, invalid token → 404; žádná 500.
+- Stav: **G1 ✅ G2 ✅ G4 ✅ G5 ✅ splněny**. Čeká: **G3 Lovable Publish + P0 smoke** — vyžaduje výslovné schválení Pavla.
+- Produkce `xkzhjldrojjlrkezorey` nebyla dotčena žádným z G4/G5 kroků.
+
 ## 2026-06-08 - Produkční rollout checklist Phase 2A–2D připraven (dokumentace)
 
 - Připraven kompletní produkční rollout checklist pro B2B company lead workflow (Phase 2A–2D). Žádný deploy neproveden. Produkce nedotčena.

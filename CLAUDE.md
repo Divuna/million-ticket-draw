@@ -64,9 +64,9 @@ Company confirmation/rejection workflow **implementován a uzamčen zeleným sta
 - **Pravidlo (neměnit zpět):** spec 36i reject UI používá `dispatchEvent('click')` uvnitř `expect(...).toPass()` retry bloku — `.click()` čeká na stabilitu a re-rendery stránky klik nikdy nedispatchly; `dispatchEvent('click')` vystřelí bublající event okamžitě, React 18 root-delegated listener ho chytí.
 - Spec 34 email assertion opravena na `/partner/invite`. Spec 34 a spec 35 musí zůstat zelené.
 
-## PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, Bloky 1–4 ✅ KOMPLETNÍ na staging, čeká produkční schválení Pavla)
+## PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, Bloky 1–4 ✅ KOMPLETNÍ na staging, G1+G2+G4+G5 ✅ splněny — čeká G3 Lovable Publish, výslovné schválení Pavla)
 
-**Phase 2D — Bloky 1–4 kompletní na staging. Staging Full E2E run `27139244907`: 95 passed · 3 skipped · 0 failed. Spec 34 ✅, 35 ✅, 36 ✅, 37 ✅ (13/13). Finální commit `468ecfc8`. Produkce `xkzhjldrojjlrkezorey` nedotčena. Produkční rollout vyžaduje výslovné schválení Pavla + gates G1–G5.**
+**Phase 2D — Bloky 1–4 kompletní na staging. Staging Full E2E run `27139244907`: 95 passed · 3 skipped · 0 failed. Spec 34 ✅, 35 ✅, 36 ✅, 37 ✅ (13/13). Finální commit `468ecfc8`. Produkce `xkzhjldrojjlrkezorey` nedotčena zápisem mimo schválené gates. Produkční rollout: G1 ✅ DB/RPC migrace + postcheck (08. 06. 2026); G2 ✅ EF smoke (08. 06. 2026); G4 ✅ generateLink staging test (08. 06. 2026); G5 ✅ email queue staging test (08. 06. 2026). Čeká pouze G3 Lovable Publish + P0 smoke — vyžaduje výslovné schválení Pavla.**
 
 **Cíl:** admin schvaluje/zamítá company leady ve stavu `pending_admin_approval` (po company confirm z Phase 2C).
 
@@ -113,13 +113,13 @@ Company confirmation/rejection workflow **implementován a uzamčen zeleným sta
 
 **Staging rollout pořadí:** Blok 1 → Blok 2 → Blok 3 → Blok 4 ✅ DOKONČENO.
 
-**Produkční rollout gates** (každý vyžaduje výslovné schválení Pavla): G1 DB/RPC postcheck; G2 EF smoke (admin→200, non-admin→403); G3 Lovable Publish (P0 smoke zelený); G4 `generateLink` ověřen na stagingu (jednorázový link dorazí firmě); G5 email queue ověřen na stagingu. **Detailní rollout checklist (pořadí operací, SQL, curl příkazy, rollback plán) je v `onemil_state.md` → sekce Phase 2D.**
+**Produkční rollout gates** (každý vyžaduje výslovné schválení Pavla): G1 ✅ DB/RPC postcheck (08. 06. 2026, produkce); G2 ✅ EF smoke (08. 06. 2026, produkce — bez JWT→401, neplatný JWT→401, invalid token→404); G3 ⏳ Lovable Publish (P0 smoke zelený) — čeká schválení Pavla; G4 ✅ `generateLink` ověřen na stagingu (34 approve emailů, jednorázový recovery token, bez hesla); G5 ✅ email queue ověřen na stagingu (6 invite + 34 approve emailů, commission_count=0). **Detailní rollout checklist (pořadí operací, SQL, curl příkazy, rollback plán) je v `onemil_state.md` → sekce Phase 2D.**
 
 **Rizika:** nullable `affiliate_id` (best-effort, approve nikdy neshodit); email kolize (idempotence check před `createUser`); `generateLink` selhání po approve (best-effort, `setup_link_pending`); race condition (`FOR UPDATE`); `createUser`+RPC atomicita (retry idempotence); `generateLink` typ ověřit pouze na stagingu bez změny produkční Auth konfigurace.
 
 **Rollback staging:** EF delete + git revert UI + DROP FUNCTION. Data leadů nedotčena.
 
-**Produkční rollout Phase 2D vyžaduje výslovné schválení Pavla.** Žádný Lovable Publish bez schválení.
+**G3 Lovable Publish — jediný zbývající krok před live provozem Phase 2A–2D. Vyžaduje výslovné schválení Pavla.** Žádný Lovable Publish bez schválení.
 
 ## SPRÁVA SOUTĚŽÍ — statistické karty jen z `active` (06. 06. 2026, admin UI invariant)
 
