@@ -1,5 +1,57 @@
 # CLAUDE.md
 
+## B2B FAKTURACE A PROVIZE — INVARIANTY (08. 06. 2026)
+
+### Fakturační řetězec (ověřen E2E testem na produkci)
+
+```
+partner_reward_codes (vydání kódu)
+  → partner_coin_activations (aktivace coinů zákazníkem, invoiced=false)
+  → create_partner_invoices_for_period(from, to)   [pg_cron job 17, každou neděli]
+      → partner_invoices (status='draft', coins × price_per_coin)
+      → partner_coin_activations.invoiced = true
+  → admin označí fakturu status='paid'
+  → calculate_affiliate_commissions_for_month(měsíc)   [pg_cron job 25, 2. v měsíci]
+      → affiliate_commissions (commission_type='company_invoice', 5 % z amount_ex_vat)
+```
+
+**Závazná pravidla (neměnit bez výslovného schválení Pavla):**
+- Provize vzniká **výhradně** z `partner_invoices.status = 'paid'` — nikdy z registrace, schválení leadu ani ze samotné aktivace.
+- `commission_type` pro B2B provize = `'company_invoice'` (CHECK constraint — nelze vložit jiný typ).
+- Status flow provize: `calculated → approved → paid` — přechod je jednosměrný, rollback není možný po `approved`.
+- `calculate_affiliate_commissions_for_month` maže jen `status='calculated'` záznamy před přepočtem — `approved` a `paid` jsou nedotčeny.
+- `partner_coin_activations.code` má FK na `partner_reward_codes(code)` — přímý INSERT aktivace bez vydaného kódu selže.
+- `partner_coin_activations.code` je UNIQUE — každý kód lze aktivovat pouze jednou.
+
+### pg_cron job `affiliate_company_commissions_monthly` (jobid 25)
+
+- **Schedule:** `0 3 2 * *` — 2. den v měsíci, 03:00 UTC
+- **Command:** `SELECT public.calculate_affiliate_commissions_for_month(date_trunc('month', current_date - interval '1 month')::date);`
+- **Migrace:** `supabase/migrations/20260608_affiliate_company_commissions_cron.sql`, commit `8d8de0c1`
+- **Nasazeno:** produkce `xkzhjldrojjlrkezorey`, 08. 06. 2026, postcheck ✅
+- **Rollback:** `SELECT cron.unschedule('affiliate_company_commissions_monthly');`
+- **Neměnit** bez výslovného schválení Pavla.
+
+### Přehled všech pg_cron jobů (08. 06. 2026)
+
+| ID | Název | Schedule | Volá |
+|----|-------|----------|------|
+| 11 | forward_messages_to_sofinity | každou minutu | EF sofinity |
+| 16 | process_email_queue_every_10_min | každých 10 min | EF process-email-queue |
+| 17 | weekly_partner_invoices | neděle 02:00 | `create_partner_invoices_for_last_week()` |
+| 18 | referral_inactivity_daily | denně 02:15 | `process_referral_inactivity()` |
+| 20 | influencer_commissions_monthly | 1. v měsíci 02:00 | `calculate_influencer_commissions_current_month()` |
+| 23 | process-event-queue | každou minutu | EF process_event_queue_worker |
+| 24 | send_offer_reminders_daily | denně 08:00 | EF send-offer-reminders |
+| **25** | **affiliate_company_commissions_monthly** | **2. v měsíci 03:00** | **`calculate_affiliate_commissions_for_month(...)`** |
+
+### Zbývající mezery před ostrým B2B provozem
+
+1. `source_invoice_id` a `company_ref_id` v `affiliate_commissions` jsou NULL — funkce nepropojuje provizi na konkrétní fakturu; audit je manuální.
+2. Botanic `price_per_coin = 1.00 Kč` — default; nastavit reálnou smluvní cenu v `/admin/partners` před prvním ostrým fakturačním cyklem.
+3. Botanic `payout_ready = false` — chybí platební údaje; doplnit v `/partner/dashboard`.
+4. Botanic `billing_street/city/zip = NULL` — neúplná fakturační adresa.
+
 ## B2B LEADS — `create-affiliate-company-lead` INVARIANTY (07. 06. 2026)
 
 Edge Function `create-affiliate-company-lead` je deployována na **STAGING ONLY** (`dxmowysntemfqfnanxua`). Produkce `xkzhjldrojjlrkezorey` nebyla dotčena.

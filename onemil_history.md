@@ -14,6 +14,37 @@
 
 ---
 
+## 2026-06-08 - B2B fakturace a provize — E2E test + cron nasazen na produkci
+
+### Produkční E2E test B2B fakturačního řetězce ✅
+
+Řízený produkční test celého B2B fakturačního a provizního řetězce proveden a rollbacknut na produkci `xkzhjldrojjlrkezorey`.
+
+**Testovací scénář:** Botanic (partner `20bdf15a`) × Pavel affiliate (`cd74ff3a`, 5 % sazba), 10 coinů, období 2025-01.
+
+Ověřený řetězec:
+1. `partner_reward_codes` → vydání testovacího kódu
+2. `partner_coin_activations` → aktivace 10 coinů (invoiced=false)
+3. `create_partner_invoices_for_period('2025-01-01','2025-01-31')` → draft faktura (OMA-20260003)
+   - coins=10, amount_net=10.00 Kč, vat_amount=2.10 Kč, amount_gross=12.10 Kč ✅
+   - aktivace označena invoiced=true ✅
+4. UPDATE `partner_invoices SET status='paid'` → 1 řádek ovlivněn ✅
+5. `calculate_affiliate_commissions_for_month('2025-01-01')` → company_rows=1, company_total=0.50 ✅
+   - `affiliate_commissions`: amount_base_czk=0.50, vat_rate=0 (Pavel není plátce DPH), amount_total_czk=0.50, status=calculated ✅
+6. Rollback (4 kroky) → všechny 4 tabulky čisté (0 záznamů) ✅
+
+Zjištěno: `source_invoice_id` a `company_ref_id` v provizi jsou NULL — funkce nepropojuje provizi na konkrétní fakturu (budoucí vylepšení, ne blocker).
+
+### pg_cron job `affiliate_company_commissions_monthly` nasazen na produkci ✅
+
+- **Příčina:** `calculate_affiliate_commissions_for_month` nebyla v žádném cron jobu → B2B company provize musely být spouštěny manuálně každý měsíc.
+- **Migrace:** `supabase/migrations/20260608_affiliate_company_commissions_cron.sql`, commit `8d8de0c1`
+- **Produkce:** jobid=25, schedule=`0 3 2 * *` (2. v měsíci 03:00 UTC), active=true
+- **Idempotentní:** DO blok s IF NOT EXISTS — bezpečné opakované spuštění
+- **Postcheck:** job existuje ✅, active=true ✅, schedule=`0 3 2 * *` ✅, obsahuje správnou funkci ✅, žádná duplicita ✅, ostatních 7 jobů beze změny ✅
+- UI, Edge Functions, fakturační logika nedotčeny.
+- **Rollback:** `SELECT cron.unschedule('affiliate_company_commissions_monthly');`
+
 ## 2026-06-08 - G4+G5 staging email testy splněny — produkční rollout připraven na G3
 
 - **Gate G4 `generateLink` ✅ SPLNĚN** — staging `dxmowysntemfqfnanxua`. SQL postcheck potvrdil: 34 approve emailů v `email_queue` s jednorázovým Supabase recovery tokenem; tělo emailu obsahuje `Nastavit heslo a aktivovat ucet` tlačítko; `heslo:` nebo `password:` — **0 výskytů**; EF response nikdy neobsahuje raw token.

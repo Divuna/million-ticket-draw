@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 08. 06. 2026 — Phase 2A–2D KOMPLETNÍ v produkci. B2B fakturace E2E test ✅. pg_cron B2B provize nasazen ✅.
+**Aktualizováno:** 08. 06. 2026 — Phase 2A–2D + B2B fakturace + pg_cron provize KOMPLETNÍ v produkci. Dokumentace finalizována.
 
 ## 🟢 B2B FAKTURACE & PROVIZE — PRODUKČNÍ STAV (08. 06. 2026)
 
