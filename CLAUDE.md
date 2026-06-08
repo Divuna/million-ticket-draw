@@ -95,11 +95,12 @@ Company confirmation/rejection workflow **implementován a uzamčen zeleným sta
 - Kolize emailu (existující partner) → 409 `company_email_already_has_partner_account`.
 - Smoke ✅: no JWT → 401, invalid JWT → 401/`invalid_authorization_token`, missing header → 401/`missing_authorization_header`.
 
-**Blok 3 — Admin UI** (`src/pages/AdminCompanyLeads.tsx` + `AdminContextSubNav.tsx` + `App.tsx`, po bloku 2):
-- Route `/admin/company-leads`, protected admin route.
-- Nav badge: počet `pending_admin_approval`, pollovat 60 s, zobrazit jen pokud > 0.
-- Schválit: confirm dialog → POST EF → toast → refresh. Zamítnout: dialog + povinný `rejection_reason` → POST EF → toast → refresh.
+**Blok 3 — Admin UI ✅ IMPLEMENTOVÁNO** (commit `2a81db8f`, `src/pages/AdminCompanyLeads.tsx` + `adminNavConfig.ts` + `AdminContextSubNav.tsx` + `App.tsx`):
+- Route `/admin/company-leads` (inside AdminLayout). `adminNavConfig.ts`: `Building2`, `companyLeads` entry, `users` sekce, routing.
+- Nav badge: `pendingCompanyLeadsCount` polled 60 s přes supabase count query, červený badge na `Žádosti firem` když > 0.
+- Schválit: confirm dialog → POST EF `{action:'approve'}` → toast (+`setup_link_pending` varování) → refresh. Zamítnout: dialog + povinný `rejection_reason` max 1000 znaků → POST EF `{action:'reject', rejection_reason}` → toast → refresh.
 - Data přes SELECT `WHERE status='pending_admin_approval'`. **Žádný client INSERT/UPDATE — vše přes EF.**
+- `npm run build` ✅ exit 0. Produkce nedotčena.
 
 **Blok 4 — Spec 37** (`tests/e2e/37-affiliate-company-lead-admin-approval.spec.ts`, po blocích 1–3):
 - Staging-only, self-contained. Vzor jako spec 36 (insertLeadDirect, dynamické testovací účty).

@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-08 - Phase 2D Blok 3 Admin UI implementováno
+
+- `src/pages/AdminCompanyLeads.tsx` vytvořena — zobrazuje `affiliate_company_leads WHERE status='pending_admin_approval'`. **Produkce nedotčena.**
+- Route `/admin/company-leads` přidána do `src/App.tsx` (inside AdminLayout).
+- `adminNavConfig.ts`: `Building2` import, `companyLeads` nav entry (`Žádosti firem`), přidáno do `users` sekce subnav, routing pro `/admin/company-leads`.
+- `AdminContextSubNav.tsx`: `pendingCompanyLeadsCount` state + 60s polling (supabase count query) + červený badge na `Žádosti firem`.
+- Schválit: confirm dialog → POST EF `approve-affiliate-company-lead {action:'approve'}` → toast → refresh. Zamítnout: dialog + povinný `rejection_reason` (max 1000 znaků) → POST EF → toast → refresh. Žádný přímý INSERT/UPDATE z klienta.
+- `npm run build` ✅ exit 0. Commit `2a81db8f`.
+
 ## 2026-06-08 - Phase 2D Blok 2 Edge Function `approve-affiliate-company-lead` nasazena na staging
 
 - Soubor `supabase/functions/approve-affiliate-company-lead/index.ts` vytvořen a nasazen na staging `dxmowysntemfqfnanxua`. **Produkce nedotčena.**

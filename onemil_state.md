@@ -4,9 +4,9 @@
 
 ---
 
-## 🟡 PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, Blok 1 ✅ + Blok 2 ✅ nasazeny na staging, zbývá Blok 3–4)
+## 🟡 PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, Blok 1 ✅ + Blok 2 ✅ + Blok 3 ✅ na staging, zbývá Blok 4)
 
-**Phase 2D — Blok 1 DB/RPC + Blok 2 Edge Function nasazeny a ověřeny na staging `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
+**Phase 2D — Blok 1 DB/RPC + Blok 2 EF + Blok 3 Admin UI implementovány. Zbývá Blok 4 (Spec 37). Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
 
 **Cíl:** admin schvaluje/zamítá company leady ve stavu `pending_admin_approval` (po company confirm z Phase 2C).
 
@@ -39,14 +39,16 @@
 - **Smoke výsledky:** no JWT → 401, invalid JWT → 401/`invalid_authorization_token`, missing header → 401/`missing_authorization_header` ✅.
 - **Produkce nedotčena.**
 
-**Blok 3 — Admin UI** (`src/pages/AdminCompanyLeads.tsx` + `AdminContextSubNav.tsx` + `App.tsx`, po bloku 2)
-- Route `/admin/company-leads`, protected admin route.
-- Nav: přidat do `AdminContextSubNav.tsx`, červený badge s počtem `pending_admin_approval` leadů (pollovat 60 s, zobrazit jen pokud > 0).
-- Seznam: company name, email, IČO, DIČ, website, sales rep (snapshot), `submitted_to_admin_at`, tlačítka Schválit/Zamítnout.
-- **Schválit:** confirm dialog → POST na EF → toast → refresh (lead zmizí).
-- **Zamítnout:** dialog s povinným textarea `rejection_reason` (max 1000 znaků) → POST na EF → toast → refresh.
-- Data: přímý Supabase client SELECT `WHERE status='pending_admin_approval'`. **Žádný INSERT/UPDATE z klienta — vše přes EF.**
-- Stránka zobrazuje pouze `pending_admin_approval`. Historické záznamy jsou mimo MVP scope.
+**Blok 3 — Admin UI ✅ IMPLEMENTOVÁNO (08. 06. 2026, commit `2a81db8f`)**
+- `src/pages/AdminCompanyLeads.tsx` — nová stránka, route `/admin/company-leads` (inside AdminLayout).
+- `src/components/admin/adminNavConfig.ts` — přidán `Building2` import, `companyLeads` nav entry (`Žádosti firem`), do `users` sekce subnav, routing `/admin/company-leads → "users"`.
+- `src/components/admin/AdminContextSubNav.tsx` — `pendingCompanyLeadsCount` state, 60s polling (`supabase.from('affiliate_company_leads').select('id', {count:'exact',head:true}).eq('status','pending_admin_approval')`), červený badge na `Žádosti firem` když > 0.
+- `src/App.tsx` — import + route.
+- Seznam leadů: company name, email, IČO, DIČ, website, sales rep snapshot, `submitted_to_admin_at`, `company_confirmed_at`.
+- Schválit: confirm dialog → POST EF `approve-affiliate-company-lead` `{action:'approve'}` → toast (vč. `setup_link_pending` varování) → refresh.
+- Zamítnout: dialog s povinným textarea `rejection_reason` (max 1000 znaků) → POST EF `{action:'reject', rejection_reason}` → toast → refresh.
+- Žádný přímý INSERT/UPDATE z klienta — vše přes EF. Zobrazuje pouze `pending_admin_approval`.
+- `npm run build` ✅ exit 0. **Produkce nedotčena.**
 
 **Blok 4 — Spec 37** (`tests/e2e/37-affiliate-company-lead-admin-approval.spec.ts`, po blocích 1–3)
 - Staging-only, self-contained, vzor identický se spec 36 (`insertLeadDirect` via service-role REST, dynamické testovací účty).
