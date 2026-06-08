@@ -211,10 +211,9 @@ async function loginAsAdmin(page: Page) {
   });
 
   await page.goto('/login');
-  await page.waitForLoadState('networkidle');
-  await page.locator('input[type="email"]').fill(ADMIN_EMAIL);
-  await page.locator('input[type="password"]').fill(ADMIN_PASSWORD);
-  await page.locator('button[type="submit"]').click();
+  await page.fill('#email', ADMIN_EMAIL);
+  await page.fill('#password', ADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Přihlásit se', exact: true }).click();
   // Admin lands on /admin after login
   await page.waitForURL(/\/admin/, { timeout: 20_000 });
 }
