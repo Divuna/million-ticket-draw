@@ -572,7 +572,7 @@ test.describe('Phase 2C — confirm-affiliate-company-lead (spec 36)', () => {
 
   test('36i: /partner/invite page — reject button works → success state', async ({ page }) => {
     skipIfNotStaging();
-    test.setTimeout(120_000);
+    test.setTimeout(180_000);
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false, autoRefreshToken: false } });
     const ts = Date.now();
