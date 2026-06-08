@@ -113,7 +113,7 @@ Company confirmation/rejection workflow **implementován a uzamčen zeleným sta
 
 **Staging rollout pořadí:** Blok 1 → Blok 2 → Blok 3 → Blok 4 ✅ DOKONČENO.
 
-**Produkční rollout gates** (každý vyžaduje výslovné schválení Pavla): G1 DB/RPC postcheck; G2 EF smoke (admin→200, non-admin→403); G3 Lovable Publish (P0 smoke zelený); G4 `generateLink` ověřen na stagingu (jednorázový link dorazí firmě); G5 email queue ověřen na stagingu.
+**Produkční rollout gates** (každý vyžaduje výslovné schválení Pavla): G1 DB/RPC postcheck; G2 EF smoke (admin→200, non-admin→403); G3 Lovable Publish (P0 smoke zelený); G4 `generateLink` ověřen na stagingu (jednorázový link dorazí firmě); G5 email queue ověřen na stagingu. **Detailní rollout checklist (pořadí operací, SQL, curl příkazy, rollback plán) je v `onemil_state.md` → sekce Phase 2D.**
 
 **Rizika:** nullable `affiliate_id` (best-effort, approve nikdy neshodit); email kolize (idempotence check před `createUser`); `generateLink` selhání po approve (best-effort, `setup_link_pending`); race condition (`FOR UPDATE`); `createUser`+RPC atomicita (retry idempotence); `generateLink` typ ověřit pouze na stagingu bez změny produkční Auth konfigurace.
 

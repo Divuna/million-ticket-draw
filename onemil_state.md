@@ -66,13 +66,170 @@ Blok 1 → Blok 2 → Blok 3 → Blok 4
 
 ### Produkční rollout gates (každý vyžaduje výslovné schválení Pavla)
 
-| Gate | Podmínka |
-|------|----------|
-| G1 DB/RPC | postcheck: funkce existují, SECURITY DEFINER, RLS nedotčena |
-| G2 EF deploy | smoke: admin JWT → 200; non-admin → 403 |
-| G3 Lovable Publish | P0 smoke zelený |
-| G4 `generateLink` ověřen | staging manual test: link dorazí, je jednorázový |
-| G5 email queue | staging: `company_lead_approved` email dorazí firmě |
+| Gate | Podmínka | Blokuje |
+|------|----------|---------|
+| G1 DB/RPC | postcheck: obě funkce SECURITY DEFINER, `record_…_by_id` bez execute grantu pro anon/authenticated | EF deploy |
+| G2 EF deploy | smoke: `approve` anon → 401, non-admin → 403; `confirm` invalid token → 404; `create` anon → 401 | Lovable Publish |
+| G3 Lovable Publish | P0 smoke CI zelený po Publish | live verifikace |
+| G4 `generateLink` ověřen | staging manuální test: firma obdrží email, link funguje, je jednorázový | Lovable Publish |
+| G5 email queue | staging: oba typy emailů (invite + approved) dorazí na testovací adresu | Lovable Publish |
+
+### Produkční rollout — přesné pořadí operací
+
+```
+Krok 1  DB/RPC migrace (SQL Editor, produkce xkzhjldrojjlrkezorey)
+   ↓
+Krok 2  DB postcheck (SQL dotazy — gate G1)
+   ↓  [G1 ✅ — výslovné schválení Pavla]
+Krok 3  EF deploy (3 funkce na produkci)
+   ↓
+Krok 4  EF smoke (gate G2)
+   ↓  [G2 ✅ — výslovné schválení Pavla]
+Krok 5  generateLink staging manuální test (gate G4)
+Krok 5b email_queue staging manuální test (gate G5)
+   ↓  [G4 + G5 ✅ — výslovné schválení Pavla]
+Krok 6  Lovable Publish
+   ↓
+Krok 7  P0 smoke CI run (gate G3)
+   ↓  [G3 ✅ — výslovné schválení Pavla]
+Krok 8  Post-deploy live verifikace (viz níže)
+```
+
+### Produkční rollout — DB/RPC migrace (4 soubory, SQL Editor)
+
+Aplikovat manuálně v Supabase SQL Editoru na produkci `xkzhjldrojjlrkezorey`. **V tomto pořadí, jedno po druhém, vždy bez chyby před dalším krokem. `supabase db push` NESPOUŠTĚT.**
+
+| # | Soubor | Co vytváří |
+|---|--------|------------|
+| 1 | `20260607172151_affiliate_company_leads_phase1.sql` | Tabulka `affiliate_company_leads`, 9 indexů (vč. 2 UNIQUE), RLS enable, REVOKE anon, GRANT SELECT authenticated, 2 RLS policies (sales_rep SELECT, admin SELECT), trigger |
+| 2 | `20260607173746_affiliate_company_leads_admin_reviewed_by_index.sql` | Index `idx_affiliate_company_leads_admin_reviewed_by` |
+| 3 | `20260608_approve_affiliate_company_lead_txn.sql` | Funkce `record_affiliate_company_ref_by_id(uuid,uuid,text)` + `approve_affiliate_company_lead_txn(uuid,uuid,uuid,text,text)`, REVOKE ALL from PUBLIC, GRANT EXECUTE on `approve_affiliate_company_lead_txn` TO authenticated |
+| 4 | `20260608_approve_affiliate_company_lead_txn_harden.sql` | REVOKE EXECUTE on `record_affiliate_company_ref_by_id` FROM anon + FROM authenticated — **kritický hardening, nesmí chybět** |
+
+> ⚠️ Migrace 3 a 4 jsou neoddělitelné. Bez hardeningu (migrace 4) je helper `record_affiliate_company_ref_by_id` přístupný autentizovaným uživatelům přes PostgREST. Aplikovat obě ve stejné session.
+
+### Produkční rollout — DB postcheck SQL (gate G1)
+
+Spustit v SQL Editoru po aplikaci všech 4 migrací:
+
+```sql
+-- 1. Tabulka + RLS
+SELECT relname, relrowsecurity FROM pg_class WHERE relname = 'affiliate_company_leads';
+-- Očekáváno: relrowsecurity = true
+
+-- 2. Funkce jsou SECURITY DEFINER s prázdným search_path
+SELECT proname, prosecdef, proconfig FROM pg_proc
+WHERE proname IN ('approve_affiliate_company_lead_txn','record_affiliate_company_ref_by_id');
+-- Očekáváno: prosecdef=true, proconfig='{search_path=""}'
+
+-- 3. approve_affiliate_company_lead_txn — authenticated EXECUTE ✅
+SELECT has_function_privilege('authenticated','approve_affiliate_company_lead_txn(uuid,uuid,uuid,text,text)','execute');
+-- Očekáváno: true
+
+-- 4. record_affiliate_company_ref_by_id — anon EXECUTE ❌ (revoked)
+SELECT has_function_privilege('anon','record_affiliate_company_ref_by_id(uuid,uuid,text)','execute');
+-- Očekáváno: false
+
+-- 5. record_affiliate_company_ref_by_id — authenticated EXECUTE ❌ (revoked)
+SELECT has_function_privilege('authenticated','record_affiliate_company_ref_by_id(uuid,uuid,text)','execute');
+-- Očekáváno: false
+
+-- 6. Stará record_affiliate_company_ref(text,uuid) nedotčena
+SELECT proname FROM pg_proc WHERE proname = 'record_affiliate_company_ref';
+-- Očekáváno: 1 řádek
+
+-- 7. RLS policies existují
+SELECT policyname, cmd FROM pg_policies WHERE tablename = 'affiliate_company_leads';
+-- Očekáváno: affiliate_company_leads_sales_rep_select, affiliate_company_leads_admin_select
+```
+
+Pokud cokoliv selže → **STOP, nespouštět EF deploy, kontaktovat Pavla.**
+
+### Produkční rollout — Edge Functions (3 funkce, produkce)
+
+Nasadit pomocí `supabase functions deploy --project-ref xkzhjldrojjlrkezorey` v tomto pořadí:
+
+| # | Funkce | JWT režim | Popis |
+|---|--------|-----------|-------|
+| 1 | `create-affiliate-company-lead` | `verify_jwt = false` (vlastní JWT guard uvnitř) | Sales rep vytváří lead, odesílá email firmě |
+| 2 | `confirm-affiliate-company-lead` | `verify_jwt = false` (public — firma kliká link) | Firma potvrzuje/zamítá přes token v URL |
+| 3 | `approve-affiliate-company-lead` | `verify_jwt = false` (vlastní admin JWT guard uvnitř) | Admin schvaluje/zamítá, vytváří partner účet |
+
+Všechny tři mají `verify_jwt = false` — JWT middleware Supabase platformy je bypasován, autentizace je řešena vlastním guard kódem uvnitř EF. **Toto nastavení neměnit.**
+
+### Produkční rollout — EF smoke (gate G2)
+
+Po deployi ověřit na produkci:
+
+```bash
+# approve-affiliate-company-lead: anon → 401
+curl -s -o /dev/null -w "%{http_code}" \
+  -X POST https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/approve-affiliate-company-lead \
+  -H "apikey: <ANON_KEY>"
+# Očekáváno: 401
+
+# confirm-affiliate-company-lead: invalid token → 404
+curl -s -o /dev/null -w "%{http_code}" \
+  "https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/confirm-affiliate-company-lead?token=invalidtoken"
+# Očekáváno: 404
+
+# create-affiliate-company-lead: anon → 401
+curl -s -o /dev/null -w "%{http_code}" \
+  -X POST https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/create-affiliate-company-lead \
+  -H "apikey: <ANON_KEY>"
+# Očekáváno: 401
+
+# approve-affiliate-company-lead: non-admin JWT → 403
+# (použít JWT neprivilegovaného uživatele)
+# Očekáváno: 403
+```
+
+Pokud jakákoliv EF vrátí 500 na tyto vstupy → **STOP.**
+
+### Produkční rollout — generateLink staging test (gate G4)
+
+Před Lovable Publish ověřit na stagingu (`dxmowysntemfqfnanxua`):
+1. Lead ve stavu `pending_admin_approval` s reálnou testovací firmou.
+2. Admin zavolá EF approve → response `{ success: true, status: 'approved' }` (nikdy link, nikdy token).
+3. Firma na zadaném emailu obdrží email s password setup odkazem.
+4. Odkaz funguje (přesměruje na `/partner/login` nebo Supabase Auth stránku) a je jednorázový.
+5. Pokud EF vrátí `setup_link_pending: true` → `generateLink` selhal → zkoumat příčinu před prod deployem.
+
+**`generateLink` typ `'recovery'` ověřovat výhradně na stagingu. Produkční Auth redirect URL a Auth konfiguraci neměnit.**
+
+### Produkční rollout — email queue staging test (gate G5)
+
+Ověřit na stagingu, že `email_queue` záznamy nezůstanou stuck:
+
+```sql
+-- Na stagingu dxmowysntemfqfnanxua:
+SELECT type, status, created_at FROM email_queue
+ORDER BY created_at DESC LIMIT 10;
+-- Záznamy nesmí zůstat ve stavu 'pending' déle než ~5 minut
+```
+
+Oba typy emailů musí dorazit na testovací adresu: invite email (z `create-affiliate-company-lead`) + approved email (z `approve-affiliate-company-lead`).
+
+### Produkční rollout — Lovable Publish + P0 smoke (gate G3)
+
+Po G1 + G2 + G4 + G5:
+1. Lovable → **Publish** (HEAD main = commit `c8ab4df8` nebo novější).
+2. Spustit P0 smoke CI (`playwright-staging-p0.yml` nebo produkční smoke).
+3. P0 specy: 01, 02, 33, 14, 04, 05, 09, 03-voucher, 29, 32, 31.
+4. Pokud P0 selže → **okamžitý Lovable rollback** na předchozí publish → investigace.
+
+### Produkční rollout — post-deploy live verifikace (Krok 8)
+
+| # | Akce | Očekáváno |
+|---|------|-----------|
+| 1 | Sales rep → `/affiliate/dashboard` → Obchodník | Vidí „Žádosti o registraci firem" + `+ Přidat firmu` |
+| 2 | Sales rep vyplní formulář Přidat firmu | Toast úspěch; `email_queue` záznam vznikl |
+| 3 | Testovací firma obdrží email | Email dorazí; `/partner/invite?token=X` linky funkční |
+| 4 | Firma klikne Potvrzuji → `/partner/invite` | Lead přejde na `pending_admin_approval` |
+| 5 | Admin → `/admin/company-leads` | Lead viditelný; červený badge v nav |
+| 6 | Admin Schválit → Ano, schválit | Toast „Firma schválena"; lead zmizí ze seznamu |
+| 7 | Firma obdrží password setup email | Email dorazí; link funguje; firma se přihlásí na `/partner/login` |
+| 8 | DB ověření | `status='approved'`; `affiliate_company_refs` se `source='company_lead'`; `partners.referred_by_affiliate_id` nastaveno; žádná `affiliate_commissions` provize |
 
 ### Rizika a mitigace
 
@@ -80,14 +237,22 @@ Blok 1 → Blok 2 → Blok 3 → Blok 4
 |--------|----------|
 | `affiliate_company_refs.affiliate_id NOT NULL` + nullable `lead.affiliate_id` | RPC přeskočí INSERT pokud `IS NULL`; approve nikdy neshodí |
 | Kolize emailu při `createUser` | EF zkontroluje existenci auth user před `createUser`; 409 se zprávou |
-| `generateLink` selže po RPC approve | best-effort; `setup_link_pending:true` v response; admin re-send v pozdější iteraci |
+| `generateLink` selže po RPC approve | best-effort; `setup_link_pending:true` v response; admin re-send přes Supabase Dashboard |
 | Race condition dva admini | `FOR UPDATE` lock + status guard → druhý caller 409 |
 | `createUser` uspěje, RPC selže | EF retry najde existující auth user (idempotence), pokračuje |
 | `generateLink` typ na produkci | ověřit pouze na stagingu; produkční Auth konfiguraci neměnit |
 
-**Rollback staging:** EF delete + git revert UI + DROP FUNCTION v SQL Editoru. Data leadů zůstávají nedotčena.
+### Rollback plán
 
-**Produkční rollout Phase 2D vyžaduje výslovné schválení Pavla.** Žádný Lovable Publish bez schválení.
+**Selhání při DB migraci (Krok 1):** žádné EF nasazeny → rollback `DROP TABLE IF EXISTS public.affiliate_company_leads CASCADE; DROP FUNCTION IF EXISTS approve_affiliate_company_lead_txn(...); DROP FUNCTION IF EXISTS record_affiliate_company_ref_by_id(...);` — produkce funguje bez B2B funkcionality.
+
+**Selhání při EF deployi (Krok 3):** DB migrace aplikovány, EF nejsou aktivní → žádný dopad. Rollback: `supabase functions delete <jméno> --project-ref xkzhjldrojjlrkezorey`.
+
+**Selhání po Lovable Publish (Krok 6):** P0 selhal → **okamžitý Lovable rollback** na předchozí publish. EF zůstanou nasazeny (admin-gated a token-gated — bezpečné). Investigovat, opravit, projít checklistem znovu.
+
+**`generateLink` nefunguje v produkci:** EF vrátí `setup_link_pending: true` → lead je schválený, partner účet existuje, firma se ale nemůže přihlásit. Workaround: admin manuálně vygeneruje link přes Supabase Dashboard → Authentication → Users. Není blocker pro rollback.
+
+**Produkční rollout Phase 2D vyžaduje výslovné schválení Pavla před každým gate.** Žádný Lovable Publish bez schválení. Žádný EF deploy bez schválení. `supabase db push` NESPOUŠTĚT.
 
 ---
 

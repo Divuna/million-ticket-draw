@@ -14,6 +14,13 @@
 
 ---
 
+## 2026-06-08 - Produkční rollout checklist Phase 2A–2D připraven (dokumentace)
+
+- Připraven kompletní produkční rollout checklist pro B2B company lead workflow (Phase 2A–2D). Žádný deploy neproveden. Produkce nedotčena.
+- Checklist zaznamenán v `onemil_state.md` (sekce Phase 2D): přesné pořadí operací (Kroky 1–8), seznam 4 DB/RPC migrací v pořadí, 3 EF k deployi, SQL postcheck dotazy (gate G1), EF smoke příkazy (gate G2), staging generateLink test (gate G4), email queue test (gate G5), Lovable Publish + P0 smoke (gate G3), post-deploy live verifikace, rollback plán.
+- Prod smoke run `27140109104` pro commit `c8ab4df8` (docs-only): **success** — produkce nedotčena potvrzeno.
+- Každý gate G1–G5 vyžaduje výslovné schválení Pavla Diviše před přechodem.
+
 ## 2026-06-08 - Phase 2D Blok 4 Spec 37 zelený — Phase 2D KOMPLETNÍ na staging
 
 - `tests/e2e/37-affiliate-company-lead-admin-approval.spec.ts` vytvořen a uzamčen — 13 testů (37a–37m), staging-only, self-contained. Commit `468ecfc8`.
