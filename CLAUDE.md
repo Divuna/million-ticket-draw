@@ -64,9 +64,9 @@ Company confirmation/rejection workflow **implementován a uzamčen zeleným sta
 - **Pravidlo (neměnit zpět):** spec 36i reject UI používá `dispatchEvent('click')` uvnitř `expect(...).toPass()` retry bloku — `.click()` čeká na stabilitu a re-rendery stránky klik nikdy nedispatchly; `dispatchEvent('click')` vystřelí bublající event okamžitě, React 18 root-delegated listener ho chytí.
 - Spec 34 email assertion opravena na `/partner/invite`. Spec 34 a spec 35 musí zůstat zelené.
 
-## PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, Blok 1 ✅ + Blok 2 ✅ na staging, Blok 3–4 čeká)
+## PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, Bloky 1–4 ✅ KOMPLETNÍ na staging, čeká produkční schválení Pavla)
 
-**Phase 2D — Blok 1 DB/RPC + Blok 2 EF nasazeny na staging. Blok 3–4 čeká na implementaci. Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
+**Phase 2D — Bloky 1–4 kompletní na staging. Staging Full E2E run `27139244907`: 95 passed · 3 skipped · 0 failed. Spec 34 ✅, 35 ✅, 36 ✅, 37 ✅ (13/13). Finální commit `468ecfc8`. Produkce `xkzhjldrojjlrkezorey` nedotčena. Produkční rollout vyžaduje výslovné schválení Pavla + gates G1–G5.**
 
 **Cíl:** admin schvaluje/zamítá company leady ve stavu `pending_admin_approval` (po company confirm z Phase 2C).
 
@@ -102,13 +102,16 @@ Company confirmation/rejection workflow **implementován a uzamčen zeleným sta
 - Data přes SELECT `WHERE status='pending_admin_approval'`. **Žádný client INSERT/UPDATE — vše přes EF.**
 - `npm run build` ✅ exit 0. Produkce nedotčena.
 
-**Blok 4 — Spec 37** (`tests/e2e/37-affiliate-company-lead-admin-approval.spec.ts`, po blocích 1–3):
-- Staging-only, self-contained. Vzor jako spec 36 (insertLeadDirect, dynamické testovací účty).
+**Blok 4 — Spec 37 ✅ ZELENÝ** (`tests/e2e/37-affiliate-company-lead-admin-approval.spec.ts`, commit `468ecfc8`):
+- Staging-only, self-contained, 13 testů (37a–37m). Vzor jako spec 36 (insertLeadDirect, dynamické testovací účty).
 - 37a–37j backend: approve, partner vznik, refs `source='company_lead'`, nullable approve, reject, reject→žádný partner/refs, duplicate approve→409, špatný status→409, non-admin→403, anon→401.
 - 37k–37m admin UI: vidí lead, Schválit → zmizí, Zamítnout s důvodem → zmizí.
-- Spec 34/35/36 musí zůstat zelené.
+- **Invarianty spec 37 (neměnit):**
+  - `loginAsAdmin` volá `await page.waitForLoadState('networkidle', { timeout: 15_000 })` po `waitForURL(/\/admin/)` — zajišťuje, že Supabase session je plně v localStorage před `callApproveEF`. Bez toho vrací `getSession()` null → EF se neodesílá.
+  - UI testy 37l/37m používají `Promise.all([page.waitForResponse(...POST EF..., {timeout:20s}), click])` pro explicitní čekání na HTTP odpověď z EF před assertionem `not.toBeVisible`. Neměnit zpět na prostý click.
+- Spec 34/35/36/37 musí zůstat zelené. Staging Full E2E run `27139244907`: **95 passed · 3 skipped · 0 failed** ✅.
 
-**Staging rollout pořadí:** Blok 1 → Blok 2 → Blok 3 → Blok 4 (Full E2E zelený → merge do main).
+**Staging rollout pořadí:** Blok 1 → Blok 2 → Blok 3 → Blok 4 ✅ DOKONČENO.
 
 **Produkční rollout gates** (každý vyžaduje výslovné schválení Pavla): G1 DB/RPC postcheck; G2 EF smoke (admin→200, non-admin→403); G3 Lovable Publish (P0 smoke zelený); G4 `generateLink` ověřen na stagingu (jednorázový link dorazí firmě); G5 email queue ověřen na stagingu.
 
