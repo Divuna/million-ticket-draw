@@ -268,6 +268,120 @@ export type Database = {
           },
         ]
       }
+      affiliate_company_leads: {
+        Row: {
+          admin_rejection_reason: string | null
+          admin_reviewed_at: string | null
+          admin_reviewed_by: string | null
+          affiliate_id: string | null
+          approved_at: string | null
+          company_confirmation_expires_at: string | null
+          company_confirmation_sent_at: string | null
+          company_confirmation_token_hash: string | null
+          company_confirmation_used_at: string | null
+          company_confirmed_at: string | null
+          company_email: string
+          company_name: string
+          company_rejected_at: string | null
+          company_rejection_reason: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          created_at: string
+          dic: string | null
+          ico: string | null
+          id: string
+          partner_id: string | null
+          sales_rep_affiliate_id_snapshot: string | null
+          sales_rep_email_snapshot: string | null
+          sales_rep_name_snapshot: string | null
+          sales_rep_note: string | null
+          sales_rep_ref_code_snapshot: string | null
+          status: string
+          submitted_to_admin_at: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          admin_rejection_reason?: string | null
+          admin_reviewed_at?: string | null
+          admin_reviewed_by?: string | null
+          affiliate_id?: string | null
+          approved_at?: string | null
+          company_confirmation_expires_at?: string | null
+          company_confirmation_sent_at?: string | null
+          company_confirmation_token_hash?: string | null
+          company_confirmation_used_at?: string | null
+          company_confirmed_at?: string | null
+          company_email: string
+          company_name: string
+          company_rejected_at?: string | null
+          company_rejection_reason?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          dic?: string | null
+          ico?: string | null
+          id?: string
+          partner_id?: string | null
+          sales_rep_affiliate_id_snapshot?: string | null
+          sales_rep_email_snapshot?: string | null
+          sales_rep_name_snapshot?: string | null
+          sales_rep_note?: string | null
+          sales_rep_ref_code_snapshot?: string | null
+          status?: string
+          submitted_to_admin_at?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          admin_rejection_reason?: string | null
+          admin_reviewed_at?: string | null
+          admin_reviewed_by?: string | null
+          affiliate_id?: string | null
+          approved_at?: string | null
+          company_confirmation_expires_at?: string | null
+          company_confirmation_sent_at?: string | null
+          company_confirmation_token_hash?: string | null
+          company_confirmation_used_at?: string | null
+          company_confirmed_at?: string | null
+          company_email?: string
+          company_name?: string
+          company_rejected_at?: string | null
+          company_rejection_reason?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          dic?: string | null
+          ico?: string | null
+          id?: string
+          partner_id?: string | null
+          sales_rep_affiliate_id_snapshot?: string | null
+          sales_rep_email_snapshot?: string | null
+          sales_rep_name_snapshot?: string | null
+          sales_rep_note?: string | null
+          sales_rep_ref_code_snapshot?: string | null
+          status?: string
+          submitted_to_admin_at?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_company_leads_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_company_leads_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       affiliate_company_refs: {
         Row: {
           affiliate_id: string
@@ -4492,6 +4606,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      approve_affiliate_company_lead_txn: {
+        Args: {
+          p_action: string
+          p_admin_user_id: string
+          p_lead_id: string
+          p_partner_auth_id: string
+          p_rejection_reason: string
+        }
+        Returns: Json
+      }
       assign_partner_offer_to_ticket: {
         Args: { p_contest_id: string; p_ticket_id?: string; p_user_id: string }
         Returns: string
@@ -4921,6 +5045,10 @@ export type Database = {
       recalculate_bonus_wallet: { Args: never; Returns: undefined }
       record_affiliate_company_ref: {
         Args: { p_partner_id: string; p_via_code: string }
+        Returns: Json
+      }
+      record_affiliate_company_ref_by_id: {
+        Args: { p_affiliate_id: string; p_partner_id: string; p_source: string }
         Returns: Json
       }
       record_affiliate_customer_ref: {
