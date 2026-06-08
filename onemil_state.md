@@ -1,6 +1,48 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 08. 06. 2026 — Phase 2A–2D KOMPLETNÍ v produkci. Partner password setup flow funkční. Lovable Publish ✅.
+**Aktualizováno:** 08. 06. 2026 — Phase 2A–2D KOMPLETNÍ v produkci. B2B fakturace E2E test ✅. pg_cron B2B provize nasazen ✅.
+
+## 🟢 B2B FAKTURACE & PROVIZE — PRODUKČNÍ STAV (08. 06. 2026)
+
+### pg_cron job `affiliate_company_commissions_monthly` (jobid 25) ✅ NASAZEN
+
+- **Kdy:** 2. den v měsíci v 03:00 UTC
+- **Co:** `SELECT public.calculate_affiliate_commissions_for_month(date_trunc('month', current_date - interval '1 month')::date);`
+- **Migrace:** `supabase/migrations/20260608_affiliate_company_commissions_cron.sql`, commit `8d8de0c1`
+- **Idempotentní:** ano (DO blok s IF NOT EXISTS)
+- **Rollback:** `SELECT cron.unschedule('affiliate_company_commissions_monthly');`
+- Postcheck ✅: jobid=25, active=true, schedule=`0 3 2 * *`, obsahuje_funkci=true, no_duplicate=true
+
+### E2E test fakturace a provizí (08. 06. 2026) ✅
+
+Celý řetězec otestován a rollbacknut na produkci:
+`partner_reward_codes` → `partner_coin_activations` → `create_partner_invoices_for_period` → `partner_invoices` (paid) → `calculate_affiliate_commissions_for_month` → `affiliate_commissions`
+
+Výsledky testu (10 coinů, Botanic, Pavel 5 %):
+- coins=10, amount_net=10.00 Kč, VAT=2.10 Kč, amount_gross=12.10 Kč ✅
+- Pavlova provize: amount_base_czk=0.50, amount_total_czk=0.50 (Pavel není plátce DPH), status=calculated ✅
+- Rollback vyčistil všechna 4 testovací záznamy ✅
+
+### Přehled pg_cron jobů (aktuální stav)
+
+| ID | Název | Schedule | Aktivní |
+|----|-------|----------|---------|
+| 11 | forward_messages_to_sofinity | každou minutu | ✅ |
+| 16 | process_email_queue_every_10_min | každých 10 min | ✅ |
+| 17 | weekly_partner_invoices | neděle 02:00 | ✅ |
+| 18 | referral_inactivity_daily | denně 02:15 | ✅ |
+| 20 | influencer_commissions_monthly | 1. v měsíci 02:00 | ✅ |
+| 23 | process-event-queue | každou minutu | ✅ |
+| 24 | send_offer_reminders_daily | denně 08:00 | ✅ |
+| **25** | **affiliate_company_commissions_monthly** | **2. v měsíci 03:00** | **✅** |
+
+### Zbývající mezery před ostrým B2B provozem
+
+1. `source_invoice_id` a `company_ref_id` v `affiliate_commissions` jsou NULL — funkce nepropojuje provizi na konkrétní fakturu (audit musí být manuální)
+2. Botanic `price_per_coin = 1.00 Kč` — defaultní hodnota, nastavit reálnou smluvní cenu v `/admin/partners`
+3. Botanic `payout_ready = false` — chybí platební údaje firmy
+4. Botanic `billing_street/city/zip = NULL` — neúplná fakturační adresa
+5. Botanic `terms_accepted_at = NULL` — firma nepřijala podmínky
 
 ---
 
