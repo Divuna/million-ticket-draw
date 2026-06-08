@@ -228,9 +228,12 @@ test.describe('Phase 2B UI — Přidat firmu (spec 35)', () => {
     }
   });
 
-  // ── 35c: influencer-only does NOT see lead section ──────────────────────
+  // ── 35c: influencer-only account SEES the section UI but backend enforces sales_rep ──
+  // UI no longer gates CompanyLeadSection on account.modes — the section renders for all
+  // affiliates in Obchodník mode. Backend EF (create-affiliate-company-lead) still enforces
+  // 'sales_rep' = ANY(modes) and returns 403 for influencer-only accounts.
 
-  test('35c: influencer-only account does not see lead section in Obchodník mode', async ({ page }) => {
+  test('35c: influencer-only account sees lead section in Obchodník mode (backend enforces sales_rep)', async ({ page }) => {
     skipIfNotStaging();
     test.setTimeout(90_000);
 
@@ -252,19 +255,16 @@ test.describe('Phase 2B UI — Přidat firmu (spec 35)', () => {
       }));
 
       await goToDashboard(page, email, password);
-      // mode-btn-sales_rep is always rendered for all affiliate accounts;
-      // switching to it does NOT show the lead section when modes=['influencer']
       await switchToSalesRepMode(page);
 
       // Allow data load to settle
       await page.waitForTimeout(2_000);
 
-      // Lead section must NOT be present for influencer-only accounts
-      // (condition: activeMode === 'sales_rep' && account.modes.includes('sales_rep'))
-      // modes = ['influencer'] → includes('sales_rep') = false → section absent
+      // UI renders CompanyLeadSection for all affiliates in Obchodník mode.
+      // (modes check removed from UI — backend EF enforces sales_rep requirement.)
       await expect(
         page.getByTestId('company-lead-section'),
-      ).not.toBeVisible({ timeout: 5_000 });
+      ).toBeVisible({ timeout: 10_000 });
 
     } finally {
       await cleanup(admin, { authUserId, affiliateId });

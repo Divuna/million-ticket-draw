@@ -23,7 +23,7 @@ UI design schválen Pavlem. Implementováno v commitu `aaa2e092`. Spec 35 zelen�
 
 **Závazná pravidla:**
 - `Přidat firmu` NIKDY na `/affiliate/login`. Patří pouze do `/affiliate/dashboard`, `sales_rep` / `Obchodník` mode.
-- Zobrazit POUZE pokud `activeMode === 'sales_rep' && account.modes.includes('sales_rep')`.
+- Zobrazit pokud `activeMode === 'sales_rep'` (UI modes check odstraněn 08. 06. 2026 — backend EF `create-affiliate-company-lead` stále vyžaduje `'sales_rep' = ANY(modes)`, neautorizovaný pokus → 403). Spec 35c aktualizován.
 - UI musí volat POUZE Edge Function `create-affiliate-company-lead` — žádný přímý INSERT do `affiliate_company_leads` z klienta.
 - Po odeslání formuláře: pouze toast + refresh leadů. Žádný zápis do `affiliate_company_refs`, žádná provize.
 - „Žádosti o registraci firem" (sekce leadů) čte z `affiliate_company_leads`. „Moje firmy (schválené)" čte z `affiliate_company_refs`. Datové zdroje musí zůstat striktně odděleny.

@@ -541,7 +541,7 @@ const AffiliateDashboard = () => {
           </div>
         )}
 
-        {activeMode === 'sales_rep' && a.modes.includes('sales_rep') && (
+        {activeMode === 'sales_rep' && (
           <CompanyLeadSection affiliateId={a.id} />
         )}
 
