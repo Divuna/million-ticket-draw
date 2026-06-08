@@ -4,9 +4,9 @@
 
 ---
 
-## 🟡 PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, Blok 1 DB/RPC nasazen na staging ✅, zbývá Blok 2–4)
+## 🟡 PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, Blok 1 ✅ + Blok 2 ✅ nasazeny na staging, zbývá Blok 3–4)
 
-**Phase 2D — Blok 1 DB/RPC nasazen a ověřen na staging `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
+**Phase 2D — Blok 1 DB/RPC + Blok 2 Edge Function nasazeny a ověřeny na staging `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
 
 **Cíl:** admin schvaluje/zamítá company leady ve stavu `pending_admin_approval` (po company confirm z Phase 2C).
 
@@ -30,13 +30,14 @@
 - Žádná nová DB migrace na sloupce — Phase 1 schema má vše.
 - **Produkce nedotčena.**
 
-**Blok 2 — Edge Function** (`supabase/functions/approve-affiliate-company-lead/index.ts`, po bloku 1)
-- **Auth guard:** `Authorization: Bearer <admin JWT>` → `supabaseAdmin.auth.getUser(token)` → `user_roles IN ('admin','superadmin')`. JWT povinný (žádné `verify_jwt = false`).
-- **Request:** `POST { lead_id, action: 'approve'|'reject', rejection_reason? }` — **Response:** `{ success, lead_id, status }`. Nikdy heslo, password link, auth token firmy ani hash v response.
-- **Approve flow:** (1) validace + admin guard; (2) načíst lead (status guard, nenalezen → 404, špatný status → 409); (3) zkontrolovat existenci auth user s `company_email` — pokud ne → `auth.admin.createUser({ email, email_confirm: false })`, žádné heslo; (4) zavolat RPC `approve_affiliate_company_lead_txn(…)` — conflict → 409; (5) `auth.admin.generateLink({ type: 'recovery', email })` — **nikdy nelog, nikdy nevrátit**; (6) INSERT `email_queue` (typ `company_lead_approved`, setup link URL, company name, sales rep snapshot, info o OneMil — žádné heslo); (7) vrátit `{success:true, lead_id, status:'approved'}`. Email je best-effort poslední krok — selhání emailu neroluje approve.
-- **Kolize emailu:** pokud auth user existuje a má partnera → 409 se srozumitelnou zprávou. Pokud existuje ale partner neexistuje → reuse (idempotence).
-- **`generateLink` selže po úspěšném RPC:** lead zůstane `approved`, partner existuje. Response vrátí `{success:true, setup_link_pending:true}`. Admin UI zobrazí varování (re-send v pozdější iteraci).
-- **Reject flow:** (1) validace + admin guard; (2) status guard; (3) zavolat RPC s `action='reject'`; (4) vrátit `{success:true, lead_id, status:'admin_rejected'}`. Žádný `createUser`, žádný `generateLink`.
+**Blok 2 — Edge Function ✅ NASAZENO NA STAGING (08. 06. 2026, commit `c36410eb`)**
+- Soubor: `supabase/functions/approve-affiliate-company-lead/index.ts`. Config: `supabase/config.toml` `[functions.approve-affiliate-company-lead] verify_jwt = false`.
+- **Auth guard:** `Authorization: Bearer <admin JWT>` → `supabaseAdmin.auth.getUser(token)` → `user_roles IN ('admin','superadmin')` → 401/403 pokud nesplněno.
+- **Request:** `POST { lead_id, action: 'approve'|'reject', rejection_reason? }` — **Response:** `{ success, lead_id, status }`. Nikdy heslo, password link, auth token firmy ani hash v response. 5xx masked jako `internal_error`.
+- **Approve flow:** (1) validace + admin guard; (2) načíst lead (status guard, nenalezen → 404, špatný status → 409); (3) `auth.admin.createUser({ email, email_confirm: false })`, žádné heslo — pokud email existuje, reuse přes `listUsers`; (4) kolize: existující partner → 409; (5) RPC `approve_affiliate_company_lead_txn(…)` — conflict → 409; (6) `auth.admin.generateLink({ type: 'recovery', email })` — **nikdy nelog, nikdy nevrátit v response**; (7) INSERT `email_queue` best-effort; (8) vrátit `{success:true, lead_id, status:'approved', partner_id, setup_link_pending?}`.
+- **Reject flow:** RPC s `action='reject'`, žádný `createUser`, žádný `generateLink`.
+- **Smoke výsledky:** no JWT → 401, invalid JWT → 401/`invalid_authorization_token`, missing header → 401/`missing_authorization_header` ✅.
+- **Produkce nedotčena.**
 
 **Blok 3 — Admin UI** (`src/pages/AdminCompanyLeads.tsx` + `AdminContextSubNav.tsx` + `App.tsx`, po bloku 2)
 - Route `/admin/company-leads`, protected admin route.

@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-06-08 - Phase 2D Blok 2 Edge Function `approve-affiliate-company-lead` nasazena na staging
+
+- Soubor `supabase/functions/approve-affiliate-company-lead/index.ts` vytvořen a nasazen na staging `dxmowysntemfqfnanxua`. **Produkce nedotčena.**
+- `supabase/config.toml`: přidáno `[functions.approve-affiliate-company-lead] verify_jwt = false`.
+- Admin JWT guard: `getUser(token)` → `user_roles IN ('admin','superadmin')` → 401/403.
+- Approve flow: `createUser` bez hesla (nebo reuse existujícího auth user); kolize s partnerem → 409; RPC `approve_affiliate_company_lead_txn`; `generateLink(type:'recovery')` (nikdy nelog, nikdy v response); `email_queue` INSERT best-effort; response `{success, lead_id, status:'approved', partner_id, setup_link_pending?}`.
+- Reject flow: pouze RPC `action='reject'`; žádný `createUser`, žádný `generateLink`; response `{success, lead_id, status:'admin_rejected'}`.
+- Heslo, setup link, token ani hash nikdy v response ani logu. 5xx masked jako `internal_error`.
+- Smoke ✅: no JWT → 401, invalid JWT → 401/`invalid_authorization_token`, missing header → 401/`missing_authorization_header`.
+- `npm run build` ✅ exit 0. Commit `c36410eb`.
+
 ## 2026-06-08 - Phase 2D Blok 1 DB/RPC nasazen na staging + hardening
 
 - Migrace `20260608_approve_affiliate_company_lead_txn.sql` aplikována na staging `dxmowysntemfqfnanxua`. **Produkce nedotčena.**

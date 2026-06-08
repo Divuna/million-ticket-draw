@@ -64,9 +64,9 @@ Company confirmation/rejection workflow **implementován a uzamčen zeleným sta
 - **Pravidlo (neměnit zpět):** spec 36i reject UI používá `dispatchEvent('click')` uvnitř `expect(...).toPass()` retry bloku — `.click()` čeká na stabilitu a re-rendery stránky klik nikdy nedispatchly; `dispatchEvent('click')` vystřelí bublající event okamžitě, React 18 root-delegated listener ho chytí.
 - Spec 34 email assertion opravena na `/partner/invite`. Spec 34 a spec 35 musí zůstat zelené.
 
-## PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, Blok 1 DB/RPC na staging ✅, Blok 2–4 čeká)
+## PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, Blok 1 ✅ + Blok 2 ✅ na staging, Blok 3–4 čeká)
 
-**Phase 2D — Blok 1 DB/RPC nasazen na staging. Blok 2–4 čeká na implementaci. Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
+**Phase 2D — Blok 1 DB/RPC + Blok 2 EF nasazeny na staging. Blok 3–4 čeká na implementaci. Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
 
 **Cíl:** admin schvaluje/zamítá company leady ve stavu `pending_admin_approval` (po company confirm z Phase 2C).
 
@@ -87,12 +87,13 @@ Company confirmation/rejection workflow **implementován a uzamčen zeleným sta
 - Nullable `affiliate_id` → atribuci přeskočit (best-effort). Approve nikdy neshodit.
 - Žádná nová DB migrace na sloupce — Phase 1 schema má vše. Produkce nedotčena.
 
-**Blok 2 — Edge Function** (`supabase/functions/approve-affiliate-company-lead/index.ts`, po bloku 1):
-- Admin JWT guard: `Authorization: Bearer <JWT>` → `auth.getUser` → `user_roles IN ('admin','superadmin')`. JWT povinný, žádné `verify_jwt = false`.
-- Request: `POST { lead_id, action, rejection_reason? }`. Response: `{ success, lead_id, status }` — nikdy heslo/token/hash.
-- Approve: načíst lead (status guard) → `createUser` bez hesla → RPC → `generateLink` (nikdy nelog/nevrátit) → `email_queue`. `generateLink` selhání = best-effort, `setup_link_pending:true`.
-- Reject: status guard → RPC. Žádný `createUser`, žádný `generateLink`.
-- Kolize emailu při `createUser` → 409 se srozumitelnou zprávou.
+**Blok 2 — Edge Function ✅ NASAZENO NA STAGING** (commit `c36410eb`, `supabase/functions/approve-affiliate-company-lead/index.ts`, `supabase/config.toml` `verify_jwt = false`):
+- Admin JWT guard: `Authorization: Bearer <JWT>` → `auth.getUser` → `user_roles IN ('admin','superadmin')`. 401/403 pokud nesplněno.
+- Request: `POST { lead_id, action, rejection_reason? }`. Response: `{ success, lead_id, status }` — nikdy heslo/token/hash. 5xx masked jako `internal_error`.
+- Approve: načíst lead (status guard) → `createUser` bez hesla (nebo reuse existujícího auth user) → kolize s partnerem → 409 → RPC → `generateLink` (nikdy nelog/nevrátit) → `email_queue` best-effort. `generateLink` selhání = `setup_link_pending:true`.
+- Reject: status guard → RPC `action='reject'`. Žádný `createUser`, žádný `generateLink`.
+- Kolize emailu (existující partner) → 409 `company_email_already_has_partner_account`.
+- Smoke ✅: no JWT → 401, invalid JWT → 401/`invalid_authorization_token`, missing header → 401/`missing_authorization_header`.
 
 **Blok 3 — Admin UI** (`src/pages/AdminCompanyLeads.tsx` + `AdminContextSubNav.tsx` + `App.tsx`, po bloku 2):
 - Route `/admin/company-leads`, protected admin route.
