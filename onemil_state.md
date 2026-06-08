@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 08. 06. 2026 — Phase 2A–2D + B2B fakturace + pg_cron provize KOMPLETNÍ v produkci. Production smoke run `27168922017` ✅ success (commit `4a5a8d40`).
+**Aktualizováno:** 09. 06. 2026 — Admin stránka `Provize obchodníků` (`/admin/affiliate-commissions`) fáze 1 live. Production smoke run `27170849002` ✅ success (commit `e2e673e1`).
 
 ## 🟢 B2B WORKFLOW ONÉMIL — PRODUKČNĚ OVĚŘENO (08. 06. 2026)
 
@@ -55,6 +55,57 @@ Výsledky testu (10 coinů, Botanic, Pavel 5 %):
 3. Botanic `payout_ready = false` — chybí platební údaje firmy
 4. Botanic `billing_street/city/zip = NULL` — neúplná fakturační adresa
 5. Botanic `terms_accepted_at = NULL` — firma nepřijala podmínky
+
+---
+
+## ✅ ADMIN STRÁNKA `Provize obchodníků` — FÁZE 1 LIVE (09. 06. 2026)
+
+**Route:** `/admin/affiliate-commissions`
+**Soubor:** `src/pages/AdminAffiliateCommissions.tsx`
+**Commit implementace:** `156519d5`
+**Commit opravy PostgREST sloupců:** `e2e673e1`
+**Production smoke:** run `27170849002` ✅ success
+
+### Co stránka dělá (fáze 1)
+
+Read-only přehled B2B provizí obchodníků z `affiliate_commissions` kde `commission_type = 'company_invoice'`.
+
+Tabulka zobrazuje:
+- Měsíc, Obchodník, Ref kód, Firma (nebo `Neuvedeno`), Typ provize, Základ (bez DPH), DPH, Celkem, Stav, Datum vytvoření
+
+Filtry: stav / obchodník / měsíc (posledních 12)
+
+Info banner: „Provize se počítají z uhrazených faktur firem. Automatický výpočet běží každý měsíc."
+
+Prázdný stav: zobrazí „Žádné B2B provize obchodníků zatím nebyly vypočítány." (bez chybového toastu)
+
+Nav: sekce Uživatelé → Více → Affiliate → **Provize obchodníků**
+
+### Co fáze 1 neobsahuje (bude v další fázi)
+
+- Schvalování (`calculated → approved`)
+- Označení jako vyplaceno (`approved → paid`)
+- ABO export
+- Změny provizní logiky
+
+### Oprava PostgREST sloupců (commit `e2e673e1`)
+
+Původní kód obsahoval 3 špatné názvy sloupců — PostgREST odmítal query a stránka zobrazovala toast chyby:
+
+| Špatně | Správně |
+|--------|---------|
+| `amount_czk` | `amount_base_czk` + `amount_total_czk` |
+| `commission_rate` | odstraněno (neexistuje v `affiliate_commissions`) |
+| `affiliate_accounts.full_name` | `affiliate_accounts.name` |
+
+### Skutečné sloupce `affiliate_commissions` (ověřeno na produkci)
+
+`id`, `affiliate_id`, `commission_type`, `customer_ref_id`, `company_ref_id`, `source_invoice_id`, `period_month`, `amount_base_czk`, `vat_rate`, `amount_total_czk`, `status`, `created_at`, `updated_at`, `paid_at`
+
+### Fáze 2 (plánováno, vyžaduje schválení Pavla)
+
+- Schvalování a vyplácení provizí přes `admin_set_affiliate_commission_status`
+- ABO export (po doplnění IBAN affiliate obchodníků)
 
 ---
 

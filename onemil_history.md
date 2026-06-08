@@ -14,6 +14,13 @@
 
 ---
 
+## 2026-06-09 - Admin stránka `Provize obchodníků` fáze 1 live
+
+- **Commit implementace:** `156519d5` — nová stránka `src/pages/AdminAffiliateCommissions.tsx`, route `/admin/affiliate-commissions`, nav entry „Provize obchodníků" (sekce Affiliate), spec 39 (staging-only, 3 testy).
+- **Commit opravy PostgREST sloupců:** `e2e673e1` — opraveny 3 špatné názvy sloupců (`amount_czk` → `amount_base_czk`/`amount_total_czk`, `commission_rate` odstraněno, `full_name` → `name`). Původní kód způsoboval chybový toast při načtení.
+- **Production smoke run `27170849002`** ✅ — 5 passed, 0 failed. Stránka live po Lovable Publish.
+- Stránka: read-only přehled `affiliate_commissions` kde `commission_type = 'company_invoice'`. Filtry: stav/obchodník/měsíc. Prázdný stav bez toastu. Fáze 2 (schvalování, výplaty, ABO export) bude v samostatné fázi.
+
 ## 2026-06-08 - Production smoke ✅ — B2B workflow OneMil produkčně ověřen
 
 - **Production smoke run `27168922017`** — commit `4a5a8d40`, workflow `Playwright Smoke Tests`, conclusion `success`, 08. 06. 2026 21:44 UTC.

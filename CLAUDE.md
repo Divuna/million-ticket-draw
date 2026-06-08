@@ -1,5 +1,19 @@
 # CLAUDE.md
 
+## ADMIN STRÁNKA `Provize obchodníků` — FÁZE 1 (09. 06. 2026, invarianty)
+
+**Live na produkci.** Route `/admin/affiliate-commissions`. Commit implementace `156519d5`, oprava PostgREST sloupců `e2e673e1`. Production smoke `27170849002` ✅.
+
+**Zdroj dat:** `affiliate_commissions` WHERE `commission_type = 'company_invoice'`. JOIN `affiliate_accounts` (sloupec `name`, ne `full_name`). Firma přes `source_invoice_id` nebo `company_ref_id`; jinak `Neuvedeno`.
+
+**Skutečné sloupce `affiliate_commissions`:** `amount_base_czk` (čistá provize), `vat_rate`, `amount_total_czk` (vč. DPH). Sloupce `amount_czk` a `commission_rate` NEEXISTUJÍ — nepoužívat.
+
+**Fáze 1 neobsahuje:** schvalování, výplaty, ABO export. To bude fáze 2 — vyžaduje výslovné schválení Pavla.
+
+**Spec 39** (`tests/e2e/39-admin-affiliate-commissions.spec.ts`) — staging-only, 3 testy (39a stránka načte, 39b nadpis, 39c banner).
+
+---
+
 ## B2B FAKTURACE A PROVIZE — INVARIANTY (08. 06. 2026)
 
 **Produkčně ověřeno:** production smoke run `27168922017` ✅ success — commit `4a5a8d40`, 08. 06. 2026 21:44 UTC.
