@@ -64,30 +64,56 @@ Company confirmation/rejection workflow **implementován a uzamčen zeleným sta
 - **Pravidlo (neměnit zpět):** spec 36i reject UI používá `dispatchEvent('click')` uvnitř `expect(...).toPass()` retry bloku — `.click()` čeká na stabilitu a re-rendery stránky klik nikdy nedispatchly; `dispatchEvent('click')` vystřelí bublající event okamžitě, React 18 root-delegated listener ho chytí.
 - Spec 34 email assertion opravena na `/partner/invite`. Spec 34 a spec 35 musí zůstat zelené.
 
-## PHASE 2D DESIGN — Admin approval flow for confirmed B2B company leads, approved design, not implemented (08. 06. 2026)
+## PHASE 2D — Admin approval flow for confirmed B2B company leads, implementační plán hotový, NOT YET IMPLEMENTED (08. 06. 2026)
 
-**Phase 2D je POUZE design. Nic se neimplementuje. Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
+**Phase 2D NENÍ implementováno. Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
 
 **Cíl:** admin schvaluje/zamítá company leady ve stavu `pending_admin_approval` (po company confirm z Phase 2C).
 
+**Závazná pravidla (neměnit bez výslovného schválení Pavla):**
 1. Admin vidí **pouze** leady se stavem `pending_admin_approval`.
 2. Admin může **approve** nebo **reject**.
-3. **Approve musí:** vytvořit/aktivovat company partner účet; propojit lead na `partner_id`; nastavit lead status `approved`; nastavit `approved_at`, `admin_reviewed_by`, `admin_reviewed_at`; zapsat finální atribuci do `affiliate_company_refs` se `source = 'company_lead'`; zrcadlit do `partners.referred_by_affiliate_id`; poslat bezpečný password setup link; **NIKDY** neposílat vygenerované heslo.
-4. **Reject musí:** nastavit status `admin_rejected`; uložit `admin_rejection_reason`; nastavit `admin_reviewed_by` a `admin_reviewed_at`; **NE**vytvořit partnera; **NE**vytvořit atribuci; **NE**vytvořit provizi.
-5. **Provize** zůstává **pouze z placené/fakturované aktivity firmy** (`partner_invoices` → `affiliate_commissions.commission_type='company_invoice'`), nikdy z approve.
+3. **Approve musí:** vytvořit/aktivovat company partner účet; propojit lead na `partner_id`; nastavit lead status `approved` (+`approved_at`, `admin_reviewed_by`, `admin_reviewed_at`); zapsat atribuci `affiliate_company_refs.source='company_lead'`; zrcadlit do `partners.referred_by_affiliate_id`; poslat bezpečný password setup link; **NIKDY** neposílat vygenerované heslo.
+4. **Reject musí:** nastavit status `admin_rejected` (+`admin_rejection_reason`, `admin_reviewed_by`, `admin_reviewed_at`); **NE**vytvořit partnera; **NE**vytvořit atribuci; **NE**vytvořit provizi.
+5. **Provize** pouze z placené/fakturované aktivity firmy (`partner_invoices` → `affiliate_commissions.commission_type='company_invoice'`), nikdy z approve.
+6. Status přechody: `pending_admin_approval → approved` nebo `pending_admin_approval → admin_rejected`. Guard `WHERE status='pending_admin_approval'`, 0 řádků → 409. Zakázáno: `sent_to_company → approved`, approve z `company_rejected`/`expired`/`admin_rejected`, mutace po `approved`.
 
-**Přesné přechody:** `pending_admin_approval → approved` (approve), `pending_admin_approval → admin_rejected` (reject). Jen z `pending_admin_approval` (guard `WHERE status='pending_admin_approval'`, 0 řádků → 409). Zakázáno: `sent_to_company → approved`, approve z `company_rejected`/`expired`/`admin_rejected`, mutace po `approved`.
+**Implementační bloky (v tomto pořadí):**
 
-**Phase 2D může potřebovat:**
-- Edge Function **`approve-affiliate-company-lead`** (admin JWT gating dle vzoru `approve-partner-registration`: `auth.getUser` + `user_roles IN ('admin','superadmin')`); řeší auth `createUser` firmy, volání RPC, `generateLink` + zápis do `email_queue`.
-- **SECURITY DEFINER RPC** pro atomickou DB část approve (status guard + partner create/link + lead `approved` + refs + mirror), `SET search_path=''`.
-- možné bezpečné rozšíření **`record_affiliate_company_ref`** o param `source` pro `source='company_lead'` (dnes `'via_link'`); CREATE OR REPLACE, beze změny chování. **DB změna vyžaduje samostatné schválení Pavla.**
-- admin UI pro confirmed company leady (např. `src/pages/AdminCompanyLeads.tsx` + nav), filtr jen `pending_admin_approval`, volá pouze EF.
-- **spec 37** (`tests/e2e/37-affiliate-company-lead-admin-approval.spec.ts`), staging-only, self-contained.
+**Blok 1 — DB/RPC** (`supabase/migrations/20260608_approve_affiliate_company_lead_txn.sql`, staging SQL Editor, samostatné schválení Pavla):
+- Nová SECURITY DEFINER RPC **`approve_affiliate_company_lead_txn(p_lead_id, p_admin_user_id, p_partner_auth_id, p_action, p_rejection_reason)`**, `SET search_path=''`.
+- Nová interní helper RPC **`record_affiliate_company_ref_by_id(p_affiliate_id uuid, p_partner_id uuid, p_source text)`** — volaná pouze z `approve_affiliate_company_lead_txn`.
+- Stará `record_affiliate_company_ref(text, uuid)` se **nemodifikuje** — nová overload, žádný CREATE OR REPLACE existující signatury.
+- Approve atomicky: `SELECT FOR UPDATE WHERE status='pending_admin_approval'`; INSERT `partners` (idempotentní); UPDATE lead; pokud `lead.affiliate_id IS NOT NULL` → INSERT `affiliate_company_refs … source='company_lead'` + UPDATE `partners.referred_by_affiliate_id`; vrátit `{status, partner_id, attribution_written}`.
+- Nullable `affiliate_id` → atribuci přeskočit (best-effort). Approve nikdy neshodit.
+- Žádná nová DB migrace na sloupce — Phase 1 schema má vše.
 
-**Žádná nová DB migrace na sloupce** — `affiliate_company_leads` (Phase 1) už má `partner_id`, `admin_reviewed_by`, `admin_reviewed_at`, `admin_rejection_reason`, `approved_at` a status CHECK s `approved`/`admin_rejected`.
+**Blok 2 — Edge Function** (`supabase/functions/approve-affiliate-company-lead/index.ts`, po bloku 1):
+- Admin JWT guard: `Authorization: Bearer <JWT>` → `auth.getUser` → `user_roles IN ('admin','superadmin')`. JWT povinný, žádné `verify_jwt = false`.
+- Request: `POST { lead_id, action, rejection_reason? }`. Response: `{ success, lead_id, status }` — nikdy heslo/token/hash.
+- Approve: načíst lead (status guard) → `createUser` bez hesla → RPC → `generateLink` (nikdy nelog/nevrátit) → `email_queue`. `generateLink` selhání = best-effort, `setup_link_pending:true`.
+- Reject: status guard → RPC. Žádný `createUser`, žádný `generateLink`.
+- Kolize emailu při `createUser` → 409 se srozumitelnou zprávou.
 
-**Rizika:** `affiliate_company_refs.affiliate_id` NOT NULL vs. `lead.affiliate_id` nullable → approve musí proběhnout i bez atribuce (best-effort, nikdy neshodit approve); auth účet firmy = nová operace (kolize emailu); atomicita napříč auth+DB+email (email best-effort poslední krok); typ `generateLink` ověřit na stagingu bez změny produkční Auth konfigurace.
+**Blok 3 — Admin UI** (`src/pages/AdminCompanyLeads.tsx` + `AdminContextSubNav.tsx` + `App.tsx`, po bloku 2):
+- Route `/admin/company-leads`, protected admin route.
+- Nav badge: počet `pending_admin_approval`, pollovat 60 s, zobrazit jen pokud > 0.
+- Schválit: confirm dialog → POST EF → toast → refresh. Zamítnout: dialog + povinný `rejection_reason` → POST EF → toast → refresh.
+- Data přes SELECT `WHERE status='pending_admin_approval'`. **Žádný client INSERT/UPDATE — vše přes EF.**
+
+**Blok 4 — Spec 37** (`tests/e2e/37-affiliate-company-lead-admin-approval.spec.ts`, po blocích 1–3):
+- Staging-only, self-contained. Vzor jako spec 36 (insertLeadDirect, dynamické testovací účty).
+- 37a–37j backend: approve, partner vznik, refs `source='company_lead'`, nullable approve, reject, reject→žádný partner/refs, duplicate approve→409, špatný status→409, non-admin→403, anon→401.
+- 37k–37m admin UI: vidí lead, Schválit → zmizí, Zamítnout s důvodem → zmizí.
+- Spec 34/35/36 musí zůstat zelené.
+
+**Staging rollout pořadí:** Blok 1 → Blok 2 → Blok 3 → Blok 4 (Full E2E zelený → merge do main).
+
+**Produkční rollout gates** (každý vyžaduje výslovné schválení Pavla): G1 DB/RPC postcheck; G2 EF smoke (admin→200, non-admin→403); G3 Lovable Publish (P0 smoke zelený); G4 `generateLink` ověřen na stagingu (jednorázový link dorazí firmě); G5 email queue ověřen na stagingu.
+
+**Rizika:** nullable `affiliate_id` (best-effort, approve nikdy neshodit); email kolize (idempotence check před `createUser`); `generateLink` selhání po approve (best-effort, `setup_link_pending`); race condition (`FOR UPDATE`); `createUser`+RPC atomicita (retry idempotence); `generateLink` typ ověřit pouze na stagingu bez změny produkční Auth konfigurace.
+
+**Rollback staging:** EF delete + git revert UI + DROP FUNCTION. Data leadů nedotčena.
 
 **Produkční rollout Phase 2D vyžaduje výslovné schválení Pavla.** Žádný Lovable Publish bez schválení.
 

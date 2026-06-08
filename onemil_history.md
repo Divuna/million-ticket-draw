@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-06-08 - Phase 2D implementační plán: admin approval flow for confirmed B2B company leads
+
+- Implementační plán Phase 2D vypracován a zapsán do dokumentace. **Nic neimplementováno. Produkce nedotčena.**
+- Plán rozčleněn do 4 bloků: (1) DB/RPC migrace, (2) EF `approve-affiliate-company-lead`, (3) admin UI `AdminCompanyLeads.tsx`, (4) spec 37.
+- **Blok 1 — DB/RPC:** nová SECURITY DEFINER RPC `approve_affiliate_company_lead_txn` (atomický approve/reject s `FOR UPDATE` status guard); nová interní helper RPC `record_affiliate_company_ref_by_id(affiliate_id, partner_id, source)` — stará `record_affiliate_company_ref` beze změny (risk regrese). Migrace `supabase/migrations/20260608_approve_affiliate_company_lead_txn.sql`. Nullable `lead.affiliate_id` → atribuci přeskočit (best-effort), approve nikdy neshodit.
+- **Blok 2 — EF:** `approve-affiliate-company-lead`, admin JWT gating (`user_roles IN ('admin','superadmin')`). Approve: `createUser` bez hesla → RPC → `generateLink` (nikdy nelog/nevrátit) → `email_queue`. Reject: pouze RPC, žádný `createUser`. Kolize emailu → 409. `generateLink` selže po RPC → best-effort, `setup_link_pending:true`. Response vždy `{success, lead_id, status}` — nikdy heslo/token/hash.
+- **Blok 3 — UI:** route `/admin/company-leads`, nav badge `pending_admin_approval`, schvalovací dialog, zamítací dialog s `rejection_reason`. Vše přes EF, žádný přímý client INSERT/UPDATE.
+- **Blok 4 — spec 37:** 37a–37j backend (approve/reject/idempotence/nullable/auth guards), 37k–37m admin UI. Self-contained, neovlivní spec 34/35/36.
+- Produkční rollout gates G1–G5 definovány, každý vyžaduje výslovné schválení Pavla.
+- Rizika zdokumentována: nullable `affiliate_id` (best-effort), email kolize (idempotence check), `generateLink` selhání (re-send), race condition (`FOR UPDATE`), `createUser`+RPC atomicita (retry).
+
 ## 2026-06-08 - Phase 2D design: admin approval flow for confirmed B2B company leads (schválen, není implementováno)
 
 - Design schválen pro admin approve/reject company leadů ve stavu `pending_admin_approval`. **Pouze design — nic neimplementováno. Produkce nedotčena.**
