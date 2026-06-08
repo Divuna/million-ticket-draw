@@ -4,6 +4,14 @@
  * Zobrazuje B2B provize obchodníků z affiliate_commissions kde commission_type = 'company_invoice'.
  * Fáze 1: pouze přehled, žádné schvalování, žádné vyplácení, žádný ABO export.
  * Provize se počítají automaticky 2. každého měsíce (pg_cron job 25).
+ *
+ * Skutečné sloupce affiliate_commissions (ověřeno na produkci):
+ *   id, affiliate_id, commission_type, customer_ref_id, company_ref_id, source_invoice_id,
+ *   period_month, amount_base_czk (čistá provize), vat_rate, amount_total_czk (včetně DPH),
+ *   status, created_at, updated_at, paid_at
+ *
+ * Skutečné sloupce affiliate_accounts (ověřeno na produkci):
+ *   id, auth_user_id, name (NE full_name), ref_code, ...
  */
 import React, { useState, useEffect, useMemo } from "react";
 import { Navigate } from "react-router-dom";
@@ -29,8 +37,9 @@ interface CommissionRow {
   affiliate_id: string;
   commission_type: string;
   period_month: string | null;
-  amount_czk: number;
-  commission_rate: number | null;
+  amount_base_czk: number;   // čistá provize bez DPH
+  vat_rate: number | null;
+  amount_total_czk: number;  // provize včetně DPH
   source_invoice_id: string | null;
   company_ref_id: string | null;
   status: string;
@@ -83,8 +92,6 @@ function lastMonths(n: number): { label: string; value: string }[] {
   return result;
 }
 
-const VAT_RATE = 0.21; // DPH 21 %
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminAffiliateCommissions() {
@@ -109,14 +116,26 @@ export default function AdminAffiliateCommissions() {
     else setRefreshing(true);
 
     try {
-      // 1. Načti affiliate_commissions (commission_type='company_invoice') + affiliate_accounts join
+      // 1. Načti affiliate_commissions (commission_type='company_invoice')
+      //    + join affiliate_accounts přes FK affiliate_commissions_affiliate_id_fkey
+      //    Sloupce: name (NE full_name), ref_code
       const { data: commissions, error: commErr } = await supabase
         .from("affiliate_commissions")
         .select(
-          `id, affiliate_id, commission_type, period_month, amount_czk, commission_rate,
-           source_invoice_id, company_ref_id, status, created_at,
+          `id,
+           affiliate_id,
+           commission_type,
+           period_month,
+           amount_base_czk,
+           vat_rate,
+           amount_total_czk,
+           source_invoice_id,
+           company_ref_id,
+           status,
+           created_at,
            affiliate_accounts!affiliate_commissions_affiliate_id_fkey(
-             full_name, ref_code
+             name,
+             ref_code
            )`
         )
         .eq("commission_type", "company_invoice")
@@ -124,15 +143,18 @@ export default function AdminAffiliateCommissions() {
 
       if (commErr) throw commErr;
 
-      // 2. Pokud máme source_invoice_id → dohledej company přes partner_invoices → partners
-      //    Pokud máme company_ref_id → dohledej company přes affiliate_company_refs → partners
-      //    V obou případech NULL → "Neuvedeno"
+      // Prázdný výsledek je v pořádku — zobrazit prázdnou tabulku
+      if (!commissions || commissions.length === 0) {
+        setRows([]);
+        return;
+      }
 
-      const invoiceIds = (commissions ?? [])
+      // 2. Firmu dohledej pouze pokud máme source_invoice_id nebo company_ref_id
+      const invoiceIds = commissions
         .map((r: any) => r.source_invoice_id)
         .filter(Boolean) as string[];
 
-      const refIds = (commissions ?? [])
+      const refIds = commissions
         .map((r: any) => r.company_ref_id)
         .filter(Boolean) as string[];
 
@@ -145,7 +167,9 @@ export default function AdminAffiliateCommissions() {
           .in("id", invoiceIds);
         for (const inv of invData ?? []) {
           const p = (inv as any).partners;
-          invoicePartnerMap[inv.id] = p?.company_name || p?.name || "Neuvedeno";
+          if (p) {
+            invoicePartnerMap[inv.id] = p.company_name || p.name || "Neuvedeno";
+          }
         }
       }
 
@@ -158,12 +182,14 @@ export default function AdminAffiliateCommissions() {
           .in("id", refIds);
         for (const ref of refData ?? []) {
           const p = (ref as any).partners;
-          refPartnerMap[ref.id] = p?.company_name || p?.name || "Neuvedeno";
+          if (p) {
+            refPartnerMap[ref.id] = p.company_name || p.name || "Neuvedeno";
+          }
         }
       }
 
       // 3. Sestavení výsledných řádků
-      const result: CommissionRow[] = (commissions ?? []).map((r: any) => {
+      const result: CommissionRow[] = commissions.map((r: any) => {
         const aa = r.affiliate_accounts;
         let companyName: string | null = null;
         if (r.source_invoice_id && invoicePartnerMap[r.source_invoice_id]) {
@@ -176,13 +202,14 @@ export default function AdminAffiliateCommissions() {
           affiliate_id: r.affiliate_id,
           commission_type: r.commission_type,
           period_month: r.period_month,
-          amount_czk: r.amount_czk,
-          commission_rate: r.commission_rate,
+          amount_base_czk: r.amount_base_czk ?? 0,
+          vat_rate: r.vat_rate,
+          amount_total_czk: r.amount_total_czk ?? 0,
           source_invoice_id: r.source_invoice_id,
           company_ref_id: r.company_ref_id,
           status: r.status,
           created_at: r.created_at,
-          affiliate_name: aa?.full_name ?? null,
+          affiliate_name: aa?.name ?? null,
           affiliate_ref_code: aa?.ref_code ?? null,
           company_name: companyName,
         };
@@ -225,7 +252,6 @@ export default function AdminAffiliateCommissions() {
     if (filterStatus !== "all" && r.status !== filterStatus) return false;
     if (filterAffiliate !== "all" && r.affiliate_id !== filterAffiliate) return false;
     if (filterMonth !== "all") {
-      // period_month is stored as YYYY-MM-DD; compare first 7 chars
       const rowMonth = (r.period_month ?? "").substring(0, 7);
       const selMonth = filterMonth.substring(0, 7);
       if (rowMonth !== selMonth) return false;
@@ -380,7 +406,7 @@ export default function AdminAffiliateCommissions() {
                     <TableHead>Firma</TableHead>
                     <TableHead>Typ provize</TableHead>
                     <TableHead className="text-right">Základ (bez DPH)</TableHead>
-                    <TableHead className="text-right">DPH 21 %</TableHead>
+                    <TableHead className="text-right">DPH</TableHead>
                     <TableHead className="text-right">Celkem</TableHead>
                     <TableHead>Stav</TableHead>
                     <TableHead>Vytvořeno</TableHead>
@@ -388,8 +414,10 @@ export default function AdminAffiliateCommissions() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((row) => {
-                    const vatAmount = row.amount_czk * VAT_RATE;
-                    const totalAmount = row.amount_czk + vatAmount;
+                    const vatAmount = row.amount_total_czk - row.amount_base_czk;
+                    const vatLabel = row.vat_rate != null
+                      ? `DPH ${Math.round(row.vat_rate * 100)} %`
+                      : "DPH";
                     return (
                       <TableRow key={row.id}>
                         <TableCell className="whitespace-nowrap">
@@ -420,13 +448,13 @@ export default function AdminAffiliateCommissions() {
                           </code>
                         </TableCell>
                         <TableCell className="text-right font-mono text-sm">
-                          {formatCzk(row.amount_czk)}
+                          {formatCzk(row.amount_base_czk)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                        <TableCell className="text-right font-mono text-sm text-muted-foreground" title={vatLabel}>
                           {formatCzk(vatAmount)}
                         </TableCell>
                         <TableCell className="text-right font-mono text-sm font-semibold">
-                          {formatCzk(totalAmount)}
+                          {formatCzk(row.amount_total_czk)}
                         </TableCell>
                         <TableCell>{statusBadge(row.status)}</TableCell>
                         <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
