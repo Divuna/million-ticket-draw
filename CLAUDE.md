@@ -35,30 +35,34 @@ UI design schválen Pavlem. Implementováno v commitu `aaa2e092`. Spec 35 zelen�
 
 **Spec 35** (`tests/e2e/35-affiliate-company-lead-ui.spec.ts`) ✅ — zelený. Self-contained (dynamické testovací uživatele). Pokrývá: 35a sales_rep vidí sekci; 35b dialog 8 polí + Zrušit; 35c influencer-only nevidí sekci.
 
-## B2B LEADS — PHASE 2C DESIGN (07. 06. 2026, schváleno, není implementováno)
+## B2B LEADS — PHASE 2C IMPLEMENTOVÁNO + SPEC 36 ZELENÝ, MERGNUTO DO `main` (08. 06. 2026, staging only)
 
-Design company confirmation/rejection workflow schválen Pavlem. **Není implementováno. Produkce nedotčena.**
+Company confirmation/rejection workflow **implementován a uzamčen zeleným staging E2E. Mergnuto do `main` (fast-forward). Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.** Žádný Lovable Publish, žádný production EF deploy, žádná production DB změna. **Produkční rollout vyžaduje výslovné schválení Pavla.**
 
-**Plánovaná Edge Function `confirm-affiliate-company-lead`:**
-- PUBLIC — bez JWT; firma kliká link z e-mailu jako neautentizovaný návštěvník.
-- GET `?token=RAW_TOKEN` → validuje hash, vrátí `{ company_name, sales_rep_name, expires_at }`.
-- POST `{ token, action: "confirm" | "reject" }` → atomická UPDATE `WHERE status='sent_to_company'`:
+- Finální commit na `main`: `f1999b9fe980737f78de5f82d28817db458044b0` (`f1999b9f`).
+- Merge fast-forward z dočasné větve `fix/spec36-reject-retry` (po merge smazána lokálně i na originu). Jediná mergnutá změna z větve byla **test-only** `tests/e2e/36-affiliate-company-lead-confirm.spec.ts`.
+- Poslední zelený staging Full E2E run `27123113289`: **82 passed · 3 skipped · 0 failed**. Spec 34 ✅, spec 35 ✅, spec 36 ✅ (11/11).
+
+**Edge Function `confirm-affiliate-company-lead` (`supabase/functions/confirm-affiliate-company-lead/index.ts`):**
+- PUBLIC — bez JWT (`verify_jwt = false` v `supabase/config.toml`); firma kliká link z e-mailu jako neautentizovaný návštěvník. DB přes service-role.
+- GET `?token=RAW_TOKEN` → validuje hash, vrátí `{ success, company_name, sales_rep_name, expires_at }`.
+- POST `{ token, action: "confirm" | "reject", rejection_reason? }` → atomická UPDATE `WHERE status='sent_to_company'`:
   - confirm: `status = 'pending_admin_approval'`, nastaví `company_confirmed_at`, `submitted_to_admin_at`, `company_confirmation_used_at`, smaže token hash.
-  - reject: `status = 'company_rejected'`, nastaví `company_rejected_at`, `company_confirmation_used_at`, smaže token hash.
-- Race condition ochrana: UPDATE vrátí 0 řádků → HTTP 409.
-- NIKDY: INSERT do `affiliate_company_refs`, `affiliate_commissions`, vytváření partner účtu, vracení raw tokenu.
+  - reject: `status = 'company_rejected'`, nastaví `company_rejected_at`, `company_confirmation_used_at`, `company_rejection_reason`, smaže token hash.
+- Token: 404 invalid / 410 expired / 409 already-processed. Race condition ochrana: UPDATE vrátí 0 řádků → HTTP 409. Použitý token (hash NULL po confirm/reject) → lookup nenajde řádek → 404.
+- NIKDY: INSERT do `affiliate_company_refs`, `affiliate_commissions`, vytváření/aktivace partner účtu, `partners.referred_by_affiliate_id`, password setup link, vracení raw tokenu ani hash.
 
-**Plánovaná veřejná stránka `src/pages/CompanyLeadConfirm.tsx`:**
-- Route: `/partner/invite` — public (přidat do App.tsx + do allowed listů pro affiliate/influencer render guard).
-- Zobrazí summary žádosti, tlačítka `Potvrzuji žádost` / `Zamítnout žádost`, success/error stavy.
+**Veřejná stránka `src/pages/CompanyLeadConfirm.tsx`:**
+- Route `/partner/invite` — public (přidána do `App.tsx` + do allowed listů affiliate i influencer — useEffect guard i render guard).
+- Zobrazí summary žádosti, tlačítka `Potvrzuji žádost` / `Zamítnout žádost`, loading/success/error stavy. Reject má volitelný textarea s důvodem.
 
-**Email URL**: Phase 2A generuje `/affiliate/company-lead/confirm?token=X`. Po Phase 2C se změní na `/partner/invite?token=X` (2 řádky v create-affiliate-company-lead/index.ts).
+**Email URL**: `create-affiliate-company-lead` nyní generuje `/partner/invite?token=X` (změněno z `/affiliate/company-lead/confirm`).
 
 **Žádná nová DB migrace** — Phase 1 schema obsahuje všechny potřebné sloupce.
 
-**Plánovaný spec 36** (`tests/e2e/36-affiliate-company-lead-confirm.spec.ts`): staging-only, self-contained. 7 backend testů (confirm, reject, expired, used, invalid, no-partner/refs/commission, GET info) + 4 UI testy (confirm page, reject page, expired page, invalid page). Spec 34 a spec 35 musí zůstat zelené.
-
-**Implementační pořadí:** aktualizovat email URL v EF → deploy `confirm-affiliate-company-lead` na staging → frontend stránka + route → build ✅ → spec 36 → Staging Full E2E → dokumentace → commit/push → produkce jen se schválením Pavla.
+**Spec 36** (`tests/e2e/36-affiliate-company-lead-confirm.spec.ts`): staging-only, self-contained, 11 testů (36a–36k). Backend: confirm, reject, expired, used→404, invalid→404, no-partner/refs/commission, GET info. UI (`/partner/invite`): confirm, reject, expired, invalid stavy.
+- **Pravidlo (neměnit zpět):** spec 36i reject UI používá `dispatchEvent('click')` uvnitř `expect(...).toPass()` retry bloku — `.click()` čeká na stabilitu a re-rendery stránky klik nikdy nedispatchly; `dispatchEvent('click')` vystřelí bublající event okamžitě, React 18 root-delegated listener ho chytí.
+- Spec 34 email assertion opravena na `/partner/invite`. Spec 34 a spec 35 musí zůstat zelené.
 
 ## SPRÁVA SOUTĚŽÍ — statistické karty jen z `active` (06. 06. 2026, admin UI invariant)
 

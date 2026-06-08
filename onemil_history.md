@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-06-08 - Phase 2C implementováno + spec 36 zelený, mergnuto do `main`
+
+- Phase 2C (company confirmation/rejection) implementována: Edge Function `supabase/functions/confirm-affiliate-company-lead/index.ts` (public, GET+POST, SHA-256 token hash, confirm `sent_to_company → pending_admin_approval`, reject `sent_to_company → company_rejected`, race guard, žádný partner/refs/provize/raw token).
+- Email URL v `create-affiliate-company-lead` změněna `/affiliate/company-lead/confirm` → `/partner/invite`.
+- Frontend: `src/pages/CompanyLeadConfirm.tsx` + public route `/partner/invite` v `App.tsx` (allowed listy affiliate i influencer). `supabase/config.toml`: `confirm-affiliate-company-lead verify_jwt = false`.
+- Nový spec `tests/e2e/36-affiliate-company-lead-confirm.spec.ts` (11 testů 36a–36k). Oprava spec 34 email URL assertion na `/partner/invite`.
+- Spec 36i (reject UI) finalizován přes `dispatchEvent('click')` v `expect(...).toPass()` retry bloku (`.click()` čekal na stabilitu a re-rendery klik nedispatchly).
+- Merge: fast-forward only z dočasné větve `fix/spec36-reject-retry` (po merge smazána lokálně i na originu). Jediná mergnutá změna z větve byla test-only `tests/e2e/36-affiliate-company-lead-confirm.spec.ts`.
+- Finální commit na `main`: `f1999b9fe980737f78de5f82d28817db458044b0`.
+- Poslední zelený staging Full E2E run `27123113289`: 82 passed · 3 skipped · 0 failed. Spec 34 ✅, spec 35 ✅, spec 36 ✅.
+- Produkce `xkzhjldrojjlrkezorey` nedotčena — žádný Lovable Publish, žádný production EF deploy, žádná production DB změna. Produkční rollout vyžaduje výslovné schválení Pavla.
+
 ## 2026-06-07 - Phase 2C design: company confirmation/rejection (schválen, není implementováno)
 
 - Design schválen pro Edge Function `confirm-affiliate-company-lead` (public, bez JWT, GET+POST).

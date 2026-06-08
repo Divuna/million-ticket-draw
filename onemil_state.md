@@ -1,6 +1,28 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 07. 06. 2026
+**Aktualizováno:** 08. 06. 2026
+
+---
+
+## ✅ PHASE 2C — confirm/reject workflow + spec 36 ZELENÝ, MERGNUTO DO `main` (08. 06. 2026)
+
+**Phase 2C (company confirmation/rejection) je implementována a uzamčena zeleným staging E2E. Mergnuto do `main`. Produkce nedotčena.**
+
+- **Finální commit na `main`:** `f1999b9fe980737f78de5f82d28817db458044b0` (`f1999b9f`).
+- **Merge:** fast-forward only z dočasné větve `fix/spec36-reject-retry` (smazána lokálně i na originu po merge).
+- **Poslední zelený staging Full E2E run:** `27123113289` — **82 passed · 3 skipped · 0 failed** (7,2 min).
+- **Spec 34 ✅, spec 35 ✅, spec 36 ✅** (spec 36 = 11/11 testů zelených, vč. 36i reject UI).
+- Jediná změna mergnutá z větve byla **test-only**: `tests/e2e/36-affiliate-company-lead-confirm.spec.ts`.
+
+**Implementované komponenty Phase 2C (na `main`, staging only):**
+- Edge Function `supabase/functions/confirm-affiliate-company-lead/index.ts` — PUBLIC (`verify_jwt = false`), GET+POST, service-role pro DB. GET `?token=` → safe summary `{ success, company_name, sales_rep_name, expires_at }`. POST `{ token, action: "confirm"|"reject", rejection_reason? }`. Token: SHA-256 hash lookup, 404 invalid / 410 expired / 409 already-processed. Confirm: `sent_to_company → pending_admin_approval` (+`company_confirmed_at`, `company_confirmation_used_at`, `submitted_to_admin_at`, hash NULL). Reject: `sent_to_company → company_rejected` (+`company_rejected_at`, `company_confirmation_used_at`, `company_rejection_reason`, hash NULL). Race guard `UPDATE … WHERE status='sent_to_company'`. NIKDY: partner účet, `affiliate_company_refs`, `partners.referred_by_affiliate_id`, provize, password setup link, raw token/hash.
+- Email URL v `create-affiliate-company-lead` změněna z `/affiliate/company-lead/confirm` na `/partner/invite`.
+- Frontend stránka `src/pages/CompanyLeadConfirm.tsx` + public route `/partner/invite` v `App.tsx` (přidána do allowed listů affiliate i influencer — useEffect i render guard).
+- `supabase/config.toml`: `[functions.confirm-affiliate-company-lead] verify_jwt = false`.
+
+**Pozn. k testu spec 36i (reject UI):** klik na reject tlačítko používá `dispatchEvent('click')` uvnitř `expect(...).toPass()` retry bloku — `.click()` čekal na stabilitu a re-rendery stránky klik nikdy nedispatchly. `dispatchEvent('click')` vystřelí bublající event okamžitě, React 18 root-delegated listener ho chytí. Neměnit zpět na `.click()`.
+
+**Produkce:** `xkzhjldrojjlrkezorey` **NEDOTČENA** — žádný Lovable Publish, žádný production EF deploy, žádná production DB změna. **Produkční rollout Phase 2C vyžaduje výslovné schválení Pavla.**
 
 ---
 
