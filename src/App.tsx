@@ -367,21 +367,12 @@ function GlobalWinnersRealtimeFeed() {
 }
 
 function AppContent() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isPasswordRecovery } = useAuth();
   const { isAdmin, isPartner, isPartnerAccount, isInfluencerAccount, isAffiliateAccount, loading: roleLoading } = useUserRole();
   const location = useLocation();
   const navigate = useNavigate();
   const isPartnerRoute = location.pathname.startsWith('/partner');
   const isInfluencerRoute = location.pathname.startsWith('/influencer');
-
-  // Detect PASSWORD_RECOVERY synchronously from URL hash at mount time.
-  // Supabase appends #access_token=...&type=recovery to the redirect URL.
-  // We read this ONCE before any effects run so the route guard can be blocked
-  // immediately — preventing the race condition where the partner route guard
-  // redirects to /partner/dashboard before PASSWORD_RECOVERY fires.
-  const isPasswordRecoveryMode = React.useRef(
-    typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
-  );
 
   // All hooks MUST be called unconditionally (React rules of hooks).
   const partnerData = usePartnerData(isPartnerAccount && !isInfluencerAccount ? user?.id : undefined);
@@ -391,25 +382,22 @@ function AppContent() {
   useHeartbeat(user?.id);
 
   // PASSWORD_RECOVERY: when a partner clicks the one-time setup link from approval
-  // email, Supabase fires PASSWORD_RECOVERY via onAuthStateChange. Intercept it
-  // and send the user to the dedicated set-password page before any route guard
-  // can redirect them away to /partner/dashboard.
+  // email, Supabase fires PASSWORD_RECOVERY via onAuthStateChange (tracked in useAuth).
+  // Navigate to /partner/set-password. isPasswordRecovery is set in the SAME React
+  // batch as user, so route guards below already see it as true and do not redirect.
   React.useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        isPasswordRecoveryMode.current = true;
-        navigate('/partner/set-password', { replace: true });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    if (isPasswordRecovery) {
+      navigate('/partner/set-password', { replace: true });
+    }
+  }, [isPasswordRecovery, navigate]);
 
   // Hard-block: Redirect accounts away from unauthorized routes
   React.useEffect(() => {
     if (roleLoading || !user) return;
-    // Never redirect during a password-recovery flow — let PASSWORD_RECOVERY
-    // handler navigate to /partner/set-password uninterrupted.
-    if (isPasswordRecoveryMode.current) return;
+    // Never redirect during a password-recovery flow — isPasswordRecovery is set
+    // in the same React batch as user (inside useAuthState onAuthStateChange),
+    // so by the time this guard fires, isPasswordRecovery is already true.
+    if (isPasswordRecovery) return;
     
     // Influencer accounts: redirect to Affiliate v2 UI.
     // /influencer/* routes remain mounted for backward compat but the default landing is /affiliate/dashboard.
@@ -466,7 +454,7 @@ function AppContent() {
     ) {
       navigate("/", { replace: true });
     }
-  }, [isAdmin, isPartner, isPartnerAccount, isInfluencerAccount, isAffiliateAccount, user, location.pathname, navigate, roleLoading]);
+  }, [isAdmin, isPartner, isPartnerAccount, isInfluencerAccount, isAffiliateAccount, user, location.pathname, navigate, roleLoading, isPasswordRecovery]);
 
   if (authLoading) {
     return null;
@@ -490,8 +478,9 @@ function AppContent() {
   }
 
   // Hard-block: If partner/influencer tries to access blocked route, show spinner (redirect in effect)
+  // Skip during password recovery flow — let the user reach /partner/set-password.
   if (isPartnerAccount && user && !isInfluencerAccount && isCustomerBlockedRoute(location.pathname)
-      && !isPasswordRecoveryMode.current) {
+      && !isPasswordRecovery) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

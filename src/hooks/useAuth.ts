@@ -21,6 +21,10 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  /** True when Supabase fired PASSWORD_RECOVERY (one-time setup/reset link clicked).
+   *  Stays true until the user navigates away or completes the password update.
+   *  Route guards must not redirect while this is true. */
+  isPasswordRecovery: boolean;
   signUp: (email: string, password: string, marketingConsent?: boolean) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -66,11 +70,17 @@ export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        // All setX calls here are batched by React 18 into a single re-render,
+        // so isPasswordRecovery=true and user are visible together on the same render.
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsPasswordRecovery(true);
+        }
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -193,6 +203,7 @@ export const useAuthState = () => {
     user,
     session,
     loading,
+    isPasswordRecovery,
     signUp,
     signIn,
     signOut,
