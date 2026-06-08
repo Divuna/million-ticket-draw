@@ -64,9 +64,9 @@ Company confirmation/rejection workflow **implementován a uzamčen zeleným sta
 - **Pravidlo (neměnit zpět):** spec 36i reject UI používá `dispatchEvent('click')` uvnitř `expect(...).toPass()` retry bloku — `.click()` čeká na stabilitu a re-rendery stránky klik nikdy nedispatchly; `dispatchEvent('click')` vystřelí bublající event okamžitě, React 18 root-delegated listener ho chytí.
 - Spec 34 email assertion opravena na `/partner/invite`. Spec 34 a spec 35 musí zůstat zelené.
 
-## PHASE 2D — Admin approval flow for confirmed B2B company leads, implementační plán hotový, NOT YET IMPLEMENTED (08. 06. 2026)
+## PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, Blok 1 DB/RPC na staging ✅, Blok 2–4 čeká)
 
-**Phase 2D NENÍ implementováno. Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
+**Phase 2D — Blok 1 DB/RPC nasazen na staging. Blok 2–4 čeká na implementaci. Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
 
 **Cíl:** admin schvaluje/zamítá company leady ve stavu `pending_admin_approval` (po company confirm z Phase 2C).
 
@@ -80,13 +80,12 @@ Company confirmation/rejection workflow **implementován a uzamčen zeleným sta
 
 **Implementační bloky (v tomto pořadí):**
 
-**Blok 1 — DB/RPC** (`supabase/migrations/20260608_approve_affiliate_company_lead_txn.sql`, staging SQL Editor, samostatné schválení Pavla):
-- Nová SECURITY DEFINER RPC **`approve_affiliate_company_lead_txn(p_lead_id, p_admin_user_id, p_partner_auth_id, p_action, p_rejection_reason)`**, `SET search_path=''`.
-- Nová interní helper RPC **`record_affiliate_company_ref_by_id(p_affiliate_id uuid, p_partner_id uuid, p_source text)`** — volaná pouze z `approve_affiliate_company_lead_txn`.
-- Stará `record_affiliate_company_ref(text, uuid)` se **nemodifikuje** — nová overload, žádný CREATE OR REPLACE existující signatury.
-- Approve atomicky: `SELECT FOR UPDATE WHERE status='pending_admin_approval'`; INSERT `partners` (idempotentní); UPDATE lead; pokud `lead.affiliate_id IS NOT NULL` → INSERT `affiliate_company_refs … source='company_lead'` + UPDATE `partners.referred_by_affiliate_id`; vrátit `{status, partner_id, attribution_written}`.
+**Blok 1 — DB/RPC ✅ NASAZENO NA STAGING** (migrace `20260608_approve_affiliate_company_lead_txn.sql` + `20260608_approve_affiliate_company_lead_txn_harden.sql`, commit `f093e22c`):
+- **`approve_affiliate_company_lead_txn`** — SECURITY DEFINER, `SET search_path=''`, `GRANT EXECUTE TO authenticated`. Atomický approve/reject, `FOR UPDATE` status guard, idempotentní INSERT `partners`, best-effort atribuce (`EXCEPTION WHEN OTHERS` — nikdy neshodí approve).
+- **`record_affiliate_company_ref_by_id`** — SECURITY DEFINER, `SET search_path=''`, **interní: `EXECUTE` pro `anon` i `authenticated` explicitně odebráno** (hardening). Voláno výhradně z `approve_affiliate_company_lead_txn` přes SECURITY DEFINER context. **Neměnit toto nastavení grantů.**
+- Stará `record_affiliate_company_ref(text, uuid)` — **nedotčena**.
 - Nullable `affiliate_id` → atribuci přeskočit (best-effort). Approve nikdy neshodit.
-- Žádná nová DB migrace na sloupce — Phase 1 schema má vše.
+- Žádná nová DB migrace na sloupce — Phase 1 schema má vše. Produkce nedotčena.
 
 **Blok 2 — Edge Function** (`supabase/functions/approve-affiliate-company-lead/index.ts`, po bloku 1):
 - Admin JWT guard: `Authorization: Bearer <JWT>` → `auth.getUser` → `user_roles IN ('admin','superadmin')`. JWT povinný, žádné `verify_jwt = false`.

@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-06-08 - Phase 2D Blok 1 DB/RPC nasazen na staging + hardening
+
+- Migrace `20260608_approve_affiliate_company_lead_txn.sql` aplikována na staging `dxmowysntemfqfnanxua`. **Produkce nedotčena.**
+- Nová SECURITY DEFINER RPC `approve_affiliate_company_lead_txn(p_lead_id, p_admin_user_id, p_partner_auth_id, p_action, p_rejection_reason)`: atomický approve/reject s `FOR UPDATE` status guard; approve — idempotentní INSERT `partners`, UPDATE lead, best-effort atribuce (`EXCEPTION WHEN OTHERS`); reject — UPDATE lead.
+- Nová interní helper SECURITY DEFINER RPC `record_affiliate_company_ref_by_id(p_affiliate_id uuid, p_partner_id uuid, p_source text)`: zapíše `affiliate_company_refs(source='company_lead')`, zrcadlí `partners.referred_by_affiliate_id`.
+- Hardening migrace `20260608_approve_affiliate_company_lead_txn_harden.sql`: `REVOKE EXECUTE ON record_affiliate_company_ref_by_id FROM anon, authenticated` — Supabase auto-grant odebrán; funkce dostupná pouze owner/service_role přes SECURITY DEFINER context. Commit `f093e22c`.
+- Postcheck ✅: obě funkce SECURITY DEFINER + `search_path=''`; `approve_affiliate_company_lead_txn` EXECUTE pro `authenticated` ✅; `record_affiliate_company_ref_by_id` EXECUTE pro `anon`/`authenticated` ❌ odebráno ✅; stará `record_affiliate_company_ref` nedotčena; commission tabulky nedotčeny.
+
 ## 2026-06-08 - Phase 2D implementační plán: admin approval flow for confirmed B2B company leads
 
 - Implementační plán Phase 2D vypracován a zapsán do dokumentace. **Nic neimplementováno. Produkce nedotčena.**

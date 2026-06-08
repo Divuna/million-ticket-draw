@@ -4,9 +4,9 @@
 
 ---
 
-## 🟡 PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, implementační plán hotový, NENÍ implementováno)
+## 🟡 PHASE 2D — Admin approval flow for confirmed B2B company leads (08. 06. 2026, Blok 1 DB/RPC nasazen na staging ✅, zbývá Blok 2–4)
 
-**Phase 2D NENÍ implementováno. Pouze design + implementační plán. Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
+**Phase 2D — Blok 1 DB/RPC nasazen a ověřen na staging `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` se nesmí dotknout.** Spec 34, 35 a 36 musí zůstat zelené.
 
 **Cíl:** admin schvaluje/zamítá company leady ve stavu `pending_admin_approval` (po company confirm z Phase 2C).
 
@@ -21,15 +21,14 @@
 
 ### Implementační plán — pořadí bloků
 
-**Blok 1 — DB/RPC** (`supabase/migrations/20260608_approve_affiliate_company_lead_txn.sql`, staging SQL Editor)
-- Nová SECURITY DEFINER RPC **`approve_affiliate_company_lead_txn(p_lead_id, p_admin_user_id, p_partner_auth_id, p_action, p_rejection_reason)`**, `SET search_path=''`.
-- Nová interní helper SECURITY DEFINER RPC **`record_affiliate_company_ref_by_id(p_affiliate_id uuid, p_partner_id uuid, p_source text)`** — volá ji pouze `approve_affiliate_company_lead_txn`, stará `record_affiliate_company_ref` zůstává beze změny.
-- Stávající `record_affiliate_company_ref` se **nemodifikuje** — risk regrese. Nová overload místo CREATE OR REPLACE existující signatury.
-- **Approve v transakci:** `SELECT … FOR UPDATE WHERE status='pending_admin_approval'` (guard, 0 řádků → `{status:'conflict'}`); INSERT do `partners` (idempotentní — pokud auth_user_id existuje, SELECT); UPDATE lead (`status='approved'`, `partner_id`, `approved_at`, `admin_reviewed_by`, `admin_reviewed_at`); pokud `lead.affiliate_id IS NOT NULL` → INSERT `affiliate_company_refs(affiliate_id, partner_id, source='company_lead') ON CONFLICT (partner_id) DO NOTHING` + UPDATE `partners SET referred_by_affiliate_id WHERE referred_by_affiliate_id IS NULL`; vrátit `{status:'approved', partner_id, attribution_written: bool}`.
-- **Reject v transakci:** status guard; UPDATE lead (`status='admin_rejected'`, `admin_rejection_reason`, `admin_reviewed_by`, `admin_reviewed_at`); vrátit `{status:'admin_rejected'}`.
-- **Nullable `affiliate_id`:** pokud `lead.affiliate_id IS NULL` → atribuční krok se přeskočí (best-effort), approve pokračuje. Nikdy neshodit approve kvůli chybějící atribuci.
-- Žádná nová DB migrace na sloupce — Phase 1 schema má vše (`partner_id`, `admin_reviewed_by`, `admin_reviewed_at`, `admin_rejection_reason`, `approved_at`, status CHECK s `approved`/`admin_rejected`).
-- **Aplikovat pouze na staging** dokud Pavel neschválí produkci.
+**Blok 1 — DB/RPC ✅ NASAZENO NA STAGING (08. 06. 2026)**
+- Migrace: `supabase/migrations/20260608_approve_affiliate_company_lead_txn.sql` + `20260608_approve_affiliate_company_lead_txn_harden.sql`. Commit `f093e22c`.
+- **`approve_affiliate_company_lead_txn(p_lead_id, p_admin_user_id, p_partner_auth_id, p_action, p_rejection_reason)`** — SECURITY DEFINER, `SET search_path=''`, `GRANT EXECUTE TO authenticated`. Atomický approve/reject s `FOR UPDATE` status guard. Approve: idempotentní INSERT `partners`; UPDATE lead; best-effort atribuce (`EXCEPTION WHEN OTHERS` — nikdy neshodí approve). Reject: UPDATE lead, žádný partner.
+- **`record_affiliate_company_ref_by_id(p_affiliate_id uuid, p_partner_id uuid, p_source text)`** — SECURITY DEFINER, `SET search_path=''`. Interní helper — **`EXECUTE` pro `anon` i `authenticated` explicitně odebráno** (hardening migrace). Voláno výhradně z `approve_affiliate_company_lead_txn` přes SECURITY DEFINER context (owner postgres).
+- Stará `record_affiliate_company_ref(text, uuid)` — **nedotčena**.
+- Postcheck ✅: obě funkce existují, `prosecdef=true`, `proconfig=[search_path=""]`; `approve_affiliate_company_lead_txn` — `authenticated` EXECUTE ✅; `record_affiliate_company_ref_by_id` — `anon`/`authenticated` EXECUTE ❌ odebráno ✅.
+- Žádná nová DB migrace na sloupce — Phase 1 schema má vše.
+- **Produkce nedotčena.**
 
 **Blok 2 — Edge Function** (`supabase/functions/approve-affiliate-company-lead/index.ts`, po bloku 1)
 - **Auth guard:** `Authorization: Bearer <admin JWT>` → `supabaseAdmin.auth.getUser(token)` → `user_roles IN ('admin','superadmin')`. JWT povinný (žádné `verify_jwt = false`).
