@@ -679,8 +679,11 @@ test.describe('Phase 2D — approve-affiliate-company-lead (spec 37)', () => {
       const schvalitBtn = page.getByRole('button', { name: /Schválit/ }).first();
       await schvalitBtn.click();
 
-      // Confirm dialog appears
-      const dialog = page.getByRole('dialog');
+      // Confirm dialog — scoped to the dialog that contains "Ano, schválit"
+      // (page has 2 role=dialog elements: approve confirm + reject; filter to the right one)
+      const dialog = page.getByRole('dialog').filter({
+        has: page.getByRole('button', { name: /Ano, schválit/ }),
+      });
       await expect(dialog).toBeVisible({ timeout: 8_000 });
 
       // Click "Ano, schválit"
@@ -720,8 +723,11 @@ test.describe('Phase 2D — approve-affiliate-company-lead (spec 37)', () => {
       const zamitButton = page.getByRole('button', { name: /Zamítnout/ }).first();
       await zamitButton.click();
 
-      // Reject dialog appears
-      const dialog = page.getByRole('dialog');
+      // Reject dialog — scoped to the dialog that contains the rejection textarea
+      // (page has 2 role=dialog elements: approve confirm + reject; filter to the right one)
+      const dialog = page.getByRole('dialog').filter({
+        has: page.locator('textarea#reject-reason'),
+      });
       await expect(dialog).toBeVisible({ timeout: 8_000 });
 
       // Fill in rejection reason
