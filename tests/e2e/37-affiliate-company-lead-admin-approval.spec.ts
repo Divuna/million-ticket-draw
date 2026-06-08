@@ -216,6 +216,9 @@ async function loginAsAdmin(page: Page) {
   await page.getByRole('button', { name: 'Přihlásit se', exact: true }).click();
   // Admin lands on /admin after login
   await page.waitForURL(/\/admin/, { timeout: 20_000 });
+  // Ensure Supabase auth session is fully committed to localStorage before
+  // any callApproveEF reads it via supabase.auth.getSession()
+  await page.waitForLoadState('networkidle', { timeout: 15_000 });
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -686,12 +689,19 @@ test.describe('Phase 2D — approve-affiliate-company-lead (spec 37)', () => {
       });
       await expect(dialog).toBeVisible({ timeout: 8_000 });
 
-      // Click "Ano, schválit"
-      await dialog.getByRole('button', { name: /Ano, schválit/ }).click();
+      // Click "Ano, schválit" and wait for the approve EF POST to complete
+      // (Promise.all ensures we don't miss the response before the click fires)
+      const [approveResp] = await Promise.all([
+        page.waitForResponse(
+          (r) => r.url().includes('/functions/v1/approve-affiliate-company-lead') && r.request().method() === 'POST',
+          { timeout: 20_000 },
+        ),
+        dialog.getByRole('button', { name: /Ano, schválit/ }).click(),
+      ]);
+      expect(approveResp.status()).toBe(200);
 
-      // Dialog closes and lead disappears from list (list refreshes after action)
-      await expect(dialog).not.toBeVisible({ timeout: 30_000 });
-      await expect(page.getByText(companyName)).not.toBeVisible({ timeout: 30_000 });
+      // After EF succeeds, fetchLeads refreshes the list → lead disappears
+      await expect(page.getByText(companyName)).not.toBeVisible({ timeout: 15_000 });
 
     } finally {
       await cleanupCompanyAccount(admin, companyEmail);
@@ -735,12 +745,18 @@ test.describe('Phase 2D — approve-affiliate-company-lead (spec 37)', () => {
       await expect(textarea).toBeVisible({ timeout: 5_000 });
       await textarea.fill('Spec37M automated test rejection — důvod zamítnutí pro E2E test.');
 
-      // Click "Zamítnout" button inside the dialog (not the one in the list)
-      await dialog.getByRole('button', { name: 'Zamítnout' }).click();
+      // Click "Zamítnout" and wait for the reject EF POST to complete
+      const [rejectResp] = await Promise.all([
+        page.waitForResponse(
+          (r) => r.url().includes('/functions/v1/approve-affiliate-company-lead') && r.request().method() === 'POST',
+          { timeout: 20_000 },
+        ),
+        dialog.getByRole('button', { name: 'Zamítnout' }).click(),
+      ]);
+      expect(rejectResp.status()).toBe(200);
 
-      // Dialog closes and lead disappears from list
-      await expect(dialog).not.toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText(companyName)).not.toBeVisible({ timeout: 20_000 });
+      // After EF succeeds, fetchLeads refreshes the list → lead disappears
+      await expect(page.getByText(companyName)).not.toBeVisible({ timeout: 15_000 });
 
     } finally {
       await cleanupLeads(admin, companyEmail);
