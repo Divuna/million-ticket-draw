@@ -1,6 +1,18 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 08. 06. 2026 — Phase 2A–2D + B2B fakturace + pg_cron provize KOMPLETNÍ v produkci. Dokumentace finalizována.
+**Aktualizováno:** 08. 06. 2026 — Phase 2A–2D + B2B fakturace + pg_cron provize KOMPLETNÍ v produkci. Production smoke run `27168922017` ✅ success (commit `4a5a8d40`).
+
+## 🟢 B2B WORKFLOW ONÉMIL — PRODUKČNĚ OVĚŘENO (08. 06. 2026)
+
+**Production smoke run `27168922017` ✅ success** — commit `4a5a8d40`, workflow `Playwright Smoke Tests`, 08. 06. 2026 21:44 UTC.
+
+Celý B2B workflow OneMil je produkčně ověřen end-to-end:
+- ✅ Obchodník (Pavel) přidá firmu → lead v `affiliate_company_leads`
+- ✅ Firma dostane email s potvrzovacím linkem → potvrdí žádost
+- ✅ Admin schválí lead → partner účet Botanic vytvořen, `affiliate_company_refs.source='company_lead'`, `partners.referred_by_affiliate_id` nastaven
+- ✅ Firma dostane email s jednorázovým recovery linkem → přistane na `/partner/set-password` → nastaví heslo → `/partner/dashboard`
+- ✅ Aktivace MioCoinů zákazníkem (přes kód) → draft faktura → paid faktura → 5% provize Pavlovi (`calculated`)
+- ✅ Měsíční cron (jobid 25, `0 3 2 * *`) automaticky spouští výpočet B2B company provizí
 
 ## 🟢 B2B FAKTURACE & PROVIZE — PRODUKČNÍ STAV (08. 06. 2026)
 

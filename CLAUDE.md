@@ -2,6 +2,9 @@
 
 ## B2B FAKTURACE A PROVIZE — INVARIANTY (08. 06. 2026)
 
+**Produkčně ověřeno:** production smoke run `27168922017` ✅ success — commit `4a5a8d40`, 08. 06. 2026 21:44 UTC.
+Celý B2B workflow (Botanic → Pavel vazba, emaily, nastavení hesla firmy, fakturace, provize, měsíční cron) funguje end-to-end na produkci `xkzhjldrojjlrkezorey`.
+
 ### Fakturační řetězec (ověřen E2E testem na produkci)
 
 ```

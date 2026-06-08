@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-06-08 - Production smoke ✅ — B2B workflow OneMil produkčně ověřen
+
+- **Production smoke run `27168922017`** — commit `4a5a8d40`, workflow `Playwright Smoke Tests`, conclusion `success`, 08. 06. 2026 21:44 UTC.
+- Celý B2B workflow OneMil je produkčně ověřen end-to-end na `xkzhjldrojjlrkezorey`:
+  - Obchodník přidá firmu → lead, potvrzení firmou, admin schválení
+  - Partner účet Botanic: `affiliate_company_refs.source='company_lead'`, `partners.referred_by_affiliate_id` nastaven
+  - Email s recovery linkem → `/partner/set-password` → nastavení hesla → `/partner/dashboard`
+  - MioCoin aktivace → faktura → paid → 5 % provize Pavlovi
+  - Měsíční cron (jobid 25) automaticky spouští výpočet B2B provizí
+- Posledních 5 smoke runů na `main` — všechny `success` (runs `27168922017`, `27168755747`, `27168706325`, `27167699808`, `27167363157`).
+
 ## 2026-06-08 - B2B fakturace a provize — E2E test + cron nasazen na produkci
 
 ### Produkční E2E test B2B fakturačního řetězce ✅
