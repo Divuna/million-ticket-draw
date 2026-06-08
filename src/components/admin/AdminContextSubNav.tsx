@@ -63,6 +63,7 @@ export const AdminContextSubNav: React.FC = () => {
   const { unreadCount } = useUnreadMessagesCount();
   const { pendingCount: pendingOffersCount } = usePendingOffersCount();
   const [pendingPartnerRegistrationsCount, setPendingPartnerRegistrationsCount] = useState(0);
+  const [pendingCompanyLeadsCount, setPendingCompanyLeadsCount] = useState(0);
 
   const activeSection = getAdminSectionFromPath(location.pathname, location.search);
   const meta = ADMIN_SECTION_META[activeSection];
@@ -100,6 +101,33 @@ export const AdminContextSubNav: React.FC = () => {
 
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  // Poll pending company leads count every 60 seconds
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPendingCompanyLeadsCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from("affiliate_company_leads")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending_admin_approval");
+        if (!cancelled && !error) {
+          setPendingCompanyLeadsCount(count ?? 0);
+        }
+      } catch {
+        // best-effort — silent fail
+      }
+    };
+
+    loadPendingCompanyLeadsCount();
+    const interval = setInterval(loadPendingCompanyLeadsCount, 60_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
     };
   }, []);
 
@@ -151,6 +179,8 @@ export const AdminContextSubNav: React.FC = () => {
       const showBadge = item.path === "/admin/messages" && unreadCount > 0;
       const showPendingPartnerBadge =
         item.path === "/admin/partners" && pendingPartnerRegistrationsCount > 0;
+      const showPendingCompanyLeadsBadge =
+        item.path === "/admin/company-leads" && pendingCompanyLeadsCount > 0;
       const to = subNavItemTo(item);
       const end = !item.matchPrefix;
       return (
@@ -174,6 +204,11 @@ export const AdminContextSubNav: React.FC = () => {
           {showPendingPartnerBadge && (
             <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-0.5">
               {pendingPartnerRegistrationsCount > 99 ? "99+" : pendingPartnerRegistrationsCount}
+            </span>
+          )}
+          {showPendingCompanyLeadsBadge && (
+            <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-0.5">
+              {pendingCompanyLeadsCount > 99 ? "99+" : pendingCompanyLeadsCount}
             </span>
           )}
         </NavLink>

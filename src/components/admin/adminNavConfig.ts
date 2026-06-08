@@ -36,6 +36,7 @@ import {
   MoreHorizontal,
   Truck,
   Tag,
+  Building2,
 } from "lucide-react";
 
 /**
@@ -131,6 +132,7 @@ const USERS_NAV = {
   auditLogs: { path: "/admin/audit-logs", label: "Audit", icon: FileText },
   auditRepair: { path: "/admin/audit-repair", label: "Audit repair", icon: Wrench },
   onemilAudit: { path: "/admin/onemil-audit", label: "OneMil audit", icon: FileText },
+  companyLeads: { path: "/admin/company-leads", label: "Žádosti firem", icon: Building2 },
 } as const satisfies Record<string, AdminSubNavItem>;
 
 /** ?tab= hodnoty pro /admin — provoz soutěží a bonusů u tiketů. */
@@ -239,6 +241,7 @@ export const ADMIN_NAV_SECTIONS: readonly AdminNavSectionDefinition[] = [
       { kind: "link", item: USERS_NAV.onboarding },
       { kind: "link", item: USERS_NAV.partners },
       { kind: "link", item: USERS_NAV.influencers },
+      { kind: "link", item: USERS_NAV.companyLeads },
       {
         kind: "menu",
         label: "Více",
@@ -356,7 +359,8 @@ export function getAdminSectionFromPath(pathname: string, search: string = ""): 
     path.startsWith("/admin/legal-acceptances") ||
     path.startsWith("/admin/audit-logs") ||
     path.startsWith("/admin/audit-repair") ||
-    path.startsWith("/admin/onemil-audit")
+    path.startsWith("/admin/onemil-audit") ||
+    path.startsWith("/admin/company-leads")
   ) {
     return "users";
   }
