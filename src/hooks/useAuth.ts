@@ -81,6 +81,10 @@ export const useAuthState = () => {
         if (event === 'PASSWORD_RECOVERY') {
           setIsPasswordRecovery(true);
         }
+        if (event === 'USER_UPDATED') {
+          // Password was successfully updated — recovery flow complete
+          setIsPasswordRecovery(false);
+        }
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
