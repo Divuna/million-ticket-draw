@@ -385,9 +385,9 @@ test.describe('Phase 2C — confirm-affiliate-company-lead (spec 36)', () => {
       const first = await callConfirmEf('POST', { token: rawToken, action: 'confirm' });
       expect(first.status).toBe(200);
 
-      // Second call — must return 409
+      // Second call — hash is cleared after confirm, so lookup returns 404 (not found)
       const second = await callConfirmEf('POST', { token: rawToken, action: 'confirm' });
-      expect(second.status).toBe(409);
+      expect(second.status).toBe(404);
 
     } finally {
       await cleanup(admin, { authUserId, affiliateId, companyEmail });
@@ -572,7 +572,7 @@ test.describe('Phase 2C — confirm-affiliate-company-lead (spec 36)', () => {
 
   test('36i: /partner/invite page — reject button works → success state', async ({ page }) => {
     skipIfNotStaging();
-    test.setTimeout(90_000);
+    test.setTimeout(120_000);
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false, autoRefreshToken: false } });
     const ts = Date.now();

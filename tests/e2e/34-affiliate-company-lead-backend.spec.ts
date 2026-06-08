@@ -233,7 +233,7 @@ test.describe('create-affiliate-company-lead backend contract (spec 34)', () => 
       expect(emailError, 'email_queue query must succeed').toBeNull();
       expect(emailRow, 'email_queue row must exist').toBeTruthy();
       expect(emailRow!.subject).toContain('zadosti');
-      expect(emailRow!.body).toContain('company-lead/confirm');
+      expect(emailRow!.body).toContain('/partner/invite');
       expect(emailRow!.body).toContain('action=confirm');
       expect(emailRow!.body).toContain('action=reject');
 
