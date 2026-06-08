@@ -610,20 +610,17 @@ test.describe('Phase 2C — confirm-affiliate-company-lead (spec 36)', () => {
     try {
       await page.goto(`/partner/invite?token=${encodeURIComponent(fakeRaw)}&action=reject`);
       await expect(page.getByTestId('clc-ready')).toBeVisible({ timeout: 25_000 });
-      // Let auth-state re-renders settle so buttons are stable for click
-      await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {});
 
-      const rejectBtn = page.getByTestId('clc-reject-btn');
-      await expect(rejectBtn).toBeVisible();
-      // force:true bypasses the "stable" check — harmless here since instability
-      // is caused by auth context re-renders, not real UI changes
-      await rejectBtn.click({ force: true });
-
-      // Rejection reason textarea appears
-      await expect(page.getByTestId('clc-reject-reason')).toBeVisible({ timeout: 5_000 });
+      // Auto-retry the reject click until the reason textarea appears. This absorbs
+      // transient auth-context re-renders that can otherwise swallow a single click
+      // (the click lands on a re-rendered/detached node before React binds onClick).
+      await expect(async () => {
+        await page.getByTestId('clc-reject-btn').click();
+        await expect(page.getByTestId('clc-reject-reason')).toBeVisible({ timeout: 2_000 });
+      }).toPass({ timeout: 20_000 });
 
       // Confirm rejection
-      await page.getByTestId('clc-reject-confirm-btn').click({ force: true });
+      await page.getByTestId('clc-reject-confirm-btn').click();
       await expect(page.getByTestId('clc-success')).toBeVisible({ timeout: 20_000 });
 
     } finally {
