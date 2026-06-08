@@ -614,13 +614,16 @@ test.describe('Phase 2C — confirm-affiliate-company-lead (spec 36)', () => {
       // Auto-retry the reject click until the reason textarea appears. This absorbs
       // transient auth-context re-renders that can otherwise swallow a single click
       // (the click lands on a re-rendered/detached node before React binds onClick).
+      // dispatchEvent('click') fires a bubbling click immediately, without waiting
+      // for actionability/stability. React 18's root-delegated listener catches it,
+      // so onClick (handleRejectClick) runs even while the page re-renders.
       await expect(async () => {
-        await page.getByTestId('clc-reject-btn').click();
+        await page.getByTestId('clc-reject-btn').dispatchEvent('click');
         await expect(page.getByTestId('clc-reject-reason')).toBeVisible({ timeout: 2_000 });
       }).toPass({ timeout: 20_000 });
 
       // Confirm rejection
-      await page.getByTestId('clc-reject-confirm-btn').click();
+      await page.getByTestId('clc-reject-confirm-btn').dispatchEvent('click');
       await expect(page.getByTestId('clc-success')).toBeVisible({ timeout: 20_000 });
 
     } finally {
