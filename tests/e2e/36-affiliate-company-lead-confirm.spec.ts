@@ -569,40 +569,37 @@ test.describe('Phase 2C — confirm-affiliate-company-lead (spec 36)', () => {
   });
 
   // ── 36i: /partner/invite reject UI ───────────────────────────────────────
+  // Uses insertLeadDirect to avoid auth.admin.createUser (9th consecutive user creation
+  // hits staging Auth rate limits and hangs indefinitely). The test only needs a valid
+  // lead row with a known token hash — no full user flow required.
 
   test('36i: /partner/invite page — reject button works → success state', async ({ page }) => {
     skipIfNotStaging();
-    test.setTimeout(180_000);
+    test.setTimeout(60_000);
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false, autoRefreshToken: false } });
     const ts = Date.now();
-    const email = `spec36i-${ts}@onemil.cz`;
-    const password = `Sp36I_${ts}!`;
-    const refCode = `S36I${String(ts).slice(-6)}`;
+    const fakeRaw = `spec36i-reject-${ts}`;
+    const tokenHash = await sha256Hex(fakeRaw);
     const companyEmail = `spec36i-co-${ts}@example.com`;
 
-    let authUserId: string | null = null;
-    let affiliateId: string | null = null;
-
     try {
-      ({ authUserId, affiliateId } = await createSalesRepUser(admin, { email, password, refCode }));
-      const jwt = await getUserJwt(email, password);
-      await createLead(jwt, companyEmail, `Spec36I Firma ${ts}`);
+      // Insert lead directly with a pre-computed token hash — no auth user needed
+      const { error: insErr } = await (admin as any)
+        .from('affiliate_company_leads')
+        .insert({
+          affiliate_id: null,
+          company_name: `Spec36I Firma ${ts}`,
+          company_email: companyEmail,
+          status: 'sent_to_company',
+          company_confirmation_token_hash: tokenHash,
+          company_confirmation_expires_at: new Date(Date.now() + 86400_000).toISOString(),
+          company_confirmation_sent_at: new Date().toISOString(),
+          sales_rep_name_snapshot: 'E2E Spec36I',
+        });
+      if (insErr) throw new Error(`insertLead: ${insErr.message}`);
 
-      const { data: eq } = await (admin as any)
-        .from('email_queue')
-        .select('body')
-        .eq('email', companyEmail)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const tokenMatch = (eq.body as string).match(/\/partner\/invite\?token=([^&"]+)&action=confirm/);
-      expect(tokenMatch).toBeTruthy();
-      const rawToken = decodeURIComponent(tokenMatch![1]);
-
-      await page.goto(`/partner/invite?token=${encodeURIComponent(rawToken)}&action=reject`);
-
+      await page.goto(`/partner/invite?token=${encodeURIComponent(fakeRaw)}&action=reject`);
       await expect(page.getByTestId('clc-ready')).toBeVisible({ timeout: 15_000 });
 
       const rejectBtn = page.getByTestId('clc-reject-btn');
@@ -614,11 +611,10 @@ test.describe('Phase 2C — confirm-affiliate-company-lead (spec 36)', () => {
 
       // Confirm rejection
       await page.getByTestId('clc-reject-confirm-btn').click();
-
-      await expect(page.getByTestId('clc-success')).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByTestId('clc-success')).toBeVisible({ timeout: 15_000 });
 
     } finally {
-      await cleanup(admin, { authUserId, affiliateId, companyEmail });
+      await (admin as any).from('affiliate_company_leads').delete().ilike('company_email', companyEmail);
     }
   });
 
