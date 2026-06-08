@@ -200,7 +200,18 @@ async function cleanupSalesRep(admin: SupabaseClient, authUserId: string, affili
 
 /** Log the admin in through the login form and wait for the admin redirect. */
 async function loginAsAdmin(page: Page) {
+  // Clear any existing Supabase session — previous tests may leave the browser logged in
+  // as a different user, causing /login to redirect before the email input appears.
+  await page.goto('/');
+  await page.evaluate(() => {
+    try {
+      const keys = Object.keys(localStorage).filter((k) => k.startsWith('sb-'));
+      keys.forEach((k) => localStorage.removeItem(k));
+    } catch (_) { /* ignore */ }
+  });
+
   await page.goto('/login');
+  await page.waitForLoadState('networkidle');
   await page.locator('input[type="email"]').fill(ADMIN_EMAIL);
   await page.locator('input[type="password"]').fill(ADMIN_PASSWORD);
   await page.locator('button[type="submit"]').click();
