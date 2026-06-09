@@ -122,13 +122,13 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
 
       const session = signInData.session;
 
-      // Inject session into the browser storage before navigating
+      // Inject session into the browser storage before navigating.
+      // The app uses storageKey: 'onemil-auth' (see src/integrations/supabase/client.ts).
       await page.goto('/partner/set-password');
       await page.evaluate(
-        ({ url, session }) => {
-          const key = `sb-${new URL(url).hostname.split('.')[0]}-auth-token`;
+        ({ session }) => {
           localStorage.setItem(
-            key,
+            'onemil-auth',
             JSON.stringify({
               access_token: session.access_token,
               refresh_token: session.refresh_token,
@@ -139,7 +139,7 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
             }),
           );
         },
-        { url: SUPABASE_URL, session },
+        { session },
       );
 
       // Reload so the app picks up the injected session
@@ -183,9 +183,8 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
 
       await page.goto('/partner/set-password');
       await page.evaluate(
-        ({ url, session }) => {
-          const key = `sb-${new URL(url).hostname.split('.')[0]}-auth-token`;
-          localStorage.setItem(key, JSON.stringify({
+        ({ session }) => {
+          localStorage.setItem('onemil-auth', JSON.stringify({
             access_token: session.access_token,
             refresh_token: session.refresh_token,
             expires_in: session.expires_in,
@@ -194,7 +193,7 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
             user: session.user,
           }));
         },
-        { url: SUPABASE_URL, session: signInData.session },
+        { session: signInData.session },
       );
       await page.reload();
 
@@ -238,9 +237,8 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
 
       await page.goto('/partner/set-password');
       await page.evaluate(
-        ({ url, session }) => {
-          const key = `sb-${new URL(url).hostname.split('.')[0]}-auth-token`;
-          localStorage.setItem(key, JSON.stringify({
+        ({ session }) => {
+          localStorage.setItem('onemil-auth', JSON.stringify({
             access_token: session.access_token,
             refresh_token: session.refresh_token,
             expires_in: session.expires_in,
@@ -249,7 +247,7 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
             user: session.user,
           }));
         },
-        { url: SUPABASE_URL, session: signInData.session },
+        { session: signInData.session },
       );
       await page.reload();
 
@@ -293,9 +291,8 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
 
       await page.goto('/partner/set-password');
       await page.evaluate(
-        ({ url, session }) => {
-          const key = `sb-${new URL(url).hostname.split('.')[0]}-auth-token`;
-          localStorage.setItem(key, JSON.stringify({
+        ({ session }) => {
+          localStorage.setItem('onemil-auth', JSON.stringify({
             access_token: session.access_token,
             refresh_token: session.refresh_token,
             expires_in: session.expires_in,
@@ -304,7 +301,7 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
             user: session.user,
           }));
         },
-        { url: SUPABASE_URL, session: signInData.session },
+        { session: signInData.session },
       );
       await page.reload();
 
