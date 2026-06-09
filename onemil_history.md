@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-09 - 🌿 Dávkové výplaty provizí — Fáze A návrh + HANDOFF (implementace zastavena, limit Claude Code)
+
+- **Commit návrhu Fáze A: `6711e648`.** Soubory: `supabase/migrations/20260609_affiliate_payouts_phase_a.sql` (3 tabulky `affiliate_payout_documents`/`_batches`/`_batch_items` + rozšíření `affiliate_commissions` status CHECK + payout sloupce + sekvence + privátní storage buckety + admin RLS) a `docs/affiliate-payouts/DESIGN.md` (workflow 8 stavů, EF/RPC, UI, ABO, testy, fáze, rizika, §11 handoff).
+- **Migrace Fáze A NEAPLIKOVÁNA** na staging ani produkci. Fáze B (dávka + paid) se nedělala.
+- Air Bank = ABO `.kpc` (ověřeno airbank.cz); přesný layout musí potvrdit účetní/Air Bank. Účetní e-mail nepotvrzen. Samofakturace → podmínky affiliate/partner programu.
+- Starý návrh `00a52bc0` + migrace `20260609_affiliate_commission_payout_evidence.sql` NAHRAZENY, NEAPLIKOVAT.
+- Produkční testovací řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` (`paid`) zachován, nemazat.
+- Žádná DB změna, žádný deploy, žádný publish v tomto kroku. Pokračování v novém chatu/Codexu — handoff v `docs/affiliate-payouts/DESIGN.md` §11.
+
 ## 2026-06-09 - 🌿 Samostatná větev: dávkové výplaty affiliate/obchodních provizí (NÁVRH)
 
 - **Samostatná pracovní větev úkolu.** Hlavní roadmapa OneMil se nemění; po dokončení návrat do hlavního kmene. NIC neimplementováno/nasazeno, produkce nedotčena.

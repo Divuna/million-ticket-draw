@@ -24,6 +24,14 @@
 
 **Fázování:** A (DB základ) → B (dávka + paid) → C (doklady + e-maily) → D (Air Bank export) → E (potvrzení). **Nic nenasazovat bez průběžného schválení Pavla.**
 
+**HANDOFF (09. 06. 2026 — implementace zastavena kvůli limitu Claude Code, pokračování v novém chatu/Codexu):**
+- **Fáze A návrh hotov, commit `6711e648`.** Soubory: `supabase/migrations/20260609_affiliate_payouts_phase_a.sql` (DB základ — **NEAPLIKOVÁNO** staging/produkce), `docs/affiliate-payouts/DESIGN.md` (kompletní návrh + handoff §11).
+- Fáze B (dávka + paid RPC + UI) se NEDĚLALA — další krok po sign-off.
+- Air Bank = ABO `.kpc` (ověřeno airbank.cz); **přesný layout/offsety NUTNO POTVRDIT** proti oficiální spec / účetní — nedomýšlet.
+- Účetní e-mail OneMil nepotvrzen. Souhlas se samofakturací → do podmínek affiliate/partner programu.
+- Cílový systém: auto doklady/samofaktury, PDF, e-maily (obchodník+účetní), dávkové výplaty, Air Bank export, paid jen na úrovni celé dávky. Admin nezadává datum/VS/referenci ručně — generuje systém.
+- Detailní handoff text: `docs/affiliate-payouts/DESIGN.md` §11.
+
 ---
 
 **Předchozí milník (hlavní kmen):** Admin stránka `Provize obchodníků` fáze 2 live — schvalování + vyplácení B2B provizí. Production smoke run `27171517921` ✅ success (commit `508474fe`). Per-invoice B2B provize migrace aplikována na staging i produkci (`source_invoice_id`/`company_ref_id`, admin RLS na `partner_invoices`); tlačítka `Schválit`/`Označit jako vyplacené` ručně ověřena v produkci (`calculated→approved→paid`).

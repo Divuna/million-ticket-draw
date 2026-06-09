@@ -108,3 +108,37 @@ Zdroje: [Air Bank — Import hromadných plateb](https://www.airbank.cz/co-vas-n
 1. **Účetní (Veronika Engeová):** typ dokladu (samofaktura vs. výplatní avízo), náležitosti dokladu, účetní e-mail pro kopie, číselná řada dokladů.
 2. **Účetní / Air Bank:** přesný ABO `.kpc` layout (offsety polí, hlavička, KS/SS povinnost, datum splatnosti pravidla).
 3. **Právník:** znění souhlasu se samofakturací v podmínkách affiliate/partner programu; DPH režim provize (plátce/neplátce).
+
+## 11. HANDOFF — pokračování v novém chatu / Codexu (09. 06. 2026)
+
+**Implementace zastavena kvůli limitu Claude Code. Fáze B se NEDĚLALA.**
+
+### Co je hotovo
+- Fáze A návrh: commit **`6711e648`**. Soubory:
+  - `supabase/migrations/20260609_affiliate_payouts_phase_a.sql` (DB základ — **NEAPLIKOVÁNO** na staging ani produkci)
+  - `docs/affiliate-payouts/DESIGN.md` (tento dokument)
+- Ověřeno: Air Bank = ABO `.kpc` (Windows-1250, 50 KB); reuse `generate-partner-invoice-pdf` + `email_queue`/`process-email-queue`; storage vzor `partner-invoices`; číslování/VS vzor v `partner_invoices`.
+
+### Co je ZAKÁZÁNO
+- Aplikovat jakoukoli migraci (staging i produkce) bez výslovného schválení Pavla.
+- Aplikovat migraci `20260609_affiliate_commission_payout_evidence.sql` (NAHRAZENA, mrtvá).
+- Lovable Publish, deploy EF, produkční změny.
+- Smazat produkční testovací řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` (stav `paid`).
+- Měnit hlavní roadmapu, wallet, soutěže, tikety, Stripe, Bob, Sofinity, Partner Offers, `buy_ticket_atomic`.
+- Domýšlet ABO offsety — musí potvrdit účetní / Air Bank.
+
+### Kde pokračovat + další bezpečný krok
+1. **Sign-off** (účetní/Air Bank/právník — viz §10) — hlavně přesný ABO `.kpc` layout a typ dokladu.
+2. **Fáze B** (po schválení): RPC `create-affiliate-payout-batch` + `mark-affiliate-payout-batch-paid` + UI výběr provizí / `/admin/affiliate-payouts` / detail dávky + tlačítko „Označit dávku jako zaplacenou" (jen na dávce). BEZ PDF/banky/e-mailů — paid mechanismus ověřitelný izolovaně.
+3. Migraci Fáze A aplikovat **nejdřív na staging** + postcheck, až poté Fáze B kód.
+
+### Testovací strategie
+- Cílený spec `tests/e2e/40-affiliate-payouts.spec.ts` (staging-only, gated `E2E_AFFILIATE_PAYOUTS=1`): create-batch z `ready_to_pay`, `mark-paid` propíše provize `paid` + audit, idempotence, (Fáze D) ABO struktura/encoding.
+- Rozšířit spec 39: paid jen na dávce, ne na provizi.
+- Pak staging Full E2E (finální regrese). Produkce po schválení.
+
+### Otevřené otázky pro účetní / Air Bank
+- Přesný ABO `.kpc` layout (offsety věty 1501, hlavička, KS/SS, datum splatnosti).
+- Typ dokladu: samofaktura vs. výplatní avízo; náležitosti; číselná řada.
+- Účetní e-mail OneMil (zatím nepotvrzen; default info@onemil.cz / V. Engeová).
+- DPH režim provize (plátce/neplátce) na dokladu.

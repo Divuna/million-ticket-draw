@@ -54,6 +54,8 @@ rozšíření `/admin/affiliate-commissions` (výběr provizí) · nová `/admin
 
 **Rozsah je velký → výstup MUSÍ být po fázích, NIC nenasazovat bez průběžného schválení Pavla.** Navržené fázování: A (DB základ) → B (dávka + paid) → C (doklady + e-maily) → D (Air Bank export) → E (potvrzení).
 
+**STAV (09. 06. 2026 — HANDOFF, implementace zastavena kvůli limitu Claude Code):** Fáze A návrh hotov, commit `6711e648`. Soubory `supabase/migrations/20260609_affiliate_payouts_phase_a.sql` (**NEAPLIKOVÁNO** staging/produkce) + `docs/affiliate-payouts/DESIGN.md` (kompletní návrh + **§11 handoff** pro pokračování v novém chatu/Codexu). Fáze B se nedělala. Air Bank ABO `.kpc` ověřen, přesný layout NUTNO POTVRDIT. **Před pokračováním čti `docs/affiliate-payouts/DESIGN.md` §11.**
+
 ## ADMIN STRÁNKA `Provize obchodníků` — FÁZE 1 (09. 06. 2026, invarianty)
 
 **Live na produkci.** Route `/admin/affiliate-commissions`. Commit implementace `156519d5`, oprava PostgREST sloupců `e2e673e1`. Production smoke `27170849002` ✅.
