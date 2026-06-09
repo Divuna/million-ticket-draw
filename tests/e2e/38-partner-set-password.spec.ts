@@ -81,6 +81,7 @@ async function createTestPartnerRecord(
     .insert({
       name: 'E2E Spec38 Test Partner',
       logo_url: '',
+      website_url: '',
       contact_email: email,
       status: 'approved',
       auth_user_id: authUserId,
