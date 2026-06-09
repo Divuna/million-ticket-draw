@@ -160,6 +160,16 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
 
       const session = signInData.session;
 
+      // Pre-seed cookie consent so CookieConsentBanner (fixed bottom-0 z-[100])
+      // never appears and never intercepts pointer events on psp-submit.
+      // addInitScript runs before every page load in this context.
+      await page.addInitScript(() => {
+        localStorage.setItem('cookie_consent', JSON.stringify({
+          essential: true, analytics: false, marketing: false,
+          timestamp: new Date().toISOString(),
+        }));
+      });
+
       // Inject session into the browser storage before navigating.
       // The app uses storageKey: 'onemil-auth' (see src/integrations/supabase/client.ts).
       await page.goto('/partner/set-password');
@@ -222,6 +232,14 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
         await anonClient.auth.signInWithPassword({ email, password });
       if (!signInData.session) throw new Error('signIn failed');
 
+      // Pre-seed cookie consent so the banner never intercepts psp-submit clicks.
+      await page.addInitScript(() => {
+        localStorage.setItem('cookie_consent', JSON.stringify({
+          essential: true, analytics: false, marketing: false,
+          timestamp: new Date().toISOString(),
+        }));
+      });
+
       await page.goto('/partner/set-password');
       await page.evaluate(
         ({ session }) => {
@@ -279,6 +297,14 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
         await anonClient.auth.signInWithPassword({ email, password });
       if (!signInData.session) throw new Error('signIn failed');
 
+      // Pre-seed cookie consent so the banner never intercepts psp-submit clicks.
+      await page.addInitScript(() => {
+        localStorage.setItem('cookie_consent', JSON.stringify({
+          essential: true, analytics: false, marketing: false,
+          timestamp: new Date().toISOString(),
+        }));
+      });
+
       await page.goto('/partner/set-password');
       await page.evaluate(
         ({ session }) => {
@@ -335,6 +361,14 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
       const { data: signInData } =
         await anonClient.auth.signInWithPassword({ email, password });
       if (!signInData.session) throw new Error('signIn failed');
+
+      // Pre-seed cookie consent so the banner never intercepts psp-submit clicks.
+      await page.addInitScript(() => {
+        localStorage.setItem('cookie_consent', JSON.stringify({
+          essential: true, analytics: false, marketing: false,
+          timestamp: new Date().toISOString(),
+        }));
+      });
 
       await page.goto('/partner/set-password');
       await page.evaluate(
