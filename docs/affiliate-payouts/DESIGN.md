@@ -113,94 +113,131 @@ Zdroje: [Air Bank — Import hromadných plateb](https://www.airbank.cz/co-vas-n
 
 Tento checklist je schválený pracovní podklad. Slouží k potvrzení účetních, právních a bankovních bodů před aplikací Fáze A na staging a před zahájením Fáze B. Nejde o finální právní ani daňové stanovisko.
 
-### 1. Účetní
+### 1. Účetní — pracovní rozhodnutí pro návrh systému
 
-- [ ] Potvrdit typ dokladu:
-  - neplátce DPH: `Vyúčtování provize`,
-  - plátce DPH: `Faktura – daňový doklad, vystaveno zákazníkem`.
-- [ ] Potvrdit, že avízo samo o sobě nestačí jako účetní podklad.
-- [ ] Potvrdit podobu dokladu pro neplátce DPH:
-  - číslo dokladu, OneMil, příjemce, období, popis plnění, základ výpočtu, sazba provize, částka k výplatě, účet, datum vystavení,
-  - text: `Příjemce není plátce DPH, DPH se neuplatňuje.`
-- [ ] Potvrdit podobu dokladu pro plátce DPH:
-  - daňový doklad,
-  - text `vystaveno zákazníkem`,
-  - dodavatel = affiliate / obchodník,
-  - odběratel = OneMil,
-  - DIČ, DUZP, základ daně, sazba DPH, výše DPH, celkem.
-- [ ] Potvrdit, že DPH režim se má řídit režimem příjemce.
-- [ ] Potvrdit, že systém má ukládat snapshot režimu příjemce při vytvoření dokladu.
-- [ ] Potvrdit samostatné číselné řady:
-  - payout doklady např. `APD-2026-000001`,
-  - payout dávky např. `APB-2026-000001`.
-- [ ] Potvrdit účetní e-mail pro kopie dokladů.
-- [ ] Potvrdit, že e-mail nebude hardcoded a půjde přes nastavení typu `settings.accounting_email`.
-- [ ] Potvrdit povinné údaje na PDF dokladu.
-- [ ] Potvrdit účetní zaúčtování provize OneMil → obchodník.
-- [ ] Potvrdit okamžik vzniku/odeslání dokladu: doporučení je po schválení provize, ještě před platební dávkou.
+Pro návrh systému použít tento model:
 
-### 2. Právník
+- neplátce DPH: `Vyúčtování provize`,
+- plátce DPH: `Faktura – daňový doklad, vystaveno zákazníkem`,
+- doklad vzniká na základě affiliate / partner podmínek a souhlasu se samofakturací,
+- doklad se vytvoří po schválení provize,
+- doklad se ihned odešle obchodníkovi / affiliate a kopie účetnímu,
+- účetní e-mail nebude hardcoded, bude přes `settings.accounting_email`,
+- číselná řada bude oddělená od běžných partner faktur:
+  - payout doklady: `APD-YYYY-000001`,
+  - payout dávky: `APB-YYYY-000001`,
+- u neplátce nepoužívat text `DPH 0 %`, ale text: `Příjemce není plátce DPH, DPH se neuplatňuje.`,
+- u plátce DPH použít daňový doklad s textem `vystaveno zákazníkem`,
+- systém musí ukládat snapshot režimu příjemce při vytvoření dokladu.
 
-- [ ] Připravit finální formulaci souhlasu se samofakturací v affiliate / partner podmínkách.
-- [ ] Potvrdit, zda souhlas se samofakturací musí být samostatný checkbox.
-- [ ] Potvrdit formulaci, že příjemce odpovídá za vlastní daně, odvody a registrační povinnosti.
-- [ ] Potvrdit, zda lze do výplat pustit nepodnikatele, hlavně u opakovaných provizí.
-- [ ] Potvrdit povinné údaje pro OSVČ.
-- [ ] Potvrdit povinné údaje pro firmu / právnickou osobu.
-- [ ] Potvrdit režim pro plátce DPH:
-  - DIČ,
-  - souhlas se samofakturací,
-  - daňový doklad s textem `vystaveno zákazníkem`.
-- [ ] Potvrdit minimální typy příjemců:
+Účetní musí ještě finálně potvrdit:
+
+- [ ] přesnou podobu dokladu,
+- [ ] účtování provize,
+- [ ] účetní e-mail,
+- [ ] finální náležitosti PDF.
+
+### 2. Právník — pracovní rozhodnutí pro návrh systému
+
+Pro návrh systému počítat s tím, že:
+
+- souhlas se samofakturací bude součástí affiliate / partner podmínek,
+- bezpečnější je mít samostatné potvrzení / checkbox pro samofakturaci,
+- příjemce odpovídá za vlastní daně, odvody a registrační povinnosti,
+- systém musí rozlišovat:
   - nepodnikatel,
   - OSVČ neplátce,
   - OSVČ plátce,
   - firma neplátce,
-  - firma plátce.
-- [ ] Potvrdit, zda je samofakturace použitelná pro všechny typy příjemců, nebo jen pro podnikatele / plátce DPH.
+  - firma plátce,
+- u plátce DPH musí být DIČ a souhlas se samofakturací,
+- bez souhlasu se samofakturací nesmí systém vystavit daňový doklad jménem příjemce.
 
-### 3. Air Bank / bankovní export
+Právník musí ještě finálně potvrdit:
 
-- [ ] Potvrdit, že Air Bank pro tuzemské hromadné platby používá ABO soubor s příponou `.kpc`.
-- [ ] Potvrdit přesný technický layout souboru podle oficiální specifikace Air Bank.
-- [ ] Potvrdit přesné offsety a délky polí ve větě 1501 a případné hlavičce.
-- [ ] Potvrdit povinná pole:
-  - účet příjemce,
-  - kód banky,
-  - částka,
-  - měna,
-  - variabilní symbol,
-  - zpráva pro příjemce,
-  - datum splatnosti.
-- [ ] Potvrdit kódování souboru, předběžně Windows-1250.
-- [ ] Potvrdit maximální velikost souboru, předběžně 50 KB.
-- [ ] Potvrdit ukončení řádků, předběžně CRLF.
-- [ ] Potvrdit import přes internetové bankovnictví.
-- [ ] Potvrdit pravidla splatnosti:
-  - dnešní datum,
-  - minulost,
-  - víkend / svátek,
-  - maximální budoucí datum.
-- [ ] Potvrdit, zda jsou potřeba konstantní nebo specifický symbol.
+- [ ] přesné znění podmínek,
+- [ ] zda stačí obecný souhlas s podmínkami, nebo samostatný checkbox,
+- [ ] zda a jak pustit nepodnikatele do opakovaných provizí.
+
+### 3. Air Bank / ABO export — ověřeno z oficiální specifikace
+
+Air Bank potvrzuje:
+
+- import hromadných plateb je přes internetové bankovnictví,
+- pro tuzemské CZK příkazy používá ABO formát,
+- soubor má příponu `.kpc`,
+- soubor je ve znakové sadě Windows-1250,
+- maximální velikost souboru je 50 KB,
+- soubor slouží pro jednorázové tuzemské příkazy k úhradě z korunových účtů v korunách.
+
+Oficiální specifikace uvádí strukturu:
+
+- `UHL1`,
+- hlavička účetního souboru,
+- hlavička skupiny,
+- účetní položky,
+- konec skupiny,
+- konec účetního souboru.
+
+Hlavička účetního souboru:
+
+- začátek účetního souboru: `1`,
+- druh dat: `1501`,
+- kód banky: `3030`,
+- konec řádku: `CR LF`.
+
+Hlavička skupiny pro jeden účet:
+
+- začátek skupiny: `2`,
+- účet plátce,
+- celková částka skupiny v haléřích,
+- datum splatnosti ve formátu `DDMMRR`,
+- konec řádku: `CR LF`.
+
+Účetní položka pro debet z jednoho účtu:
+
+- číslo účtu příjemce,
+- částka v haléřích,
+- variabilní symbol,
+- kód banky příjemce,
+- konstantní symbol, případně `0000`,
+- specifický symbol volitelně,
+- zpráva pro příjemce max 35 znaků,
+- konec řádku: `CR LF`.
+
+Poznámky k importu:
+
+- Air Bank uvádí, že platby s datem splatnosti v minulosti provede v nejbližším možném čase.
+- Při importu se dávka nahraje v internetovém bankovnictví v sekci Placení / Hromadné platby.
+- Po nahrání se dávka potvrzuje v internetovém nebo mobilním bankovnictví.
+
+Pro implementaci:
+
+- použít ABO `.kpc`,
+- použít Windows-1250,
+- používat CRLF,
+- částky zapisovat v haléřích,
+- VS generovat systémově jako numerický max 10 znaků,
+- konstantní symbol zatím `0000`,
+- specifický symbol nepoužívat, pokud účetní neřekne jinak,
+- zprávu pro příjemce držet do 35 znaků,
+- datum splatnosti generovat jako dnešní datum nebo nejbližší pracovní den podle pravidel, která ještě potvrdí účetní / Air Bank.
 
 ### 4. Technické dopady
 
-- **Typ dokladu:** blokuje Fázi C. Fázi A neblokuje, pokud `document_type` zůstane obecný.
-- **DPH režim:** blokuje Fázi C. Fázi A neblokuje, pokud uložíme snapshot příjemce.
-- **Číselné řady:** blokují Fázi C. Fáze A už počítá se samostatnými sekvencemi.
-- **Účetní e-mail:** blokuje Fázi C a E. Neblokuje Fázi A ani B.
-- **Souhlas se samofakturací:** blokuje Fázi C u plátců DPH.
-- **Typ příjemce:** blokuje Fázi C, částečně ovlivňuje Fázi B kvůli validaci `ready_to_pay`.
-- **Povinné bankovní údaje:** částečně blokují Fázi B.
-- **Air Bank ABO layout:** blokuje Fázi D. Neblokuje Fázi A ani B.
-- **Kódování, velikost, řádky, splatnost:** blokuje Fázi D.
+- **Fáze A:** může pokračovat, pokud DB model zůstane obecný pro `document_type`, snapshoty, doklady, dávky a položky.
+- **Fáze B:** může pokračovat s minimem: příjemce, účet, banka, částka, systémový VS, stav dávky. Není nutné čekat na finální PDF šablonu.
+- **Fáze C:** blokuje finální účetní/právní potvrzení dokladu a textů.
+- **Fáze D:** Air Bank formát je už dostatečně ověřený pro návrh, ale před produkčním použitím musí být export otestovaný importem v Air Bank.
+- **Fáze E:** závisí na e-mailové šabloně a účetním e-mailu.
 
 ### 5. Doporučení podle fází
 
-- **Před Fází A:** stačí potvrdit, že DB model je dostatečně obecný: doklady, dávky, položky, snapshoty, sekvence a privátní storage.
-- **Před Fází B:** potvrdit minimální bankovní údaje pro `ready_to_pay`.
-- **Před Fází C:** potvrdit účetní/právní podobu dokladu.
-- **Před Fází D:** potvrdit přesný Air Bank `.kpc` layout.
+- **Před Fází A:** potvrdit, že DB model je dostatečně obecný: doklady, dávky, položky, snapshoty, sekvence a privátní storage. Fázi A lze připravovat jako staging migraci až po Pavlově schválení.
+- **Před Fází B:** potvrdit minimální bankovní údaje pro `ready_to_pay`; není nutné čekat na finální PDF šablonu.
+- **Před Fází C:** počkat na finální účetní/právní podobu dokladu a textů.
+- **Před Fází D:** použít ověřený Air Bank ABO `.kpc` návrh, ale před produkčním použitím provést importní test v Air Bank.
+- **Před Fází E:** potvrdit e-mailové šablony a finální účetní e-mail.
 
 ### 6. Zdroje pro ověření
 
