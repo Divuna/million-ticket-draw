@@ -50,9 +50,17 @@ CREATE TABLE IF NOT EXISTS public.affiliate_payout_documents (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   commission_id   uuid NOT NULL REFERENCES public.affiliate_commissions(id) ON DELETE RESTRICT,
   affiliate_id    uuid NOT NULL REFERENCES public.affiliate_accounts(id) ON DELETE RESTRICT,
-  document_number text NOT NULL UNIQUE,                   -- napr. 'AP-2026-000123'
-  document_type   text NOT NULL DEFAULT 'self_invoice'
-                    CHECK (document_type IN ('self_invoice','payout_statement')),
+  document_number text NOT NULL UNIQUE,                   -- napr. 'APD-2026-000001'
+  document_type   text NOT NULL DEFAULT 'commission_statement'
+                    CHECK (document_type IN ('commission_statement','self_billed_tax_invoice')),
+  -- Snapshot příjemce v okamžiku vytvoření dokladu (neměnit zpětně při změně profilu).
+  recipient_name  text NOT NULL,
+  recipient_email text,
+  recipient_ico   text,
+  recipient_vat_id text,
+  recipient_billing_address text,
+  recipient_is_vat_payer boolean NOT NULL DEFAULT false,
+  recipient_subject_type text,
   amount_base_czk  numeric NOT NULL,
   vat_rate         numeric NOT NULL DEFAULT 0,
   amount_total_czk numeric NOT NULL,
@@ -71,12 +79,17 @@ CREATE INDEX IF NOT EXISTS idx_apd_affiliate  ON public.affiliate_payout_documen
 -- ── 4) affiliate_payout_batches — hromadná dávka ────────────────────────────
 CREATE TABLE IF NOT EXISTS public.affiliate_payout_batches (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  batch_number     text NOT NULL UNIQUE,                  -- napr. 'BATCH-2026-0007'
+  batch_number     text NOT NULL UNIQUE,                  -- napr. 'APB-2026-000001'
   status           text NOT NULL DEFAULT 'created'
                     CHECK (status IN ('created','exported','paid','cancelled')),
   bank             text NOT NULL DEFAULT 'airbank',
   bank_export_format text NOT NULL DEFAULT 'abo_kpc',     -- ABO .kpc (Air Bank tuzemský CZK)
+  bank_export_encoding text NOT NULL DEFAULT 'windows-1250',
+  bank_export_line_endings text NOT NULL DEFAULT 'crlf',
   bank_export_url  text,                                  -- privátní bucket
+  due_date         date,
+  payer_account    text,
+  payer_bank_code  text NOT NULL DEFAULT '3030',
   total_amount_czk numeric NOT NULL DEFAULT 0,
   item_count       integer NOT NULL DEFAULT 0,
   created_by       uuid NOT NULL,                         -- admin auth.uid()
@@ -95,10 +108,17 @@ CREATE TABLE IF NOT EXISTS public.affiliate_payout_batch_items (
   commission_id    uuid NOT NULL REFERENCES public.affiliate_commissions(id) ON DELETE RESTRICT,
   amount_czk       numeric NOT NULL,
   recipient_account text NOT NULL,                        -- snapshot z affiliate_accounts.payout_account
+  recipient_bank_code text NOT NULL,                      -- snapshot z affiliate_accounts.payout_bank
   recipient_name   text NOT NULL,                         -- snapshot
   variable_symbol  text NOT NULL,                         -- SYSTÉM generuje (z čísla dokladu)
-  payment_reference text,                                 -- SYSTÉM generuje (zpráva pro příjemce)
+  payment_message  text,                                  -- zpráva pro příjemce, ABO max 35 znaků
+  constant_symbol  text NOT NULL DEFAULT '0000',
+  specific_symbol  text,
   created_at       timestamptz NOT NULL DEFAULT now(),
+  CHECK (variable_symbol ~ '^[0-9]{1,10}$'),
+  CHECK (char_length(coalesce(payment_message, '')) <= 35),
+  CHECK (constant_symbol ~ '^[0-9]{4}$'),
+  CHECK (specific_symbol IS NULL OR specific_symbol ~ '^[0-9]{1,10}$'),
   UNIQUE (commission_id)                                  -- 1 provize max v 1 dávce
 );
 CREATE INDEX IF NOT EXISTS idx_apbi_batch ON public.affiliate_payout_batch_items(batch_id);

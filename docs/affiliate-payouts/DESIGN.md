@@ -31,9 +31,10 @@ Výplaty řeší **systém automaticky**; admin jen kontroluje a fyzicky odesíl
 ## 3. DB model (Fáze A — soubor `20260609_affiliate_payouts_phase_a.sql`, NEAPLIKOVÁNO)
 
 - **`affiliate_commissions`** rozšíření: status CHECK +`payout_document_created`/`ready_to_pay`/`in_payment_batch`; sloupce `payout_document_id`, `payout_batch_id`, `paid_by`, `confirmation_sent_at`.
-- **`affiliate_payout_documents`** — doklad/samofaktura 1:1 k provizi: `document_number` (UNIQUE), `document_type` (`self_invoice`/`payout_statement`), částky, `pdf_url`, `email_status`, `affiliate_email`, `accounting_email`.
-- **`affiliate_payout_batches`** — dávka: `batch_number` (UNIQUE), `status`, `bank='airbank'`, `bank_export_format='abo_kpc'`, `bank_export_url`, součty, `created_by`, `marked_paid_by/at`.
-- **`affiliate_payout_batch_items`** — položky: `commission_id` (UNIQUE), `amount_czk`, **snapshot** `recipient_account`/`recipient_name`, systémový `variable_symbol`/`payment_reference`.
+- **`affiliate_payout_documents`** — doklad 1:1 k provizi: `document_number` (UNIQUE, formát `APD-YYYY-000001`), `document_type` (`commission_statement`/`self_billed_tax_invoice`), částky, `pdf_url`, `email_status`, `affiliate_email`, `accounting_email`.
+- **Snapshot příjemce na dokladu:** `recipient_name`, `recipient_email`, `recipient_ico`, `recipient_vat_id`, `recipient_billing_address`, `recipient_is_vat_payer`, `recipient_subject_type`.
+- **`affiliate_payout_batches`** — dávka: `batch_number` (UNIQUE, formát `APB-YYYY-000001`), `status`, `bank='airbank'`, `bank_export_format='abo_kpc'`, `bank_export_encoding='windows-1250'`, `bank_export_line_endings='crlf'`, `bank_export_url`, `due_date`, `payer_account`, `payer_bank_code='3030'`, součty, `created_by`, `marked_paid_by/at`.
+- **`affiliate_payout_batch_items`** — položky: `commission_id` (UNIQUE), `amount_czk`, **snapshot** `recipient_account`/`recipient_bank_code`/`recipient_name`, systémový `variable_symbol` (CHECK: číslice, max 10), `payment_message` (max 35 znaků), `constant_symbol='0000'`, volitelný `specific_symbol`.
 - **Sekvence:** `affiliate_payout_document_seq`, `affiliate_payout_batch_seq`.
 - **Storage (PRIVÁTNÍ):** `affiliate-payout-docs`, `affiliate-bank-exports` (citlivé — nikdy public).
 - **RLS:** jen admin/superadmin (`is_admin()`) na všech 3 tabulkách + storage objektech.
@@ -46,7 +47,7 @@ Výplaty řeší **systém automaticky**; admin jen kontroluje a fyzicky odesíl
 
 **Export musí obsahovat** (Pavlův seznam): číslo účtu, kód banky, částka, měna (CZK), VS, zpráva pro příjemce, datum splatnosti.
 
-> ⚠️ **K POTVRZENÍ před implementací Fáze D:** přesné offsety/délky polí věty 1501 a hlavičky **podle oficiální Air Bank technické specifikace** (PDF `technicke-pozadavky-a-specifikace-hromadnych-plateb-a-export-vypisu.pdf` se nepodařilo strojově přečíst). Nedomýšlet — ověřit s účetní / Air Bank supportem.
+> ⚠️ **Před produkčním použitím Fáze D:** ABO `.kpc` struktura je dostatečně ověřená pro návrh, ale výsledný export musí projít importním testem v Air Bank internetovém bankovnictví. Datum splatnosti a případné použití KS/SS ještě potvrdit s účetní / Air Bank.
 
 Zdroje: [Air Bank — Import hromadných plateb](https://www.airbank.cz/co-vas-nejvic-zajima/import-hromadnych-plateb/), [Air Bank — tech. specifikace (PDF)](https://www.airbank.cz/file-download/technicke-pozadavky-a-specifikace-hromadnych-plateb-a-export-vypisu.pdf), [ČSAS — ABO formát pro programátory (PDF)](https://www.csas.cz/banka/content/inet/internet/cs/ABO_format.pdf), [CREDITAS — popis ABO/KPC (PDF)](https://www.creditas.cz/files/popis-formatu-abo-kpc-pro-platebni-prikazy-172021-revize.pdf).
 
@@ -62,7 +63,7 @@ Zdroje: [Air Bank — Import hromadných plateb](https://www.airbank.cz/co-vas-n
 | `mark-affiliate-payout-batch-paid` (RPC) | B | batch→`paid`, items→`paid`, `marked_paid_by/at` (atomicky, FOR UPDATE) | rozšíření logiky `admin_set_...` |
 | `send-affiliate-payment-confirmation` (EF) | E | potvrzení obchodníkovi + souhrn účetní, `confirmation_sent_at` | `email_queue` |
 
-**Číslování/VS:** sekvence v DB → `document_number = 'AP-YYYY-' || lpad(nextval, 6)`, `VS` deterministicky z čísla dokladu (max 10 číslic). Nikdy admin.
+**Číslování/VS:** sekvence v DB → `document_number = 'APD-YYYY-' || lpad(nextval, 6)`, `batch_number = 'APB-YYYY-' || lpad(nextval, 6)`, `VS` generuje systém jako numerický max 10 znaků. Nikdy admin.
 
 **E-mail infra (ověřeno):** `email_queue(email, subject, body, attachment_url, status, sent_at)` + worker `process-email-queue`. Účetní e-mail: zatím **nepotvrzeno** (`COMPANY_CONTEXT.md`: Veronika Engeová / info@onemil.cz) → přidat `settings.accounting_email`.
 
@@ -93,20 +94,20 @@ Zdroje: [Air Bank — Import hromadných plateb](https://www.airbank.cz/co-vas-n
 
 | Riziko | Poznámka |
 |--------|----------|
-| **ABO formát Air Bank** | přesné offsety věty 1501 NEPOTVRZENY (PDF nečitelné) → potvrdit před Fází D. Nedomýšlet. |
+| **ABO formát Air Bank** | Základní ABO `.kpc` struktura je ověřená pro návrh. Před produkčním použitím musí projít importní test v Air Bank. |
 | **Samofakturace (legal)** | self-billing vyžaduje souhlas obchodníka → zařazeno do podmínek affiliate/partner programu (právní review). |
 | **Atomicita `mark-paid`** | batch + items + provize v jedné transakci, FOR UPDATE. |
 | **Citlivá data** | bankovní exporty + doklady = PRIVÁTNÍ buckety + signed URL, admin-only RLS. |
 | **Idempotence e-mailů** | `email_status` + `email_queue`, neposlat 2×. |
 | **Zrušení dávky** | `cancelled` → provize zpět `ready_to_pay` (jen před `exported`/`paid`). |
 | **Účetní e-mail** | nepotvrzený → `settings.accounting_email` + potvrdit s Veronikou Engeovou. |
-| **VS délka** | max 10 číslic, deterministicky z čísla dokladu. |
+| **VS délka** | max 10 číslic, systémově generovaný; admin ho nikdy nezadává ručně. |
 | **Měna** | jen CZK tuzemské (ABO). Zahraniční/EUR = mimo rozsah. |
 
 ## 10. Co musí potvrdit účetní / právník
 
 1. **Účetní (Veronika Engeová):** typ dokladu (samofaktura vs. výplatní avízo), náležitosti dokladu, účetní e-mail pro kopie, číselná řada dokladů.
-2. **Účetní / Air Bank:** přesný ABO `.kpc` layout (offsety polí, hlavička, KS/SS povinnost, datum splatnosti pravidla).
+2. **Účetní / Air Bank:** datum splatnosti, KS/SS pravidla a produkční importní test ABO `.kpc`.
 3. **Právník:** znění souhlasu se samofakturací v podmínkách affiliate/partner programu; DPH režim provize (plátce/neplátce).
 
 ## Sign-off checklist před implementací
@@ -251,10 +252,10 @@ Pro implementaci:
 **Implementace zastavena kvůli limitu Claude Code. Fáze B se NEDĚLALA.**
 
 ### Co je hotovo
-- Fáze A návrh: commit **`6711e648`**. Soubory:
+- Fáze A návrh: commit **`6711e648`**, později doplněno podle sign-off odpovědí. Soubory:
   - `supabase/migrations/20260609_affiliate_payouts_phase_a.sql` (DB základ — **NEAPLIKOVÁNO** na staging ani produkci)
   - `docs/affiliate-payouts/DESIGN.md` (tento dokument)
-- Ověřeno: Air Bank = ABO `.kpc` (Windows-1250, 50 KB); reuse `generate-partner-invoice-pdf` + `email_queue`/`process-email-queue`; storage vzor `partner-invoices`; číslování/VS vzor v `partner_invoices`.
+- Ověřeno: Air Bank = ABO `.kpc` (Windows-1250, 50 KB, CRLF, částky v haléřích); reuse `generate-partner-invoice-pdf` + `email_queue`/`process-email-queue`; číslování `APD-YYYY-000001` / `APB-YYYY-000001`.
 
 ### Co je ZAKÁZÁNO
 - Aplikovat jakoukoli migraci (staging i produkce) bez výslovného schválení Pavla.
@@ -262,10 +263,10 @@ Pro implementaci:
 - Lovable Publish, deploy EF, produkční změny.
 - Smazat produkční testovací řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` (stav `paid`).
 - Měnit hlavní roadmapu, wallet, soutěže, tikety, Stripe, Bob, Sofinity, Partner Offers, `buy_ticket_atomic`.
-- Domýšlet ABO offsety — musí potvrdit účetní / Air Bank.
+- Použít bankovní export v produkci bez importního testu v Air Bank.
 
 ### Kde pokračovat + další bezpečný krok
-1. **Sign-off** (účetní/Air Bank/právník — viz §10) — hlavně přesný ABO `.kpc` layout a typ dokladu.
+1. **Sign-off** (účetní/Air Bank/právník — viz §10 a checklist) — hlavně finální podoba dokladu, účetní e-mail, právní texty a pozdější Air Bank import test.
 2. **Fáze B** (po schválení): RPC `create-affiliate-payout-batch` + `mark-affiliate-payout-batch-paid` + UI výběr provizí / `/admin/affiliate-payouts` / detail dávky + tlačítko „Označit dávku jako zaplacenou" (jen na dávce). BEZ PDF/banky/e-mailů — paid mechanismus ověřitelný izolovaně.
 3. Migraci Fáze A aplikovat **nejdřív na staging** + postcheck, až poté Fáze B kód.
 
@@ -275,7 +276,7 @@ Pro implementaci:
 - Pak staging Full E2E (finální regrese). Produkce po schválení.
 
 ### Otevřené otázky pro účetní / Air Bank
-- Přesný ABO `.kpc` layout (offsety věty 1501, hlavička, KS/SS, datum splatnosti).
+- Air Bank `.kpc` export: před produkčním použitím provést importní test v internetovém bankovnictví.
 - Typ dokladu: samofaktura vs. výplatní avízo; náležitosti; číselná řada.
 - Účetní e-mail OneMil (zatím nepotvrzen; default info@onemil.cz / V. Engeová).
 - DPH režim provize (plátce/neplátce) na dokladu.
