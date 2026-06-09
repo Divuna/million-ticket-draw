@@ -2,6 +2,15 @@ name: Playwright Staging Full E2E
 
 on:
   workflow_dispatch:
+    inputs:
+      only_spec:
+        description: "Spusť jen tento spec (např. tests/e2e/39-admin-affiliate-commissions.spec.ts). Prázdné = celý suite."
+        required: false
+        default: ""
+      b2b_per_invoice:
+        description: "Nastav E2E_B2B_PER_INVOICE=1 (aktivuje spec 39h). Jen pro staging s aplikovanou migrací 20260609."
+        required: false
+        default: "0"
   schedule:
     # Prague time (CEST = UTC+2): 04:00, 12:00, 20:00 — offset from prod smoke (00:00, 08:00, 16:00)
     - cron: '0 2 * * *'    # 04:00 Praha
@@ -408,11 +417,19 @@ jobs:
           ADMIN_EMAIL: ${{ secrets.STAGING_E2E_ADMIN_EMAIL }}
           ADMIN_PASSWORD: ${{ secrets.STAGING_E2E_ADMIN_PASSWORD }}
 
-      - name: Run full E2E suite
+      - name: Run E2E (full suite nebo cílený spec)
         id: e2e_tests
-        run: npm run test:smoke
+        run: |
+          if [ -n "${{ github.event.inputs.only_spec }}" ]; then
+            echo "Cílený běh: ${{ github.event.inputs.only_spec }}"
+            npx playwright test "${{ github.event.inputs.only_spec }}"
+          else
+            echo "Plný staging E2E suite"
+            npm run test:smoke
+          fi
         env:
           CI: true
+          E2E_B2B_PER_INVOICE: ${{ github.event.inputs.b2b_per_invoice }}
           VITE_SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.STAGING_VITE_SUPABASE_ANON_KEY }}
           VITE_INTERNAL_FUNCTION_TOKEN: ${{ secrets.STAGING_VITE_INTERNAL_FUNCTION_TOKEN }}
