@@ -30,6 +30,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,6 +65,12 @@ interface CommissionRow {
   affiliate_name: string | null;
   affiliate_ref_code: string | null;
   commission_rate_company: number | null;
+  // joined — platební údaje příjemce (OneMil → obchodník)
+  payout_account: string | null;
+  payout_bank: string | null;
+  affiliate_ico: string | null;
+  affiliate_vat_id: string | null;
+  affiliate_is_vat_payer: boolean | null;
   // joined — firma + faktura (zdroj výpočtu)
   company_name: string | null;
   invoice_number: string | null;
@@ -140,6 +148,11 @@ export default function AdminAffiliateCommissions() {
 
   // Potvrzovací dialog
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  // Pole výplatního dialogu (jen pro přechod → paid)
+  const [paymentReference, setPaymentReference] = useState<string>("");
+  const [actualPaymentDate, setActualPaymentDate] = useState<string>(
+    format(new Date(), "yyyy-MM-dd")
+  );
 
   // Filtry
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -172,7 +185,12 @@ export default function AdminAffiliateCommissions() {
            affiliate_accounts!affiliate_commissions_affiliate_id_fkey(
              name,
              ref_code,
-             commission_rate_company
+             commission_rate_company,
+             payout_account,
+             payout_bank,
+             ico,
+             vat_id,
+             is_vat_payer
            )`
         )
         .eq("commission_type", "company_invoice")
@@ -253,6 +271,11 @@ export default function AdminAffiliateCommissions() {
           affiliate_name: aa?.name ?? null,
           affiliate_ref_code: aa?.ref_code ?? null,
           commission_rate_company: aa?.commission_rate_company ?? null,
+          payout_account: aa?.payout_account ?? null,
+          payout_bank: aa?.payout_bank ?? null,
+          affiliate_ico: aa?.ico ?? null,
+          affiliate_vat_id: aa?.vat_id ?? null,
+          affiliate_is_vat_payer: aa?.is_vat_payer ?? null,
           company_name: companyName,
           invoice_number: inv?.invoice_number ?? null,
           invoice_base_ex_vat: inv?.amount_ex_vat ?? null,
@@ -276,10 +299,17 @@ export default function AdminAffiliateCommissions() {
   const executeAction = async (commissionId: string, newStatus: "approved" | "paid") => {
     setActionLoading(commissionId);
     try {
-      const { data, error } = await supabase.rpc("admin_set_affiliate_commission_status", {
+      // Při výplatě posíláme referenci platby + reálné datum (RPC je vyžaduje).
+      const rpcArgs: Record<string, unknown> = {
         p_commission_id: commissionId,
         p_new_status: newStatus,
-      });
+      };
+      if (newStatus === "paid") {
+        rpcArgs.p_payment_reference = paymentReference.trim();
+        rpcArgs.p_actual_payment_date = actualPaymentDate || null;
+      }
+
+      const { data, error } = await supabase.rpc("admin_set_affiliate_commission_status", rpcArgs);
 
       if (error) throw error;
 
@@ -289,24 +319,34 @@ export default function AdminAffiliateCommissions() {
         if (newStatus === "approved") {
           toast.success("Provize byla schválena.");
         } else {
-          toast.success("Provize byla označena jako vyplacená.");
+          toast.success("Provize byla označena jako ručně vyplacená.");
         }
-        // Optimisticky aktualizuj řádek v lokálním state, pak obnoví data
         setRows((prev) =>
           prev.map((r) => (r.id === commissionId ? { ...r, status: newStatus } : r))
         );
-        // Tiché obnovení pro synchronizaci se serverem
         fetchData(true);
+        setPendingAction(null);
+        setPaymentReference("");
+        setActualPaymentDate(format(new Date(), "yyyy-MM-dd"));
       } else {
-        console.error("admin_set_affiliate_commission_status unexpected result:", result);
-        toast.error("Provizi se nepodařilo aktualizovat.");
+        // Konkrétní hlášky pro nové guardy RPC
+        const map: Record<string, string> = {
+          missing_payout_account: "Obchodník nemá vyplněné číslo účtu — výplatu nelze potvrdit.",
+          missing_payment_reference: "Zadejte referenci platby (VS / poznámka).",
+          missing_actual_payment_date: "Zadejte skutečné datum platby.",
+          forbidden: "Nemáte oprávnění tuto akci provést.",
+          invalid_transition: "Tento přechod stavu není povolen.",
+          not_found: "Provize nebyla nalezena.",
+        };
+        const msg = map[result?.status ?? ""] ?? "Provizi se nepodařilo aktualizovat.";
+        console.error("admin_set_affiliate_commission_status result:", result);
+        toast.error(msg);
       }
     } catch (err: any) {
       console.error("admin_set_affiliate_commission_status error:", err);
       toast.error("Provizi se nepodařilo aktualizovat.");
     } finally {
       setActionLoading(null);
-      setPendingAction(null);
     }
   };
 
@@ -350,16 +390,21 @@ export default function AdminAffiliateCommissions() {
 
   // ─── Dialog texts ────────────────────────────────────────────────────────────
 
+  const pendingRow = pendingAction ? rows.find((r) => r.id === pendingAction.id) ?? null : null;
+  const isPaidDialog = pendingAction?.newStatus === "paid";
+  const hasPayoutAccount = !!(pendingRow?.payout_account && pendingRow.payout_account.trim());
+  // Tlačítko výplaty smí být aktivní jen s účtem + referencí + datem.
+  const paidCanConfirm =
+    hasPayoutAccount && paymentReference.trim().length > 0 && !!actualPaymentDate;
+
   const dialogConfig = pendingAction?.newStatus === "approved"
     ? {
         title: "Schválit provizi?",
-        description: "Opravdu chcete schválit tuto provizi? Stav se změní z Vypočteno na Schváleno. Tato akce je nevratná.",
         actionLabel: "Schválit",
       }
     : {
-        title: "Označit jako vyplacenou?",
-        description: "Opravdu chcete označit tuto provizi jako vyplacenou? Stav se změní z Schváleno na Vyplaceno. Tato akce je nevratná.",
-        actionLabel: "Označit jako vyplacenou",
+        title: "Označit jako ručně vyplacené?",
+        actionLabel: "Označit jako vyplacené",
       };
 
   // ─── Render ─────────────────────────────────────────────────────────────────
@@ -367,17 +412,99 @@ export default function AdminAffiliateCommissions() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Potvrzovací dialog */}
-      <AlertDialog open={!!pendingAction} onOpenChange={(open) => { if (!open) setPendingAction(null); }}>
-        <AlertDialogContent>
+      <AlertDialog open={!!pendingAction} onOpenChange={(open) => { if (!open) { setPendingAction(null); } }}>
+        <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>{dialogConfig.title}</AlertDialogTitle>
-            <AlertDialogDescription>{dialogConfig.description}</AlertDialogDescription>
+            <AlertDialogDescription>
+              {isPaidDialog ? (
+                <span className="font-medium text-foreground">
+                  Tato akce neposílá peníze. Pouze označí provizi jako ručně vyplacenou.
+                </span>
+              ) : (
+                "Opravdu chcete schválit tuto provizi? Stav se změní z Vypočteno na Schváleno. Tato akce je nevratná."
+              )}
+            </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {isPaidDialog && pendingRow && (
+            <div className="space-y-4 text-sm">
+              {/* Komu / kam / podklad / částka */}
+              <div className="rounded-md border border-border bg-muted/30 p-3 space-y-1.5">
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Příjemce</span>
+                  <span className="font-medium">{pendingRow.affiliate_name ?? "Neuvedeno"}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Účet / banka</span>
+                  <span className="font-mono">
+                    {hasPayoutAccount ? pendingRow.payout_account : <span className="text-destructive">chybí</span>}
+                    {pendingRow.payout_bank ? ` · ${pendingRow.payout_bank}` : ""}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">IČO / DIČ</span>
+                  <span className="font-mono">
+                    {pendingRow.affiliate_ico ?? "—"} / {pendingRow.affiliate_vat_id ?? "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Firma / faktura / období</span>
+                  <span className="text-right">
+                    {(pendingRow.company_name ?? "Neuvedeno")}
+                    {pendingRow.invoice_number ? ` · ${pendingRow.invoice_number}` : ""}
+                    {` · ${formatMonth(pendingRow.period_month)}`}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-3 pt-1 border-t border-border">
+                  <span className="text-muted-foreground">Vypočtená provize</span>
+                  <span className="font-semibold">
+                    {formatCzk(pendingRow.amount_total_czk)}
+                    <span className="text-muted-foreground font-normal">
+                      {" "}(základ {formatCzk(pendingRow.amount_base_czk)})
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              {!hasPayoutAccount && (
+                <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive text-xs">
+                  Obchodník nemá vyplněné číslo účtu. Výplatu nelze potvrdit, dokud nebude doplněno
+                  v profilu obchodníka.
+                </div>
+              )}
+
+              {/* Reference + skutečné datum */}
+              <div className="space-y-1.5">
+                <Label htmlFor="aac-reference">Reference platby / VS / poznámka <span className="text-destructive">*</span></Label>
+                <Input
+                  id="aac-reference"
+                  value={paymentReference}
+                  onChange={(e) => setPaymentReference(e.target.value)}
+                  placeholder="VS, ID bankovní transakce nebo poznámka"
+                  disabled={!hasPayoutAccount || !!actionLoading}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="aac-paydate">Skutečné datum platby <span className="text-destructive">*</span></Label>
+                <Input
+                  id="aac-paydate"
+                  type="date"
+                  value={actualPaymentDate}
+                  onChange={(e) => setActualPaymentDate(e.target.value)}
+                  disabled={!hasPayoutAccount || !!actionLoading}
+                />
+              </div>
+            </div>
+          )}
+
           <AlertDialogFooter>
             <AlertDialogCancel disabled={!!actionLoading}>Zrušit</AlertDialogCancel>
             <AlertDialogAction
-              disabled={!!actionLoading}
-              onClick={() => {
+              disabled={!!actionLoading || (isPaidDialog && !paidCanConfirm)}
+              onClick={(e) => {
+                // U výplaty nesmí dialog zavřít, pokud nelze potvrdit
+                if (isPaidDialog && !paidCanConfirm) { e.preventDefault(); return; }
                 if (pendingAction) {
                   executeAction(pendingAction.id, pendingAction.newStatus);
                 }
@@ -630,7 +757,11 @@ export default function AdminAffiliateCommissions() {
                               className="gap-1 text-xs"
                               disabled={isActioning}
                               data-testid={`btn-pay-${row.id}`}
-                              onClick={() => setPendingAction({ id: row.id, newStatus: "paid" })}
+                              onClick={() => {
+                                setPaymentReference("");
+                                setActualPaymentDate(format(new Date(), "yyyy-MM-dd"));
+                                setPendingAction({ id: row.id, newStatus: "paid" });
+                              }}
                             >
                               {isActioning ? (
                                 <Loader2 className="h-3 w-3 animate-spin" />

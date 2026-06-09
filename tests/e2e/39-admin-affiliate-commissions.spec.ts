@@ -305,4 +305,56 @@ test.describe('39e-g — akční tlačítka dle statusu', () => {
       await deleteTestPartnerWithInvoice(admin, partnerId, invoiceId);
     }
   });
+
+  test('39i) výplatní dialog: text + platební údaje + gating reference/datum', async ({ page }) => {
+    // Vyžaduje migraci 20260609_affiliate_commission_payout_evidence.sql
+    // (sloupce paid_by/payment_reference/actual_payment_date + 4-arg RPC) na stagingu.
+    // Po aplikaci nastav E2E_PAYOUT_EVIDENCE=1 (workflow env).
+    test.skip(
+      process.env.E2E_PAYOUT_EVIDENCE !== '1',
+      'vyžaduje migraci 20260609_affiliate_commission_payout_evidence na stagingu — nastav E2E_PAYOUT_EVIDENCE=1',
+    );
+    const admin = makeAdmin();
+    const ts = Date.now();
+    // Dedikovaný obchodník S vyplněným účtem (aby gating prošel)
+    const { data: aff, error: affErr } = await (admin as any)
+      .from('affiliate_accounts')
+      .insert({
+        name: `E2E Spec39i Obchodník ${ts}`,
+        ref_code: `SPEC39I${ts % 100000}`,
+        status: 'approved',
+        payout_account: '12545857/0800',
+        payout_bank: 'csob',
+      })
+      .select('id')
+      .single();
+    if (affErr || !aff) throw new Error(`Cannot create test affiliate: ${affErr?.message}`);
+    const commId = await insertTestCommission(admin, aff.id, 'approved');
+    try {
+      await loginAsAdmin(page);
+      await page.goto('/admin/affiliate-commissions');
+      await page.waitForLoadState('networkidle', { timeout: 10_000 });
+
+      // Otevři výplatní dialog
+      await page.locator(`[data-testid="btn-pay-${commId}"]`).click();
+
+      // Bezpečnostní text
+      await expect(
+        page.getByText('Tato akce neposílá peníze. Pouze označí provizi jako ručně vyplacenou.')
+      ).toBeVisible({ timeout: 10_000 });
+      // Platební údaje
+      await expect(page.getByText('12545857/0800').first()).toBeVisible();
+
+      // Potvrzení je disabled bez reference
+      const confirmBtn = page.getByRole('button', { name: 'Označit jako vyplacené', exact: true });
+      await expect(confirmBtn).toBeDisabled();
+
+      // Vyplň referenci → datum je předvyplněné dneškem → potvrzení se povolí
+      await page.fill('#aac-reference', 'E2E test VS 12345');
+      await expect(confirmBtn).toBeEnabled();
+    } finally {
+      await deleteTestCommission(admin, commId);
+      await (admin as any).from('affiliate_accounts').delete().eq('id', aff.id);
+    }
+  });
 });
