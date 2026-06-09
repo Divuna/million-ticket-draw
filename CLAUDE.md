@@ -1,5 +1,20 @@
 # CLAUDE.md
 
+## PRAVIDLO PRO SPOUŠTĚNÍ TESTŮ — ŠKÁLUJ ROZSAH (09. 06. 2026, závazné)
+
+Když Pavel řekne „spusť test" nebo když se ladí konkrétní část aplikace, **NEspouštěj automaticky hned celý staging Full E2E** — je pomalý a při ladění jedné stránky zbytečně zdržuje.
+
+**Správný postup:**
+1. **Nejdřív spusť nejmenší relevantní test** — konkrétní spec (např. `npx playwright test tests/e2e/39-...`), případně jediný test přes `--grep "<title>"`.
+2. **Když cílený test projde**, teprve potom **navrhni** celý staging Full E2E jako finální kontrolu.
+3. **Celý staging Full E2E spusť automaticky jen:**
+   - před finálním schválením větší změny,
+   - před produkčním nasazením,
+   - nebo když Pavel výslovně řekne, že chce celý test.
+4. **U každého spuštění napiš, proč právě tento rozsah** (proč jen tento spec / proč už celý suite).
+
+Toto pravidlo nemění P0 smoke povinnosti před Lovable Publish (viz sekce „OCHRANA PROTI REGRESÍM") — týká se volby rozsahu při běžném ladění.
+
 ## ADMIN STRÁNKA `Provize obchodníků` — FÁZE 1 (09. 06. 2026, invarianty)
 
 **Live na produkci.** Route `/admin/affiliate-commissions`. Commit implementace `156519d5`, oprava PostgREST sloupců `e2e673e1`. Production smoke `27170849002` ✅.
