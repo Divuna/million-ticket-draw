@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-09 - 🌿 Samostatná větev: dávkové výplaty affiliate/obchodních provizí (NÁVRH)
+
+- **Samostatná pracovní větev úkolu.** Hlavní roadmapa OneMil se nemění; po dokončení návrat do hlavního kmene. NIC neimplementováno/nasazeno, produkce nedotčena.
+- **Per-invoice B2B provize (předchozí podúkol, NASAZENO):** migrace `20260609_b2b_commissions_per_invoice.sql` aplikována staging + produkce — B2B větev `calculate_affiliate_commissions_for_month` tvoří 1 provizi/fakturu (`source_invoice_id`+`company_ref_id`), indexy `uq_affiliate_commissions_invoice` + `_month_customer` (starý `_month` zrušen), admin RLS `partner_invoices_admin_select`. Commity `7b7dcb3c`, `ae3e9c67`, `bda7c0cd`, `b564e2e7`. UI rozšířeno o zdroj výpočtu. Tlačítka ručně ověřena v produkci: `calculated→approved` (19:19:52 UTC), `approved→paid` (19:27:55, `paid_at` nastaveno). Testovací řádek `dddddddd-…` v produkci = `paid`, zatím nemazat.
+- **Payout-evidence návrh (NAHRAZEN):** commit `00a52bc0` + migrace `20260609_affiliate_commission_payout_evidence.sql` (ruční reference/VS/datum) — **NESMÍ se aplikovat**, Pavel rozhodl pro plně automatický dávkový model.
+- **Nový dohodnutý směr — dávkové výplaty:** workflow 8 stavů (`calculated`→`approved`→`payout_document_created`→`ready_to_pay`→`payment_batch_created`→`bank_export_generated`→`paid`→`payment_confirmation_sent`). Systém generuje doklad/samofakturu, číslo, VS, PDF, e-maily (obchodník+účetní), dávku, export pro **Air Bank**. Admin jen vybere provize, vytvoří dávku, stáhne příkaz, po odeslání označí celou dávku zaplacenou. Tlačítko `Označit jako vyplacené` jen na úrovni dávky.
+- **DB model (návrh):** `affiliate_payout_documents`, `affiliate_payout_batches`, `affiliate_payout_batch_items` + rozšíření `affiliate_commissions`.
+- **Otevřené:** ověřit Air Bank importní formát (ABO/SEPA XML — nedomýšlet), PDF gen, email_queue, účetní e-mail. Fázování A–E, nic nenasazovat bez schválení. Detail v `onemil_state.md` + `CLAUDE.md`.
+
 ## 2026-06-09 - Admin stránka `Provize obchodníků` fáze 2 — schvalování + vyplácení B2B provizí
 
 - **Commit:** `508474fe` — přidány akční tlačítka Schválit (calculated→approved) a Označit jako vyplacené (approved→paid) s AlertDialog potvrzením.

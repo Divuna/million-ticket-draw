@@ -15,6 +15,45 @@ Když Pavel řekne „spusť test" nebo když se ladí konkrétní část aplika
 
 Toto pravidlo nemění P0 smoke povinnosti před Lovable Publish (viz sekce „OCHRANA PROTI REGRESÍM") — týká se volby rozsahu při běžném ladění.
 
+## 🌿 SAMOSTATNÁ VĚTEV: DÁVKOVÉ VÝPLATY AFFILIATE/OBCHODNÍCH PROVIZÍ (09. 06. 2026, ROZPRACOVÁNO — návrh)
+
+**Samostatná pracovní větev úkolu. Hlavní roadmapa OneMil se teď NEMĚNÍ. Po dokončení této větve se vrací do hlavního kmene.** Žádná implementace nasazená, žádná migrace aplikovaná, produkce nedotčena.
+
+**Řeší:** dávkové výplaty provizí směrem **OneMil → obchodník/affiliate** (opačný směr než `partner_invoices` = firma→OneMil).
+
+### Dohodnutá rozhodnutí Pavla (závazná pro tuto větev)
+1. Admin **NEzadává ručně** datum platby, VS ani referenci — **systém generuje vše automaticky**.
+2. Výplata se řeší **dávkou (batch)**, ne po jedné provizi. Tlačítko **`Označit jako vyplacené` je až na úrovni celé dávky**, NIKDY na jednotlivé provizi.
+3. Systém automaticky generuje: výplatní doklad/samofakturu, číslo dokladu, VS/referenci, PDF, e-maily (obchodník + účetní), platební dávku, **export pro Air Bank**.
+4. Admin jen: zkontroluje schválené provize → vybere k proplacení → vytvoří dávku → stáhne hromadný příkaz pro Air Bank → vloží do banky → odešle → označí celou dávku jako zaplacenou.
+5. Doklad se vytvoří **po schválení provize**, hned se odešle obchodníkovi + kopie účetnímu OneMil. Po označení dávky jako zaplacené se posílá **potvrzení o zaplacení** (ne nový účetní doklad).
+6. Souhlas se samofakturací = součást odsouhlasení podmínek partnerského/affiliate programu.
+7. **Banka = Air Bank.** Importní formát (ABO vs. SEPA XML) **NUTNO OVĚŘIT — nedomýšlet.**
+8. **Předchozí návrh `00a52bc0` (ruční reference/VS/datum) je NAHRAZEN a NESMÍ se aplikovat jako finální řešení.**
+9. **Migrace `20260609_affiliate_commission_payout_evidence.sql` se NEMÁ aplikovat.**
+10. Testovací řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` (produkce, stav `paid`) **zatím nemazat.**
+
+### Cílový workflow (8 stavů)
+`calculated` → `approved` → `payout_document_created` (PDF doklad/samofaktura odeslán obchodníkovi+účetní) → `ready_to_pay` (doklad+bank.údaje+příjemce+částka validní) → `payment_batch_created` (admin vybere, systém vytvoří dávku) → `bank_export_generated` (export pro Air Bank) → `paid` (admin označí celou dávku po odeslání plateb) → `payment_confirmation_sent` (potvrzení obchodníkovi + souhrn účetní).
+
+### Navržený DB model (jako soubory, NEAPLIKOVAT)
+- `affiliate_payout_documents` (doklad/samofaktura: číslo, PDF URL, email stav, typ, vazba na provizi)
+- `affiliate_payout_batches` (dávka: číslo, stav, datum, kdo vytvořil, kdo+kdy označil zaplaceno, export soubor)
+- `affiliate_payout_batch_items` (položky: vazba na provizi, částka, účet příjemce, systémový VS/reference)
+- rozšíření `affiliate_commissions`: vazba na batch, stav dokladu, confirmation timestamp, status CHECK o nové stavy
+- číselné řady (doklady, dávky), storage bucket pro PDF, bezpečné úložiště pro bankovní exporty, RLS jen admin/superadmin (+ vlastník dokladu kde dává smysl)
+
+### Navržené funkce/RPC
+vytvoření dokladu · generování PDF · odeslání e-mailu s dokladem · vytvoření dávky · generování Air Bank exportu · označení dávky zaplacené · odeslání potvrzení o zaplacení.
+
+### Navržené UI
+rozšíření `/admin/affiliate-commissions` (výběr provizí) · nová `/admin/affiliate-payouts` · detail `/admin/affiliate-payouts/:id` · `Vytvořit platební dávku` · `Stáhnout hromadný příkaz` · `Označit dávku jako zaplacenou` · přehled dokladů/e-mailů/exportů.
+
+### Nedodělané body (před implementací)
+1. Ověřit **Air Bank importní formát** (ABO/SEPA XML — nedomýšlet). 2. Ověřit existující PDF generování (`generate-partner-invoice-pdf`). 3. Ověřit `email_queue` šablony. 4. Ověřit, kde je účetní e-mail OneMil. 5. Ověřit schéma `affiliate_commissions`, `affiliate_accounts`, `partner_invoices`, `email_queue`, storage bucketů, PDF funkcí. 6. Implementační plán po fázích. 7. Migrace jako soubory, NEAPLIKOVAT. 8. Testy nejdřív staging. 9. Produkce až po výslovném schválení Pavla.
+
+**Rozsah je velký → výstup MUSÍ být po fázích, NIC nenasazovat bez průběžného schválení Pavla.** Navržené fázování: A (DB základ) → B (dávka + paid) → C (doklady + e-maily) → D (Air Bank export) → E (potvrzení).
+
 ## ADMIN STRÁNKA `Provize obchodníků` — FÁZE 1 (09. 06. 2026, invarianty)
 
 **Live na produkci.** Route `/admin/affiliate-commissions`. Commit implementace `156519d5`, oprava PostgREST sloupců `e2e673e1`. Production smoke `27170849002` ✅.

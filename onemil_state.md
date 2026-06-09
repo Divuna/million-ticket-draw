@@ -1,6 +1,32 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 09. 06. 2026 — Admin stránka `Provize obchodníků` fáze 2 live — schvalování + vyplácení B2B provizí. Production smoke run `27171517921` ✅ success (commit `508474fe`).
+**Aktualizováno:** 09. 06. 2026 — 🌿 **Samostatná větev: dávkové výplaty affiliate/obchodních provizí (návrh, rozpracováno).** Hlavní roadmapa se teď nemění.
+
+## 🌿 SAMOSTATNÁ VĚTEV — DÁVKOVÉ VÝPLATY PROVIZÍ (09. 06. 2026, NÁVRH)
+
+**Stav: návrh dohodnut, NIC neimplementováno/nasazeno. Hlavní kmen OneMil nedotčen — po dokončení větve návrat.**
+
+**Co řešíme:** dávkové výplaty provizí OneMil → obchodník/affiliate. Admin jen vybírá provize, vytvoří dávku, stáhne hromadný příkaz pro **Air Bank**, po odeslání označí celou dávku jako zaplacenou. **Vše ostatní (doklad, číslo, VS, PDF, e-maily, export) generuje systém automaticky.** Žádné ruční zadávání data/VS/reference.
+
+**Cílový workflow (8 stavů):** `calculated` → `approved` → `payout_document_created` → `ready_to_pay` → `payment_batch_created` → `bank_export_generated` → `paid` (na úrovni dávky) → `payment_confirmation_sent`.
+
+**DB model (návrh, NEAPLIKOVÁNO):** `affiliate_payout_documents`, `affiliate_payout_batches`, `affiliate_payout_batch_items` + rozšíření `affiliate_commissions` (vazba na batch, stav dokladu, confirmation ts, status CHECK). Číselné řady, PDF storage bucket, bezpečné úložiště exportů, RLS jen admin.
+
+**UI (návrh):** rozšíření `/admin/affiliate-commissions` (výběr) + nová `/admin/affiliate-payouts` + detail `/:id`; `Vytvořit platební dávku`, `Stáhnout hromadný příkaz`, `Označit dávku jako zaplacenou` (jen na dávce, ne na provizi).
+
+**ZÁVAZNÉ:**
+- Předchozí návrh `00a52bc0` (ruční reference/VS/datum) **NAHRAZEN, neaplikovat.**
+- Migrace `20260609_affiliate_commission_payout_evidence.sql` **NEaplikovat.**
+- Testovací řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` (produkce, `paid`) **zatím nemazat.**
+- Air Bank importní formát (ABO/SEPA XML) **NUTNO OVĚŘIT — nedomýšlet.**
+
+**Nedodělané (před implementací):** ověřit Air Bank formát · existující PDF gen (`generate-partner-invoice-pdf`) · `email_queue` šablony · účetní e-mail OneMil · schéma `affiliate_commissions`/`affiliate_accounts`/`partner_invoices`/`email_queue`/buckety/PDF funkce · implementační plán po fázích · migrace jako soubory (neaplikovat) · testy staging · produkce až po schválení.
+
+**Fázování:** A (DB základ) → B (dávka + paid) → C (doklady + e-maily) → D (Air Bank export) → E (potvrzení). **Nic nenasazovat bez průběžného schválení Pavla.**
+
+---
+
+**Předchozí milník (hlavní kmen):** Admin stránka `Provize obchodníků` fáze 2 live — schvalování + vyplácení B2B provizí. Production smoke run `27171517921` ✅ success (commit `508474fe`). Per-invoice B2B provize migrace aplikována na staging i produkci (`source_invoice_id`/`company_ref_id`, admin RLS na `partner_invoices`); tlačítka `Schválit`/`Označit jako vyplacené` ručně ověřena v produkci (`calculated→approved→paid`).
 
 ## 🟢 B2B WORKFLOW ONÉMIL — PRODUKČNĚ OVĚŘENO (08. 06. 2026)
 
