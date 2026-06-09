@@ -274,6 +274,14 @@ test.describe('39e-g — akční tlačítka dle statusu', () => {
   });
 
   test('39h) provize navázaná na fakturu ukáže firmu a číslo faktury', async ({ page }) => {
+    // Vyžaduje migraci 20260609_b2b_commissions_per_invoice.sql aplikovanou na
+    // staging — konkrétně admin SELECT policy na partner_invoices. Bez ní admin
+    // fakturu nepřečte (RLS) a zdroj výpočtu by ukázal „Neuvedeno".
+    // Po aplikaci migrace na staging nastav E2E_B2B_PER_INVOICE=1 (workflow env).
+    test.skip(
+      process.env.E2E_B2B_PER_INVOICE !== '1',
+      'vyžaduje migraci 20260609 (admin SELECT policy na partner_invoices) na stagingu — nastav E2E_B2B_PER_INVOICE=1',
+    );
     const admin = makeAdmin();
     const affiliateId = await getOrCreateAffiliateId(admin);
     const { partnerId, invoiceId, invoiceNumber, companyName } =

@@ -44,6 +44,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_affiliate_commissions_invoice
   ON public.affiliate_commissions (source_invoice_id)
   WHERE source_invoice_id IS NOT NULL;
 
+-- ── 1b) Admin SELECT na partner_invoices ────────────────────────────────────
+-- partner_invoices má RLS zapnuté, ale ŽÁDNOU policy → authenticated admin
+-- nemůže fakturu přečíst z prohlížeče, takže /admin/affiliate-commissions by
+-- u zdroje výpočtu (firma, č. faktury, částky) vždy ukázal „Neuvedeno".
+-- Aditivní admin-only SELECT policy (vzor jako affiliate_company_refs). NEMĚNÍ
+-- přístup partnerů ani service-role; pouze přidává čtení pro adminy.
+DROP POLICY IF EXISTS partner_invoices_admin_select ON public.partner_invoices;
+CREATE POLICY partner_invoices_admin_select
+  ON public.partner_invoices FOR SELECT TO authenticated
+  USING (public.is_admin());
+
 -- ── 2) Přepis funkce ────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.calculate_affiliate_commissions_for_month(p_month date)
  RETURNS jsonb
@@ -135,6 +146,7 @@ COMMIT;
 -- ROLLBACK (návrat k měsíčně agregované B2B větvi + původní index)
 -- ============================================================================
 -- BEGIN;
+-- DROP POLICY IF EXISTS partner_invoices_admin_select ON public.partner_invoices;
 -- DROP INDEX IF EXISTS public.uq_affiliate_commissions_invoice;
 -- DROP INDEX IF EXISTS public.uq_affiliate_commissions_month_customer;
 -- CREATE UNIQUE INDEX uq_affiliate_commissions_month
