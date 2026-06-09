@@ -61,6 +61,41 @@ async function createTestPartnerUser(
   return data.user.id;
 }
 
+/**
+ * Vytvoří minimální NON-influencer partnerský záznam pro test uživatele.
+ * Bez něj useUserRole vrátí isPartnerAccount=false, role guard v App.tsx
+ * pak na /partner/set-password překresluje stránku (roleLoading spinner
+ * + případný redirect), takže submit tlačítko není stabilní/akceschopné.
+ *
+ * notes ZÁMĚRNĚ neobsahuje "influencer" — jinak by se aktivoval influencer
+ * guard a přesměroval na /affiliate/dashboard. status='approved'.
+ * Vrací partner.id pro úklid.
+ */
+async function createTestPartnerRecord(
+  admin: SupabaseClient,
+  authUserId: string,
+  email: string,
+): Promise<string> {
+  const { data, error } = await (admin as any)
+    .from('partners')
+    .insert({
+      name: 'E2E Spec38 Test Partner',
+      logo_url: '',
+      contact_email: email,
+      status: 'approved',
+      auth_user_id: authUserId,
+      notes: JSON.stringify({ account_type: 'company', e2e_spec: '38' }),
+    })
+    .select('id')
+    .single();
+  if (error || !data) throw new Error(`partner record seed failed: ${error?.message}`);
+  return data.id as string;
+}
+
+async function deleteTestPartnerRecord(admin: SupabaseClient, partnerId: string) {
+  await (admin as any).from('partners').delete().eq('id', partnerId);
+}
+
 async function deleteTestUser(admin: SupabaseClient, userId: string) {
   await admin.auth.admin.deleteUser(userId);
 }
@@ -104,9 +139,11 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
     const email    = `spec38b-${ts}@onemil.cz`;
     const password = `Sp38B_${ts}!`;
     let userId: string | null = null;
+    let partnerId: string | null = null;
 
     try {
       userId = await createTestPartnerUser(admin, email, password);
+      partnerId = await createTestPartnerRecord(admin, userId, email);
 
       // Sign in via the anon client to get a real session token,
       // then inject it via localStorage so the page picks it up
@@ -152,6 +189,7 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
       await expect(page.getByText('Nastavte si heslo')).toBeVisible();
 
     } finally {
+      if (partnerId) await deleteTestPartnerRecord(admin, partnerId);
       if (userId) await deleteTestUser(admin, userId);
     }
   });
@@ -170,9 +208,11 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
     const email    = `spec38c-${ts}@onemil.cz`;
     const password = `Sp38C_${ts}!`;
     let userId: string | null = null;
+    let partnerId: string | null = null;
 
     try {
       userId = await createTestPartnerUser(admin, email, password);
+      partnerId = await createTestPartnerRecord(admin, userId, email);
 
       const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON, {
         auth: { persistSession: false, autoRefreshToken: false },
@@ -206,6 +246,7 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
       await expect(page.getByText('Hesla se neshodují')).toBeVisible({ timeout: 5_000 });
 
     } finally {
+      if (partnerId) await deleteTestPartnerRecord(admin, partnerId);
       if (userId) await deleteTestUser(admin, userId);
     }
   });
@@ -224,9 +265,11 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
     const email    = `spec38d-${ts}@onemil.cz`;
     const password = `Sp38D_${ts}!`;
     let userId: string | null = null;
+    let partnerId: string | null = null;
 
     try {
       userId = await createTestPartnerUser(admin, email, password);
+      partnerId = await createTestPartnerRecord(admin, userId, email);
 
       const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON, {
         auth: { persistSession: false, autoRefreshToken: false },
@@ -259,6 +302,7 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
       await expect(page.getByText('Heslo musí mít alespoň 8 znaků')).toBeVisible({ timeout: 5_000 });
 
     } finally {
+      if (partnerId) await deleteTestPartnerRecord(admin, partnerId);
       if (userId) await deleteTestUser(admin, userId);
     }
   });
@@ -278,9 +322,11 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
     const password   = `Sp38E_${ts}!`;
     const newPassword = `NewSp38E_${ts}!`;
     let userId: string | null = null;
+    let partnerId: string | null = null;
 
     try {
       userId = await createTestPartnerUser(admin, email, password);
+      partnerId = await createTestPartnerRecord(admin, userId, email);
 
       const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON, {
         auth: { persistSession: false, autoRefreshToken: false },
@@ -318,6 +364,7 @@ test.describe('Spec 38 — /partner/set-password onboarding', () => {
       await expect(page.getByText('Heslo bylo nastaveno')).toBeVisible({ timeout: 8_000 });
 
     } finally {
+      if (partnerId) await deleteTestPartnerRecord(admin, partnerId);
       if (userId) await deleteTestUser(admin, userId);
     }
   });
