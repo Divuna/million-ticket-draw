@@ -158,7 +158,7 @@ async function createTestPartnerWithInvoice(
     .insert({
       partner_id: partner.id,
       invoice_number: invoiceNumber,
-      type: 'company',
+      type: 'coin',
       status: 'paid',
       amount_ex_vat: 1000.0,
       vat_rate: 21,
