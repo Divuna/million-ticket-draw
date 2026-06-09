@@ -9,8 +9,9 @@
  *   39e) Pokud existuje calculated provize, vidět tlačítko Schválit
  *   39f) Pokud existuje approved provize, vidět tlačítko Označit jako vyplacené
  *   39g) U paid provize není žádné akční tlačítko
+ *   39h) Provize navázaná na fakturu ukáže firmu a číslo faktury (zdroj výpočtu)
  *
- * Testy 39e–39g vytvoří testovací záznamy přes service role a po testu je uklidí.
+ * Testy 39e–39h vytvoří testovací záznamy přes service role a po testu je uklidí.
  *
  * Vyžaduje env:
  *   VITE_SUPABASE_URL              — musí obsahovat staging ref dxmowysntemfqfnanxua
@@ -89,11 +90,12 @@ async function getOrCreateAffiliateId(admin: SupabaseClient): Promise<string> {
   return data.id;
 }
 
-/** Vytvoř testovací provizi v daném stavu. */
+/** Vytvoř testovací provizi v daném stavu. Volitelně navázanou na fakturu. */
 async function insertTestCommission(
   admin: SupabaseClient,
   affiliateId: string,
   status: 'calculated' | 'approved' | 'paid',
+  sourceInvoiceId?: string | null,
 ): Promise<string> {
   const { data, error } = await admin
     .from('affiliate_commissions')
@@ -105,6 +107,7 @@ async function insertTestCommission(
       vat_rate: 0,
       amount_total_czk: 1.00,
       status,
+      source_invoice_id: sourceInvoiceId ?? null,
     })
     .select('id')
     .single();
@@ -114,6 +117,67 @@ async function insertTestCommission(
 
 async function deleteTestCommission(admin: SupabaseClient, id: string) {
   await admin.from('affiliate_commissions').delete().eq('id', id);
+}
+
+/**
+ * Vytvoř testovacího partnera (firmu) + zaplacenou fakturu pro ověření, že
+ * /admin/affiliate-commissions ukáže zdroj výpočtu (firmu a číslo faktury).
+ */
+async function createTestPartnerWithInvoice(
+  admin: SupabaseClient,
+  affiliateId: string,
+): Promise<{ partnerId: string; invoiceId: string; invoiceNumber: string; companyName: string }> {
+  const ts = Date.now();
+  const companyName = `E2E Spec39 Firma ${ts}`;
+  const invoiceNumber = `E2E-SPEC39-${ts}`;
+
+  const { data: partner, error: pErr } = await (admin as any)
+    .from('partners')
+    .insert({
+      name: companyName,
+      company_name: companyName,
+      logo_url: '',
+      website_url: '',
+      status: 'approved',
+      currency: 'CZK',
+      logo_status: 'none',
+      mc_per_99_czk: 0,
+      payout_ready: false,
+      price_per_coin: 1.0,
+      reward_base_czk: 0,
+      reward_mc: 0,
+      vat_rate: 21,
+      referred_by_affiliate_id: affiliateId,
+    })
+    .select('id')
+    .single();
+  if (pErr || !partner) throw new Error(`Cannot create test partner: ${pErr?.message}`);
+
+  const { data: invoice, error: iErr } = await (admin as any)
+    .from('partner_invoices')
+    .insert({
+      partner_id: partner.id,
+      invoice_number: invoiceNumber,
+      type: 'company',
+      status: 'paid',
+      amount_ex_vat: 1000.0,
+      vat_rate: 21,
+      vat_amount: 210.0,
+      amount_inc_vat: 1210.0,
+      coins_activated: 1000,
+      period_start: '2020-01-01',
+      period_end: '2020-01-31',
+    })
+    .select('id')
+    .single();
+  if (iErr || !invoice) throw new Error(`Cannot create test invoice: ${iErr?.message}`);
+
+  return { partnerId: partner.id, invoiceId: invoice.id, invoiceNumber, companyName };
+}
+
+async function deleteTestPartnerWithInvoice(admin: SupabaseClient, partnerId: string, invoiceId: string) {
+  await (admin as any).from('partner_invoices').delete().eq('id', invoiceId);
+  await (admin as any).from('partners').delete().eq('id', partnerId);
 }
 
 // ─── Tests — základní rendering (nevyžaduje SERVICE_ROLE) ─────────────────────
@@ -206,6 +270,31 @@ test.describe('39e-g — akční tlačítka dle statusu', () => {
       await expect(page.locator(`[data-testid="btn-pay-${commId}"]`)).toHaveCount(0);
     } finally {
       await deleteTestCommission(admin, commId);
+    }
+  });
+
+  test('39h) provize navázaná na fakturu ukáže firmu a číslo faktury', async ({ page }) => {
+    const admin = makeAdmin();
+    const affiliateId = await getOrCreateAffiliateId(admin);
+    const { partnerId, invoiceId, invoiceNumber, companyName } =
+      await createTestPartnerWithInvoice(admin, affiliateId);
+    const commId = await insertTestCommission(admin, affiliateId, 'calculated', invoiceId);
+    try {
+      await loginAsAdmin(page);
+      await page.goto('/admin/affiliate-commissions');
+      await page.waitForLoadState('networkidle', { timeout: 10_000 });
+
+      // Řádek provize musí být vidět (tlačítko Schválit pro calculated)
+      await expect(
+        page.locator(`[data-testid="btn-approve-${commId}"]`)
+      ).toBeVisible({ timeout: 10_000 });
+
+      // Zdroj výpočtu: firma + číslo faktury z partner_invoices
+      await expect(page.getByText(companyName).first()).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByText(invoiceNumber).first()).toBeVisible({ timeout: 10_000 });
+    } finally {
+      await deleteTestCommission(admin, commId);
+      await deleteTestPartnerWithInvoice(admin, partnerId, invoiceId);
     }
   });
 });

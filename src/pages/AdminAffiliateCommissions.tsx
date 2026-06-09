@@ -59,10 +59,16 @@ interface CommissionRow {
   company_ref_id: string | null;
   status: string;
   created_at: string;
-  // joined
+  // joined — obchodník
   affiliate_name: string | null;
   affiliate_ref_code: string | null;
+  commission_rate_company: number | null;
+  // joined — firma + faktura (zdroj výpočtu)
   company_name: string | null;
+  invoice_number: string | null;
+  invoice_base_ex_vat: number | null;
+  invoice_vat_amount: number | null;
+  invoice_total_inc_vat: number | null;
 }
 
 type PendingAction = {
@@ -97,6 +103,16 @@ function formatMonth(isoDate: string | null): string {
 function formatCzk(value: number | null | undefined): string {
   if (value == null) return "—";
   return new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK" }).format(value);
+}
+
+function formatPercent(value: number | null | undefined): string {
+  if (value == null) return "—";
+  return `${value} %`;
+}
+
+/** Když vazba/údaj chybí, ukaž jednotné „Neuvedeno" — nic nehádáme. */
+function Neuvedeno() {
+  return <span className="text-muted-foreground text-xs italic">Neuvedeno</span>;
 }
 
 function lastMonths(n: number): { label: string; value: string }[] {
@@ -155,7 +171,8 @@ export default function AdminAffiliateCommissions() {
            created_at,
            affiliate_accounts!affiliate_commissions_affiliate_id_fkey(
              name,
-             ref_code
+             ref_code,
+             commission_rate_company
            )`
         )
         .eq("commission_type", "company_invoice")
@@ -171,15 +188,31 @@ export default function AdminAffiliateCommissions() {
       const invoiceIds = commissions.map((r: any) => r.source_invoice_id).filter(Boolean) as string[];
       const refIds = commissions.map((r: any) => r.company_ref_id).filter(Boolean) as string[];
 
-      const invoicePartnerMap: Record<string, string> = {};
+      // Detail faktury (zdroj výpočtu provize): firma, č. faktury, základ, DPH, celkem.
+      interface InvoiceDetail {
+        company: string;
+        invoice_number: string | null;
+        amount_ex_vat: number | null;
+        vat_amount: number | null;
+        amount_inc_vat: number | null;
+      }
+      const invoiceDetailMap: Record<string, InvoiceDetail> = {};
       if (invoiceIds.length > 0) {
         const { data: invData } = await supabase
           .from("partner_invoices")
-          .select("id, partner_id, partners!partner_invoices_partner_id_fkey(company_name, name)")
+          .select(
+            "id, partner_id, invoice_number, amount_ex_vat, vat_amount, amount_inc_vat, partners!partner_invoices_partner_id_fkey(company_name, name)"
+          )
           .in("id", invoiceIds);
         for (const inv of invData ?? []) {
           const p = (inv as any).partners;
-          if (p) invoicePartnerMap[inv.id] = p.company_name || p.name || "Neuvedeno";
+          invoiceDetailMap[(inv as any).id] = {
+            company: p ? (p.company_name || p.name || "Neuvedeno") : "Neuvedeno",
+            invoice_number: (inv as any).invoice_number ?? null,
+            amount_ex_vat: (inv as any).amount_ex_vat ?? null,
+            vat_amount: (inv as any).vat_amount ?? null,
+            amount_inc_vat: (inv as any).amount_inc_vat ?? null,
+          };
         }
       }
 
@@ -197,9 +230,11 @@ export default function AdminAffiliateCommissions() {
 
       const result: CommissionRow[] = commissions.map((r: any) => {
         const aa = r.affiliate_accounts;
+        const inv = r.source_invoice_id ? invoiceDetailMap[r.source_invoice_id] : undefined;
+        // Firma: primárně z faktury (zdroj výpočtu), fallback z atribuce. Nikdy nehádat.
         let companyName: string | null = null;
-        if (r.source_invoice_id && invoicePartnerMap[r.source_invoice_id]) {
-          companyName = invoicePartnerMap[r.source_invoice_id];
+        if (inv) {
+          companyName = inv.company;
         } else if (r.company_ref_id && refPartnerMap[r.company_ref_id]) {
           companyName = refPartnerMap[r.company_ref_id];
         }
@@ -217,7 +252,12 @@ export default function AdminAffiliateCommissions() {
           created_at: r.created_at,
           affiliate_name: aa?.name ?? null,
           affiliate_ref_code: aa?.ref_code ?? null,
+          commission_rate_company: aa?.commission_rate_company ?? null,
           company_name: companyName,
+          invoice_number: inv?.invoice_number ?? null,
+          invoice_base_ex_vat: inv?.amount_ex_vat ?? null,
+          invoice_vat_amount: inv?.vat_amount ?? null,
+          invoice_total_inc_vat: inv?.amount_inc_vat ?? null,
         };
       });
 
@@ -487,9 +527,14 @@ export default function AdminAffiliateCommissions() {
                     <TableHead>Obchodník</TableHead>
                     <TableHead>Ref kód</TableHead>
                     <TableHead>Firma</TableHead>
-                    <TableHead className="text-right">Základ (bez DPH)</TableHead>
-                    <TableHead className="text-right">DPH</TableHead>
-                    <TableHead className="text-right">Celkem</TableHead>
+                    <TableHead>Č. faktury</TableHead>
+                    <TableHead className="text-right">Faktura zákl. (bez DPH)</TableHead>
+                    <TableHead className="text-right">Faktura DPH</TableHead>
+                    <TableHead className="text-right">Faktura celkem</TableHead>
+                    <TableHead className="text-right">Sazba</TableHead>
+                    <TableHead className="text-right">Provize zákl.</TableHead>
+                    <TableHead className="text-right">Provize DPH</TableHead>
+                    <TableHead className="text-right">Provize celkem</TableHead>
                     <TableHead>Stav</TableHead>
                     <TableHead>Vytvořeno</TableHead>
                     <TableHead className="text-center">Akce</TableHead>
@@ -523,10 +568,30 @@ export default function AdminAffiliateCommissions() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {row.company_name ?? (
-                            <span className="text-muted-foreground text-xs italic">Neuvedeno</span>
+                          {row.company_name ?? <Neuvedeno />}
+                        </TableCell>
+                        {/* Zdroj výpočtu — faktura firmy */}
+                        <TableCell>
+                          {row.invoice_number ? (
+                            <code className="text-xs bg-muted px-1 py-0.5 rounded">{row.invoice_number}</code>
+                          ) : (
+                            <Neuvedeno />
                           )}
                         </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {row.invoice_base_ex_vat != null ? formatCzk(row.invoice_base_ex_vat) : <Neuvedeno />}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                          {row.invoice_vat_amount != null ? formatCzk(row.invoice_vat_amount) : <Neuvedeno />}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {row.invoice_total_inc_vat != null ? formatCzk(row.invoice_total_inc_vat) : <Neuvedeno />}
+                        </TableCell>
+                        {/* Sazba provize obchodníka */}
+                        <TableCell className="text-right font-mono text-sm">
+                          {formatPercent(row.commission_rate_company)}
+                        </TableCell>
+                        {/* Vypočtená provize */}
                         <TableCell className="text-right font-mono text-sm">
                           {formatCzk(row.amount_base_czk)}
                         </TableCell>
