@@ -321,6 +321,7 @@ test.describe('39e-g — akční tlačítka dle statusu', () => {
       .from('affiliate_accounts')
       .insert({
         name: `E2E Spec39i Obchodník ${ts}`,
+        email: `affiliate-payout-39i-${ts}@example.test`,
         ref_code: `SPEC39I${ts % 100000}`,
         status: 'approved',
         payout_account: '12545857',
