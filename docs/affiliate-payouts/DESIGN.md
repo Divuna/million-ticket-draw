@@ -633,9 +633,19 @@ Pavel rucne nahral `sample-onemil-20260625.kpc` do Air Bank internetoveho bankov
 
 Poznamka: `src/pages/AdminAffiliatePayouts.tsx` ani `src/integrations/supabase/types.ts` zatim nebylo nutne menit; detail davky pouziva stavajici `any` pristup k payout tabulkam.
 
-## 16. FAZE D.1 - ZDROJ PAYER_ACCOUNT A DUE_DATE (rozhodnutí 10. 06. 2026, NEIMPLEMENTOVÁNO)
+## 16. FAZE D.1 - ZDROJ PAYER_ACCOUNT A DUE_DATE (APLIKOVANO NA STAGING 10. 06. 2026 ✅)
 
-Faze D.1 resi automaticke plneni `payer_account` a `due_date` pri vytvoreni payout davky. Tato cast neni soucasti soucasne migrace Faze D ani EF; jde o samostatnou vrstvu, ktera musi byt implementovana pred produkci.
+Faze D.1 resi automaticke plneni `payer_account` a `due_date` pri vytvoreni payout davky. Implementovano a overeno **pouze na staging** `dxmowysntemfqfnanxua` (10. 06. 2026). Produkce `xkzhjldrojjlrkezorey` zustava nedotcena a blokovana.
+
+### Staging stav (10. 06. 2026)
+
+- Migrace `supabase/migrations/20260610180000_affiliate_payouts_phase_d1.sql` aplikovana na staging.
+- Settings seed OK: `affiliate_payout_payer_account = 3151752019`, `affiliate_payout_payer_bank_code = 3030`.
+- ACL OK: `create_affiliate_payout_batch` nema `anon` EXECUTE (explicitni REVOKE proveden po aplikaci — Supabase pridava implicitni grant), `update_affiliate_payout_batch_meta` nema `anon` EXECUTE.
+- Nove RPC `update_affiliate_payout_batch_meta(uuid, text, text, date)` — admin-only, FOR UPDATE lock, guard `status = 'created'`, validace uctu/bank_code/due_date.
+- Spec 42 `42-affiliate-bank-export.spec.ts`: **6 passed, 0 failed**, run `27303172376` (42a–42f, `prepareBatchForExport` workaround odstranen).
+- Spec 40 `40-affiliate-payouts.spec.ts`: **4 passed, 0 failed**, run `27303389522` (zadne regrese).
+- Faze D.1 staging overeni kompletni. Produkce blokovana bez vyslovneho schvaleni Pavla.
 
 ### Rozhodnutí
 

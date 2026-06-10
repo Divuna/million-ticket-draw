@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D.1 staging ověření ✅
+
+- Migrace `supabase/migrations/20260610180000_affiliate_payouts_phase_d1.sql` aplikována **pouze na staging** `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` nedotčena.
+- Settings seed OK: `affiliate_payout_payer_account = 3151752019`, `affiliate_payout_payer_bank_code = 3030`.
+- ACL OK: `create_affiliate_payout_batch` nemá `anon` EXECUTE (explicitní REVOKE po aplikaci), `update_affiliate_payout_batch_meta` nemá `anon` EXECUTE.
+- `create_affiliate_payout_batch` auto-filluje `payer_account`/`payer_bank_code` ze settings a `due_date = current_date + 2`. Nové RPC `update_affiliate_payout_batch_meta` umožňuje editaci dokud je dávka ve stavu `created`.
+- Spec 42 `42-affiliate-bank-export.spec.ts`: **6 passed, 0 failed**, run `27303172376` (42a–42f).
+- Spec 40 `40-affiliate-payouts.spec.ts`: **4 passed, 0 failed**, run `27303389522` (žádné regrese).
+- Fáze D.1 staging ověření kompletní. Produkce zůstává blokována bez výslovného schválení Pavla.
+
 ## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D spec 40 ✅ 4 passed
 
 - Spec 40 `40-affiliate-payouts.spec.ts` spuštěn na staging `dxmowysntemfqfnanxua`, run `27301606390`.

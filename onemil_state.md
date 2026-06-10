@@ -70,9 +70,13 @@
 - Pavel žádnou platbu nepotvrdil ani neodeslal.
 - **Blokující podmínka importního testu je splněna.** Fáze D může pokročit na staging po výslovném schválení Pavla. Zdroj `payer_account`/`due_date` v produkčním prostředí musí být před aplikací potvrzen.
 
-**Rozhodnutí Fáze D.1 (10. 06. 2026) — NEIMPLEMENTOVÁNO:** Před produkčním rollout musí být vyřešeny tyto tři body: (1) Zdroj `payer_account`/`payer_bank_code`: uložit do `settings` jako `affiliate_payout_payer_account = 3151752019` a `affiliate_payout_payer_bank_code = 3030`; `create_affiliate_payout_batch` je načte automaticky. (2) Zdroj `due_date`: automaticky `current_date + 2` při vytvoření dávky; admin může editovat v detailu `/admin/affiliate-payouts/:id` před exportem. (3) Export selže řízeně, pokud `payer_account` nebo `due_date` chybí. Současná migrace a EF Fáze D jsou pro staging testování použitelné — spec 42 nastavuje obě pole přes přímý UPDATE (`prepareBatchForExport`).
+**Fáze D.1 APLIKOVÁNA NA STAGING ✅ (10. 06. 2026):** Migrace `20260610180000_affiliate_payouts_phase_d1.sql` aplikována na staging `dxmowysntemfqfnanxua`. Settings seed OK: `affiliate_payout_payer_account = 3151752019`, `affiliate_payout_payer_bank_code = 3030`. ACL OK: `create_affiliate_payout_batch` i `update_affiliate_payout_batch_meta` nemají `anon` EXECUTE — explicitní REVOKE provedeno po každé funkci (Supabase přidává implicit grant). `create_affiliate_payout_batch` auto-filluje `payer_account`, `payer_bank_code` ze settings a `due_date = current_date + 2` při vytvoření dávky. Admin může editovat tato pole v detailu `/admin/affiliate-payouts/:id` dokud je dávka ve stavu `created` — uložení přes RPC `update_affiliate_payout_batch_meta`. `prepareBatchForExport` workaround odstraněn ze spec 42. Produkce `xkzhjldrojjlrkezorey` nedotčena.
 
-**Další bezpečný krok:** Deploy Edge Function `generate-affiliate-bank-export` na staging + spuštění spec 42 (výslovné schválení Pavla). Do produkce nic nepřenášet bez výslovného schválení. Žádný Lovable Publish. Testovací produkční řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` zatím nemazat.
+**Spec 42 `42-affiliate-bank-export.spec.ts`: `6 passed` ✅ (10. 06. 2026, run `27303172376`):** 42a) vytvoří Air Bank `.kpc` export a povolí paid až po exportu ✅; 42b) chybějící účet plátce (NULL-ováno po auto-fill) vrátí řízenou chybu ✅; 42c) `created` dávku nelze označit jako paid před exportem ✅; 42d) `create_affiliate_payout_batch` auto-filluje `payer_account` a `due_date = today+2` ✅; 42e) `update_affiliate_payout_batch_meta` umožňuje editaci před exportem ✅; 42f) `update_affiliate_payout_batch_meta` odmítne editaci po exportu ✅. Telegram OK doručen.
+
+**Spec 40 `40-affiliate-payouts.spec.ts`: `4 passed` ✅ (10. 06. 2026, run `27303389522`):** Žádné regrese po D.1. 40a–40d všechny prošly. **Fáze D.1 staging ověření kompletní.**
+
+**Produkce zůstává blokována.** Do produkce nic nepřenášet bez výslovného schválení Pavla. Žádný Lovable Publish. Testovací produkční řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` zatím nemazat.
 
 ## 🌿 SAMOSTATNÁ VĚTEV — DÁVKOVÉ VÝPLATY PROVIZÍ (09. 06. 2026, NÁVRH)
 
