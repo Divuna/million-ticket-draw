@@ -16,7 +16,7 @@ Fáze C staging stav:
 
 Oprava během testu: `process-email-queue` už neinicializuje Resend při startu funkce; Resend se inicializuje až před skutečným odesláním. Required PDF příloha bez souboru skončí řízeně jako `failed`. Commit opravy: `6f998677c4fc5ccb085f9e511d625c58579d6f62`.
 
-Fáze D / Air Bank export zatím není hotová. Další krok je pouze audit a návrh Fáze D, bez implementace. Do produkce nic nepřenášet bez výslovného schválení Pavla; nedělat deploy ani Lovable Publish.
+Fáze D / Air Bank export má hotový pouze audit/design, bez implementace. Fáze D má být Air Bank ABO `.kpc` export přes `generate-affiliate-bank-export`, prepare/finalize RPC, privátní bucket `affiliate-bank-exports`, Windows-1250, CRLF, částky v haléřích, VS max 10 číslic, KS `0000` a zprávu max 35 znaků. Rizika: přesný ABO layout musí projít reálným importním testem v Air Bank, Windows-1250 musí být ověřen bajtově a současný přechod `created → paid` se má později zpřísnit na `exported → paid`. Do produkce nic nepřenášet bez výslovného schválení Pavla; nedělat deploy ani Lovable Publish.
 
 ## PRAVIDLO PRO SPOUŠTĚNÍ TESTŮ — ŠKÁLUJ ROZSAH (09. 06. 2026, závazné)
 

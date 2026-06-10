@@ -53,9 +53,11 @@
 
 **Mimo aktuálně hotový staging rozsah:** Air Bank export (Fáze D) a potvrzení o zaplacení (Fáze E) zatím nejsou hotové. Produkční rollout zůstává odložený na koordinovaný balík DB + aktuální UI + smoke test.
 
+**Fáze D audit/design hotový, bez implementace:** Fáze D má být Air Bank ABO `.kpc` export z payout dávky. Pozdější implementace má použít Edge Function `generate-affiliate-bank-export`, prepare/finalize RPC, privátní bucket `affiliate-bank-exports`, Windows-1250, CRLF, částky v haléřích, VS max 10 číslic, KS `0000` a zprávu max 35 znaků. Rizika: přesný ABO layout musí projít reálným importním testem v Air Bank, Windows-1250 musí být ověřen bajtově a současný staging přechod `created → paid` by se má ve Fázi D zpřísnit na `exported → paid`.
+
 **Produkční rollout závěr:** Fáze A+B se nesmí nasadit jako samotná DB změna bez aktuálního UI. Fáze B blokuje staré RPC `approved → paid`, zatímco staré produkční UI může pořád zobrazovat per-row `Označit jako vyplacené`; tím by staré ruční paid flow začalo vracet chybu. Nejbezpečnější je koordinované produkční okno: (1) produkční okno, (2) aplikovat DB Fázi A, (3) aplikovat DB Fázi B, (4) aplikovat temp-table guard, (5) ihned nasadit aktuální UI, (6) udělat produkční smoke. Správné storage buckety pro postcheck jsou `affiliate-payout-docs` a `affiliate-bank-exports`.
 
-**Další bezpečný krok:** Fáze D / Air Bank export — nejdřív pouze audit a návrh, bez implementace. Později lze připravit koordinovaný produkční rollout celého balíku, ale do produkce nic nepřenášet bez výslovného schválení. Žádný deploy, žádný Lovable Publish. Testovací produkční řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` zatím nemazat.
+**Další bezpečný krok:** Po Pavlově výslovném schválení lze připravit reviewable soubory Fáze D, zatím bez aplikace. Později lze připravit koordinovaný produkční rollout celého balíku, ale do produkce nic nepřenášet bez výslovného schválení. Žádný deploy, žádný Lovable Publish. Testovací produkční řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` zatím nemazat.
 
 ## 🌿 SAMOSTATNÁ VĚTEV — DÁVKOVÉ VÝPLATY PROVIZÍ (09. 06. 2026, NÁVRH)
 

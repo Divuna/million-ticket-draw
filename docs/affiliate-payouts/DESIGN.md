@@ -491,3 +491,99 @@ Poznamka: `process-email-queue` s podporou `attachment_storage_bucket/path` se n
 - Potvrzeni o zaplaceni.
 - Produkcni rollout.
 - Lovable Publish.
+
+## 15. FAZE D - AIR BANK ABO `.kpc` EXPORT (AUDIT / DESIGN, BEZ IMPLEMENTACE)
+
+Faze D je zatim pouze audit a navrh. Nic neni implementovano, zadna migrace nebyla vytvorena ani aplikovana, zadna Edge Function nebyla nasazena, produkce `xkzhjldrojjlrkezorey` je netknuta.
+
+Aktualni potvrzeny stav:
+
+- Faze A+B+C jsou aplikovane a overene pouze na stagingu `dxmowysntemfqfnanxua`.
+- Produkce `xkzhjldrojjlrkezorey` je netknuta.
+- Web deploy ani Lovable Publish neprobehl.
+- Stara migrace `20260609_affiliate_commission_payout_evidence.sql` se nesmi aplikovat.
+- Produkcni testovaci radek `dddddddd-dddd-dddd-dddd-dddddddddddd` se nema mazat.
+
+### Cil Faze D
+
+- Vygenerovat Air Bank ABO `.kpc` export z payout davky.
+- Ulozit export do privatniho bucketu `affiliate-bank-exports`.
+- Nastavit davku z `created` na `exported`.
+- Umoznit adminovi stahnout `.kpc` z detailu `/admin/affiliate-payouts/:id`.
+- Neodesilat penize automaticky; Air Bank import a potvrzeni plateb zustava rucni krok admina.
+
+### Navrzena architektura
+
+- Edge Function `generate-affiliate-bank-export`
+  - admin-only,
+  - vstup `batch_id`,
+  - vola prepare RPC,
+  - generuje ABO `.kpc`,
+  - prevadi obsah do Windows-1250,
+  - uklada soubor do `affiliate-bank-exports`,
+  - vola finalize RPC,
+  - pri pozdni chybe maze orphan export soubor.
+- RPC `prepare_affiliate_bank_export(p_batch_id uuid)`
+  - zamkne davku pres `FOR UPDATE`,
+  - povoli jen davku ve stavu `created`,
+  - validuje polozky, ucty, banky, castky, VS, KS, SS, zpravu, `due_date`, `payer_account`,
+  - vraci snapshot dat pro export.
+- RPC `finalize_affiliate_bank_export(...)`
+  - transakcne ulozi metadata exportu,
+  - nastavi `affiliate_payout_batches.status = 'exported'`,
+  - kontroluje `ROW_COUNT`,
+  - vraci rizene JSON chyby.
+
+### Technicka pravidla exportu
+
+- Format: Air Bank ABO `.kpc`.
+- Bucket: privatni `affiliate-bank-exports`.
+- Encoding: Windows-1250.
+- Konce radku: CRLF.
+- Castky: v halerich, bez desetinne carky.
+- VS: numericky, max 10 cislic.
+- KS: default `0000`.
+- SS: nullable, pokud ucetni neurci jinak.
+- Zprava pro prijemce: max 35 znaku.
+- Soubor musi zustat do limitu Air Bank 50 KB.
+
+### Dopad na stavovy model
+
+Soucasny stav davky je `created -> exported -> paid` (+ `cancelled`).
+
+Faze D by mela pozdeji zprisnit `mark_affiliate_payout_batch_paid` tak, aby v produkcnim workflow neslo oznacit davku jako zaplacenou primo ze stavu `created`. Doporuceny cilovy prechod je:
+
+- `created -> exported` po uspesnem `.kpc` exportu,
+- `exported -> paid` az po rucnim importu a odeslani plateb v Air Bank.
+
+### Rizika
+
+- Presny ABO layout musi byt pred produkcnim pouzitim otestovan realnym importem v Air Bank internetovem bankovnictvi.
+- Windows-1250 a CRLF musi byt testovane bajtove, ne jen textovou kontrolou.
+- Soucasne `created -> paid` z Faze B je prakticke pro staging, ale pro produkcni Fazi D by melo byt zprisneno na `exported -> paid`.
+- `payer_account` a `due_date` jsou dnes nullable; export musi pri chybejicich hodnotach vratit rizenou chybu, dokud nebude jasne, odkud se maji nastavovat.
+
+### Test plan pro pozdejsi implementaci
+
+- Novy gated staging test `tests/e2e/42-affiliate-bank-export.spec.ts`.
+- Overit vytvoreni exportu z davky `created`.
+- Overit ulozeni souboru do privatniho bucketu `affiliate-bank-exports`.
+- Overit prechod davky `created -> exported`.
+- Overit Windows-1250, CRLF a castky v halerich na bajtove urovni.
+- Overit VS max 10 cislic, KS `0000`, zpravu max 35 znaku.
+- Overit rizene chyby pro chybejici `payer_account`, `due_date`, prazdnou davku a spatny stav.
+- Overit, ze `Oznacit davku jako zaplacenou` funguje az po exportu.
+- Overit cleanup testovacich dat.
+
+### Soubory pro pozdejsi implementaci
+
+- `supabase/migrations/202606xx_affiliate_payouts_phase_d.sql`
+- `supabase/functions/generate-affiliate-bank-export/index.ts`
+- `src/pages/AdminAffiliatePayoutDetail.tsx`
+- `src/pages/AdminAffiliatePayouts.tsx`
+- `src/integrations/supabase/types.ts`
+- `tests/e2e/42-affiliate-bank-export.spec.ts`
+- `docs/affiliate-payouts/DESIGN.md`
+- `onemil_state.md`
+- `onemil_history.md`
+- `CLAUDE.md`

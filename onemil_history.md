@@ -14,6 +14,12 @@
 
 ---
 
+## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D Air Bank export audit/design
+
+- Připraven a zapsán pouze audit/design Fáze D: Air Bank ABO `.kpc` export.
+- Návrh počítá s `generate-affiliate-bank-export`, prepare/finalize RPC, privátním bucketem `affiliate-bank-exports`, Windows-1250, CRLF, částkami v haléřích, VS max 10 číslic, KS `0000` a zprávou max 35 znaků.
+- Rizika: přesný ABO layout musí projít reálným importním testem v Air Bank, Windows-1250 musí být ověřen bajtově a přechod dávky `created → paid` se má později zpřísnit na `exported → paid`.
+- Žádná implementace, žádná migrace, žádná Supabase změna, žádný deploy, žádný Lovable Publish. Produkce `xkzhjldrojjlrkezorey` netknutá.
 ## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze C aplikovaná na staging
 
 - Fáze C aplikována pouze na staging `dxmowysntemfqfnanxua`: migrace `20260610140000_affiliate_payouts_phase_c.sql`.
