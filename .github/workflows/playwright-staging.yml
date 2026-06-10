@@ -11,6 +11,18 @@ on:
         description: "Nastav E2E_B2B_PER_INVOICE=1 (aktivuje spec 39h). Jen pro staging s aplikovanou migrací 20260609."
         required: false
         default: "0"
+      affiliate_payouts:
+        description: "Nastav E2E_AFFILIATE_PAYOUTS=1 pro cilene payout E2E testy."
+        required: false
+        type: choice
+        options:
+          - "false"
+          - "true"
+        default: "false"
+      grep:
+        description: "Volitelny Playwright --grep filtr pro cilene testy, napr. 39f|39i."
+        required: false
+        default: ""
   schedule:
     # Prague time (CEST = UTC+2): 04:00, 12:00, 20:00 — offset from prod smoke (00:00, 08:00, 16:00)
     - cron: '0 2 * * *'    # 04:00 Praha
@@ -420,16 +432,27 @@ jobs:
       - name: Run E2E (full suite nebo cílený spec)
         id: e2e_tests
         run: |
-          if [ -n "${{ github.event.inputs.only_spec }}" ]; then
-            echo "Cílený běh: ${{ github.event.inputs.only_spec }}"
-            npx playwright test "${{ github.event.inputs.only_spec }}"
+          if [ -n "${ONLY_SPEC}" ]; then
+            echo "Cileny beh: ${ONLY_SPEC}"
+            if [ -n "${E2E_GREP}" ]; then
+              echo "Grep filtr: ${E2E_GREP}"
+              npx playwright test "${ONLY_SPEC}" --grep "${E2E_GREP}"
+            else
+              npx playwright test "${ONLY_SPEC}"
+            fi
+          elif [ -n "${E2E_GREP}" ]; then
+            echo "Cileny grep beh: ${E2E_GREP}"
+            npx playwright test --grep "${E2E_GREP}"
           else
-            echo "Plný staging E2E suite"
+            echo "Plny staging E2E suite"
             npm run test:smoke
           fi
         env:
           CI: true
+          ONLY_SPEC: ${{ github.event.inputs.only_spec }}
+          E2E_GREP: ${{ github.event.inputs.grep }}
           E2E_B2B_PER_INVOICE: ${{ github.event.inputs.b2b_per_invoice }}
+          E2E_AFFILIATE_PAYOUTS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.affiliate_payouts == 'true' && '1' || '0' }}
           VITE_SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.STAGING_VITE_SUPABASE_ANON_KEY }}
           VITE_INTERNAL_FUNCTION_TOKEN: ${{ secrets.STAGING_VITE_INTERNAL_FUNCTION_TOKEN }}
