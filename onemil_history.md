@@ -14,6 +14,12 @@
 
 ---
 
+## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D EF nasazena na staging ✅
+
+- Edge Function `generate-affiliate-bank-export` nasazena na staging `dxmowysntemfqfnanxua`, ACTIVE, verze 1.
+- Smoke test bez JWT → `401` ✅.
+- Produkce `xkzhjldrojjlrkezorey` nedotčena. Žádný Lovable Publish.
+
 ## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D migrace aplikována na staging ✅
 
 - Migrace `20260610170000_affiliate_payouts_phase_d.sql` aplikována na staging `dxmowysntemfqfnanxua`.
