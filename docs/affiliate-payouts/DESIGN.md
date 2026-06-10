@@ -558,12 +558,30 @@ Faze D by mela pozdeji zprisnit `mark_affiliate_payout_batch_paid` tak, aby v pr
 - `created -> exported` po uspesnem `.kpc` exportu,
 - `exported -> paid` az po rucnim importu a odeslani plateb v Air Bank.
 
+### Review opravy (commit `7890dc0c745a0659354d0378a97fe35d4c9fd606`)
+
+Pred staging aplikaci byl navrh reviewovan a opraveny 4 chyby:
+
+1. **ABO layout** — `buildAboKpc` byl placeholder; opraven dle oficialniho CSAS ABO specifikace: polozka zacina uctem prijemce (bez debetniho uctu), bez `AV:` prefixu, item amount max 12 cislic (ne 14), KS pole = `bank_code(4) + KS(4)`.
+2. **Path-traversal regex** — `\\.\\.` v CHECK constraintu a ve `finalize` RPC nefungovalo spravne (`standard_conforming_strings = on`); opraveno na `\.\.`.
+3. **Items-sum integrity check** — pridana kontrola `sum(amount_czk) = total_amount_czk`; chyba `amount_sum_mismatch`.
+4. **`due_date` horni limit** — pridana kontrola `due_date > current_date + 364`; chyba `invalid_due_date_too_far`.
+
+### Vzorovy soubor pro rucni importni test
+
+Pripraveny vzorovy Air Bank `.kpc` soubor pro overeni importu v internetovem bankovnictvi pred staging aplikaci Faze D.
+
+- **Soubor:** `docs/affiliate-payouts/sample-bank-export/sample-onemil-20260625.kpc`
+- **Generátor:** `docs/affiliate-payouts/sample-bank-export/generate-sample.cjs`
+- **README:** `docs/affiliate-payouts/sample-bank-export/README.md` (postup a blokujici checklist)
+- **Commit:** `e41c2e0a2f545039e017ba95b53b7546e9fd0de8`
+- **BLOKER:** Pavel musi rucne overit import `.kpc` v Air Bank internetovem bankovnictvi; bez tohoto potvrzeni se Faze D nesmi aplikovat na staging.
+
 ### Rizika
 
-- Presny ABO layout musi byt pred produkcnim pouzitim otestovan realnym importem v Air Bank internetovem bankovnictvi.
-- Windows-1250 a CRLF musi byt testovane bajtove, ne jen textovou kontrolou.
-- Soucasne `created -> paid` z Faze B je prakticke pro staging, ale pro produkcni Fazi D by melo byt zprisneno na `exported -> paid`.
-- `payer_account` a `due_date` jsou dnes nullable; export musi pri chybejicich hodnotach vratit rizenou chybu, dokud nebude jasne, odkud se maji nastavovat.
+- **[BLOKER] Presny ABO layout musi byt pred staging aplikaci otestovan realnym importem v Air Bank** — viz vzorovy soubor a README vyse.
+- Windows-1250 a CRLF jsou overeny bajtove v generatoru (vsechny bajty <= 0x7F, CRLF konce radku).
+- `payer_account` a `due_date` jsou dnes nullable; export vrati rizenou chybu pri chybejicich hodnotach; pred aplikaci musi byt potvrzeno, odkud se hodnoty nastavuji.
 
 ### Test plan pro pozdejsi implementaci
 
@@ -585,6 +603,9 @@ Faze D by mela pozdeji zprisnit `mark_affiliate_payout_batch_paid` tak, aby v pr
 - `src/pages/AdminAffiliatePayouts.tsx`
 - `tests/e2e/40-affiliate-payouts.spec.ts`
 - `tests/e2e/42-affiliate-bank-export.spec.ts`
+- `docs/affiliate-payouts/sample-bank-export/sample-onemil-20260625.kpc` (vzorovy .kpc pro importni test)
+- `docs/affiliate-payouts/sample-bank-export/generate-sample.cjs` (generator)
+- `docs/affiliate-payouts/sample-bank-export/README.md` (postup importniho testu)
 - `docs/affiliate-payouts/DESIGN.md`
 - `onemil_state.md`
 - `onemil_history.md`
