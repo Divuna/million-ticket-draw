@@ -1,10 +1,10 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 10. 06. 2026 — 🌿 **Samostatná větev: dávkové výplaty affiliate/obchodních provizí (Fáze A+B na stagingu ověřené automaticky i ručně, produkce netknutá).** Hlavní roadmapa se teď nemění.
+**Aktualizováno:** 10. 06. 2026 — 🌿 **Samostatná větev: dávkové výplaty affiliate/obchodních provizí (Fáze A+B+C na stagingu ověřené, produkce netknutá).** Hlavní roadmapa se teď nemění.
 
 ## 🌿 DÁVKOVÉ VÝPLATY PROVIZÍ — AKTUÁLNÍ STAV STAGINGU (10. 06. 2026)
 
-**Stav větve:** Fáze A i Fáze B jsou aplikované pouze na staging Supabase projekt `dxmowysntemfqfnanxua`. Bezpečnostní patch temp tabulky pro `create_affiliate_payout_batch` je aplikovaný. Produkce `xkzhjldrojjlrkezorey` je netknutá. Nebyl proveden žádný deploy, žádný Lovable Publish a full E2E nebylo spuštěno.
+**Stav větve:** Fáze A, Fáze B i Fáze C jsou aplikované pouze na staging Supabase projekt `dxmowysntemfqfnanxua`. Bezpečnostní patch temp tabulky pro `create_affiliate_payout_batch` je aplikovaný. Produkce `xkzhjldrojjlrkezorey` je netknutá. Nebyl proveden žádný web deploy, žádný Lovable Publish a full E2E nebylo spuštěno.
 
 **Důležité commity:**
 - Fáze A úprava: `3b2ba8a65c7480636045440f15998a5d79abc082`
@@ -14,11 +14,24 @@
 - CI workflow inputy: `1bcf3221829f238a94ae8534aeeda495af8dfea0`
 - test email fix: `2b9b6b07c549fb2f26dcab22f95c9967f68284a5`
 - cookie consent fix: `7e061f1b6737435939eb3d1a6250301bccd7fb06`
+- Fáze C worker fix: `6f998677c4fc5ccb085f9e511d625c58579d6f62`
 
 **Ověřené GitHub Actions:**
 - spec 40 run `27258741085` — 4 passed
 - spec 39 run `27270797466` — 2 passed
 - staging UI smoke run `27271124754` — 2 passed
+
+**Fáze C — PDF doklady + e-mail queue na stagingu:**
+- Aplikována migrace `20260610140000_affiliate_payouts_phase_c.sql`.
+- `affiliate_payout_documents` má nové PDF/e-mail auditní sloupce.
+- `email_queue` má nové sloupce pro privátní storage přílohy a `attachment_required`.
+- Existují RPC `prepare_affiliate_payout_document` a `finalize_affiliate_payout_document`.
+- Edge Function `create-affiliate-payout-document` je nasazená na stagingu, verze 1.
+- Edge Function `process-email-queue` je nasazená na stagingu, verze 2.
+- `settings.accounting_email = accounting-test@onemil.test`.
+- Cílený test `tests/e2e/41-affiliate-payout-documents.spec.ts` prošel: `4 passed`.
+- Cleanup testu 41 čistý: `email_queue` 0 zbytků pro spec41, `affiliate_accounts` 0 zbytků pro spec41, `affiliate_payout_documents` 0 zbytků pro spec41.
+- Během testu opraven `process-email-queue`: Resend se už neinicializuje při startu funkce, ale až před skutečným odesláním; required PDF příloha bez souboru skončí řízeně jako `failed`.
 
 **Ruční staging test Pavlem dokončen:**
 - Staging: `dxmowysntemfqfnanxua`
@@ -38,11 +51,11 @@
 - `/admin/affiliate-payouts/:id` má detail dávky a tlačítko `Označit dávku jako zaplacenou`.
 - Akce `Označit dávku jako zaplacenou` pouze eviduje, že platba byla provedena v bance; neposílá peníze.
 
-**Mimo rozsah Fáze B:** PDF doklady, e-maily a Air Bank export nejsou hotové a nejsou součást Fáze B. Tyto části zůstávají pro další fáze po samostatném schválení.
+**Mimo aktuálně hotový staging rozsah:** Air Bank export (Fáze D) a potvrzení o zaplacení (Fáze E) zatím nejsou hotové. Produkční rollout zůstává odložený na koordinovaný balík DB + aktuální UI + smoke test.
 
 **Produkční rollout závěr:** Fáze A+B se nesmí nasadit jako samotná DB změna bez aktuálního UI. Fáze B blokuje staré RPC `approved → paid`, zatímco staré produkční UI může pořád zobrazovat per-row `Označit jako vyplacené`; tím by staré ruční paid flow začalo vracet chybu. Nejbezpečnější je koordinované produkční okno: (1) produkční okno, (2) aplikovat DB Fázi A, (3) aplikovat DB Fázi B, (4) aplikovat temp-table guard, (5) ihned nasadit aktuální UI, (6) udělat produkční smoke. Správné storage buckety pro postcheck jsou `affiliate-payout-docs` a `affiliate-bank-exports`.
 
-**Další bezpečný krok:** rozhodnutí Pavla, zda otevřít koordinované DB+UI produkční okno nebo pokračovat další fází. Do produkce nic nepřenášet bez výslovného schválení. Žádný deploy, žádný Lovable Publish. Testovací produkční řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` zatím nemazat.
+**Další bezpečný krok:** pokračovat Fází D / Air Bank export na stagingu, nebo později připravit koordinovaný produkční rollout celého balíku. Do produkce nic nepřenášet bez výslovného schválení. Žádný deploy, žádný Lovable Publish. Testovací produkční řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` zatím nemazat.
 
 ## 🌿 SAMOSTATNÁ VĚTEV — DÁVKOVÉ VÝPLATY PROVIZÍ (09. 06. 2026, NÁVRH)
 

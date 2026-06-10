@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze C aplikovaná na staging
+
+- Fáze C aplikována pouze na staging `dxmowysntemfqfnanxua`: migrace `20260610140000_affiliate_payouts_phase_c.sql`.
+- Přidány PDF/e-mail auditní sloupce do `affiliate_payout_documents` a přílohové sloupce do `email_queue`.
+- Na staging nasazeny Edge Functions: `create-affiliate-payout-document` verze 1 a `process-email-queue` verze 2.
+- Nastaveno `settings.accounting_email = accounting-test@onemil.test`.
+- Cílený test `tests/e2e/41-affiliate-payout-documents.spec.ts` prošel: `4 passed`; cleanup čistý (`email_queue`, `affiliate_accounts`, `affiliate_payout_documents` pro spec41 = 0).
+- Během testu opraven `process-email-queue`, aby Resend neinicializoval při startu funkce; required PDF příloha bez souboru končí řízeně jako `failed`. Commit opravy: `6f998677c4fc5ccb085f9e511d625c58579d6f62`.
+- Produkce `xkzhjldrojjlrkezorey` netknutá; žádný web deploy, žádný Lovable Publish, full E2E neběželo. Fáze D / Air Bank export zatím není hotová.
 ## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — opravený produkční rollout plán
 
 - Do dokumentace zapsán opravený závěr: produkční rollout Fáze A+B se nesmí dělat jako samotná DB změna bez aktuálního UI deploye.

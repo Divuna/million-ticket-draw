@@ -385,9 +385,33 @@ Očekávání: oba buckety existují a `public = false`.
 - Nedělat samostatný DB rollout bez UI deploye.
 - Nedělat produkční test reálné dávky bez výslovného schválení Pavla.
 
-## 14. FAZE C - REVIEWABLE NAVRH PDF DOKLADU A E-MAILU
+## 14. FAZE C - PDF DOKLADY A E-MAILY NA STAGINGU
 
-Faze C je pripravena pouze jako reviewable navrh. Neni aplikovana na staging ani produkci a nebyl proveden deploy Edge Functions.
+Faze C je aplikovana a overena pouze na stagingu `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` je netknuta. Nebyl proveden web deploy, Lovable Publish ani full E2E.
+
+### Aktualni staging stav
+
+- DB migrace `20260610140000_affiliate_payouts_phase_c.sql` aplikovana na staging.
+- `affiliate_payout_documents` ma nove PDF/e-mail auditni sloupce.
+- `email_queue` ma nove sloupce pro privatni storage prilohy a `attachment_required`.
+- Existuji RPC:
+  - `prepare_affiliate_payout_document`
+  - `finalize_affiliate_payout_document`
+- Edge Function `create-affiliate-payout-document` je nasazena na staging, verze 1.
+- Edge Function `process-email-queue` je nasazena na staging, verze 2.
+- `settings.accounting_email = accounting-test@onemil.test`.
+- Test `tests/e2e/41-affiliate-payout-documents.spec.ts` prosel: `4 passed`.
+- Cleanup testu 41 cisty:
+  - `email_queue`: 0 zbytku pro spec41
+  - `affiliate_accounts`: 0 zbytku pro spec41
+  - `affiliate_payout_documents`: 0 zbytku pro spec41
+
+### Oprava behem staging testu
+
+- `process-email-queue` uz neinicializuje Resend pri startu funkce.
+- Resend se inicializuje az pred skutecnym odeslanim.
+- Required PDF priloha bez souboru skonci rizene jako `failed`.
+- Commit opravy: `6f998677c4fc5ccb085f9e511d625c58579d6f62`.
 
 ### Cil
 
@@ -403,7 +427,7 @@ Faze C je pripravena pouze jako reviewable navrh. Neni aplikovana na staging ani
 
 Nepouzivat dlouhodobe ulozenou signed URL jako jediny zdroj prilohy.
 
-Navrh Faze C uklada:
+Faze C uklada:
 
 - `affiliate_payout_documents.pdf_storage_path`
 - `email_queue.attachment_storage_bucket`
@@ -412,7 +436,7 @@ Navrh Faze C uklada:
 
 Worker `process-email-queue` si prilohu stahne pres service role z privatniho storage az pri odesilani. Pokud je `attachment_required = true` a soubor nejde stahnout, e-mail skonci jako `failed`; nesmi odejit bez PDF.
 
-### Pripravene soubory navrhu
+### Soubory Faze C
 
 - `supabase/migrations/20260610140000_affiliate_payouts_phase_c.sql`
 - `supabase/functions/create-affiliate-payout-document/index.ts`
@@ -421,9 +445,9 @@ Worker `process-email-queue` si prilohu stahne pres service role z privatniho st
 - `src/pages/AdminAffiliatePayoutDetail.tsx`
 - `tests/e2e/41-affiliate-payout-documents.spec.ts`
 
-### Testovaci navrh
+### Overeny cilene test
 
-Novy gated staging test `tests/e2e/41-affiliate-payout-documents.spec.ts` vyzaduje:
+Gated staging test `tests/e2e/41-affiliate-payout-documents.spec.ts` vyzaduje:
 
 - `E2E_AFFILIATE_PAYOUTS=1`
 - staging Supabase `dxmowysntemfqfnanxua`
@@ -439,14 +463,16 @@ Overuje:
 - provize prejde do `ready_to_pay`,
 - payout e-mail ma povinnou privatni prilohu pres bucket/path.
 
-### Blokace pred aplikaci
+### Stav po aplikaci
 
-- Finalne potvrdit text a podobu PDF s ucetni / pravnikem.
-- Aplikovat migraci Faze C pouze na staging po Pavlove schvaleni.
-- Nasadit Edge Functions pouze na staging po Pavlove schvaleni.
-- Potvrdit a nastavit `settings.accounting_email` na stagingu.
+- Faze C je aplikovana a overena na stagingu.
+- Produkce je netknuta.
+- Web deploy ani Lovable Publish neprobehl.
+- Full E2E nebezelo.
+- Finalni produkcni text a podoba PDF porad vyzaduji ucetni/pravni potvrzeni pred produkcnim roll-outem.
+- Faze D / Air Bank export zatim neni hotova.
 
-### Bezpecne poradi staging aplikace Faze C
+### Provedene poradi staging aplikace Faze C
 
 1. Aplikovat DB migraci `supabase/migrations/20260610140000_affiliate_payouts_phase_c.sql`.
 2. Nasadit Edge Functions na staging:
