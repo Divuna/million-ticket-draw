@@ -1,6 +1,35 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 09. 06. 2026 — 🌿 **Samostatná větev: dávkové výplaty affiliate/obchodních provizí (návrh, rozpracováno).** Hlavní roadmapa se teď nemění.
+**Aktualizováno:** 10. 06. 2026 — 🌿 **Samostatná větev: dávkové výplaty affiliate/obchodních provizí (Fáze A+B na stagingu, produkce netknutá).** Hlavní roadmapa se teď nemění.
+
+## 🌿 DÁVKOVÉ VÝPLATY PROVIZÍ — AKTUÁLNÍ STAV STAGINGU (10. 06. 2026)
+
+**Stav větve:** Fáze A i Fáze B jsou aplikované pouze na staging Supabase projekt `dxmowysntemfqfnanxua`. Bezpečnostní patch temp tabulky pro `create_affiliate_payout_batch` je aplikovaný. Produkce `xkzhjldrojjlrkezorey` je netknutá. Nebyl proveden žádný deploy, žádný Lovable Publish a full E2E nebylo spuštěno.
+
+**Důležité commity:**
+- Fáze A úprava: `3b2ba8a65c7480636045440f15998a5d79abc082`
+- Fáze B návrh: `ab44ffa04b54ab405ef17de502e5ef986f710c98`
+- Fáze B cleanup: `74cf175fea8f514001728160ec4f044beaddc54b`
+- temp table patch: `0915b03e0d3dc8a235e4ff12aba079875557ef4b`
+- CI workflow inputy: `1bcf3221829f238a94ae8534aeeda495af8dfea0`
+- test email fix: `2b9b6b07c549fb2f26dcab22f95c9967f68284a5`
+- cookie consent fix: `7e061f1b6737435939eb3d1a6250301bccd7fb06`
+
+**Ověřené GitHub Actions:**
+- spec 40 run `27258741085` — 4 passed
+- spec 39 run `27270797466` — 2 passed
+- staging UI smoke run `27271124754` — 2 passed
+
+**UI stav na stagingu:**
+- `/admin/affiliate-commissions` má dávkové workflow pro eligible provize.
+- Per-row `Označit jako vyplacené` je odstraněno; jednotlivá provize se už neoznačuje jako paid.
+- Eligible provize mají checkbox a akci `Vytvořit platební dávku`.
+- `/admin/affiliate-payouts/:id` má detail dávky a tlačítko `Označit dávku jako zaplacenou`.
+- Akce `Označit dávku jako zaplacenou` pouze eviduje, že platba byla provedena v bance; neposílá peníze.
+
+**Mimo rozsah Fáze B:** PDF doklady, e-maily a Air Bank export nejsou součást Fáze B. Tyto části zůstávají pro další fáze po samostatném schválení.
+
+**Další bezpečný krok:** Pavlovo ruční otestování stagingu. Do produkce nic nepřenášet bez výslovného schválení. Testovací produkční řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` zatím nemazat.
 
 ## 🌿 SAMOSTATNÁ VĚTEV — DÁVKOVÉ VÝPLATY PROVIZÍ (09. 06. 2026, NÁVRH)
 

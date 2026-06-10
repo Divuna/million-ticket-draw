@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze A+B aplikované na staging
+
+- Fáze A migrace `20260609_affiliate_payouts_phase_a.sql` aplikována pouze na staging `dxmowysntemfqfnanxua`; Fáze B migrace `20260610_affiliate_payouts_phase_b.sql` aplikována pouze na staging `dxmowysntemfqfnanxua`.
+- Bezpečnostní patch temp tabulky pro `create_affiliate_payout_batch` aplikován na staging; produkce `xkzhjldrojjlrkezorey` zůstala netknutá.
+- Důležité commity: Fáze A úprava `3b2ba8a65c7480636045440f15998a5d79abc082`, Fáze B návrh `ab44ffa04b54ab405ef17de502e5ef986f710c98`, Fáze B cleanup `74cf175fea8f514001728160ec4f044beaddc54b`, temp table patch `0915b03e0d3dc8a235e4ff12aba079875557ef4b`, CI workflow inputy `1bcf3221829f238a94ae8534aeeda495af8dfea0`, test email fix `2b9b6b07c549fb2f26dcab22f95c9967f68284a5`, cookie consent fix `7e061f1b6737435939eb3d1a6250301bccd7fb06`.
+- Ověřené GitHub Actions: spec 40 run `27258741085` — 4 passed; spec 39 run `27270797466` — 2 passed; staging UI smoke run `27271124754` — 2 passed.
+- `/admin/affiliate-commissions` má dávkové workflow; per-row `Označit jako vyplacené` odstraněno. `/admin/affiliate-payouts/:id` má detail dávky a tlačítko `Označit dávku jako zaplacenou`; akce pouze eviduje platbu, neposílá peníze.
+- PDF, e-maily a Air Bank export nejsou součást Fáze B. Žádný deploy, žádný Lovable Publish, full E2E nebylo spuštěno. Další krok: Pavlovo ruční otestování stagingu.
+
 ## 2026-06-09 - 🌿 Dávkové výplaty provizí — Fáze A návrh + HANDOFF (implementace zastavena, limit Claude Code)
 
 - **Commit návrhu Fáze A: `6711e648`.** Soubory: `supabase/migrations/20260609_affiliate_payouts_phase_a.sql` (3 tabulky `affiliate_payout_documents`/`_batches`/`_batch_items` + rozšíření `affiliate_commissions` status CHECK + payout sloupce + sekvence + privátní storage buckety + admin RLS) a `docs/affiliate-payouts/DESIGN.md` (workflow 8 stavů, EF/RPC, UI, ABO, testy, fáze, rizika, §11 handoff).
