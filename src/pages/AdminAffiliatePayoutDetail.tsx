@@ -7,6 +7,8 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -19,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Banknote, CheckCircle, Download, FileText, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Banknote, CheckCircle, Download, FileText, Loader2, Pencil, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { toast } from "sonner";
@@ -104,6 +106,10 @@ export default function AdminAffiliatePayoutDetail() {
   const [generatingExport, setGeneratingExport] = useState(false);
   const [downloadingExport, setDownloadingExport] = useState(false);
   const [confirmPaidOpen, setConfirmPaidOpen] = useState(false);
+  const [editPayerAccount, setEditPayerAccount] = useState("");
+  const [editPayerBankCode, setEditPayerBankCode] = useState("3030");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [isSavingBatchMeta, setIsSavingBatchMeta] = useState(false);
 
   const fetchDetail = useCallback(async (silent = false) => {
     if (!batchId) return;
@@ -146,7 +152,13 @@ export default function AdminAffiliatePayoutDetail() {
         }
       }
 
-      setBatch((batchData ?? null) as PayoutBatch | null);
+      const fetchedBatch = (batchData ?? null) as PayoutBatch | null;
+      setBatch(fetchedBatch);
+      if (fetchedBatch) {
+        setEditPayerAccount(fetchedBatch.payer_account ?? "");
+        setEditPayerBankCode(fetchedBatch.payer_bank_code ?? "3030");
+        setEditDueDate(fetchedBatch.due_date ?? "");
+      }
       setItems(((itemData ?? []) as any[]).map((item) => ({
         ...item,
         payout_document_number: documentMap[item.commission_id]?.document_number ?? null,
@@ -194,6 +206,49 @@ export default function AdminAffiliatePayoutDetail() {
       toast.error("Dávku se nepodařilo označit jako zaplacenou.");
     } finally {
       setMarkingPaid(false);
+    }
+  };
+
+  const saveBatchMeta = async () => {
+    if (!batchId) return;
+
+    setIsSavingBatchMeta(true);
+    try {
+      const { data, error } = await (supabase as any).rpc("update_affiliate_payout_batch_meta", {
+        p_batch_id: batchId,
+        p_payer_account: editPayerAccount.trim(),
+        p_payer_bank_code: editPayerBankCode.trim(),
+        p_due_date: editDueDate || null,
+      });
+
+      if (error) throw error;
+
+      const result = data as { success?: boolean; status?: string };
+
+      if (result?.success) {
+        toast.success("Údaje dávky byly uloženy.");
+        fetchDetail(true);
+        return;
+      }
+
+      const map: Record<string, string> = {
+        forbidden: "Nemáte oprávnění tuto akci provést.",
+        not_found: "Dávka nebyla nalezena.",
+        invalid_batch_status: "Údaje lze upravit pouze u dávky ve stavu Vytvořeno.",
+        missing_payer_account: "Zadejte číslo účtu plátce.",
+        invalid_payer_account: "Číslo účtu plátce nemá platný formát.",
+        missing_payer_bank_code: "Zadejte kód banky plátce.",
+        invalid_airbank_payer_bank_code: "Pro Air Bank export musí být kód banky plátce 3030.",
+        missing_due_date: "Zadejte datum splatnosti.",
+        invalid_due_date_past: "Datum splatnosti nesmí být v minulosti.",
+        invalid_due_date_future: "Datum splatnosti nesmí být více než rok dopředu.",
+      };
+      toast.error(map[result?.status ?? ""] ?? "Uložení se nepodařilo.");
+    } catch (error) {
+      console.error("update_affiliate_payout_batch_meta error:", error);
+      toast.error("Uložení se nepodařilo.");
+    } finally {
+      setIsSavingBatchMeta(false);
     }
   };
 
@@ -433,13 +488,60 @@ export default function AdminAffiliatePayoutDetail() {
                 </div>
                 <div>
                   <div className="text-muted-foreground">Splatnost</div>
-                  <div className="mt-1">{formatDate(batch?.due_date)}</div>
+                  {batch?.status === "created" ? (
+                    <Input
+                      type="date"
+                      className="mt-1 h-8 text-sm font-mono w-40"
+                      value={editDueDate}
+                      onChange={(e) => setEditDueDate(e.target.value)}
+                      data-testid="input-due-date"
+                    />
+                  ) : (
+                    <div className="mt-1">{formatDate(batch?.due_date)}</div>
+                  )}
                 </div>
                 <div>
                   <div className="text-muted-foreground">Účet plátce</div>
-                  <div className="mt-1 font-mono">
-                    {batch?.payer_account ? `${batch.payer_account}/${batch.payer_bank_code ?? "—"}` : "—"}
-                  </div>
+                  {batch?.status === "created" ? (
+                    <div className="mt-1 flex gap-2 items-center flex-wrap">
+                      <Input
+                        type="text"
+                        className="h-8 text-sm font-mono w-36"
+                        placeholder="číslo účtu"
+                        value={editPayerAccount}
+                        onChange={(e) => setEditPayerAccount(e.target.value)}
+                        data-testid="input-payer-account"
+                      />
+                      <span className="text-muted-foreground">/</span>
+                      <Input
+                        type="text"
+                        className="h-8 text-sm font-mono w-20"
+                        placeholder="kód banky"
+                        value={editPayerBankCode}
+                        onChange={(e) => setEditPayerBankCode(e.target.value)}
+                        data-testid="input-payer-bank-code"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 gap-1"
+                        onClick={saveBatchMeta}
+                        disabled={isSavingBatchMeta}
+                        data-testid="btn-save-batch-meta"
+                      >
+                        {isSavingBatchMeta ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Pencil className="h-3 w-3" />
+                        )}
+                        Uložit
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="mt-1 font-mono">
+                      {batch?.payer_account ? `${batch.payer_account}/${batch.payer_bank_code ?? "—"}` : "—"}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <div className="text-muted-foreground">Kódování</div>

@@ -132,18 +132,9 @@ async function createBatch(
   return { batchId: data.batch_id, batchNumber: data.batch_number };
 }
 
-async function prepareBatchForExport(admin: SupabaseClient, batchId: string) {
-  const today = new Date().toISOString().slice(0, 10);
-  const { error } = await (admin as any)
-    .from('affiliate_payout_batches')
-    .update({
-      due_date: today,
-      payer_account: '1234567890',
-      payer_bank_code: '3030',
-    })
-    .eq('id', batchId);
-  expect(error).toBeFalsy();
-}
+// D.1: prepareBatchForExport workaround odstraněn.
+// create_affiliate_payout_batch nyní automaticky nastavuje payer_account,
+// payer_bank_code ze settings a due_date = current_date + 2.
 
 async function cleanup(
   admin: SupabaseClient,
@@ -180,7 +171,7 @@ test.describe('42 - affiliate bank export', () => {
       ids.commissionId = seeded.commissionId;
       const batch = await createBatch(adminUser, seeded.commissionId);
       ids.batchId = batch.batchId;
-      await prepareBatchForExport(service, batch.batchId);
+      // D.1: payer_account a due_date jsou auto-fill z create_affiliate_payout_batch.
 
       const { data, error } = await (adminUser as any).functions.invoke(
         'generate-affiliate-bank-export',
@@ -238,6 +229,14 @@ test.describe('42 - affiliate bank export', () => {
       const batch = await createBatch(adminUser, seeded.commissionId);
       ids.batchId = batch.batchId;
 
+      // D.1: batch má auto-fill payer_account; pro test chybějícího účtu ho null-ujeme
+      // přes service klienta (obchází RLS).
+      const { error: nullErr } = await (service as any)
+        .from('affiliate_payout_batches')
+        .update({ payer_account: null })
+        .eq('id', batch.batchId);
+      expect(nullErr).toBeFalsy();
+
       const { data, error } = await (adminUser as any).functions.invoke(
         'generate-affiliate-bank-export',
         { body: { batch_id: batch.batchId } },
@@ -245,6 +244,123 @@ test.describe('42 - affiliate bank export', () => {
       expect(error).toBeTruthy();
       const payload = await readFunctionErrorPayload(data, error);
       expect(payload?.error ?? payload?.status).toBe('missing_payer_account');
+    } finally {
+      await cleanup(service, ids);
+    }
+  });
+
+  test('42d) create_affiliate_payout_batch auto-fill payer_account a due_date', async () => {
+    const service = makeServiceClient();
+    const adminUser = await makeAdminUserClient();
+    const ids: { affiliateId?: string; commissionId?: string; batchId?: string } = {};
+
+    try {
+      const seeded = await seedReadyCommission(service);
+      ids.affiliateId = seeded.affiliateId;
+      ids.commissionId = seeded.commissionId;
+      const batch = await createBatch(adminUser, seeded.commissionId);
+      ids.batchId = batch.batchId;
+
+      const { data: batchRow } = await (service as any)
+        .from('affiliate_payout_batches')
+        .select('payer_account,payer_bank_code,due_date')
+        .eq('id', batch.batchId)
+        .single();
+
+      // Hodnoty musí být auto-fill ze settings.
+      expect(batchRow.payer_account).toBeTruthy();
+      expect(batchRow.payer_bank_code).toBe('3030');
+
+      // due_date musí být current_date + 2.
+      const today = new Date();
+      const expected = new Date(today);
+      expected.setDate(expected.getDate() + 2);
+      const expectedStr = expected.toISOString().slice(0, 10);
+      expect(batchRow.due_date).toBe(expectedStr);
+    } finally {
+      await cleanup(service, ids);
+    }
+  });
+
+  test('42e) update_affiliate_payout_batch_meta umoznuje editaci pred exportem', async () => {
+    const service = makeServiceClient();
+    const adminUser = await makeAdminUserClient();
+    const ids: { affiliateId?: string; commissionId?: string; batchId?: string } = {};
+
+    try {
+      const seeded = await seedReadyCommission(service);
+      ids.affiliateId = seeded.affiliateId;
+      ids.commissionId = seeded.commissionId;
+      const batch = await createBatch(adminUser, seeded.commissionId);
+      ids.batchId = batch.batchId;
+
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 3);
+      const newDueDate = tomorrow.toISOString().slice(0, 10);
+
+      const { data, error } = await (adminUser as any).rpc(
+        'update_affiliate_payout_batch_meta',
+        {
+          p_batch_id: batch.batchId,
+          p_payer_account: '9876543210',
+          p_payer_bank_code: '3030',
+          p_due_date: newDueDate,
+        },
+      );
+      expect(error).toBeFalsy();
+      expect(data?.success).toBe(true);
+      expect(data?.status).toBe('updated');
+
+      const { data: batchRow } = await (service as any)
+        .from('affiliate_payout_batches')
+        .select('payer_account,payer_bank_code,due_date')
+        .eq('id', batch.batchId)
+        .single();
+      expect(batchRow.payer_account).toBe('9876543210');
+      expect(batchRow.payer_bank_code).toBe('3030');
+      expect(batchRow.due_date).toBe(newDueDate);
+    } finally {
+      await cleanup(service, ids);
+    }
+  });
+
+  test('42f) update_affiliate_payout_batch_meta odmitne editaci po exportu', async () => {
+    const service = makeServiceClient();
+    const adminUser = await makeAdminUserClient();
+    const ids: { affiliateId?: string; commissionId?: string; batchId?: string; exportPath?: string } = {};
+
+    try {
+      const seeded = await seedReadyCommission(service);
+      ids.affiliateId = seeded.affiliateId;
+      ids.commissionId = seeded.commissionId;
+      const batch = await createBatch(adminUser, seeded.commissionId);
+      ids.batchId = batch.batchId;
+
+      // Vygeneruj export — přesune dávku do stavu 'exported'.
+      const { data: exportData, error: exportError } = await (adminUser as any).functions.invoke(
+        'generate-affiliate-bank-export',
+        { body: { batch_id: batch.batchId } },
+      );
+      expect(exportError).toBeFalsy();
+      expect(exportData?.status).toBe('exported');
+      ids.exportPath = exportData?.bank_export_storage_path;
+
+      // Pokus o editaci po exportu musí být odmítnut.
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const { data, error } = await (adminUser as any).rpc(
+        'update_affiliate_payout_batch_meta',
+        {
+          p_batch_id: batch.batchId,
+          p_payer_account: '1111111111',
+          p_payer_bank_code: '3030',
+          p_due_date: tomorrow.toISOString().slice(0, 10),
+        },
+      );
+      expect(error).toBeFalsy();
+      expect(data?.success).toBe(false);
+      expect(data?.status).toBe('invalid_batch_status');
+      expect(data?.required_status).toBe('created');
     } finally {
       await cleanup(service, ids);
     }
