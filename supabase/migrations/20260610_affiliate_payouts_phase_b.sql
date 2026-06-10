@@ -22,7 +22,76 @@
 
 BEGIN;
 
--- ── 1) Vytvoření platební dávky ──────────────────────────────────────────────
+-- ── 1) Zúžení starého commission status RPC ──────────────────────────────────
+-- Fáze B ruší ruční per-row výplatu provize. Staré RPC smí dál sloužit jen pro
+-- schválení calculated -> approved; stav paid vzniká výhradně přes dávku.
+CREATE OR REPLACE FUNCTION public.admin_set_affiliate_commission_status(
+  p_commission_id uuid,
+  p_new_status text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_current text;
+BEGIN
+  IF NOT public.is_admin() THEN
+    RETURN jsonb_build_object('status', 'forbidden');
+  END IF;
+
+  IF p_new_status IS NULL OR p_new_status NOT IN ('approved', 'paid') THEN
+    RETURN jsonb_build_object('status', 'invalid_status');
+  END IF;
+
+  SELECT status
+  INTO v_current
+  FROM public.affiliate_commissions
+  WHERE id = p_commission_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('status', 'not_found');
+  END IF;
+
+  IF p_new_status = 'paid' THEN
+    RETURN jsonb_build_object(
+      'status', 'invalid_transition',
+      'from', v_current,
+      'to', p_new_status
+    );
+  END IF;
+
+  IF NOT (v_current = 'calculated' AND p_new_status = 'approved') THEN
+    RETURN jsonb_build_object(
+      'status', 'invalid_transition',
+      'from', v_current,
+      'to', p_new_status
+    );
+  END IF;
+
+  UPDATE public.affiliate_commissions
+  SET status = 'approved',
+      updated_at = now()
+  WHERE id = p_commission_id;
+
+  RETURN jsonb_build_object(
+    'status', 'updated',
+    'id', p_commission_id,
+    'from', v_current,
+    'to', p_new_status
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.admin_set_affiliate_commission_status(uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.admin_set_affiliate_commission_status(uuid, text) TO authenticated;
+
+COMMENT ON FUNCTION public.admin_set_affiliate_commission_status(uuid, text) IS
+  'Fáze B návrh: staré per-row RPC omezené jen na calculated -> approved. Paid vzniká pouze přes payout batch.';
+
+-- ── 2) Vytvoření platební dávky ──────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.create_affiliate_payout_batch(
   p_commission_ids uuid[]
 )
@@ -69,10 +138,10 @@ BEGIN
   CREATE TEMP TABLE tmp_affiliate_payout_batch_selection (
     commission_id uuid PRIMARY KEY,
     affiliate_id uuid NOT NULL,
-    amount_total_czk numeric(12,2) NOT NULL,
-    recipient_name text NOT NULL,
-    recipient_account text NOT NULL,
-    recipient_bank_code text NOT NULL,
+    amount_total_czk numeric(12,2),
+    recipient_name text,
+    recipient_account text,
+    recipient_bank_code text,
     rn integer NOT NULL
   ) ON COMMIT DROP;
 
@@ -243,7 +312,7 @@ GRANT EXECUTE ON FUNCTION public.create_affiliate_payout_batch(uuid[]) TO authen
 COMMENT ON FUNCTION public.create_affiliate_payout_batch(uuid[]) IS
   'Fáze B návrh: admin-only vytvoření payout dávky z ready_to_pay provizí. Bez PDF, e-mailů a bank exportu.';
 
--- ── 2) Označení celé dávky jako zaplacené ────────────────────────────────────
+-- ── 3) Označení celé dávky jako zaplacené ────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.mark_affiliate_payout_batch_paid(
   p_batch_id uuid
 )
@@ -327,7 +396,7 @@ GRANT EXECUTE ON FUNCTION public.mark_affiliate_payout_batch_paid(uuid) TO authe
 COMMENT ON FUNCTION public.mark_affiliate_payout_batch_paid(uuid) IS
   'Fáze B návrh: admin-only označení celé payout dávky jako zaplacené, atomicky propíše provize na paid.';
 
--- ── 3) Bezpečné zrušení dávky před exportem/zaplacením ───────────────────────
+-- ── 4) Bezpečné zrušení dávky před exportem/zaplacením ───────────────────────
 CREATE OR REPLACE FUNCTION public.cancel_affiliate_payout_batch(
   p_batch_id uuid
 )
@@ -403,5 +472,7 @@ COMMIT;
 -- DROP FUNCTION IF EXISTS public.cancel_affiliate_payout_batch(uuid);
 -- DROP FUNCTION IF EXISTS public.mark_affiliate_payout_batch_paid(uuid);
 -- DROP FUNCTION IF EXISTS public.create_affiliate_payout_batch(uuid[]);
+-- -- Staré admin_set_affiliate_commission_status(uuid,text) obnovit z migrace
+-- -- 20260603_affiliate_commission_status_workflow.sql, pokud by se Fáze B vracela.
 -- COMMIT;
 -- ============================================================================

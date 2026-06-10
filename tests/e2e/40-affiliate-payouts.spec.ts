@@ -73,7 +73,10 @@ async function loginAsAdmin(page: Page) {
   await page.waitForLoadState('networkidle', { timeout: 15_000 });
 }
 
-async function seedReadyCommission(admin: SupabaseClient): Promise<{ affiliateId: string; commissionId: string }> {
+async function seedCommission(
+  admin: SupabaseClient,
+  status: 'approved' | 'ready_to_pay' = 'ready_to_pay',
+): Promise<{ affiliateId: string; commissionId: string }> {
   const ts = Date.now();
   const { data: affiliate, error: affiliateError } = await (admin as any)
     .from('affiliate_accounts')
@@ -103,7 +106,7 @@ async function seedReadyCommission(admin: SupabaseClient): Promise<{ affiliateId
       amount_base_czk: 123.45,
       vat_rate: 0,
       amount_total_czk: 123.45,
-      status: 'ready_to_pay',
+      status,
     })
     .select('id')
     .single();
@@ -139,7 +142,7 @@ test.describe('40 — affiliate payout batches', () => {
     const ids: { affiliateId?: string; commissionId?: string; batchId?: string } = {};
 
     try {
-      const seeded = await seedReadyCommission(service);
+      const seeded = await seedCommission(service, 'ready_to_pay');
       ids.affiliateId = seeded.affiliateId;
       ids.commissionId = seeded.commissionId;
 
@@ -195,7 +198,7 @@ test.describe('40 — affiliate payout batches', () => {
     const ids: { affiliateId?: string; commissionId?: string; batchId?: string } = {};
 
     try {
-      const seeded = await seedReadyCommission(service);
+      const seeded = await seedCommission(service, 'ready_to_pay');
       ids.affiliateId = seeded.affiliateId;
       ids.commissionId = seeded.commissionId;
 
@@ -217,6 +220,61 @@ test.describe('40 — affiliate payout batches', () => {
       ).toBeVisible();
       await page.getByRole('button', { name: 'Označit jako zaplacené', exact: true }).click();
       await expect(page.getByText('Zaplaceno').first()).toBeVisible({ timeout: 15_000 });
+    } finally {
+      await cleanup(service, ids);
+    }
+  });
+
+  test('40c) staré per-row RPC odmítne approved → paid', async () => {
+    const service = makeServiceClient();
+    const adminUser = await makeAdminUserClient();
+    const ids: { affiliateId?: string; commissionId?: string } = {};
+
+    try {
+      const seeded = await seedCommission(service, 'approved');
+      ids.affiliateId = seeded.affiliateId;
+      ids.commissionId = seeded.commissionId;
+
+      const { data, error } = await (adminUser as any).rpc(
+        'admin_set_affiliate_commission_status',
+        {
+          p_commission_id: seeded.commissionId,
+          p_new_status: 'paid',
+        },
+      );
+
+      expect(error).toBeFalsy();
+      expect(data?.status).toBe('invalid_transition');
+
+      const { data: commission } = await (service as any)
+        .from('affiliate_commissions')
+        .select('status,paid_at')
+        .eq('id', seeded.commissionId)
+        .single();
+      expect(commission.status).toBe('approved');
+      expect(commission.paid_at).toBeFalsy();
+    } finally {
+      await cleanup(service, ids);
+    }
+  });
+
+  test('40d) AdminAffiliateAccounts detail nemá per-row paid akci', async ({ page }) => {
+    const service = makeServiceClient();
+    const ids: { affiliateId?: string; commissionId?: string } = {};
+
+    try {
+      const seeded = await seedCommission(service, 'approved');
+      ids.affiliateId = seeded.affiliateId;
+      ids.commissionId = seeded.commissionId;
+
+      await loginAsAdmin(page);
+      await page.goto('/admin/affiliate-accounts');
+      await page.getByTestId(`detail-affiliate-${seeded.affiliateId}`).click();
+
+      await expect(page.getByText('Provize —').first()).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByRole('button', { name: 'Vyplatit', exact: true })).toHaveCount(0);
+      await expect(page.getByText('Označit jako vyplacené')).toHaveCount(0);
+      await expect(page.locator(`[data-testid="affiliate-account-commission-approve-${seeded.commissionId}"]`)).toHaveCount(0);
     } finally {
       await cleanup(service, ids);
     }

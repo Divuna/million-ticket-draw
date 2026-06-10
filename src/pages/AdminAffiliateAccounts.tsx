@@ -1,7 +1,7 @@
 /**
  * AFFILIATE v2 (Admin) — read + status workflow over the standalone affiliate model.
  * Reads:  affiliate_accounts, affiliate_commissions.
- * Writes: ONLY via RPC admin_set_affiliate_commission_status (calculated→approved→paid)
+ * Writes: ONLY via RPC admin_set_affiliate_commission_status (calculated→approved)
  *         and direct UPDATE on affiliate_accounts for pending→approved / pending→rejected
  *         (allowed by aff_accounts_admin_write RLS policy FOR ALL TO authenticated USING is_admin()).
  *
@@ -27,7 +27,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { RefreshCw, Eye, CheckCircle, Banknote, Loader2, Megaphone, Briefcase, Users, UserCheck, XCircle, Mail } from "lucide-react";
+import { RefreshCw, Eye, CheckCircle, Loader2, Megaphone, Briefcase, Users, UserCheck, XCircle, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { toast } from "sonner";
@@ -81,7 +81,7 @@ interface AccountAgg {
   paidTotal: number;
 }
 
-const NEXT_STATUS: Record<string, string> = { calculated: "approved", approved: "paid" };
+const NEXT_STATUS: Record<string, string> = { calculated: "approved" };
 // Full column set — all profile/social columns exist on staging + production.
 // No fallback: a fallback that omits social columns would silently show admins
 // empty Instagram/TikTok/YouTube/Facebook/audience/categories despite saved data.
@@ -102,6 +102,9 @@ function commissionStatusBadge(status: string) {
   switch (status) {
     case "calculated": return <Badge variant="warning">Vypočteno</Badge>;
     case "approved":   return <Badge variant="success">Schváleno</Badge>;
+    case "payout_document_created": return <Badge variant="outline">Doklad vytvořen</Badge>;
+    case "ready_to_pay": return <Badge variant="warning">Připraveno k dávce</Badge>;
+    case "in_payment_batch": return <Badge variant="info">V dávce</Badge>;
     case "paid":       return <Badge variant="info">Vyplaceno</Badge>;
     default:           return <Badge variant="outline">{status}</Badge>;
   }
@@ -140,7 +143,6 @@ const AdminAffiliateAccounts = () => {
   const [detailRows, setDetailRows] = useState<CommissionRow[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
-  const [confirmPaid, setConfirmPaid] = useState<CommissionRow | null>(null);
 
   // Account approval / rejection
   const [accountActionTarget, setAccountActionTarget] = useState<{ account: AffiliateAccount; action: "approve" | "reject" } | null>(null);
@@ -213,9 +215,9 @@ const AdminAffiliateAccounts = () => {
 
       const status = (data as any)?.status;
       if (status === "updated") {
-        toast.success(newStatus === "approved" ? "Provize schválena" : "Provize označena jako vyplacená");
+        toast.success("Provize schválena");
         setDetailRows((prev) => prev.map((r) =>
-          r.id === row.id ? { ...r, status: newStatus, paid_at: newStatus === "paid" ? new Date().toISOString() : r.paid_at } : r
+          r.id === row.id ? { ...r, status: newStatus } : r
         ));
         fetchData();
       } else if (status === "forbidden") {
@@ -267,7 +269,6 @@ const AdminAffiliateAccounts = () => {
   const handleAction = (row: CommissionRow) => {
     const next = NEXT_STATUS[row.status];
     if (!next) return;
-    if (next === "paid") { setConfirmPaid(row); return; }
     runStatusChange(row, next);
   };
 
@@ -293,7 +294,7 @@ const AdminAffiliateAccounts = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Affiliate účty (v2)</h1>
           <p className="text-sm text-muted-foreground">
-            Samostatný affiliate model — účty, režimy, provize a workflow schválení/výplaty.
+            Samostatný affiliate model — účty, režimy a schvalování provizí. Vyplacení probíhá přes dávky.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
@@ -521,16 +522,15 @@ const AdminAffiliateAccounts = () => {
                         {NEXT_STATUS[r.status] ? (
                           <Button
                             size="sm"
-                            variant={r.status === "approved" ? "default" : "outline"}
+                            variant="outline"
                             disabled={actionLoadingId === r.id}
                             onClick={() => handleAction(r)}
+                            data-testid={`affiliate-account-commission-approve-${r.id}`}
                           >
                             {actionLoadingId === r.id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : r.status === "calculated" ? (
-                              <><CheckCircle className="w-4 h-4 mr-1" />Schválit</>
                             ) : (
-                              <><Banknote className="w-4 h-4 mr-1" />Vyplatit</>
+                              <><CheckCircle className="w-4 h-4 mr-1" />Schválit</>
                             )}
                           </Button>
                         ) : (
@@ -582,26 +582,6 @@ const AdminAffiliateAccounts = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Confirm paid */}
-      <AlertDialog open={!!confirmPaid} onOpenChange={(o) => { if (!o) setConfirmPaid(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Označit jako vyplacené?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tato akce nastaví provizi {confirmPaid ? czk(confirmPaid.amount_total_czk) : ""} jako vyplacenou
-              a zapíše datum výplaty. Akci nelze vrátit zpět.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Zrušit</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => { const r = confirmPaid; setConfirmPaid(null); if (r) runStatusChange(r, "paid"); }}
-            >
-              Potvrdit výplatu
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

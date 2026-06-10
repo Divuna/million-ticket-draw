@@ -58,6 +58,7 @@ Zdroje: [Air Bank — Import hromadných plateb](https://www.airbank.cz/co-vas-n
 | `create-affiliate-payout-document` (EF/RPC) | C | vznik dokladu + `document_number` (sekvence) | — |
 | `generate-affiliate-payout-pdf` (EF) | C | PDF (pdf-lib) → bucket `affiliate-payout-docs` (signed URL) | `generate-partner-invoice-pdf` (pdf-lib+fontkit+QRCode) |
 | `send-affiliate-payout-document-email` (EF) | C | `email_queue` insert (affiliate + účetní), `attachment_url`=PDF | `send-partner-invoice-email`, `process-email-queue` |
+| `admin_set_affiliate_commission_status` (RPC) | B | zúžení starého RPC jen na `calculated → approved`; `approved → paid` vrací `invalid_transition` | paid smí vzniknout jen přes dávku |
 | `create-affiliate-payout-batch` (RPC) | B | z vybraných `ready_to_pay` → batch + items + VS, provize→`in_payment_batch` | návrh v `20260610_affiliate_payouts_phase_b.sql`, NEAPLIKOVÁNO |
 | `generate-affiliate-bank-export` (EF) | D | ABO `.kpc` (Windows-1250) → bucket `affiliate-bank-exports`, batch→`exported` | — |
 | `mark-affiliate-payout-batch-paid` (RPC) | B | batch→`paid`, provize→`paid`, `marked_paid_by/at` (atomicky, FOR UPDATE) | návrh v `20260610_affiliate_payouts_phase_b.sql`, NEAPLIKOVÁNO |
@@ -86,7 +87,7 @@ Zdroje: [Air Bank — Import hromadných plateb](https://www.airbank.cz/co-vas-n
 | Fáze | Obsah | Výstup |
 |------|-------|--------|
 | **A** | DB základ (tabulky, sloupce, sekvence, buckety, RLS) | `20260609_affiliate_payouts_phase_a.sql` (✅ připraveno) |
-| **B** | `create-batch` + `mark-paid` RPC + volitelný `cancel-batch` + UI výběr/detail dávky + paid na dávce | návrh připraven: `20260610_affiliate_payouts_phase_b.sql`, nové admin stránky a gated E2E; NEAPLIKOVÁNO |
+| **B** | zúžení starého paid RPC + `create-batch` + `mark-paid` RPC + volitelný `cancel-batch` + UI výběr/detail dávky + paid jen na dávce | návrh připraven: `20260610_affiliate_payouts_phase_b.sql`, nové admin stránky a gated E2E; NEAPLIKOVÁNO |
 | **C** | doklady: `create-document` + PDF + e-maily (obchodník+účetní), stav `payout_document_created` | |
 | **D** | Air Bank ABO `.kpc` export + `Stáhnout hromadný příkaz` | po potvrzení přesného formátu |
 | **E** | `payment_confirmation_sent` (potvrzení po zaplacení) | |
