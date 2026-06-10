@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D migrace aplikována na staging ✅
+
+- Migrace `20260610170000_affiliate_payouts_phase_d.sql` aplikována na staging `dxmowysntemfqfnanxua`.
+- Postcheck OK: 5 export sloupců na `affiliate_payout_batches`, 3 CHECK constrainty, index `idx_apb_exported_at`. ✅
+- RPC `prepare_affiliate_bank_export` — existuje, ACL: `postgres` + `service_role` only. ✅
+- RPC `finalize_affiliate_bank_export` — existuje, ACL: `postgres` + `service_role` only. ✅
+- RPC `mark_affiliate_payout_batch_paid` — existuje, ACL: `postgres` + `authenticated` + `service_role`. ✅
+- Bucket `affiliate-bank-exports` — existuje, `public: false` (privátní). ✅
+- Grant oprava: Supabase přidával `anon`/`authenticated` EXECUTE na nové funkce implicitně; po migraci provedeno `REVOKE FROM anon, authenticated` na `prepare`/`finalize` a `REVOKE FROM anon` na `mark_paid`.
+- Edge Function `generate-affiliate-bank-export` zatím NEdeployována.
+- Produkce `xkzhjldrojjlrkezorey` nedotčena. Žádný Lovable Publish.
+
 ## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D.1 rozhodnutí (dokumentace)
 
 - Formát `.kpc` Air Bank plně ověřen importním testem; blokující podmínka splněna.
