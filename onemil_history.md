@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — ruční staging test Pavlem dokončen
+
+- Pavel ručně ověřil Fázi A+B na stagingu `dxmowysntemfqfnanxua`.
+- Testovací provize `pavel-manual-payout-test obchodnik` byla vidět na `/admin/affiliate-commissions`, šla vybrat checkboxem a šlo z ní vytvořit platební dávku.
+- Vznikla dávka `APB-2026-000016`, částka `123,45 Kč`; dávka šla otevřít v detailu.
+- Potvrzovací dialog správně upozornil, že akce neposílá peníze; dávka byla označena jako zaplacená a v seznamu dávek je se stavem `Zaplaceno`.
+- Původní provize už nejde znovu zařadit do další dávky.
+- Fáze A+B jsou na stagingu ověřené automaticky i ručně. Produkce `xkzhjldrojjlrkezorey` netknutá; žádný deploy, žádný Lovable Publish. PDF, e-maily a Air Bank export nejsou hotové a patří do dalších fází.
+
 ## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze A+B aplikované na staging
 
 - Fáze A migrace `20260609_affiliate_payouts_phase_a.sql` aplikována pouze na staging `dxmowysntemfqfnanxua`; Fáze B migrace `20260610_affiliate_payouts_phase_b.sql` aplikována pouze na staging `dxmowysntemfqfnanxua`.

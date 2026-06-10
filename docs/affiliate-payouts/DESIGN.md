@@ -310,6 +310,20 @@ Fáze A i Fáze B jsou aplikované pouze na staging Supabase projekt `dxmowysnte
 - spec 39 run `27270797466` — 2 passed
 - staging UI smoke run `27271124754` — 2 passed
 
+### Ruční staging test Pavlem
+
+- Staging: `dxmowysntemfqfnanxua`
+- Testovací provize `pavel-manual-payout-test obchodnik` byla vidět na `/admin/affiliate-commissions`.
+- Provizi šlo vybrat checkboxem.
+- Šlo vytvořit platební dávku.
+- Vznikla dávka `APB-2026-000016`.
+- Částka: `123,45 Kč`.
+- Dávka šla otevřít v detailu.
+- Potvrzovací dialog správně upozornil, že akce neposílá peníze.
+- Dávka byla označena jako zaplacená.
+- Dávka je v seznamu dávek se stavem `Zaplaceno`.
+- Původní provize už nejde znovu zařadit do další dávky.
+
 ### UI stav na stagingu
 
 - `/admin/affiliate-commissions` má dávkové workflow.
@@ -320,7 +334,7 @@ Fáze A i Fáze B jsou aplikované pouze na staging Supabase projekt `dxmowysnte
 
 ### Mimo rozsah Fáze B
 
-PDF doklady, e-maily a Air Bank export nejsou součást Fáze B. Tyto části zůstávají pro další fáze po samostatném schválení a ověření.
+PDF doklady, e-maily a Air Bank export nejsou hotové a nejsou součást Fáze B. Tyto části zůstávají pro další fáze po samostatném schválení a ověření.
 
 ### Další bezpečný krok
 

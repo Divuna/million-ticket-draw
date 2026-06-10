@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 10. 06. 2026 — 🌿 **Samostatná větev: dávkové výplaty affiliate/obchodních provizí (Fáze A+B na stagingu, produkce netknutá).** Hlavní roadmapa se teď nemění.
+**Aktualizováno:** 10. 06. 2026 — 🌿 **Samostatná větev: dávkové výplaty affiliate/obchodních provizí (Fáze A+B na stagingu ověřené automaticky i ručně, produkce netknutá).** Hlavní roadmapa se teď nemění.
 
 ## 🌿 DÁVKOVÉ VÝPLATY PROVIZÍ — AKTUÁLNÍ STAV STAGINGU (10. 06. 2026)
 
@@ -20,6 +20,17 @@
 - spec 39 run `27270797466` — 2 passed
 - staging UI smoke run `27271124754` — 2 passed
 
+**Ruční staging test Pavlem dokončen:**
+- Staging: `dxmowysntemfqfnanxua`
+- Testovací provize `pavel-manual-payout-test obchodnik` byla vidět na `/admin/affiliate-commissions`.
+- Provizi šlo vybrat checkboxem a vytvořit z ní platební dávku.
+- Vznikla dávka `APB-2026-000016`, částka `123,45 Kč`.
+- Dávka šla otevřít v detailu.
+- Potvrzovací dialog správně upozornil, že akce neposílá peníze.
+- Dávka byla označena jako zaplacená.
+- Dávka je v seznamu dávek se stavem `Zaplaceno`.
+- Původní provize už nejde znovu zařadit do další dávky.
+
 **UI stav na stagingu:**
 - `/admin/affiliate-commissions` má dávkové workflow pro eligible provize.
 - Per-row `Označit jako vyplacené` je odstraněno; jednotlivá provize se už neoznačuje jako paid.
@@ -27,9 +38,9 @@
 - `/admin/affiliate-payouts/:id` má detail dávky a tlačítko `Označit dávku jako zaplacenou`.
 - Akce `Označit dávku jako zaplacenou` pouze eviduje, že platba byla provedena v bance; neposílá peníze.
 
-**Mimo rozsah Fáze B:** PDF doklady, e-maily a Air Bank export nejsou součást Fáze B. Tyto části zůstávají pro další fáze po samostatném schválení.
+**Mimo rozsah Fáze B:** PDF doklady, e-maily a Air Bank export nejsou hotové a nejsou součást Fáze B. Tyto části zůstávají pro další fáze po samostatném schválení.
 
-**Další bezpečný krok:** Pavlovo ruční otestování stagingu. Do produkce nic nepřenášet bez výslovného schválení. Testovací produkční řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` zatím nemazat.
+**Další bezpečný krok:** rozhodnutí Pavla, zda pokračovat další fází. Do produkce nic nepřenášet bez výslovného schválení. Žádný deploy, žádný Lovable Publish. Testovací produkční řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` zatím nemazat.
 
 ## 🌿 SAMOSTATNÁ VĚTEV — DÁVKOVÉ VÝPLATY PROVIZÍ (09. 06. 2026, NÁVRH)
 

@@ -2,15 +2,17 @@
 
 ## AKTUÁLNÍ STAV — DÁVKOVÉ VÝPLATY AFFILIATE/OBCHODNÍCH PROVIZÍ (10. 06. 2026)
 
-Fáze A i Fáze B jsou aplikované pouze na staging Supabase projekt `dxmowysntemfqfnanxua`. Bezpečnostní patch temp tabulky pro `create_affiliate_payout_batch` je aplikovaný. Produkce `xkzhjldrojjlrkezorey` je netknutá. Nebyl proveden deploy, Lovable Publish ani full E2E.
+Fáze A i Fáze B jsou aplikované pouze na staging Supabase projekt `dxmowysntemfqfnanxua` a jsou ověřené automaticky i ručně Pavlem. Bezpečnostní patch temp tabulky pro `create_affiliate_payout_batch` je aplikovaný. Produkce `xkzhjldrojjlrkezorey` je netknutá. Nebyl proveden deploy, Lovable Publish ani full E2E.
 
 Ověřené commity: Fáze A úprava `3b2ba8a65c7480636045440f15998a5d79abc082`, Fáze B návrh `ab44ffa04b54ab405ef17de502e5ef986f710c98`, Fáze B cleanup `74cf175fea8f514001728160ec4f044beaddc54b`, temp table patch `0915b03e0d3dc8a235e4ff12aba079875557ef4b`, CI workflow inputy `1bcf3221829f238a94ae8534aeeda495af8dfea0`, test email fix `2b9b6b07c549fb2f26dcab22f95c9967f68284a5`, cookie consent fix `7e061f1b6737435939eb3d1a6250301bccd7fb06`.
 
 Ověřené GitHub Actions: spec 40 run `27258741085` — 4 passed; spec 39 run `27270797466` — 2 passed; staging UI smoke run `27271124754` — 2 passed.
 
+Ruční staging test Pavlem: testovací provize `pavel-manual-payout-test obchodnik` byla vidět na `/admin/affiliate-commissions`, šla vybrat checkboxem a vytvořit z ní platební dávku `APB-2026-000016` na `123,45 Kč`. Detail dávky šel otevřít, potvrzovací dialog správně upozornil, že akce neposílá peníze, dávka byla označena jako zaplacená, v seznamu dávek je `Zaplaceno` a původní provize už nejde znovu zařadit do další dávky.
+
 UI stav: `/admin/affiliate-commissions` má dávkové workflow, per-row `Označit jako vyplacené` je odstraněno, eligible provize mají checkbox a akci `Vytvořit platební dávku`. `/admin/affiliate-payouts/:id` má detail dávky a tlačítko `Označit dávku jako zaplacenou`. Tato akce pouze eviduje platbu provedenou v bance, neposílá peníze.
 
-PDF, e-maily a Air Bank export nejsou součást Fáze B. Další bezpečný krok je Pavlovo ruční otestování stagingu. Nesahej na produkci, nedělej deploy, nedělej Lovable Publish, neaplikuj nic dalšího a nemaž produkční testovací řádek `dddddddd-dddd-dddd-dddd-dddddddddddd`.
+PDF, e-maily a Air Bank export nejsou hotové a nejsou součást Fáze B; patří do dalších fází po samostatném schválení. Další bezpečný krok je Pavlovo rozhodnutí, zda pokračovat další fází. Nesahej na produkci, nedělej deploy, nedělej Lovable Publish, neaplikuj nic dalšího a nemaž produkční testovací řádek `dddddddd-dddd-dddd-dddd-dddddddddddd`.
 
 ## PRAVIDLO PRO SPOUŠTĚNÍ TESTŮ — ŠKÁLUJ ROZSAH (09. 06. 2026, závazné)
 
