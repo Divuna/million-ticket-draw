@@ -136,7 +136,7 @@ test.describe('40 — affiliate payout batches', () => {
     skipIfNotEnabled();
   });
 
-  test('40a) RPC vytvoří dávku a označí celou dávku jako zaplacenou', async () => {
+  test('40a) RPC vytvoří dávku a po Fázi D nepovolí paid bez exportu', async () => {
     const service = makeServiceClient();
     const adminUser = await makeAdminUserClient();
     const ids: { affiliateId?: string; commissionId?: string; batchId?: string } = {};
@@ -178,21 +178,23 @@ test.describe('40 — affiliate payout batches', () => {
         { p_batch_id: ids.batchId },
       );
       expect(paidError).toBeFalsy();
-      expect(paid?.status).toBe('paid');
+      expect(paid?.status).toBe('invalid_batch_status');
+      expect(paid?.required_status).toBe('exported');
 
       const { data: paidCommission } = await (service as any)
         .from('affiliate_commissions')
-        .select('status,paid_at')
+        .select('status,paid_at,payout_batch_id')
         .eq('id', seeded.commissionId)
         .single();
-      expect(paidCommission.status).toBe('paid');
-      expect(paidCommission.paid_at).toBeTruthy();
+      expect(paidCommission.status).toBe('in_payment_batch');
+      expect(paidCommission.paid_at).toBeFalsy();
+      expect(paidCommission.payout_batch_id).toBe(ids.batchId);
     } finally {
       await cleanup(service, ids);
     }
   });
 
-  test('40b) UI zobrazí detail dávky a dovolí označit dávku jako zaplacenou', async ({ page }) => {
+  test('40b) UI zobrazí detail dávky a po Fázi D nabídne export před paid', async ({ page }) => {
     const service = makeServiceClient();
     const adminUser = await makeAdminUserClient();
     const ids: { affiliateId?: string; commissionId?: string; batchId?: string } = {};
@@ -214,12 +216,8 @@ test.describe('40 — affiliate payout batches', () => {
       await expect(page.getByRole('heading', { name: created.batch_number })).toBeVisible({ timeout: 15_000 });
       await expect(page.getByText('E2E Spec40 Obchodník').first()).toBeVisible({ timeout: 15_000 });
 
-      await page.getByTestId('btn-mark-affiliate-payout-batch-paid').click();
-      await expect(
-        page.getByText('Tato akce neposílá peníze. Pouze potvrzuje, že platba byla provedena v bance.'),
-      ).toBeVisible();
-      await page.getByRole('button', { name: 'Označit jako zaplacené', exact: true }).click();
-      await expect(page.getByText('Zaplaceno').first()).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByTestId('btn-generate-affiliate-bank-export')).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByTestId('btn-mark-affiliate-payout-batch-paid')).toHaveCount(0);
     } finally {
       await cleanup(service, ids);
     }

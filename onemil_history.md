@@ -14,6 +14,13 @@
 
 ---
 
+## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D reviewable návrh
+
+- Připraveny reviewable soubory Fáze D pro Air Bank ABO `.kpc` export: migrace `20260610170000_affiliate_payouts_phase_d.sql`, Edge Function `generate-affiliate-bank-export`, UI detail dávky a cílené testy.
+- Návrh přidává prepare/finalize RPC, metadata exportu na payout dávce, uložení `.kpc` do privátního bucketu `affiliate-bank-exports`, Windows-1250/CRLF, částky v haléřích, limit 50 KB a zpřísnění flow na `created → exported → paid`.
+- Upravený cílený spec 40 počítá s tím, že `mark_affiliate_payout_batch_paid` už po Fázi D nepovolí paid bez exportu; nový spec 42 ověřuje export, storage a řízené chyby.
+- Nic nebylo aplikováno na staging ani produkci, žádná Edge Function nebyla nasazena, žádný deploy ani Lovable Publish. Produkce `xkzhjldrojjlrkezorey` je netknutá.
+
 ## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D Air Bank export audit/design
 
 - Připraven a zapsán pouze audit/design Fáze D: Air Bank ABO `.kpc` export.

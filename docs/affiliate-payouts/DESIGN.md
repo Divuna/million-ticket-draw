@@ -492,15 +492,17 @@ Poznamka: `process-email-queue` s podporou `attachment_storage_bucket/path` se n
 - Produkcni rollout.
 - Lovable Publish.
 
-## 15. FAZE D - AIR BANK ABO `.kpc` EXPORT (AUDIT / DESIGN, BEZ IMPLEMENTACE)
+## 15. FAZE D - AIR BANK ABO `.kpc` EXPORT (REVIEWABLE NAVRH, NEAPLIKOVANO)
 
-Faze D je zatim pouze audit a navrh. Nic neni implementovano, zadna migrace nebyla vytvorena ani aplikovana, zadna Edge Function nebyla nasazena, produkce `xkzhjldrojjlrkezorey` je netknuta.
+Faze D ma pripraveny reviewable implementacni navrh jako soubory v repu. Nic nebylo aplikovano na staging ani produkci, zadna Edge Function nebyla nasazena, produkce `xkzhjldrojjlrkezorey` je netknuta.
 
 Aktualni potvrzeny stav:
 
 - Faze A+B+C jsou aplikovane a overene pouze na stagingu `dxmowysntemfqfnanxua`.
 - Produkce `xkzhjldrojjlrkezorey` je netknuta.
 - Web deploy ani Lovable Publish neprobehl.
+- Migrace `supabase/migrations/20260610170000_affiliate_payouts_phase_d.sql` je pouze navrh; neaplikovat bez Pavlova schvaleni.
+- Edge Function `supabase/functions/generate-affiliate-bank-export/index.ts` je pouze navrh; nedeployovat bez Pavlova schvaleni.
 - Stara migrace `20260609_affiliate_commission_payout_evidence.sql` se nesmi aplikovat.
 - Produkcni testovaci radek `dddddddd-dddd-dddd-dddd-dddddddddddd` se nema mazat.
 
@@ -575,15 +577,17 @@ Faze D by mela pozdeji zprisnit `mark_affiliate_payout_batch_paid` tak, aby v pr
 - Overit, ze `Oznacit davku jako zaplacenou` funguje az po exportu.
 - Overit cleanup testovacich dat.
 
-### Soubory pro pozdejsi implementaci
+### Pripravene reviewable soubory
 
-- `supabase/migrations/202606xx_affiliate_payouts_phase_d.sql`
+- `supabase/migrations/20260610170000_affiliate_payouts_phase_d.sql`
 - `supabase/functions/generate-affiliate-bank-export/index.ts`
 - `src/pages/AdminAffiliatePayoutDetail.tsx`
 - `src/pages/AdminAffiliatePayouts.tsx`
-- `src/integrations/supabase/types.ts`
+- `tests/e2e/40-affiliate-payouts.spec.ts`
 - `tests/e2e/42-affiliate-bank-export.spec.ts`
 - `docs/affiliate-payouts/DESIGN.md`
 - `onemil_state.md`
 - `onemil_history.md`
 - `CLAUDE.md`
+
+Poznamka: `src/pages/AdminAffiliatePayouts.tsx` ani `src/integrations/supabase/types.ts` zatim nebylo nutne menit; detail davky pouziva stavajici `any` pristup k payout tabulkam.

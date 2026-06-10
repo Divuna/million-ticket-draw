@@ -187,4 +187,4 @@ Zkontrolovat:
 
 ## Startovací text pro další chat
 
-Pokračujeme v OneMil na větvi `codex/affiliate-payouts-audit`, samostatný úkol dávkové výplaty affiliate / obchodních provizí. Produkce je netknutá. Fáze A+B+C jsou aplikované a ověřené na stagingu `dxmowysntemfqfnanxua`. Další krok je Fáze D — Air Bank export — nejdřív pouze návrh/audit, bez implementace, bez staging aplikace a bez produkce.
+Pokračujeme v OneMil na větvi `codex/affiliate-payouts-audit`, samostatný úkol dávkové výplaty affiliate / obchodních provizí. Produkce je netknutá. Fáze A+B+C jsou aplikované a ověřené na stagingu `dxmowysntemfqfnanxua`. Fáze D — Air Bank export — má připravené reviewable soubory v repu, ale nic nebylo aplikováno na staging ani produkci a žádná Edge Function nebyla nasazená. Další bezpečný krok je review návrhu Fáze D před případným schválením staging aplikace.

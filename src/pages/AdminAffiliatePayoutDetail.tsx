@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Banknote, CheckCircle, Loader2, RefreshCw, FileText } from "lucide-react";
+import { ArrowLeft, Banknote, CheckCircle, Download, FileText, Loader2, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { toast } from "sonner";
@@ -35,6 +35,10 @@ type PayoutBatch = {
   payer_bank_code: string | null;
   bank_export_encoding: string | null;
   bank_export_line_endings: string | null;
+  bank_export_storage_path: string | null;
+  bank_export_generated_at: string | null;
+  bank_export_sha256: string | null;
+  bank_export_size_bytes: number | null;
   created_at: string;
   marked_paid_at: string | null;
   marked_paid_by: string | null;
@@ -97,6 +101,8 @@ export default function AdminAffiliatePayoutDetail() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [markingPaid, setMarkingPaid] = useState(false);
+  const [generatingExport, setGeneratingExport] = useState(false);
+  const [downloadingExport, setDownloadingExport] = useState(false);
   const [confirmPaidOpen, setConfirmPaidOpen] = useState(false);
 
   const fetchDetail = useCallback(async (silent = false) => {
@@ -108,7 +114,7 @@ export default function AdminAffiliatePayoutDetail() {
       const { data: batchData, error: batchError } = await (supabase as any)
         .from("affiliate_payout_batches")
         .select(
-          "id,batch_number,status,item_count,total_amount_czk,due_date,payer_account,payer_bank_code,bank_export_encoding,bank_export_line_endings,created_at,marked_paid_at,marked_paid_by"
+          "id,batch_number,status,item_count,total_amount_czk,due_date,payer_account,payer_bank_code,bank_export_encoding,bank_export_line_endings,bank_export_storage_path,bank_export_generated_at,bank_export_sha256,bank_export_size_bytes,created_at,marked_paid_at,marked_paid_by"
         )
         .eq("id", batchId)
         .maybeSingle();
@@ -191,6 +197,70 @@ export default function AdminAffiliatePayoutDetail() {
     }
   };
 
+  const generateBankExport = async () => {
+    if (!batchId) return;
+
+    setGeneratingExport(true);
+    try {
+      const { data, error } = await (supabase as any).functions.invoke(
+        "generate-affiliate-bank-export",
+        { body: { batch_id: batchId } },
+      );
+
+      if (error) throw error;
+
+      if (data?.success && data.status === "exported") {
+        toast.success("Bankovní export pro Air Bank byl vygenerován.");
+        fetchDetail(true);
+        return;
+      }
+
+      const status = data?.error ?? data?.status;
+      const map: Record<string, string> = {
+        missing_payer_account: "Chybí účet plátce pro export.",
+        invalid_payer_account: "Účet plátce nemá platný formát.",
+        invalid_payer_bank_code: "Kód banky plátce není platný.",
+        invalid_airbank_payer_bank_code: "Pro Air Bank export musí být kód banky plátce 3030.",
+        missing_due_date: "Chybí datum splatnosti dávky.",
+        invalid_due_date: "Datum splatnosti není platné.",
+        empty_batch: "Dávka nemá žádné položky.",
+        invalid_batch_status: "Export lze vytvořit jen pro dávku ve stavu Vytvořeno.",
+        invalid_commission_status: "Některá provize v dávce nemá očekávaný stav.",
+        kpc_file_too_large: "Exportní soubor překročil limit Air Bank 50 KB.",
+      };
+      toast.error(map[status ?? ""] ?? "Bankovní export se nepodařilo vygenerovat.");
+    } catch (error) {
+      console.error("generate-affiliate-bank-export error:", error);
+      toast.error("Bankovní export se nepodařilo vygenerovat.");
+    } finally {
+      setGeneratingExport(false);
+    }
+  };
+
+  const downloadBankExport = async () => {
+    if (!batch?.bank_export_storage_path) return;
+
+    setDownloadingExport(true);
+    try {
+      const { data, error } = await (supabase as any).storage
+        .from("affiliate-bank-exports")
+        .createSignedUrl(batch.bank_export_storage_path, 60);
+      if (error || !data?.signedUrl) throw error ?? new Error("missing_signed_url");
+
+      const link = document.createElement("a");
+      link.href = data.signedUrl;
+      link.download = `${batch.batch_number}.kpc`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("download affiliate bank export error:", error);
+      toast.error("Export se nepodařilo stáhnout.");
+    } finally {
+      setDownloadingExport(false);
+    }
+  };
+
   useEffect(() => {
     if (!authLoading && !roleLoading && isAdmin) {
       fetchDetail();
@@ -225,7 +295,9 @@ export default function AdminAffiliatePayoutDetail() {
     );
   }
 
-  const canMarkPaid = batch?.status === "created" || batch?.status === "exported";
+  const canGenerateExport = batch?.status === "created";
+  const canDownloadExport = Boolean(batch?.bank_export_storage_path);
+  const canMarkPaid = batch?.status === "exported";
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -278,6 +350,42 @@ export default function AdminAffiliatePayoutDetail() {
             <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             Obnovit
           </Button>
+          {canGenerateExport && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={generateBankExport}
+              disabled={generatingExport}
+              data-testid="btn-generate-affiliate-bank-export"
+            >
+              {generatingExport ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Vygenerovat Air Bank export
+            </Button>
+          )}
+          {canDownloadExport && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={downloadBankExport}
+              disabled={downloadingExport}
+              data-testid="btn-download-affiliate-bank-export"
+            >
+              {downloadingExport ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Stáhnout .kpc
+            </Button>
+          )}
           {canMarkPaid && (
             <Button
               type="button"
@@ -306,7 +414,7 @@ export default function AdminAffiliatePayoutDetail() {
             <CardHeader>
               <CardTitle className="text-base">Souhrn</CardTitle>
               <CardDescription>
-                Fáze B zatím neeviduje PDF, e-maily ani bankovní export. Dávka slouží pro atomické seskupení a stav výplaty.
+                Faze D pridava Air Bank export. Davku lze oznacit jako zaplacenou az po vygenerovani exportu.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -344,6 +452,28 @@ export default function AdminAffiliatePayoutDetail() {
                 <div>
                   <div className="text-muted-foreground">Zaplaceno</div>
                   <div className="mt-1">{formatDateTime(batch?.marked_paid_at)}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Export Air Bank</div>
+                  <div className="mt-1">{formatDateTime(batch?.bank_export_generated_at)}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Soubor exportu</div>
+                  <div className="mt-1 font-mono text-xs break-all">
+                    {batch?.bank_export_storage_path ?? "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Velikost exportu</div>
+                  <div className="mt-1 font-mono">
+                    {batch?.bank_export_size_bytes ? `${batch.bank_export_size_bytes} B` : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">SHA-256</div>
+                  <div className="mt-1 font-mono text-xs break-all">
+                    {batch?.bank_export_sha256 ?? "—"}
+                  </div>
                 </div>
               </div>
             </CardContent>
