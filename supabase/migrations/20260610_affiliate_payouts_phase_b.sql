@@ -135,6 +135,8 @@ BEGIN
   END IF;
   v_batch_number := 'APB-' || to_char(now(), 'YYYY') || '-' || lpad(v_batch_seq::text, 6, '0');
 
+  DROP TABLE IF EXISTS pg_temp.tmp_affiliate_payout_batch_selection;
+
   CREATE TEMP TABLE tmp_affiliate_payout_batch_selection (
     commission_id uuid PRIMARY KEY,
     affiliate_id uuid NOT NULL,
