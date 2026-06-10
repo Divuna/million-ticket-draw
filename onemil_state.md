@@ -55,7 +55,7 @@
 
 **Produkční rollout závěr:** Fáze A+B se nesmí nasadit jako samotná DB změna bez aktuálního UI. Fáze B blokuje staré RPC `approved → paid`, zatímco staré produkční UI může pořád zobrazovat per-row `Označit jako vyplacené`; tím by staré ruční paid flow začalo vracet chybu. Nejbezpečnější je koordinované produkční okno: (1) produkční okno, (2) aplikovat DB Fázi A, (3) aplikovat DB Fázi B, (4) aplikovat temp-table guard, (5) ihned nasadit aktuální UI, (6) udělat produkční smoke. Správné storage buckety pro postcheck jsou `affiliate-payout-docs` a `affiliate-bank-exports`.
 
-**Další bezpečný krok:** pokračovat Fází D / Air Bank export na stagingu, nebo později připravit koordinovaný produkční rollout celého balíku. Do produkce nic nepřenášet bez výslovného schválení. Žádný deploy, žádný Lovable Publish. Testovací produkční řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` zatím nemazat.
+**Další bezpečný krok:** Fáze D / Air Bank export — nejdřív pouze audit a návrh, bez implementace. Později lze připravit koordinovaný produkční rollout celého balíku, ale do produkce nic nepřenášet bez výslovného schválení. Žádný deploy, žádný Lovable Publish. Testovací produkční řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` zatím nemazat.
 
 ## 🌿 SAMOSTATNÁ VĚTEV — DÁVKOVÉ VÝPLATY PROVIZÍ (09. 06. 2026, NÁVRH)
 

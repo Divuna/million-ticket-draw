@@ -290,56 +290,56 @@ Pro implementaci:
 - Účetní e-mail OneMil (zatím nepotvrzen; default info@onemil.cz / V. Engeová).
 - DPH režim provize (plátce/neplátce) na dokladu.
 
-## 12. AKTUÁLNÍ STAV PO STAGING OVĚŘENÍ (10. 06. 2026)
+## 12. AKTUALNI STAV PO STAGING OVERENI (10. 06. 2026)
 
-Fáze A i Fáze B jsou aplikované pouze na staging Supabase projekt `dxmowysntemfqfnanxua`. Bezpečnostní patch temp tabulky pro `create_affiliate_payout_batch` je aplikovaný. Produkce `xkzhjldrojjlrkezorey` je netknutá. Nebyl proveden žádný deploy, žádný Lovable Publish a full E2E nebylo spuštěno.
+Faze A+B+C jsou aplikovane a overene pouze na staging Supabase projektu `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` je netknuta. Nebyl proveden web deploy, Lovable Publish ani full E2E.
 
-### Důležité commity
+### Dulezite commity
 
-- Fáze A úprava: `3b2ba8a65c7480636045440f15998a5d79abc082`
-- Fáze B návrh: `ab44ffa04b54ab405ef17de502e5ef986f710c98`
-- Fáze B cleanup: `74cf175fea8f514001728160ec4f044beaddc54b`
+- Faze A uprava: `3b2ba8a65c7480636045440f15998a5d79abc082`
+- Faze B navrh: `ab44ffa04b54ab405ef17de502e5ef986f710c98`
+- Faze B cleanup: `74cf175fea8f514001728160ec4f044beaddc54b`
 - temp table patch: `0915b03e0d3dc8a235e4ff12aba079875557ef4b`
 - CI workflow inputy: `1bcf3221829f238a94ae8534aeeda495af8dfea0`
 - test email fix: `2b9b6b07c549fb2f26dcab22f95c9967f68284a5`
 - cookie consent fix: `7e061f1b6737435939eb3d1a6250301bccd7fb06`
+- Faze C worker fix: `6f998677c4fc5ccb085f9e511d625c58579d6f62`
 
-### Ověřené GitHub Actions
+### Overene testy
 
-- spec 40 run `27258741085` — 4 passed
-- spec 39 run `27270797466` — 2 passed
-- staging UI smoke run `27271124754` — 2 passed
+- spec 40 run `27258741085` - 4 passed
+- spec 39 run `27270797466` - 2 passed
+- staging UI smoke run `27271124754` - 2 passed
+- `tests/e2e/41-affiliate-payout-documents.spec.ts` - 4 passed
 
-### Ruční staging test Pavlem
+### Faze A+B staging stav
 
-- Staging: `dxmowysntemfqfnanxua`
-- Testovací provize `pavel-manual-payout-test obchodnik` byla vidět na `/admin/affiliate-commissions`.
-- Provizi šlo vybrat checkboxem.
-- Šlo vytvořit platební dávku.
-- Vznikla dávka `APB-2026-000016`.
-- Částka: `123,45 Kč`.
-- Dávka šla otevřít v detailu.
-- Potvrzovací dialog správně upozornil, že akce neposílá peníze.
-- Dávka byla označena jako zaplacená.
-- Dávka je v seznamu dávek se stavem `Zaplaceno`.
-- Původní provize už nejde znovu zařadit do další dávky.
+- `/admin/affiliate-commissions` ma davkove workflow.
+- Per-row `Oznacit jako vyplacene` je odstraneno.
+- Eligible provize maji checkbox a akci `Vytvorit platebni davku`.
+- `/admin/affiliate-payouts/:id` ma detail davky a tlacitko `Oznacit davku jako zaplacenou`.
+- Akce `Oznacit davku jako zaplacenou` pouze eviduje platbu provedenou v bance; neposila penize.
+- Pavel rucne overil davku `APB-2026-000016` na `123,45 Kc`; puvodni provize uz nejde znovu zaradit do dalsi davky.
 
-### UI stav na stagingu
+### Faze C staging stav
 
-- `/admin/affiliate-commissions` má dávkové workflow.
-- Per-row `Označit jako vyplacené` je odstraněno.
-- Eligible provize mají checkbox a akci `Vytvořit platební dávku`.
-- `/admin/affiliate-payouts/:id` má detail dávky a tlačítko `Označit dávku jako zaplacenou`.
-- Akce `Označit dávku jako zaplacenou` pouze eviduje platbu provedenou v bance; neposílá peníze.
+- Aplikovana migrace `20260610140000_affiliate_payouts_phase_c.sql`.
+- `affiliate_payout_documents` ma nove PDF/e-mail auditni sloupce.
+- `email_queue` ma nove sloupce pro privatni storage prilohy a `attachment_required`.
+- Existuji RPC `prepare_affiliate_payout_document` a `finalize_affiliate_payout_document`.
+- Edge Function `create-affiliate-payout-document` je nasazena na staging, verze 1.
+- Edge Function `process-email-queue` je nasazena na staging, verze 2.
+- `settings.accounting_email = accounting-test@onemil.test`.
+- Cleanup testu 41 je cisty: `email_queue`, `affiliate_accounts`, `affiliate_payout_documents` pro spec41 = 0.
+- `process-email-queue` uz neinicializuje Resend pri startu funkce; required PDF priloha bez souboru skonci rizene jako `failed`.
 
-### Mimo rozsah Fáze B
+### Zakazy a dalsi bezpecny krok
 
-PDF doklady, e-maily a Air Bank export nejsou hotové a nejsou součást Fáze B. Tyto části zůstávají pro další fáze po samostatném schválení a ověření.
-
-### Další bezpečný krok
-
-Pavlovo ruční otestování stagingu. Do produkce nic nepřenášet bez výslovného schválení, nespouštět Lovable Publish a nemazat produkční testovací řádek `dddddddd-dddd-dddd-dddd-dddddddddddd`.
-
+- Produkci `xkzhjldrojjlrkezorey` zatim nespoustet.
+- Nedelat Lovable Publish, web deploy ani produkcni rollout.
+- Nemazat produkcni testovaci radek `dddddddd-dddd-dddd-dddd-dddddddddddd`.
+- Neaplikovat starou migraci `20260609_affiliate_commission_payout_evidence.sql`.
+- Dalsi krok: Faze D / Air Bank export, nejdriv pouze audit a navrh, bez implementace.
 ## 13. PRODUKČNÍ ROLLOUT PLÁN FÁZE A+B — OPRAVENÝ ZÁVĚR
 
 Produkční rollout Fáze A+B se nesmí dělat jako samotná DB změna bez nasazení aktuálního UI.

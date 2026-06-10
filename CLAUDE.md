@@ -16,7 +16,7 @@ Fáze C staging stav:
 
 Oprava během testu: `process-email-queue` už neinicializuje Resend při startu funkce; Resend se inicializuje až před skutečným odesláním. Required PDF příloha bez souboru skončí řízeně jako `failed`. Commit opravy: `6f998677c4fc5ccb085f9e511d625c58579d6f62`.
 
-Fáze D / Air Bank export zatím není hotová. Do produkce nic nepřenášet bez výslovného schválení Pavla; nedělat deploy ani Lovable Publish.
+Fáze D / Air Bank export zatím není hotová. Další krok je pouze audit a návrh Fáze D, bez implementace. Do produkce nic nepřenášet bez výslovného schválení Pavla; nedělat deploy ani Lovable Publish.
 
 ## PRAVIDLO PRO SPOUŠTĚNÍ TESTŮ — ŠKÁLUJ ROZSAH (09. 06. 2026, závazné)
 
