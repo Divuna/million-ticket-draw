@@ -14,6 +14,13 @@
 
 ---
 
+## 2026-06-11 - Dávkové výplaty affiliate/obchodních provizí — Production rollout checklist připraven
+
+- Do `docs/affiliate-payouts/DESIGN.md` §17 přidán plný „Production rollout checklist — Affiliate Payouts Phase A+B+C+D+D.1". Shrnutí v `onemil_state.md` a `CLAUDE.md`.
+- Obsahuje: exact migration order (A → B → B guard → C → D → D.1; NE podle `ls` kvůli podtržítku Phase B base), Edge Functions k deployi (`create-affiliate-payout-document`, `generate-affiliate-bank-export`, `process-email-queue`), required postchecks per fáze, P0 smoke testy, E2E staging testy (spec 40/41/42), rollback plán (reverzně D.1→A), production rizika.
+- **Final gate:** produkce `xkzhjldrojjlrkezorey` zůstává BLOKOVÁNA dokud Pavel nedá nové výslovné písemné schválení.
+- Pouze dokumentace — žádná SQL, žádný deploy, žádný zásah do Supabase/produkce.
+
 ## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D.1 staging ověření ✅
 
 - Migrace `supabase/migrations/20260610180000_affiliate_payouts_phase_d1.sql` aplikována **pouze na staging** `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` nedotčena.

@@ -674,3 +674,79 @@ Soucasna migrace Faze D a EF `generate-affiliate-bank-export` jsou pro staging t
 - Nova migrace pro settings klice (zatim nepripravena).
 - Uprava `create_affiliate_payout_batch` RPC (zatim neupravena).
 - UI edit fields pro `payer_account` a `due_date` v `src/pages/AdminAffiliatePayoutDetail.tsx` (zatim neimplementovano).
+
+## 17. PRODUCTION ROLLOUT CHECKLIST — Affiliate Payouts Phase A+B+C+D+D.1
+
+**Target production:** `xkzhjldrojjlrkezorey`. **Status: ⛔ BLOKOVANO** — viz Final Gate.
+
+> ⚠️ **Filename sort ≠ apply order.** Phase B base soubor `20260610_affiliate_payouts_phase_b.sql` se v `ls` razeni objevi POSLEDNI (kvuli podtrzitku), ale musi se aplikovat PRED timestamped B/C/D soubory. Aplikovat v explicitnim logickem poradi nize, ne podle `ls`.
+
+### 17.1 Exact migration order (manualne v Supabase SQL Editoru, jeden po druhem, postcheck po kazdem)
+
+1. `supabase/migrations/20260609_affiliate_payouts_phase_a.sql` — DB base: tabulky, sequences, RLS, status enums.
+2. `supabase/migrations/20260610_affiliate_payouts_phase_b.sql` — batch + paid flow, `create_affiliate_payout_batch`, `mark_affiliate_payout_batch_paid`.
+3. `supabase/migrations/20260610120000_affiliate_payouts_phase_b_temp_table_guard.sql` — temp-table guard hardening pro B.
+4. `supabase/migrations/20260610140000_affiliate_payouts_phase_c.sql` — payout documents, email-queue private attachment sloupce, `prepare_/finalize_affiliate_payout_document`.
+5. `supabase/migrations/20260610170000_affiliate_payouts_phase_d.sql` — Air Bank ABO export sloupce, `prepare_/finalize_affiliate_bank_export`, bucket `affiliate-bank-exports`.
+6. `supabase/migrations/20260610180000_affiliate_payouts_phase_d1.sql` — settings seed (payer account/bank), auto-fill v `create_affiliate_payout_batch`, `update_affiliate_payout_batch_meta`.
+
+**Post-apply manualni krok (po #6):** Supabase pridava implicitni `anon` EXECUTE grant na nove/nahrazene funkce. Po migraci 6 spustit:
+```sql
+REVOKE EXECUTE ON FUNCTION public.create_affiliate_payout_batch(uuid[]) FROM anon;
+```
+(D.1 revoke `anon` na `update_affiliate_payout_batch_meta` inline — presto RE-OVERIT.)
+
+**Settings k potvrzeni na produkci po #6:**
+- `affiliate_payout_payer_account = 3151752019`
+- `affiliate_payout_payer_bank_code = 3030`
+- `accounting_email` = produkcni ucetni adresa (NE staging `accounting-test@onemil.test`).
+
+### 17.2 Edge Functions to deploy (produkce, az po vsech migracich + postcheck)
+
+1. `create-affiliate-payout-document` (Phase C) — overit admin guard v `supabase/config.toml`.
+2. `generate-affiliate-bank-export` (Phase D) — JWT-protected; smoke bez JWT → 401.
+3. `process-email-queue` (Phase C update) — Resend init posunut tesne pred odeslani; required PDF priloha bez souboru → rizeny `failed`.
+
+### 17.3 Required postchecks (per phase, na produkci)
+
+- **A:** tabulky existuji, RLS enabled, sequences present.
+- **B:** `create_affiliate_payout_batch` + `mark_affiliate_payout_batch_paid` existuji; `mark_..._paid` vyzaduje `exported` pred `paid`; zadny `anon` EXECUTE.
+- **C:** `affiliate_payout_documents` PDF/email audit sloupce; `email_queue` private-attachment + `attachment_required` sloupce; `prepare_/finalize_affiliate_payout_document` existuji.
+- **D:** 5 export sloupcu, 3 CHECK constrainty, export index, bucket `affiliate-bank-exports` PRIVATNI; `prepare_/finalize_affiliate_bank_export` = service_role only.
+- **D.1:** settings seed present; auto-fill payer_account/bank_code + `due_date = current_date + 2`; `update_affiliate_payout_batch_meta` admin-only s `status='created'` guard; ZADNY `anon` EXECUTE na obou funkcich (`proacl` check).
+- **Edge Functions:** vsechny 3 ACTIVE; `generate-affiliate-bank-export` no-JWT → 401.
+- **Advisors:** `get_advisors` (security + performance), triage novych nalezu (pre-existing security backlog je samostatny).
+
+### 17.4 Required smoke tests (pred Lovable Publish — P0)
+
+P0 Smoke dle CLAUDE.md: registrace/login (01,02), login gating (33,14), ticket (04), vyhra (05), penezenka/balance (09,03-voucher), zpravy (29,32), Bob ON/OFF (31). Plus curl smoke: `generate-affiliate-bank-export` no-JWT → 401.
+
+### 17.5 Required E2E tests (staging, zelene tesne pred produkcni gate)
+
+- `tests/e2e/40-affiliate-payouts.spec.ts` → 4 passed (last green run `27303389522`).
+- `tests/e2e/41-affiliate-payout-documents.spec.ts` → 4 passed.
+- `tests/e2e/42-affiliate-bank-export.spec.ts` → 6 passed (last green run `27303172376`).
+- Full Staging E2E suite zeleny (bez regresi: spec 39 commissions, partners, messaging).
+- E2E vzdy proti staging `dxmowysntemfqfnanxua`; produkce nikdy neni E2E cil.
+
+### 17.6 Rollback plan
+
+- **Edge Functions:** net-new (`create-affiliate-payout-document`, `generate-affiliate-bank-export`) → delete; `process-email-queue` → redeploy prior version.
+- **DB (reverzni poradi D.1 → A):** D.1 drop `update_affiliate_payout_batch_meta` + restore Phase B verzi `create_affiliate_payout_batch` (+ pripadne smazat 2 settings klice); D drop export RPC/sloupce/constrainty/index + bucket (jen pokud prazdny); C drop document RPC + revert sloupce; B drop batch RPC + tabulky; A drop base tabulky/sequences/policies.
+- **Data safety:** rollback jen na cistem/prazdnem payout datasetu. Pokud existuji realne batch/document/export radky → NEDROPOVAT, eskalovat Pavlovi. Nikdy nemazat produkcni testovaci radek `dddddddd-dddd-dddd-dddd-dddddddddddd`.
+- **Frontend:** `git revert` UI commitu + re-Publish prior build pres Lovable.
+
+### 17.7 Production risks
+
+- Implicitni `anon` grant re-added pri function replace → re-REVOKE + re-verify po kazde aplikaci.
+- Migration ordering trap (podtrzitko razeni).
+- `accounting_email` mireny na staging test adresu → realne payout emaily uniknou do test inboxu. Nastavit produkcni hodnotu pred deployem.
+- Bucket privacy — `affiliate-bank-exports` musi byt privatni; verejny bucket leakuje bankovni ucty prijemcu.
+- Realny money path — Air Bank `.kpc` import rizi skutecne prevody; payer `3151752019/3030` (Iconic Point s.r.o.) musi byt spravny. Import test jiz uspesny na realnem prijemci (`225259937/0600`, 1,00 Kc), zadne chybne „K oprave".
+- Email attachment flow — required PDF bez souboru → rizeny `failed` (worker nesmi spadnout); overit po deployi.
+- Pre-existing security backlog (23 nalezu) nesouvisi, ale nesmi byt nove zhorseno; recheck advisors.
+- Adjacent regression — payout RPC se dotykaji `affiliate_commissions` status flow; overit commissions UI (spec 39) a B2B fakturaci.
+
+### 17.8 ⛔ FINAL GATE
+
+**Produkce `xkzhjldrojjlrkezorey` zustava BLOKOVANA.** Zadna migrace, EF deploy, settings zmena, smoke, Publish ani jakakoli produkcni/Supabase mutace tohoto rolloutu nesmi probehnout, dokud Pavel neda NOVE, VYSLOVNE, PISEMNE schvaleni pro produkci. Tento checklist je jen priprava — nic zde neni autorizovano k provedeni.

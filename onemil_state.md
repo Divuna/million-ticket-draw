@@ -78,6 +78,19 @@
 
 **Produkce zůstává blokována.** Do produkce nic nepřenášet bez výslovného schválení Pavla. Žádný Lovable Publish. Testovací produkční řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` zatím nemazat.
 
+### Production rollout checklist — Affiliate Payouts Phase A+B+C+D+D.1 (připraven 11. 06. 2026, NEAUTORIZOVÁNO)
+
+Plný checklist je v `docs/affiliate-payouts/DESIGN.md` §17. Shrnutí:
+
+- **Migration order (NE podle `ls` — podtrzitko Phase B base sortuje poslední):** A `20260609_affiliate_payouts_phase_a.sql` → B `20260610_affiliate_payouts_phase_b.sql` → B guard `20260610120000_affiliate_payouts_phase_b_temp_table_guard.sql` → C `20260610140000_affiliate_payouts_phase_c.sql` → D `20260610170000_affiliate_payouts_phase_d.sql` → D.1 `20260610180000_affiliate_payouts_phase_d1.sql`. Po D.1 ručně `REVOKE EXECUTE ... create_affiliate_payout_batch FROM anon`. Potvrdit settings (payer 3151752019/3030, produkční `accounting_email`).
+- **Edge Functions:** `create-affiliate-payout-document`, `generate-affiliate-bank-export`, `process-email-queue`.
+- **Postchecks:** per-fáze (RLS, RPC existence, `mark_..._paid` vyžaduje `exported`, bucket `affiliate-bank-exports` privátní, service_role-only export RPC, žádný `anon` EXECUTE, advisors).
+- **Smoke (P0 před Publish):** 01,02 / 33,14 / 04 / 05 / 09,03-voucher / 29,32 / 31 + EF no-JWT → 401.
+- **E2E (staging):** spec 40 (4), spec 41 (4), spec 42 (6) zelené + Full E2E bez regresí.
+- **Rollback:** EF delete/redeploy; DB reverzně D.1→A; jen na prázdném payout datasetu; nemazat `dddddddd-…`; frontend `git revert` + re-Publish.
+- **Rizika:** implicitní `anon` grant po replace, ordering trap, staging `accounting_email`, bucket privacy, reálný Air Bank money path, email attachment failed flow, security backlog, adjacent regrese commissions/B2B.
+- **⛔ FINAL GATE:** produkce `xkzhjldrojjlrkezorey` zůstává BLOKOVÁNA dokud Pavel nedá nové výslovné písemné schválení.
+
 ## 🌿 SAMOSTATNÁ VĚTEV — DÁVKOVÉ VÝPLATY PROVIZÍ (09. 06. 2026, NÁVRH)
 
 **Stav: návrh dohodnut, NIC neimplementováno/nasazeno. Hlavní kmen OneMil nedotčen — po dokončení větve návrat.**
