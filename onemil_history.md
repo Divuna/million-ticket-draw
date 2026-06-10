@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D spec 42 ✅ 3 passed
+
+- Spec 42 `42-affiliate-bank-export.spec.ts` spuštěn na staging `dxmowysntemfqfnanxua`, run `27301399760`.
+- **3 passed, 0 failed** (14,8 s).
+  - 42a) vytvoří Air Bank `.kpc` export a povolí paid až po exportu ✅
+  - 42b) chybějící účet plátce vrátí řízenou chybu ✅
+  - 42c) `created` dávku nelze označit jako paid před exportem ✅
+- Telegram: `✅ OneMil STAGING full E2E OK — all specs passed` doručen.
+- Produkce `xkzhjldrojjlrkezorey` nedotčena. Žádný Lovable Publish.
+
 ## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D EF nasazena na staging ✅
 
 - Edge Function `generate-affiliate-bank-export` nasazena na staging `dxmowysntemfqfnanxua`, ACTIVE, verze 1.

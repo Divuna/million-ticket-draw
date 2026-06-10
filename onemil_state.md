@@ -53,9 +53,11 @@
 
 **Fáze D APLIKOVÁNA NA STAGING ✅ (10. 06. 2026):** Migrace `20260610170000_affiliate_payouts_phase_d.sql` aplikována na staging `dxmowysntemfqfnanxua`. Postcheck OK: 5 nových export sloupců na `affiliate_payout_batches`, 3 CHECK constrainty, index `idx_apb_exported_at`, RPC `prepare_affiliate_bank_export` (service_role only), RPC `finalize_affiliate_bank_export` (service_role only), RPC `mark_affiliate_payout_batch_paid` (authenticated+service_role), bucket `affiliate-bank-exports` privátní ✅. Grant oprava: Supabase přidával `anon`/`authenticated` EXECUTE implicitně — po migraci provedeno `REVOKE`; `prepare` a `finalize` jsou nyní skutečně service_role only. Edge Function `generate-affiliate-bank-export` zatím NEdeployována. Produkce `xkzhjldrojjlrkezorey` nedotčena.
 
-**Edge Function `generate-affiliate-bank-export` NASAZENA NA STAGING ✅ (10. 06. 2026):** ACTIVE, verze 1. Smoke test bez JWT → `401` ✅. Zbývá: spustit spec 42 (výslovné schválení Pavla).
+**Edge Function `generate-affiliate-bank-export` NASAZENA NA STAGING ✅ (10. 06. 2026):** ACTIVE, verze 1. Smoke test bez JWT → `401` ✅.
 
-**Mimo aktuálně hotový staging rozsah:** Spec 42 `42-affiliate-bank-export.spec.ts` zatím nespuštěn — čeká na výslovné schválení Pavla. Potvrzení o zaplacení (Fáze E) zatím není hotové. Produkční rollout zůstává odložený na koordinovaný balík DB + aktuální UI + smoke test.
+**Spec 42 `42-affiliate-bank-export.spec.ts`: `3 passed` ✅ (10. 06. 2026, run `27301399760`):** 42a) vytvoří Air Bank `.kpc` export a povolí paid až po exportu ✅; 42b) chybějící účet plátce vrátí řízenou chybu ✅; 42c) `created` dávku nelze označit jako paid před exportem ✅. Telegram OK doručen.
+
+**Mimo aktuálně hotový staging rozsah:** Potvrzení o zaplacení (Fáze E) zatím není hotové. Produkční rollout zůstává odložený na koordinovaný balík DB + aktuální UI + smoke test.
 
 **Produkční rollout závěr:** Fáze A+B se nesmí nasadit jako samotná DB změna bez aktuálního UI. Fáze B blokuje staré RPC `approved → paid`, zatímco staré produkční UI může pořád zobrazovat per-row `Označit jako vyplacené`; tím by staré ruční paid flow začalo vracet chybu. Nejbezpečnější je koordinované produkční okno: (1) produkční okno, (2) aplikovat DB Fázi A, (3) aplikovat DB Fázi B, (4) aplikovat temp-table guard, (5) ihned nasadit aktuální UI, (6) udělat produkční smoke. Správné storage buckety pro postcheck jsou `affiliate-payout-docs` a `affiliate-bank-exports`.
 
