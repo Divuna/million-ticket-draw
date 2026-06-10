@@ -630,3 +630,35 @@ Pavel rucne nahral `sample-onemil-20260625.kpc` do Air Bank internetoveho bankov
 - `CLAUDE.md`
 
 Poznamka: `src/pages/AdminAffiliatePayouts.tsx` ani `src/integrations/supabase/types.ts` zatim nebylo nutne menit; detail davky pouziva stavajici `any` pristup k payout tabulkam.
+
+## 16. FAZE D.1 - ZDROJ PAYER_ACCOUNT A DUE_DATE (rozhodnutí 10. 06. 2026, NEIMPLEMENTOVÁNO)
+
+Faze D.1 resi automaticke plneni `payer_account` a `due_date` pri vytvoreni payout davky. Tato cast neni soucasti soucasne migrace Faze D ani EF; jde o samostatnou vrstvu, ktera musi byt implementovana pred produkci.
+
+### Rozhodnutí
+
+**`payer_account` a `payer_bank_code`:**
+- Ulozit jako settings klice do existujici tabulky `public.settings(key text, value text)`.
+- Klice: `affiliate_payout_payer_account = 3151752019`, `affiliate_payout_payer_bank_code = 3030`.
+- `create_affiliate_payout_batch` RPC nacte tyto hodnoty automaticky pri vytvoreni davky a ulozi je do `affiliate_payout_batches.payer_account` a `payer_bank_code`.
+- Vzor: stejny jako `accounting_email` v Fazi C.
+- Novy settings migration soubor (NEAPLIKOVAT bez Pavlova schvaleni).
+
+**`due_date`:**
+- Automaticky `current_date + 5` pri vytvoreni davky (nastavi `create_affiliate_payout_batch`).
+- Admin muze editovat pole `due_date` v detailu davky `/admin/affiliate-payouts/:id` pred spustenim exportu.
+- UI edit field: date input, validace `due_date >= current_date`, `due_date <= current_date + 364`.
+
+**Rizena chyba pri chybejicich hodnotach:**
+- `prepare_affiliate_bank_export` vrati chybu `missing_payer_account` pokud `affiliate_payout_batches.payer_account IS NULL`.
+- `prepare_affiliate_bank_export` vrati chybu `missing_due_date` pokud `affiliate_payout_batches.due_date IS NULL`.
+
+### Staging testovani bez Faze D.1
+
+Soucasna migrace Faze D a EF `generate-affiliate-bank-export` jsou pro staging testovani pouzitelne i bez Faze D.1 — spec 42 pomocna funkce `prepareBatchForExport` nastavuje `payer_account = '1234567890'`, `payer_bank_code = '3030'` a `due_date = today` primo pres UPDATE. Faze D.1 nevyzaduje zmenu v spec 42.
+
+### Soubory pro Fazi D.1 (NEAPLIKOVAT, NENASAZOVAT bez Pavlova schvaleni)
+
+- Nova migrace pro settings klice (zatim nepripravena).
+- Uprava `create_affiliate_payout_batch` RPC (zatim neupravena).
+- UI edit fields pro `payer_account` a `due_date` v `src/pages/AdminAffiliatePayoutDetail.tsx` (zatim neimplementovano).

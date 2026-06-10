@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D.1 rozhodnutí (dokumentace)
+
+- Formát `.kpc` Air Bank plně ověřen importním testem; blokující podmínka splněna.
+- **Rozhodnutí Phase D.1** (NEIMPLEMENTOVÁNO, pouze dokumentace):
+  1. `payer_account`/`payer_bank_code` se budou načítat ze `settings`: klíče `affiliate_payout_payer_account = 3151752019`, `affiliate_payout_payer_bank_code = 3030`. `create_affiliate_payout_batch` je nastaví automaticky.
+  2. `due_date` = automaticky `current_date + 5`; admin může editovat v detailu `/admin/affiliate-payouts/:id` před exportem.
+  3. Export selže řízeně, pokud `payer_account` nebo `due_date` chybí.
+- Současná migrace Fáze D a EF jsou pro staging testování použitelné — spec 42 nastavuje `payer_account` a `due_date` přes přímý UPDATE (`prepareBatchForExport`); Fáze D.1 nevyžaduje změnu v spec 42.
+- Produkce stále blokována. Žádné SQL aplikováno, žádný deploy, žádný Lovable Publish. Produkce `xkzhjldrojjlrkezorey` je netknutá.
+
 ## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — importní test Air Bank ✅ SPLNĚN
 
 - **Test 1** (`sample-onemil-20260625.kpc`, 2 fiktivní příjemci, 579,45 Kč): Air Bank přijala, stav „Vytvořena", platby označeny „K opravě" — fiktivní účty příjemců neexistují v bankovním systému.
