@@ -339,3 +339,48 @@ PDF doklady, e-maily a Air Bank export nejsou hotové a nejsou součást Fáze B
 ### Další bezpečný krok
 
 Pavlovo ruční otestování stagingu. Do produkce nic nepřenášet bez výslovného schválení, nespouštět Lovable Publish a nemazat produkční testovací řádek `dddddddd-dddd-dddd-dddd-dddddddddddd`.
+
+## 13. PRODUKČNÍ ROLLOUT PLÁN FÁZE A+B — OPRAVENÝ ZÁVĚR
+
+Produkční rollout Fáze A+B se nesmí dělat jako samotná DB změna bez nasazení aktuálního UI.
+
+### Důvod
+
+- Staré produkční UI může pořád zobrazovat per-row `Označit jako vyplacené`.
+- Fáze B ale staré RPC `admin_set_affiliate_commission_status` pro přechod `approved → paid` už blokuje.
+- Výsledkem by bylo, že staré produkční ruční paid flow začne vracet chybu.
+
+### Doporučený postup
+
+1. Vyhlásit krátké produkční okno.
+2. Aplikovat DB Fázi A: `supabase/migrations/20260609_affiliate_payouts_phase_a.sql`.
+3. Aplikovat DB Fázi B: `supabase/migrations/20260610_affiliate_payouts_phase_b.sql`.
+4. Aplikovat temp-table guard: `supabase/migrations/20260610120000_affiliate_payouts_phase_b_temp_table_guard.sql`.
+5. Ihned nasadit aktuální UI / Lovable Publish z větve s dávkovým workflow.
+6. Udělat produkční smoke.
+
+### Storage postcheck
+
+Správné názvy privátních storage bucketů jsou:
+
+- `affiliate-payout-docs`
+- `affiliate-bank-exports`
+
+Postcheck:
+
+```sql
+select id, name, public
+from storage.buckets
+where id in (
+  'affiliate-payout-docs',
+  'affiliate-bank-exports'
+);
+```
+
+Očekávání: oba buckety existují a `public = false`.
+
+### Zakázané
+
+- Neaplikovat `supabase/migrations/20260609_affiliate_commission_payout_evidence.sql`.
+- Nedělat samostatný DB rollout bez UI deploye.
+- Nedělat produkční test reálné dávky bez výslovného schválení Pavla.

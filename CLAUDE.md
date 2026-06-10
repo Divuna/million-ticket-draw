@@ -14,6 +14,8 @@ UI stav: `/admin/affiliate-commissions` má dávkové workflow, per-row `Označi
 
 PDF, e-maily a Air Bank export nejsou hotové a nejsou součást Fáze B; patří do dalších fází po samostatném schválení. Další bezpečný krok je Pavlovo rozhodnutí, zda pokračovat další fází. Nesahej na produkci, nedělej deploy, nedělej Lovable Publish, neaplikuj nic dalšího a nemaž produkční testovací řádek `dddddddd-dddd-dddd-dddd-dddddddddddd`.
 
+Produkční rollout Fáze A+B se nesmí dělat jako samotná DB změna bez aktuálního UI deploye. Důvod: staré produkční UI může pořád zobrazovat per-row `Označit jako vyplacené`, ale Fáze B už blokuje staré RPC `approved → paid`, takže staré ruční paid flow by začalo vracet chybu. Doporučené pořadí je krátké koordinované okno: produkční okno → DB Fáze A → DB Fáze B → temp-table guard → ihned aktuální UI deploy/Lovable Publish → produkční smoke. Správné storage buckety pro payout postcheck jsou `affiliate-payout-docs` a `affiliate-bank-exports`.
+
 ## PRAVIDLO PRO SPOUŠTĚNÍ TESTŮ — ŠKÁLUJ ROZSAH (09. 06. 2026, závazné)
 
 Když Pavel řekne „spusť test" nebo když se ladí konkrétní část aplikace, **NEspouštěj automaticky hned celý staging Full E2E** — je pomalý a při ladění jedné stránky zbytečně zdržuje.

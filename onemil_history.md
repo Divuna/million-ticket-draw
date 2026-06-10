@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — opravený produkční rollout plán
+
+- Do dokumentace zapsán opravený závěr: produkční rollout Fáze A+B se nesmí dělat jako samotná DB změna bez aktuálního UI deploye.
+- Důvod: staré produkční UI může pořád zobrazovat per-row `Označit jako vyplacené`, ale Fáze B už blokuje staré RPC `approved → paid`; staré ruční paid flow by začalo vracet chybu.
+- Doporučené pořadí: produkční okno → DB Fáze A → DB Fáze B → temp-table guard → ihned aktuální UI deploy/Lovable Publish → produkční smoke.
+- Opraveny storage bucket názvy pro postcheck: `affiliate-payout-docs`, `affiliate-bank-exports`.
+- Žádná migrace aplikována, produkce `xkzhjldrojjlrkezorey` netknutá, žádný deploy ani Lovable Publish.
+
 ## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — ruční staging test Pavlem dokončen
 
 - Pavel ručně ověřil Fázi A+B na stagingu `dxmowysntemfqfnanxua`.
