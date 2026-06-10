@@ -601,17 +601,19 @@ Pavel rucne nahral `sample-onemil-20260625.kpc` do Air Bank internetoveho bankov
 - `payer_account` a `due_date` jsou dnes nullable; export vrati rizenou chybu pri chybejicich hodnotach; pred aplikaci musi byt potvrzeno, odkud se hodnoty nastavuji.
 - **Zbyvajici bloker pred staging aplikaci:** vyhradne schvaleni Pavla.
 
-### Test plan pro pozdejsi implementaci
+### Test plan — SPLNĚNO na staging ✅ (10. 06. 2026)
 
-- Novy gated staging test `tests/e2e/42-affiliate-bank-export.spec.ts`.
-- Overit vytvoreni exportu z davky `created`.
-- Overit ulozeni souboru do privatniho bucketu `affiliate-bank-exports`.
-- Overit prechod davky `created -> exported`.
-- Overit Windows-1250, CRLF a castky v halerich na bajtove urovni.
-- Overit VS max 10 cislic, KS `0000`, zpravu max 35 znaku.
-- Overit rizene chyby pro chybejici `payer_account`, `due_date`, prazdnou davku a spatny stav.
-- Overit, ze `Oznacit davku jako zaplacenou` funguje az po exportu.
-- Overit cleanup testovacich dat.
+- `tests/e2e/42-affiliate-bank-export.spec.ts`: **3 passed** (run `27301399760`) ✅
+  - 42a) vytvoří Air Bank `.kpc` export a povolí paid až po exportu ✅
+  - 42b) chybějící účet plátce vrátí řízenou chybu ✅
+  - 42c) `created` dávku nelze označit jako paid před exportem ✅
+- `tests/e2e/40-affiliate-payouts.spec.ts`: **4 passed** (run `27301606390`) ✅
+  - 40a) batch lze vytvořit, ale paid je blokován před exportem ✅
+  - 40b) admin UI zobrazí detail dávky a nabídne export před paid ✅
+  - 40c) staré per-row RPC odmítne approved → paid ✅
+  - 40d) AdminAffiliateAccounts detail nemá per-row paid akci ✅
+
+**Fáze D staging ověření kompletní. Produkce nedotčena.**
 
 ### Pripravene reviewable soubory
 

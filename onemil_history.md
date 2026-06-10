@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D spec 40 ✅ 4 passed
+
+- Spec 40 `40-affiliate-payouts.spec.ts` spuštěn na staging `dxmowysntemfqfnanxua`, run `27301606390`.
+- **4 passed, 0 failed** (36,4 s).
+  - 40a) batch lze vytvořit, ale paid je blokován před exportem ✅
+  - 40b) admin UI zobrazí detail dávky a nabídne export před paid ✅
+  - 40c) staré per-row RPC odmítne approved → paid ✅
+  - 40d) AdminAffiliateAccounts detail nemá per-row paid akci ✅
+- **Fáze D staging ověření kompletní** — spec 40 + spec 42 zelené.
+- Produkce `xkzhjldrojjlrkezorey` nedotčena. Žádný Lovable Publish.
+
 ## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D spec 42 ✅ 3 passed
 
 - Spec 42 `42-affiliate-bank-export.spec.ts` spuštěn na staging `dxmowysntemfqfnanxua`, run `27301399760`.

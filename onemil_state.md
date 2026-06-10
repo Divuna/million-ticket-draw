@@ -57,6 +57,8 @@
 
 **Spec 42 `42-affiliate-bank-export.spec.ts`: `3 passed` ✅ (10. 06. 2026, run `27301399760`):** 42a) vytvoří Air Bank `.kpc` export a povolí paid až po exportu ✅; 42b) chybějící účet plátce vrátí řízenou chybu ✅; 42c) `created` dávku nelze označit jako paid před exportem ✅. Telegram OK doručen.
 
+**Spec 40 `40-affiliate-payouts.spec.ts`: `4 passed` ✅ (10. 06. 2026, run `27301606390`):** 40a) batch lze vytvořit, ale paid je blokován před exportem ✅; 40b) admin UI zobrazí detail dávky a nabídne export před paid ✅; 40c) staré per-row RPC odmítne approved → paid ✅; 40d) AdminAffiliateAccounts detail nemá per-row paid akci ✅. **Fáze D staging ověření kompletní (spec 40 + spec 42).** Produkce nedotčena.
+
 **Mimo aktuálně hotový staging rozsah:** Potvrzení o zaplacení (Fáze E) zatím není hotové. Produkční rollout zůstává odložený na koordinovaný balík DB + aktuální UI + smoke test.
 
 **Produkční rollout závěr:** Fáze A+B se nesmí nasadit jako samotná DB změna bez aktuálního UI. Fáze B blokuje staré RPC `approved → paid`, zatímco staré produkční UI může pořád zobrazovat per-row `Označit jako vyplacené`; tím by staré ruční paid flow začalo vracet chybu. Nejbezpečnější je koordinované produkční okno: (1) produkční okno, (2) aplikovat DB Fázi A, (3) aplikovat DB Fázi B, (4) aplikovat temp-table guard, (5) ihned nasadit aktuální UI, (6) udělat produkční smoke. Správné storage buckety pro postcheck jsou `affiliate-payout-docs` a `affiliate-bank-exports`.
