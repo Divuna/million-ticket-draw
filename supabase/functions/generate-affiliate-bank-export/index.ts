@@ -75,6 +75,9 @@ function statusToHttpStatus(status: string): number {
     case "invalid_airbank_payer_bank_code":
     case "missing_due_date":
     case "invalid_due_date":
+    case "invalid_due_date_too_far":
+    case "amount_sum_mismatch":
+    case "amount_too_large":
     case "empty_batch":
     case "missing_recipient_account":
     case "invalid_recipient_account":
@@ -124,13 +127,15 @@ function padLeft(value: string, length: number, char = "0"): string {
   return value.slice(-length).padStart(length, char);
 }
 
-function padRight(value: string, length: number): string {
-  return value.slice(0, length).padEnd(length, " ");
-}
-
+// ABO edicni format cisla uctu: vodici nuly povoleny; predcisli jen kdyz existuje,
+// oddelene '-'. Bez predcisli se '-' i predcisli vynechava.
 function formatAccount(account: string): string {
   const parsed = parseCzechAccount(account);
-  return `${padLeft(parsed.prefix || "0", 6)}-${padLeft(parsed.number, 10)}`;
+  const number = padLeft(parsed.number, 10);
+  if (parsed.prefix && parsed.prefix !== "0") {
+    return `${padLeft(parsed.prefix, 6)}-${number}`;
+  }
+  return number;
 }
 
 function dateDDMMYY(value: string): string {
@@ -144,12 +149,18 @@ function dateDDMMYY(value: string): string {
   return `${dd}${mm}${yy}`;
 }
 
-function amountToHalere(value: number | string, length: number): string {
+// Castka v halerich. ABO: vodici nuly povoleny (volitelne), proto zleva nulami
+// do maxLen (header skupiny max 14, polozka max 12). Pretek = rizena chyba.
+function amountToHalere(value: number | string, maxLen: number): string {
   const numberValue = Number(value);
   if (!Number.isFinite(numberValue) || numberValue <= 0) {
     throw new HttpError(400, "invalid_amount");
   }
-  return padLeft(String(Math.round(numberValue * 100)), length);
+  const halere = String(Math.round(numberValue * 100));
+  if (halere.length > maxLen) {
+    throw new HttpError(400, "amount_too_large", { value });
+  }
+  return halere.padStart(maxLen, "0");
 }
 
 function stripDiacritics(value: string): string {
@@ -162,6 +173,21 @@ function normalizeMessage(value: string | null | undefined): string {
     .slice(0, 35);
 }
 
+// ABO format prikazu k uhrade (hromadny prikaz / bulk) dle oficialni
+// specifikace (CSAS "Technicky popis struktury ABO formatu pro programatory"):
+//   UHL1
+//   1 <druh dat 1501> <cislo uctetniho souboru sssppp> <smerovy kod banky>
+//   2 <ucet prikazce> <celkova castka skupiny v halerich> <datum splatnosti ddmmrr>
+//   <polozky> ...
+//   3 +
+//   5 +
+// Pole jsou oddelena MEZEROU. U hromadneho prikazu je ucet prikazce v hlavicce
+// skupiny (veta 2), proto polozka NEOBSAHUJE debetni ucet a zacina uctem prijemce.
+// Pole konstantni symbol nese na 5.-8. miste zprava smerovy kod banky prijemce
+// a na 1.-4. miste zprava vlastni konstantni symbol (tj. <bank><KS>).
+//
+// POZOR: presny layout musi byt pred produkcnim pouzitim overen REALNYM importem
+// v Air Bank internetovem bankovnictvi (vcetne pripadnych UHL1 autentizacnich poli).
 function buildAboKpc(prepared: PreparedBankExport): string {
   const payerAccount = formatAccount(prepared.payer_account);
   const dueDate = dateDDMMYY(prepared.due_date);
@@ -174,14 +200,17 @@ function buildAboKpc(prepared: PreparedBankExport): string {
 
   for (const item of prepared.items) {
     const recipientAccount = formatAccount(item.recipient_account);
-    const amountHalere = amountToHalere(item.amount_czk, 14);
-    const vs = padLeft(item.variable_symbol, 10);
+    const amountHalere = amountToHalere(item.amount_czk, 12);
+    const vs = item.variable_symbol;
+    // KS pole = smerovy kod banky prijemce (4) + konstantni symbol (4) = 8 cislic.
     const bankAndKs = `${item.recipient_bank_code}${item.constant_symbol ?? "0000"}`;
-    const ss = padRight(item.specific_symbol ?? "", 10);
-    const message = padRight(normalizeMessage(item.payment_message), 35);
+    // SS volitelny: pri neuvedeni "0", aby zustaly zachovany oba separatory.
+    const ss = item.specific_symbol ?? "0";
+    const message = normalizeMessage(item.payment_message);
 
+    // Hromadny prikaz: bez debetniho uctu, polozka zacina uctem prijemce.
     lines.push(
-      `${payerAccount} ${recipientAccount} ${amountHalere} ${vs} ${bankAndKs} ${ss} AV:${message}`,
+      `${recipientAccount} ${amountHalere} ${vs} ${bankAndKs} ${ss} ${message}`,
     );
   }
 

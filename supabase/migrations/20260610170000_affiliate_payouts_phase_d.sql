@@ -35,7 +35,7 @@ ALTER TABLE public.affiliate_payout_batches
     bank_export_storage_path IS NULL
     OR (
       char_length(btrim(bank_export_storage_path)) > 0
-      AND bank_export_storage_path !~ '(^/|\\.\\.)'
+      AND bank_export_storage_path !~ '(^/|\.\.)'
     )
   );
 
@@ -58,6 +58,7 @@ DECLARE
   v_item_count integer;
   v_invalid record;
   v_items jsonb;
+  v_items_total numeric;
 BEGIN
   IF auth.role() <> 'service_role' THEN
     RETURN jsonb_build_object('success', false, 'status', 'forbidden');
@@ -121,6 +122,11 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'status', 'invalid_due_date');
   END IF;
 
+  -- Air Bank / ABO: datum splatnosti max +364 dni od dneska.
+  IF v_batch.due_date > current_date + 364 THEN
+    RETURN jsonb_build_object('success', false, 'status', 'invalid_due_date_too_far');
+  END IF;
+
   SELECT count(*)
   INTO v_item_count
   FROM public.affiliate_payout_batch_items
@@ -171,6 +177,21 @@ BEGIN
       AND c.status <> 'in_payment_batch'
   ) THEN
     RETURN jsonb_build_object('success', false, 'status', 'invalid_commission_status');
+  END IF;
+
+  -- Soucet polozek davky musi sedet s total_amount_czk (header skupiny v ABO).
+  SELECT coalesce(sum(amount_czk), 0)
+  INTO v_items_total
+  FROM public.affiliate_payout_batch_items
+  WHERE batch_id = p_batch_id;
+
+  IF v_items_total <> v_batch.total_amount_czk THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'status', 'amount_sum_mismatch',
+      'items_total_czk', v_items_total,
+      'batch_total_czk', v_batch.total_amount_czk
+    );
   END IF;
 
   SELECT jsonb_agg(
@@ -240,7 +261,7 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'status', 'missing_batch_id');
   END IF;
 
-  IF p_storage_path IS NULL OR btrim(p_storage_path) = '' OR p_storage_path ~ '(^/|\\.\\.)' THEN
+  IF p_storage_path IS NULL OR btrim(p_storage_path) = '' OR p_storage_path ~ '(^/|\.\.)' THEN
     RETURN jsonb_build_object('success', false, 'status', 'invalid_storage_path');
   END IF;
 
