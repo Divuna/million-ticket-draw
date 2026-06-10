@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 10. 06. 2026 — 🌿 **Samostatná větev: dávkové výplaty affiliate/obchodních provizí (Fáze A+B+C na stagingu ověřené, Fáze D opravený reviewable návrh + vzorový `.kpc` pro importní test, produkce netknutá).** Hlavní roadmapa se teď nemění.
+**Aktualizováno:** 10. 06. 2026 — 🌿 **Samostatná větev: dávkové výplaty affiliate/obchodních provizí (Fáze A+B+C na stagingu ověřené, Fáze D opravený reviewable návrh — importní test Air Bank proběhl, soubor akceptován, položky „K opravě" kvůli fiktivním účtům příjemců — staging aplikace čeká na vyřešení, produkce netknutá).** Hlavní roadmapa se teď nemění.
 
 ## 🌿 DÁVKOVÉ VÝPLATY PROVIZÍ — AKTUÁLNÍ STAV STAGINGU (10. 06. 2026)
 
@@ -57,7 +57,9 @@
 
 **Produkční rollout závěr:** Fáze A+B se nesmí nasadit jako samotná DB změna bez aktuálního UI. Fáze B blokuje staré RPC `approved → paid`, zatímco staré produkční UI může pořád zobrazovat per-row `Označit jako vyplacené`; tím by staré ruční paid flow začalo vracet chybu. Nejbezpečnější je koordinované produkční okno: (1) produkční okno, (2) aplikovat DB Fázi A, (3) aplikovat DB Fázi B, (4) aplikovat temp-table guard, (5) ihned nasadit aktuální UI, (6) udělat produkční smoke. Správné storage buckety pro postcheck jsou `affiliate-payout-docs` a `affiliate-bank-exports`.
 
-**Další bezpečný krok:** Pavel ručně ověří import `docs/affiliate-payouts/sample-bank-export/sample-onemil-20260625.kpc` v Air Bank internetovém bankovnictví. Bez tohoto potvrzení se Fáze D nesmí aplikovat na staging. Po potvrzení teprve výslovné schválení staging aplikace a deploye Edge Function. Do produkce nic nepřenášet bez výslovného schválení. Žádný deploy, žádný Lovable Publish. Testovací produkční řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` zatím nemazat.
+**Ruční importní test Air Bank — výsledek (10. 06. 2026):** Pavel ručně nahrál `sample-onemil-20260625.kpc` do Air Bank internetového bankovnictví. Air Bank soubor akceptovala a otevřela „Detail hromadné úhrady". Správně zobrazila: účet plátce `3151752019/3030`, 2 platby, celková částka 579,45 Kč. Jednotlivé testovací platby jsou označeny **„K opravě"** — pravděpodobně proto, že čísla příjemců jsou fiktivní testovací účty neexistující v bankovním systému. **Pavel nepotvrdil ani neodeslal platbu.** Formátová struktura `.kpc` souboru je tedy funkční; Air Bank ho přijala a správně naparsovala. Stav označení „K opravě" musí být před staging aplikací Fáze D buď vyřešen (použití reálných testovacích účtů příjemců) nebo výslovně Pavlem akceptován jako artefakt vzorových dat.
+
+**Další bezpečný krok:** Zjistit příčinu „K opravě" — buď vygenerovat druhý vzorek s reálnými/interními testovacími účty příjemců, nebo ověřit, zda Air Bank označuje neexistující účty tímto stavem bez odmítnutí souboru. Fáze D se nesmí aplikovat na staging, dokud není tato otázka vyřešena nebo výslovně akceptována Pavlem. Do produkce nic nepřenášet bez výslovného schválení. Žádný deploy, žádný Lovable Publish. Testovací produkční řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` zatím nemazat.
 
 ## 🌿 SAMOSTATNÁ VĚTEV — DÁVKOVÉ VÝPLATY PROVIZÍ (09. 06. 2026, NÁVRH)
 

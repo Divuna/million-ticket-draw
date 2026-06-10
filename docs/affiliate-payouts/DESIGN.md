@@ -574,13 +574,26 @@ Pripraveny vzorovy Air Bank `.kpc` soubor pro overeni importu v internetovem ban
 - **Soubor:** `docs/affiliate-payouts/sample-bank-export/sample-onemil-20260625.kpc`
 - **Generátor:** `docs/affiliate-payouts/sample-bank-export/generate-sample.cjs`
 - **README:** `docs/affiliate-payouts/sample-bank-export/README.md` (postup a blokujici checklist)
-- **Commit:** `e41c2e0a2f545039e017ba95b53b7546e9fd0de8`
-- **BLOKER:** Pavel musi rucne overit import `.kpc` v Air Bank internetovem bankovnictvi; bez tohoto potvrzeni se Faze D nesmi aplikovat na staging.
+- **Ucet platce:** `3151752019/3030` (Iconic Point s.r.o., Air Bank)
+
+### Vysledek rucniho importniho testu Air Bank (10. 06. 2026)
+
+Pavel rucne nahral `sample-onemil-20260625.kpc` do Air Bank internetoveho bankovnictvi.
+
+- Air Bank soubor akceptovala a otevrel se „Detail hromadne uhrady". ✅
+- Spravne zobrazeny: ucet platce `3151752019/3030`, 2 platby, celkova castka 579,45 Kc. ✅
+- Jednotlive platby jsou oznaceny **„K oprave"** — pravdepodobne proto, ze cisla prijemcu jsou fiktivni testovaci ucty neexistujici v bankovnim systemu. ⚠️
+- Pavel platbu **nepotvrdil ani neodeslal**.
+- **Zaver:** formatova struktura `.kpc` je funkcni; Air Bank soubor prijala a spravne naparsovala.
+
+**Blokujici otazka:** Overit, zda „K oprave" oznacuje neexistujici ucty prijemcu (artefakt vzorovich dat) nebo skutecnou strukturalni chybu. Moznosti reseni:
+1. Vygenerovat druhy vzorek s realnym/internim testovacim uctem prijemce a overit, ze se „K oprave" neobjevuje.
+2. Pavel explicitne potvrdi, ze „K oprave" je artefakt vzorovich dat a neblokuje staging aplikaci.
 
 ### Rizika
 
-- **[BLOKER] Presny ABO layout musi byt pred staging aplikaci otestovan realnym importem v Air Bank** — viz vzorovy soubor a README vyse.
-- Windows-1250 a CRLF jsou overeny bajtove v generatoru (vsechny bajty <= 0x7F, CRLF konce radku).
+- **[BLOKER] „K oprave" u testovacich polozek** — viz vysledek testu vyse; musi byt vysvetleno pred staging aplikaci.
+- Windows-1250 a CRLF jsou overeny bajtove v generatoru (vsechny bajty <= 0x7F, CRLF konce radku). ✅
 - `payer_account` a `due_date` jsou dnes nullable; export vrati rizenou chybu pri chybejicich hodnotach; pred aplikaci musi byt potvrzeno, odkud se hodnoty nastavuji.
 
 ### Test plan pro pozdejsi implementaci
