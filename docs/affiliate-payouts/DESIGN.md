@@ -645,7 +645,7 @@ Faze D.1 resi automaticke plneni `payer_account` a `due_date` pri vytvoreni payo
 - Novy settings migration soubor (NEAPLIKOVAT bez Pavlova schvaleni).
 
 **`due_date`:**
-- Automaticky `current_date + 5` pri vytvoreni davky (nastavi `create_affiliate_payout_batch`).
+- Automaticky `current_date + 2` pri vytvoreni davky (nastavi `create_affiliate_payout_batch`).
 - Admin muze editovat pole `due_date` v detailu davky `/admin/affiliate-payouts/:id` pred spustenim exportu.
 - UI edit field: date input, validace `due_date >= current_date`, `due_date <= current_date + 364`.
 
