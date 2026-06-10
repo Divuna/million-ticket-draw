@@ -63,6 +63,12 @@ async function loginAsAdmin(page: Page) {
     try {
       const keys = Object.keys(localStorage).filter((k) => k.startsWith('sb-'));
       keys.forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem('cookie_consent', JSON.stringify({
+        essential: true,
+        analytics: false,
+        marketing: false,
+        timestamp: new Date().toISOString(),
+      }));
     } catch (_) { /* ignore */ }
   });
   await page.goto('/login');
