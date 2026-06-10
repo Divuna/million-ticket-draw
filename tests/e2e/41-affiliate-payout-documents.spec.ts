@@ -58,6 +58,24 @@ async function makeAdminUserClient(): Promise<SupabaseClient> {
   return client;
 }
 
+async function readFunctionErrorPayload(data: any, error: any): Promise<any> {
+  if (data) return data;
+
+  const context = error?.context;
+  if (context && typeof context.json === 'function') {
+    try {
+      return await context.json();
+    } catch (_) {
+      // Fall through to generic error shape.
+    }
+  }
+
+  return {
+    error: error?.message ?? 'unknown_function_error',
+    status: error?.name ?? 'unknown_function_error',
+  };
+}
+
 async function seedApprovedCommission(
   admin: SupabaseClient,
 ): Promise<{ affiliateId: string; commissionId: string }> {
@@ -245,7 +263,8 @@ test.describe('41 - affiliate payout documents', () => {
         { body: { commission_id: seeded.commissionId } },
       );
       expect(error).toBeTruthy();
-      expect(data?.error ?? data?.status).toBe('missing_accounting_email');
+      const payload = await readFunctionErrorPayload(data, error);
+      expect(payload?.error ?? payload?.status).toBe('missing_accounting_email');
     } finally {
       if (existing) {
         await (service as any).from('settings').upsert(existing);
@@ -295,5 +314,53 @@ test.describe('41 - affiliate payout documents', () => {
         await cleanup(service, ids);
       }
     });
+  });
+
+  test('41d) worker oznaci required prilohu jako failed, kdyz chybi PDF', async () => {
+    const service = makeServiceClient();
+    const adminUser = await makeAdminUserClient();
+    let emailQueueId: string | null = null;
+
+    try {
+      const { data: queued, error: queueError } = await (service as any)
+        .from('email_queue')
+        .insert({
+          email: `spec41-required-missing-${Date.now()}@example.test`,
+          subject: 'Spec41 missing required payout PDF',
+          body: '<p>Required attachment should fail before Resend.</p>',
+          attachment_storage_bucket: 'affiliate-payout-docs',
+          attachment_storage_path: `missing/spec41-${Date.now()}.pdf`,
+          attachment_filename: 'missing.pdf',
+          attachment_content_type: 'application/pdf',
+          attachment_required: true,
+          status: 'pending',
+        })
+        .select('id')
+        .single();
+      expect(queueError).toBeFalsy();
+      emailQueueId = queued.id;
+
+      const { data, error } = await (adminUser as any).functions.invoke(
+        'process-email-queue',
+        { body: { email_id: emailQueueId } },
+      );
+      expect(error).toBeFalsy();
+      expect(data?.success).toBe(true);
+      expect(data?.processed).toBe(1);
+      expect(data?.sent).toBe(0);
+      expect(data?.failed).toBe(1);
+
+      const { data: row } = await (service as any)
+        .from('email_queue')
+        .select('status,sent_at')
+        .eq('id', emailQueueId)
+        .single();
+      expect(row.status).toBe('failed');
+      expect(row.sent_at).toBeFalsy();
+    } finally {
+      if (emailQueueId) {
+        await (service as any).from('email_queue').delete().eq('id', emailQueueId);
+      }
+    }
   });
 });

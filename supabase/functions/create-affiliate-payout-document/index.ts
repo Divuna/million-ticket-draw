@@ -3,6 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "npm:@pdf-lib/fontkit@1.1.1";
 
+const PAYOUT_DOC_BUCKET = "affiliate-payout-docs";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -14,6 +16,28 @@ const SUPPLIER = {
   ico: "17795851",
   vatId: "CZ17795851",
   address: "Tyrsova 1832/7, Nove Mesto, 120 00 Praha 2",
+};
+
+type DocumentType = "commission_statement" | "self_billed_tax_invoice";
+
+type PreparedPayoutDocument = {
+  success: boolean;
+  status: string;
+  commission_id: string;
+  affiliate_id: string;
+  document_number: string;
+  document_type: DocumentType;
+  recipient_name: string;
+  recipient_email: string;
+  recipient_ico: string | null;
+  recipient_vat_id: string | null;
+  recipient_billing_address: string | null;
+  recipient_is_vat_payer: boolean;
+  recipient_subject_type: string | null;
+  amount_base_czk: number;
+  vat_rate: number;
+  amount_total_czk: number;
+  accounting_email: string;
 };
 
 class HttpError extends Error {
@@ -58,15 +82,29 @@ function formatDate(value: Date): string {
   }).format(value);
 }
 
-function buildBillingAddress(affiliate: Record<string, unknown>): string | null {
-  const parts = [
-    affiliate.billing_street,
-    [affiliate.billing_zip, affiliate.billing_city].filter(Boolean).join(" "),
-    affiliate.billing_country,
-  ]
-    .map((part) => (typeof part === "string" ? part.trim() : ""))
-    .filter(Boolean);
-  return parts.length > 0 ? parts.join(", ") : null;
+function statusToHttpStatus(status: string): number {
+  switch (status) {
+    case "missing_commission_id":
+    case "missing_accounting_email":
+    case "missing_recipient_name":
+    case "missing_recipient_email":
+    case "missing_recipient_vat_id":
+    case "invalid_amount":
+    case "invalid_document_number":
+    case "missing_pdf_storage_path":
+    case "invalid_pdf_sha256":
+      return 400;
+    case "access_denied_admin_only":
+      return 403;
+    case "commission_not_found":
+      return 404;
+    case "invalid_commission_status":
+    case "document_already_exists":
+    case "commission_update_failed":
+      return 409;
+    default:
+      return 500;
+  }
 }
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
@@ -78,7 +116,7 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
 
 async function createPdf(input: {
   documentNumber: string;
-  documentType: "commission_statement" | "self_billed_tax_invoice";
+  documentType: DocumentType;
   recipientName: string;
   recipientEmail: string;
   recipientIco: string | null;
@@ -93,15 +131,13 @@ async function createPdf(input: {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
 
-  const regularBytes = await fetch(
-    "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf",
-  ).then((res) => res.arrayBuffer());
-  const boldBytes = await fetch(
-    "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf",
-  ).then((res) => res.arrayBuffer());
+  const [regularBytes, boldBytes] = await Promise.all([
+    fetch("https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf").then((res) => res.arrayBuffer()),
+    fetch("https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf").then((res) => res.arrayBuffer()),
+  ]);
 
-  const regular = await pdf.embedFont(regularBytes);
-  const bold = await pdf.embedFont(boldBytes);
+  const regular = await pdf.embedFont(regularBytes, { subset: true });
+  const bold = await pdf.embedFont(boldBytes, { subset: true });
   const page = pdf.addPage([595.28, 841.89]);
   const { height } = page.getSize();
   let y = height - 58;
@@ -155,10 +191,9 @@ async function createPdf(input: {
     draw("Prijemce neni platce DPH, DPH se neuplatnuje.", 48);
   }
 
-  y = 60;
   page.drawText("OneMil - affiliate payout document", {
     x: 48,
-    y,
+    y: 60,
     size: 8,
     font: regular,
     color: rgb(0.45, 0.48, 0.52),
@@ -205,6 +240,9 @@ serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let uploadedPdfPath: string | null = null;
+  let supabaseAdmin: ReturnType<typeof createClient> | null = null;
+
   try {
     if (req.method !== "POST") {
       throw new HttpError(405, "method_not_allowed");
@@ -212,7 +250,7 @@ serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+    supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
 
@@ -241,183 +279,98 @@ serve(async (req: Request) => {
     const { commission_id } = await req.json();
     const commissionId = requireString(commission_id, "missing_commission_id");
 
-    const { data: settingsRow, error: settingsError } = await supabaseAdmin
-      .from("settings")
-      .select("value")
-      .eq("key", "accounting_email")
-      .maybeSingle();
-    if (settingsError) throw settingsError;
-
-    const accountingEmail = settingsRow?.value?.trim();
-    if (!accountingEmail) {
-      throw new HttpError(400, "missing_accounting_email");
-    }
-
-    const { data: commission, error: commissionError } = await supabaseAdmin
-      .from("affiliate_commissions")
-      .select(
-        `id, affiliate_id, status, commission_type, amount_base_czk, vat_rate, amount_total_czk, payout_document_id,
-         affiliate_accounts!affiliate_commissions_affiliate_id_fkey(
-           id, name, email, ico, vat_id, is_vat_payer, payout_account, payout_bank,
-           billing_street, billing_city, billing_zip, billing_country
-         )`,
-      )
-      .eq("id", commissionId)
-      .maybeSingle();
-    if (commissionError) throw commissionError;
-    if (!commission) throw new HttpError(404, "commission_not_found");
-    if (commission.status !== "approved") {
-      throw new HttpError(409, "invalid_commission_status", { current_status: commission.status });
-    }
-    if (commission.payout_document_id) {
-      throw new HttpError(409, "payout_document_already_linked");
-    }
-
-    const affiliate = (commission as any).affiliate_accounts;
-    if (!affiliate) throw new HttpError(400, "missing_affiliate_account");
-
-    const recipientName = requireString(affiliate.name, "missing_recipient_name");
-    const recipientEmail = requireString(affiliate.email, "missing_recipient_email");
-    const amountBase = Number(commission.amount_base_czk ?? 0);
-    const vatRate = Number(commission.vat_rate ?? 0);
-    const amountTotal = Number(commission.amount_total_czk ?? 0);
-    if (!Number.isFinite(amountTotal) || amountTotal <= 0) {
-      throw new HttpError(400, "invalid_amount");
-    }
-
-    const documentType = affiliate.is_vat_payer
-      ? "self_billed_tax_invoice"
-      : "commission_statement";
-    if (affiliate.is_vat_payer && !affiliate.vat_id) {
-      throw new HttpError(400, "missing_recipient_vat_id");
-    }
-
-    const { data: documentNumber, error: numberError } = await supabaseAdmin.rpc(
-      "next_affiliate_payout_document_number",
+    const { data: preparedData, error: prepareError } = await supabaseAdmin.rpc(
+      "prepare_affiliate_payout_document",
+      { p_commission_id: commissionId },
     );
-    if (numberError || !documentNumber) {
-      throw new Error(numberError?.message ?? "document_number_generation_failed");
+    if (prepareError) throw prepareError;
+
+    const prepared = preparedData as PreparedPayoutDocument;
+    if (!prepared?.success) {
+      const status = String(prepared?.status ?? "prepare_failed");
+      throw new HttpError(statusToHttpStatus(status), status);
     }
 
     const createdAt = new Date();
-    const recipientAddress = buildBillingAddress(affiliate);
     const pdfBytes = await createPdf({
-      documentNumber,
-      documentType,
-      recipientName,
-      recipientEmail,
-      recipientIco: affiliate.ico ?? null,
-      recipientVatId: affiliate.vat_id ?? null,
-      recipientAddress,
-      recipientIsVatPayer: Boolean(affiliate.is_vat_payer),
-      amountBase,
-      vatRate,
-      amountTotal,
+      documentNumber: prepared.document_number,
+      documentType: prepared.document_type,
+      recipientName: prepared.recipient_name,
+      recipientEmail: prepared.recipient_email,
+      recipientIco: prepared.recipient_ico,
+      recipientVatId: prepared.recipient_vat_id,
+      recipientAddress: prepared.recipient_billing_address,
+      recipientIsVatPayer: prepared.recipient_is_vat_payer,
+      amountBase: Number(prepared.amount_base_czk),
+      vatRate: Number(prepared.vat_rate),
+      amountTotal: Number(prepared.amount_total_czk),
       createdAt,
     });
     const pdfHash = await sha256Hex(pdfBytes);
-    const pdfStoragePath = `${new Date().getFullYear()}/${commissionId}/${documentNumber}.pdf`;
+    const pdfStoragePath = `${new Date().getFullYear()}/${commissionId}/${prepared.document_number}.pdf`;
 
     const { error: uploadError } = await supabaseAdmin.storage
-      .from("affiliate-payout-docs")
+      .from(PAYOUT_DOC_BUCKET)
       .upload(pdfStoragePath, pdfBytes, {
         contentType: "application/pdf",
         upsert: false,
       });
     if (uploadError) throw uploadError;
+    uploadedPdfPath = pdfStoragePath;
 
-    const { data: document, error: documentError } = await supabaseAdmin
-      .from("affiliate_payout_documents")
-      .insert({
-        commission_id: commission.id,
-        affiliate_id: commission.affiliate_id,
-        document_number: documentNumber,
-        document_type: documentType,
-        recipient_name: recipientName,
-        recipient_email: recipientEmail,
-        recipient_ico: affiliate.ico ?? null,
-        recipient_vat_id: affiliate.vat_id ?? null,
-        recipient_billing_address: recipientAddress,
-        recipient_is_vat_payer: Boolean(affiliate.is_vat_payer),
-        recipient_subject_type: affiliate.is_vat_payer ? "vat_payer" : "non_vat_payer",
-        amount_base_czk: amountBase,
-        vat_rate: vatRate,
-        amount_total_czk: amountTotal,
-        pdf_url: null,
-        pdf_storage_path: pdfStoragePath,
-        pdf_generated_at: createdAt.toISOString(),
-        pdf_sha256: pdfHash,
-        email_status: "pending",
-        affiliate_email: recipientEmail,
-        accounting_email: accountingEmail,
-      } as any)
-      .select("id")
-      .single();
-    if (documentError || !document) throw documentError;
+    const { data: finalizedData, error: finalizeError } = await supabaseAdmin.rpc(
+      "finalize_affiliate_payout_document",
+      {
+        p_commission_id: commissionId,
+        p_document_number: prepared.document_number,
+        p_pdf_storage_path: pdfStoragePath,
+        p_pdf_sha256: pdfHash,
+        p_affiliate_email_subject: `OneMil payout doklad ${prepared.document_number}`,
+        p_affiliate_email_body: buildAffiliateEmail({
+          recipientName: prepared.recipient_name,
+          documentNumber: prepared.document_number,
+          amountTotal: Number(prepared.amount_total_czk),
+        }),
+        p_accounting_email_subject: `Kopie payout dokladu ${prepared.document_number}`,
+        p_accounting_email_body: buildAccountingEmail({
+          recipientName: prepared.recipient_name,
+          documentNumber: prepared.document_number,
+          amountTotal: Number(prepared.amount_total_czk),
+        }),
+      },
+    );
+    if (finalizeError) throw finalizeError;
 
-    const attachment = {
-      attachment_storage_bucket: "affiliate-payout-docs",
-      attachment_storage_path: pdfStoragePath,
-      attachment_filename: `${documentNumber}.pdf`,
-      attachment_content_type: "application/pdf",
-      attachment_required: true,
-    };
+    const finalized = finalizedData as Record<string, unknown>;
+    if (!finalized?.success) {
+      throw new HttpError(
+        statusToHttpStatus(String(finalized?.status ?? "finalize_failed")),
+        String(finalized?.status ?? "finalize_failed"),
+      );
+    }
 
-    const { data: affiliateEmail, error: affiliateEmailError } = await supabaseAdmin
-      .from("email_queue")
-      .insert({
-        email: recipientEmail,
-        subject: `OneMil payout doklad ${documentNumber}`,
-        body: buildAffiliateEmail({ recipientName, documentNumber, amountTotal }),
-        ...attachment,
-      } as any)
-      .select("id")
-      .single();
-    if (affiliateEmailError || !affiliateEmail) throw affiliateEmailError;
-
-    const { data: accountingEmailRow, error: accountingEmailError } = await supabaseAdmin
-      .from("email_queue")
-      .insert({
-        email: accountingEmail,
-        subject: `Kopie payout dokladu ${documentNumber}`,
-        body: buildAccountingEmail({ recipientName, documentNumber, amountTotal }),
-        ...attachment,
-      } as any)
-      .select("id")
-      .single();
-    if (accountingEmailError || !accountingEmailRow) throw accountingEmailError;
-
-    const { error: updateDocumentError } = await supabaseAdmin
-      .from("affiliate_payout_documents")
-      .update({
-        email_queue_id: affiliateEmail.id,
-        accounting_email_queue_id: accountingEmailRow.id,
-      } as any)
-      .eq("id", document.id);
-    if (updateDocumentError) throw updateDocumentError;
-
-    const { error: updateCommissionError } = await supabaseAdmin
-      .from("affiliate_commissions")
-      .update({
-        status: "ready_to_pay",
-        payout_document_id: document.id,
-        updated_at: new Date().toISOString(),
-      } as any)
-      .eq("id", commission.id)
-      .eq("status", "approved");
-    if (updateCommissionError) throw updateCommissionError;
+    uploadedPdfPath = null;
 
     return jsonResponse({
       success: true,
       status: "created",
-      document_id: document.id,
-      document_number: documentNumber,
-      pdf_storage_path: pdfStoragePath,
-      email_queue_id: affiliateEmail.id,
-      accounting_email_queue_id: accountingEmailRow.id,
-      commission_status: "ready_to_pay",
+      document_id: finalized.document_id,
+      document_number: finalized.document_number,
+      pdf_storage_path: finalized.pdf_storage_path,
+      email_queue_id: finalized.email_queue_id,
+      accounting_email_queue_id: finalized.accounting_email_queue_id,
+      commission_status: finalized.commission_status,
     });
   } catch (error: any) {
+    if (uploadedPdfPath && supabaseAdmin) {
+      const { error: cleanupError } = await supabaseAdmin.storage
+        .from(PAYOUT_DOC_BUCKET)
+        .remove([uploadedPdfPath]);
+      if (cleanupError) {
+        console.error("create-affiliate-payout-document cleanup failed:", cleanupError.message);
+      }
+    }
+
     console.error("create-affiliate-payout-document error:", error);
     const status = error instanceof HttpError ? error.status : 500;
     const code = error instanceof HttpError ? error.code : "internal_error";

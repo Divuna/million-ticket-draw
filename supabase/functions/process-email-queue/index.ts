@@ -113,6 +113,16 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    let requestedEmailId: string | null = null;
+    if (req.method === "POST") {
+      try {
+        const body = await req.clone().json();
+        requestedEmailId = typeof body?.email_id === "string" ? body.email_id : null;
+      } catch (_) {
+        requestedEmailId = null;
+      }
+    }
+
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -120,13 +130,19 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Processing email queue...");
 
-    const { data: pendingEmails, error: selectError } = await supabaseClient
+    let query = supabaseClient
       .from("email_queue")
       .select("*")
       .eq("status", "pending")
       .or("subject.not.ilike.%faktura%,attachment_url.not.is.null,attachment_storage_path.not.is.null")
       .order("created_at", { ascending: true })
       .limit(50);
+
+    if (requestedEmailId) {
+      query = query.eq("id", requestedEmailId).limit(1);
+    }
+
+    const { data: pendingEmails, error: selectError } = await query;
 
     if (selectError) {
       console.error("Error fetching pending emails:", selectError);

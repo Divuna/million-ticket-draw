@@ -442,9 +442,22 @@ Overuje:
 ### Blokace pred aplikaci
 
 - Finalne potvrdit text a podobu PDF s ucetni / pravnikem.
-- Potvrdit a nastavit `settings.accounting_email` na stagingu.
-- Nasadit Edge Function `create-affiliate-payout-document` pouze na staging po Pavlove schvaleni.
 - Aplikovat migraci Faze C pouze na staging po Pavlove schvaleni.
+- Nasadit Edge Functions pouze na staging po Pavlove schvaleni.
+- Potvrdit a nastavit `settings.accounting_email` na stagingu.
+
+### Bezpecne poradi staging aplikace Faze C
+
+1. Aplikovat DB migraci `supabase/migrations/20260610140000_affiliate_payouts_phase_c.sql`.
+2. Nasadit Edge Functions na staging:
+   - `create-affiliate-payout-document`
+   - `process-email-queue`
+3. Nastavit / overit `settings.accounting_email`.
+4. Spustit pouze cilene gated testy:
+   - `E2E_AFFILIATE_PAYOUTS=1`
+   - `tests/e2e/41-affiliate-payout-documents.spec.ts`
+
+Poznamka: `process-email-queue` s podporou `attachment_storage_bucket/path` se nesmi deploynout pred DB migraci Faze C, protoze worker po deployi cte nove sloupce v `email_queue`.
 
 ### Mimo rozsah Faze C
 
