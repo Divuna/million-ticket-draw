@@ -51,16 +51,17 @@ Výplaty řeší **systém automaticky**; admin jen kontroluje a fyzicky odesíl
 
 Zdroje: [Air Bank — Import hromadných plateb](https://www.airbank.cz/co-vas-nejvic-zajima/import-hromadnych-plateb/), [Air Bank — tech. specifikace (PDF)](https://www.airbank.cz/file-download/technicke-pozadavky-a-specifikace-hromadnych-plateb-a-export-vypisu.pdf), [ČSAS — ABO formát pro programátory (PDF)](https://www.csas.cz/banka/content/inet/internet/cs/ABO_format.pdf), [CREDITAS — popis ABO/KPC (PDF)](https://www.creditas.cz/files/popis-formatu-abo-kpc-pro-platebni-prikazy-172021-revize.pdf).
 
-## 5. Edge Functions / RPC (Fáze B–E — návrh, zatím bez kódu)
+## 5. Edge Functions / RPC (Fáze B–E)
 
 | Jednotka | Fáze | Účel | Reuse |
 |----------|------|------|-------|
 | `create-affiliate-payout-document` (EF/RPC) | C | vznik dokladu + `document_number` (sekvence) | — |
 | `generate-affiliate-payout-pdf` (EF) | C | PDF (pdf-lib) → bucket `affiliate-payout-docs` (signed URL) | `generate-partner-invoice-pdf` (pdf-lib+fontkit+QRCode) |
 | `send-affiliate-payout-document-email` (EF) | C | `email_queue` insert (affiliate + účetní), `attachment_url`=PDF | `send-partner-invoice-email`, `process-email-queue` |
-| `create-affiliate-payout-batch` (RPC) | B | z vybraných `ready_to_pay` → batch + items + VS, provize→`in_payment_batch` | — |
+| `create-affiliate-payout-batch` (RPC) | B | z vybraných `ready_to_pay` → batch + items + VS, provize→`in_payment_batch` | návrh v `20260610_affiliate_payouts_phase_b.sql`, NEAPLIKOVÁNO |
 | `generate-affiliate-bank-export` (EF) | D | ABO `.kpc` (Windows-1250) → bucket `affiliate-bank-exports`, batch→`exported` | — |
-| `mark-affiliate-payout-batch-paid` (RPC) | B | batch→`paid`, items→`paid`, `marked_paid_by/at` (atomicky, FOR UPDATE) | rozšíření logiky `admin_set_...` |
+| `mark-affiliate-payout-batch-paid` (RPC) | B | batch→`paid`, provize→`paid`, `marked_paid_by/at` (atomicky, FOR UPDATE) | návrh v `20260610_affiliate_payouts_phase_b.sql`, NEAPLIKOVÁNO |
+| `cancel-affiliate-payout-batch` (RPC) | B | jednoduché zrušení dávky `created` → `cancelled`, provize zpět `ready_to_pay` | návrh v `20260610_affiliate_payouts_phase_b.sql`, NEAPLIKOVÁNO |
 | `send-affiliate-payment-confirmation` (EF) | E | potvrzení obchodníkovi + souhrn účetní, `confirmation_sent_at` | `email_queue` |
 
 **Číslování/VS:** sekvence v DB → `document_number = 'APD-YYYY-' || lpad(nextval, 6)`, `batch_number = 'APB-YYYY-' || lpad(nextval, 6)`, `VS` generuje systém jako numerický max 10 znaků. Nikdy admin.
@@ -71,11 +72,11 @@ Zdroje: [Air Bank — Import hromadných plateb](https://www.airbank.cz/co-vas-n
 
 - **`/admin/affiliate-commissions`**: checkboxy pro výběr `ready_to_pay` provizí + tlačítko **`Vytvořit platební dávku`**. Z řádku provize se ruční „paid" odebere.
 - **`/admin/affiliate-payouts`** (nová): seznam dávek (číslo, stav, součet, počet, datum, kdo).
-- **`/admin/affiliate-payouts/:id`** (detail): položky (příjemce, účet, VS, částka, doklad PDF), tlačítka **`Stáhnout hromadný příkaz`** (`.kpc`) a **`Označit dávku jako zaplacenou`** (dialog: „Tato akce neposílá peníze. Pouze potvrzuje, že platba byla provedena v bance."), přehled dokladů + stav e-mailů/exportu.
+- **`/admin/affiliate-payouts/:id`** (detail Fáze B): položky (příjemce, účet, VS, částka) + tlačítko **`Označit dávku jako zaplacenou`** (dialog: „Tato akce neposílá peníze. Pouze potvrzuje, že platba byla provedena v bance."). PDF, e-maily a Air Bank export jsou mimo Fázi B.
 
 ## 7. Testy
 
-- **Cílený spec** `tests/e2e/40-affiliate-payouts.spec.ts` (staging-only, gated `E2E_AFFILIATE_PAYOUTS=1`): vytvoření dávky z `ready_to_pay`, generování ABO (struktura/encoding), `mark-paid` propíše provizím `paid` + audit, e-mail enqueue, idempotence.
+- **Cílený spec** `tests/e2e/40-affiliate-payouts.spec.ts` (staging-only, gated `E2E_AFFILIATE_PAYOUTS=1`): vytvoření dávky z `ready_to_pay`, systémový VS, `mark-paid` propíše provizím `paid` + audit. Bez PDF, bez e-mailů, bez Air Bank exportu.
 - **Rozšířit spec 39**: tlačítko paid NENÍ na provizi; je na dávce.
 - **Staging Full E2E** jako finální regrese (po cíleném zeleném).
 - **Produkce** až po výslovném schválení Pavla + postcheck.
@@ -85,7 +86,7 @@ Zdroje: [Air Bank — Import hromadných plateb](https://www.airbank.cz/co-vas-n
 | Fáze | Obsah | Výstup |
 |------|-------|--------|
 | **A** | DB základ (tabulky, sloupce, sekvence, buckety, RLS) | `20260609_affiliate_payouts_phase_a.sql` (✅ připraveno) |
-| **B** | `create-batch` + `mark-paid` RPC + UI výběr/detail dávky + paid na dávce | bez PDF/banky/e-mailů — paid ověřitelné |
+| **B** | `create-batch` + `mark-paid` RPC + volitelný `cancel-batch` + UI výběr/detail dávky + paid na dávce | návrh připraven: `20260610_affiliate_payouts_phase_b.sql`, nové admin stránky a gated E2E; NEAPLIKOVÁNO |
 | **C** | doklady: `create-document` + PDF + e-maily (obchodník+účetní), stav `payout_document_created` | |
 | **D** | Air Bank ABO `.kpc` export + `Stáhnout hromadný příkaz` | po potvrzení přesného formátu |
 | **E** | `payment_confirmation_sent` (potvrzení po zaplacení) | |
@@ -247,14 +248,21 @@ Pro implementaci:
 - [Zákon o účetnictví č. 563/1991 Sb.](https://www.zakonyprolidi.cz/cs/1991-563)
 - [Zákon o DPH č. 235/2004 Sb.](https://www.zakonyprolidi.cz/cs/2004-235)
 
-## 11. HANDOFF — pokračování v novém chatu / Codexu (09. 06. 2026)
+## 11. HANDOFF — pokračování v novém chatu / Codexu (10. 06. 2026)
 
-**Implementace zastavena kvůli limitu Claude Code. Fáze B se NEDĚLALA.**
+**Fáze A i Fáze B jsou pouze reviewable návrh v samostatné větvi. Žádná migrace nebyla aplikována na staging ani produkci. Nic nebylo nasazeno.**
 
 ### Co je hotovo
 - Fáze A návrh: commit **`6711e648`**, později doplněno podle sign-off odpovědí. Soubory:
   - `supabase/migrations/20260609_affiliate_payouts_phase_a.sql` (DB základ — **NEAPLIKOVÁNO** na staging ani produkci)
   - `docs/affiliate-payouts/DESIGN.md` (tento dokument)
+- Fáze B návrh: lokálně připravené reviewable soubory:
+  - `supabase/migrations/20260610_affiliate_payouts_phase_b.sql` (RPC `create_affiliate_payout_batch`, `mark_affiliate_payout_batch_paid`, `cancel_affiliate_payout_batch` — **NEAPLIKOVÁNO**)
+  - `src/pages/AdminAffiliateCommissions.tsx` (výběr `ready_to_pay`, bez per-row paid tlačítka)
+  - `src/pages/AdminAffiliatePayouts.tsx`
+  - `src/pages/AdminAffiliatePayoutDetail.tsx`
+  - routing/nav pro `/admin/affiliate-payouts`
+  - gated E2E specy `tests/e2e/39-admin-affiliate-commissions.spec.ts` a `tests/e2e/40-affiliate-payouts.spec.ts`
 - Ověřeno: Air Bank = ABO `.kpc` (Windows-1250, 50 KB, CRLF, částky v haléřích); reuse `generate-partner-invoice-pdf` + `email_queue`/`process-email-queue`; číslování `APD-YYYY-000001` / `APB-YYYY-000001`.
 
 ### Co je ZAKÁZÁNO
@@ -267,11 +275,11 @@ Pro implementaci:
 
 ### Kde pokračovat + další bezpečný krok
 1. **Sign-off** (účetní/Air Bank/právník — viz §10 a checklist) — hlavně finální podoba dokladu, účetní e-mail, právní texty a pozdější Air Bank import test.
-2. **Fáze B** (po schválení): RPC `create-affiliate-payout-batch` + `mark-affiliate-payout-batch-paid` + UI výběr provizí / `/admin/affiliate-payouts` / detail dávky + tlačítko „Označit dávku jako zaplacenou" (jen na dávce). BEZ PDF/banky/e-mailů — paid mechanismus ověřitelný izolovaně.
-3. Migraci Fáze A aplikovat **nejdřív na staging** + postcheck, až poté Fáze B kód.
+2. Po Pavlově schválení aplikovat **nejdřív Fázi A na staging** + postcheck.
+3. Poté aplikovat / ověřit Fázi B na stagingu: RPC `create_affiliate_payout_batch` + `mark_affiliate_payout_batch_paid` + UI výběr provizí / `/admin/affiliate-payouts` / detail dávky + tlačítko „Označit dávku jako zaplacenou" (jen na dávce). BEZ PDF/banky/e-mailů/exportu.
 
 ### Testovací strategie
-- Cílený spec `tests/e2e/40-affiliate-payouts.spec.ts` (staging-only, gated `E2E_AFFILIATE_PAYOUTS=1`): create-batch z `ready_to_pay`, `mark-paid` propíše provize `paid` + audit, idempotence, (Fáze D) ABO struktura/encoding.
+- Cílený spec `tests/e2e/40-affiliate-payouts.spec.ts` (staging-only, gated `E2E_AFFILIATE_PAYOUTS=1`): create-batch z `ready_to_pay`, systémový VS, detail dávky, `mark-paid` propíše provize `paid` + audit. Bez PDF, e-mailů a Air Bank exportu.
 - Rozšířit spec 39: paid jen na dávce, ne na provizi.
 - Pak staging Full E2E (finální regrese). Produkce po schválení.
 

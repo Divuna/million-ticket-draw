@@ -7,13 +7,15 @@
  *   39c) Stránka obsahuje informační banner o automatickém výpočtu
  *   39d) Při prázdných datech stránka nepadá — zobrazí prázdný stav
  *   39e) Pokud existuje calculated provize, vidět tlačítko Schválit
- *   39f) Pokud existuje approved provize, vidět tlačítko Označit jako vyplacené
+ *   39f) Pokud existuje approved provize, není vidět per-row tlačítko Označit jako vyplacené
  *   39g) U paid provize není žádné akční tlačítko
  *   39h) Provize navázaná na fakturu ukáže firmu a číslo faktury (zdroj výpočtu)
+ *   39i) Pokud existuje ready_to_pay provize, lze ji vybrat pro platební dávku
  *
  * Testy 39e–39h vytvoří testovací záznamy přes service role a po testu je uklidí.
  *
  * Vyžaduje env:
+ *   E2E_AFFILIATE_PAYOUTS=1       — Phase A/B musí být aplikované na stagingu
  *   VITE_SUPABASE_URL              — musí obsahovat staging ref dxmowysntemfqfnanxua
  *   VITE_SUPABASE_ANON_KEY
  *   E2E_SUPABASE_SERVICE_ROLE_KEY
@@ -35,13 +37,14 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? '';
 test.beforeEach(() => {
   if (
     !SUPABASE_URL.includes(STAGING_REF) ||
+    process.env.E2E_AFFILIATE_PAYOUTS !== '1' ||
     !SUPABASE_ANON ||
     !ADMIN_EMAIL ||
     !ADMIN_PASSWORD
   ) {
     test.skip(
       true,
-      'staging-only — vyžaduje VITE_SUPABASE_URL (staging), VITE_SUPABASE_ANON_KEY, E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD',
+      'staging-only opt-in — vyžaduje E2E_AFFILIATE_PAYOUTS=1, VITE_SUPABASE_URL (staging), VITE_SUPABASE_ANON_KEY, E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD',
     );
   }
 });
@@ -94,7 +97,7 @@ async function getOrCreateAffiliateId(admin: SupabaseClient): Promise<string> {
 async function insertTestCommission(
   admin: SupabaseClient,
   affiliateId: string,
-  status: 'calculated' | 'approved' | 'paid',
+  status: 'calculated' | 'approved' | 'payout_document_created' | 'ready_to_pay' | 'in_payment_batch' | 'paid',
   sourceInvoiceId?: string | null,
 ): Promise<string> {
   const { data, error } = await admin
@@ -241,7 +244,7 @@ test.describe('39e-g — akční tlačítka dle statusu', () => {
     }
   });
 
-  test('39f) u approved provize je vidět tlačítko Označit jako vyplacené', async ({ page }) => {
+  test('39f) u approved provize není per-row tlačítko Označit jako vyplacené', async ({ page }) => {
     const admin = makeAdmin();
     const affiliateId = await getOrCreateAffiliateId(admin);
     const commId = await insertTestCommission(admin, affiliateId, 'approved');
@@ -249,9 +252,8 @@ test.describe('39e-g — akční tlačítka dle statusu', () => {
       await loginAsAdmin(page);
       await page.goto('/admin/affiliate-commissions');
       await page.waitForLoadState('networkidle', { timeout: 10_000 });
-      await expect(
-        page.locator(`[data-testid="btn-pay-${commId}"]`)
-      ).toBeVisible({ timeout: 10_000 });
+      await expect(page.locator(`[data-testid="btn-pay-${commId}"]`)).toHaveCount(0);
+      await expect(page.locator(`[data-testid="btn-approve-${commId}"]`)).toHaveCount(0);
     } finally {
       await deleteTestCommission(admin, commId);
     }
@@ -306,52 +308,39 @@ test.describe('39e-g — akční tlačítka dle statusu', () => {
     }
   });
 
-  test('39i) výplatní dialog: text + platební údaje + gating reference/datum', async ({ page }) => {
-    // Vyžaduje migraci 20260609_affiliate_commission_payout_evidence.sql
-    // (sloupce paid_by/payment_reference/actual_payment_date + 4-arg RPC) na stagingu.
-    // Po aplikaci nastav E2E_PAYOUT_EVIDENCE=1 (workflow env).
+  test('39i) u ready_to_pay provize je dostupný výběr pro platební dávku', async ({ page }) => {
+    // Vyžaduje Phase A/B návrh aplikovaný na staging. Nespouštět automaticky.
     test.skip(
-      process.env.E2E_PAYOUT_EVIDENCE !== '1',
-      'vyžaduje migraci 20260609_affiliate_commission_payout_evidence na stagingu — nastav E2E_PAYOUT_EVIDENCE=1',
+      process.env.E2E_AFFILIATE_PAYOUTS !== '1',
+      'vyžaduje Phase A/B payout migrace na stagingu — nastav E2E_AFFILIATE_PAYOUTS=1',
     );
     const admin = makeAdmin();
     const ts = Date.now();
-    // Dedikovaný obchodník S vyplněným účtem (aby gating prošel)
+    // Dedikovaný obchodník s vyplněným účtem pro dávkové validace.
     const { data: aff, error: affErr } = await (admin as any)
       .from('affiliate_accounts')
       .insert({
         name: `E2E Spec39i Obchodník ${ts}`,
         ref_code: `SPEC39I${ts % 100000}`,
         status: 'approved',
-        payout_account: '12545857/0800',
-        payout_bank: 'csob',
+        payout_account: '12545857',
+        payout_bank: '0800',
       })
       .select('id')
       .single();
     if (affErr || !aff) throw new Error(`Cannot create test affiliate: ${affErr?.message}`);
-    const commId = await insertTestCommission(admin, aff.id, 'approved');
+    const commId = await insertTestCommission(admin, aff.id, 'ready_to_pay');
     try {
       await loginAsAdmin(page);
       await page.goto('/admin/affiliate-commissions');
       await page.waitForLoadState('networkidle', { timeout: 10_000 });
 
-      // Otevři výplatní dialog
-      await page.locator(`[data-testid="btn-pay-${commId}"]`).click();
-
-      // Bezpečnostní text
-      await expect(
-        page.getByText('Tato akce neposílá peníze. Pouze označí provizi jako ručně vyplacenou.')
-      ).toBeVisible({ timeout: 10_000 });
-      // Platební údaje
-      await expect(page.getByText('12545857/0800').first()).toBeVisible();
-
-      // Potvrzení je disabled bez reference
-      const confirmBtn = page.getByRole('button', { name: 'Označit jako vyplacené', exact: true });
-      await expect(confirmBtn).toBeDisabled();
-
-      // Vyplň referenci → datum je předvyplněné dneškem → potvrzení se povolí
-      await page.fill('#aac-reference', 'E2E test VS 12345');
-      await expect(confirmBtn).toBeEnabled();
+      const checkbox = page.locator(`[data-testid="checkbox-payout-commission-${commId}"]`);
+      await expect(checkbox).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByTestId('btn-create-affiliate-payout-batch')).toBeDisabled();
+      await checkbox.click();
+      await expect(page.getByTestId('btn-create-affiliate-payout-batch')).toBeEnabled();
+      await expect(page.locator(`[data-testid="btn-pay-${commId}"]`)).toHaveCount(0);
     } finally {
       await deleteTestCommission(admin, commId);
       await (admin as any).from('affiliate_accounts').delete().eq('id', aff.id);

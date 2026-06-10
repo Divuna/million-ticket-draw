@@ -93,6 +93,8 @@ import NotFound from "@/pages/NotFound";
 import CompanyLeadConfirm from "@/pages/CompanyLeadConfirm";
 import AdminCompanyLeads from "@/pages/AdminCompanyLeads";
 import AdminAffiliateCommissions from "@/pages/AdminAffiliateCommissions";
+import AdminAffiliatePayouts from "@/pages/AdminAffiliatePayouts";
+import AdminAffiliatePayoutDetail from "@/pages/AdminAffiliatePayoutDetail";
 import PartnerSetPassword from "@/pages/PartnerSetPassword";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -630,6 +632,8 @@ function AppContent() {
             <Route path="/admin/influencer-campaigns" element={<AdminInfluencerCampaigns />} />
             <Route path="/admin/company-leads" element={<AdminCompanyLeads />} />
             <Route path="/admin/affiliate-commissions" element={<AdminAffiliateCommissions />} />
+            <Route path="/admin/affiliate-payouts" element={<AdminAffiliatePayouts />} />
+            <Route path="/admin/affiliate-payouts/:batchId" element={<AdminAffiliatePayoutDetail />} />
             <Route path="/admin/*" element={<AdminNotFound />} />
           </Route>
           <Route path="/partner/login" element={<PartnerLogin />} />
