@@ -384,3 +384,71 @@ Očekávání: oba buckety existují a `public = false`.
 - Neaplikovat `supabase/migrations/20260609_affiliate_commission_payout_evidence.sql`.
 - Nedělat samostatný DB rollout bez UI deploye.
 - Nedělat produkční test reálné dávky bez výslovného schválení Pavla.
+
+## 14. FAZE C - REVIEWABLE NAVRH PDF DOKLADU A E-MAILU
+
+Faze C je pripravena pouze jako reviewable navrh. Neni aplikovana na staging ani produkci a nebyl proveden deploy Edge Functions.
+
+### Cil
+
+- Vytvorit payout doklad k provizi ve stavu `approved`.
+- Vygenerovat PDF doklad.
+- Ulozit PDF do privatniho bucketu `affiliate-payout-docs`.
+- Vlozit e-mail affiliate / obchodnikovi do `email_queue`.
+- Vlozit kopii e-mailu ucetnimu podle `settings.accounting_email`.
+- Posunout provizi do `ready_to_pay` az po uspesnem PDF + zarazeni obou e-mailu do fronty.
+- Neresit Air Bank export, produkci ani Lovable Publish.
+
+### Bezpecny model priloh
+
+Nepouzivat dlouhodobe ulozenou signed URL jako jediny zdroj prilohy.
+
+Navrh Faze C uklada:
+
+- `affiliate_payout_documents.pdf_storage_path`
+- `email_queue.attachment_storage_bucket`
+- `email_queue.attachment_storage_path`
+- `email_queue.attachment_required = true`
+
+Worker `process-email-queue` si prilohu stahne pres service role z privatniho storage az pri odesilani. Pokud je `attachment_required = true` a soubor nejde stahnout, e-mail skonci jako `failed`; nesmi odejit bez PDF.
+
+### Pripravene soubory navrhu
+
+- `supabase/migrations/20260610140000_affiliate_payouts_phase_c.sql`
+- `supabase/functions/create-affiliate-payout-document/index.ts`
+- `supabase/functions/process-email-queue/index.ts`
+- `src/pages/AdminAffiliateCommissions.tsx`
+- `src/pages/AdminAffiliatePayoutDetail.tsx`
+- `tests/e2e/41-affiliate-payout-documents.spec.ts`
+
+### Testovaci navrh
+
+Novy gated staging test `tests/e2e/41-affiliate-payout-documents.spec.ts` vyzaduje:
+
+- `E2E_AFFILIATE_PAYOUTS=1`
+- staging Supabase `dxmowysntemfqfnanxua`
+- staging admin credentials
+- staging service-role key
+
+Overuje:
+
+- doklad vznikne,
+- PDF vznikne v privatnim bucketu,
+- `email_queue` ma affiliate i ucetni e-mail,
+- chybejici `settings.accounting_email` vraci rizenou chybu `missing_accounting_email`,
+- provize prejde do `ready_to_pay`,
+- payout e-mail ma povinnou privatni prilohu pres bucket/path.
+
+### Blokace pred aplikaci
+
+- Finalne potvrdit text a podobu PDF s ucetni / pravnikem.
+- Potvrdit a nastavit `settings.accounting_email` na stagingu.
+- Nasadit Edge Function `create-affiliate-payout-document` pouze na staging po Pavlove schvaleni.
+- Aplikovat migraci Faze C pouze na staging po Pavlove schvaleni.
+
+### Mimo rozsah Faze C
+
+- Air Bank ABO `.kpc` export.
+- Potvrzeni o zaplaceni.
+- Produkcni rollout.
+- Lovable Publish.

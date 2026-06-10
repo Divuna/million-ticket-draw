@@ -41,7 +41,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Info, RefreshCw, Banknote, CheckCircle, Loader2, PackagePlus } from "lucide-react";
+import { Info, RefreshCw, Banknote, CheckCircle, Loader2, PackagePlus, FileText } from "lucide-react";
 import { format, startOfMonth, subMonths } from "date-fns";
 import { cs } from "date-fns/locale";
 import { toast } from "sonner";
@@ -51,6 +51,7 @@ import { toast } from "sonner";
 interface CommissionRow {
   id: string;
   affiliate_id: string;
+  payout_document_id: string | null;
   payout_batch_id: string | null;
   commission_type: string;
   period_month: string | null;
@@ -71,6 +72,11 @@ interface CommissionRow {
   affiliate_ico: string | null;
   affiliate_vat_id: string | null;
   affiliate_is_vat_payer: boolean | null;
+  payout_document_number: string | null;
+  payout_document_type: string | null;
+  payout_pdf_storage_path: string | null;
+  payout_pdf_generated_at: string | null;
+  payout_email_status: string | null;
   // joined — firma + faktura (zdroj výpočtu)
   company_name: string | null;
   invoice_number: string | null;
@@ -103,6 +109,22 @@ function statusBadge(status: string) {
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
+}
+
+function payoutDocumentBadge(row: CommissionRow) {
+  if (!row.payout_document_number) {
+    return <Badge variant="outline">Bez dokladu</Badge>;
+  }
+
+  if (row.payout_pdf_storage_path && row.payout_email_status) {
+    return <Badge variant="success">PDF + e-mail</Badge>;
+  }
+
+  if (row.payout_pdf_storage_path) {
+    return <Badge variant="warning">PDF připraveno</Badge>;
+  }
+
+  return <Badge variant="outline">Doklad bez PDF</Badge>;
 }
 
 function formatMonth(isoDate: string | null): string {
@@ -152,6 +174,7 @@ export default function AdminAffiliateCommissions() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null); // commission id being updated
+  const [documentLoading, setDocumentLoading] = useState<string | null>(null);
   const [batchCreating, setBatchCreating] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -177,6 +200,7 @@ export default function AdminAffiliateCommissions() {
         .select(
           `id,
            affiliate_id,
+           payout_document_id,
            payout_batch_id,
            commission_type,
            period_month,
@@ -251,9 +275,25 @@ export default function AdminAffiliateCommissions() {
         }
       }
 
+      const commissionIds = commissions.map((r: any) => r.id).filter(Boolean) as string[];
+      const payoutDocumentMap: Record<string, any> = {};
+      if (commissionIds.length > 0) {
+        const { data: docData, error: docError } = await (supabase as any)
+          .from("affiliate_payout_documents")
+          .select("commission_id,document_number,document_type,pdf_storage_path,pdf_generated_at,email_status")
+          .in("commission_id", commissionIds);
+        if (docError) {
+          console.warn("affiliate_payout_documents fetch skipped:", docError.message);
+        }
+        for (const doc of docData ?? []) {
+          payoutDocumentMap[doc.commission_id] = doc;
+        }
+      }
+
       const result: CommissionRow[] = commissions.map((r: any) => {
         const aa = r.affiliate_accounts;
         const inv = r.source_invoice_id ? invoiceDetailMap[r.source_invoice_id] : undefined;
+        const doc = payoutDocumentMap[r.id];
         // Firma: primárně z faktury (zdroj výpočtu), fallback z atribuce. Nikdy nehádat.
         let companyName: string | null = null;
         if (inv) {
@@ -264,6 +304,7 @@ export default function AdminAffiliateCommissions() {
         return {
           id: r.id,
           affiliate_id: r.affiliate_id,
+          payout_document_id: r.payout_document_id ?? null,
           payout_batch_id: r.payout_batch_id ?? null,
           commission_type: r.commission_type,
           period_month: r.period_month,
@@ -282,6 +323,11 @@ export default function AdminAffiliateCommissions() {
           affiliate_ico: aa?.ico ?? null,
           affiliate_vat_id: aa?.vat_id ?? null,
           affiliate_is_vat_payer: aa?.is_vat_payer ?? null,
+          payout_document_number: doc?.document_number ?? null,
+          payout_document_type: doc?.document_type ?? null,
+          payout_pdf_storage_path: doc?.pdf_storage_path ?? null,
+          payout_pdf_generated_at: doc?.pdf_generated_at ?? null,
+          payout_email_status: doc?.email_status ?? null,
           company_name: companyName,
           invoice_number: inv?.invoice_number ?? null,
           invoice_base_ex_vat: inv?.amount_ex_vat ?? null,
@@ -339,6 +385,46 @@ export default function AdminAffiliateCommissions() {
       toast.error("Provizi se nepodařilo aktualizovat.");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const createPayoutDocument = async (commissionId: string) => {
+    setDocumentLoading(commissionId);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-affiliate-payout-document", {
+        body: { commission_id: commissionId },
+      });
+
+      if (error) throw error;
+
+      const result = data as {
+        success?: boolean;
+        status?: string;
+        document_number?: string;
+        error?: string;
+      };
+
+      if (result?.success && result.status === "created") {
+        toast.success(`Payout doklad ${result.document_number ?? ""} byl vytvořen.`);
+        fetchData(true);
+        return;
+      }
+
+      const map: Record<string, string> = {
+        missing_accounting_email: "Chybí settings.accounting_email.",
+        invalid_commission_status: "Doklad lze vytvořit jen pro schválenou provizi.",
+        missing_recipient_name: "Provizi chybí jméno příjemce.",
+        missing_recipient_email: "Provizi chybí e-mail příjemce.",
+        missing_recipient_vat_id: "Plátci DPH chybí DIČ.",
+        invalid_amount: "Provize má neplatnou částku.",
+        payout_document_already_linked: "Provize už má payout doklad.",
+      };
+      toast.error(map[result?.error ?? result?.status ?? ""] ?? "Payout doklad se nepodařilo vytvořit.");
+    } catch (err) {
+      console.error("create-affiliate-payout-document error:", err);
+      toast.error("Payout doklad se nepodařilo vytvořit.");
+    } finally {
+      setDocumentLoading(null);
     }
   };
 
@@ -657,6 +743,7 @@ export default function AdminAffiliateCommissions() {
                     <TableHead className="text-right">Provize DPH</TableHead>
                     <TableHead className="text-right">Provize celkem</TableHead>
                     <TableHead>Stav</TableHead>
+                    <TableHead>Doklad</TableHead>
                     <TableHead>Vytvořeno</TableHead>
                     <TableHead className="text-center">Akce</TableHead>
                   </TableRow>
@@ -736,6 +823,25 @@ export default function AdminAffiliateCommissions() {
                           {formatCzk(row.amount_total_czk)}
                         </TableCell>
                         <TableCell>{statusBadge(row.status)}</TableCell>
+                        <TableCell>
+                          <div className="space-y-1 min-w-36">
+                            {payoutDocumentBadge(row)}
+                            {row.payout_document_number && (
+                              <div className="font-mono text-xs">{row.payout_document_number}</div>
+                            )}
+                            {row.payout_email_status && (
+                              <div className="text-xs text-muted-foreground">E-mail: {row.payout_email_status}</div>
+                            )}
+                            {row.payout_pdf_storage_path && (
+                              <div
+                                className="max-w-44 truncate text-xs text-muted-foreground"
+                                title={row.payout_pdf_storage_path}
+                              >
+                                PDF: storage
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                           {format(new Date(row.created_at), "d. M. yyyy HH:mm", { locale: cs })}
                         </TableCell>
@@ -758,7 +864,24 @@ export default function AdminAffiliateCommissions() {
                             </Button>
                           )}
                           {row.status === "approved" && (
-                            <span className="text-muted-foreground text-xs">Čeká na doklad</span>
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1 text-xs"
+                                disabled={documentLoading === row.id}
+                                data-testid={`btn-create-payout-document-${row.id}`}
+                                onClick={() => createPayoutDocument(row.id)}
+                              >
+                                {documentLoading === row.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <FileText className="h-3 w-3" />
+                                )}
+                                Vytvořit doklad
+                              </Button>
+                              <span className="sr-only">Čeká na doklad</span>
+                            </>
                           )}
                           {row.status === "payout_document_created" && (
                             <span className="text-muted-foreground text-xs">Čeká na zařazení</span>

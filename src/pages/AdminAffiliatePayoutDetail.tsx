@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Banknote, CheckCircle, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Banknote, CheckCircle, Loader2, RefreshCw, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { toast } from "sonner";
@@ -52,6 +52,9 @@ type PayoutBatchItem = {
   constant_symbol: string | null;
   specific_symbol: string | null;
   created_at: string;
+  payout_document_number: string | null;
+  payout_pdf_storage_path: string | null;
+  payout_email_status: string | null;
 };
 
 function formatCzk(value: number | null | undefined): string {
@@ -122,8 +125,28 @@ export default function AdminAffiliatePayoutDetail() {
 
       if (itemError) throw itemError;
 
+      const commissionIds = (itemData ?? []).map((item: any) => item.commission_id).filter(Boolean);
+      const documentMap: Record<string, any> = {};
+      if (commissionIds.length > 0) {
+        const { data: documentData, error: documentError } = await (supabase as any)
+          .from("affiliate_payout_documents")
+          .select("commission_id,document_number,pdf_storage_path,email_status")
+          .in("commission_id", commissionIds);
+        if (documentError) {
+          console.warn("affiliate_payout_documents fetch skipped:", documentError.message);
+        }
+        for (const doc of documentData ?? []) {
+          documentMap[doc.commission_id] = doc;
+        }
+      }
+
       setBatch((batchData ?? null) as PayoutBatch | null);
-      setItems((itemData ?? []) as PayoutBatchItem[]);
+      setItems(((itemData ?? []) as any[]).map((item) => ({
+        ...item,
+        payout_document_number: documentMap[item.commission_id]?.document_number ?? null,
+        payout_pdf_storage_path: documentMap[item.commission_id]?.pdf_storage_path ?? null,
+        payout_email_status: documentMap[item.commission_id]?.email_status ?? null,
+      })) as PayoutBatchItem[]);
     } catch (error) {
       console.error("AdminAffiliatePayoutDetail fetch error:", error);
       toast.error("Nepodařilo se načíst detail dávky.");
@@ -349,6 +372,7 @@ export default function AdminAffiliatePayoutDetail() {
                         <TableHead>VS</TableHead>
                         <TableHead>KS</TableHead>
                         <TableHead>SS</TableHead>
+                        <TableHead>Doklad</TableHead>
                         <TableHead>Zpráva</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -367,6 +391,24 @@ export default function AdminAffiliatePayoutDetail() {
                           </TableCell>
                           <TableCell className="font-mono text-sm">{item.constant_symbol ?? "—"}</TableCell>
                           <TableCell className="font-mono text-sm">{item.specific_symbol ?? "—"}</TableCell>
+                          <TableCell>
+                            {item.payout_document_number ? (
+                              <div className="space-y-1 min-w-36">
+                                <div className="flex items-center gap-1 font-mono text-xs">
+                                  <FileText className="h-3 w-3" />
+                                  {item.payout_document_number}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {item.payout_pdf_storage_path ? "PDF ve storage" : "PDF chybi"}
+                                </div>
+                                {item.payout_email_status && (
+                                  <div className="text-xs text-muted-foreground">E-mail: {item.payout_email_status}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">Bez dokladu</span>
+                            )}
+                          </TableCell>
                           <TableCell className="max-w-64 truncate" title={item.payment_message ?? undefined}>
                             {item.payment_message ?? "—"}
                           </TableCell>

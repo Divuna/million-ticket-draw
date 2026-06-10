@@ -12,51 +12,97 @@ const corsHeaders = {
 
 interface Attachment {
   filename: string;
-  content: string; // base64 encoded
+  content: string;
   content_type?: string;
+}
+
+interface QueueEmailRecord {
+  id: string;
+  email: string;
+  subject: string;
+  body: string;
+  attachment_url?: string | null;
+  attachment_storage_bucket?: string | null;
+  attachment_storage_path?: string | null;
+  attachment_filename?: string | null;
+  attachment_content_type?: string | null;
+  attachment_required?: boolean | null;
+}
+
+async function blobToAttachment(
+  blob: Blob,
+  filename: string,
+  contentType?: string | null,
+): Promise<Attachment> {
+  const arrayBuffer = await blob.arrayBuffer();
+  const base64Content = btoa(
+    String.fromCharCode(...new Uint8Array(arrayBuffer)),
+  );
+
+  let resolvedContentType = contentType || blob.type || "application/octet-stream";
+  if (!contentType) {
+    if (filename.endsWith(".isdoc") || filename.endsWith(".xml")) {
+      resolvedContentType = "application/xml";
+    } else if (filename.endsWith(".pdf")) {
+      resolvedContentType = "application/pdf";
+    }
+  }
+
+  return {
+    filename,
+    content: base64Content,
+    content_type: resolvedContentType,
+  };
 }
 
 async function fetchAttachment(url: string): Promise<Attachment | null> {
   try {
-    console.log(`📎 Fetching attachment from: ${url}`);
-    
+    console.log(`Fetching attachment from URL: ${url}`);
+
     const response = await fetch(url);
     if (!response.ok) {
-      console.error(`❌ Failed to fetch attachment: ${response.status} ${response.statusText}`);
+      console.error(`Failed to fetch attachment: ${response.status} ${response.statusText}`);
       return null;
     }
 
-    const arrayBuffer = await response.arrayBuffer();
-    const base64Content = btoa(
-      String.fromCharCode(...new Uint8Array(arrayBuffer))
-    );
-
-    // Extract filename from URL
-    const urlParts = url.split('/');
-    let filename = urlParts[urlParts.length - 1] || 'attachment';
-    
-    // Remove query params from filename
-    if (filename.includes('?')) {
-      filename = filename.split('?')[0];
+    const urlParts = url.split("/");
+    let filename = urlParts[urlParts.length - 1] || "attachment";
+    if (filename.includes("?")) {
+      filename = filename.split("?")[0];
     }
 
-    // Determine content type based on file extension
-    let contentType = 'application/octet-stream';
-    if (filename.endsWith('.isdoc') || filename.endsWith('.xml')) {
-      contentType = 'application/xml';
-    } else if (filename.endsWith('.pdf')) {
-      contentType = 'application/pdf';
-    }
-
-    console.log(`✅ Attachment fetched: ${filename} (${contentType}, ${arrayBuffer.byteLength} bytes)`);
-
-    return {
-      filename,
-      content: base64Content,
-      content_type: contentType,
-    };
+    const blob = await response.blob();
+    const attachment = await blobToAttachment(blob, filename);
+    console.log(`Attachment fetched: ${filename} (${attachment.content_type}, ${blob.size} bytes)`);
+    return attachment;
   } catch (error) {
-    console.error(`❌ Error fetching attachment:`, error);
+    console.error("Error fetching URL attachment:", error);
+    return null;
+  }
+}
+
+async function fetchStorageAttachment(
+  supabaseClient: ReturnType<typeof createClient>,
+  bucket: string,
+  path: string,
+  filename?: string | null,
+  contentType?: string | null,
+): Promise<Attachment | null> {
+  try {
+    console.log(`Fetching storage attachment: ${bucket}/${path}`);
+
+    const { data, error } = await supabaseClient.storage.from(bucket).download(path);
+    if (error || !data) {
+      console.error("Failed to download storage attachment:", error?.message ?? "no data");
+      return null;
+    }
+
+    const resolvedFilename = filename || path.split("/").pop() || "attachment";
+    const attachment = await blobToAttachment(data, resolvedFilename, contentType);
+    console.log(`Storage attachment fetched: ${resolvedFilename} (${attachment.content_type}, ${data.size} bytes)`);
+    return attachment;
+  } catch (error) {
+    console.error("Error fetching storage attachment:", error);
     return null;
   }
 }
@@ -69,34 +115,33 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    console.log("📧 Processing email queue...");
+    console.log("Processing email queue...");
 
-    // Select pending emails: skip invoices ("faktura") that have no attachment yet
     const { data: pendingEmails, error: selectError } = await supabaseClient
       .from("email_queue")
       .select("*")
       .eq("status", "pending")
-      .or("subject.not.ilike.%faktura%,attachment_url.not.is.null")
+      .or("subject.not.ilike.%faktura%,attachment_url.not.is.null,attachment_storage_path.not.is.null")
       .order("created_at", { ascending: true })
       .limit(50);
 
     if (selectError) {
-      console.error("❌ Error fetching pending emails:", selectError);
+      console.error("Error fetching pending emails:", selectError);
       throw new Error(`Failed to fetch pending emails: ${selectError.message}`);
     }
 
     if (!pendingEmails || pendingEmails.length === 0) {
-      console.log("ℹ️ No pending emails to process");
+      console.log("No pending emails to process");
       return new Response(
         JSON.stringify({ success: true, processed: 0, message: "No pending emails" }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    console.log(`📬 Found ${pendingEmails.length} pending emails`);
+    console.log(`Found ${pendingEmails.length} pending emails`);
 
     const results = {
       processed: 0,
@@ -105,13 +150,12 @@ const handler = async (req: Request): Promise<Response> => {
       errors: [] as string[],
     };
 
-    for (const emailRecord of pendingEmails) {
+    for (const emailRecord of pendingEmails as QueueEmailRecord[]) {
       results.processed++;
 
       try {
-        console.log(`📤 Sending email to: ${emailRecord.email}`);
+        console.log(`Sending email to: ${emailRecord.email}`);
 
-        // Prepare email options
         const emailOptions: {
           from: string;
           to: string[];
@@ -125,30 +169,39 @@ const handler = async (req: Request): Promise<Response> => {
           html: emailRecord.body,
         };
 
-        // If attachment_url is present, fetch and attach the file
-        if (emailRecord.attachment_url) {
-          const attachment = await fetchAttachment(emailRecord.attachment_url);
-          if (attachment) {
-            emailOptions.attachments = [{
-              filename: attachment.filename,
-              content: attachment.content,
-              content_type: attachment.content_type,
-            }];
-            console.log(`📎 Attachment added: ${attachment.filename}`);
-          } else {
-            console.warn(`⚠️ Could not fetch attachment, sending email without it`);
-          }
+        let attachment: Attachment | null = null;
+        if (emailRecord.attachment_storage_bucket && emailRecord.attachment_storage_path) {
+          attachment = await fetchStorageAttachment(
+            supabaseClient,
+            emailRecord.attachment_storage_bucket,
+            emailRecord.attachment_storage_path,
+            emailRecord.attachment_filename,
+            emailRecord.attachment_content_type,
+          );
+        } else if (emailRecord.attachment_url) {
+          attachment = await fetchAttachment(emailRecord.attachment_url);
+        }
+
+        if (attachment) {
+          emailOptions.attachments = [{
+            filename: attachment.filename,
+            content: attachment.content,
+            content_type: attachment.content_type,
+          }];
+          console.log(`Attachment added: ${attachment.filename}`);
+        } else if (emailRecord.attachment_required) {
+          throw new Error("required_attachment_unavailable");
+        } else if (emailRecord.attachment_url || emailRecord.attachment_storage_path) {
+          console.warn("Could not fetch optional attachment, sending email without it");
         }
 
         const emailResponse = await resend.emails.send(emailOptions);
-
         if (emailResponse.error) {
           throw new Error(emailResponse.error.message);
         }
 
-        console.log(`✅ Email sent successfully to ${emailRecord.email}`);
+        console.log(`Email sent successfully to ${emailRecord.email}`);
 
-        // Update status to 'sent' and set sent_at
         const { error: updateError } = await supabaseClient
           .from("email_queue")
           .update({
@@ -158,28 +211,26 @@ const handler = async (req: Request): Promise<Response> => {
           .eq("id", emailRecord.id);
 
         if (updateError) {
-          console.error(`❌ Failed to update email status for ${emailRecord.id}:`, updateError);
+          console.error(`Failed to update email status for ${emailRecord.id}:`, updateError);
           results.errors.push(`Update failed for ${emailRecord.email}: ${updateError.message}`);
         } else {
           results.sent++;
         }
       } catch (sendError: any) {
-        console.error(`❌ Failed to send email to ${emailRecord.email}:`, sendError);
+        console.error(`Failed to send email to ${emailRecord.email}:`, sendError);
         results.failed++;
         results.errors.push(`${emailRecord.email}: ${sendError.message}`);
 
-        // Optionally mark as failed in the queue
         await supabaseClient
           .from("email_queue")
           .update({ status: "failed" })
           .eq("id", emailRecord.id);
       }
 
-      // Small delay to avoid rate limiting
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
-    console.log("📊 Email queue processing complete:", results);
+    console.log("Email queue processing complete:", results);
 
     return new Response(
       JSON.stringify({
@@ -187,13 +238,13 @@ const handler = async (req: Request): Promise<Response> => {
         ...results,
         message: `Processed: ${results.processed}, Sent: ${results.sent}, Failed: ${results.failed}`,
       }),
-      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
   } catch (error: any) {
-    console.error("💥 Error processing email queue:", error);
+    console.error("Error processing email queue:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
   }
 };
