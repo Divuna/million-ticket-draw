@@ -14,15 +14,13 @@
 
 ---
 
-## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — ruční importní test Air Bank
+## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — importní test Air Bank ✅ SPLNĚN
 
-- Pavel ručně nahrál `docs/affiliate-payouts/sample-bank-export/sample-onemil-20260625.kpc` do Air Bank internetového bankovnictví.
-- Air Bank soubor akceptovala a otevřela „Detail hromadné úhrady".
-- Správně zobrazila: účet plátce `3151752019/3030`, 2 platby, celková částka 579,45 Kč.
-- Jednotlivé platby jsou označeny **„K opravě"** — pravděpodobně proto, že čísla příjemců jsou fiktivní testovací účty neexistující v bankovním systému.
-- Pavel platbu nepotvrdil ani neodeslal.
-- **Závěr:** formátová struktura `.kpc` je funkční; Air Bank soubor přijala a správně naparsovala.
-- **Blokující otázka před staging aplikací:** ověřit, zda „K opravě" označuje neexistující účty příjemců (artefakt vzorových dat) nebo skutečnou strukturální chybu formátu. Možnosti: vygenerovat druhý vzorek s reálnými/interními testovacími účty příjemců, nebo Pavel výslovně akceptuje „K opravě" jako artefakt vzorových dat.
+- **Test 1** (`sample-onemil-20260625.kpc`, 2 fiktivní příjemci, 579,45 Kč): Air Bank přijala, stav „Vytvořena", platby označeny „K opravě" — fiktivní účty příjemců neexistují v bankovním systému.
+- **Test 2** (`sample2-real-recipient-20260625.kpc`, příjemce `225259937/0600` MONETA Money Bank, 1,00 Kč): Air Bank přijala, stav „Vytvořena", platba zobrazena správně — **žádné „K opravě"** ✅.
+- **Závěr:** formát `.kpc` je plně funkční. „K opravě" bylo výhradně artefaktem neexistujících fiktivních účtů příjemců, nikoli chybou struktury souboru.
+- Pavel žádnou platbu nepotvrdil ani neodeslal.
+- **Blokující podmínka importního testu je splněna.** Fáze D může pokročit na staging po výslovném schválení Pavla.
 - Nic nebylo aplikováno na staging ani produkci, žádný deploy ani Lovable Publish. Produkce `xkzhjldrojjlrkezorey` je netknutá.
 
 ## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — vzorový `.kpc` aktualizován na Iconic Point s.r.o.

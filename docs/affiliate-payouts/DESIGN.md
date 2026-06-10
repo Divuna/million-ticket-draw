@@ -580,21 +580,26 @@ Pripraveny vzorovy Air Bank `.kpc` soubor pro overeni importu v internetovem ban
 
 Pavel rucne nahral `sample-onemil-20260625.kpc` do Air Bank internetoveho bankovnictvi.
 
-- Air Bank soubor akceptovala a otevrel se „Detail hromadne uhrady". ✅
+**Test 1** (`sample-onemil-20260625.kpc`, 2 fiktivni prijemci, 579,45 Kc):
+- Air Bank soubor akceptovala, otevrela „Detail hromadne uhrady". ✅
 - Spravne zobrazeny: ucet platce `3151752019/3030`, 2 platby, celkova castka 579,45 Kc. ✅
-- Jednotlive platby jsou oznaceny **„K oprave"** — pravdepodobne proto, ze cisla prijemcu jsou fiktivni testovaci ucty neexistujici v bankovnim systemu. ⚠️
-- Pavel platbu **nepotvrdil ani neodeslal**.
-- **Zaver:** formatova struktura `.kpc` je funkcni; Air Bank soubor prijala a spravne naparsovala.
+- Platby oznaceny „K oprave" — fiktivni ucty prijemcu neexistuji v bankovnim systemu. ⚠️
+- Pavel platbu nepotvrdil ani neodeslal.
 
-**Blokujici otazka:** Overit, zda „K oprave" oznacuje neexistujici ucty prijemcu (artefakt vzorovich dat) nebo skutecnou strukturalni chybu. Moznosti reseni:
-1. Vygenerovat druhy vzorek s realnym/internim testovacim uctem prijemce a overit, ze se „K oprave" neobjevuje.
-2. Pavel explicitne potvrdi, ze „K oprave" je artefakt vzorovich dat a neblokuje staging aplikaci.
+**Test 2** (`sample2-real-recipient-20260625.kpc`, prijemce `225259937/0600` MONETA, 1,00 Kc):
+- Air Bank soubor akceptovala, stav „Vytvořena". ✅
+- Platba zobrazena spravne: `225259937/0600`, VS `2026060010`, 1,00 CZK, datum 25.06.2026. ✅
+- **Zadne „K oprave"** ✅ — s realnym uctem prijemce problema neni.
+- Pavel platbu nepotvrdil ani neodeslal.
+
+**Zaver: format `.kpc` je plne funkcni. „K oprave" bylo artefaktem neexistujicich fiktivnich uctu prijemcu, nikoli chybou struktury souboru.**
 
 ### Rizika
 
-- **[BLOKER] „K oprave" u testovacich polozek** — viz vysledek testu vyse; musi byt vysvetleno pred staging aplikaci.
-- Windows-1250 a CRLF jsou overeny bajtove v generatoru (vsechny bajty <= 0x7F, CRLF konce radku). ✅
+- **[SPLNENO] Importni test Air Bank** — format `.kpc` overen, „K oprave" vysvetleno. ✅
+- Windows-1250 a CRLF overeny bajtove (vsechny bajty <= 0x7F, CRLF konce radku). ✅
 - `payer_account` a `due_date` jsou dnes nullable; export vrati rizenou chybu pri chybejicich hodnotach; pred aplikaci musi byt potvrzeno, odkud se hodnoty nastavuji.
+- **Zbyvajici bloker pred staging aplikaci:** vyhradne schvaleni Pavla.
 
 ### Test plan pro pozdejsi implementaci
 
