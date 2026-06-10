@@ -14,6 +14,12 @@
 
 ---
 
+## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — vzorový `.kpc` aktualizován na Iconic Point s.r.o.
+
+- Účet plátce ve vzorovém `.kpc` souboru aktualizován na `3151752019/3030` (Iconic Point s.r.o., Air Bank).
+- Soubory aktualizovány: `generate-sample.cjs`, `sample-onemil-20260625.kpc`, `README.md`, `onemil_state.md`, `onemil_history.md`, `CLAUDE.md`.
+- Nic nebylo aplikováno na staging ani produkci, žádná Edge Function nebyla nasazena, žádný deploy ani Lovable Publish. Produkce `xkzhjldrojjlrkezorey` je netknutá.
+
 ## 2026-06-10 - Dávkové výplaty affiliate/obchodních provizí — Fáze D review opravy + vzorový `.kpc`
 
 - Review Fáze D odhalil 4 problémy; všechny opraveny v commitu `7890dc0c745a0659354d0378a97fe35d4c9fd606`:
@@ -21,7 +27,7 @@
   2. Path-traversal regex v migraci: `\\.\\.` → `\.\.` (PostgreSQL `standard_conforming_strings`).
   3. Items-sum integrity check: `sum(amount_czk)` musí souhlasit s `total_amount_czk`; chyba `amount_sum_mismatch`.
   4. `due_date` horní limit +364 dní; chyba `invalid_due_date_too_far`.
-- Přidán vzorový soubor `docs/affiliate-payouts/sample-bank-export/sample-onemil-20260625.kpc` (2 příjemci, 579,45 Kč, 215 B, ASCII/CRLF ověřeno) — commit `e41c2e0a2f545039e017ba95b53b7546e9fd0de8`.
+- Přidán vzorový soubor `docs/affiliate-payouts/sample-bank-export/sample-onemil-20260625.kpc` (2 příjemci, 579,45 Kč, ASCII/CRLF ověřeno).
 - Generátor: `docs/affiliate-payouts/sample-bank-export/generate-sample.cjs` (zrcadlí logiku EF).
 - README obsahuje postup ručního importního testu v Air Bank a blokující checklist.
 - **Blokující podmínka:** Pavel musí ručně ověřit import vzorového `.kpc` v Air Bank internetovém bankovnictví; bez potvrzení se Fáze D nesmí aplikovat na staging.

@@ -31,7 +31,7 @@ Přepíše `sample-onemil-20260625.kpc` ve stejném adresáři.
 
 | Pole | Hodnota |
 |------|---------|
-| Účet příkazce | `1000000001` / `3030` (Air Bank) |
+| Účet příkazce | `3151752019` / `3030` (Air Bank — Iconic Point s.r.o.) |
 | Datum splatnosti | 25. 06. 2026 |
 | Celková částka | 579,45 Kč (57945 haléřů) |
 | Počet příjemců | 2 |
@@ -63,7 +63,7 @@ Přepíše `sample-onemil-20260625.kpc` ve stejném adresáři.
 ```
 UHL1
 1 1501 000001 3030
-2 1000000001 00000000057945 250626
+2 3151752019 00000000057945 250626
 0012545857 000000012345 2026060001 08000000 0 Provize obchodnik Novak
 0987654321 000000045600 2026060002 03000000 0 Provize obchodnik Kratka
 3 +

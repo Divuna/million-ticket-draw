@@ -94,7 +94,7 @@ function buildAboKpc(prepared) {
 // Splatnost:   2026-06-25
 
 const prepared = {
-  payer_account:     '1000000001',
+  payer_account:     '3151752019',  // Iconic Point s.r.o. / Air Bank
   payer_bank_code:   '3030',
   due_date:          '2026-06-25',
   total_amount_czk:  579.45,   // 123.45 + 456.00
