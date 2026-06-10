@@ -2,8 +2,6 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -14,6 +12,15 @@ interface Attachment {
   filename: string;
   content: string;
   content_type?: string;
+}
+
+function getResendClient(): Resend {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  if (!apiKey) {
+    throw new Error("missing_resend_api_key");
+  }
+
+  return new Resend(apiKey);
 }
 
 interface QueueEmailRecord {
@@ -211,7 +218,7 @@ const handler = async (req: Request): Promise<Response> => {
           console.warn("Could not fetch optional attachment, sending email without it");
         }
 
-        const emailResponse = await resend.emails.send(emailOptions);
+        const emailResponse = await getResendClient().emails.send(emailOptions);
         if (emailResponse.error) {
           throw new Error(emailResponse.error.message);
         }
