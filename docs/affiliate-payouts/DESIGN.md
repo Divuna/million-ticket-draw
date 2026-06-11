@@ -689,7 +689,7 @@ Soucasna migrace Faze D a EF `generate-affiliate-bank-export` jsou pro staging t
 4. `supabase/migrations/20260610140000_affiliate_payouts_phase_c.sql` — payout documents, email-queue private attachment sloupce, `prepare_/finalize_affiliate_payout_document`.
 5. `supabase/migrations/20260610170000_affiliate_payouts_phase_d.sql` — Air Bank ABO export sloupce, `prepare_/finalize_affiliate_bank_export`, bucket `affiliate-bank-exports`.
 6. `supabase/migrations/20260610180000_affiliate_payouts_phase_d1.sql` — settings seed (payer account/bank), auto-fill v `create_affiliate_payout_batch`, `update_affiliate_payout_batch_meta`.
-7. `supabase/migrations/20260611090000_affiliate_payouts_acl_patch.sql` — **ACL patch (audit 11. 06. 2026)**: explicitni REVOKE implicitnich Supabase EXECUTE grantu. Nahrazuje drivejsi manualni post-apply REVOKE krok. MUSI byt aplikovan jako POSLEDNI.
+7. `supabase/migrations/20260611090000_affiliate_payouts_acl_patch.sql` — **ACL patch (audit 11. 06. 2026)**: explicitni REVOKE implicitnich Supabase EXECUTE grantu. Nahrazuje drivejsi manualni post-apply REVOKE krok. MUSI byt aplikovan jako POSLEDNI. **APLIKOVAN NA STAGING `dxmowysntemfqfnanxua` ✅ (11. 06. 2026, schvaleni Pavla); ACL postcheck prosel pro vsech 10 funkci** (document/export RPC = pouze `postgres + service_role`; admin RPC = `postgres + authenticated + service_role`, zadny `anon`). Produkce nedotcena.
 
 **Duvod ACL patche (nalez auditu 11. 06. 2026):** `REVOKE ALL ... FROM PUBLIC` v puvodnich migracich NEodstrani implicitni per-role granty, ktere Supabase pridava pri CREATE FUNCTION. Staging postcheck nasel: `prepare_affiliate_payout_document`, `finalize_affiliate_payout_document` a `next_affiliate_payout_document_number` mely `anon` + `authenticated` EXECUTE — tyto funkce NEMAJI vnitrni auth guard (service_role-only by design, volane jen z EF), takze slo o realnou diru: kazdy prihlaseny uzivatel mohl vkladat payout doklady, queue emaily a posouvat provize do `ready_to_pay`. Dale `admin_set_affiliate_commission_status` a `cancel_affiliate_payout_batch` mely `anon` EXECUTE (maji vnitrni `is_admin()` guard — defense-in-depth nalez). Patch je idempotentni, pokryva vsech 10 payout funkci. Regresni lock: spec 41e.
 
@@ -732,8 +732,8 @@ P0 Smoke dle CLAUDE.md: registrace/login (01,02), login gating (33,14), ticket (
 ### 17.5 Required E2E tests (staging, zelene tesne pred produkcni gate)
 
 - `tests/e2e/40-affiliate-payouts.spec.ts` → 4 passed (last green run `27303389522`).
-- `tests/e2e/41-affiliate-payout-documents.spec.ts` → 5 testu (41a–41d + novy 41e ACL regression lock; 41e vyzaduje aplikovany ACL patch `20260611090000`). Posledni zeleny run pred 41e: 4 passed.
-- `tests/e2e/42-affiliate-bank-export.spec.ts` → 6 passed (last green run `27303172376`).
+- `tests/e2e/41-affiliate-payout-documents.spec.ts` → **5 passed** ✅ (run `27371575748`, 11. 06. 2026, po aplikaci ACL patche na staging — 41a–41e vc. 41e ACL regression locku; 41e vyzaduje aplikovany ACL patch `20260611090000`).
+- `tests/e2e/42-affiliate-bank-export.spec.ts` → **6 passed** ✅ (last green run `27372071508`, 11. 06. 2026, po ACL patchi; predchozi zeleny run `27303172376`).
 - Full Staging E2E suite zeleny (bez regresi: spec 39 commissions, partners, messaging).
 - E2E vzdy proti staging `dxmowysntemfqfnanxua`; produkce nikdy neni E2E cil.
 

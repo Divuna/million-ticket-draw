@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-06-11 - Dávkové výplaty affiliate/obchodních provizí — ACL patch aplikován na staging + post-patch ověření ✅
+
+- ACL patch `supabase/migrations/20260611090000_affiliate_payouts_acl_patch.sql` aplikován **pouze na staging** `dxmowysntemfqfnanxua` (výslovné schválení Pavla). Produkce `xkzhjldrojjlrkezorey` nedotčena a blokována.
+- ACL postcheck prošel pro všech 10 payout funkcí: document/export RPC = pouze `postgres + service_role`; admin RPC = `postgres + authenticated + service_role`, žádný `anon` EXECUTE nikde.
+- Spec 41 `41-affiliate-payout-documents.spec.ts`: **5 passed, 0 failed** (run `27371575748`) — včetně nového 41e ACL regression testu, který prošel.
+- Spec 42 `42-affiliate-bank-export.spec.ts`: **6 passed, 0 failed** (run `27372071508`).
+- Spec 40 v tomto kroku záměrně nespuštěn (dle instrukce). Po ACL patchi žádné další SQL, žádný deploy, žádný Lovable Publish.
+
 ## 2026-06-11 - Dávkové výplaty affiliate/obchodních provizí — Final readiness audit, ACL nález + patch
 
 - Final readiness audit větve `codex/affiliate-payouts-audit` (build ✅, diff-check ✅, staging postchecky).
