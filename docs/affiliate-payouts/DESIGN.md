@@ -734,7 +734,7 @@ P0 Smoke dle CLAUDE.md: registrace/login (01,02), login gating (33,14), ticket (
 - `tests/e2e/40-affiliate-payouts.spec.ts` → 4 passed (last green run `27303389522`).
 - `tests/e2e/41-affiliate-payout-documents.spec.ts` → **5 passed** ✅ (run `27371575748`, 11. 06. 2026, po aplikaci ACL patche na staging — 41a–41e vc. 41e ACL regression locku; 41e vyzaduje aplikovany ACL patch `20260611090000`).
 - `tests/e2e/42-affiliate-bank-export.spec.ts` → **6 passed** ✅ (last green run `27372071508`, 11. 06. 2026, po ACL patchi; predchozi zeleny run `27303172376`).
-- Full Staging E2E suite zeleny (bez regresi: spec 39 commissions, partners, messaging).
+- **Full Staging E2E suite zeleny ✅ (run `27372767070`, 11. 06. 2026): 123 passed · 4 skipped · 0 failed (11m49s). Spec 40: 4 ✅ · Spec 41: 5 ✅ · Spec 42: 6 ✅. Zadne regrese. Vetev `codex/affiliate-payouts-audit` PRODUCTION-READY.**
 - E2E vzdy proti staging `dxmowysntemfqfnanxua`; produkce nikdy neni E2E cil.
 
 ### 17.6 Rollback plan

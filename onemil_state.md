@@ -100,7 +100,8 @@ Plný checklist je v `docs/affiliate-payouts/DESIGN.md` §17. Shrnutí:
 - **Spec 41 po D/D.1 ověřen:** run `27370912054` — **4 passed, 0 failed** (41a–41d, před přidáním 41e). Mezera „spec 41 neběžel po aplikaci D/D.1" uzavřena.
 - **EF JWT audit:** všechny 3 payout EF na stagingu `verify_jwt = true`. ⚠️ `process-email-queue` nemá žádný vnitřní auth check a produkční verzi volá pg_cron job 16 — před produkčním redeployem ověřit produkční `verify_jwt` setting a cron Authorization header (staging pg_cron nemá, kombinace netestovatelná). Detail v DESIGN.md §17.2.
 - **Ostatní audit OK:** buckets `affiliate-payout-docs` i `affiliate-bank-exports` privátní ✅; RLS payout tabulek admin-only, `email_queue` deny-all (0 policies) ✅; settings staging OK ✅; `npm run build` ✅; `git diff --check` ✅.
-- **Zbývající kroky před production-ready:** ~~(1) aplikace ACL patche na staging~~ ✅, ~~(2) spec 41 + 42 po patchi~~ ✅. Zbývá: (3) Full Staging E2E jako finální kontrola. Pak je větev ready pro produkční schválení. Produkce `xkzhjldrojjlrkezorey` nedotčena a blokována.
+- **Zbývající kroky před production-ready:** ~~(1) aplikace ACL patche na staging~~ ✅, ~~(2) spec 41 + 42 po patchi~~ ✅, ~~(3) Full Staging E2E jako finální kontrola~~ ✅. **Větev `codex/affiliate-payouts-audit` je PLNĚ STAGING-VERIFIED a READY FOR PRODUCTION APPROVAL.** Produkce `xkzhjldrojjlrkezorey` nedotčena a blokována — čeká na výslovné písemné schválení Pavla.
+- **Full Staging E2E (11. 06. 2026):** run `27372767070` — **123 passed · 4 skipped · 0 failed** (11m49s). Spec 40: 4 passed ✅, spec 41: 5 passed (incl. 41e ACL regression lock) ✅, spec 42: 6 passed ✅. Telegram doručen: `✅ OneMil STAGING full E2E OK — all specs passed`. 4 skipy jsou pre-existující záměrné skipy nesouvisející s payout větví.
 
 ## 🌿 SAMOSTATNÁ VĚTEV — DÁVKOVÉ VÝPLATY PROVIZÍ (09. 06. 2026, NÁVRH)
 

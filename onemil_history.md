@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-06-11 - Dávkové výplaty affiliate/obchodních provizí — Full Staging E2E ✅ — větev production-ready
+
+- Full Staging E2E run `27372767070`: **123 passed · 4 skipped · 0 failed** (11m49s). Telegram OK doručen.
+- Spec 40: 4 passed ✅ · Spec 41: 5 passed (incl. 41e ACL regression lock) ✅ · Spec 42: 6 passed ✅.
+- Žádné regrese v jiných oblastech. 4 skipy jsou pre-existující záměrné skipy nesouvisející s payout větví.
+- Větev `codex/affiliate-payouts-audit` je plně staging-verified a ready for production approval decision.
+- Produkce `xkzhjldrojjlrkezorey` nedotčena a blokována — čeká na výslovné písemné schválení Pavla.
+
 ## 2026-06-11 - Dávkové výplaty affiliate/obchodních provizí — ACL patch aplikován na staging + post-patch ověření ✅
 
 - ACL patch `supabase/migrations/20260611090000_affiliate_payouts_acl_patch.sql` aplikován **pouze na staging** `dxmowysntemfqfnanxua` (výslovné schválení Pavla). Produkce `xkzhjldrojjlrkezorey` nedotčena a blokována.
