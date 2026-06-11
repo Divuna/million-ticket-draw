@@ -91,6 +91,16 @@ Plný checklist je v `docs/affiliate-payouts/DESIGN.md` §17. Shrnutí:
 - **Rizika:** implicitní `anon` grant po replace, ordering trap, staging `accounting_email`, bucket privacy, reálný Air Bank money path, email attachment failed flow, security backlog, adjacent regrese commissions/B2B.
 - **⛔ FINAL GATE:** produkce `xkzhjldrojjlrkezorey` zůstává BLOKOVÁNA dokud Pavel nedá nové výslovné písemné schválení.
 
+### Final readiness audit (11. 06. 2026) — nález: ACL díra Fáze C, patch připraven (NEAPLIKOVÁN)
+
+- **🔴 Nález:** staging postcheck odhalil, že `prepare_affiliate_payout_document`, `finalize_affiliate_payout_document` a `next_affiliate_payout_document_number` mají `anon` + `authenticated` EXECUTE — Supabase implicitní granty, které `REVOKE ALL FROM PUBLIC` v Fázi C neodstranil. Tyto funkce NEMAJÍ vnitřní auth guard (service_role-only by design) → každý přihlášený uživatel mohl vkládat payout doklady, queue emaily a posouvat provize do `ready_to_pay`. Navíc `admin_set_affiliate_commission_status` a `cancel_affiliate_payout_batch` měly `anon` EXECUTE (mají vnitřní `is_admin()` — defense-in-depth).
+- **Fix:** migrace `supabase/migrations/20260611090000_affiliate_payouts_acl_patch.sql` — idempotentní explicitní REVOKE pro všech 10 payout funkcí. **NEAPLIKOVÁNA — čeká na výslovné schválení Pavla pro aplikaci na staging.** V rollout checklistu (DESIGN.md §17) je nyní krok 7 a nahrazuje dřívější manuální post-apply REVOKE.
+- **Regresní lock:** nový test 41e v `tests/e2e/41-affiliate-payout-documents.spec.ts` (anon i authenticated → 42501 na document RPC). 41e projde až po aplikaci ACL patche na staging.
+- **Spec 41 po D/D.1 ověřen:** run `27370912054` — **4 passed, 0 failed** (41a–41d, před přidáním 41e). Mezera „spec 41 neběžel po aplikaci D/D.1" uzavřena.
+- **EF JWT audit:** všechny 3 payout EF na stagingu `verify_jwt = true`. ⚠️ `process-email-queue` nemá žádný vnitřní auth check a produkční verzi volá pg_cron job 16 — před produkčním redeployem ověřit produkční `verify_jwt` setting a cron Authorization header (staging pg_cron nemá, kombinace netestovatelná). Detail v DESIGN.md §17.2.
+- **Ostatní audit OK:** buckets `affiliate-payout-docs` i `affiliate-bank-exports` privátní ✅; RLS payout tabulek admin-only, `email_queue` deny-all (0 policies) ✅; settings staging OK ✅; `npm run build` ✅; `git diff --check` ✅.
+- **Zbývající kroky před production-ready:** (1) Pavel schválí aplikaci ACL patche na staging, (2) po aplikaci spustit spec 41 (5 testů vč. 41e) + spec 42 znovu, (3) Full E2E. Pak je větev ready pro produkční schválení.
+
 ## 🌿 SAMOSTATNÁ VĚTEV — DÁVKOVÉ VÝPLATY PROVIZÍ (09. 06. 2026, NÁVRH)
 
 **Stav: návrh dohodnut, NIC neimplementováno/nasazeno. Hlavní kmen OneMil nedotčen — po dokončení větve návrat.**

@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-11 - Dávkové výplaty affiliate/obchodních provizí — Final readiness audit, ACL nález + patch
+
+- Final readiness audit větve `codex/affiliate-payouts-audit` (build ✅, diff-check ✅, staging postchecky).
+- **🔴 Nález:** `prepare_/finalize_affiliate_payout_document` + `next_affiliate_payout_document_number` měly na stagingu implicitní `anon`+`authenticated` EXECUTE (Supabase granty, které `REVOKE ALL FROM PUBLIC` neodstraní); funkce nemají vnitřní auth guard → reálná díra. `admin_set_affiliate_commission_status` a `cancel_affiliate_payout_batch` měly `anon` EXECUTE (defense-in-depth, mají `is_admin()`).
+- Fix: nová migrace `20260611090000_affiliate_payouts_acl_patch.sql` (idempotentní REVOKE, 10 funkcí) — **NEAPLIKOVÁNA**, čeká na schválení Pavla pro staging. V DESIGN.md §17 je nyní migrační krok 7.
+- Regresní lock: nový test 41e (anon/authenticated → 42501) v spec 41.
+- Spec 41 po D/D.1 ověřen: run `27370912054` — **4 passed, 0 failed** (před přidáním 41e).
+- EF JWT audit: 3 payout EF staging `verify_jwt=true`; ⚠️ `process-email-queue` bez vnitřního auth checku — produkční redeploy musí zachovat verify_jwt kompatibilní s pg_cron job 16 (dokumentováno v DESIGN.md §17.2).
+- Buckets privátní, RLS OK, settings OK. Produkce `xkzhjldrojjlrkezorey` nedotčena.
+
 ## 2026-06-11 - Dávkové výplaty affiliate/obchodních provizí — Production rollout checklist připraven
 
 - Do `docs/affiliate-payouts/DESIGN.md` §17 přidán plný „Production rollout checklist — Affiliate Payouts Phase A+B+C+D+D.1". Shrnutí v `onemil_state.md` a `CLAUDE.md`.

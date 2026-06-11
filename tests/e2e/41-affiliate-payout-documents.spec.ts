@@ -363,4 +363,41 @@ test.describe('41 - affiliate payout documents', () => {
       }
     }
   });
+
+  test('41e) document RPC nejsou volatelne pres anon ani authenticated (ACL patch)', async () => {
+    // Vyžaduje aplikovaný ACL patch 20260611090000_affiliate_payouts_acl_patch.sql.
+    // prepare/finalize_affiliate_payout_document nemají vnitřní auth guard —
+    // jsou service_role-only a granty jsou jediná ochrana. Tento test zamyká,
+    // že implicitní Supabase granty pro anon/authenticated zůstávají odebrané.
+    const adminUser = await makeAdminUserClient();
+    const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const randomId = crypto.randomUUID();
+
+    for (const client of [adminUser, anonClient]) {
+      const { error: prepErr } = await (client as any).rpc(
+        'prepare_affiliate_payout_document',
+        { p_commission_id: randomId },
+      );
+      expect(prepErr).toBeTruthy();
+      expect(prepErr.code).toBe('42501');
+
+      const { error: finErr } = await (client as any).rpc(
+        'finalize_affiliate_payout_document',
+        {
+          p_commission_id: randomId,
+          p_document_number: 'SPEC41E-NO-ACCESS',
+          p_pdf_storage_path: 'spec41e/no-access.pdf',
+          p_pdf_sha256: '0'.repeat(64),
+          p_affiliate_email_subject: 'x',
+          p_affiliate_email_body: 'x',
+          p_accounting_email_subject: 'x',
+          p_accounting_email_body: 'x',
+        },
+      );
+      expect(finErr).toBeTruthy();
+      expect(finErr.code).toBe('42501');
+    }
+  });
 });

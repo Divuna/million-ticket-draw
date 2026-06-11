@@ -689,12 +689,18 @@ Soucasna migrace Faze D a EF `generate-affiliate-bank-export` jsou pro staging t
 4. `supabase/migrations/20260610140000_affiliate_payouts_phase_c.sql` — payout documents, email-queue private attachment sloupce, `prepare_/finalize_affiliate_payout_document`.
 5. `supabase/migrations/20260610170000_affiliate_payouts_phase_d.sql` — Air Bank ABO export sloupce, `prepare_/finalize_affiliate_bank_export`, bucket `affiliate-bank-exports`.
 6. `supabase/migrations/20260610180000_affiliate_payouts_phase_d1.sql` — settings seed (payer account/bank), auto-fill v `create_affiliate_payout_batch`, `update_affiliate_payout_batch_meta`.
+7. `supabase/migrations/20260611090000_affiliate_payouts_acl_patch.sql` — **ACL patch (audit 11. 06. 2026)**: explicitni REVOKE implicitnich Supabase EXECUTE grantu. Nahrazuje drivejsi manualni post-apply REVOKE krok. MUSI byt aplikovan jako POSLEDNI.
 
-**Post-apply manualni krok (po #6):** Supabase pridava implicitni `anon` EXECUTE grant na nove/nahrazene funkce. Po migraci 6 spustit:
+**Duvod ACL patche (nalez auditu 11. 06. 2026):** `REVOKE ALL ... FROM PUBLIC` v puvodnich migracich NEodstrani implicitni per-role granty, ktere Supabase pridava pri CREATE FUNCTION. Staging postcheck nasel: `prepare_affiliate_payout_document`, `finalize_affiliate_payout_document` a `next_affiliate_payout_document_number` mely `anon` + `authenticated` EXECUTE — tyto funkce NEMAJI vnitrni auth guard (service_role-only by design, volane jen z EF), takze slo o realnou diru: kazdy prihlaseny uzivatel mohl vkladat payout doklady, queue emaily a posouvat provize do `ready_to_pay`. Dale `admin_set_affiliate_commission_status` a `cancel_affiliate_payout_batch` mely `anon` EXECUTE (maji vnitrni `is_admin()` guard — defense-in-depth nalez). Patch je idempotentni, pokryva vsech 10 payout funkci. Regresni lock: spec 41e.
+
+**Postcheck po #7 (zadna funkce nesmi mit `anon`; document/export RPC nesmi mit ani `authenticated`):**
 ```sql
-REVOKE EXECUTE ON FUNCTION public.create_affiliate_payout_batch(uuid[]) FROM anon;
+SELECT proname, proacl::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname='public' AND proname IN ('prepare_affiliate_payout_document','finalize_affiliate_payout_document',
+ 'next_affiliate_payout_document_number','prepare_affiliate_bank_export','finalize_affiliate_bank_export',
+ 'admin_set_affiliate_commission_status','cancel_affiliate_payout_batch','mark_affiliate_payout_batch_paid',
+ 'create_affiliate_payout_batch','update_affiliate_payout_batch_meta');
 ```
-(D.1 revoke `anon` na `update_affiliate_payout_batch_meta` inline — presto RE-OVERIT.)
 
 **Settings k potvrzeni na produkci po #6:**
 - `affiliate_payout_payer_account = 3151752019`
@@ -706,6 +712,8 @@ REVOKE EXECUTE ON FUNCTION public.create_affiliate_payout_batch(uuid[]) FROM ano
 1. `create-affiliate-payout-document` (Phase C) — overit admin guard v `supabase/config.toml`.
 2. `generate-affiliate-bank-export` (Phase D) — JWT-protected; smoke bez JWT → 401.
 3. `process-email-queue` (Phase C update) — Resend init posunut tesne pred odeslani; required PDF priloha bez souboru → rizeny `failed`.
+
+**⚠️ `process-email-queue` JWT pozor (audit 11. 06. 2026):** funkce NEMA zadny vnitrni auth check — spoleha vyhradne na platform `verify_jwt` (deploy-time flag). Staging je nasazen s `verify_jwt = true`. Produkci verzi vola pg_cron job 16 kazdych 10 minut — pred produkcnim redeployem OVERIT aktualni produkci `verify_jwt` setting a zpusob, jakym cron predava Authorization header; redeploy musi zachovat kompatibilni nastaveni, jinak prestanou odchazet vsechny emaily. Staging pg_cron neexistuje, takze tato kombinace cron+EF nebyla na stagingu testovatelna. Vsechny 3 payout EF jsou na stagingu `verify_jwt = true`; `create-affiliate-payout-document` a `generate-affiliate-bank-export` maji navic vnitrni admin JWT guard.
 
 ### 17.3 Required postchecks (per phase, na produkci)
 
@@ -724,7 +732,7 @@ P0 Smoke dle CLAUDE.md: registrace/login (01,02), login gating (33,14), ticket (
 ### 17.5 Required E2E tests (staging, zelene tesne pred produkcni gate)
 
 - `tests/e2e/40-affiliate-payouts.spec.ts` → 4 passed (last green run `27303389522`).
-- `tests/e2e/41-affiliate-payout-documents.spec.ts` → 4 passed.
+- `tests/e2e/41-affiliate-payout-documents.spec.ts` → 5 testu (41a–41d + novy 41e ACL regression lock; 41e vyzaduje aplikovany ACL patch `20260611090000`). Posledni zeleny run pred 41e: 4 passed.
 - `tests/e2e/42-affiliate-bank-export.spec.ts` → 6 passed (last green run `27303172376`).
 - Full Staging E2E suite zeleny (bez regresi: spec 39 commissions, partners, messaging).
 - E2E vzdy proti staging `dxmowysntemfqfnanxua`; produkce nikdy neni E2E cil.
@@ -738,7 +746,8 @@ P0 Smoke dle CLAUDE.md: registrace/login (01,02), login gating (33,14), ticket (
 
 ### 17.7 Production risks
 
-- Implicitni `anon` grant re-added pri function replace → re-REVOKE + re-verify po kazde aplikaci.
+- Implicitni `anon`/`authenticated` granty re-added pri kazdem CREATE/REPLACE FUNCTION → ACL patch `20260611090000` musi byt VZDY posledni aplikovana migrace; po jakemkoli budoucim REPLACE payout funkce znovu spustit patch + postcheck. Regresni lock spec 41e.
+- `process-email-queue` bez vnitrniho auth checku — produkci redeploy musi zachovat verify_jwt kompatibilni s pg_cron job 16 invokaci (viz §17.2), jinak prestanou odchazet emaily.
 - Migration ordering trap (podtrzitko razeni).
 - `accounting_email` mireny na staging test adresu → realne payout emaily uniknou do test inboxu. Nastavit produkcni hodnotu pred deployem.
 - Bucket privacy — `affiliate-bank-exports` musi byt privatni; verejny bucket leakuje bankovni ucty prijemcu.
