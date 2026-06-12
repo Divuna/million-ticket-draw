@@ -36,6 +36,7 @@ const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? '';
 const ADMIN_EMAIL  = process.env.E2E_ADMIN_EMAIL ?? '';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? '';
+const INTERNAL_TOKEN = process.env.VITE_INTERNAL_FUNCTION_TOKEN ?? '';
 
 const PDF_EF_URL   = `${SUPABASE_URL}/functions/v1/generate-partner-invoice-pdf`;
 const EMAIL_EF_URL = `${SUPABASE_URL}/functions/v1/send-partner-invoice-email`;
@@ -50,7 +51,7 @@ const PASSWORD = `Spec44!${RUN_ID}x`;
 
 const isStaging =
   SUPABASE_URL.includes(STAGING_REF) &&
-  !!SUPABASE_ANON && !!SERVICE_ROLE && !!ADMIN_EMAIL && !!ADMIN_PASSWORD;
+  !!SUPABASE_ANON && !!SERVICE_ROLE && !!ADMIN_EMAIL && !!ADMIN_PASSWORD && !!INTERNAL_TOKEN;
 
 function makeAdmin(): SupabaseClient {
   return createClient(SUPABASE_URL, SERVICE_ROLE, {
@@ -76,10 +77,12 @@ async function callEf(
   invoiceId: string,
   jwt?: string,
   extraBody: Record<string, unknown> = {},
+  extraHeaders: Record<string, string> = {},
 ): Promise<Response> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     apikey: SUPABASE_ANON,
+    ...extraHeaders,
   };
   if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
   return fetch(url, {
@@ -234,8 +237,13 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
   });
 
   test('44c: admin JWT → PDF generated, export row, downloadable', async () => {
-    const jwt = await getJwt(SPEC_ADMIN_EMAIL, PASSWORD);
-    const res = await callEf(PDF_EF_URL, ctx.invoiceId!, jwt);
+    const res = await callEf(
+      PDF_EF_URL,
+      ctx.invoiceId!,
+      undefined,
+      {},
+      { 'x-internal-token': INTERNAL_TOKEN },
+    );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
