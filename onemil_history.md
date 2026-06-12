@@ -21,7 +21,8 @@
 - EF nasazeny: `create-affiliate-payout-document` v1 (verify_jwt=true), `generate-affiliate-bank-export` v1 (verify_jwt=true), `process-email-queue` v124 (verify_jwt=false — pg_cron job 16 volá bez Authorization headeru; deploy CLI `--no-verify-jwt` po samostatném schválení Pavla, classifier napřed blokoval).
 - Postchecky: RLS, privátní buckety, ACL (document/export RPC service_role-only, admin RPC bez anon), smoke no-JWT → 401/401, email worker no-auth → 200 processed:0. Advisors bez nových payout nálezů.
 - Testovací řádek `dddddddd-…` nedotčen; žádný payout, platba ani e-mail nevytvořen.
-- Zbývá: merge do `main` + P0 smoke + Lovable Publish (manuální, Pavel) pro payout admin UI.
+- Merge `codex/affiliate-payouts-audit` → `main` fast-forward (commit `fc7c08ec`), push OK (12. 06. 2026). Produkční smoke run `27395842847` ✅ passed. P0 staging smoke run `27395845092` ✅ passed. Žádné regrese.
+- Zbývá: **Lovable Publish (manuální, Pavel)** — payout admin UI není v live buildu dokud Pavel nepublikuje.
 
 ## 2026-06-11 - Dávkové výplaty affiliate/obchodních provizí — Full Staging E2E ✅ — větev production-ready
 

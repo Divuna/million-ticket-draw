@@ -112,7 +112,8 @@ Plný checklist je v `docs/affiliate-payouts/DESIGN.md` §17. Shrnutí:
 - **Smoke ✅:** `generate-affiliate-bank-export` no-JWT → **401**; `create-affiliate-payout-document` no-JWT → **401**; `process-email-queue` no-auth cron-style call → **200** `processed: 0` (cron kompatibilita potvrzena, nic neodesláno).
 - **Advisors:** žádné nové payout nálezy. Admin RPC mají očekávaný WARN `authenticated_security_definer_function_executable` (by design — `is_admin()` guard, stejný vzor jako ~150 existujících funkcí). Pre-existing security backlog nesouvisí.
 - **Data safety ✅:** testovací řádek `dddddddd-…` nedotčen (ověřeno před i po); 0 payout batchů, 0 dokladů — žádný payout nevytvořen, žádná platba, žádný e-mail neodeslán mimo existující flow.
-- **⏳ ZBÝVÁ (frontend):** merge `codex/affiliate-payouts-audit` → `main`, P0 smoke, **Lovable Publish (manuální akce Pavla)**. Payout admin UI `/admin/affiliate-payouts` + `/admin/affiliate-payouts/:id` do publishe není v live buildu — UI smoke (načtení stránek) proběhne až po publishi.
+- **✅ Merge + smoke (12. 06. 2026):** větev `codex/affiliate-payouts-audit` mergnutá do `main` fast-forward, commit `fc7c08ec`, push OK. Produkční smoke (run `27395842847`) ✅ passed. P0 staging smoke (run `27395845092`) ✅ passed. Žádné regrese z merge.
+- **⏳ ZBÝVÁ:** **Lovable Publish (manuální akce Pavla).** Payout admin UI `/admin/affiliate-payouts` + `/admin/affiliate-payouts/:id` do publishe není v live buildu. Po publishi: UI smoke (načtení stránek, EF no-JWT → 401 znovu).
 
 ## 🌿 SAMOSTATNÁ VĚTEV — DÁVKOVÉ VÝPLATY PROVIZÍ (09. 06. 2026, NÁVRH)
 
