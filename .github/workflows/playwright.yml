@@ -12,6 +12,12 @@ on:
     - cron: '0 6 * * *'    # 08:00 Praha
     - cron: '0 14 * * *'   # 16:00 Praha
 
+# Opt in to Node.js 24 runtime for JavaScript actions (checkout/setup-node/
+# upload-artifact) ahead of the GitHub-enforced default on 2026-06-16.
+# Does NOT change the project's own Node version used by setup-node.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   smoke:
     name: Smoke E2E (Chromium)
