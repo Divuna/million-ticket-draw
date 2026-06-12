@@ -1,8 +1,8 @@
 # CLAUDE.md
 
-## PARTNER INVOICES — FIX KOMPLETNÍ NA STAGINGU (12. 06. 2026, produkce NEDOTČENA)
+## PARTNER INVOICES — ✅ LIVE V PRODUKCI (12. 06. 2026, schválení Pavla)
 
-Partner Portal fakturace (coin/offer faktury firem) opravena a ověřena **pouze na stagingu `dxmowysntemfqfnanxua`**. Produkce `xkzhjldrojjlrkezorey` nedotčena — rollout checklist v `onemil_state.md`, čeká na výslovné schválení Pavla.
+Partner Portal fakturace opravena, staging-ověřena a **12. 06. 2026 nasazena na produkci `xkzhjldrojjlrkezorey`** (3 migrace + 2 EF + private bucket + Vault auto-PDF aktivace). Smoke ✅: 401/403 kontrakt, admin Generovat PDF (signed URL, `%PDF`), Odeslat fakturu emailem → pouze `eshop@onemil.cz` (OMA-20260001 `draft → issued`, nic paid), partner RLS own/foreign 5/0. Production smoke `27414185094` + P0 `27414186632` ✅. **Zbývá Lovable Publish** (PartnerDashboard PDF download přes exports) — provádí Pavel.
 
 **Aplikované staging migrace (soubory v repu, NEAPLIKOVAT na produkci bez schválení):** `20260612090000_partner_invoice_rls_policies.sql` (partner vidí jen vlastní faktury/exporty/řádky; admin UPDATE statusu) · `20260612093000_partner_invoice_enqueue_fix.sql` (chybějící overload `enqueue_partner_invoice_email(p_invoice_id uuid)` — cron volal neexistující signaturu, první reálná fakturace by spadla) · `20260612110000_partner_invoice_auto_pdf.sql` (hook `partner_invoice_post_create` = enqueue e-mail + best-effort PDF request přes pg_net+Vault; zapojen do `create_partner_invoices_for_last_week` i `_for_period`).
 

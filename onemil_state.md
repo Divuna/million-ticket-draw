@@ -1,6 +1,17 @@
 ﻿# OneMil – aktuální stav projektu
 
-## 🧾 PARTNER INVOICES — FIX KOMPLETNÍ NA STAGINGU (12. 06. 2026, produkce NEDOTČENA)
+## 🧾 PARTNER INVOICES — ✅ PRODUKČNÍ ROLLOUT PROVEDEN (12. 06. 2026, výslovné schválení Pavla „schvaluji produkční rollout partner faktur")
+
+**Produkce `xkzhjldrojjlrkezorey` — vše aplikováno a smoke-ověřeno:**
+- 3 migrace aplikovány v pořadí (RLS → enqueue fix → auto-PDF hook), postchecky ✅: 7 policies, oba enqueue overloady, hook v obou `create_partner_invoices_*`, nové funkce service_role-only.
+- Bucket `partner-invoices` přepnut na **private** (10 legacy objektů z test éry — staré public URL přestaly fungovat dle plánu; nový PDF pro OMA-20260001 vygenerován se signed URL).
+- EF nasazeny: `generate-partner-invoice-pdf` + `send-partner-invoice-email` (`--no-verify-jwt`, auth uvnitř funkce). Secrets ověřeny: `INTERNAL_FUNCTION_TOKEN`, `RESEND_API_KEY`.
+- **Auto-PDF flow AKTIVOVÁN:** Vault secrets `internal_function_token` (zkopírován server-side z cron job 23 — nikdy nebyl v příkazu/logu) + `edge_functions_url`. Produkce má pg_net → `partner_invoice_post_create` při vzniku faktury frontuje e-mail a požádá o PDF.
+- Smoke ✅: no-auth/bad-JWT → 401 (obě EF) · admin UI „Generovat PDF" na OMA-20260001 → nový export se signed URL, stažení 200 `%PDF` (26 KB) · admin UI „Odeslat fakturu emailem" → doručeno **pouze na `eshop@onemil.cz`**, status `draft → issued` (11:55:29 UTC), NIC nepaid · partner RLS simulace: BOHEMIA auth user vidí 5 faktur/11 exportů, cizí uid 0/0 · non-admin 403 kontrakt kryje spec 44b (staging).
+- Workflows ✅: production smoke run `27414185094` · P0 smoke run `27414186632`.
+- ⏳ Zbývá: **Lovable Publish** (PartnerDashboard download změna — jen Pavel; starý build funguje, partner PDF tlačítko do Publish vrací řízený 403/při RLS čtení nic nerozbíjí) · Botanic `[TEST DATA]` billing nahradit před veřejným spuštěním.
+
+## 🧾 PARTNER INVOICES — FIX KOMPLETNÍ NA STAGINGU (12. 06. 2026, historický stav před rolloutem)
 
 **Co bylo rozbité (audit 12. 06. 2026):** partner neviděl vlastní faktury (`partner_invoices` měla jen admin SELECT policy; exports/lines deny-all), admin změna stavu neměla UPDATE policy, oba invoice EF (`generate-partner-invoice-pdf`, `send-partner-invoice-email`) vyžadovaly `x-internal-token` který browser nemá → admin tlačítka vracela 401 (ověřeno na produkčním UI, faktura `cfa697db`), a `create_partner_invoices_for_last_week()` volala neexistující overload `enqueue_partner_invoice_email(uuid)` → první reálná fakturace by spadla.
 

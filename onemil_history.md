@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-06-12 — Partner Invoice fix: PRODUKČNÍ ROLLOUT (výslovné schválení Pavla)
+
+- Aplikovány 3 migrace na produkci `xkzhjldrojjlrkezorey` v pořadí RLS (`20260612090000`) → enqueue fix (`20260612093000`) → auto-PDF hook (`20260612110000`); per-migrace postchecky OK.
+- Bucket `partner-invoices` přepnut na private. EF `generate-partner-invoice-pdf` + `send-partner-invoice-email` nasazeny `--no-verify-jwt`. Vault secrets `internal_function_token` + `edge_functions_url` → auto-PDF flow aktivní (pg_net).
+- Smoke: 401 no-auth/bad-JWT ✅; admin UI Generovat PDF → signed URL, 200 `%PDF` ✅; Odeslat fakturu emailem → pouze `eshop@onemil.cz`, OMA-20260001 `draft → issued` ✅ (nic paid); partner RLS simulace own 5/11 vs foreign 0/0 ✅.
+- Production smoke run `27414185094` ✅; P0 smoke run `27414186632` ✅. Affiliate Payouts nedotčeny.
+- Zbývá Lovable Publish (PartnerDashboard download) — provádí Pavel.
+
 ## 2026-06-12 — Partner Invoice fix (staging kompletní)
 
 - Read-only audit Partner Portal fakturace: partner neviděl faktury (chybějící RLS), `partner_invoice_exports`/`partner_invoice_lines` deny-all, admin UPDATE bez policy, oba invoice EF vyžadovaly `x-internal-token` (live UI 401 ověřeno na produkci), cron volal neexistující `enqueue_partner_invoice_email(uuid)`.
