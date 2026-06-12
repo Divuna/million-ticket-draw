@@ -52,8 +52,11 @@ test.describe('45 - admin partner invoice resend button', () => {
       .insert({
         name: PARTNER_NAME,
         company_name: PARTNER_NAME,
+        logo_url: 'https://example.invalid/spec45.png',
+        website_url: 'https://example.invalid/spec45',
         contact_email: 'eshop@onemil.cz',
         status: 'approved',
+        approved_at: new Date().toISOString(),
       })
       .select('id')
       .single();
