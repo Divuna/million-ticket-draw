@@ -76,7 +76,10 @@ async function callEf(
   jwt?: string,
   extraBody: Record<string, unknown> = {},
 ): Promise<Response> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    apikey: SUPABASE_ANON,
+  };
   if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
   return fetch(url, {
     method: 'POST',
