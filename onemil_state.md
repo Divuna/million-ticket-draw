@@ -113,7 +113,7 @@ Plný checklist je v `docs/affiliate-payouts/DESIGN.md` §17. Shrnutí:
 - **Advisors:** žádné nové payout nálezy. Admin RPC mají očekávaný WARN `authenticated_security_definer_function_executable` (by design — `is_admin()` guard, stejný vzor jako ~150 existujících funkcí). Pre-existing security backlog nesouvisí.
 - **Data safety ✅:** testovací řádek `dddddddd-…` nedotčen (ověřeno před i po); 0 payout batchů, 0 dokladů — žádný payout nevytvořen, žádná platba, žádný e-mail neodeslán mimo existující flow.
 - **✅ Merge + smoke (12. 06. 2026):** větev `codex/affiliate-payouts-audit` mergnutá do `main` fast-forward, commit `fc7c08ec`, push OK. Produkční smoke (run `27395842847`) ✅ passed. P0 staging smoke (run `27395845092`) ✅ passed. Žádné regrese z merge.
-- **⏳ ZBÝVÁ:** **Lovable Publish (manuální akce Pavla).** Payout admin UI `/admin/affiliate-payouts` + `/admin/affiliate-payouts/:id` do publishe není v live buildu. Po publishi: UI smoke (načtení stránek, EF no-JWT → 401 znovu).
+- **✅ Lovable Publish + UI smoke (12. 06. 2026):** Pavel provedl Lovable Publish. Authenticated produkční UI smoke prošel: `/admin` načte ✅, `/admin/affiliate-payouts` načte a zobrazí empty state ✅, `/admin/affiliate-commissions` načte ✅, `/admin/affiliate-accounts` načte ✅. Žádné console errors. Žádná produkční data nezměněna (0 batchů, 0 dokladů, žádná platba, žádný e-mail). **Dávkové výplaty affiliate/obchodních provizí jsou PLNĚ DOKONČENY V PRODUKCI.**
 
 ## 🌿 SAMOSTATNÁ VĚTEV — DÁVKOVÉ VÝPLATY PROVIZÍ (09. 06. 2026, NÁVRH)
 

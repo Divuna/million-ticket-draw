@@ -22,7 +22,8 @@
 - Postchecky: RLS, privátní buckety, ACL (document/export RPC service_role-only, admin RPC bez anon), smoke no-JWT → 401/401, email worker no-auth → 200 processed:0. Advisors bez nových payout nálezů.
 - Testovací řádek `dddddddd-…` nedotčen; žádný payout, platba ani e-mail nevytvořen.
 - Merge `codex/affiliate-payouts-audit` → `main` fast-forward (commit `fc7c08ec`), push OK (12. 06. 2026). Produkční smoke run `27395842847` ✅ passed. P0 staging smoke run `27395845092` ✅ passed. Žádné regrese.
-- Zbývá: **Lovable Publish (manuální, Pavel)** — payout admin UI není v live buildu dokud Pavel nepublikuje.
+- Lovable Publish proveden Pavlem (12. 06. 2026). Authenticated produkční UI smoke prošel: `/admin` ✅, `/admin/affiliate-payouts` (empty state) ✅, `/admin/affiliate-commissions` ✅, `/admin/affiliate-accounts` ✅, žádné console errors. Žádná produkční data nezměněna.
+- **Dávkové výplaty affiliate/obchodních provizí PLNĚ DOKONČENY V PRODUKCI (12. 06. 2026).** Celý stack: DB (Phase A+B+C+D+D.1+ACL) · EF (3 funkce) · settings · UI · merge · smoke · Publish · UI smoke — vše zelené.
 
 ## 2026-06-11 - Dávkové výplaty affiliate/obchodních provizí — Full Staging E2E ✅ — větev production-ready
 

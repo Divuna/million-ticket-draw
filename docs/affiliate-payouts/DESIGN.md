@@ -766,4 +766,5 @@ Pavel dal 12. 06. 2026 vyslovne pisemne schvaleni produkce. **Backend rollout PR
 - **Postchecky §17.3 ✅:** tabulky+RLS, privatni buckety, ACL service_role-only / bez anon, no-JWT 401 smoke, email worker no-auth 200 processed:0, advisors bez novych payout nalezu.
 - **Data safety ✅:** `dddddddd-…` nedotcen, 0 batchu, 0 dokladu, zadna platba, zadny e-mail.
 - **✅ Merge + smoke (12. 06. 2026):** Vetev `codex/affiliate-payouts-audit` fast-forward merguta do `main` (commit `fc7c08ec`). Produkcni smoke run `27395842847` ✅ passed. P0 staging smoke run `27395845092` ✅ passed. Zadne regrese.
-- **⏳ ZBYVA: Lovable Publish (manualni akce Pavla).** Payout admin UI (`/admin/affiliate-payouts`, `/admin/affiliate-payouts/:id`) neni v live buildu dokud Pavel nepublikuje. Po publishi: UI smoke (nacteni stranek, EF no-JWT → 401).
+- **✅ Lovable Publish + UI smoke (12. 06. 2026):** Pavel provedl Lovable Publish. Authenticated produkcni UI smoke prosel: `/admin/affiliate-payouts` (empty state) ✅, `/admin/affiliate-commissions` ✅, `/admin/affiliate-accounts` ✅, zadne console errors. Zadna produkcni data nezmenena.
+- **✅ DAVKOVE VYPLATY AFFILIATE/OBCHODNICH PROVIZI PLNE DOKONCENY V PRODUKCI (12. 06. 2026).** DB (Phase A+B+C+D+D.1+ACL) · EF (3 funkce) · settings · UI · merge · smoke · Publish · UI smoke — vse zelene.
