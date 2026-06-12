@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-12 - Dávkové výplaty — TEST payout flow E2E na produkci ✅ (schválení Pavla, app neveřejná)
+
+- TEST provize `eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee` (1,23 Kč) vytvořena → schválena přes admin UI → doklad **APD-2026-000001** (EF vygenerovala PDF do privátního bucketu) → dávka **APB-2026-000005** → Air Bank `.kpc` export vygenerován (status `exported`).
+- E-mail `divispavel2@gmail.com` doručen úspěšně **s PDF přílohou** ✅; e-mail `influencer@onemil.c` řízeně `failed` (neplatná adresa, správné chování Phase C workeru) ✅.
+- Žádná platba neproběhla; nic nebylo označeno jako paid; chráněný řádek `dddddddd-…` nedotčen.
+- Pre-test úpravy: Botanic partner doplněn TEST hodnotami (payout_ready=true, testovací účet/billing, `[TEST DATA]` marker v notes); affiliate `cd74ff3a` formát bank údajů opraven a ponechán: `payout_account=12545857`, `payout_bank=0800` (batch RPC vyžaduje oddělený 4ciferný kód).
+- Cleanup: TEST provize, doklad, dávka, batch item a email_queue řádky smazány. 2 orphan soubory zůstávají v privátních bucketech (`affiliate-payout-docs/2026/eeeeeeee-…/APD-2026-000001.pdf`, `affiliate-bank-exports/2026/APB-2026-000005.kpc`) — SQL delete blokuje storage protection trigger; lze ručně smazat v Supabase Storage.
+- Botanic TEST data zůstávají — **nutno nahradit reálnými údaji před veřejným spuštěním**.
+
 ## 2026-06-12 - Dávkové výplaty affiliate/obchodních provizí — PRODUKČNÍ ROLLOUT BACKENDU ✅ (schválení Pavla)
 
 - Na produkci `xkzhjldrojjlrkezorey` aplikováno 7 migrací v pořadí A → B → B guard → C → D → D.1 → ACL patch; postcheck po každé fázi prošel.
