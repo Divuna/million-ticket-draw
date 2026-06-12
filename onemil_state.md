@@ -1,12 +1,22 @@
 ﻿# OneMil – aktuální stav projektu
 
+## 🧾 PARTNER INVOICES — ✅ ADMIN RESEND BUTTON PŘIDÁN (12. 06. 2026)
+
+- Admin UI pro partner faktury má tlačítko `Znovu odeslat` v detailu faktury.
+- Tlačítko je dostupné pouze pro partner faktury se stavem `issued`.
+- Používá existující safe resend mode Edge Function `send-partner-invoice-email` s body `{ invoice_id, resend: true }`.
+- Resend nemění status faktury, nenastavuje `paid_at` a neregeneruje PDF; vyžaduje existující PDF export.
+- Pokud PDF export v UI není dostupný, admin dostane toast `PDF faktura zatím není k dispozici.`
+- Manuální produkční resend faktury `OMA-20260001` na `eshop@onemil.cz` už byl proveden dříve po schválení Pavla; nic nebylo označeno jako zaplacené.
+- Affiliate Payouts zůstaly nedotčeny.
+
 ## 🧾 PARTNER INVOICES — ✅ PDF OVERVIEW PRODUKČNÍ FIX DOKONČEN (12. 06. 2026)
 
 **Produkce `xkzhjldrojjlrkezorey`:**
 - Production fix pro Partner Invoice PDF overview mismatch je kompletní.
 - Migrace `20260612125606_partner_invoice_line_snapshots.sql` byla aplikována na produkci jako verze `20260612132440`.
 - Edge Function `generate-partner-invoice-pdf` byla nasazena na produkci jako verze `131`.
-- Edge Function `send-partner-invoice-email` nebyla nasazena a zůstává verze `121`.
+- Edge Function `send-partner-invoice-email` byla později pro schválený jednorázový resend nasazena jako verze `123`; safe resend mode používá existující PDF export a nemění status ani `paid_at`.
 - Faktura `OMA-20260001` už nezobrazuje chybný date-range activation overview.
 - Legacy faktura `OMA-20260001` má 0 invoice-linked rows, takže PDF používá safe fallback/no-detail overview místo zavádějících 15 MioCoins.
 - Nebyly odeslány žádné e-maily.

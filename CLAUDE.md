@@ -1,8 +1,12 @@
 # CLAUDE.md
 
+## PARTNER INVOICES — ✅ ADMIN RESEND BUTTON PŘIDÁN (12. 06. 2026)
+
+Admin UI `src/pages/AdminInvoices.tsx` má tlačítko `Znovu odeslat` pouze pro partner faktury se stavem `issued`. Používá existující safe resend mode `send-partner-invoice-email` s `{ invoice_id, resend: true }`, nemění status, nenastavuje `paid_at` a neregeneruje PDF; pokud není dostupný existující PDF export, zobrazí toast `PDF faktura zatím není k dispozici.` Manuální produkční resend faktury `OMA-20260001` na `eshop@onemil.cz` už byl proveden dříve po schválení Pavla. Affiliate Payouts nedotčeny.
+
 ## PARTNER INVOICES — ✅ PDF OVERVIEW PRODUKČNÍ FIX DOKONČEN (12. 06. 2026)
 
-Production fix pro Partner Invoice PDF overview mismatch je kompletní na produkci `xkzhjldrojjlrkezorey`. Migrace `20260612125606_partner_invoice_line_snapshots.sql` byla aplikována jako verze `20260612132440`. Edge Function `generate-partner-invoice-pdf` byla nasazena jako verze `131`; `send-partner-invoice-email` nebyla nasazena a zůstává verze `121`. Faktura `OMA-20260001` už nezobrazuje chybný date-range activation overview. Protože jde o legacy fakturu s 0 invoice-linked rows, PDF používá safe fallback/no-detail overview místo zavádějících 15 MioCoins. Nebyly odeslány žádné e-maily, nic nebylo označeno jako zaplacené a Affiliate Payouts byly nedotčeny. Production smoke prošel: run `27418726117`. Strict detail total = 5 pro legacy fakturu by vyžadoval samostatně schválený cílený backfill.
+Production fix pro Partner Invoice PDF overview mismatch je kompletní na produkci `xkzhjldrojjlrkezorey`. Migrace `20260612125606_partner_invoice_line_snapshots.sql` byla aplikována jako verze `20260612132440`. Edge Function `generate-partner-invoice-pdf` byla nasazena jako verze `131`; `send-partner-invoice-email` byla později pro schválený jednorázový resend nasazena jako verze `123`. Faktura `OMA-20260001` už nezobrazuje chybný date-range activation overview. Protože jde o legacy fakturu s 0 invoice-linked rows, PDF používá safe fallback/no-detail overview místo zavádějících 15 MioCoins. Při PDF overview fixi nebyly odeslány žádné e-maily, nic nebylo označeno jako zaplacené a Affiliate Payouts byly nedotčeny. Production smoke prošel: run `27418726117`. Strict detail total = 5 pro legacy fakturu by vyžadoval samostatně schválený cílený backfill.
 
 ## PARTNER INVOICES — ✅ LIVE V PRODUKCI (12. 06. 2026, schválení Pavla)
 

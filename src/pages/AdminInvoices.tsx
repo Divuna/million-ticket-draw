@@ -75,6 +75,7 @@ const AdminInvoices: React.FC = () => {
   const [linesLoading, setLinesLoading] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
@@ -272,6 +273,32 @@ const AdminInvoices: React.FC = () => {
       toast.error(err?.message || 'Chyba při odesílání faktury emailem');
     } finally {
       setSendingEmail(false);
+    }
+  };
+
+  const resendInvoiceEmail = async () => {
+    if (!selectedInvoice) return;
+
+    if (!pdfUrl) {
+      toast.error('PDF faktura zatím není k dispozici.');
+      return;
+    }
+
+    setResendingEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-partner-invoice-email', {
+        body: { invoice_id: selectedInvoice.id, resend: true },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success('Faktura byla znovu odeslána.');
+    } catch (err) {
+      console.error('Error resending invoice email:', err);
+      toast.error('Fakturu se nepodařilo znovu odeslat.');
+    } finally {
+      setResendingEmail(false);
     }
   };
 
@@ -572,8 +599,8 @@ const AdminInvoices: React.FC = () => {
                   </div>
                 )}
 
-                {/* Send email button - visible for draft, issued, or paid status */}
-                {(selectedInvoice.status === 'draft' || selectedInvoice.status === 'issued' || selectedInvoice.status === 'paid') && (
+                {/* Send email button - initial send for draft invoices only */}
+                {selectedInvoice.status === 'draft' && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -586,6 +613,22 @@ const AdminInvoices: React.FC = () => {
                       <Mail className="h-4 w-4 mr-2" />
                     )}
                     Odeslat fakturu emailem
+                  </Button>
+                )}
+
+                {selectedInvoice.status === 'issued' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resendInvoiceEmail}
+                    disabled={resendingEmail}
+                  >
+                    {resendingEmail ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Mail className="h-4 w-4 mr-2" />
+                    )}
+                    Znovu odeslat
                   </Button>
                 )}
 
