@@ -436,22 +436,28 @@ const PartnerDashboard = () => {
     }
   };
 
+  // Partner only downloads an already generated PDF (RLS-scoped to own
+  // invoices); generation is admin/system-only — no secrets in the browser.
   const downloadOfferInvoicePdf = async (invoiceId: string) => {
     setGeneratingPdf(invoiceId);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-partner-invoice-pdf', {
-        headers: withEdgeInternalToken({}),
-        body: { invoice_id: invoiceId },
-      });
+      const { data, error } = await supabase
+        .from('partner_invoice_exports')
+        .select('file_url')
+        .eq('invoice_id', invoiceId)
+        .eq('format', 'pdf')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
       if (error) throw error;
-      if (data?.success && data.file_url) {
+      if (data?.file_url) {
         window.open(data.file_url, '_blank');
       } else {
-        toast.error('PDF se nepodařilo vygenerovat');
+        toast.error('PDF faktura zatím není k dispozici');
       }
     } catch (err) {
-      console.error('Error generating PDF:', err);
-      toast.error('Chyba při generování PDF');
+      console.error('Error downloading PDF:', err);
+      toast.error('Chyba při stahování PDF');
     } finally {
       setGeneratingPdf(null);
     }

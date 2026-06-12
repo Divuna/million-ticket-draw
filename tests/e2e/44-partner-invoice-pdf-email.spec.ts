@@ -1,0 +1,241 @@
+/**
+ * Spec 44 — Partner Invoice PDF + email Edge Function contract (fix 12. 06. 2026)
+ *
+ * Staging-only, self-contained, backend-only (no browser).
+ * Service role is used ONLY for setup/cleanup.
+ *
+ * Required env vars (all present in playwright-staging.yml):
+ *   VITE_SUPABASE_URL               — must contain staging ref dxmowysntemfqfnanxua
+ *   VITE_SUPABASE_ANON_KEY
+ *   E2E_SUPABASE_SERVICE_ROLE_KEY
+ *   E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD — staging admin account
+ *
+ * SAFE EMAIL RULE: the only real email this spec may trigger goes to
+ * divispavel2@gmail.com (test partner contact_email). Never change this.
+ *
+ * Invariants verified:
+ *   44a) no auth → 401 on both EFs
+ *   44b) non-admin JWT → 403 on both EFs
+ *   44c) admin JWT → generate-partner-invoice-pdf 200 + file_url (signed URL),
+ *        partner_invoice_exports row created, PDF downloadable (HTTP 200, %PDF)
+ *   44d) partner (authenticated, own invoice) can read the export row via RLS
+ *        and download the PDF from the signed URL
+ *   44e) admin JWT → send-partner-invoice-email 200, sent_to ==
+ *        divispavel2@gmail.com, invoice status draft → issued (never paid)
+ *
+ * Cleanup: removes invoice (cascades exports), storage object, partner and
+ * test users. Runs in afterAll even on failure.
+ */
+
+import { test, expect } from '@playwright/test';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+
+const STAGING_REF  = 'dxmowysntemfqfnanxua';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? '';
+const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY ?? '';
+const SERVICE_ROLE = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? '';
+const ADMIN_EMAIL  = process.env.E2E_ADMIN_EMAIL ?? '';
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? '';
+
+const PDF_EF_URL   = `${SUPABASE_URL}/functions/v1/generate-partner-invoice-pdf`;
+const EMAIL_EF_URL = `${SUPABASE_URL}/functions/v1/send-partner-invoice-email`;
+
+const SAFE_RECIPIENT = 'divispavel2@gmail.com'; // the ONLY allowed real recipient
+
+const RUN_ID = Date.now();
+const PARTNER_EMAIL = `spec44-partner-${RUN_ID}@onemil.cz`;
+const NONADMIN_EMAIL = `spec44-nonadmin-${RUN_ID}@onemil.cz`;
+const PASSWORD = `Spec44!${RUN_ID}x`;
+
+const isStaging =
+  SUPABASE_URL.includes(STAGING_REF) &&
+  !!SUPABASE_ANON && !!SERVICE_ROLE && !!ADMIN_EMAIL && !!ADMIN_PASSWORD;
+
+function makeAdmin(): SupabaseClient {
+  return createClient(SUPABASE_URL, SERVICE_ROLE, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+function makeAnon(): SupabaseClient {
+  return createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+async function getJwt(email: string, password: string): Promise<string> {
+  const anon = makeAnon();
+  const { data, error } = await anon.auth.signInWithPassword({ email, password });
+  if (error || !data.session?.access_token) throw new Error(`signIn ${email}: ${error?.message}`);
+  return data.session.access_token;
+}
+
+async function callEf(url: string, invoiceId: string, jwt?: string): Promise<Response> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
+  return fetch(url, { method: 'POST', headers, body: JSON.stringify({ invoice_id: invoiceId }) });
+}
+
+interface Ctx {
+  partnerAuthId: string;
+  nonAdminAuthId: string;
+  partnerId: string;
+  invoiceId: string;
+  fileUrl: string | null;
+}
+const ctx: Partial<Ctx> = { fileUrl: null };
+
+test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
+  test.skip(
+    !isStaging,
+    'staging-only — requires staging VITE_SUPABASE_URL, anon key, service role key, admin credentials',
+  );
+
+  test.beforeAll(async () => {
+    const admin = makeAdmin();
+
+    const { data: pu, error: puErr } = await admin.auth.admin.createUser({
+      email: PARTNER_EMAIL, password: PASSWORD, email_confirm: true,
+    });
+    if (puErr) throw new Error(`partner user: ${puErr.message}`);
+    ctx.partnerAuthId = pu.user.id;
+
+    const { data: nu, error: nuErr } = await admin.auth.admin.createUser({
+      email: NONADMIN_EMAIL, password: PASSWORD, email_confirm: true,
+    });
+    if (nuErr) throw new Error(`nonadmin user: ${nuErr.message}`);
+    ctx.nonAdminAuthId = nu.user.id;
+
+    const { data: p, error: pErr } = await (admin as any)
+      .from('partners')
+      .insert({
+        name: `E2E Spec44 Partner ${RUN_ID}`,
+        company_name: `E2E Spec44 s.r.o.`,
+        logo_url: 'https://example.invalid/spec44.png',
+        website_url: 'https://example.invalid/spec44',
+        contact_email: SAFE_RECIPIENT, // safe test recipient ONLY
+        auth_user_id: pu.user.id,
+        status: 'approved',
+        approved_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+    if (pErr) throw new Error(`partner insert: ${pErr.message}`);
+    ctx.partnerId = p.id as string;
+
+    const { data: inv, error: invErr } = await (admin as any)
+      .from('partner_invoices')
+      .insert({
+        partner_id: p.id,
+        period_start: '2026-06-01',
+        period_end: '2026-06-07',
+        period_from: '2026-06-01',
+        period_to: '2026-06-07',
+        coins_total: 3,
+        amount_net: 3,
+        vat_amount: 0.63,
+        amount_gross: 3.63,
+        invoice_number: `TEST-S44-${RUN_ID}`,
+        variable_symbol: '44440001',
+        status: 'draft',
+      })
+      .select('id')
+      .single();
+    if (invErr) throw new Error(`invoice insert: ${invErr.message}`);
+    ctx.invoiceId = inv.id as string;
+  });
+
+  test.afterAll(async () => {
+    const admin = makeAdmin();
+    if (ctx.fileUrl) {
+      // storage path: .../object/sign/partner-invoices/<filename>?token=...
+      const m = ctx.fileUrl.match(/partner-invoices\/([^?]+)/);
+      if (m) await admin.storage.from('partner-invoices').remove([decodeURIComponent(m[1])]).catch(() => undefined);
+    }
+    if (ctx.invoiceId) {
+      await (admin as any).from('partner_invoices').delete().eq('id', ctx.invoiceId);
+    }
+    if (ctx.partnerId) {
+      await (admin as any).from('partners').delete().eq('id', ctx.partnerId);
+    }
+    for (const uid of [ctx.partnerAuthId, ctx.nonAdminAuthId]) {
+      if (uid) await admin.auth.admin.deleteUser(uid).catch(() => undefined);
+    }
+  });
+
+  test('44a: no auth → 401 on both EFs', async () => {
+    const r1 = await callEf(PDF_EF_URL, ctx.invoiceId!);
+    expect(r1.status).toBe(401);
+    const r2 = await callEf(EMAIL_EF_URL, ctx.invoiceId!);
+    expect(r2.status).toBe(401);
+  });
+
+  test('44b: non-admin JWT → 403 on both EFs', async () => {
+    const jwt = await getJwt(NONADMIN_EMAIL, PASSWORD);
+    const r1 = await callEf(PDF_EF_URL, ctx.invoiceId!, jwt);
+    expect(r1.status).toBe(403);
+    const r2 = await callEf(EMAIL_EF_URL, ctx.invoiceId!, jwt);
+    expect(r2.status).toBe(403);
+  });
+
+  test('44c: admin JWT → PDF generated, export row, downloadable', async () => {
+    const jwt = await getJwt(ADMIN_EMAIL, ADMIN_PASSWORD);
+    const res = await callEf(PDF_EF_URL, ctx.invoiceId!, jwt);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.file_url).toBeTruthy();
+    ctx.fileUrl = body.file_url as string;
+
+    const admin = makeAdmin();
+    const { data: exp } = await (admin as any)
+      .from('partner_invoice_exports')
+      .select('id, format, file_url')
+      .eq('invoice_id', ctx.invoiceId)
+      .eq('format', 'pdf');
+    expect(exp).toHaveLength(1);
+
+    const dl = await fetch(ctx.fileUrl!);
+    expect(dl.status).toBe(200);
+    const head = new Uint8Array((await dl.arrayBuffer()).slice(0, 4));
+    expect(String.fromCharCode(...head)).toBe('%PDF');
+  });
+
+  test('44d: partner reads own export via RLS and downloads PDF', async () => {
+    const client = makeAnon();
+    const { error } = await client.auth.signInWithPassword({
+      email: PARTNER_EMAIL, password: PASSWORD,
+    });
+    expect(error).toBeNull();
+
+    const { data: exps, error: expErr } = await (client as any)
+      .from('partner_invoice_exports')
+      .select('invoice_id, file_url')
+      .eq('format', 'pdf');
+    expect(expErr).toBeNull();
+    expect(exps).toHaveLength(1);
+    expect(exps![0].invoice_id).toBe(ctx.invoiceId);
+
+    const dl = await fetch(exps![0].file_url);
+    expect(dl.status).toBe(200);
+
+    await client.auth.signOut();
+  });
+
+  test('44e: admin sends invoice email — only to safe recipient, status issued', async () => {
+    const jwt = await getJwt(ADMIN_EMAIL, ADMIN_PASSWORD);
+    const res = await callEf(EMAIL_EF_URL, ctx.invoiceId!, jwt);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.sent_to).toBe(SAFE_RECIPIENT);
+
+    const admin = makeAdmin();
+    const { data: inv } = await (admin as any)
+      .from('partner_invoices')
+      .select('status')
+      .eq('id', ctx.invoiceId)
+      .single();
+    expect(inv!.status).toBe('issued'); // never 'paid'
+  });
+});

@@ -74,15 +74,50 @@ function addPage(pdfDoc: any): { page: any; y: number } {
   return { page, y: 842 - 50 };
 }
 
+/**
+ * Authorization (12. 06. 2026):
+ *  1. backend/automation path — `x-internal-token` matching INTERNAL_FUNCTION_TOKEN
+ *     (same pattern as pg_cron jobs 23/24) OR service-role bearer token
+ *  2. admin fallback path — logged-in admin/superadmin JWT (no secret in browser)
+ */
+async function authorizeRequest(req: Request): Promise<{ status: number; error: string } | null> {
+  const internalToken = Deno.env.get('INTERNAL_FUNCTION_TOKEN');
+  const provided = req.headers.get('x-internal-token');
+  if (internalToken && provided && provided === internalToken) return null;
+
+  const authHeader = req.headers.get('authorization') ?? '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!token) return { status: 401, error: 'missing_authorization' };
+
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  if (serviceKey && token === serviceKey) return null;
+
+  const admin = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceKey);
+  const { data: userData, error: userError } = await admin.auth.getUser(token);
+  if (userError || !userData?.user) return { status: 401, error: 'invalid_authorization_token' };
+
+  const { data: roleRow } = await admin
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userData.user.id)
+    .in('role', ['admin', 'superadmin'])
+    .maybeSingle();
+  if (!roleRow) return { status: 403, error: 'access_denied_admin_only' };
+
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Internal authorization guard
-  const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
-  if (req.headers.get("x-internal-token") !== internalToken) {
-    return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const authFailure = await authorizeRequest(req);
+  if (authFailure) {
+    return new Response(
+      JSON.stringify({ error: authFailure.error }),
+      { status: authFailure.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
@@ -603,13 +638,22 @@ serve(async (req) => {
       );
     }
 
-    // ── 8. Get public URL ───────────────────────────────────────────
-    const { data: urlData } = supabase.storage
+    // ── 8. Get signed URL (bucket is private — no public access) ───
+    const SIGNED_URL_TTL_SECONDS = 10 * 365 * 24 * 60 * 60; // ~10 years
+    const { data: urlData, error: signError } = await supabase.storage
       .from('partner-invoices')
-      .getPublicUrl(filename);
+      .createSignedUrl(filename, SIGNED_URL_TTL_SECONDS);
 
-    const fileUrl = urlData.publicUrl;
-    console.log('PDF uploaded:', fileUrl);
+    if (signError || !urlData?.signedUrl) {
+      console.error('Signed URL error:', signError);
+      return new Response(
+        JSON.stringify({ error: 'Nepodařilo se vytvořit odkaz na PDF', details: signError?.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const fileUrl = urlData.signedUrl;
+    console.log('PDF uploaded, signed URL created');
 
     // ── 9. Record export ────────────────────────────────────────────
     const { error: exportError } = await supabase

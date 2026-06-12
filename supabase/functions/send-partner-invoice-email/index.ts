@@ -2,23 +2,56 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/**
+ * Authorization (12. 06. 2026):
+ *  1. backend/automation path — `x-internal-token` matching INTERNAL_FUNCTION_TOKEN
+ *     (same pattern as pg_cron jobs 23/24) OR service-role bearer token
+ *  2. admin fallback path — logged-in admin/superadmin JWT (no secret in browser)
+ */
+async function authorizeRequest(req: Request): Promise<{ status: number; error: string } | null> {
+  const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
+  const provided = req.headers.get("x-internal-token");
+  if (internalToken && provided && provided === internalToken) return null;
+
+  const authHeader = req.headers.get("authorization") ?? "";
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!token) return { status: 401, error: "missing_authorization" };
+
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (serviceKey && token === serviceKey) return null;
+
+  const admin = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceKey);
+  const { data: userData, error: userError } = await admin.auth.getUser(token);
+  if (userError || !userData?.user) return { status: 401, error: "invalid_authorization_token" };
+
+  const { data: roleRow } = await admin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userData.user.id)
+    .in("role", ["admin", "superadmin"])
+    .maybeSingle();
+  if (!roleRow) return { status: 403, error: "access_denied_admin_only" };
+
+  return null;
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Internal authorization guard
-  const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
-  if (req.headers.get("x-internal-token") !== internalToken) {
-    return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+  const authFailure = await authorizeRequest(req);
+  if (authFailure) {
+    return new Response(
+      JSON.stringify({ error: authFailure.error }),
+      { status: authFailure.status, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
   }
 
   try {
@@ -144,6 +177,7 @@ serve(async (req: Request) => {
       emailOptions.attachments = attachments;
     }
 
+    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
     const emailResponse = await resend.emails.send(emailOptions);
 
     if (emailResponse.error) {
