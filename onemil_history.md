@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-12 — Partner Invoice PDF overview production fix
+
+- Production fix pro Partner Invoice PDF overview mismatch dokončen na produkci `xkzhjldrojjlrkezorey`.
+- Migrace `20260612125606_partner_invoice_line_snapshots.sql` aplikována jako produkční verze `20260612132440`.
+- Edge Function `generate-partner-invoice-pdf` nasazena jako produkční verze `131`; `send-partner-invoice-email` nebyla nasazena a zůstává verze `121`.
+- Faktura `OMA-20260001` už nezobrazuje chybný date-range activation overview; jako legacy faktura má 0 invoice-linked rows, takže PDF používá safe fallback/no-detail overview místo zavádějících 15 MioCoins.
+- Nebyly odeslány žádné e-maily, nic nebylo označeno jako zaplacené, Affiliate Payouts nedotčeny.
+- Production smoke prošel: run `27418726117`.
+- Strict detail total = 5 pro legacy fakturu by vyžadoval samostatně schválený cílený backfill.
+
 ## 2026-06-12 — Partner Invoice fix: POST-PUBLISH OVĚŘENÍ (finální)
 
 - Lovable Publish propagoval frontend změny — live bundle `index-BKax3mKj.js` (nový PartnerDashboard download kód potvrzen v bundlu).

@@ -1,5 +1,20 @@
 ﻿# OneMil – aktuální stav projektu
 
+## 🧾 PARTNER INVOICES — ✅ PDF OVERVIEW PRODUKČNÍ FIX DOKONČEN (12. 06. 2026)
+
+**Produkce `xkzhjldrojjlrkezorey`:**
+- Production fix pro Partner Invoice PDF overview mismatch je kompletní.
+- Migrace `20260612125606_partner_invoice_line_snapshots.sql` byla aplikována na produkci jako verze `20260612132440`.
+- Edge Function `generate-partner-invoice-pdf` byla nasazena na produkci jako verze `131`.
+- Edge Function `send-partner-invoice-email` nebyla nasazena a zůstává verze `121`.
+- Faktura `OMA-20260001` už nezobrazuje chybný date-range activation overview.
+- Legacy faktura `OMA-20260001` má 0 invoice-linked rows, takže PDF používá safe fallback/no-detail overview místo zavádějících 15 MioCoins.
+- Nebyly odeslány žádné e-maily.
+- Nic nebylo označeno jako zaplacené.
+- Affiliate Payouts byly nedotčeny.
+- Production smoke prošel: run `27418726117`.
+- Strict detail total = 5 pro legacy fakturu by vyžadoval samostatně schválený cílený backfill.
+
 ## 🧾 PARTNER INVOICES — ✅ PRODUKČNÍ ROLLOUT PROVEDEN (12. 06. 2026, výslovné schválení Pavla „schvaluji produkční rollout partner faktur")
 
 **Produkce `xkzhjldrojjlrkezorey` — vše aplikováno a smoke-ověřeno:**

@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## PARTNER INVOICES — ✅ PDF OVERVIEW PRODUKČNÍ FIX DOKONČEN (12. 06. 2026)
+
+Production fix pro Partner Invoice PDF overview mismatch je kompletní na produkci `xkzhjldrojjlrkezorey`. Migrace `20260612125606_partner_invoice_line_snapshots.sql` byla aplikována jako verze `20260612132440`. Edge Function `generate-partner-invoice-pdf` byla nasazena jako verze `131`; `send-partner-invoice-email` nebyla nasazena a zůstává verze `121`. Faktura `OMA-20260001` už nezobrazuje chybný date-range activation overview. Protože jde o legacy fakturu s 0 invoice-linked rows, PDF používá safe fallback/no-detail overview místo zavádějících 15 MioCoins. Nebyly odeslány žádné e-maily, nic nebylo označeno jako zaplacené a Affiliate Payouts byly nedotčeny. Production smoke prošel: run `27418726117`. Strict detail total = 5 pro legacy fakturu by vyžadoval samostatně schválený cílený backfill.
+
 ## PARTNER INVOICES — ✅ LIVE V PRODUKCI (12. 06. 2026, schválení Pavla)
 
 Partner Portal fakturace opravena, staging-ověřena a **12. 06. 2026 nasazena na produkci `xkzhjldrojjlrkezorey`** (3 migrace + 2 EF + private bucket + Vault auto-PDF aktivace). Smoke ✅: 401/403 kontrakt, admin Generovat PDF (signed URL, `%PDF`), Odeslat fakturu emailem → pouze `eshop@onemil.cz` (OMA-20260001 `draft → issued`, nic paid), partner RLS own/foreign 5/0. Production smoke `27414185094` + P0 `27414186632` ✅. **Lovable Publish proběhl a post-publish ověření prošlo (12. 06. 2026):** live bundle `index-BKax3mKj.js`, admin „Generovat PDF" funguje po publishi (nový export row — jediná záměrná datová změna), partner PDF download přes signed URL live, e-mail znovu netestován (dřívější smoke pouze `eshop@onemil.cz`), nic paid, Affiliate Payouts nedotčeny. Finální rollout commit `f3d281c0`. **Partner Invoice fix je plně live end-to-end.**
