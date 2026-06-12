@@ -8,23 +8,29 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const STAGING_REF = "dxmowysntemfqfnanxua";
+const SAFE_STAGING_RECIPIENT = "eshop@onemil.cz";
+
 /**
  * Authorization (12. 06. 2026):
  *  1. backend/automation path — `x-internal-token` matching INTERNAL_FUNCTION_TOKEN
  *     (same pattern as pg_cron jobs 23/24) OR service-role bearer token
  *  2. admin fallback path — logged-in admin/superadmin JWT (no secret in browser)
  */
-async function authorizeRequest(req: Request): Promise<{ status: number; error: string } | null> {
+async function authorizeRequest(
+  req: Request,
+  options: { adminJwtOnly?: boolean } = {},
+): Promise<{ status: number; error: string } | null> {
   const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
   const provided = req.headers.get("x-internal-token");
-  if (internalToken && provided && provided === internalToken) return null;
+  if (!options.adminJwtOnly && internalToken && provided && provided === internalToken) return null;
 
   const authHeader = req.headers.get("authorization") ?? "";
   const token = authHeader.replace(/^Bearer\s+/i, "").trim();
   if (!token) return { status: 401, error: "missing_authorization" };
 
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  if (serviceKey && token === serviceKey) return null;
+  if (!options.adminJwtOnly && serviceKey && token === serviceKey) return null;
 
   const admin = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceKey);
   const { data: userData, error: userError } = await admin.auth.getUser(token);
@@ -46,7 +52,18 @@ serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const authFailure = await authorizeRequest(req);
+  let payload: { invoice_id?: string; resend?: boolean; mode?: string };
+  try {
+    payload = await req.json();
+  } catch (_error) {
+    return new Response(
+      JSON.stringify({ error: "invalid_json" }),
+      { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
+  }
+
+  const isResend = payload.resend === true || payload.mode === "resend";
+  const authFailure = await authorizeRequest(req, { adminJwtOnly: isResend });
   if (authFailure) {
     return new Response(
       JSON.stringify({ error: authFailure.error }),
@@ -55,7 +72,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { invoice_id } = await req.json();
+    const { invoice_id } = payload;
     if (!invoice_id) {
       throw new Error("Missing invoice_id");
     }
@@ -76,7 +93,7 @@ serve(async (req: Request) => {
     if (!invoice) throw new Error("Faktura nenalezena");
 
     // 1a. Only send if status is 'draft'
-    if (invoice.status !== "draft") {
+    if (!isResend && invoice.status !== "draft") {
       console.log(`⏭️ Invoice ${invoice_id} has status '${invoice.status}', skipping (only 'draft' allowed)`);
       return new Response(
         JSON.stringify({ success: false, skipped: true, reason: `Faktura má stav '${invoice.status}', odesílání je povoleno pouze pro stav 'draft'.` }),
@@ -88,12 +105,24 @@ serve(async (req: Request) => {
     if (!partner) throw new Error("Partner nenalezen");
 
     const recipientEmail = partner.contact_email;
+    const isStaging = (Deno.env.get("SUPABASE_URL") ?? "").includes(STAGING_REF);
     if (!recipientEmail) throw new Error("Partner nemá nastaven kontaktní e-mail");
+
+    if (isStaging && recipientEmail !== SAFE_STAGING_RECIPIENT) {
+      return new Response(
+        JSON.stringify({
+          error: "recipient_not_allowed_for_staging_test",
+          sent_to: recipientEmail,
+          allowed_recipient: SAFE_STAGING_RECIPIENT,
+        }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     // 2. Load latest PDF export
     const { data: pdfExport } = await supabaseClient
       .from("partner_invoice_exports")
-      .select("file_url")
+      .select("id, file_url, created_at")
       .eq("invoice_id", invoice_id)
       .eq("format", "pdf")
       .order("created_at", { ascending: false })
@@ -101,6 +130,12 @@ serve(async (req: Request) => {
       .maybeSingle();
 
     const pdfUrl = pdfExport?.file_url ?? null;
+    if (isResend && !pdfUrl) {
+      return new Response(
+        JSON.stringify({ error: "pdf_export_required_for_resend" }),
+        { status: 409, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     // 3. Build email
     const partnerName = partner.company_name || partner.name;
@@ -194,6 +229,19 @@ serve(async (req: Request) => {
     }
 
     console.log(`✅ Invoice email sent successfully to ${recipientEmail}`);
+
+    if (isResend) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          resend: true,
+          sent_to: recipientEmail,
+          pdf_export_id: pdfExport?.id ?? null,
+          status_updated: false,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     // 5. Update invoice status to 'issued' and set issued_at
     const { error: updateError } = await supabaseClient

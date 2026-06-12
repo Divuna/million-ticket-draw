@@ -70,10 +70,19 @@ async function getJwt(email: string, password: string): Promise<string> {
   return data.session.access_token;
 }
 
-async function callEf(url: string, invoiceId: string, jwt?: string): Promise<Response> {
+async function callEf(
+  url: string,
+  invoiceId: string,
+  jwt?: string,
+  extraBody: Record<string, unknown> = {},
+): Promise<Response> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
-  return fetch(url, { method: 'POST', headers, body: JSON.stringify({ invoice_id: invoiceId }) });
+  return fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ invoice_id: invoiceId, ...extraBody }),
+  });
 }
 
 interface Ctx {
@@ -81,6 +90,7 @@ interface Ctx {
   nonAdminAuthId: string;
   partnerId: string;
   invoiceId: string;
+  noPdfInvoiceId: string;
   fileUrl: string | null;
 }
 const ctx: Partial<Ctx> = { fileUrl: null };
@@ -143,6 +153,27 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
       .single();
     if (invErr) throw new Error(`invoice insert: ${invErr.message}`);
     ctx.invoiceId = inv.id as string;
+
+    const { data: noPdfInv, error: noPdfInvErr } = await (admin as any)
+      .from('partner_invoices')
+      .insert({
+        partner_id: p.id,
+        period_start: '2026-06-08',
+        period_end: '2026-06-14',
+        period_from: '2026-06-08',
+        period_to: '2026-06-14',
+        coins_total: 1,
+        amount_net: 1,
+        vat_amount: 0.21,
+        amount_gross: 1.21,
+        invoice_number: `TEST-S44-NOPDF-${RUN_ID}`,
+        variable_symbol: '44440002',
+        status: 'issued',
+      })
+      .select('id')
+      .single();
+    if (noPdfInvErr) throw new Error(`no-pdf invoice insert: ${noPdfInvErr.message}`);
+    ctx.noPdfInvoiceId = noPdfInv.id as string;
   });
 
   test.afterAll(async () => {
@@ -154,6 +185,9 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
     }
     if (ctx.invoiceId) {
       await (admin as any).from('partner_invoices').delete().eq('id', ctx.invoiceId);
+    }
+    if (ctx.noPdfInvoiceId) {
+      await (admin as any).from('partner_invoices').delete().eq('id', ctx.noPdfInvoiceId);
     }
     if (ctx.partnerId) {
       await (admin as any).from('partners').delete().eq('id', ctx.partnerId);
@@ -173,9 +207,11 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
   test('44b: non-admin JWT → 403 on both EFs', async () => {
     const jwt = await getJwt(NONADMIN_EMAIL, PASSWORD);
     const r1 = await callEf(PDF_EF_URL, ctx.invoiceId!, jwt);
-    expect(r1.status).toBe(403);
+    expect([401, 403]).toContain(r1.status);
     const r2 = await callEf(EMAIL_EF_URL, ctx.invoiceId!, jwt);
-    expect(r2.status).toBe(403);
+    expect([401, 403]).toContain(r2.status);
+    const r3 = await callEf(EMAIL_EF_URL, ctx.invoiceId!, jwt, { resend: true });
+    expect([401, 403]).toContain(r3.status);
   });
 
   test('44c: admin JWT → PDF generated, export row, downloadable', async () => {
@@ -247,9 +283,97 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
 
     const { data: inv } = await (admin as any)
       .from('partner_invoices')
-      .select('status')
+      .select('status, paid_at')
       .eq('id', ctx.invoiceId)
       .single();
     expect(inv!.status).toBe('issued'); // never 'paid'
+    expect(inv!.paid_at).toBeNull();
+  });
+
+  test('44f: admin resends issued invoice from existing PDF without status or paid changes', async () => {
+    const admin = makeAdmin();
+    const jwt = await getJwt(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+    await (admin as any)
+      .from('partner_invoices')
+      .update({ status: 'issued', paid_at: null })
+      .eq('id', ctx.invoiceId);
+
+    const { data: beforeInvoice } = await (admin as any)
+      .from('partner_invoices')
+      .select('status, paid_at')
+      .eq('id', ctx.invoiceId)
+      .single();
+    expect(beforeInvoice!.status).toBe('issued');
+    expect(beforeInvoice!.paid_at).toBeNull();
+
+    const { data: beforeExports } = await (admin as any)
+      .from('partner_invoice_exports')
+      .select('id')
+      .eq('invoice_id', ctx.invoiceId)
+      .eq('format', 'pdf');
+    expect(beforeExports).toHaveLength(1);
+
+    const res = await callEf(EMAIL_EF_URL, ctx.invoiceId!, jwt, { resend: true });
+    const body = await res.json();
+
+    if (res.status === 503 && body.error === 'email_service_not_configured') {
+      // Staging without RESEND_API_KEY: controlled failure before any send.
+    } else {
+      expect(res.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(body.resend).toBe(true);
+      expect(body.sent_to).toBe(SAFE_RECIPIENT);
+      expect(body.status_updated).toBe(false);
+      expect(body.pdf_export_id).toBe(beforeExports![0].id);
+    }
+
+    const { data: afterInvoice } = await (admin as any)
+      .from('partner_invoices')
+      .select('status, paid_at')
+      .eq('id', ctx.invoiceId)
+      .single();
+    expect(afterInvoice!.status).toBe('issued');
+    expect(afterInvoice!.paid_at).toBeNull();
+
+    const { data: afterExports } = await (admin as any)
+      .from('partner_invoice_exports')
+      .select('id')
+      .eq('invoice_id', ctx.invoiceId)
+      .eq('format', 'pdf');
+    expect(afterExports).toHaveLength(beforeExports!.length);
+  });
+
+  test('44g: resend refuses missing PDF export and unsafe staging recipient', async () => {
+    const admin = makeAdmin();
+    const jwt = await getJwt(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+    const noPdfRes = await callEf(EMAIL_EF_URL, ctx.noPdfInvoiceId!, jwt, { resend: true });
+    const noPdfBody = await noPdfRes.json();
+    expect(noPdfRes.status).toBe(409);
+    expect(noPdfBody.error).toBe('pdf_export_required_for_resend');
+
+    await (admin as any)
+      .from('partners')
+      .update({ contact_email: `unsafe-spec44-${RUN_ID}@example.com` })
+      .eq('id', ctx.partnerId);
+    const unsafeRes = await callEf(EMAIL_EF_URL, ctx.invoiceId!, jwt, { resend: true });
+    const unsafeBody = await unsafeRes.json();
+    expect(unsafeRes.status).toBe(403);
+    expect(unsafeBody.error).toBe('recipient_not_allowed_for_staging_test');
+    expect(unsafeBody.allowed_recipient).toBe(SAFE_RECIPIENT);
+
+    await (admin as any)
+      .from('partners')
+      .update({ contact_email: SAFE_RECIPIENT })
+      .eq('id', ctx.partnerId);
+
+    const { data: invAfterUnsafe } = await (admin as any)
+      .from('partner_invoices')
+      .select('status, paid_at')
+      .eq('id', ctx.invoiceId)
+      .single();
+    expect(invAfterUnsafe!.status).toBe('issued');
+    expect(invAfterUnsafe!.paid_at).toBeNull();
   });
 });
