@@ -45,6 +45,7 @@ const SAFE_RECIPIENT = 'eshop@onemil.cz'; // the ONLY allowed real recipient
 const RUN_ID = Date.now();
 const PARTNER_EMAIL = `spec44-partner-${RUN_ID}@onemil.cz`;
 const NONADMIN_EMAIL = `spec44-nonadmin-${RUN_ID}@onemil.cz`;
+const SPEC_ADMIN_EMAIL = `spec44-admin-${RUN_ID}@onemil.cz`;
 const PASSWORD = `Spec44!${RUN_ID}x`;
 
 const isStaging =
@@ -89,6 +90,7 @@ async function callEf(
 }
 
 interface Ctx {
+  adminAuthId: string;
   partnerAuthId: string;
   nonAdminAuthId: string;
   partnerId: string;
@@ -118,6 +120,17 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
     });
     if (nuErr) throw new Error(`nonadmin user: ${nuErr.message}`);
     ctx.nonAdminAuthId = nu.user.id;
+
+    const { data: au, error: auErr } = await admin.auth.admin.createUser({
+      email: SPEC_ADMIN_EMAIL, password: PASSWORD, email_confirm: true,
+    });
+    if (auErr) throw new Error(`admin user: ${auErr.message}`);
+    ctx.adminAuthId = au.user.id;
+
+    const { error: roleErr } = await (admin as any)
+      .from('user_roles')
+      .insert({ user_id: au.user.id, role: 'admin' });
+    if (roleErr) throw new Error(`admin role insert: ${roleErr.message}`);
 
     const { data: p, error: pErr } = await (admin as any)
       .from('partners')
@@ -195,7 +208,10 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
     if (ctx.partnerId) {
       await (admin as any).from('partners').delete().eq('id', ctx.partnerId);
     }
-    for (const uid of [ctx.partnerAuthId, ctx.nonAdminAuthId]) {
+    if (ctx.adminAuthId) {
+      await (admin as any).from('user_roles').delete().eq('user_id', ctx.adminAuthId);
+    }
+    for (const uid of [ctx.partnerAuthId, ctx.nonAdminAuthId, ctx.adminAuthId]) {
       if (uid) await admin.auth.admin.deleteUser(uid).catch(() => undefined);
     }
   });
@@ -218,7 +234,7 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
   });
 
   test('44c: admin JWT → PDF generated, export row, downloadable', async () => {
-    const jwt = await getJwt(ADMIN_EMAIL, ADMIN_PASSWORD);
+    const jwt = await getJwt(SPEC_ADMIN_EMAIL, PASSWORD);
     const res = await callEf(PDF_EF_URL, ctx.invoiceId!, jwt);
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -262,7 +278,7 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
   });
 
   test('44e: admin sends invoice email — only to safe recipient, status issued', async () => {
-    const jwt = await getJwt(ADMIN_EMAIL, ADMIN_PASSWORD);
+    const jwt = await getJwt(SPEC_ADMIN_EMAIL, PASSWORD);
     const res = await callEf(EMAIL_EF_URL, ctx.invoiceId!, jwt);
     const body = await res.json();
     const admin = makeAdmin();
@@ -295,7 +311,7 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
 
   test('44f: admin resends issued invoice from existing PDF without status or paid changes', async () => {
     const admin = makeAdmin();
-    const jwt = await getJwt(ADMIN_EMAIL, ADMIN_PASSWORD);
+    const jwt = await getJwt(SPEC_ADMIN_EMAIL, PASSWORD);
 
     await (admin as any)
       .from('partner_invoices')
@@ -349,7 +365,7 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
 
   test('44g: resend refuses missing PDF export and unsafe staging recipient', async () => {
     const admin = makeAdmin();
-    const jwt = await getJwt(ADMIN_EMAIL, ADMIN_PASSWORD);
+    const jwt = await getJwt(SPEC_ADMIN_EMAIL, PASSWORD);
 
     const noPdfRes = await callEf(EMAIL_EF_URL, ctx.noPdfInvoiceId!, jwt, { resend: true });
     const noPdfBody = await noPdfRes.json();
