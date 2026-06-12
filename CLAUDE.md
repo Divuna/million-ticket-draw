@@ -11,7 +11,7 @@ Partner Portal fakturace (coin/offer faktury firem) opravena a ověřena **pouze
 - Bucket `partner-invoices` je na stagingu **private**; EF vrací 10letou signed URL (`createSignedUrl`), ne public URL. Na produkci přepnout na private při rolloutu — nevracet `getPublicUrl`.
 - Partner faktury negeneruje a e-maily neposílá — pouze čte vlastní data (RLS) a stahuje PDF přes uloženou signed URL. `PartnerDashboard.downloadOfferInvoicePdf` čte `partner_invoice_exports`, NEVOLÁ EF.
 - `send-partner-invoice-email` bez `RESEND_API_KEY` vrací řízený `503 email_service_not_configured` a NEMĚNÍ status faktury. Posílá jen pro status `draft`, po úspěchu `draft → issued`.
-- Testovací e-mail příjemce při ověřování je **výhradně `divispavel2@gmail.com`**.
+- Testovací e-mail příjemce při ověřování partner invoice flow je **výhradně `eshop@onemil.cz`** (aktualizováno 12. 06. 2026). Nikdy neposílat testovací faktury reálným externím partnerům, zákazníkům ani třetím stranám.
 - Spec 43 (`43-partner-invoices.spec.ts`) a spec 44 (`44-partner-invoice-pdf-email.spec.ts`) musí zůstat zelené (run `27412464954`: 9 passed). Oba jsou staging-only a self-contained.
 
 ## NEJNOVĚJŠÍ STAV — DÁVKOVÉ VÝPLATY AFFILIATE/OBCHODNÍCH PROVIZÍ (10. 06. 2026)

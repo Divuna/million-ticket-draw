@@ -11,7 +11,7 @@
  *   E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD — staging admin account
  *
  * SAFE EMAIL RULE: the only real email this spec may trigger goes to
- * divispavel2@gmail.com (test partner contact_email). Never change this.
+ * eshop@onemil.cz (test partner contact_email). Never change this.
  *
  * Invariants verified:
  *   44a) no auth → 401 on both EFs
@@ -21,7 +21,7 @@
  *   44d) partner (authenticated, own invoice) can read the export row via RLS
  *        and download the PDF from the signed URL
  *   44e) admin JWT → send-partner-invoice-email 200, sent_to ==
- *        divispavel2@gmail.com, invoice status draft → issued (never paid)
+ *        eshop@onemil.cz, invoice status draft → issued (never paid)
  *
  * Cleanup: removes invoice (cascades exports), storage object, partner and
  * test users. Runs in afterAll even on failure.
@@ -40,7 +40,7 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? '';
 const PDF_EF_URL   = `${SUPABASE_URL}/functions/v1/generate-partner-invoice-pdf`;
 const EMAIL_EF_URL = `${SUPABASE_URL}/functions/v1/send-partner-invoice-email`;
 
-const SAFE_RECIPIENT = 'divispavel2@gmail.com'; // the ONLY allowed real recipient
+const SAFE_RECIPIENT = 'eshop@onemil.cz'; // the ONLY allowed real recipient
 
 const RUN_ID = Date.now();
 const PARTNER_EMAIL = `spec44-partner-${RUN_ID}@onemil.cz`;
