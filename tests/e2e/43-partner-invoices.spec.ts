@@ -47,6 +47,7 @@ async function cleanup(
   admin: SupabaseClient,
   ids: {
     partnerId?: string;
+    authUserId?: string;
     invoiceId?: string;
     rewardCodes: string[];
     activationIds: string[];
@@ -69,6 +70,9 @@ async function cleanup(
   }
   if (ids.partnerId) {
     await (admin as any).from('partners').delete().eq('id', ids.partnerId);
+  }
+  if (ids.authUserId) {
+    await admin.auth.admin.deleteUser(ids.authUserId);
   }
 }
 
@@ -108,6 +112,7 @@ test.describe('43 - partner invoices', () => {
     const periodTo = '2020-03-08';
     const ids: {
       partnerId?: string;
+      authUserId?: string;
       invoiceId?: string;
       rewardCodes: string[];
       activationIds: string[];
@@ -164,12 +169,21 @@ test.describe('43 - partner invoices', () => {
         .insert(rewardRows);
       expect(rewardError).toBeNull();
 
+      const { data: authUser, error: authUserError } = await admin.auth.admin.createUser({
+        email: `spec43-invoice-${unique}@onemil.cz`,
+        password: `Spec43Invoice${unique}!`,
+        email_confirm: true,
+      });
+      expect(authUserError).toBeNull();
+      expect(authUser.user).toBeTruthy();
+      ids.authUserId = authUser.user!.id;
+
       const activationRows = [
         {
           partner_id: partner.id,
           code: rewardRows[0].code,
           coins: 5,
-          user_id: crypto.randomUUID(),
+          user_id: authUser.user!.id,
           external_order_id: rewardRows[0].external_order_id,
           activated_at: `${periodFrom}T10:00:00.000Z`,
           invoiced: false,
@@ -178,7 +192,7 @@ test.describe('43 - partner invoices', () => {
           partner_id: partner.id,
           code: rewardRows[1].code,
           coins: 10,
-          user_id: crypto.randomUUID(),
+          user_id: authUser.user!.id,
           external_order_id: rewardRows[1].external_order_id,
           activated_at: `${periodFrom}T11:00:00.000Z`,
           invoiced: true,
