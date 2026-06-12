@@ -16,6 +16,11 @@
 
 ## 2026-06-12 — Partner Invoice admin resend button
 
+- Lovable Publish po úpravě admin invoice tlačítek byl ověřen na live webu; live bundle je `index-DZZxPOk1.js`.
+- Admin invoices live nyní zobrazují: `draft` → `Odeslat fakturu emailem`, `issued` → `Znovu odeslat`, `paid` → žádné send/resend tlačítko.
+- Staré status-only tlačítko `Odeslat` je pryč; v send/resend patičce se nezobrazuje ani staré `Označit jako zaplaceno`.
+- Při ověření nebyl odeslán žádný e-mail a nezměnil se žádný stav faktury.
+- `OMA-20260001` zůstává `issued` a `paid_at = null`.
 - Do `src/pages/AdminInvoices.tsx` bylo přidáno admin tlačítko `Znovu odeslat` pro již vydané partner faktury (`status='issued'`).
 - Tlačítko používá existující safe resend mode `send-partner-invoice-email` s `{ invoice_id, resend: true }`.
 - Resend nemění status, nenastavuje `paid_at` a neregeneruje PDF; při chybějícím PDF UI zobrazí `PDF faktura zatím není k dispozici.`
