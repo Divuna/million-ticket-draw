@@ -1,5 +1,28 @@
 ﻿# OneMil – aktuální stav projektu
 
+## 🧾 PARTNER INVOICES — FIX KOMPLETNÍ NA STAGINGU (12. 06. 2026, produkce NEDOTČENA)
+
+**Co bylo rozbité (audit 12. 06. 2026):** partner neviděl vlastní faktury (`partner_invoices` měla jen admin SELECT policy; exports/lines deny-all), admin změna stavu neměla UPDATE policy, oba invoice EF (`generate-partner-invoice-pdf`, `send-partner-invoice-email`) vyžadovaly `x-internal-token` který browser nemá → admin tlačítka vracela 401 (ověřeno na produkčním UI, faktura `cfa697db`), a `create_partner_invoices_for_last_week()` volala neexistující overload `enqueue_partner_invoice_email(uuid)` → první reálná fakturace by spadla.
+
+**Staging stav (vše aplikováno/nasazeno POUZE na `dxmowysntemfqfnanxua`):**
+- Migrace: `20260612090000_partner_invoice_rls_policies.sql` (partner own SELECT na invoices/exports/lines + admin UPDATE) ✅ · `20260612093000_partner_invoice_enqueue_fix.sql` (1-arg enqueue overload, jen INSERT do email_queue) ✅ · `20260612110000_partner_invoice_auto_pdf.sql` (`request_partner_invoice_pdf` best-effort pg_net+Vault, `partner_invoice_post_create` hook v obou `create_partner_invoices_*`) ✅.
+- EF deploy (staging, `--no-verify-jwt`): `generate-partner-invoice-pdf` v2, `send-partner-invoice-email` v2. Auth: `x-internal-token` (automatizace, stejný vzor jako cron joby 23/24) NEBO service-role bearer NEBO admin/superadmin JWT (UI fallback). Žádný token v prohlížeči.
+- PDF storage: bucket `partner-invoices` na stagingu vytvořen **private**; EF vrací 10letou **signed URL** místo public URL. ⚠️ Produkční bucket je zatím PUBLIC — v rolloutu přepnout na private (viz checklist).
+- E-mail: bez `RESEND_API_KEY` na stagingu vrací EF řízený `503 email_service_not_configured`, status faktury zůstává `draft`. Reálné doručení se ověří při produkčním rollout smoke (klíč existuje na produkci) na `divispavel2@gmail.com`.
+- Frontend (commit `78fa00fb`): `PartnerDashboard.downloadOfferInvoicePdf` čte `partner_invoice_exports` přes RLS (partner negeneruje faktury); `AdminInvoices` funguje beze změny (functions.invoke posílá JWT automaticky).
+- Testy: spec 43 (RLS visibility, 4 testy) ✅ run `27401675220` · spec 44 (EF kontrakt: 401/403/PDF+export+download/partner RLS download/email safe-fail, 5 testů) ✅ run `27412464954` (9 passed 43+44). Cleanup po obou specích = 0 zbytků (partners, invoices, queue, storage, users).
+- Automatický flow ověřen atomicky: `create_partner_invoices_for_period` → faktura + email_queue řádek + PDF hook no-op (staging bez pg_net), bez pádu; vše uklizeno v téže transakci.
+
+**Production rollout checklist (NEPROVEDENO — čeká na výslovné schválení Pavla):**
+1. Aplikovat 3 migrace v pořadí: `20260612090000` → `20260612093000` → `20260612110000`; postchecky z komentářů migrací (7 policies, 2 overloady enqueue, hook=true, ACL nových funkcí bez anon/authenticated).
+2. `UPDATE storage.buckets SET public=false WHERE id='partner-invoices'` (stávajících 10 export řádků má public URL z testovací éry — přestanou fungovat; regenerovat PDF adminem nebo akceptovat).
+3. Deploy `generate-partner-invoice-pdf` + `send-partner-invoice-email` s `--no-verify-jwt` (config.toml `verify_jwt=false`, auth řeší funkce interně). Ověřit env: `INTERNAL_FUNCTION_TOKEN`, `RESEND_API_KEY`, service key.
+4. Volitelná aktivace auto-PDF: Vault secrets `internal_function_token` (= hodnota INTERNAL_FUNCTION_TOKEN) a `edge_functions_url` (`https://xkzhjldrojjlrkezorey.supabase.co/functions/v1`) — bez nich je PDF hook no-op a e-mail flow funguje samostatně.
+5. Smoke: no-JWT → 401, non-admin → 403, admin JWT → PDF 200 + signed URL; „Odeslat fakturu" na testovací faktuře s recipientem `divispavel2@gmail.com`; nic neoznačovat paid.
+6. Lovable Publish (PartnerDashboard změna) + P0 smoke dle pravidel.
+7. Pozn.: `create_partner_invoices_*` mají pre-existing `authenticated` EXECUTE grant (SECURITY INVOKER, RLS chrání zápisy) — zvážit REVOKE jako samostatné hardening.
+8. Pozn.: Botanic má stále `[TEST DATA]` billing údaje — nahradit před ostrým provozem.
+
 **Aktualizováno:** 10. 06. 2026 — 🌿 **Samostatná větev: dávkové výplaty affiliate/obchodních provizí (Fáze A+B+C na stagingu ověřené, Fáze D opravený reviewable návrh — importní test Air Bank ✅ SPLNĚN, formát `.kpc` plně funkční, čeká na výslovné schválení Pavla pro staging aplikaci, produkce netknutá).** Hlavní roadmapa se teď nemění.
 
 ## 🌿 DÁVKOVÉ VÝPLATY PROVIZÍ — AKTUÁLNÍ STAV STAGINGU (10. 06. 2026)

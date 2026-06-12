@@ -1,5 +1,19 @@
 # CLAUDE.md
 
+## PARTNER INVOICES — FIX KOMPLETNÍ NA STAGINGU (12. 06. 2026, produkce NEDOTČENA)
+
+Partner Portal fakturace (coin/offer faktury firem) opravena a ověřena **pouze na stagingu `dxmowysntemfqfnanxua`**. Produkce `xkzhjldrojjlrkezorey` nedotčena — rollout checklist v `onemil_state.md`, čeká na výslovné schválení Pavla.
+
+**Aplikované staging migrace (soubory v repu, NEAPLIKOVAT na produkci bez schválení):** `20260612090000_partner_invoice_rls_policies.sql` (partner vidí jen vlastní faktury/exporty/řádky; admin UPDATE statusu) · `20260612093000_partner_invoice_enqueue_fix.sql` (chybějící overload `enqueue_partner_invoice_email(p_invoice_id uuid)` — cron volal neexistující signaturu, první reálná fakturace by spadla) · `20260612110000_partner_invoice_auto_pdf.sql` (hook `partner_invoice_post_create` = enqueue e-mail + best-effort PDF request přes pg_net+Vault; zapojen do `create_partner_invoices_for_last_week` i `_for_period`).
+
+**Závazná pravidla (neměnit bez schválení Pavla):**
+- EF `generate-partner-invoice-pdf` a `send-partner-invoice-email` autorizují: `x-internal-token` (automatizace/cron — stejný vzor jako joby 23/24) NEBO service-role bearer NEBO **admin/superadmin JWT** (UI fallback). **Žádný `VITE_INTERNAL_FUNCTION_TOKEN` v prohlížeči — nevracet.** `verify_jwt=false` v config.toml (auth řeší funkce interně).
+- Bucket `partner-invoices` je na stagingu **private**; EF vrací 10letou signed URL (`createSignedUrl`), ne public URL. Na produkci přepnout na private při rolloutu — nevracet `getPublicUrl`.
+- Partner faktury negeneruje a e-maily neposílá — pouze čte vlastní data (RLS) a stahuje PDF přes uloženou signed URL. `PartnerDashboard.downloadOfferInvoicePdf` čte `partner_invoice_exports`, NEVOLÁ EF.
+- `send-partner-invoice-email` bez `RESEND_API_KEY` vrací řízený `503 email_service_not_configured` a NEMĚNÍ status faktury. Posílá jen pro status `draft`, po úspěchu `draft → issued`.
+- Testovací e-mail příjemce při ověřování je **výhradně `divispavel2@gmail.com`**.
+- Spec 43 (`43-partner-invoices.spec.ts`) a spec 44 (`44-partner-invoice-pdf-email.spec.ts`) musí zůstat zelené (run `27412464954`: 9 passed). Oba jsou staging-only a self-contained.
+
 ## NEJNOVĚJŠÍ STAV — DÁVKOVÉ VÝPLATY AFFILIATE/OBCHODNÍCH PROVIZÍ (10. 06. 2026)
 
 Fáze A+B+C jsou aplikované a ověřené pouze na staging Supabase projektu `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` je netknutá. Nebyl proveden web deploy, Lovable Publish ani full E2E.

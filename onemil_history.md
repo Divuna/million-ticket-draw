@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-06-12 — Partner Invoice fix (staging kompletní)
+
+- Read-only audit Partner Portal fakturace: partner neviděl faktury (chybějící RLS), `partner_invoice_exports`/`partner_invoice_lines` deny-all, admin UPDATE bez policy, oba invoice EF vyžadovaly `x-internal-token` (live UI 401 ověřeno na produkci), cron volal neexistující `enqueue_partner_invoice_email(uuid)`.
+- RLS migrace `20260612090000_partner_invoice_rls_policies.sql` (commit `659002d5`) aplikována na staging; spec 43 zelený (run `27401675220`, 4 passed, commit `0ad88026`).
+- Enqueue fix `20260612093000_partner_invoice_enqueue_fix.sql` (commit `f2b3690b`) aplikován na staging; atomický funkční test OK (queue row vytvořen a smazán v téže transakci, nic neodesláno).
+- Auto-flow migrace `20260612110000_partner_invoice_auto_pdf.sql` aplikována na staging: `request_partner_invoice_pdf` (best-effort pg_net+Vault), `partner_invoice_post_create` hook v obou `create_partner_invoices_*`.
+- EF `generate-partner-invoice-pdf` v2 + `send-partner-invoice-email` v2 nasazeny POUZE na staging: auth = x-internal-token | service-role bearer | admin JWT; privátní bucket `partner-invoices` (na stagingu vytvořen private) + 10letá signed URL; chybějící RESEND_API_KEY → řízený 503 `email_service_not_configured`.
+- Frontend: `PartnerDashboard` stahuje PDF z `partner_invoice_exports` přes RLS (žádný EF, žádný token v prohlížeči); `AdminInvoices` beze změny kódu (JWT jde automaticky přes functions.invoke).
+- Spec 44 (44a–44e) zelený; targeted run `27412464954` 9 passed (43+44). Commits `78fa00fb`, `2b3a4625`.
+- Produkce nedotčena; rollout checklist připraven v `onemil_state.md`.
+
 ## 2026-06-12 - Dávkové výplaty — TEST payout flow E2E na produkci ✅ (schválení Pavla, app neveřejná)
 
 - TEST provize `eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee` (1,23 Kč) vytvořena → schválena přes admin UI → doklad **APD-2026-000001** (EF vygenerovala PDF do privátního bucketu) → dávka **APB-2026-000005** → Air Bank `.kpc` export vygenerován (status `exported`).
