@@ -177,7 +177,16 @@ serve(async (req: Request) => {
       emailOptions.attachments = attachments;
     }
 
-    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) {
+      // Controlled failure: nothing sent, invoice status unchanged
+      console.warn("⚠️ RESEND_API_KEY not configured — email not sent");
+      return new Response(
+        JSON.stringify({ error: "email_service_not_configured" }),
+        { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    const resend = new Resend(resendApiKey);
     const emailResponse = await resend.emails.send(emailOptions);
 
     if (emailResponse.error) {
