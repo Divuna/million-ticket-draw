@@ -756,6 +756,13 @@ P0 Smoke dle CLAUDE.md: registrace/login (01,02), login gating (33,14), ticket (
 - Pre-existing security backlog (23 nalezu) nesouvisi, ale nesmi byt nove zhorseno; recheck advisors.
 - Adjacent regression — payout RPC se dotykaji `affiliate_commissions` status flow; overit commissions UI (spec 39) a B2B fakturaci.
 
-### 17.8 ⛔ FINAL GATE
+### 17.8 ⛔ FINAL GATE — ✅ SCHVALENO A BACKEND PROVEDEN (12. 06. 2026)
 
-**Produkce `xkzhjldrojjlrkezorey` zustava BLOKOVANA.** Zadna migrace, EF deploy, settings zmena, smoke, Publish ani jakakoli produkcni/Supabase mutace tohoto rolloutu nesmi probehnout, dokud Pavel neda NOVE, VYSLOVNE, PISEMNE schvaleni pro produkci. Tento checklist je jen priprava — nic zde neni autorizovano k provedeni.
+Pavel dal 12. 06. 2026 vyslovne pisemne schvaleni produkce. **Backend rollout PROVEDEN** dle tohoto checklistu:
+
+- **Migrace 1–7 ✅** aplikovany v presnem poradi (A → B → B guard → C → D → D.1 → ACL patch), per-faze postchecky prosly.
+- **Settings ✅:** `accounting_email = divispavel2@gmail.com` (produkcni hodnota dle Pavla), payer `3151752019` / `3030` (seed D.1).
+- **EF ✅:** `create-affiliate-payout-document` v1 (`verify_jwt=true`), `generate-affiliate-bank-export` v1 (`verify_jwt=true`), `process-email-queue` v124 (`verify_jwt=false` — §17.2 risk vyresen: `cron.job` 16 overen, vola bez Authorization headeru, predchozi v123 mel rovnez `verify_jwt=false`; deploy pres CLI `--no-verify-jwt` po samostatnem schvaleni Pavla).
+- **Postchecky §17.3 ✅:** tabulky+RLS, privatni buckety, ACL service_role-only / bez anon, no-JWT 401 smoke, email worker no-auth 200 processed:0, advisors bez novych payout nalezu.
+- **Data safety ✅:** `dddddddd-…` nedotcen, 0 batchu, 0 dokladu, zadna platba, zadny e-mail.
+- **⏳ ZBYVA:** merge vetve do `main` → P0 smoke (§17.4) → **Lovable Publish (manualni akce Pavla)** → post-publish UI smoke (`/admin/affiliate-payouts` nacteni). Do publishe payout admin UI neni v live buildu.

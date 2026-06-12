@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-12 - Dávkové výplaty affiliate/obchodních provizí — PRODUKČNÍ ROLLOUT BACKENDU ✅ (schválení Pavla)
+
+- Na produkci `xkzhjldrojjlrkezorey` aplikováno 7 migrací v pořadí A → B → B guard → C → D → D.1 → ACL patch; postcheck po každé fázi prošel.
+- Settings: `accounting_email = divispavel2@gmail.com`, payer `3151752019` / `3030`.
+- EF nasazeny: `create-affiliate-payout-document` v1 (verify_jwt=true), `generate-affiliate-bank-export` v1 (verify_jwt=true), `process-email-queue` v124 (verify_jwt=false — pg_cron job 16 volá bez Authorization headeru; deploy CLI `--no-verify-jwt` po samostatném schválení Pavla, classifier napřed blokoval).
+- Postchecky: RLS, privátní buckety, ACL (document/export RPC service_role-only, admin RPC bez anon), smoke no-JWT → 401/401, email worker no-auth → 200 processed:0. Advisors bez nových payout nálezů.
+- Testovací řádek `dddddddd-…` nedotčen; žádný payout, platba ani e-mail nevytvořen.
+- Zbývá: merge do `main` + P0 smoke + Lovable Publish (manuální, Pavel) pro payout admin UI.
+
 ## 2026-06-11 - Dávkové výplaty affiliate/obchodních provizí — Full Staging E2E ✅ — větev production-ready
 
 - Full Staging E2E run `27372767070`: **123 passed · 4 skipped · 0 failed** (11m49s). Telegram OK doručen.
