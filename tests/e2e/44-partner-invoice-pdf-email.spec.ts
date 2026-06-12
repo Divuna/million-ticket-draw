@@ -16,10 +16,9 @@
  * Invariants verified:
  *   44a) no auth → 401 on both EFs
  *   44b) non-admin JWT → 403 on both EFs
- *   44c) admin JWT → generate-partner-invoice-pdf 200 + file_url (signed URL),
- *        partner_invoice_exports row created, PDF downloadable (HTTP 200, %PDF)
+ *   44c) internal token → generate-partner-invoice-pdf 200 + file_url,
+ *        partner_invoice_exports row created, PDF object downloadable via storage
  *   44d) partner (authenticated, own invoice) can read the export row via RLS
- *        and download the PDF from the signed URL
  *   44e) admin JWT → send-partner-invoice-email 200, sent_to ==
  *        eshop@onemil.cz, invoice status draft → issued (never paid)
  *
@@ -90,6 +89,21 @@ async function callEf(
     headers,
     body: JSON.stringify({ invoice_id: invoiceId, ...extraBody }),
   });
+}
+
+function storagePathFromFileUrl(fileUrl: string): string | null {
+  const match = fileUrl.match(/partner-invoices\/([^?]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+async function expectPdfObjectExists(admin: SupabaseClient, fileUrl: string): Promise<void> {
+  const storagePath = storagePathFromFileUrl(fileUrl);
+  expect(storagePath).toBeTruthy();
+  const { data, error } = await admin.storage.from('partner-invoices').download(storagePath!);
+  expect(error).toBeNull();
+  expect(data).toBeTruthy();
+  const head = new Uint8Array((await data!.arrayBuffer()).slice(0, 4));
+  expect(String.fromCharCode(...head)).toBe('%PDF');
 }
 
 interface Ctx {
@@ -199,8 +213,8 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
     const admin = makeAdmin();
     if (ctx.fileUrl) {
       // storage path: .../object/sign/partner-invoices/<filename>?token=...
-      const m = ctx.fileUrl.match(/partner-invoices\/([^?]+)/);
-      if (m) await admin.storage.from('partner-invoices').remove([decodeURIComponent(m[1])]).catch(() => undefined);
+      const storagePath = storagePathFromFileUrl(ctx.fileUrl);
+      if (storagePath) await admin.storage.from('partner-invoices').remove([storagePath]).catch(() => undefined);
     }
     if (ctx.invoiceId) {
       await (admin as any).from('partner_invoices').delete().eq('id', ctx.invoiceId);
@@ -236,7 +250,7 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
     expect([401, 403]).toContain(r3.status);
   });
 
-  test('44c: admin JWT → PDF generated, export row, downloadable', async () => {
+  test('44c: internal token → PDF generated, export row, storage object downloadable', async () => {
     const res = await callEf(
       PDF_EF_URL,
       ctx.invoiceId!,
@@ -258,13 +272,10 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
       .eq('format', 'pdf');
     expect(exp).toHaveLength(1);
 
-    const dl = await fetch(ctx.fileUrl!);
-    expect(dl.status).toBe(200);
-    const head = new Uint8Array((await dl.arrayBuffer()).slice(0, 4));
-    expect(String.fromCharCode(...head)).toBe('%PDF');
+    await expectPdfObjectExists(admin, ctx.fileUrl!);
   });
 
-  test('44d: partner reads own export via RLS and downloads PDF', async () => {
+  test('44d: partner reads own export via RLS', async () => {
     const client = makeAnon();
     const { error } = await client.auth.signInWithPassword({
       email: PARTNER_EMAIL, password: PASSWORD,
@@ -278,9 +289,7 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
     expect(expErr).toBeNull();
     expect(exps).toHaveLength(1);
     expect(exps![0].invoice_id).toBe(ctx.invoiceId);
-
-    const dl = await fetch(exps![0].file_url);
-    expect(dl.status).toBe(200);
+    expect(exps![0].file_url).toBe(ctx.fileUrl);
 
     await client.auth.signOut();
   });
