@@ -14,6 +14,13 @@
 
 ---
 
+## 2026-06-12 — Partner Invoice fix: POST-PUBLISH OVĚŘENÍ (finální)
+
+- Lovable Publish propagoval frontend změny — live bundle `index-BKax3mKj.js` (nový PartnerDashboard download kód potvrzen v bundlu).
+- Admin invoice UI funguje; „Generovat PDF" po publishi ověřen (nový export 12:08:42 UTC — jediná záměrná datová změna; nic paid).
+- Partner PDF download přes signed URL (privátní bucket) live. E-mail po publishi znovu netestován — dřívější smoke doručil pouze na `eshop@onemil.cz`.
+- Affiliate Payouts nedotčeny. Finální rollout commit `f3d281c0`. **Partner Invoice fix plně live end-to-end.**
+
 ## 2026-06-12 — Partner Invoice fix: PRODUKČNÍ ROLLOUT (výslovné schválení Pavla)
 
 - Aplikovány 3 migrace na produkci `xkzhjldrojjlrkezorey` v pořadí RLS (`20260612090000`) → enqueue fix (`20260612093000`) → auto-PDF hook (`20260612110000`); per-migrace postchecky OK.

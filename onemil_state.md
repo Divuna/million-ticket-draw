@@ -9,7 +9,8 @@
 - **Auto-PDF flow AKTIVOVÁN:** Vault secrets `internal_function_token` (zkopírován server-side z cron job 23 — nikdy nebyl v příkazu/logu) + `edge_functions_url`. Produkce má pg_net → `partner_invoice_post_create` při vzniku faktury frontuje e-mail a požádá o PDF.
 - Smoke ✅: no-auth/bad-JWT → 401 (obě EF) · admin UI „Generovat PDF" na OMA-20260001 → nový export se signed URL, stažení 200 `%PDF` (26 KB) · admin UI „Odeslat fakturu emailem" → doručeno **pouze na `eshop@onemil.cz`**, status `draft → issued` (11:55:29 UTC), NIC nepaid · partner RLS simulace: BOHEMIA auth user vidí 5 faktur/11 exportů, cizí uid 0/0 · non-admin 403 kontrakt kryje spec 44b (staging).
 - Workflows ✅: production smoke run `27414185094` · P0 smoke run `27414186632`.
-- ⏳ Zbývá: **Lovable Publish** (PartnerDashboard download změna — jen Pavel; starý build funguje, partner PDF tlačítko do Publish vrací řízený 403/při RLS čtení nic nerozbíjí) · Botanic `[TEST DATA]` billing nahradit před veřejným spuštěním.
+- **✅ POST-PUBLISH OVĚŘENÍ (12. 06. 2026):** Lovable Publish proběhl a propagoval se — live bundle změněn na `index-BKax3mKj.js` (obsahuje nový PartnerDashboard download kód). Admin invoice UI funguje; „Generovat PDF" po publishi ověřen (nový export row + storage objekt 12:08:42 UTC — jediná záměrná datová změna ověření). Partner PDF download přes signed URL flow je live (privátní bucket, `/object/sign/`). E-mail po publishi znovu NEtestován — dřívější produkční smoke doručil pouze na `eshop@onemil.cz`. Žádná faktura nebyla označena jako zaplacená. Affiliate Payouts nedotčeny. Finální rollout commit `f3d281c0`. **Partner Invoice fix je plně live end-to-end.**
+- ⏳ Zbývá: Botanic `[TEST DATA]` billing nahradit před veřejným spuštěním.
 
 ## 🧾 PARTNER INVOICES — FIX KOMPLETNÍ NA STAGINGU (12. 06. 2026, historický stav před rolloutem)
 
