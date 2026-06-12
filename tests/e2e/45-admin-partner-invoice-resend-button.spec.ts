@@ -138,6 +138,8 @@ test.describe('45 - admin partner invoice resend button', () => {
     const resendButton = page.getByRole('button', { name: 'Znovu odeslat' });
     await expect(resendButton).toBeVisible();
     await expect(page.getByRole('button', { name: 'Odeslat fakturu emailem' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Označit jako zaplaceno' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Odeslat', exact: true })).toHaveCount(0);
 
     await resendButton.click();
     await expect(page.getByText('Faktura byla znovu odeslána.')).toBeVisible();

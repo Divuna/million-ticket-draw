@@ -19,6 +19,7 @@
 - Do `src/pages/AdminInvoices.tsx` bylo přidáno admin tlačítko `Znovu odeslat` pro již vydané partner faktury (`status='issued'`).
 - Tlačítko používá existující safe resend mode `send-partner-invoice-email` s `{ invoice_id, resend: true }`.
 - Resend nemění status, nenastavuje `paid_at` a neregeneruje PDF; při chybějícím PDF UI zobrazí `PDF faktura zatím není k dispozici.`
+- Z normální admin invoice patičky bylo odstraněno status-only tlačítko `Odeslat`/`Označit jako zaplaceno`; draft se vystavuje přes skutečné e-mailové odeslání a paid se zde ručně nenastavuje.
 - Manuální produkční resend `OMA-20260001` na `eshop@onemil.cz` byl proveden dříve po schválení Pavla. Affiliate Payouts nedotčeny.
 
 ## 2026-06-12 — Partner Invoice PDF overview production fix

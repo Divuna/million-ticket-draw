@@ -7,6 +7,7 @@
 - Používá existující safe resend mode Edge Function `send-partner-invoice-email` s body `{ invoice_id, resend: true }`.
 - Resend nemění status faktury, nenastavuje `paid_at` a neregeneruje PDF; vyžaduje existující PDF export.
 - Pokud PDF export v UI není dostupný, admin dostane toast `PDF faktura zatím není k dispozici.`
+- Normální admin invoice UI už nezobrazuje status-only tlačítko `Odeslat`; draft faktury se vystavují pouze přes skutečné odeslání e-mailu backend flow a paid stav se v této UI patičce ručně nenastavuje.
 - Manuální produkční resend faktury `OMA-20260001` na `eshop@onemil.cz` už byl proveden dříve po schválení Pavla; nic nebylo označeno jako zaplacené.
 - Affiliate Payouts zůstaly nedotčeny.
 

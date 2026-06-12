@@ -73,7 +73,6 @@ const AdminInvoices: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceLines, setInvoiceLines] = useState<InvoiceLine[]>([]);
   const [linesLoading, setLinesLoading] = useState(false);
-  const [statusUpdating, setStatusUpdating] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [resendingEmail, setResendingEmail] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -193,38 +192,6 @@ const AdminInvoices: React.FC = () => {
     }
   };
 
-  const updateInvoiceStatus = async (newStatus: InvoiceStatus) => {
-    if (!selectedInvoice) return;
-
-    const previousStatus = selectedInvoice.status;
-    
-    // Optimistic update
-    setSelectedInvoice({ ...selectedInvoice, status: newStatus });
-    setInvoices(prev => prev.map(inv => 
-      inv.id === selectedInvoice.id ? { ...inv, status: newStatus } : inv
-    ));
-    setStatusUpdating(true);
-
-    // Only update the status column, do not touch any timestamp columns
-    const { error } = await supabase
-      .from('partner_invoices')
-      .update({ status: newStatus })
-      .eq('id', selectedInvoice.id);
-
-    if (error) {
-      // Revert optimistic update
-      setSelectedInvoice({ ...selectedInvoice, status: previousStatus });
-      setInvoices(prev => prev.map(inv => 
-        inv.id === selectedInvoice.id ? { ...inv, status: previousStatus } : inv
-      ));
-      toast.error('Chyba při aktualizaci stavu');
-      console.error(error);
-    } else {
-      toast.success(`Stav změněn na: ${statusLabels[newStatus]}`);
-    }
-    setStatusUpdating(false);
-  };
-
   // ISDOC generation temporarily disabled
   // const generateIsdoc = async () => {
   //   if (!selectedInvoice) return;
@@ -248,12 +215,6 @@ const AdminInvoices: React.FC = () => {
   //     setGeneratingIsdoc(false);
   //   }
   // };
-
-  const getNextStatus = (current: InvoiceStatus): InvoiceStatus | null => {
-    if (current === 'draft') return 'issued';
-    if (current === 'issued') return 'paid';
-    return null;
-  };
 
   const sendInvoiceEmail = async () => {
     if (!selectedInvoice) return;
@@ -632,17 +593,6 @@ const AdminInvoices: React.FC = () => {
                   </Button>
                 )}
 
-                {/* Status transition button */}
-                {getNextStatus(selectedInvoice.status) && (
-                  <Button
-                    size="sm"
-                    onClick={() => updateInvoiceStatus(getNextStatus(selectedInvoice.status)!)}
-                    disabled={statusUpdating}
-                  >
-                    {statusUpdating && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                    {selectedInvoice.status === 'draft' ? 'Odeslat' : 'Označit jako zaplaceno'}
-                  </Button>
-                )}
               </>
             )}
             <DrawerClose asChild>

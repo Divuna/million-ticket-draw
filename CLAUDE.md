@@ -2,7 +2,7 @@
 
 ## PARTNER INVOICES — ✅ ADMIN RESEND BUTTON PŘIDÁN (12. 06. 2026)
 
-Admin UI `src/pages/AdminInvoices.tsx` má tlačítko `Znovu odeslat` pouze pro partner faktury se stavem `issued`. Používá existující safe resend mode `send-partner-invoice-email` s `{ invoice_id, resend: true }`, nemění status, nenastavuje `paid_at` a neregeneruje PDF; pokud není dostupný existující PDF export, zobrazí toast `PDF faktura zatím není k dispozici.` Manuální produkční resend faktury `OMA-20260001` na `eshop@onemil.cz` už byl proveden dříve po schválení Pavla. Affiliate Payouts nedotčeny.
+Admin UI `src/pages/AdminInvoices.tsx` má tlačítko `Znovu odeslat` pouze pro partner faktury se stavem `issued`. Používá existující safe resend mode `send-partner-invoice-email` s `{ invoice_id, resend: true }`, nemění status, nenastavuje `paid_at` a neregeneruje PDF; pokud není dostupný existující PDF export, zobrazí toast `PDF faktura zatím není k dispozici.` Normální admin invoice UI už nezobrazuje status-only `Odeslat` ani `Označit jako zaplaceno`; draft se vystavuje přes skutečné e-mailové odeslání a paid se zde ručně nenastavuje. Manuální produkční resend faktury `OMA-20260001` na `eshop@onemil.cz` už byl proveden dříve po schválení Pavla. Affiliate Payouts nedotčeny.
 
 ## PARTNER INVOICES — ✅ PDF OVERVIEW PRODUKČNÍ FIX DOKONČEN (12. 06. 2026)
 
