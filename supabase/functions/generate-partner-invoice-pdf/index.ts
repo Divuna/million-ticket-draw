@@ -192,10 +192,6 @@ serve(async (req) => {
     }
 
     // ── 3. Fetch activation details for the control list ────────────
-    const periodStart = invoice.period_start;
-    const periodEnd = invoice.period_end;
-    const partnerId = invoice.partner?.id;
-
     let activations: any[] = [];
 
     if (isOfferInvoice) {
@@ -229,40 +225,56 @@ serve(async (req) => {
           offer_title: (a.partner_offers as any)?.title || '-',
         }));
       }
-    } else {
-      // Coin: existing logic — unchanged
-      if (partnerId && periodStart && periodEnd) {
+    } else if (lines.length > 0) {
+      const activationIds = lines.map((line: any) => line.activation_id).filter(Boolean);
+      const activationMap = new Map<string, any>();
+
+      if (activationIds.length > 0) {
         const { data: actData, error: actError } = await supabase
           .from('partner_coin_activations')
-          .select('activated_at, coins, code, external_order_id, user_id')
-          .eq('partner_id', partnerId)
-          .gte('activated_at', periodStart)
-          .lte('activated_at', periodEnd)
-          .order('activated_at', { ascending: true });
+          .select('id, code, user_id')
+          .in('id', activationIds);
 
         if (actError) {
-          console.error('Error fetching activations:', actError);
+          console.error('Error fetching invoice-linked activations:', actError);
         } else {
-          activations = actData || [];
-        }
-
-        if (activations.length > 0) {
-          const userIds = [...new Set(activations.map((a: any) => a.user_id))];
-          const emailMap = new Map<string, string>();
-          const userResults = await Promise.all(
-            userIds.map((uid: string) => supabase.auth.admin.getUserById(uid))
-          );
-          for (const result of userResults) {
-            if (result.data?.user) {
-              emailMap.set(result.data.user.id, result.data.user.email || '-');
-            }
+          for (const act of actData || []) {
+            activationMap.set(act.id, act);
           }
-          activations = activations.map((a: any) => ({
-            ...a,
-            user_email: emailMap.get(a.user_id) || '-',
-          }));
         }
       }
+
+      const userIds = [
+        ...new Set(
+          [...activationMap.values()]
+            .map((a: any) => a.user_id)
+            .filter(Boolean)
+        ),
+      ];
+      const emailMap = new Map<string, string>();
+
+      if (userIds.length > 0) {
+        const userResults = await Promise.all(
+          userIds.map((uid: string) => supabase.auth.admin.getUserById(uid))
+        );
+        for (const result of userResults) {
+          if (result.data?.user) {
+            emailMap.set(result.data.user.id, result.data.user.email || '-');
+          }
+        }
+      }
+
+      activations = lines.map((line: any) => {
+        const activation = activationMap.get(line.activation_id) || {};
+        return {
+          activated_at: line.activated_at,
+          coins: Number(line.coins || 0),
+          code: activation.code || line.external_order_id || '-',
+          external_order_id: line.external_order_id,
+          user_id: activation.user_id || null,
+          user_email: activation.user_id ? (emailMap.get(activation.user_id) || '-') : '-',
+        };
+      });
     }
 
     const partner = invoice.partner;
@@ -552,7 +564,7 @@ serve(async (req) => {
       y -= 20;
 
       if (activations.length === 0) {
-        currentPage.drawText('Žádné aktivace v tomto období.', { x: leftMargin, y, size: 9, font, color: rgb(0.5, 0.5, 0.5) });
+        currentPage.drawText('Detail aktivací není u této historické faktury k dispozici.', { x: leftMargin, y, size: 9, font, color: rgb(0.5, 0.5, 0.5) });
         y -= 20;
       } else {
         currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 16, color: rgb(0.9, 0.9, 0.92) });
@@ -668,8 +680,18 @@ serve(async (req) => {
       console.error('Error recording export:', exportError);
     }
 
+    const activationOverviewTotalCoins = isOfferInvoice
+      ? null
+      : activations.reduce((sum: number, activation: any) => sum + Number(activation.coins || 0), 0);
+
     return new Response(
-      JSON.stringify({ success: true, file_url: fileUrl }),
+      JSON.stringify({
+        success: true,
+        file_url: fileUrl,
+        activation_overview_source: isOfferInvoice ? 'partner_offer_activations' : 'partner_invoice_lines',
+        activation_overview_total_coins: activationOverviewTotalCoins,
+        activation_overview_rows: activations.length,
+      }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
