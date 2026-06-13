@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-06-13 — KRITICKÁ produkční oprava: odměny za doporučení (invite rewards)
+
+- Read-only bezpečnostní audit zákaznického login/registrace + invite reward flow odhalil kritickou díru na produkci `xkzhjldrojjlrkezorey`.
+- Funkce `public.create_referral_reward_from_wallet_credit(uuid, numeric)` byla `SECURITY DEFINER` a EXECUTE měl `anon`, `authenticated` i `public`; bez autorizace volajícího, bez vazby na platbu, bez idempotence → kdokoli mohl připsat odměnu za doporučení a MioCoiny do peněženky bez reálné platby.
+- Aplikováno (výslovné schválení Pavla „schvaluji produkční opravu kritické díry v odměnách za doporučení"):
+  `REVOKE EXECUTE ON FUNCTION public.create_referral_reward_from_wallet_credit(uuid, numeric) FROM anon, authenticated, public;`
+- Postcheck: anon execute = false, authenticated execute = false, service_role execute = true.
+- Legitimní cesta odměn přes platební trigger `create_referral_reward_from_payment` (idempotentní `ON CONFLICT (payment_id)`) zůstala nedotčena.
+- Rozsah dodržen: žádná změna app kódu, žádný deploy, Affiliate Payouts nedotčeny, Partner Invoices nedotčeny.
+- Otevřené body z auditu (NEOPRAVENO): (1) HIGH — invite reward tabulky stále vystavují příliš dat přes široké SELECT policy; (2) MEDIUM — Edge Function `admin-create-test-user` vyžaduje revizi autorizace.
+
 ## 2026-06-13 — Partner Invoice production test invoice with activation overview
 
 - Produkční test invoice `OMA-20260003` byl vytvořen, PDF-generated, ověřen a odeslán přesně jednou; Pavel potvrdil, že e-mail dorazil a vše je správně.

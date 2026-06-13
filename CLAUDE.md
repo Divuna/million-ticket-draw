@@ -1,5 +1,14 @@
 # CLAUDE.md
 
+## ODMĚNY ZA DOPORUČENÍ — KRITICKÁ PRODUKČNÍ OPRAVA (13. 06. 2026, invariant)
+
+Bezpečnostní audit zákaznického invite reward flow odhalil a opravil kritickou díru na produkci `xkzhjldrojjlrkezorey`.
+
+- **Funkce `public.create_referral_reward_from_wallet_credit(uuid, numeric)`** byla `SECURITY DEFINER` a EXECUTE měl `anon`, `authenticated` i `public`; bez autorizace volajícího, bez vazby na platbu, bez idempotence → kdokoli mohl připsat odměnu za doporučení a MioCoiny do peněženky bez reálné platby.
+- **Aplikováno** (výslovné schválení Pavla): `REVOKE EXECUTE ON FUNCTION public.create_referral_reward_from_wallet_credit(uuid, numeric) FROM anon, authenticated, public;` Postcheck: anon=false, authenticated=false, service_role=true.
+- **Pravidlo (neměnit):** tato funkce NESMÍ mít `anon`/`authenticated`/`public` EXECUTE. Odměny za doporučení vznikají VÝHRADNĚ přes legitimní platební trigger `create_referral_reward_from_payment` (idempotentní `ON CONFLICT (payment_id)`) — ten zůstal nedotčen. Nevracet EXECUTE grant zpět.
+- **Otevřené body z auditu (NEOPRAVENO, vyžadují samostatné schválení):** (1) HIGH — invite reward tabulky `referral_rewards`/`referrals`/`referral_codes` mají široké SELECT policy (`USING (true)`) vystavující cizí data; (2) MEDIUM — Edge Function `admin-create-test-user` bez autorizace + service role.
+
 ## PARTNER INVOICES — ✅ PRODUKČNÍ TEST NOVÉ PDF AKTIVAČNÍ TABULKY OVĚŘEN (13. 06. 2026)
 
 Produkční test invoice `OMA-20260003` byl vytvořen, PDF-generated, ověřen a odeslán přesně jednou. Pavel potvrdil, že e-mail dorazil a vše je správně. Invoice id: `75fc016e-5283-4801-a19f-0566a2aaa587`. Activation code/id: `TESTPDF20260613A` / `764ddcde-ff44-4c48-99fa-9ed9ef453818`. External order id: `TEST-PDF-OVERVIEW-20260613-5MC`. Invoice total: `5` MioCoins. `partner_invoice_lines` total: `5` MioCoins, 1 line. PDF overview total: `5` MioCoins. PDF export id: `48e44363-acde-4807-8d8c-ec3f85b5a8e7`. PDF obsahuje `Kontrolní přehled aktivací MioCoinů`, test activation code, test external order id a total `5`. E-mail byl odeslán přesně jednou na `eshop@onemil.cz`. Final status: `issued`. `paid_at`: `null`. `OMA-20260001` nebyla dotčena. Nic nebylo označeno jako zaplacené. Affiliate Payouts a nesouvisející systémy byly nedotčeny. Cleanup zatím nebyl proveden, aby Pavel mohl zkontrolovat e-mail/PDF. Cleanup identifiers for later: invoice `OMA-20260003`, invoice id `75fc016e-5283-4801-a19f-0566a2aaa587`, activation `TESTPDF20260613A`, activation id `764ddcde-ff44-4c48-99fa-9ed9ef453818`, PDF export `48e44363-acde-4807-8d8c-ec3f85b5a8e7`.

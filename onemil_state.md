@@ -1,5 +1,20 @@
 ﻿# OneMil – aktuální stav projektu
 
+## 🔐 KRITICKÁ PRODUKČNÍ OPRAVA — ODMĚNY ZA DOPORUČENÍ (13. 06. 2026)
+
+Read-only bezpečnostní audit zákaznického login/registrace + invite reward flow odhalil a **opravil kritickou díru na produkci `xkzhjldrojjlrkezorey`**.
+
+- **Funkce:** `public.create_referral_reward_from_wallet_credit(uuid, numeric)`.
+- **Problém:** byla `SECURITY DEFINER` a EXECUTE měl `anon`, `authenticated` i `public`; bez autorizace volajícího, bez vazby na platbu, bez idempotence → kdokoli mohl připsat odměnu za doporučení a MioCoiny do peněženky **bez reálné platby**.
+- **Aplikované SQL** (výslovné schválení Pavla):
+  `REVOKE EXECUTE ON FUNCTION public.create_referral_reward_from_wallet_credit(uuid, numeric) FROM anon, authenticated, public;`
+- **Postcheck:** anon execute = false · authenticated execute = false · service_role execute = true.
+- **Legitimní cesta odměn nedotčena:** platební trigger `create_referral_reward_from_payment` (idempotentní `ON CONFLICT (payment_id)`).
+- **Rozsah dodržen:** žádná změna app kódu, žádný deploy, Affiliate Payouts nedotčeny, Partner Invoices nedotčeny.
+- **Otevřené body z auditu (NEOPRAVENO):**
+  1. **HIGH** — invite reward tabulky (`referral_rewards`/`referrals`/`referral_codes`) stále vystavují příliš dat přes široké SELECT policy (`USING (true)`).
+  2. **MEDIUM** — Edge Function `admin-create-test-user` vyžaduje revizi autorizace.
+
 ## 🧾 PARTNER INVOICES — ✅ PRODUKČNÍ TEST NOVÉ PDF AKTIVAČNÍ TABULKY OVĚŘEN (13. 06. 2026)
 
 - Produkční test invoice `OMA-20260003` byl vytvořen, PDF-generated, ověřen a odeslán přesně jednou.
