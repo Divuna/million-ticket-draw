@@ -1,5 +1,46 @@
 ﻿# OneMil – aktuální stav projektu
 
+## ✅ STAGING PARTNER API REAL ACTIVATION TEST — PROŠEL (13. 06. 2026)
+
+Staging dxmowysntemfqfnanxua — real end-to-end partner API activation test prošel. Produkce nedotčena.
+
+### SQL aplikováno pouze na staging
+
+**ctivate_partner_reward_sql nahrazen reálnou implementací (staging-only):**
+- Zamkne partner_reward_codes řádek (FOR UPDATE)
+- Validuje: kód existuje pro daného partnera, status='issued', neexpirovaný
+- UPDATE: status='activated', ctivated_at=now(), ctivated_by_user_id=<staging_e2e_user>
+- Trigger 	rg_log_partner_coin_activation_reward automaticky vloží partner_coin_activations
+- Vrátí {success:true, coins, activation_id}
+- **Produkční ctivate_partner_reward_sql zůstává stub** — záměrně; reálná produkční implementace vyžaduje explicitní customer_user_id parametr (viz otevřený bod níže)
+
+**Test reward code vytvořen:**
+- Code: STAGING-APITEST-001, coins: 5, partner: E2E Staging Partner, status při vytvoření: issued
+
+### Test výsledek
+
+| Ověření | Výsledek |
+|---------|---------|
+| API HTTP status | **200 OK** |
+| Response body | {"status":"ok","coins":5,"activation_id":"e9b4148b-8478-41e5-82b5-3c1223817fa5"} |
+| partner_coin_activations řádek vytvořen | **Ano** — id e9b4148b-8478-41e5-82b5-3c1223817fa5, coins=5, invoiced=false |
+| partner_reward_codes status po testu | ctivated (2026-06-13 18:21:01 UTC) |
+| Faktury vytvořeny | **0** |
+| E-maily odeslány | žádný |
+| PDF generováno | žádné |
+| Stripe/platba | žádná |
+| Peněženka e2e@onemil.cz změněna | **Ne** (balance_coins=5000.00 beze změny — aktivace přes partner API trigger nekredituje wallet) |
+| Produkční data dotčena | **Ne** |
+
+### Data ponechaná na stagingu (pro budoucí testy)
+- partner_reward_codes: STAGING-APITEST-001 (status=ctivated) — kód je spotřebovaný; pro další test je třeba vytvořit nový kód
+- partner_coin_activations: id e9b4148b-... (invoiced=false) — zatím nefakturováno; staging cron job by mohl vytvořit fakturu v neděli → OK pro staging, nedotýká se produkce
+
+### Otevřené body před produkčním nasazením partner API
+1. **Produkční ctivate_partner_reward_sql je stub** — reálná implementace potřebuje customer_user_id parametr nebo jiný mechanismus (např. email lookup) pro ctivated_by_user_id
+2. **partner_coin_activations.user_id NOT NULL** — pro B2B API aktivace (žádný přihlášený zákazník) je potřeba schema change nebo explicit customer user parameter
+3. **Neúplný EF parametr** — partner-activate EF nepřijímá coins ani customer_user_id → partner e-shop nemůže specifikovat počet mincí ani zákazníka
+4. Tyto body vyžadují samostatné schválení Pavla před produkčním nasazením
 ## ✅ STAGING PARTNER API TEST ENVIRONMENT — PŘIPRAVEN A ROTOVÁN (13. 06. 2026)
 
 Staging dxmowysntemfqfnanxua má nasazené a funkční partner API EF pro bezpečné testování bez dotyku produkce.
@@ -49,6 +90,47 @@ Spec 47 (`tests/e2e/47-partner-dashboard-smoke.spec.ts`) test 47f aktualizován:
 - **Staging cílený run `27474214282`:** **3 passed · 0 skipped · 0 failed**, success (47f logout již passuje, není skipnut).
 - Test-only: žádná změna app UI, žádné SQL, žádný deploy, žádná produkční data. Affiliate Payouts a customer invite reward security nedotčeny.
 
+## ✅ STAGING PARTNER API REAL ACTIVATION TEST — PROŠEL (13. 06. 2026)
+
+Staging dxmowysntemfqfnanxua — real end-to-end partner API activation test prošel. Produkce nedotčena.
+
+### SQL aplikováno pouze na staging
+
+**ctivate_partner_reward_sql nahrazen reálnou implementací (staging-only):**
+- Zamkne partner_reward_codes řádek (FOR UPDATE)
+- Validuje: kód existuje pro daného partnera, status='issued', neexpirovaný
+- UPDATE: status='activated', ctivated_at=now(), ctivated_by_user_id=<staging_e2e_user>
+- Trigger 	rg_log_partner_coin_activation_reward automaticky vloží partner_coin_activations
+- Vrátí {success:true, coins, activation_id}
+- **Produkční ctivate_partner_reward_sql zůstává stub** — záměrně; reálná produkční implementace vyžaduje explicitní customer_user_id parametr (viz otevřený bod níže)
+
+**Test reward code vytvořen:**
+- Code: STAGING-APITEST-001, coins: 5, partner: E2E Staging Partner, status při vytvoření: issued
+
+### Test výsledek
+
+| Ověření | Výsledek |
+|---------|---------|
+| API HTTP status | **200 OK** |
+| Response body | {"status":"ok","coins":5,"activation_id":"e9b4148b-8478-41e5-82b5-3c1223817fa5"} |
+| partner_coin_activations řádek vytvořen | **Ano** — id e9b4148b-8478-41e5-82b5-3c1223817fa5, coins=5, invoiced=false |
+| partner_reward_codes status po testu | ctivated (2026-06-13 18:21:01 UTC) |
+| Faktury vytvořeny | **0** |
+| E-maily odeslány | žádný |
+| PDF generováno | žádné |
+| Stripe/platba | žádná |
+| Peněženka e2e@onemil.cz změněna | **Ne** (balance_coins=5000.00 beze změny — aktivace přes partner API trigger nekredituje wallet) |
+| Produkční data dotčena | **Ne** |
+
+### Data ponechaná na stagingu (pro budoucí testy)
+- partner_reward_codes: STAGING-APITEST-001 (status=ctivated) — kód je spotřebovaný; pro další test je třeba vytvořit nový kód
+- partner_coin_activations: id e9b4148b-... (invoiced=false) — zatím nefakturováno; staging cron job by mohl vytvořit fakturu v neděli → OK pro staging, nedotýká se produkce
+
+### Otevřené body před produkčním nasazením partner API
+1. **Produkční ctivate_partner_reward_sql je stub** — reálná implementace potřebuje customer_user_id parametr nebo jiný mechanismus (např. email lookup) pro ctivated_by_user_id
+2. **partner_coin_activations.user_id NOT NULL** — pro B2B API aktivace (žádný přihlášený zákazník) je potřeba schema change nebo explicit customer user parameter
+3. **Neúplný EF parametr** — partner-activate EF nepřijímá coins ani customer_user_id → partner e-shop nemůže specifikovat počet mincí ani zákazníka
+4. Tyto body vyžadují samostatné schválení Pavla před produkčním nasazením
 ## ✅ STAGING PARTNER API TEST ENVIRONMENT — PŘIPRAVEN A ROTOVÁN (13. 06. 2026)
 
 Staging dxmowysntemfqfnanxua má nasazené a funkční partner API EF pro bezpečné testování bez dotyku produkce.
