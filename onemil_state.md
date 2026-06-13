@@ -1,5 +1,18 @@
 ﻿# OneMil – aktuální stav projektu
 
+## ✅ P0 ADMIN FLOW AUDIT — PO SECURITY + INVOICE + CUSTOMER-FLOW PRÁCI (13. 06. 2026)
+
+P0 audit nejdůležitějších admin flow dokončen po invite reward security práci, Partner Invoice úklidu a P0 customer-flow auditu. Staging behaviorálně ověřen (green run), UI kontrakty staticky ověřeny, produkce pouze read-only.
+
+- **Staging Full E2E run `27464656913` byl green** — admin specy passed (`15`, `16`, `18`, `23`, `24`, `29`, `30`, `32`, `33` 6/6, `43` 4/5, `44` 7/7, `45` 1/1).
+- **Ověřené admin flow:** admin login · admin dashboard · contests admin page · otevření create/edit contest UI · vouchers admin page (route + policy) · messages/admin unread state · partner invoices admin page · partner invoice detail drawer · invoice tlačítka · admin `Doporučení a odměny` overview · admin tests page bez volání `admin-create-test-user`.
+- **Invoice tlačítka kontrakt (spec 45 + statická kontrola `AdminInvoices.tsx`):** `draft → Odeslat fakturu emailem`, `issued → Znovu odeslat`, `paid → žádné send/resend tlačítko`.
+- **Admin tests page (statická kontrola `ComprehensiveAdminTestDashboard.tsx`):** jediná zmínka `admin-create-test-user` je v neutralizovaném `createTestUser` (toast „Tento produkční test byl bezpečnostně vypnut."); žádné `.invoke()` nikde v `src`.
+- **Produkce `xkzhjldrojjlrkezorey` — pouze read-only:** `partner_invoices`/`_lines`/`_exports` admin čte přes `is_admin()`, partner own-row, žádné `USING (true)`; invite reward tabulky own-row + admin read-all (`has_role` admin/superadmin); `vouchers` admin SELECT + záměrný world-readable veřejný katalog.
+- **Žádný admin blocker nenalezen.**
+- **Doporučené pozdější test-only zlepšení:** přidat dedikované read-only smoke specy pro `/admin/vouchers` a `/admin/referrals` (jediné dva admin P0 flow zatím bez vlastního spec; dnes prochází přes route + policy).
+- Bez změny souborů, bez SQL writes, bez deploye, bez e-mailů, bez generování PDF, bez označení faktur jako zaplaceno, bez vytváření soutěží. Žádná produkční data nezměněna. Affiliate Payouts a Partner Invoice logika nedotčeny.
+
 ## ✅ P0 CUSTOMER FLOW AUDIT — PO SECURITY + INVOICE PRÁCI (13. 06. 2026)
 
 P0 audit nejdůležitějších zákaznických flow byl dokončen po nedávné invite reward security práci a Partner Invoice úklidu. Staging behaviorálně ověřen, produkce pouze read-only.

@@ -1,5 +1,16 @@
 # CLAUDE.md
 
+## P0 ADMIN FLOW AUDIT — ✅ ZELENÝ PO SECURITY + INVOICE + CUSTOMER-FLOW PRÁCI (13. 06. 2026)
+
+P0 audit admin flow dokončen. Staging behaviorálně ověřen (green run), UI kontrakty staticky, produkce read-only.
+
+- **Staging Full E2E run `27464656913` green** — admin specy passed (`15`, `16`, `18`, `23`, `24`, `29`, `30`, `32`, `33` 6/6, `43` 4/5, `44` 7/7, `45` 1/1).
+- **Ověřené admin flow:** admin login, admin dashboard, contests admin page, otevření create/edit contest UI, vouchers admin page (route + policy), messages/admin unread state, partner invoices admin page, partner invoice detail drawer, invoice tlačítka, admin „Doporučení a odměny" overview, admin tests page bez volání `admin-create-test-user`.
+- **Invoice tlačítka (spec 45 + statická kontrola `AdminInvoices.tsx`):** `draft → Odeslat fakturu emailem`, `issued → Znovu odeslat`, `paid → žádné send/resend`. **Admin tests page:** `createTestUser` neutralizován (toast „bezpečnostně vypnut"), žádné `.invoke('admin-create-test-user')` v `src`.
+- **Produkce `xkzhjldrojjlrkezorey` read-only:** `partner_invoices`/`_lines`/`_exports` admin přes `is_admin()` + partner own-row; invite reward tabulky own-row + admin read-all; `vouchers` admin SELECT + záměrný world-readable katalog; žádné `USING (true)`.
+- **Žádný admin blocker.** Bez změny souborů, bez SQL writes, bez deploye, bez e-mailů, bez generování PDF, bez označení faktur zaplaceno, bez vytváření soutěží, žádná produkční data nezměněna.
+- **Doporučené pozdější test-only zlepšení:** dedikované read-only smoke specy pro `/admin/vouchers` a `/admin/referrals`.
+
 ## P0 CUSTOMER FLOW AUDIT — ✅ ZELENÝ PO SECURITY + INVOICE PRÁCI (13. 06. 2026)
 
 P0 audit zákaznických flow dokončen po invite reward security práci a Partner Invoice úklidu. Staging behaviorálně ověřen, produkce pouze read-only.

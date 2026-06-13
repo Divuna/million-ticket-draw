@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-13 — P0 admin flow audit po security + invoice + customer-flow práci
+
+- Staging Full E2E run `27464656913` green; admin specy passed (`15`, `16`, `18`, `23`, `24`, `29`, `30`, `32`, `33` 6/6, `43` 4/5, `44` 7/7, `45` 1/1).
+- Ověřené admin flow: admin login, admin dashboard, contests admin page, otevření create/edit contest UI, vouchers admin page (route + policy), messages/admin unread state, partner invoices admin page, partner invoice detail drawer, invoice tlačítka, admin `Doporučení a odměny` overview, admin tests page bez volání `admin-create-test-user`.
+- Invoice tlačítka (spec 45 + statická kontrola): `draft → Odeslat fakturu emailem`, `issued → Znovu odeslat`, `paid → žádné send/resend`. Admin tests page: `createTestUser` neutralizován, žádné `.invoke('admin-create-test-user')` v `src`.
+- Produkce `xkzhjldrojjlrkezorey` ověřena pouze read-only: `partner_invoices` admin přes `is_admin()` + partner own-row; invite reward tabulky own-row + admin read-all; `vouchers` admin SELECT + záměrný world-readable katalog; žádné `USING (true)`.
+- Žádný admin blocker. Bez změny souborů, bez SQL writes, bez deploye, bez e-mailů, bez generování PDF, bez označení faktur jako zaplaceno, bez vytváření soutěží, žádná produkční data nezměněna.
+- Doporučené pozdější test-only zlepšení: dedikované read-only smoke specy pro `/admin/vouchers` a `/admin/referrals`.
+
 ## 2026-06-13 — P0 customer flow audit po security + invoice práci
 
 - Staging Full E2E run `27464656913` ✅: **112 passed · 28 skipped · 0 failed** (větev `main`).
