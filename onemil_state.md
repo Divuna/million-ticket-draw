@@ -1,5 +1,20 @@
 ﻿# OneMil – aktuální stav projektu
 
+## 🔄 STAGING SYNC — INVITE REWARD SECURITY FIXY (13. 06. 2026)
+
+Staging `dxmowysntemfqfnanxua` synchronizován s již schválenými produkčními invite reward security fixy. Produkce `xkzhjldrojjlrkezorey` byla v tomto kroku **pouze read-only** a nebyla změněna.
+
+- **Staging před syncem postrádal oba fixy:**
+  1. `create_referral_reward_from_wallet_credit(uuid,numeric)` stále povoloval `anon` i `authenticated` execute.
+  2. `referrals`, `referral_rewards`, `referral_codes` měly RLS zapnuté, ale nula policy.
+- **Aplikováno pouze na staging:**
+  - REVOKE `EXECUTE` na `create_referral_reward_from_wallet_credit(uuid,numeric)` od `anon`, `authenticated`, `public`.
+  - Přidány stejné own-row + admin/superadmin SELECT policy jako produkce na `referrals`, `referral_rewards`, `referral_codes`.
+- **Staging postcheck ✅:** anon execute=false · authenticated execute=false · service_role execute=true · 6 SELECT policy · žádné broad `USING (true)` · payment reward triggery intaktní (`create_referral_reward_from_payment`, `reverse_referral_reward_on_payment_status_change`).
+- **Staging Full E2E run `27459386337` proběhl úspěšně.** Ověřené flow: registrace/login, profil, peněženka, top-up/checkout bez reálné platby, vlastní invite zobrazení zákazníka, admin invite přehled. **Žádný rozbitý flow.**
+- Bez změny produkčních dat, bez reálných plateb, bez vytváření uživatelů, bez e-mailů, bez deploye. Affiliate Payouts a Partner Invoices nedotčeny.
+- **Otevřený bezpečnostní bod (NEOPRAVENO):** MEDIUM — Edge Function `admin-create-test-user` bez autorizace + service role.
+
 ## 🔒 INVITE REWARD RLS — ✅ REGRESSION AUDIT PO PRODUKČNÍ OPRAVĚ (13. 06. 2026)
 
 - Regression audit after production invite reward RLS fix was completed.

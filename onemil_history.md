@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-13 — Staging sync produkčních invite reward security fixů
+
+- Staging `dxmowysntemfqfnanxua` synchronizován s již schválenými produkčními invite reward security fixy. Produkce `xkzhjldrojjlrkezorey` v tomto kroku pouze read-only, nezměněna.
+- Staging před syncem postrádal oba fixy: (1) `create_referral_reward_from_wallet_credit(uuid,numeric)` povoloval `anon` i `authenticated` execute; (2) `referrals`, `referral_rewards`, `referral_codes` měly RLS zapnuté, ale nula policy.
+- Aplikováno pouze na staging: REVOKE `EXECUTE` na `create_referral_reward_from_wallet_credit(uuid,numeric)` od `anon`, `authenticated`, `public`; přidány stejné own-row + admin/superadmin SELECT policy jako produkce na `referrals`, `referral_rewards`, `referral_codes`.
+- Staging postcheck: anon execute=false, authenticated execute=false, service_role execute=true; 6 SELECT policy; žádné broad `USING (true)`; payment reward triggery `create_referral_reward_from_payment` a `reverse_referral_reward_on_payment_status_change` intaktní.
+- Staging Full E2E run `27459386337` prošel úspěšně. Ověřeno: registrace/login, profil, peněženka, top-up/checkout bez reálné platby, vlastní invite zobrazení zákazníka, admin invite přehled. Žádný rozbitý flow.
+- Bez změny produkčních dat, bez reálných plateb, bez vytváření uživatelů, bez e-mailů, bez deploye, bez změny app kódu. Affiliate Payouts a Partner Invoices nedotčeny.
+- Otevřený bod (NEOPRAVENO): MEDIUM — Edge Function `admin-create-test-user` bez autorizace + service role.
+
 ## 2026-06-13 — Invite reward RLS production fix regression audit
 
 - Regression audit after production invite reward RLS fix was completed on production project `xkzhjldrojjlrkezorey`.

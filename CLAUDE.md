@@ -1,5 +1,17 @@
 # CLAUDE.md
 
+## ODMĚNY ZA DOPORUČENÍ — STAGING SYNCHRONIZOVÁN S PRODUKČNÍMI FIXY (13. 06. 2026, invariant)
+
+Staging `dxmowysntemfqfnanxua` byl synchronizován s již schválenými produkčními invite reward security fixy. Produkce `xkzhjldrojjlrkezorey` byla v tomto kroku **pouze read-only** a nebyla změněna.
+
+- **Staging před syncem postrádal oba fixy:** (1) `create_referral_reward_from_wallet_credit(uuid,numeric)` stále povoloval execute pro `anon` i `authenticated`; (2) `referrals`, `referral_rewards`, `referral_codes` měly RLS zapnuté, ale **nula policy** (deny-all i pro vlastní data).
+- **Aplikováno pouze na staging:** REVOKE `EXECUTE` na `create_referral_reward_from_wallet_credit(uuid,numeric)` od `anon`, `authenticated`, `public`; přidány stejné own-row + admin/superadmin SELECT policy jako na produkci na `referrals`, `referral_rewards`, `referral_codes`.
+- **Staging postcheck ✅:** anon execute=false, authenticated execute=false, service_role execute=true; 6 SELECT policy; žádné broad `USING (true)`; payment reward triggery `create_referral_reward_from_payment` i `reverse_referral_reward_on_payment_status_change` zůstaly intaktní.
+- **Staging Full E2E run `27459386337` ✅** — registrace/login, profil, peněženka, top-up/checkout (bez reálné platby), vlastní invite zobrazení zákazníka, admin invite přehled. Žádný rozbitý flow.
+- **Pravidlo (neměnit):** staging i produkce musí pro tyto tři tabulky držet own+admin policy bez `USING (true)` a funkce `create_referral_reward_from_wallet_credit` nesmí mít anon/authenticated/public EXECUTE.
+- Bez změny produkčních dat, bez reálných plateb, bez vytváření uživatelů, bez e-mailů, bez deploye, bez změny app kódu. Affiliate Payouts a Partner Invoices nedotčeny.
+- **Otevřený bezpečnostní bod (NEOPRAVENO):** MEDIUM — Edge Function `admin-create-test-user` bez autorizace + service role.
+
 ## INVITE REWARD RLS — ✅ REGRESSION AUDIT PO PRODUKČNÍ OPRAVĚ (13. 06. 2026)
 
 Regression audit after production invite reward RLS fix was completed on production project `xkzhjldrojjlrkezorey`. Verified read-only on production: `referrals`, `referral_rewards`, `referral_codes` now have exactly 2 scoped SELECT policies per table; no broad `USING (true)` policies remain; `wallets`, `profiles`, and `payments` policies stayed unchanged. Static code check confirmed only 4 frontend files read the 3 invite reward tables: `src/components/ReferralSection.tsx`, `src/pages/AdminReferrals.tsx`, `src/pages/AdminReferralDashboard.tsx`, `src/components/AdminReferralAudit.tsx`. Login, profile, wallet, top-up, voucher, and payment code do not depend on the changed tables. Edge Functions do not reference the changed invite reward tables. `create-stripe-checkout` remains JWT-gated and derives `user_id` server-side. `stripe-webhook` remains signature-verified and uses service-role path; wallet credit and `create_referral_reward_from_payment` are unaffected by tightened customer SELECT policies. Production smoke on post-fix commit `40df522b` passed at 2026-06-13 06:10 and confirmed registration/login still work. Conclusion: customer login safe; profile safe; wallet safe; top-up safe; payment/wallet credit path safe; own invite display safe; admin invite overview safe. No broken flow found. No production data was changed during the audit, no app code changed, no SQL writes, no deploy. Remaining open security item: MEDIUM — `admin-create-test-user` Edge Function lacks authorization and uses service role.
