@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-13 — Partner Invoice production test invoice with activation overview
+
+- Produkční test invoice `OMA-20260003` byl vytvořen, PDF-generated, ověřen a odeslán přesně jednou; Pavel potvrdil, že e-mail dorazil a vše je správně.
+- Invoice id: `75fc016e-5283-4801-a19f-0566a2aaa587`; activation code/id: `TESTPDF20260613A` / `764ddcde-ff44-4c48-99fa-9ed9ef453818`; external order id: `TEST-PDF-OVERVIEW-20260613-5MC`.
+- Invoice total = `5` MioCoins, `partner_invoice_lines` total = `5` MioCoins (1 line), PDF overview total = `5` MioCoins.
+- PDF export id `48e44363-acde-4807-8d8c-ec3f85b5a8e7`; PDF contains `Kontrolní přehled aktivací MioCoinů`, the test activation code, the test external order id, and total `5`.
+- E-mail was sent exactly once to `eshop@onemil.cz`; final status `issued`; `paid_at = null`.
+- `OMA-20260001` was not touched; nothing was marked paid; Affiliate Payouts and unrelated systems were untouched.
+- No cleanup was performed yet so Pavel can inspect the email/PDF. Cleanup identifiers for later: invoice `OMA-20260003`, invoice id `75fc016e-5283-4801-a19f-0566a2aaa587`, activation `TESTPDF20260613A`, activation id `764ddcde-ff44-4c48-99fa-9ed9ef453818`, PDF export `48e44363-acde-4807-8d8c-ec3f85b5a8e7`.
+
 ## 2026-06-12 — Partner Invoice admin resend button
 
 - Lovable Publish po úpravě admin invoice tlačítek byl ověřen na live webu; live bundle je `index-DZZxPOk1.js`.
