@@ -1,5 +1,16 @@
 ﻿# OneMil – aktuální stav projektu
 
+## ✅ PARTNER DASHBOARD SMOKE SPEC 47 PŘIDÁN (13. 06. 2026)
+
+Dedikovaný approved-partner dashboard smoke test přidán, aby uzamkl live business-text úpravy partner dashboardu proti regresi.
+
+- **Test soubor:** `tests/e2e/47-partner-dashboard-smoke.spec.ts` (staging-only, self-contained; service role vytvoří/uklidí jednoho throwaway approved partnera + auth usera, cleanup v `afterAll`).
+- **Commit:** `fe5f59a9`.
+- **Staging cílený run `27467129135`:** **2 passed · 1 skipped · 0 failed**, run success.
+- **Ověřuje:** 47a–47d schválený partner otevře `/partner/dashboard`, sekce `Nastavení konverze MioCoinů` viditelná, konverzní helper text viditelný (přesná kopie), karta `Fakturace MioCoinů` viditelná; 47e `Moje faktury` naviguje na `/partner/invoices`. 47f logout = best-effort, **skipnuto** (partner dashboard nemá vystavený logout control — by design, ne fail).
+- **Test-only:** žádná změna app UI/logiky, žádné schema, žádné SQL, žádný deploy, žádné e-maily, žádné PDF, žádná produkční data. Affiliate Payouts a customer invite reward security nedotčeny.
+- Uzavírá doporučené volitelné zpřísnění z P0 partner flow auditu.
+
 ## ✅ P0 PARTNER FLOW AUDIT — PO DASHBOARD BUSINESS-TEXT ÚPRAVÁCH (13. 06. 2026)
 
 P0 audit schváleného partnerského flow dokončen po úpravách business textů v partner dashboardu (explainer „Fakturace MioCoinů" + konverzní helper). Staging behaviorálně, produkce read-only.

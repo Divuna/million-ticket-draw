@@ -16,7 +16,14 @@ P0 audit schváleného partnerského flow dokončen po úpravách partner dashbo
 - **Ověřeno:** partner login, dashboard loads, konverzní helper text přítomen, karta `Fakturace MioCoinů` viditelná, `Moje faktury` → `/partner/invoices`, partner invoices page loads, PDF download jen když PDF existuje, partner nevidí faktury jiných partnerů, partner nemá přístup na admin invoice stránky, logout přes standardní sdílenou auth cestu.
 - **Produkce read-only:** RLS izolace partnerských invoice dat (`partner_invoices`/`_lines`/`_exports` partner-own přes `auth.uid()`, admin `is_admin()`, žádné `USING (true)`).
 - **Žádný partner blocker.** Bez změny produkčních dat, SQL, deploye, e-mailů, PDF, faktur či partnerů. Affiliate Payouts a customer invite reward security nedotčeny.
-- **Doporučené volitelné zpřísnění:** dedikovaný approved-partner dashboard smoke spec (Fakturace MioCoinů, konverzní helper, logout).
+- **Doporučené volitelné zpřísnění — ✅ UZAVŘENO (spec 47, viz níže):** dedikovaný approved-partner dashboard smoke spec přidán.
+
+## PARTNER DASHBOARD SMOKE SPEC 47 (13. 06. 2026, invariant)
+
+`tests/e2e/47-partner-dashboard-smoke.spec.ts` (staging-only, self-contained; service-role throwaway approved partner + cleanup v `afterAll`). Commit `fe5f59a9`. Staging cílený run `27467129135`: 2 passed · 1 skipped · 0 failed, success.
+
+- **Ověřuje:** schválený partner otevře `/partner/dashboard`; sekce `Nastavení konverze MioCoinů` viditelná; konverzní helper text viditelný (přesná kopie); karta `Fakturace MioCoinů` viditelná; `Moje faktury` → `/partner/invoices`. 47f logout best-effort skipnuto (partner dashboard nemá vystavený logout control — by design).
+- **Test-only (neměnit charakter):** žádná změna app UI/logiky, schema, SQL, deploye, e-mailů, PDF ani produkčních dat. Uzavírá zpřísnění z P0 partner flow auditu.
 
 ## PARTNER DASHBOARD — KONVERZE MIOCOINŮ PŘÍKLAD (13. 06. 2026, invariant)
 

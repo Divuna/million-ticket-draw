@@ -14,6 +14,13 @@
 
 ---
 
+## 2026-06-13 — Partner dashboard smoke spec 47
+
+- Přidán `tests/e2e/47-partner-dashboard-smoke.spec.ts` (staging-only, self-contained, service-role throwaway approved partner + cleanup). Commit `fe5f59a9`.
+- Staging cílený run `27467129135`: **2 passed · 1 skipped · 0 failed**, success.
+- Ověřuje: `/partner/dashboard` otevře, sekce `Nastavení konverze MioCoinů` viditelná, konverzní helper text viditelný, karta `Fakturace MioCoinů` viditelná, `Moje faktury` → `/partner/invoices`. 47f logout best-effort skipnuto (žádný logout control na partner dashboardu — by design).
+- Test-only: žádná změna app UI/logiky, schema, SQL, deploye, e-mailů, PDF ani produkčních dat. Uzavírá doporučené zpřísnění z P0 partner flow auditu.
+
 ## 2026-06-13 — P0 partner flow audit po dashboard business-text úpravách
 
 - Staging cílený run `27466916402` (spec 43): **4 passed · 1 skipped · 0 failed**, success.
