@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-13 — Public customer-facing UI text audit
+
+- Read-only audit zákaznických UI textů na routách `/`, `/games`, `/wins`, `/vouchers`, `/profile`, `/messages`, `/my-contests`.
+- Žádné viditelné zákaznické anglické slovo `referral`; výskyty jsou code-only (identifikátory, komentáře, RPC/table názvy) nebo v admin/partner/interních oblastech.
+- Zákaznické wording je české: `Pozvi přátele`, `doporučovací kód`, `odměny z doporučení`.
+- Žádný B2B/partner billing text neuniká do zákaznických rout; billing wording izolovaný v partner/admin oblastech. Homepage „partnerské e-shopy" text je legitimní zákaznický benefit copy.
+- Žádný fix nutný. Volitelné budoucí zpřísnění: CI guard proti viditelnému anglickému `referral` v zákaznickém UI.
+- Read-only: žádná změna souborů, žádné SQL, žádný deploy. Affiliate Payouts a Partner Invoices nedotčeny.
+
 ## 2026-06-13 — Live ověření: partner dashboard Fakturace MioCoinů card
 
 - Lovable Publish dokončen po commitu `8c5e5375`.

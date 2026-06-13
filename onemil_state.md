@@ -1,5 +1,17 @@
 ﻿# OneMil – aktuální stav projektu
 
+## ✅ PUBLIC CUSTOMER-FACING UI TEXT AUDIT (13. 06. 2026)
+
+Read-only audit veřejných/zákaznických UI textů dokončen — UI je čisté před outreachem.
+
+- **Ověřené zákaznické routy:** `/`, `/games`, `/wins`, `/vouchers`, `/profile`, `/messages`, `/my-contests`.
+- **Žádné viditelné zákaznické anglické slovo `referral`** nenalezeno. Výskyty `referral` jsou pouze code-only: identifikátory, komentáře, RPC/table názvy, JSX komentáře, RPC návratová hodnota (`rejected:self_referral`), nebo admin/partner/interní oblasti.
+- **Zákaznické wording je české a používá:** `Pozvi přátele` (nadpis sekce v `ReferralSection.tsx`), `doporučovací kód`, `odměny z doporučení`, `doporučitel`.
+- **Žádný B2B/partner billing text neuniká do zákaznických rout.** Partner/business billing wording (Fakturace MioCoinů, `price_per_coin`, IČO/DIČ, samofakturace, týdenní fakturace) je izolovaný v partner/admin oblastech (`PartnerDashboard`, `PartnerInvoices`, `AdminInvoices`).
+- **Homepage text o partnerských e-shopech** („Nakupujete u partnerských e-shopů" → MioCoiny jako marketingová odměna) je legitimní zákaznický benefit copy, ne B2B billing.
+- **Žádný aktuální fix není potřeba.** Volitelné budoucí zpřísnění: CI guard zabraňující viditelnému anglickému `referral` v zákaznickém UI.
+- Read-only: žádná změna souborů, žádné SQL, žádný deploy. Affiliate Payouts a Partner Invoices nedotčeny.
+
 ## ✅ PARTNER DASHBOARD — FAKTURACE MIOCOINŮ CARD LIVE OVĚŘENO (13. 06. 2026)
 
 Lovable Publish dokončen po commitu `8c5e5375`. Pavel live ověřil, že partner dashboard obsahuje novou kartu `Fakturace MioCoinů`.
