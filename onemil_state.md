@@ -1,5 +1,16 @@
 ﻿# OneMil – aktuální stav projektu
 
+## ✅ P0 PARTNER FLOW AUDIT — PO DASHBOARD BUSINESS-TEXT ÚPRAVÁCH (13. 06. 2026)
+
+P0 audit schváleného partnerského flow dokončen po úpravách business textů v partner dashboardu (explainer „Fakturace MioCoinů" + konverzní helper). Staging behaviorálně, produkce read-only.
+
+- **Staging cílený run `27466916402` (spec 43):** **4 passed · 1 skipped · 0 failed**, run success.
+- **Ověřené flow:** partner login · partner dashboard loads · konverzní helper text přítomen · karta `Fakturace MioCoinů` viditelná · `Moje faktury` otevírá `/partner/invoices` · partner invoices page loads · PDF download jen když PDF existuje · partner nevidí faktury jiných partnerů · partner nemá přístup na admin invoice stránky · logout používá standardní sdílenou auth cestu.
+- **Produkce `xkzhjldrojjlrkezorey` — pouze read-only:** RLS potvrzuje izolaci partnerských invoice dat dle vazby vlastní partner/invoice — `partner_invoices` (`partner_id IN own`), `partner_invoice_lines`/`partner_invoice_exports` (invoice→partner přes `auth.uid()`), admin přes `is_admin()`; žádné `USING (true)`.
+- **Žádný partner-facing blocker nenalezen.**
+- **Doporučené volitelné budoucí zpřísnění:** dedikovaný approved-partner dashboard smoke spec pro `Fakturace MioCoinů`, konverzní helper a logout (dnes kryto statickou + manuální live verifikací).
+- Bez změny produkčních dat, bez SQL writes, bez deploye, bez e-mailů, bez generování PDF, bez vytváření faktur či partnerů. Affiliate Payouts a customer invite reward security nedotčeny.
+
 ## ✅ PARTNER DASHBOARD — KONVERZE HELPER LIVE OVĚŘENO (13. 06. 2026)
 
 Lovable Publish dokončen po commitu `7464cd78`. Pavel live ověřil, že partner dashboard zobrazuje konverzní helper pod sekcí `Nastavení konverze MioCoinů`.

@@ -9,6 +9,15 @@ Read-only audit zákaznických UI textů (routy `/`, `/games`, `/wins`, `/vouche
 - **Žádný B2B/partner billing text neuniká do zákaznických rout.** Billing wording (Fakturace MioCoinů, `price_per_coin`, IČO/DIČ, samofakturace) izolovaný v partner/admin (`PartnerDashboard`, `PartnerInvoices`, `AdminInvoices`). Homepage „partnerské e-shopy" = legitimní zákaznický benefit copy.
 - **Žádný fix nutný.** Volitelné budoucí zpřísnění: CI guard proti viditelnému anglickému `referral` v zákaznickém UI. Read-only: bez změny souborů, SQL, deploye. Affiliate Payouts a Partner Invoices nedotčeny.
 
+## P0 PARTNER FLOW AUDIT — ✅ PO DASHBOARD BUSINESS-TEXT ÚPRAVÁCH (13. 06. 2026)
+
+P0 audit schváleného partnerského flow dokončen po úpravách partner dashboard business textů. Staging cílený run `27466916402` (spec 43): **4 passed · 1 skipped · 0 failed**, success.
+
+- **Ověřeno:** partner login, dashboard loads, konverzní helper text přítomen, karta `Fakturace MioCoinů` viditelná, `Moje faktury` → `/partner/invoices`, partner invoices page loads, PDF download jen když PDF existuje, partner nevidí faktury jiných partnerů, partner nemá přístup na admin invoice stránky, logout přes standardní sdílenou auth cestu.
+- **Produkce read-only:** RLS izolace partnerských invoice dat (`partner_invoices`/`_lines`/`_exports` partner-own přes `auth.uid()`, admin `is_admin()`, žádné `USING (true)`).
+- **Žádný partner blocker.** Bez změny produkčních dat, SQL, deploye, e-mailů, PDF, faktur či partnerů. Affiliate Payouts a customer invite reward security nedotčeny.
+- **Doporučené volitelné zpřísnění:** dedikovaný approved-partner dashboard smoke spec (Fakturace MioCoinů, konverzní helper, logout).
+
 ## PARTNER DASHBOARD — KONVERZE MIOCOINŮ PŘÍKLAD (13. 06. 2026, invariant)
 
 **✅ LIVE OVĚŘENO (13. 06. 2026):** Lovable Publish dokončen po commitu `7464cd78`; Pavel live ověřil helper pod `Nastavení konverze MioCoinů`. Při ověření žádná změna kalkulace, DB, SQL, EF deploye, e-mailů ani dat.

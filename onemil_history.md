@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-06-13 — P0 partner flow audit po dashboard business-text úpravách
+
+- Staging cílený run `27466916402` (spec 43): **4 passed · 1 skipped · 0 failed**, success.
+- Ověřeno: partner login, partner dashboard loads, konverzní helper text přítomen, karta `Fakturace MioCoinů` viditelná, `Moje faktury` otevírá `/partner/invoices`, partner invoices page loads, PDF download jen když PDF existuje, partner nevidí faktury jiných partnerů, partner nemá přístup na admin invoice stránky, logout přes standardní sdílenou auth cestu.
+- Produkce ověřena pouze read-only; RLS potvrzuje izolaci partnerských invoice dat dle vazby vlastní partner/invoice (`partner_invoices`/`_lines`/`_exports` partner-own přes `auth.uid()`, admin `is_admin()`).
+- Žádný partner-facing blocker. Bez změny produkčních dat, bez SQL, bez deploye, bez e-mailů, bez generování PDF, bez vytváření faktur či partnerů.
+- Doporučené volitelné zpřísnění: dedikovaný approved-partner dashboard smoke spec (Fakturace MioCoinů, konverzní helper, logout).
+
 ## 2026-06-13 — Live ověření: partner dashboard konverzní helper
 
 - Lovable Publish dokončen po commitu `7464cd78`.
