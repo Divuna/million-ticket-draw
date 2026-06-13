@@ -1,5 +1,19 @@
 ﻿# OneMil – aktuální stav projektu
 
+## 🧹 ÚKLID TESTOVACÍ PARTNER FAKTURY OMA-20260003 (13. 06. 2026)
+
+Produkční testovací faktura `OMA-20260003` a všechna související testovací data smazána z produkce `xkzhjldrojjlrkezorey`. Schváleno Pavlem: „schvaluji úklid produkční testovací faktury OMA-20260003".
+
+- **Smazané řádky (produkce):**
+  - `partner_invoices` — `OMA-20260003` (id `75fc016e-5283-4801-a19f-0566a2aaa587`, status `issued`, created 2026-06-13)
+  - `partner_invoice_lines` — 1 řádek (invoice_id `75fc016e...`, activation_id `764ddcde...`, external_order_id `TEST-PDF-OVERVIEW-20260613-5MC`, coins 5)
+  - `partner_invoice_exports` — id `48e44363-acde-4807-8d8c-ec3f85b5a8e7`
+  - `partner_coin_activations` — id `764ddcde-ff44-4c48-99fa-9ed9ef453818`, code `TESTPDF20260613A`
+  - `partner_reward_codes` — code `TESTPDF20260613A` (`metadata.test = true`)
+- **Storage objekt smazán:** `partner-invoices/invoice-75fc016e-5283-4801-a19f-0566a2aaa587-1781327271530.pdf` (přes `supabase storage rm --experimental`).
+- **Postcheck ✅:** všechny cílové řádky = 0; `OMA-20260001` (id `cfa697db...`) existuje a nebyl dotčen.
+- **Nedotčeno:** `OMA-20260001`, reálné partner faktury, reálné aktivace, Affiliate Payouts, Partner Invoice logika. Žádný deploy, žádné e-maily, žádné označení jako zaplaceno, žádná změna app kódu.
+
 ## 🧹 ADMIN TEST UI — vypnuta akce admin-create-test-user (13. 06. 2026)
 
 Navazuje na produkční odstranění Edge Function `admin-create-test-user`. V admin test dashboardu vypnuta akce, která funkci volala.

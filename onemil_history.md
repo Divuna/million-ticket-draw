@@ -14,6 +14,13 @@
 
 ---
 
+## 2026-06-13 — Úklid testovací partner faktury OMA-20260003
+
+- Smazány z produkce `xkzhjldrojjlrkezorey`: `partner_invoices` OMA-20260003 (id `75fc016e...`), 1 `partner_invoice_lines` řádek (external_order_id `TEST-PDF-OVERVIEW-20260613-5MC`), `partner_invoice_exports` id `48e44363...`, `partner_coin_activations` id `764ddcde...` / code `TESTPDF20260613A`, `partner_reward_codes` code `TESTPDF20260613A`.
+- Storage objekt `partner-invoices/invoice-75fc016e-...-1781327271530.pdf` smazán přes Supabase CLI.
+- Postcheck ✅: všechny cílové řádky = 0; `OMA-20260001` (`cfa697db...`) existuje a nebyl dotčen.
+- Schválení Pavla: „schvaluji úklid produkční testovací faktury OMA-20260003". Žádný deploy, žádné e-maily, žádné označení jako zaplaceno, žádná změna app kódu.
+
 ## 2026-06-13 — Admin test dashboard: vypnuta akce admin-create-test-user
 
 - Po odstranění produkční Edge Function `admin-create-test-user` vypnuta odpovídající akce v admin test dashboardu (`src/tests/ComprehensiveAdminTestDashboard.tsx`).
