@@ -14,6 +14,13 @@
 
 ---
 
+## 2026-06-13 — Live ověření: partner dashboard Fakturace MioCoinů card
+
+- Lovable Publish dokončen po commitu `8c5e5375`.
+- Pavel live ověřil, že `/partner/dashboard` obsahuje novou kartu `Fakturace MioCoinů` pro schváleného partnera, umístěnou pod `Nastavení konverze MioCoinů`.
+- Karta live vysvětluje týdenní fakturaci aktivovaných MioCoinů, doručení faktury e-mailem, odkaz `Moje faktury` a aktuální cenu za 1 MioCoin.
+- Při ověření žádná data nezměněna, žádné e-maily neodeslány, žádné SQL neaplikováno, žádný deploy mimo Lovable Publish.
+
 ## 2026-06-13 — Partner dashboard: explainer Fakturace MioCoinů + sjednocení labelu
 
 - Přidán read-only info blok „Fakturace MioCoinů" do `/partner/dashboard` (`src/pages/PartnerDashboard.tsx`, gated `isAccountApproved`). Text vysvětluje: fakturujeme jen aktivované MioCoiny, vyúčtování automaticky jednou týdně, faktura přijde e-mailem a je v „Moje faktury"; aktuální cena z `partner.price_per_coin`. Odkaz „Moje faktury" → `/partner/invoices`.

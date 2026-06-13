@@ -1,5 +1,13 @@
 ﻿# OneMil – aktuální stav projektu
 
+## ✅ PARTNER DASHBOARD — FAKTURACE MIOCOINŮ CARD LIVE OVĚŘENO (13. 06. 2026)
+
+Lovable Publish dokončen po commitu `8c5e5375`. Pavel live ověřil, že partner dashboard obsahuje novou kartu `Fakturace MioCoinů`.
+
+- **Live stav:** karta `Fakturace MioCoinů` se zobrazuje na `/partner/dashboard` pro schváleného partnera, umístěná pod kartou `Nastavení konverze MioCoinů`.
+- **Obsah ověřen live:** vysvětluje týdenní fakturaci aktivovaných MioCoinů, doručení faktury e-mailem, odkaz na `Moje faktury` a aktuální cenu za 1 MioCoin (z `partner.price_per_coin`).
+- Při ověření nebyla změněna žádná data, neodeslány žádné e-maily, neaplikováno žádné SQL, žádný deploy mimo Lovable Publish. Affiliate Payouts, Partner Invoice backend a customer invite reward security nedotčeny.
+
 ## ✅ PARTNER DASHBOARD — FAKTURACE MIOCOINŮ EXPLAINER (13. 06. 2026)
 
 Navazuje na Partner Flow business readiness audit (největší mezera: partner nevěděl, kdy a kde dostane fakturu). Přidán read-only info blok do `/partner/dashboard`.
