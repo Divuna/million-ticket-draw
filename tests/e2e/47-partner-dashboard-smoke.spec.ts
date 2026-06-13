@@ -144,20 +144,16 @@ test.describe.serial('47 — Approved partner dashboard smoke', () => {
     });
   });
 
-  test('47f: logout works (best-effort if a logout control is exposed)', async ({ page }) => {
+  test('47f: logout via partner top-nav redirects to /partner/login', async ({ page }) => {
     test.setTimeout(60_000);
     await loginAsPartner(page);
 
-    const logoutBtn = page.getByRole('button', { name: /Odhlásit se/i });
-    if ((await logoutBtn.count()) === 0) {
-      test.skip(true, 'No logout control exposed on the partner dashboard — nothing to assert.');
-      return;
-    }
+    // The partner top navigation (PartnerHeader) exposes an "Odhlásit se" button
+    // (visible at the default desktop viewport). handleLogout signs out and
+    // navigates to /partner/login.
+    await page.getByRole('button', { name: /Odhlásit se/i }).click();
 
-    await logoutBtn.first().click();
-    // After signOut the partner must leave the authenticated dashboard.
-    await expect
-      .poll(async () => page.url(), { timeout: 15_000 })
-      .not.toMatch(/\/partner\/dashboard/);
+    await page.waitForURL(/\/partner\/login/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/partner\/login/);
   });
 });
