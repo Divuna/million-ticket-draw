@@ -1,5 +1,19 @@
 ﻿# OneMil – aktuální stav projektu
 
+## ✅ ADMIN SMOKE TEST — VOUCHERS + DOPORUČENÍ A ODMĚNY (13. 06. 2026)
+
+Dedikovaný read-only admin smoke test přidán pro dvě admin stránky, které prošly P0 admin auditem, ale neměly vlastní spec. Tím se uzavírá dříve doporučené test-only zlepšení z P0 admin auditu.
+
+- **Test soubor:** `tests/e2e/46-admin-vouchers-referrals-smoke.spec.ts` (staging-only, self-skipping bez admin secrets).
+- **Commit:** `6d67fd2f`.
+- **Staging cílený běh `27465396025`:** result **1 passed, run success** (přes `only_spec` input, 18.0s).
+- **Test ověřuje:**
+  - `/admin/vouchers` načte s nadpisem `Přehled voucherů`.
+  - `/admin/referrals` načte taby `Doporučení hráčů` a `Audit doporučení`.
+  - žádné neodchycené client-side chyby na obou stránkách (`pageerror` listener).
+- **Read-only:** žádné vytváření/editace voucherů, žádné vytváření/úprava invite rewardů, žádné e-maily, žádné SQL, žádný deploy. Login přes existující `loginViaUI` helper.
+- Affiliate Payouts a Partner Invoices nedotčeny. Žádná změna app kódu.
+
 ## ✅ P0 ADMIN FLOW AUDIT — PO SECURITY + INVOICE + CUSTOMER-FLOW PRÁCI (13. 06. 2026)
 
 P0 audit nejdůležitějších admin flow dokončen po invite reward security práci, Partner Invoice úklidu a P0 customer-flow auditu. Staging behaviorálně ověřen (green run), UI kontrakty staticky ověřeny, produkce pouze read-only.

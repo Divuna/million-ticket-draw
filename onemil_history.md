@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-06-13 — Admin smoke test pro vouchers + Doporučení a odměny (spec 46)
+
+- Přidán dedikovaný read-only admin smoke test `tests/e2e/46-admin-vouchers-referrals-smoke.spec.ts` pro `/admin/vouchers` a `/admin/referrals`. Commit `6d67fd2f`.
+- Staging cílený běh `27465396025` (přes `only_spec`): **1 passed, run success**.
+- Ověřuje: `/admin/vouchers` načte s `Přehled voucherů`; `/admin/referrals` načte taby `Doporučení hráčů` a `Audit doporučení`; žádné neodchycené client-side chyby.
+- Read-only: žádné vytváření/editace voucherů, žádné vytváření/úprava invite rewardů, žádné e-maily, žádné SQL, žádný deploy. Affiliate Payouts a Partner Invoices nedotčeny.
+- Uzavírá dříve doporučené test-only zlepšení z P0 admin auditu.
+
 ## 2026-06-13 — P0 admin flow audit po security + invoice + customer-flow práci
 
 - Staging Full E2E run `27464656913` green; admin specy passed (`15`, `16`, `18`, `23`, `24`, `29`, `30`, `32`, `33` 6/6, `43` 4/5, `44` 7/7, `45` 1/1).

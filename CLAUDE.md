@@ -9,7 +9,15 @@ P0 audit admin flow dokončen. Staging behaviorálně ověřen (green run), UI k
 - **Invoice tlačítka (spec 45 + statická kontrola `AdminInvoices.tsx`):** `draft → Odeslat fakturu emailem`, `issued → Znovu odeslat`, `paid → žádné send/resend`. **Admin tests page:** `createTestUser` neutralizován (toast „bezpečnostně vypnut"), žádné `.invoke('admin-create-test-user')` v `src`.
 - **Produkce `xkzhjldrojjlrkezorey` read-only:** `partner_invoices`/`_lines`/`_exports` admin přes `is_admin()` + partner own-row; invite reward tabulky own-row + admin read-all; `vouchers` admin SELECT + záměrný world-readable katalog; žádné `USING (true)`.
 - **Žádný admin blocker.** Bez změny souborů, bez SQL writes, bez deploye, bez e-mailů, bez generování PDF, bez označení faktur zaplaceno, bez vytváření soutěží, žádná produkční data nezměněna.
-- **Doporučené pozdější test-only zlepšení:** dedikované read-only smoke specy pro `/admin/vouchers` a `/admin/referrals`.
+- **Doporučené pozdější test-only zlepšení — ✅ UZAVŘENO (spec 46, viz níže):** dedikované read-only smoke specy pro `/admin/vouchers` a `/admin/referrals` přidány.
+
+## ADMIN SMOKE SPEC 46 — VOUCHERS + DOPORUČENÍ A ODMĚNY (13. 06. 2026, invariant)
+
+Dedikovaný read-only admin smoke test `tests/e2e/46-admin-vouchers-referrals-smoke.spec.ts` (staging-only, self-skipping bez admin secrets). Commit `6d67fd2f`. Staging cílený běh `27465396025` (přes `only_spec`): 1 passed, run success.
+
+- **Ověřuje:** `/admin/vouchers` načte s `Přehled voucherů`; `/admin/referrals` načte taby `Doporučení hráčů` a `Audit doporučení`; žádné neodchycené client-side chyby (`pageerror` listener).
+- **Read-only (neměnit charakter):** žádné vytváření/editace voucherů, žádné vytváření/úprava invite rewardů, žádné e-maily, žádné SQL, žádný deploy. Login přes `loginViaUI` helper.
+- Uzavírá test-only gap z P0 admin auditu. Affiliate Payouts a Partner Invoices nedotčeny.
 
 ## P0 CUSTOMER FLOW AUDIT — ✅ ZELENÝ PO SECURITY + INVOICE PRÁCI (13. 06. 2026)
 
