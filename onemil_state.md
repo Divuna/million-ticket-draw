@@ -1,5 +1,18 @@
 ﻿# OneMil – aktuální stav projektu
 
+## 🧹 PRODUKČNÍ ODSTRANĚNÍ EDGE FUNKCE admin-create-test-user (13. 06. 2026)
+
+Edge Function `admin-create-test-user` odstraněna z produkce `xkzhjldrojjlrkezorey` — poslední otevřený bod invite reward security auditu (MEDIUM).
+
+- **Příkaz:** `supabase functions delete admin-create-test-user --project-ref xkzhjldrojjlrkezorey --yes`.
+- **Read-only ověření:** slug `admin-create-test-user` chybí v produkčním Edge Function seznamu (`list_edge_functions`).
+- **Důvod:** `verify_jwt=false`, žádná interní admin/superadmin autorizace, používala service role, mohla zapisovat testovací data.
+- **Staging `dxmowysntemfqfnanxua`** tuto funkci nasazenou neměl a nebyl změněn.
+- Žádná produkční tabulková data nezměněna. Žádné SQL. Žádná jiná Edge Function nasazena ani odstraněna. Žádné e-maily. Žádní uživatelé. Affiliate Payouts a Partner Invoices nedotčeny.
+- Zdrojová složka v repu zůstává; redeploy možný až po přidání řádného admin guardu.
+- Vedlejší efekt: interní admin test dashboard může ukázat „function not found" při kliknutí na staré test tlačítko.
+- **Invite reward security audit UZAVŘEN:** (1) CRITICAL wallet-minting RPC opraveno REVOKE; (2) HIGH invite reward RLS expozice opravena; (3) MEDIUM `admin-create-test-user` produkční funkce odstraněna.
+
 ## 🔄 STAGING SYNC — INVITE REWARD SECURITY FIXY (13. 06. 2026)
 
 Staging `dxmowysntemfqfnanxua` synchronizován s již schválenými produkčními invite reward security fixy. Produkce `xkzhjldrojjlrkezorey` byla v tomto kroku **pouze read-only** a nebyla změněna.

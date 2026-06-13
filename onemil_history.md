@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-13 — Odstranění produkční Edge funkce admin-create-test-user
+
+- Edge Function `admin-create-test-user` odstraněna z produkce `xkzhjldrojjlrkezorey`. Příkaz: `supabase functions delete admin-create-test-user --project-ref xkzhjldrojjlrkezorey --yes`.
+- Read-only ověření přes `list_edge_functions`: slug v produkčním seznamu chybí.
+- Důvod: `verify_jwt=false`, žádná interní admin/superadmin autorizace, používala service role, mohla zapisovat testovací data (volatelná bez autentizace).
+- Staging `dxmowysntemfqfnanxua` tuto funkci nasazenou neměl, nebyl změněn.
+- Žádná produkční tabulková data nezměněna, žádné SQL, žádná jiná Edge Function nasazena/odstraněna, žádné e-maily, žádní uživatelé. Affiliate Payouts a Partner Invoices nedotčeny.
+- Zdrojová složka v repu zůstává; redeploy jen po přidání admin guardu. Interní admin test dashboard může ukázat „function not found" u starého test tlačítka.
+- Invite reward security audit uzavřen: (1) CRITICAL wallet-minting RPC REVOKE; (2) HIGH invite reward RLS expozice; (3) MEDIUM `admin-create-test-user` odstraněn z produkce.
+
 ## 2026-06-13 — Staging sync produkčních invite reward security fixů
 
 - Staging `dxmowysntemfqfnanxua` synchronizován s již schválenými produkčními invite reward security fixy. Produkce `xkzhjldrojjlrkezorey` v tomto kroku pouze read-only, nezměněna.

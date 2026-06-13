@@ -1,5 +1,17 @@
 # CLAUDE.md
 
+## ADMIN-CREATE-TEST-USER ODSTRANĚN Z PRODUKCE (13. 06. 2026, invariant)
+
+Edge Function `admin-create-test-user` byla odstraněna z produkce `xkzhjldrojjlrkezorey` (poslední otevřený bod invite reward security auditu, MEDIUM).
+
+- **Důvod:** funkce měla `verify_jwt=false`, žádnou interní admin/superadmin autorizaci, používala service role a mohla zapisovat testovací data → byla volatelná bez autentizace.
+- **Příkaz:** `supabase functions delete admin-create-test-user --project-ref xkzhjldrojjlrkezorey --yes`. Read-only ověření přes `list_edge_functions` potvrdilo, že slug v produkčním seznamu chybí.
+- **Staging `dxmowysntemfqfnanxua`** tuto funkci nasazenou neměl a nebyl změněn.
+- **Pravidlo (neměnit):** funkci `admin-create-test-user` NEnasazovat zpět na produkci bez řádného admin guardu (Authorization Bearer → `auth.getUser` → `user_roles` admin/superadmin). Zdrojová složka v repu zůstává; redeploy jen po přidání autorizace.
+- Žádná produkční tabulková data nezměněna, žádné SQL, žádná jiná Edge Function nasazena/odstraněna, žádné e-maily, žádní uživatelé. Affiliate Payouts a Partner Invoices nedotčeny.
+- Vedlejší efekt: interní admin test dashboard může zobrazit „function not found", pokud se klikne staré test tlačítko.
+- **Invite reward security audit UZAVŘEN:** (1) CRITICAL wallet-minting RPC opraveno REVOKE; (2) HIGH invite reward RLS expozice opravena; (3) MEDIUM `admin-create-test-user` odstraněn z produkce.
+
 ## ODMĚNY ZA DOPORUČENÍ — STAGING SYNCHRONIZOVÁN S PRODUKČNÍMI FIXY (13. 06. 2026, invariant)
 
 Staging `dxmowysntemfqfnanxua` byl synchronizován s již schválenými produkčními invite reward security fixy. Produkce `xkzhjldrojjlrkezorey` byla v tomto kroku **pouze read-only** a nebyla změněna.
