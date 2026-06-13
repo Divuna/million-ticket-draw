@@ -14,6 +14,12 @@
 
 ---
 
+## 2026-06-13 — Live ověření: partner dashboard konverzní helper
+
+- Lovable Publish dokončen po commitu `7464cd78`.
+- Pavel live ověřil, že `/partner/dashboard` zobrazuje konverzní helper pod `Nastavení konverze MioCoinů`: „Příklad: při nastavení 100 Kč = 1 MioCoin dostane zákazník za objednávku 500 Kč celkem 5 MioCoinů."
+- Žádná změna kalkulační logiky, žádná změna DB, žádné SQL, žádný deploy Edge Functions, žádné e-maily, žádná data nezměněna při ověření.
+
 ## 2026-06-13 — Partner dashboard: příklad konverze MioCoinů
 
 - Do sekce „Nastavení konverze MioCoinů" (`/partner/dashboard`, `src/pages/PartnerDashboard.tsx`) přidán český helper text pod inputy: „Příklad: při nastavení 100 Kč = 1 MioCoin dostane zákazník za objednávku 500 Kč celkem 5 MioCoinů."

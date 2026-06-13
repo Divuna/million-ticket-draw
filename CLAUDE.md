@@ -11,6 +11,8 @@ Read-only audit zákaznických UI textů (routy `/`, `/games`, `/wins`, `/vouche
 
 ## PARTNER DASHBOARD — KONVERZE MIOCOINŮ PŘÍKLAD (13. 06. 2026, invariant)
 
+**✅ LIVE OVĚŘENO (13. 06. 2026):** Lovable Publish dokončen po commitu `7464cd78`; Pavel live ověřil helper pod `Nastavení konverze MioCoinů`. Při ověření žádná změna kalkulace, DB, SQL, EF deploye, e-mailů ani dat.
+
 V sekci „Nastavení konverze MioCoinů" (`/partner/dashboard`, `src/pages/PartnerDashboard.tsx`) je pod inputy český helper text: „Příklad: při nastavení 100 Kč = 1 MioCoin dostane zákazník za objednávku 500 Kč celkem 5 MioCoinů." Pouze frontend info blok (vzor `bg-muted/30` + `Info` ikona). NEMĚNIT kalkulační logiku konverze ani DB. Build ✅ exit 0.
 
 ## PARTNER DASHBOARD — FAKTURACE MIOCOINŮ EXPLAINER (13. 06. 2026, invariant)

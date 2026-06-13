@@ -1,5 +1,12 @@
 ﻿# OneMil – aktuální stav projektu
 
+## ✅ PARTNER DASHBOARD — KONVERZE HELPER LIVE OVĚŘENO (13. 06. 2026)
+
+Lovable Publish dokončen po commitu `7464cd78`. Pavel live ověřil, že partner dashboard zobrazuje konverzní helper pod sekcí `Nastavení konverze MioCoinů`.
+
+- **Live helper text:** „Příklad: při nastavení 100 Kč = 1 MioCoin dostane zákazník za objednávku 500 Kč celkem 5 MioCoinů."
+- Žádná změna kalkulační logiky, žádná změna DB, žádné SQL, žádný deploy Edge Functions, žádné e-maily, žádná data nezměněna při ověření. Affiliate Payouts, Partner Invoice backend a customer invite reward security nedotčeny.
+
 ## ✅ PARTNER DASHBOARD — KONVERZE MIOCOINŮ PŘÍKLAD (13. 06. 2026)
 
 Do sekce „Nastavení konverze MioCoinů" na `/partner/dashboard` přidán krátký český helper text s příkladem, aby partner ihned pochopil převod „Základ (Kč) + MioCoiny".
