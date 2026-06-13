@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-06-13 — Produkční RLS oprava: expozice dat odměn za doporučení (HIGH)
+
+- HIGH nález z auditu: `referrals`, `referral_rewards`, `referral_codes` měly broad SELECT policy `USING (true)` (role `public`) → každý přihlášený uživatel mohl číst cizí invite graf, kódy a částky odměn.
+- Opraveno a ověřeno na produkci `xkzhjldrojjlrkezorey`:
+  - Odstraněny broad `*_read USING (true)` SELECT policy.
+  - Přidány own-row SELECT policy (authenticated): `referrals` a `referral_rewards` přes `referrer_user_id = auth.uid() OR referred_user_id = auth.uid()`; `referral_codes` přes `user_id = auth.uid()`.
+  - Přidány admin/superadmin read-all policy přes `has_role(auth.uid(), 'admin'::app_role)` / `has_role(auth.uid(), 'superadmin'::app_role)`.
+- Postcheck: přesně 2 SELECT policy na tabulku, žádné `USING (true)` nezůstalo, anon/public bez policy i grantu.
+- Admin referral UI zůstává funkční. Wallet/payment reward trigger nedotčen. Affiliate Payouts a Partner Invoices nedotčeny. Žádná změna app kódu, žádný deploy.
+- Otevřený bod (NEOPRAVENO): MEDIUM — Edge Function `admin-create-test-user` bez autorizace + service role.
+
 ## 2026-06-13 — KRITICKÁ produkční oprava: odměny za doporučení (invite rewards)
 
 - Read-only bezpečnostní audit zákaznického login/registrace + invite reward flow odhalil kritickou díru na produkci `xkzhjldrojjlrkezorey`.

@@ -1,5 +1,20 @@
 # CLAUDE.md
 
+## ODMĚNY ZA DOPORUČENÍ — RLS OPRAVA EXPOZICE DAT (13. 06. 2026, invariant)
+
+Navazuje na REVOKE opravu níže. HIGH nález z auditu: tabulky `referrals`, `referral_rewards`, `referral_codes` měly broad SELECT policy `USING (true)` (role `public`), takže každý přihlášený uživatel mohl číst cizí invite graf, kódy a částky odměn. **Opraveno a ověřeno na produkci `xkzhjldrojjlrkezorey`.**
+
+- **Odstraněny** broad `*_read USING (true)` SELECT policy na všech třech tabulkách.
+- **Přidány own-row SELECT policy (role `authenticated`):**
+  - `referrals` → `referrer_user_id = auth.uid() OR referred_user_id = auth.uid()`.
+  - `referral_rewards` → `referrer_user_id = auth.uid() OR referred_user_id = auth.uid()`.
+  - `referral_codes` → `user_id = auth.uid()`.
+- **Přidány admin/superadmin read-all policy:** `has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'superadmin'::app_role)`.
+- **Postcheck ✅:** přesně 2 SELECT policy na tabulku, žádné `USING (true)` nezůstalo, anon/public nemá policy ani grant (deny).
+- **Pravidlo (neměnit):** tyto tabulky NESMÍ mít zpět `USING (true)` / `public` SELECT policy. Admin referral UI čte plnou tabulku přes admin read-all policy; kódy se generují/čtou přes SECURITY DEFINER RPC (`ensure_referral_code`, `set_my_referrer_by_code`) které RLS obcházejí.
+- **Rozsah:** žádná změna app kódu, žádný deploy, wallet/payment reward trigger nedotčen, Affiliate Payouts nedotčeny, Partner Invoices nedotčeny.
+- **Otevřený bezpečnostní bod (NEOPRAVENO):** MEDIUM — Edge Function `admin-create-test-user` bez autorizace + service role.
+
 ## ODMĚNY ZA DOPORUČENÍ — KRITICKÁ PRODUKČNÍ OPRAVA (13. 06. 2026, invariant)
 
 Bezpečnostní audit zákaznického invite reward flow odhalil a opravil kritickou díru na produkci `xkzhjldrojjlrkezorey`.

@@ -1,5 +1,20 @@
 ﻿# OneMil – aktuální stav projektu
 
+## 🔐 PRODUKČNÍ RLS OPRAVA — EXPOZICE DAT ODMĚN ZA DOPORUČENÍ (13. 06. 2026)
+
+HIGH nález z bezpečnostního auditu **opraven a ověřen na produkci `xkzhjldrojjlrkezorey`**. Tabulky `referrals`, `referral_rewards`, `referral_codes` měly broad SELECT policy `USING (true)`, takže každý přihlášený uživatel mohl číst cizí invite graf, doporučovací kódy a částky odměn.
+
+- **Odstraněny** broad `*_read USING (true)` SELECT policy.
+- **Přidány own-row SELECT policy (authenticated):**
+  - `referrals`: uživatel čte řádky, kde je `referrer_user_id` nebo `referred_user_id`.
+  - `referral_rewards`: uživatel čte řádky, kde je `referrer_user_id` nebo `referred_user_id`.
+  - `referral_codes`: uživatel čte jen vlastní kód přes `user_id = auth.uid()`.
+- **Přidány admin/superadmin read-all policy:** `has_role(auth.uid(), 'admin'::app_role)` nebo `has_role(auth.uid(), 'superadmin'::app_role)`.
+- **Postcheck ✅:** přesně 2 SELECT policy na tabulku · žádné `USING (true)` nezůstalo · anon/public nemá policy ani grant.
+- Admin referral UI zůstává funkční (admin read-all policy).
+- Wallet/payment reward trigger nedotčen. Affiliate Payouts nedotčeny. Partner Invoices nedotčeny. Žádná změna app kódu, žádný deploy.
+- **Otevřený bezpečnostní bod (NEOPRAVENO):** MEDIUM — Edge Function `admin-create-test-user` bez autorizace + service role.
+
 ## 🔐 KRITICKÁ PRODUKČNÍ OPRAVA — ODMĚNY ZA DOPORUČENÍ (13. 06. 2026)
 
 Read-only bezpečnostní audit zákaznického login/registrace + invite reward flow odhalil a **opravil kritickou díru na produkci `xkzhjldrojjlrkezorey`**.
