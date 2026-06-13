@@ -1,5 +1,14 @@
 ﻿# OneMil – aktuální stav projektu
 
+## ✅ PARTNER DASHBOARD — KONVERZE MIOCOINŮ PŘÍKLAD (13. 06. 2026)
+
+Do sekce „Nastavení konverze MioCoinů" na `/partner/dashboard` přidán krátký český helper text s příkladem, aby partner ihned pochopil převod „Základ (Kč) + MioCoiny".
+
+- **Soubor:** `src/pages/PartnerDashboard.tsx` (pouze frontend, žádná změna výpočtu, DB ani SQL).
+- **Přidaný text** (info blok pod inputy konverze): „Příklad: při nastavení 100 Kč = 1 MioCoin dostane zákazník za objednávku 500 Kč celkem 5 MioCoinů."
+- Layout/design zachován (stejný `bg-muted/30` info blok + `Info` ikona jako u explaineru „Fakturace MioCoinů").
+- **Build ✅:** `npm run build` exit 0 (22.02s). Žádná změna kalkulace, billing, cron, DB/EF. Affiliate Payouts, Partner Invoice backend a customer invite reward security nedotčeny.
+
 ## ✅ PUBLIC CUSTOMER-FACING UI TEXT AUDIT (13. 06. 2026)
 
 Read-only audit veřejných/zákaznických UI textů dokončen — UI je čisté před outreachem.

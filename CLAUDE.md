@@ -9,6 +9,10 @@ Read-only audit zákaznických UI textů (routy `/`, `/games`, `/wins`, `/vouche
 - **Žádný B2B/partner billing text neuniká do zákaznických rout.** Billing wording (Fakturace MioCoinů, `price_per_coin`, IČO/DIČ, samofakturace) izolovaný v partner/admin (`PartnerDashboard`, `PartnerInvoices`, `AdminInvoices`). Homepage „partnerské e-shopy" = legitimní zákaznický benefit copy.
 - **Žádný fix nutný.** Volitelné budoucí zpřísnění: CI guard proti viditelnému anglickému `referral` v zákaznickém UI. Read-only: bez změny souborů, SQL, deploye. Affiliate Payouts a Partner Invoices nedotčeny.
 
+## PARTNER DASHBOARD — KONVERZE MIOCOINŮ PŘÍKLAD (13. 06. 2026, invariant)
+
+V sekci „Nastavení konverze MioCoinů" (`/partner/dashboard`, `src/pages/PartnerDashboard.tsx`) je pod inputy český helper text: „Příklad: při nastavení 100 Kč = 1 MioCoin dostane zákazník za objednávku 500 Kč celkem 5 MioCoinů." Pouze frontend info blok (vzor `bg-muted/30` + `Info` ikona). NEMĚNIT kalkulační logiku konverze ani DB. Build ✅ exit 0.
+
 ## PARTNER DASHBOARD — FAKTURACE MIOCOINŮ EXPLAINER (13. 06. 2026, invariant)
 
 **✅ LIVE OVĚŘENO (13. 06. 2026):** Lovable Publish dokončen po commitu `8c5e5375`; Pavel live ověřil, že karta `Fakturace MioCoinů` je na `/partner/dashboard` pro schváleného partnera, pod `Nastavení konverze MioCoinů`. Při ověření žádná data nezměněna, žádné e-maily, žádné SQL, žádný deploy mimo Lovable Publish.

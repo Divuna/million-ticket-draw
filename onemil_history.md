@@ -14,6 +14,12 @@
 
 ---
 
+## 2026-06-13 — Partner dashboard: příklad konverze MioCoinů
+
+- Do sekce „Nastavení konverze MioCoinů" (`/partner/dashboard`, `src/pages/PartnerDashboard.tsx`) přidán český helper text pod inputy: „Příklad: při nastavení 100 Kč = 1 MioCoin dostane zákazník za objednávku 500 Kč celkem 5 MioCoinů."
+- Pouze frontend info blok (stejný vzor jako explainer „Fakturace MioCoinů"). Žádná změna výpočtu, layoutu, DB/schema/SQL, deploye.
+- Build `npm run build` ✅ exit 0. Affiliate Payouts, Partner Invoice backend a customer invite reward security nedotčeny.
+
 ## 2026-06-13 — Public customer-facing UI text audit
 
 - Read-only audit zákaznických UI textů na routách `/`, `/games`, `/wins`, `/vouchers`, `/profile`, `/messages`, `/my-contests`.

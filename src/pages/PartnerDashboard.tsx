@@ -1370,6 +1370,14 @@ const PartnerDashboard = () => {
                 </div>
               </div>
 
+              {/* Conversion example helper — read-only info, no logic change */}
+              <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border/50 p-3">
+                <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Příklad: při nastavení 100 Kč = 1 MioCoin dostane zákazník za objednávku 500 Kč celkem 5 MioCoinů.
+                </p>
+              </div>
+
               {/* Save button inline */}
               <div className="flex justify-end">
                 <Button
