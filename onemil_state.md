@@ -1,5 +1,13 @@
 ﻿# OneMil – aktuální stav projektu
 
+## ✅ PARTNER DASHBOARD SMOKE SPEC 47 — LOGOUT NYNÍ ASSERTOVÁN (13. 06. 2026)
+
+Spec 47 (`tests/e2e/47-partner-dashboard-smoke.spec.ts`) test 47f aktualizován: místo best-effort skipu nyní klikne na existující top-nav tlačítko `Odhlásit se` (PartnerHeader v `App.tsx`, `handleLogout` = `signOut` → `navigate('/partner/login')`) a ověří redirect na `/partner/login`.
+
+- **Commit:** `e3c2439b` (navazuje na add `fe5f59a9`). Pouze test soubor; žádná změna app UI/logiky.
+- **Staging cílený run `27474214282`:** **3 passed · 0 skipped · 0 failed**, success (47f logout již passuje, není skipnut).
+- Test-only: žádná změna app UI, žádné SQL, žádný deploy, žádná produkční data. Affiliate Payouts a customer invite reward security nedotčeny.
+
 ## ✅ PARTNER DASHBOARD SMOKE SPEC 47 PŘIDÁN (13. 06. 2026)
 
 Dedikovaný approved-partner dashboard smoke test přidán, aby uzamkl live business-text úpravy partner dashboardu proti regresi.

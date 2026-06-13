@@ -20,9 +20,9 @@ P0 audit schváleného partnerského flow dokončen po úpravách partner dashbo
 
 ## PARTNER DASHBOARD SMOKE SPEC 47 (13. 06. 2026, invariant)
 
-`tests/e2e/47-partner-dashboard-smoke.spec.ts` (staging-only, self-contained; service-role throwaway approved partner + cleanup v `afterAll`). Commit `fe5f59a9`. Staging cílený run `27467129135`: 2 passed · 1 skipped · 0 failed, success.
+`tests/e2e/47-partner-dashboard-smoke.spec.ts` (staging-only, self-contained; service-role throwaway approved partner + cleanup v `afterAll`). Commity `fe5f59a9` (add) + `e3c2439b` (logout). Staging cílený run `27474214282`: **3 passed · 0 skipped · 0 failed**, success.
 
-- **Ověřuje:** schválený partner otevře `/partner/dashboard`; sekce `Nastavení konverze MioCoinů` viditelná; konverzní helper text viditelný (přesná kopie); karta `Fakturace MioCoinů` viditelná; `Moje faktury` → `/partner/invoices`. 47f logout best-effort skipnuto (partner dashboard nemá vystavený logout control — by design).
+- **Ověřuje:** schválený partner otevře `/partner/dashboard`; sekce `Nastavení konverze MioCoinů` viditelná; konverzní helper text viditelný (přesná kopie); karta `Fakturace MioCoinů` viditelná; `Moje faktury` → `/partner/invoices`; 47f logout přes top-nav `Odhlásit se` (PartnerHeader v `App.tsx`, `handleLogout` → `navigate('/partner/login')`) redirectuje na `/partner/login`.
 - **Test-only (neměnit charakter):** žádná změna app UI/logiky, schema, SQL, deploye, e-mailů, PDF ani produkčních dat. Uzavírá zpřísnění z P0 partner flow auditu.
 
 ## PARTNER DASHBOARD — KONVERZE MIOCOINŮ PŘÍKLAD (13. 06. 2026, invariant)

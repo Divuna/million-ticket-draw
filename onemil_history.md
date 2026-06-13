@@ -14,6 +14,12 @@
 
 ---
 
+## 2026-06-13 — Spec 47 logout assertován přes existující top-nav tlačítko
+
+- Spec 47 test 47f aktualizován: klikne na existující `Odhlásit se` v partner top-nav (PartnerHeader v `App.tsx`, `handleLogout` → `navigate('/partner/login')`) a ověří redirect na `/partner/login`; best-effort skip odstraněn. Commit `e3c2439b`.
+- Staging cílený run `27474214282`: **3 passed · 0 skipped · 0 failed**, success.
+- Test-only: žádná změna app UI/logiky, žádné SQL, žádný deploy, žádná produkční data.
+
 ## 2026-06-13 — Partner dashboard smoke spec 47
 
 - Přidán `tests/e2e/47-partner-dashboard-smoke.spec.ts` (staging-only, self-contained, service-role throwaway approved partner + cleanup). Commit `fe5f59a9`.
