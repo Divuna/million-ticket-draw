@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-13 - Partner API order flow na existujicim systemu aplikovan na staging
+
+- Implementace zustala v existujicim endpointu `partner-activate`; nevznikl novy endpoint, nova tabulka ani obnoveny `partner-api-v1` / `partner_api_v1_order_rewards`.
+- Na staging `dxmowysntemfqfnanxua` aplikovany migrace `20260613200202_partner_order_api_existing_system.sql` a `20260613200849_partner_order_api_crypto_schema_fix.sql`.
+- Pridano `pending` pro `partner_code_status`, idempotency index na `partner_reward_codes(partner_id, external_order_id)` pro `metadata->>'source' = 'partner_order_api'`, RPC `create_partner_order_reward` a `update_partner_order_reward_status`, pending guard v `redeem_miocoin_code` a odstraneni prototype odkazu z `log_partner_coin_activation_from_reward`.
+- Edge Function `partner-activate` nasazena na staging jako verze 6 (`verify_jwt=false`, API-key auth). Legacy `reward_code` aktivacni branch zustal za `x-internal-token`.
+- Staging E2E partner `99790c17-0fcc-49f4-9f01-18e915dd241a`: conversion potvrzena `100 Kc = 1 MioCoin`; order total `250 Kc` vypocetl OneMil na `2` MioCoiny.
+- Overeni: create -> `pending` kod/link, duplicate -> stejny kod/link, pending redeem -> `pending`, `paid` -> `issued`, redeem pres `redeem_miocoin_code` -> wallet +2 a 1 `partner_coin_activations`, cancel -> `cancelled`, cancelled redeem -> `cancelled`, recent invoice/export count = 0.
+- Staging data zustala zamerne ponechana pro audit; cleanup vyzaduje samostatne schvaleni. Produkce `xkzhjldrojjlrkezorey` nebyla dotcena.
+
 ## 2026-06-13 - Partner API v1 staging prototyp odmítnut a odstraněn z repozitáře
 
 - Staging prototyp z commitu `5b5d8270` byl odmítnut, protože vytvořil paralelní Partner API systém (`partner-api-v1`, `partner_api_v1_order_rewards`, `partner_api_v1_*` RPC) vedle existujícího Partner API.

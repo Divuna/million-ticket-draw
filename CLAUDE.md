@@ -8,6 +8,26 @@ Budoucí implementace Partner API v1 musí znovu použít existující `partner_
 
 Staging cleanup po prototypu je stále pending a vyžaduje samostatné výslovné schválení. Bez schválení neprovádět cleanup SQL, nedeployovat, nemazat staging Edge Function ani staging data a netýkat se produkce.
 
+## PARTNER API ORDER FLOW � EXISTUJICI SYSTEM, STAGING HOTOVO (13. 06. 2026)
+
+Spravna Partner API order implementace je na stagingu `dxmowysntemfqfnanxua` hotova v existujicim endpointu `partner-activate` (staging verze 6, `verify_jwt=false`, Partner API key auth). Nevytvaret novy endpoint, nevytvaret novou tabulku, neobnovovat `partner-api-v1` ani `partner_api_v1_order_rewards`.
+
+Repo/staging zmeny:
+- migrace `20260613200202_partner_order_api_existing_system.sql`
+- migrace `20260613200849_partner_order_api_crypto_schema_fix.sql`
+- existujici Edge Function `supabase/functions/partner-activate/index.ts`
+- `partner_code_status` obsahuje `pending`
+- idempotency index `idx_partner_reward_codes_order_api_idempotency`
+- RPC `create_partner_order_reward` a `update_partner_order_reward_status`
+- `redeem_miocoin_code` vraci pro pending kod `pending`
+- `log_partner_coin_activation_from_reward` uz nema odkaz na prototype tabulku
+
+Flow: partner posila `order_id`/`external_order_id`, `order_total_czk`, `customer_email`; partner NESMI posilat `coins`, `miocoins` ani finalni reward amount. OneMil pocita MioCoiny z `partners.reward_base_czk` a `partners.reward_mc`, vytvari `partner_reward_codes.status='pending'`, duplicate `partner_id + order_id` vraci stejny kod/link, `paid`/`delivered`/`completed` meni stav na `issued`, `cancelled`/`returned`/`unpaid`/`not_picked_up` meni stav na `cancelled`. Wallet credit a `partner_coin_activations` vznikaji pouze pres existujici `redeem_miocoin_code`; invoice pipeline zustava nad `partner_coin_activations`.
+
+Staging test: E2E partner `99790c17-0fcc-49f4-9f01-18e915dd241a`, conversion `100 Kc = 1 MioCoin`, order total `250 Kc` -> `2` MioCoiny. Overeno create pending, duplicate same code/link, pending redeem fails, paid -> issued, redeem -> wallet +2 and activation row, cancel -> cancelled, cancelled redeem fails, recent invoice/export count 0.
+
+Staging cleanup stale pending a vyzaduje samostatne schvaleni: test API key prefix `codex_9b`, codes `WPXE41O3IYN6`, `0JTQJKMQO0JX`, `YXEAB9ND2IGO`, test user `8f3ff053-2b8c-4df3-8ab0-b88a622f2a13`, wallet/transaction/activation test data, a stale rejected-prototype table `partner_api_v1_order_rewards`.
+
 ## NEJNOVĚJŠÍ STAV — DÁVKOVÉ VÝPLATY AFFILIATE/OBCHODNÍCH PROVIZÍ (10. 06. 2026)
 
 Fáze A+B+C jsou aplikované a ověřené pouze na staging Supabase projektu `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` je netknutá. Nebyl proveden web deploy, Lovable Publish ani full E2E.
