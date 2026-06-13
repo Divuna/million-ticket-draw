@@ -14,6 +14,19 @@
 
 ---
 
+## 2026-06-13 — Invite reward RLS production fix regression audit
+
+- Regression audit after production invite reward RLS fix was completed on production project `xkzhjldrojjlrkezorey`.
+- Read-only production verification confirmed `referrals`, `referral_rewards`, and `referral_codes` now have exactly 2 scoped SELECT policies per table, with no broad `USING (true)` policies remaining.
+- `wallets`, `profiles`, and `payments` policies stayed unchanged.
+- Static code check confirmed only 4 frontend files read the 3 invite reward tables: `src/components/ReferralSection.tsx`, `src/pages/AdminReferrals.tsx`, `src/pages/AdminReferralDashboard.tsx`, `src/components/AdminReferralAudit.tsx`.
+- Login, profile, wallet, top-up, voucher, and payment code do not depend on the changed tables; Edge Functions do not reference them.
+- `create-stripe-checkout` remains JWT-gated and derives `user_id` server-side. `stripe-webhook` remains signature-verified and uses service-role path; wallet credit and `create_referral_reward_from_payment` are unaffected by tightened customer SELECT policies.
+- Production smoke on post-fix commit `40df522b` passed at 2026-06-13 06:10 and confirmed registration/login still work.
+- Conclusion: customer login safe, profile safe, wallet safe, top-up safe, payment/wallet credit path safe, own invite display safe, admin invite overview safe. No broken flow found.
+- No production data was changed during the audit; no app code changed; no SQL writes; no deploy.
+- Remaining open security item: MEDIUM — `admin-create-test-user` Edge Function lacks authorization and uses service role.
+
 ## 2026-06-13 — Produkční RLS oprava: expozice dat odměn za doporučení (HIGH)
 
 - HIGH nález z auditu: `referrals`, `referral_rewards`, `referral_codes` měly broad SELECT policy `USING (true)` (role `public`) → každý přihlášený uživatel mohl číst cizí invite graf, kódy a částky odměn.

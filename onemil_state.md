@@ -1,5 +1,26 @@
 ﻿# OneMil – aktuální stav projektu
 
+## 🔒 INVITE REWARD RLS — ✅ REGRESSION AUDIT PO PRODUKČNÍ OPRAVĚ (13. 06. 2026)
+
+- Regression audit after production invite reward RLS fix was completed.
+- Production project: `xkzhjldrojjlrkezorey`.
+- Verified read-only on production: `referrals`, `referral_rewards`, `referral_codes` now have exactly 2 scoped SELECT policies per table.
+- No broad `USING (true)` policies remain.
+- `wallets`, `profiles`, and `payments` policies stayed unchanged.
+- Static code check confirmed only 4 frontend files read the 3 invite reward tables: `src/components/ReferralSection.tsx`, `src/pages/AdminReferrals.tsx`, `src/pages/AdminReferralDashboard.tsx`, `src/components/AdminReferralAudit.tsx`.
+- Login, profile, wallet, top-up, voucher, and payment code do not depend on the changed tables.
+- Edge Functions do not reference the changed invite reward tables.
+- `create-stripe-checkout` remains JWT-gated and derives `user_id` server-side.
+- `stripe-webhook` remains signature-verified and uses service-role path; wallet credit and `create_referral_reward_from_payment` are unaffected by tightened customer SELECT policies.
+- Production smoke on post-fix commit `40df522b` passed at 2026-06-13 06:10 and confirmed registration/login still work.
+- Conclusion: customer login safe; profile safe; wallet safe; top-up safe; payment/wallet credit path safe; own invite display safe; admin invite overview safe.
+- No broken flow found.
+- No production data was changed during the audit.
+- No app code changed.
+- No SQL writes.
+- No deploy.
+- Remaining open security item: MEDIUM — `admin-create-test-user` Edge Function lacks authorization and uses service role.
+
 ## 🔐 PRODUKČNÍ RLS OPRAVA — EXPOZICE DAT ODMĚN ZA DOPORUČENÍ (13. 06. 2026)
 
 HIGH nález z bezpečnostního auditu **opraven a ověřen na produkci `xkzhjldrojjlrkezorey`**. Tabulky `referrals`, `referral_rewards`, `referral_codes` měly broad SELECT policy `USING (true)`, takže každý přihlášený uživatel mohl číst cizí invite graf, doporučovací kódy a částky odměn.
