@@ -14,6 +14,13 @@
 
 ---
 
+## 2026-06-13 — Admin test dashboard: vypnuta akce admin-create-test-user
+
+- Po odstranění produkční Edge Function `admin-create-test-user` vypnuta odpovídající akce v admin test dashboardu (`src/tests/ComprehensiveAdminTestDashboard.tsx`).
+- `createTestUser` už nevolá `supabase.functions.invoke('admin-create-test-user')`; zobrazuje toast „Tento produkční test byl bezpečnostně vypnut."; tři tlačítka „Vytvořit Test User" přejmenována na „Produkční test vypnut".
+- Build `npm run build` ✅ exit 0. Commit `a7329fc7`.
+- Změna jen v admin test UI. Žádné SQL, žádný deploy Edge Function, žádné e-maily, žádní uživatelé, customer app nedotčena. Affiliate Payouts a Partner Invoices nedotčeny.
+
 ## 2026-06-13 — Odstranění produkční Edge funkce admin-create-test-user
 
 - Edge Function `admin-create-test-user` odstraněna z produkce `xkzhjldrojjlrkezorey`. Příkaz: `supabase functions delete admin-create-test-user --project-ref xkzhjldrojjlrkezorey --yes`.

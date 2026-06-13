@@ -1,5 +1,15 @@
 ﻿# OneMil – aktuální stav projektu
 
+## 🧹 ADMIN TEST UI — vypnuta akce admin-create-test-user (13. 06. 2026)
+
+Navazuje na produkční odstranění Edge Function `admin-create-test-user`. V admin test dashboardu vypnuta akce, která funkci volala.
+
+- **Soubor:** `src/tests/ComprehensiveAdminTestDashboard.tsx`.
+- `createTestUser` už nevolá odstraněnou Edge Function; zobrazuje toast „Tento produkční test byl bezpečnostně vypnut."
+- Tři tlačítka „Vytvořit Test User" přejmenována na „Produkční test vypnut".
+- **Build:** `npm run build` ✅ exit 0. Commit `a7329fc7`.
+- Změna omezena na admin test UI. Žádné SQL, žádný deploy, žádné e-maily, žádní uživatelé. Customer app, Affiliate Payouts a Partner Invoices nedotčeny.
+
 ## 🧹 PRODUKČNÍ ODSTRANĚNÍ EDGE FUNKCE admin-create-test-user (13. 06. 2026)
 
 Edge Function `admin-create-test-user` odstraněna z produkce `xkzhjldrojjlrkezorey` — poslední otevřený bod invite reward security auditu (MEDIUM).
