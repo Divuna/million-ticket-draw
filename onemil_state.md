@@ -1,5 +1,15 @@
 ﻿# OneMil – aktuální stav projektu
 
+## ✅ PARTNER DASHBOARD — FAKTURACE MIOCOINŮ EXPLAINER (13. 06. 2026)
+
+Navazuje na Partner Flow business readiness audit (největší mezera: partner nevěděl, kdy a kde dostane fakturu). Přidán read-only info blok do `/partner/dashboard`.
+
+- **Soubor:** `src/pages/PartnerDashboard.tsx` (pouze frontend, žádná billing logika, žádné schema, žádné SQL).
+- **Nová karta „Fakturace MioCoinů"** (gated `isAccountApproved`, umístěná za kartou „Nastavení konverze MioCoinů", před „Fakturace nabídek"). Text: „Fakturujeme pouze aktivované MioCoiny. Vyúčtování probíhá automaticky jednou týdně. Fakturu vám pošleme e-mailem a najdete ji také v sekci **Moje faktury**. Aktuální cena: {price_per_coin} Kč za 1 MioCoin." Odkaz „Moje faktury" naviguje na `/partner/invoices`. Cena čte existující `partner.price_per_coin` (fallback `1.00`).
+- **Sjednocení labelu konceptu:** jediný partner-facing „Návrh" (offer invoice draft badge, dříve řádek ~1590) změněn na **„Koncept"** — sjednoceno s `PartnerInvoices.tsx` (`draft: 'Koncept'`) a status badge dashboardu (`Koncept`).
+- **Build ✅:** `npm run build` exit 0 (22.19s). Žádná změna billing/cron/DB/EF. Affiliate Payouts, Partner Invoice backend a customer invite reward security nedotčeny.
+- Cron `weekly_partner_invoices` (job 17, neděle 02:00 UTC) a PDF/e-mail pipeline beze změny — explainer pouze popisuje existující chování.
+
 ## ✅ ADMIN SMOKE TEST — VOUCHERS + DOPORUČENÍ A ODMĚNY (13. 06. 2026)
 
 Dedikovaný read-only admin smoke test přidán pro dvě admin stránky, které prošly P0 admin auditem, ale neměly vlastní spec. Tím se uzavírá dříve doporučené test-only zlepšení z P0 admin auditu.

@@ -1,5 +1,12 @@
 # CLAUDE.md
 
+## PARTNER DASHBOARD — FAKTURACE MIOCOINŮ EXPLAINER (13. 06. 2026, invariant)
+
+Read-only info blok „Fakturace MioCoinů" v `/partner/dashboard` (`src/pages/PartnerDashboard.tsx`, gated `isAccountApproved`, za kartou „Nastavení konverze MioCoinů"). Vysvětluje partnerovi: fakturujeme jen aktivované MioCoiny, vyúčtování automaticky jednou týdně, faktura přijde e-mailem + je v „Moje faktury"; aktuální cena z `partner.price_per_coin` (fallback `1.00`). Odkaz „Moje faktury" → `/partner/invoices`.
+
+- **Sjednocený label konceptu faktury:** partner-facing draft = **„Koncept"** všude (`PartnerInvoices.tsx` + dashboard offer invoice badge; dřívější „Návrh" odstraněn). Neměnit zpět na „Návrh".
+- **Pravidlo:** explainer pouze popisuje existující chování — NEMĚNIT billing logiku, cron `weekly_partner_invoices` (job 17, neděle 02:00 UTC), DB schema, PDF/e-mail EF. Build ✅ exit 0. Žádné SQL/deploy/e-maily. Affiliate Payouts a customer invite reward security nedotčeny.
+
 ## P0 ADMIN FLOW AUDIT — ✅ ZELENÝ PO SECURITY + INVOICE + CUSTOMER-FLOW PRÁCI (13. 06. 2026)
 
 P0 audit admin flow dokončen. Staging behaviorálně ověřen (green run), UI kontrakty staticky, produkce read-only.

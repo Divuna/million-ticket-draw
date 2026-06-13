@@ -14,6 +14,13 @@
 
 ---
 
+## 2026-06-13 — Partner dashboard: explainer Fakturace MioCoinů + sjednocení labelu
+
+- Přidán read-only info blok „Fakturace MioCoinů" do `/partner/dashboard` (`src/pages/PartnerDashboard.tsx`, gated `isAccountApproved`). Text vysvětluje: fakturujeme jen aktivované MioCoiny, vyúčtování automaticky jednou týdně, faktura přijde e-mailem a je v „Moje faktury"; aktuální cena z `partner.price_per_coin`. Odkaz „Moje faktury" → `/partner/invoices`.
+- Sjednocen partner-facing label konceptu faktury: offer invoice draft badge „Návrh" → „Koncept" (sjednoceno s `PartnerInvoices.tsx`).
+- Reaguje na Partner Flow business readiness audit (mezera: partner nevěděl, kdy/kde dostane fakturu).
+- Build `npm run build` ✅ exit 0. Žádná billing logika, žádné DB/schema/SQL, žádný deploy, žádné e-maily. Affiliate Payouts, Partner Invoice backend a customer invite reward security nedotčeny.
+
 ## 2026-06-13 — Admin smoke test pro vouchers + Doporučení a odměny (spec 46)
 
 - Přidán dedikovaný read-only admin smoke test `tests/e2e/46-admin-vouchers-referrals-smoke.spec.ts` pro `/admin/vouchers` a `/admin/referrals`. Commit `6d67fd2f`.

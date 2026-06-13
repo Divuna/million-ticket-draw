@@ -1462,6 +1462,35 @@ const PartnerDashboard = () => {
           </Card>
         )}
 
+        {/* MioCoin Invoicing Explainer — read-only info, no billing logic */}
+        {isAccountApproved && (
+          <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
+                <Receipt className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
+                Fakturace MioCoinů
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-start gap-3 rounded-lg bg-muted/30 border border-border/50 p-4">
+                <Info className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Fakturujeme pouze aktivované MioCoiny. Vyúčtování probíhá automaticky
+                  jednou týdně. Fakturu vám pošleme e-mailem a najdete ji také v sekci{' '}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/partner/invoices')}
+                    className="text-[hsl(var(--neon-gold))] hover:underline font-medium"
+                  >
+                    Moje faktury
+                  </button>
+                  . Aktuální cena: {partner?.price_per_coin?.toFixed(2) ?? '1.00'} Kč za 1 MioCoin.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Offer Billing Section */}
         {offerBillingConfig && (
           <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
@@ -1558,7 +1587,7 @@ const PartnerDashboard = () => {
                                 {(inv.amount_inc_vat ?? inv.amount_gross ?? 0).toLocaleString('cs-CZ')} Kč
                               </TableCell>
                               <TableCell>
-                                {inv.status === 'draft' && <Badge variant="outline">Návrh</Badge>}
+                                {inv.status === 'draft' && <Badge variant="outline">Koncept</Badge>}
                                 {inv.status === 'sent' && <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">Odesláno</Badge>}
                                 {inv.status === 'paid' && <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Zaplaceno</Badge>}
                                 {inv.status === 'void' && <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-500/20">Storno</Badge>}
