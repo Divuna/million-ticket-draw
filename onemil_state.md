@@ -1,5 +1,46 @@
 ﻿# OneMil – aktuální stav projektu
 
+## ✅ STAGING PARTNER API TEST ENVIRONMENT — PŘIPRAVEN A ROTOVÁN (13. 06. 2026)
+
+Staging dxmowysntemfqfnanxua má nasazené a funkční partner API EF pro bezpečné testování bez dotyku produkce.
+
+### Nasazené staging EF (nové, pouze staging)
+- partner-activate v1 — ACTIVE, erify_jwt=false (vlastní auth: x-internal-token + Authorization: Bearer <api_key>)
+- dmin-generate-partner-api-key v1 — ACTIVE, erify_jwt=false (vlastní auth: x-internal-token + admin JWT)
+
+### Staging secrets
+- INTERNAL_FUNCTION_TOKEN — nastaven a ROTOVÁN (prefix 18f549b); **neobsahuje** produkční hodnotu; staging-only.
+
+### Staging partner API klíč
+- **Partner:** E2E Staging Partner (99790c17-0fcc-49f4-9f01-18e915dd241a)
+- **Aktivní klíč prefix:** 9e56826 (key_id 7c7babd3-4ba9-45a4-8dab-fd8567b01a40)
+- **Starý expozovaný klíč 5f00421 REVOKOVÁN.**
+
+### Connection test výsledek
+- HTTP 200 OK, body {"status":"ok","coins":null,"activation_id":null} — OK
+- partner_coin_activations rows: **0** (stub potvrzeno — žádné DB zápisy)
+- No invoice, no email, no PDF, no payment, no production data.
+- Wrong token → 401 ✓
+
+### Stub status
+- ctivate_partner_reward_sql je na stagingu **stub** — vrací {success:true, partner_id} bez reálných DB zápisů.
+- Pro testování reálné aktivační logiky je potřeba nasadit produkční verzi funkce (vyžaduje samostatné schválení Pavla).
+
+### Curl template (pro Pavla)
+`
+curl -i -X POST "https://dxmowysntemfqfnanxua.supabase.co/functions/v1/partner-activate" \
+  -H "x-internal-token: <STAGING_INTERNAL_FUNCTION_TOKEN>" \
+  -H "Authorization: Bearer <STAGING_PARTNER_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"reward_code":"TEST-CONN-001","external_order_id":"TEST-ORDER-001"}'
+`
+Plné hodnoty Pavel zná z terminálu; NEUKLÁDAT do dokumentace ani do kódu.
+
+**Pravidla (neměnit):**
+- partner-activate staging EF — staging-only; produkce má svůj vlastní token v Vault.
+- INTERNAL_FUNCTION_TOKEN produkce NESMÍ být nikdy printnut ani sdílen.
+- Staging API klíče jsou staging-only; nesmí se používat pro produkční e-shopy.
+- Real activation (non-stub) vyžaduje: (1) produkční ctivate_partner_reward_sql nasazenu na staging, (2) existující partner_reward_codes pro testovacího partnera.
 ## ✅ PARTNER DASHBOARD SMOKE SPEC 47 — LOGOUT NYNÍ ASSERTOVÁN (13. 06. 2026)
 
 Spec 47 (`tests/e2e/47-partner-dashboard-smoke.spec.ts`) test 47f aktualizován: místo best-effort skipu nyní klikne na existující top-nav tlačítko `Odhlásit se` (PartnerHeader v `App.tsx`, `handleLogout` = `signOut` → `navigate('/partner/login')`) a ověří redirect na `/partner/login`.
@@ -8,6 +49,47 @@ Spec 47 (`tests/e2e/47-partner-dashboard-smoke.spec.ts`) test 47f aktualizován:
 - **Staging cílený run `27474214282`:** **3 passed · 0 skipped · 0 failed**, success (47f logout již passuje, není skipnut).
 - Test-only: žádná změna app UI, žádné SQL, žádný deploy, žádná produkční data. Affiliate Payouts a customer invite reward security nedotčeny.
 
+## ✅ STAGING PARTNER API TEST ENVIRONMENT — PŘIPRAVEN A ROTOVÁN (13. 06. 2026)
+
+Staging dxmowysntemfqfnanxua má nasazené a funkční partner API EF pro bezpečné testování bez dotyku produkce.
+
+### Nasazené staging EF (nové, pouze staging)
+- partner-activate v1 — ACTIVE, erify_jwt=false (vlastní auth: x-internal-token + Authorization: Bearer <api_key>)
+- dmin-generate-partner-api-key v1 — ACTIVE, erify_jwt=false (vlastní auth: x-internal-token + admin JWT)
+
+### Staging secrets
+- INTERNAL_FUNCTION_TOKEN — nastaven a ROTOVÁN (prefix 18f549b); **neobsahuje** produkční hodnotu; staging-only.
+
+### Staging partner API klíč
+- **Partner:** E2E Staging Partner (99790c17-0fcc-49f4-9f01-18e915dd241a)
+- **Aktivní klíč prefix:** 9e56826 (key_id 7c7babd3-4ba9-45a4-8dab-fd8567b01a40)
+- **Starý expozovaný klíč 5f00421 REVOKOVÁN.**
+
+### Connection test výsledek
+- HTTP 200 OK, body {"status":"ok","coins":null,"activation_id":null} — OK
+- partner_coin_activations rows: **0** (stub potvrzeno — žádné DB zápisy)
+- No invoice, no email, no PDF, no payment, no production data.
+- Wrong token → 401 ✓
+
+### Stub status
+- ctivate_partner_reward_sql je na stagingu **stub** — vrací {success:true, partner_id} bez reálných DB zápisů.
+- Pro testování reálné aktivační logiky je potřeba nasadit produkční verzi funkce (vyžaduje samostatné schválení Pavla).
+
+### Curl template (pro Pavla)
+`
+curl -i -X POST "https://dxmowysntemfqfnanxua.supabase.co/functions/v1/partner-activate" \
+  -H "x-internal-token: <STAGING_INTERNAL_FUNCTION_TOKEN>" \
+  -H "Authorization: Bearer <STAGING_PARTNER_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"reward_code":"TEST-CONN-001","external_order_id":"TEST-ORDER-001"}'
+`
+Plné hodnoty Pavel zná z terminálu; NEUKLÁDAT do dokumentace ani do kódu.
+
+**Pravidla (neměnit):**
+- partner-activate staging EF — staging-only; produkce má svůj vlastní token v Vault.
+- INTERNAL_FUNCTION_TOKEN produkce NESMÍ být nikdy printnut ani sdílen.
+- Staging API klíče jsou staging-only; nesmí se používat pro produkční e-shopy.
+- Real activation (non-stub) vyžaduje: (1) produkční ctivate_partner_reward_sql nasazenu na staging, (2) existující partner_reward_codes pro testovacího partnera.
 ## ✅ PARTNER DASHBOARD SMOKE SPEC 47 PŘIDÁN (13. 06. 2026)
 
 Dedikovaný approved-partner dashboard smoke test přidán, aby uzamkl live business-text úpravy partner dashboardu proti regresi.
