@@ -505,42 +505,15 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
   };
 
   const createTestUser = async () => {
-    setLoading(true);
-    const startTime = Date.now();
-    
-    try {
-      toast({
-        title: "👤 Vytvářím test uživatele",
-        description: "Vytváření auth uživatele a všech závislých dat...",
-      });
-
-      const { data, error } = await supabase.functions.invoke('admin-create-test-user');
-      
-      if (error) throw error;
-      
-      const response = data as { success: boolean; message: string; user_id?: string; email?: string };
-      
-      if (!response.success) {
-        throw new Error(response.message);
-      }
-      
-      const executionTime = Date.now() - startTime;
-      updatePerformanceMetrics('create_test_user', executionTime);
-
-      toast({
-        title: "👤 Test uživatel vytvořen ✅",
-        description: `Email: ${response.email} • ID: ${response.user_id?.substring(0, 8)}... • Za ${executionTime}ms`,
-      });
-
-    } catch (error: any) {
-      toast({
-        title: "❌ Chyba při vytváření test uživatele",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
+    // Produkční Edge Function `admin-create-test-user` byla bezpečnostně odstraněna
+    // z produkce (měla verify_jwt=false, žádnou interní autorizaci a používala service role).
+    // Akce je proto vypnutá, aby admin neklikal na nefunkční/nebezpečný produkční test.
+    // NEOBNOVOVAT volání bez přidání řádného admin guardu na Edge Function.
+    toast({
+      title: "Test vypnut",
+      description: "Tento produkční test byl bezpečnostně vypnut.",
+      variant: "destructive",
+    });
   };
 
   const updatePerformanceMetrics = (testType: string, executionTime: number) => {
@@ -734,7 +707,7 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
                     disabled={loading}
                     className="w-full text-xs bg-yellow-100 border-yellow-300 hover:bg-yellow-200"
                   >
-                    Vytvořit Test User
+                    Produkční test vypnut
                   </Button>
                 </div>
                 {performanceMetrics.create_test_user && (
@@ -941,7 +914,7 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
                     disabled={loading}
                     className="mr-2 bg-yellow-500 hover:bg-yellow-600"
                   >
-                    Vytvořit Test User
+                    Produkční test vypnut
                   </Button>
                   <Button 
                     variant="outline" 
@@ -963,7 +936,7 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
                     disabled={loading}
                     className="mr-2 bg-yellow-500 hover:bg-yellow-600"
                   >
-                    Vytvořit Test User
+                    Produkční test vypnut
                   </Button>
                   <Button 
                     variant="outline" 
