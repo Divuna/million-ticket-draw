@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-06-13 — P0 customer flow audit po security + invoice práci
+
+- Staging Full E2E run `27464656913` ✅: **112 passed · 28 skipped · 0 failed** (větev `main`).
+- Ověřené zákaznické flow: registrace, login, profil, načtení peněženky, „Pozvi přátele"/vlastní invite data, stránka Hry, detail soutěže, stránka Voucher, stránka Zprávy, top-up/checkout otevření bez reálné platby, logout.
+- Produkce `xkzhjldrojjlrkezorey` ověřena **pouze read-only**. Zákaznické RPC přítomny s `authenticated` execute: `buy_ticket_atomic`, `ensure_referral_code`, `set_my_referrer_by_code`, `get_bob_enabled`, `redeem_miocoin_code`, `bump_user_last_seen`.
+- Policy pro `profiles`, `wallets`, `messages`, `contests` a invite reward tabulky zůstávají scoped; žádné broad `USING (true)`. `vouchers` world-readable SELECT je záměrný pro veřejný voucher katalog.
+- Žádný zákaznický blocker. Bez změny souborů, bez SQL writes, bez deploye, bez e-mailů, bez plateb, žádná produkční data nezměněna.
+
 ## 2026-06-13 — Úklid testovací partner faktury OMA-20260003
 
 - Smazány z produkce `xkzhjldrojjlrkezorey`: `partner_invoices` OMA-20260003 (id `75fc016e...`), 1 `partner_invoice_lines` řádek (external_order_id `TEST-PDF-OVERVIEW-20260613-5MC`), `partner_invoice_exports` id `48e44363...`, `partner_coin_activations` id `764ddcde...` / code `TESTPDF20260613A`, `partner_reward_codes` code `TESTPDF20260613A`.

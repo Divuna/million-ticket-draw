@@ -1,5 +1,20 @@
 ﻿# OneMil – aktuální stav projektu
 
+## ✅ P0 CUSTOMER FLOW AUDIT — PO SECURITY + INVOICE PRÁCI (13. 06. 2026)
+
+P0 audit nejdůležitějších zákaznických flow byl dokončen po nedávné invite reward security práci a Partner Invoice úklidu. Staging behaviorálně ověřen, produkce pouze read-only.
+
+- **Staging Full E2E run `27464656913` ✅** — **112 passed · 28 skipped · 0 failed** (9.3m, exit success), větev `main`.
+- **Ověřené zákaznické flow (staging):** registrace · login · profil · načtení peněženky · „Pozvi přátele" / vlastní invite data · stránka Hry · detail soutěže · stránka Voucher · stránka Zprávy · top-up/checkout otevření bez reálné platby · logout.
+- **Per-spec:** `01-registration` 2/2 spuštěné passed (1 záměrný new-user skip), `02-login` 3/3, `17-profile-smoke` 2/2, `09-wallet-balance` 1/1, `03-voucher`/`10`/`11` passed, `04-ticket-purchase` 3/3, `12-mobile-messages` 1/1, `33-login-gating` 6/6, `31-bob-toggle` passed.
+- **28 skipů je non-blocking** — koncentrované v podmíněných specech (partner offers 06/07/08 cooldown, staging-only B2B + Partner Invoice specy 22/34–45 vyžadující seed, jeden záměrný registrační case v 01). Žádný zákaznický P0 flow neselhal ani nebyl tiše přeskočen.
+- **Produkce `xkzhjldrojjlrkezorey` — pouze read-only ověření:**
+  - Zákaznické RPC přítomny s `authenticated` execute: `buy_ticket_atomic`, `ensure_referral_code`, `set_my_referrer_by_code`, `get_bob_enabled`, `redeem_miocoin_code`, `bump_user_last_seen`.
+  - Policy pro `profiles`, `wallets`, `messages`, `contests` a invite reward tabulky zůstávají scoped — **žádné broad `USING (true)`**.
+  - `vouchers` world-readable SELECT je **záměrný** pro veřejný voucher katalog (ne regrese).
+- **Žádný zákaznický blocker nenalezen.**
+- Bez změny souborů, bez SQL writes, bez deploye, bez e-mailů, bez plateb. Žádná produkční data nezměněna. Affiliate Payouts a Partner Invoices nedotčeny.
+
 ## 🧹 ÚKLID TESTOVACÍ PARTNER FAKTURY OMA-20260003 (13. 06. 2026)
 
 Produkční testovací faktura `OMA-20260003` a všechna související testovací data smazána z produkce `xkzhjldrojjlrkezorey`. Schváleno Pavlem: „schvaluji úklid produkční testovací faktury OMA-20260003".

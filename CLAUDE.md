@@ -1,5 +1,14 @@
 # CLAUDE.md
 
+## P0 CUSTOMER FLOW AUDIT — ✅ ZELENÝ PO SECURITY + INVOICE PRÁCI (13. 06. 2026)
+
+P0 audit zákaznických flow dokončen po invite reward security práci a Partner Invoice úklidu. Staging behaviorálně ověřen, produkce pouze read-only.
+
+- **Staging Full E2E run `27464656913` ✅:** 112 passed · 28 skipped · 0 failed (větev `main`).
+- **Ověřené zákaznické flow:** registrace, login, profil, načtení peněženky, „Pozvi přátele"/vlastní invite data, stránka Hry, detail soutěže, stránka Voucher, stránka Zprávy, top-up/checkout otevření bez reálné platby, logout. 28 skipů non-blocking (partner offers cooldown, staging-only B2B/Partner Invoice specy, 1 záměrný registrační skip) — žádný zákaznický P0 flow neselhal.
+- **Produkce `xkzhjldrojjlrkezorey` read-only:** zákaznické RPC přítomny s `authenticated` execute (`buy_ticket_atomic`, `ensure_referral_code`, `set_my_referrer_by_code`, `get_bob_enabled`, `redeem_miocoin_code`, `bump_user_last_seen`); policy `profiles`/`wallets`/`messages`/`contests`/invite reward tabulky scoped, žádné broad `USING (true)`; `vouchers` world-readable SELECT záměrný pro veřejný voucher katalog.
+- **Žádný zákaznický blocker.** Bez změny souborů, bez SQL writes, bez deploye, bez e-mailů, bez plateb, žádná produkční data nezměněna.
+
 ## ADMIN TEST DASHBOARD — akce admin-create-test-user VYPNUTA (13. 06. 2026, invariant)
 
 Po odstranění produkční Edge Function `admin-create-test-user` byla v admin test dashboardu vypnuta akce, která ji volala, aby admin neklikal na nefunkční/nebezpečné produkční tlačítko.
