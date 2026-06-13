@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+## PARTNER API V1 — ODMÍTNUTÝ STAGING PROTOTYP `5b5d8270`
+
+Staging prototyp Partner API v1 z commitu `5b5d8270` byl odmítnutý, protože vytvořil paralelní Partner API systém: novou Edge Function `partner-api-v1`, novou tabulku `partner_api_v1_order_rewards` a nové `partner_api_v1_*` RPC vedle existujícího Partner API. Prototypové soubory byly odstraněny z repozitáře. Affiliate Payouts práce zůstává nedotčená.
+
+Budoucí implementace Partner API v1 musí znovu použít existující `partner_api_keys`, `partner_reward_codes`, `partner_coin_activations`, existující partner conversion settings (`partners.reward_base_czk`, `partners.reward_mc`), existující redemption flow `redeem_miocoin_code` a existující invoice pipeline. Partner nesmí posílat finální MioCoin částku; OneMil ji počítá podle nastavení partnera.
+
+Staging cleanup po prototypu je stále pending a vyžaduje samostatné výslovné schválení. Bez schválení neprovádět cleanup SQL, nedeployovat, nemazat staging Edge Function ani staging data a netýkat se produkce.
+
 ## NEJNOVĚJŠÍ STAV — DÁVKOVÉ VÝPLATY AFFILIATE/OBCHODNÍCH PROVIZÍ (10. 06. 2026)
 
 Fáze A+B+C jsou aplikované a ověřené pouze na staging Supabase projektu `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` je netknutá. Nebyl proveden web deploy, Lovable Publish ani full E2E.

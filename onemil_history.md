@@ -14,6 +14,13 @@
 
 ---
 
+## 2026-06-13 - Partner API v1 staging prototyp odmítnut a odstraněn z repozitáře
+
+- Staging prototyp z commitu `5b5d8270` byl odmítnut, protože vytvořil paralelní Partner API systém (`partner-api-v1`, `partner_api_v1_order_rewards`, `partner_api_v1_*` RPC) vedle existujícího Partner API.
+- Z repozitáře byly odstraněny pouze prototypové soubory: `docs/partner-api-v1.md`, `supabase/functions/partner-api-v1/index.ts`, `20260613192714_partner_api_v1_staging.sql`, `20260613193339_partner_api_v1_staging_crypto_fix.sql`.
+- Budoucí implementace musí znovu použít existující `partner_api_keys`, `partner_reward_codes`, `partner_coin_activations`, partner conversion settings, `redeem_miocoin_code` a invoice pipeline.
+- Staging cleanup po prototypu zůstává pending a vyžaduje samostatné schválení; v tomto kroku nebylo spuštěno SQL, nebyl deploy a produkce nebyla dotčena.
+
 ## 2026-06-12 - Dávkové výplaty affiliate/obchodních provizí — PRODUKČNÍ ROLLOUT BACKENDU ✅ (schválení Pavla)
 
 - Na produkci `xkzhjldrojjlrkezorey` aplikováno 7 migrací v pořadí A → B → B guard → C → D → D.1 → ACL patch; postcheck po každé fázi prošel.

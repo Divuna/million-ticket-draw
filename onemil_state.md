@@ -2,6 +2,14 @@
 
 **Aktualizováno:** 10. 06. 2026 — 🌿 **Samostatná větev: dávkové výplaty affiliate/obchodních provizí (Fáze A+B+C na stagingu ověřené, Fáze D opravený reviewable návrh — importní test Air Bank ✅ SPLNĚN, formát `.kpc` plně funkční, čeká na výslovné schválení Pavla pro staging aplikaci, produkce netknutá).** Hlavní roadmapa se teď nemění.
 
+## PARTNER API V1 — STAGING PROTOTYP 5b5d8270 ODMÍTNUTÝ
+
+Staging prototyp Partner API v1 z commitu `5b5d8270` byl odmítnutý, protože vytvořil paralelní Partner API systém: novou Edge Function `partner-api-v1`, novou tabulku `partner_api_v1_order_rewards` a nové `partner_api_v1_*` RPC vedle existujícího Partner API. Tyto prototypové soubory byly odstraněny z repozitáře; Affiliate Payouts práce zůstává oddělená a nedotčená.
+
+Budoucí implementace Partner API v1 musí znovu použít existující systém: `partner_api_keys`, `partner_reward_codes`, `partner_coin_activations`, existující partner conversion settings (`partners.reward_base_czk`, `partners.reward_mc`), existující redemption flow `redeem_miocoin_code` a existující invoice pipeline nad `partner_coin_activations`. Partner nesmí posílat finální MioCoin částku; OneMil ji má spočítat z existujícího nastavení partnera.
+
+Staging cleanup po odmítnutém prototypu je stále pending a vyžaduje samostatné výslovné schválení. Bez tohoto schválení neprovádět cleanup SQL, nedeployovat, nemazat staging Edge Function ani staging data a netýkat se produkce.
+
 ## 🌿 DÁVKOVÉ VÝPLATY PROVIZÍ — AKTUÁLNÍ STAV STAGINGU (10. 06. 2026)
 
 **Stav větve:** Fáze A, Fáze B i Fáze C jsou aplikované pouze na staging Supabase projekt `dxmowysntemfqfnanxua`. Bezpečnostní patch temp tabulky pro `create_affiliate_payout_batch` je aplikovaný. Produkce `xkzhjldrojjlrkezorey` je netknutá. Nebyl proveden žádný web deploy, žádný Lovable Publish a full E2E nebylo spuštěno.
