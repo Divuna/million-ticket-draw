@@ -2,7 +2,7 @@
 
 ## CONTACT / LEGAL EMAIL CONSISTENCY AUDIT (14. 06. 2026, documentation-only)
 
-Repo audit verejnych e-mailu: app/legal/contact/footer/delete-account/support fallback a partner docs konzistentne pouzivaji `podpora@onemil.cz`; `COMPANY_CONTEXT.md` stale uvadi `support@onemil.cz` jako podporu a `info@onemil.cz` jako hlavni e-mail, `b2b@onemil.cz` jen pro spoluprace. `accounting_email` je interni affiliate payout setting, ne verejny support. Znamy DB vysledek doplnen do `LAUNCH_TODO.md`: CMS `vop`, `gdpr`, `pravidla-souteze` a `cookies` existuji, ale pravni kvalita/aktualnost zustava neoverena. Doporuceni: potvrdit `podpora@onemil.cz` jako kanonicky verejny support e-mail nebo sjednotit zdroj pravdy. Pouze dokumentace; zadny kod, SQL, deploy, produkcni data, Partner API, fakturace ani reward logika.
+Owner potvrzeno: kanonicky verejny support e-mail pro OneMil launch readiness je `podpora@onemil.cz`. `COMPANY_CONTEXT.md` byl dokumentacne sjednocen na `podpora@onemil.cz` pro hlavni verejny support kontakt i podporu; `b2b@onemil.cz` zustava jen pro obchodni spoluprace. `LAUNCH_TODO.md` L05 oznacen jako proslo pro public support e-mail consistency. CMS `vop`, `gdpr`, `pravidla-souteze` a `cookies` existuji, ale pravni kvalita/aktualnost zustava neoverena v L01-L04. Pouze dokumentace; zadny kod, SQL, deploy, produkcni data, Partner API, fakturace ani reward logika.
 
 ## C22 CUSTOMER PASSWORD RESET CLEAN BRANCH (14. 06. 2026)
 
@@ -14,7 +14,7 @@ PR #115 mergnut do `main` jako `a7690d0b63b9f0c46bcf96f8e2810605dd5e934a`. Prvni
 
 ## LEGAL / PUBLIC TEXTS P0 REVIEW (14. 06. 2026, documentation-only)
 
-Static audit pravnich/verejnych stranek: `/terms` (`TermsConditions.tsx`), `/privacy` (`PrivacyPolicy.tsx`) a `/kontakt` (`Kontakt.tsx`) existuji a maji vecny obsah; cookie banner/settings existuje (`CookieConsentBanner`, `consent.ts`) a uklada localStorage + `cookie_consents`. CMS legal routes `/vop`, `/gdpr`, `/pravidla-souteze` existuji pres `SlugContentPage`, ale repo neobsahuje seed/prokazatelny obsah; footer take odkazuje na dynamic `/legal/cookies`. Kontakt neni plne dle `COMPANY_CONTEXT.md`: app pouziva `podpora@onemil.cz`, context uvadi `support@onemil.cz`/`info@onemil.cz`. `LAUNCH_TODO.md` aktualizovan: legal P0 zustava blokovan dokud vlastnik nepotvrdi/nenaplni CMS pravni texty, cookie policy a kanonicky support e-mail. Zadny kod, SQL, deploy, produkcni data, Partner API, fakturace ani reward logika.
+Static audit pravnich/verejnych stranek: `/terms` (`TermsConditions.tsx`), `/privacy` (`PrivacyPolicy.tsx`) a `/kontakt` (`Kontakt.tsx`) existuji a maji vecny obsah; cookie banner/settings existuje (`CookieConsentBanner`, `consent.ts`) a uklada localStorage + `cookie_consents`. CMS legal routes `/vop`, `/gdpr`, `/pravidla-souteze` existuji pres `SlugContentPage`, ale repo neobsahuje seed/prokazatelny obsah; footer take odkazuje na dynamic `/legal/cookies`. Kontakt/support e-mail je po owner rozhodnuti sjednocen: kanonicky verejny support e-mail je `podpora@onemil.cz` v app i `COMPANY_CONTEXT.md`. Legal P0 zustava blokovan jen pro pravni kvalitu/aktualnost CMS pravnich textu a cookie policy, ne pro support e-mail consistency. Zadny kod, SQL, deploy, produkcni data, Partner API, fakturace ani reward logika.
 
 ## LAUNCH PLAN GAP AUDIT (14. 06. 2026, jen dokumentace)
 

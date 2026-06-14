@@ -4210,3 +4210,7 @@ Invariant:
 **Timestamp (Europe/Prague): 2026-06-14** - Contact/legal email consistency audit (documentation-only). Repo audit nasel, ze app/legal/contact/footer/delete-account/support fallback a partner docs konzistentne pouzivaji `podpora@onemil.cz`; `COMPANY_CONTEXT.md` stale uvadi `support@onemil.cz` jako podporu a `info@onemil.cz` jako hlavni e-mail, `b2b@onemil.cz` jen pro spoluprace. `accounting_email` je interni affiliate payout setting, ne verejny support. `LAUNCH_TODO.md` aktualizovan podle znameho DB vysledku: CMS `vop`, `gdpr`, `pravidla-souteze` a `cookies` existuji, ale pravni kvalita/aktualnost zustava neoverena. Doporuceni: potvrdit `podpora@onemil.cz` jako kanonicky verejny support e-mail nebo sjednotit zdroj pravdy. Pouze dokumentace; zadny kod, SQL, deploy, produkcni data, Partner API, fakturace, reward logika ani migrace.
 
 ---
+
+**Timestamp (Europe/Prague): 2026-06-14** - Owner decision applied for public support e-mail (documentation-only). Owner confirmed `podpora@onemil.cz` as the canonical public support e-mail for OneMil launch readiness. `COMPANY_CONTEXT.md` was aligned so the main public support contact and support line use `podpora@onemil.cz`; `b2b@onemil.cz` remains business cooperation only. `LAUNCH_TODO.md` L05 marked `proslo` for public support e-mail consistency. L01-L04 remain unverified for legal/owner review of VOP/GDPR/rules/cookies content quality. No app code, SQL, deploy, production data, Partner API, invoices, reward logic, or migrations touched.
+
+---

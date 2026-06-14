@@ -45,8 +45,8 @@ obchodní komunikací nebo oficiálním popisem OneMil.
 | Typ | Hodnota |
 |-----|---------|
 | Web | [www.onemil.cz](https://www.onemil.cz) |
-| Hlavní e-mail | info@onemil.cz |
-| Podpora | support@onemil.cz |
+| Hlavní veřejný support e-mail | podpora@onemil.cz |
+| Podpora | podpora@onemil.cz |
 | Obchodní spolupráce | b2b@onemil.cz |
 | Telefon | +420 776 532 562 |
 
@@ -66,8 +66,8 @@ S pozdravem
 Tým OneMil
 
 Web: www.onemil.cz
-E-mail: info@onemil.cz
-Podpora: support@onemil.cz
+E-mail: podpora@onemil.cz
+Podpora: podpora@onemil.cz
 Obchodní spolupráce: b2b@onemil.cz
 Tel.: +420 776 532 562
 

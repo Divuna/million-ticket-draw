@@ -2,7 +2,7 @@
 
 ## CONTACT / LEGAL EMAIL CONSISTENCY AUDIT (14. 06. 2026, jen dokumentace)
 
-Repo audit verejnych e-mailu: app/legal/contact/footer/delete-account/support fallback a partner docs konzistentne pouzivaji `podpora@onemil.cz`; `COMPANY_CONTEXT.md` stale uvadi `support@onemil.cz` jako podporu a `info@onemil.cz` jako hlavni e-mail, `b2b@onemil.cz` jen pro spoluprace. `accounting_email` je interni affiliate payout setting, ne verejny support. Znamy DB vysledek doplnen do `LAUNCH_TODO.md`: CMS `vop`, `gdpr`, `pravidla-souteze` a `cookies` existuji, ale pravni kvalita/aktualnost zustava neoverena. Doporuceni: potvrdit `podpora@onemil.cz` jako kanonicky verejny support e-mail nebo sjednotit zdroj pravdy. Zadny kod, SQL, deploy, produkcni data, Partner API, fakturace ani reward logika.
+Owner potvrzeno: kanonicky verejny support e-mail pro OneMil launch readiness je `podpora@onemil.cz`. `COMPANY_CONTEXT.md` byl dokumentacne sjednocen na `podpora@onemil.cz` pro hlavni verejny support kontakt i podporu; `b2b@onemil.cz` zustava jen pro obchodni spoluprace. `LAUNCH_TODO.md` L05 oznacen jako proslo pro public support e-mail consistency. CMS `vop`, `gdpr`, `pravidla-souteze` a `cookies` existuji, ale pravni kvalita/aktualnost zustava neoverena v L01-L04. Zadny kod, SQL, deploy, produkcni data, Partner API, fakturace ani reward logika.
 
 ## LAUNCH READINESS DOKUMENTACE (14. 06. 2026, jen dokumentace)
 
@@ -1161,6 +1161,6 @@ PR #115 merged to `main` as `a7690d0b63b9f0c46bcf96f8e2810605dd5e934a`. Targeted
 
 ## LEGAL / PUBLIC TEXTS P0 REVIEW (14. 06. 2026)
 
-Documentation-only static audit. `/terms`, `/privacy`, `/kontakt`, cookie banner/settings, footer legal links, and CMS route wiring were reviewed. Static pages exist and are not obvious placeholders, but CMS-backed legal routes `/vop`, `/gdpr`, `/pravidla-souteze`, and `/legal/cookies` still require owner/environment confirmation of real content. Contact/support e-mail must be confirmed because app pages use `podpora@onemil.cz` while `COMPANY_CONTEXT.md` lists `support@onemil.cz`/`info@onemil.cz`. Do not invent legal wording or edit legal text without owner approval. No code, SQL, deploy, production data, Partner API, invoice, reward, or migration change.
+Documentation-only static audit. `/terms`, `/privacy`, `/kontakt`, cookie banner/settings, footer legal links, and CMS route wiring were reviewed. Static pages exist and are not obvious placeholders, but CMS-backed legal routes `/vop`, `/gdpr`, `/pravidla-souteze`, and `/legal/cookies` still require owner/environment confirmation of real content. Owner confirmed `podpora@onemil.cz` as the canonical public support e-mail, and documentation/source-of-truth wording has been aligned. Do not invent legal wording or edit legal text without owner approval. No code, SQL, deploy, production data, Partner API, invoice, reward, or migration change.
 
 ---
