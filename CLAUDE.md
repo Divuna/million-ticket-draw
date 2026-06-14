@@ -1154,3 +1154,9 @@ Clean branch `codex/customer-password-reset-clean` brings only the customer pass
 PR #115 merged to `main` as `a7690d0b63b9f0c46bcf96f8e2810605dd5e934a`. Targeted staging workflow `27507097356` ran spec 44 against `main`/`a7690d0b` and passed. Earlier local post-merge failure was a `page.goto('/login')` timeout caused by local dev-server startup/reuse timing; CI-mode local rerun also passed 3/3. No SQL, deploy, production data, Partner API, invoice, reward, or migration changes in the C22 verification follow-up.
 
 ---
+
+## LEGAL / PUBLIC TEXTS P0 REVIEW (14. 06. 2026)
+
+Documentation-only static audit. `/terms`, `/privacy`, `/kontakt`, cookie banner/settings, footer legal links, and CMS route wiring were reviewed. Static pages exist and are not obvious placeholders, but CMS-backed legal routes `/vop`, `/gdpr`, `/pravidla-souteze`, and `/legal/cookies` still require owner/environment confirmation of real content. Contact/support e-mail must be confirmed because app pages use `podpora@onemil.cz` while `COMPANY_CONTEXT.md` lists `support@onemil.cz`/`info@onemil.cz`. Do not invent legal wording or edit legal text without owner approval. No code, SQL, deploy, production data, Partner API, invoice, reward, or migration change.
+
+---
