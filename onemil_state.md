@@ -1,5 +1,9 @@
 ﻿# OneMil – aktuální stav projektu
 
+## LAUNCH READINESS TESTOVACI PLAN PRIPRAVEN (14. 06. 2026, jen dokumentace)
+
+Vytvorena sada ve `docs/launch-readiness/`: `LAUNCH_TEST_PLAN.md` (sekce A–H), `ROUTE_CHECKLIST.md` (mapa ~70 rout z `src/App.tsx` s P0/P1/P2), `LAUNCH_TODO.md` (65 testovacich bodu: zakaznik/admin/partner/platby/pravni/CI). Souhrn priorit: P0=48, P1=16, P2=1. **P0 blockery veřejneho spusteni (NEOVERENO):** naplneni pravniho obsahu (VOP/GDPR/pravidla souteze), cookies reseni, realne kontaktni/reklamacni udaje, zeleny Full E2E + P0 smoke na `main`, realne partner reward settings (ne `[TEST DATA]`). `onemil_spec.md` neexistuje (todo). `TestLogin`/`InfluencerDashboard` jsou mimo router (NEOVERENO mrtvy kod). Pouze dokumentace — zadny kod/SQL/deploy/produkce/testovaci data.
+
 ## STAGING INTERNAL_FUNCTION_TOKEN REALIGNMENT — CI ZELENE (14. 06. 2026)
 
 Behem partner-API prace byl staging Supabase secret `INTERNAL_FUNCTION_TOKEN` nekolikrat rotovan, cimz prestal odpovidat GitHub Actions secretu `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` → spec 44 (44c) padalo na 401 (a navazne 44d–g). Slo o staging secret drift, NE o chybu testu, app/API ani produkce (produkcni `INTERNAL_FUNCTION_TOKEN` nikdy nezmenen).

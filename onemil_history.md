@@ -4187,3 +4187,7 @@ Invariant:
 ---
 
 **Timestamp (Europe/Prague): 2026-06-14** — Staging-only realignment secretu `INTERNAL_FUNCTION_TOKEN`. Drift z drivejsich partner-API rotaci zpusobil, ze staging Supabase `INTERNAL_FUNCTION_TOKEN` (projekt `dxmowysntemfqfnanxua`) neodpovidal GitHub secretu `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` → spec 44 (44c) 401. Vygenerovan novy sdileny token, nastaven na obou mistech (token netisten). `VITE_INTERNAL_FUNCTION_TOKEN` a produkcni secrety nezmeneny; produkce netknuta. Prvni pokus pres PowerShell pipe pridal BOM (U+FEFF) → 44c TypeError; opraveno pres `gh secret set --body`. Cilene staging runy zelene: spec 44 `27500754646` (7 passed), spec 43 `27500810383`, spec 22 `27500856702`. Zadny kod/test/migrace/EF/deploy nezmenen.
+
+---
+
+**Timestamp (Europe/Prague): 2026-06-14** — Pripravena launch readiness dokumentace ve `docs/launch-readiness/`: `LAUNCH_TEST_PLAN.md` (sekce A–H), `ROUTE_CHECKLIST.md` (mapa ~70 rout z routeru s P0/P1/P2), `LAUNCH_TODO.md` (65 testovacich bodu, P0=48/P1=16/P2=1). Pokryva zakaznicke, admin, partner, platebni, pravni a CI testy + zaver (co je hotove, co rucne, co automaticky, co blokuje spusteni, doporuceny poradek). P0 blockery NEOVERENO: pravni obsah VOP/GDPR/pravidla souteze, cookies, realne kontaktni/reklamacni udaje, zeleny Full E2E + P0 smoke, realne partner reward settings. `onemil_spec.md` neexistuje. Pouze dokumentace — zadny kod/SQL/deploy/produkce/testovaci data nezmeneno.

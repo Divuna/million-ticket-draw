@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## LAUNCH READINESS DOKUMENTACE (14. 06. 2026, jen dokumentace)
+
+Launch testovaci plan ve `docs/launch-readiness/`: `LAUNCH_TEST_PLAN.md` (A–H), `ROUTE_CHECKLIST.md` (mapa rout P0/P1/P2), `LAUNCH_TODO.md` (65 bodu; P0=48/P1=16/P2=1). P0 blockery: pravni obsah (VOP/GDPR/pravidla), cookies, kontakt/reklamace, zeleny Full E2E + P0 smoke, realne partner reward settings. NEOVERENO oznacene jako todo. Zadny kod/SQL/deploy/produkce.
+
 ## STAGING INTERNAL_FUNCTION_TOKEN — REALIGNMENT (14. 06. 2026)
 
 Staging `INTERNAL_FUNCTION_TOKEN` (Supabase `dxmowysntemfqfnanxua`) byl realignovan s GitHub secretem `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` (oba na jednu novou sdilenou hodnotu) — predtim drift z partner-API rotaci shazoval spec 44/43/22 (401). Produkcni `INTERNAL_FUNCTION_TOKEN` ani `VITE_INTERNAL_FUNCTION_TOKEN` nezmenen. **Pravidlo: GitHub secrety nastavovat pres `gh secret set --body`, NE pres PowerShell pipe (pipe pridava BOM U+FEFF → header TypeError).** Cilene runy zelene: 44 `27500754646`, 43 `27500810383`, 22 `27500856702`. Zadny kod/test/migrace/deploy/produkce.
