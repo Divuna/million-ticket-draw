@@ -4,10 +4,15 @@
 > Source: `get_advisors(security)` on production `xkzhjldrojjlrkezorey`, read-only, 14. 06. 2026.
 > No code, SQL, RLS, deploy, or production data changed. Nothing marked fixed without proof.
 >
-> **Totals: 467 findings — 23 ERROR · 20 INFO · 424 WARN.**
+> **Totals (production, 14.06): 467 findings — 23 ERROR · 20 INFO · 424 WARN.**
 > The **23 ERROR-level findings = the "23 pre-existing findings" referenced in SEC01** (2 Exposed Auth Users + 1 RLS Disabled in Public + 20 Security Definer View).
 >
 > **SEC01 remains a P0 launch blocker** until each finding below is individually fixed or explicitly accepted by the owner.
+>
+> ### UPDATE 14.06.2026 — Group 1 safe fixes APPLIED + VERIFIED on STAGING (`dxmowysntemfqfnanxua`) only
+> 11 app-unused SECURITY DEFINER views had `SELECT` revoked from `anon`/`authenticated` and `security_invoker=on` set (migration `sec01_group1_safe_view_hardening`). Postcheck: all 11 anon=false, auth=false, security_invoker=on. Re-run `get_advisors(security)` on staging: **all 11 targeted ERROR findings GONE** (staging ERROR 21→10). Full Staging E2E run **`27510668205` = success, 121 passed, 0 failures** → no customer/admin/partner flow broke.
+> **Production NOT touched** (production still shows all 23 ERROR). SEC01 stays **P0 blocker** — 10 ERRORs remain on staging (1 RLS Disabled in Public + 9 Security Definer View = Group 2/3) and production is unchanged.
+> Group-1 rows below marked **fixed (staging, verified)**; production fix pending separate owner approval.
 >
 > Status values: `fixed` (proof in repo/docs) · `open` (must fix/triage) · `needs owner decision` · `accepted-risk candidate`.
 

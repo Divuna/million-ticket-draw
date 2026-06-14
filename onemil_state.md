@@ -1,5 +1,15 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SEC01 GROUP 1 — APLIKOVÁN A OVĚŘEN NA STAGINGU (14. 06. 2026)
+
+SEC01 Group 1 (11 app-unused SECURITY DEFINER views) aplikován **POUZE na staging** `dxmowysntemfqfnanxua` (migrace `sec01_group1_safe_view_hardening`): `REVOKE SELECT` od anon/authenticated + `SET (security_invoker = on)` na `daily_platform_metrics`, `v_influencer_referrals_valid`, `v_user_wallets`, `contest_analytics`, `contest_ticket_map`, `event_queue_monitoring`, `event_queue_failed_summary`, `contest_integrity_check`, `system_health_monitor`, `admin_winner_delivery_detail`, `v_first_topup_valid`.
+
+- **Postcheck:** všech 11 anon=false, auth=false, security_invoker=on.
+- **Advisor staging re-run:** všech 11 cílených ERROR nálezů ZMIZELO (staging ERROR 21→10).
+- **Full Staging E2E `27510668205` = success, 121 passed, 0 fail** → žádný customer/admin/partner flow se nerozbil.
+- **PRODUKCE NEDOTČENA** (`xkzhjldrojjlrkezorey` stále 23 ERROR). Žádný deploy, žádná změna app kódu.
+- **SEC01 ZŮSTÁVÁ P0 BLOCKER:** na stagingu zbývá 10 ERROR (1 RLS Disabled in Public `_messages_policies_backup` + 9 Security Definer View = Group 2/3); produkce neopravena. Produkční rollout Group 1 + řešení Group 2/3 vyžaduje samostatné schválení ownera.
+
 ## SEC01 SECURITY FINDINGS INVENTÁŘ — P0 BLOCKER (14. 06. 2026, jen dokumentace)
 
 Read-only `get_advisors(security)` na produkci `xkzhjldrojjlrkezorey` → vytvoren `docs/launch-readiness/SECURITY_FINDINGS.md`. **467 nalezu: 23 ERROR / 20 INFO / 424 WARN.** 23 ERROR = puvodni „23" ze SEC01 (2× Exposed Auth Users, 1× RLS Disabled in Public na `_messages_policies_backup`, 20× Security Definer View). Fixnuto v inventari = 0 (drivejsi invite-reward/affiliate fixy se v aktualnim seznamu uz neobjevuji — overeno absenci). Open = 23 ERROR + W1 (102 function search_path) + W7 (Leaked Password Protection off). Needs owner decision / accepted-risk = INFO(20) + WARN(424): public-execute SECURITY DEFINER (151/156, vetsinou by-design s is_admin/auth.uid guardem), public buckets (9, asset buckets; `partner-invoices` spravne neni public), RLS Policy Always True (3: cookie_consents/event_queue), Extension in Public (2). **SEC01 zustava P0 blocker** dokud nejsou ERRORy fixnuty nebo ownerem vyslovne akceptovany. Zadny kod/SQL/RLS/deploy/produkcni data nezmeneno.

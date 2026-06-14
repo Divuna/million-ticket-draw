@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 GROUP 1 — STAGING FIX OVĚŘEN (14. 06. 2026)
+
+SEC01 Group 1 (11 app-unused SECURITY DEFINER views) aplikován pouze na staging `dxmowysntemfqfnanxua` (REVOKE anon/auth + `security_invoker=on`, migrace `sec01_group1_safe_view_hardening`). Advisor staging: 11 cílených ERROR zmizelo (21→10). Full E2E `27510668205` = 121 passed/0 fail. **Produkce NEDOTČENA** (stále 23 ERROR). SEC01 zůstává P0 blocker (Group 2/3 = 10 ERROR + prod neopraven). Produkční rollout vyžaduje samostatné schválení ownera. Pravidlo: tyto views NESMÍ mít zpět anon/authenticated SELECT ani SECURITY DEFINER bez invoker.
+
 ## SEC01 SECURITY FINDINGS INVENTÁŘ (14. 06. 2026, jen dokumentace)
 
 `docs/launch-readiness/SECURITY_FINDINGS.md` = read-only inventar produkcniho Security Advisoru (`xkzhjldrojjlrkezorey`): **467 nalezu (23 ERROR / 20 INFO / 424 WARN)**. 23 ERROR odpovida puvodni „23" ze SEC01 (2 Exposed Auth Users, 1 RLS Disabled in Public, 20 Security Definer View). Fixnuto=0 v inventari; ERRORy open, WARN/INFO needs-owner-decision/accepted-risk. **SEC01 = P0 blocker** dokud nejsou ERRORy fixnuty nebo ownerem akceptovany. Nic neoznaceno fixed bez dukazu. Zadny kod/SQL/RLS/deploy/produkce.
