@@ -84,6 +84,14 @@ async function setupData(): Promise<void> {
   if (cuErr) throw new Error(`createUser(customer): ${cuErr.message}`);
   ctx.customerAuthId = cu.user.id;
 
+  // redeem_miocoin_code credits public.wallets, whose user_id FK references
+  // public.users(id). There is no auth.users -> public.users trigger, so the
+  // throwaway customer needs an explicit public.users row before redemption.
+  const { error: puErr2 } = await (admin as any)
+    .from('users')
+    .upsert({ id: ctx.customerAuthId, email: CUSTOMER_EMAIL, role: 'user' }, { onConflict: 'id' });
+  if (puErr2) throw new Error(`public.users insert(customer): ${puErr2.message}`);
+
   // Approved partner with explicit conversion settings
   const { data: p, error: pErr } = await (admin as any)
     .from('partners')
@@ -115,6 +123,7 @@ async function cleanupData(): Promise<void> {
   if (ctx.customerAuthId) {
     await (admin as any).from('wallet_transactions').delete().eq('user_id', ctx.customerAuthId);
     await (admin as any).from('wallets').delete().eq('user_id', ctx.customerAuthId);
+    await (admin as any).from('users').delete().eq('id', ctx.customerAuthId);
     await admin.auth.admin.deleteUser(ctx.customerAuthId).catch(() => undefined);
   }
   if (ctx.partnerAuthId) {
