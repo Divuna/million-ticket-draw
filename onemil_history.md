@@ -4214,3 +4214,7 @@ Invariant:
 **Timestamp (Europe/Prague): 2026-06-14** - Owner decision applied for public support e-mail (documentation-only). Owner confirmed `podpora@onemil.cz` as the canonical public support e-mail for OneMil launch readiness. `COMPANY_CONTEXT.md` was aligned so the main public support contact and support line use `podpora@onemil.cz`; `b2b@onemil.cz` remains business cooperation only. `LAUNCH_TODO.md` L05 marked `proslo` for public support e-mail consistency. L01-L04 remain unverified for legal/owner review of VOP/GDPR/rules/cookies content quality. No app code, SQL, deploy, production data, Partner API, invoices, reward logic, or migrations touched.
 
 ---
+
+**Timestamp (Europe/Prague): 2026-06-14** - Public support e-mail cleanup complete (documentation-only). Full repo search for `support@onemil.cz` found no remaining live app code, email template, Edge Function, settings doc, or current source-of-truth usage. Remaining occurrences are old audit/history notes and were intentionally left unchanged. `podpora@onemil.cz` is canonical for public support; `LAUNCH_TODO.md` L05 remains `proslo`. No legal text content, app code, SQL, deploy, production data, Partner API, invoices, reward logic, or migrations touched.
+
+---

@@ -2,7 +2,7 @@
 
 ## CONTACT / LEGAL EMAIL CONSISTENCY AUDIT (14. 06. 2026, jen dokumentace)
 
-Owner potvrzeno: kanonicky verejny support e-mail pro OneMil launch readiness je `podpora@onemil.cz`. `COMPANY_CONTEXT.md` byl dokumentacne sjednocen na `podpora@onemil.cz` pro hlavni verejny support kontakt i podporu; `b2b@onemil.cz` zustava jen pro obchodni spoluprace. `LAUNCH_TODO.md` L05 oznacen jako proslo pro public support e-mail consistency. CMS `vop`, `gdpr`, `pravidla-souteze` a `cookies` existuji, ale pravni kvalita/aktualnost zustava neoverena v L01-L04. Zadny kod, SQL, deploy, produkcni data, Partner API, fakturace ani reward logika.
+Owner potvrzeno: kanonicky verejny support e-mail pro OneMil launch readiness je `podpora@onemil.cz`. `COMPANY_CONTEXT.md` byl dokumentacne sjednocen na `podpora@onemil.cz` pro hlavni verejny support kontakt i podporu; `b2b@onemil.cz` zustava jen pro obchodni spoluprace. Cleanup audit potvrzuje, ze stara support adresa nezustava v live app code, email templates, Edge Functions, settings docs ani current source-of-truth docs; zbyle vyskyty jsou jen stare audit/history notes. `LAUNCH_TODO.md` L05 oznacen jako proslo. CMS `vop`, `gdpr`, `pravidla-souteze` a `cookies` existuji, ale pravni kvalita/aktualnost zustava neoverena v L01-L04. Zadny kod, SQL, deploy, produkcni data, Partner API, fakturace ani reward logika.
 
 ## LAUNCH READINESS DOKUMENTACE (14. 06. 2026, jen dokumentace)
 
