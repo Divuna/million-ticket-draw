@@ -9,10 +9,12 @@
 >
 > **SEC01 remains a P0 launch blocker** until each finding below is individually fixed or explicitly accepted by the owner.
 >
-> ### UPDATE 14.06.2026 — Group 1 safe fixes APPLIED + VERIFIED on STAGING (`dxmowysntemfqfnanxua`) only
-> 11 app-unused SECURITY DEFINER views had `SELECT` revoked from `anon`/`authenticated` and `security_invoker=on` set (migration `sec01_group1_safe_view_hardening`). Postcheck: all 11 anon=false, auth=false, security_invoker=on. Re-run `get_advisors(security)` on staging: **all 11 targeted ERROR findings GONE** (staging ERROR 21→10). Full Staging E2E run **`27510668205` = success, 121 passed, 0 failures** → no customer/admin/partner flow broke.
-> **Production NOT touched** (production still shows all 23 ERROR). SEC01 stays **P0 blocker** — 10 ERRORs remain on staging (1 RLS Disabled in Public + 9 Security Definer View = Group 2/3) and production is unchanged.
-> Group-1 rows below marked **fixed (staging, verified)**; production fix pending separate owner approval.
+> ### UPDATE 14.06.2026 — Group 1 safe fixes APPLIED + VERIFIED on STAGING **and PRODUCTION**
+> 11 app-unused SECURITY DEFINER views had `SELECT` revoked from `anon`/`authenticated` and `security_invoker=on` set (migration `sec01_group1_safe_view_hardening`).
+> **STAGING** (`dxmowysntemfqfnanxua`): postcheck 11/11 (anon=f, auth=f, invoker=t); Full E2E `27510668205` = 121 passed/0 fail.
+> **PRODUCTION** (`xkzhjldrojjlrkezorey`, owner-approved by Pavel): precheck matched baseline → forward SQL applied → postcheck 11/11 (anon revoked, auth revoked, invoker on) → advisor **ERROR 23 → 10** (all 11 targeted views' findings gone, incl. both Exposed Auth Users) → production P0 smoke `27511158470` = success, 5 passed. **No rollback needed.**
+> Group-1 ERROR findings (E01/E02/E04/E06/E07/E08/E10/E11/E12/E13/E15/E16/E21) are now **fixed (production, verified)**.
+> **SEC01 STILL A P0 BLOCKER:** 10 ERROR remain in production — **1 RLS Disabled in Public** (`_messages_policies_backup`, Group 2) + **9 Security Definer View** (Group 2/3). Plus the WARN/INFO categories. Group 1 only is closed.
 >
 > Status values: `fixed` (proof in repo/docs) · `open` (must fix/triage) · `needs owner decision` · `accepted-risk candidate`.
 

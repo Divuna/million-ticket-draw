@@ -1,5 +1,17 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SEC01 GROUP 1 — APLIKOVÁN A OVĚŘEN NA PRODUKCI (14. 06. 2026, schválení Pavla)
+
+SEC01 Group 1 (11 app-unused SECURITY DEFINER views) aplikován na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_group1_safe_view_hardening`): `REVOKE SELECT` od anon/authenticated + `SET (security_invoker = on)`.
+
+- **Precheck:** produkční stav = zachycený baseline (8 anon+auth, 3 auth-only: v_first_topup_valid/v_influencer_referrals_valid/v_user_wallets; vše SECURITY DEFINER) → shoda, pokračováno.
+- **Postcheck:** všech 11 anon revoked, auth revoked, security_invoker=on.
+- **Advisor produkce:** ERROR **23 → 10** (všech 11 cílených views vyřešeno; oba Exposed Auth Users pryč). Zbývá 10 ERROR = 1 RLS Disabled in Public (`_messages_policies_backup`) + 9 Security Definer View (Group 2/3).
+- **Produkční P0 smoke `27511158470` = success, 5 passed.** Bez rollbacku.
+- Staging dříve ověřen (E2E `27510668205` 121 passed). Žádný deploy, žádná změna app kódu.
+- **SEC01 ZŮSTÁVÁ P0 BLOCKER:** Group 1 hotov; Group 2/3 (10 ERROR) + WARN/INFO zbývají k fixu nebo owner-accept.
+- **Rollback k dispozici** (RESET security_invoker + GRANT zpět dle baseline) pro případ pozdější regrese.
+
 ## SEC01 GROUP 1 — APLIKOVÁN A OVĚŘEN NA STAGINGU (14. 06. 2026)
 
 SEC01 Group 1 (11 app-unused SECURITY DEFINER views) aplikován **POUZE na staging** `dxmowysntemfqfnanxua` (migrace `sec01_group1_safe_view_hardening`): `REVOKE SELECT` od anon/authenticated + `SET (security_invoker = on)` na `daily_platform_metrics`, `v_influencer_referrals_valid`, `v_user_wallets`, `contest_analytics`, `contest_ticket_map`, `event_queue_monitoring`, `event_queue_failed_summary`, `contest_integrity_check`, `system_health_monitor`, `admin_winner_delivery_detail`, `v_first_topup_valid`.

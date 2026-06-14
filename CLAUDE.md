@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 GROUP 1 — PRODUKČNÍ FIX OVĚŘEN (14. 06. 2026, schválení Pavla)
+
+SEC01 Group 1 (11 app-unused SECURITY DEFINER views) aplikován na produkci `xkzhjldrojjlrkezorey` (REVOKE anon/auth + `security_invoker=on`, migrace `sec01_group1_safe_view_hardening`). Precheck=baseline; postcheck 11/11; advisor ERROR 23→10; P0 smoke `27511158470` success (5 passed); bez rollbacku. Pravidlo: těchto 11 views NESMÍ mít zpět anon/authenticated SELECT ani SECURITY DEFINER bez invoker. SEC01 zůstává P0 blocker — zbývá 10 ERROR (Group 2/3: 1 RLS Disabled in Public + 9 Security Definer View) + WARN/INFO; vyžadují fix nebo owner-accept.
+
 ## SEC01 GROUP 1 — STAGING FIX OVĚŘEN (14. 06. 2026)
 
 SEC01 Group 1 (11 app-unused SECURITY DEFINER views) aplikován pouze na staging `dxmowysntemfqfnanxua` (REVOKE anon/auth + `security_invoker=on`, migrace `sec01_group1_safe_view_hardening`). Advisor staging: 11 cílených ERROR zmizelo (21→10). Full E2E `27510668205` = 121 passed/0 fail. **Produkce NEDOTČENA** (stále 23 ERROR). SEC01 zůstává P0 blocker (Group 2/3 = 10 ERROR + prod neopraven). Produkční rollout vyžaduje samostatné schválení ownera. Pravidlo: tyto views NESMÍ mít zpět anon/authenticated SELECT ani SECURITY DEFINER bez invoker.
