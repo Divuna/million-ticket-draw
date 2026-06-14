@@ -1,5 +1,16 @@
 ﻿# OneMil – aktuální stav projektu
 
+## CLEAN PARTNER API BRANCH + SPEC 48 (14. 06. 2026)
+
+Cista vetev `codex/partner-api-existing-system-clean` z aktualniho `main` (9a40cec8). Cherry-pick pouze commitu `590e4f5b` (Partner API order flow nad existujicim systemem); rejected prototyp ani duplicitni Partner Invoice prace z vetve `codex/affiliate-payouts-audit` NEzahrnuty. Doc konflikty vyreseny tak, ze `onemil_state.md`/`onemil_history.md`/`CLAUDE.md` zustaly identicke s `main` (doc zmeny commitu zahozeny, dokumentuje se zde).
+
+- **Cherry-pick commit na clean vetvi:** `7b20a57c` (jen 4 kodove soubory: `partner-activate/index.ts`, `types.ts`, 2 migrace). Diff vs main = pouze Partner API; zadne `partner_api_v1` reference, zadne invoice duplicity.
+- **Reuse potvrzeno:** existujici EF `partner-activate`, `partner_reward_codes`, `partner_coin_activations`, `partner_api_keys`, `redeem_miocoin_code`. Zadny novy endpoint ani tabulka.
+- **Spec 48** `tests/e2e/48-partner-order-api.spec.ts` (commit `d7af1543`, staging-only, self-contained): create→pending, duplicate→stejny kod, pending nelze redeem, paid→issued, issued redeem kredituje wallet + vznikne activation, cancelled nelze redeem, zadna faktura/activation behem create.
+- **CI blocker (pre-existing, NESOUVISI s touto zmenou):** staging Full E2E workflow padá v pre-test kroku „Ensure staging admin E2E user has admin role" (curl exit 22). Stejny krok padá i na `main` (scheduled run `27477105656` 13.06. 19:43 selhal; posledni zeleny byl spec 47 run `27474214282` 17:42). Spec 48 si vytvari vlastni throwaway uzivatele a tento seed krok nepotrebuje, ale workflow ho ma jako tvrdou branu → spec 48 v CI zatim nedobehl.
+- **Manualni staging verifikace logiky (zelena, 14.06.):** pres nasazene RPC na partnerovi `99790c17` (100 Kc = 1 MioCoin): order 250 Kc → create `pending` 2 coiny (kod HI06EJ6KFUEU), duplicate → stejny kod, paid → `issued`, druhy order → cancel → `cancelled`; activations behem create = 0. Probe radky pote smazany. Redeem-rejection (pending/cancelled) je vynucen v `redeem_miocoin_code` a byl drive overen codex staging kody.
+- **Zbyva pred merge:** opravit/odblokovat staging admin-seed CI krok, pak nechat spec 48 dobehnout zelene v CI; produkcni rollout checklist + vyslovne schvaleni Pavla. Staging cleanup (rejected prototyp `partner_api_v1_order_rewards` + codex test data) zustava pending na samostatne schvaleni.
+
 ## ✅ STAGING PARTNER API REAL ACTIVATION TEST — PROŠEL (13. 06. 2026)
 
 Staging dxmowysntemfqfnanxua — real end-to-end partner API activation test prošel. Produkce nedotčena.
