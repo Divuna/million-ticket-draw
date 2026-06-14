@@ -4191,3 +4191,7 @@ Invariant:
 ---
 
 **Timestamp (Europe/Prague): 2026-06-14** — Pripravena launch readiness dokumentace ve `docs/launch-readiness/`: `LAUNCH_TEST_PLAN.md` (sekce A–H), `ROUTE_CHECKLIST.md` (mapa ~70 rout z routeru s P0/P1/P2), `LAUNCH_TODO.md` (65 testovacich bodu, P0=48/P1=16/P2=1). Pokryva zakaznicke, admin, partner, platebni, pravni a CI testy + zaver (co je hotove, co rucne, co automaticky, co blokuje spusteni, doporuceny poradek). P0 blockery NEOVERENO: pravni obsah VOP/GDPR/pravidla souteze, cookies, realne kontaktni/reklamacni udaje, zeleny Full E2E + P0 smoke, realne partner reward settings. `onemil_spec.md` neexistuje. Pouze dokumentace — zadny kod/SQL/deploy/produkce/testovaci data nezmeneno.
+
+---
+
+**Timestamp (Europe/Prague): 2026-06-14** — Launch plan gap audit (read-only). Doplneno do `docs/launch-readiness/*`: cookie banner existuje (L04 preformulovan), GAP P0 zakaznicky reset hesla (C22, nenalezen forgot/reset-password flow), zakaznicke doporuceni/invite (C23), affiliate/influencer sekce AF01–AF05 + rozhodnuti o rozsahu pro 1. test, security sekce SEC01–SEC03 (23 pre-existing advisor nalezu jako P0 consideration). Bodu 65 → 75. Nove P0 blockery: reset hesla zakaznika, security backlog. Pouze dokumentace.

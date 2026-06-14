@@ -1,5 +1,9 @@
 ﻿# OneMil – aktuální stav projektu
 
+## LAUNCH PLAN GAP AUDIT (14. 06. 2026, jen dokumentace)
+
+Read-only gap audit launch plan proti reálné app. Opravy/doplnky v `docs/launch-readiness/`: (1) cookie banner `CookieConsentBanner` EXISTUJE (zapisuje `cookie_consents`) → L04 preformulovan z „existuje?" na „funguje + policy text"; (2) **GAP P0: zakaznicky reset hesla nenalezen** v routeru/UI (jen partner set-password) → novy bod C22; (3) pridano C23 (zakaznicke doporuceni/invite), sekce AF01–AF05 (affiliate/influencer + rozhodnuti o rozsahu), SEC01–SEC03 (security advisor backlog 23 nalezu jako P0 launch consideration). Pocet bodu vzrostl z 65 na 75. Plan je po doplneni pripraveny ke spusteni; pred veřejnym testem nutno uzavrit P0 blockery (pravni obsah, reset hesla, kontakt/reklamace, security backlog, zeleny E2E, realne partner reward settings). Zadny kod/SQL/deploy/produkce.
+
 ## LAUNCH READINESS TESTOVACI PLAN PRIPRAVEN (14. 06. 2026, jen dokumentace)
 
 Vytvorena sada ve `docs/launch-readiness/`: `LAUNCH_TEST_PLAN.md` (sekce A–H), `ROUTE_CHECKLIST.md` (mapa ~70 rout z `src/App.tsx` s P0/P1/P2), `LAUNCH_TODO.md` (65 testovacich bodu: zakaznik/admin/partner/platby/pravni/CI). Souhrn priorit: P0=48, P1=16, P2=1. **P0 blockery veřejneho spusteni (NEOVERENO):** naplneni pravniho obsahu (VOP/GDPR/pravidla souteze), cookies reseni, realne kontaktni/reklamacni udaje, zeleny Full E2E + P0 smoke na `main`, realne partner reward settings (ne `[TEST DATA]`). `onemil_spec.md` neexistuje (todo). `TestLogin`/`InfluencerDashboard` jsou mimo router (NEOVERENO mrtvy kod). Pouze dokumentace — zadny kod/SQL/deploy/produkce/testovaci data.

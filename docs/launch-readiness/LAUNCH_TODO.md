@@ -30,6 +30,8 @@
 | C19 | P1 | Mobil | Layout na mobilu | Bez ořezů, bottom nav | | všechny | | neověřeno | jen spec 12 |
 | C20 | P0 | Wins | Taby Výhry/Nabídky | Partner Offers ≠ výhry | | /wins | | neotestováno | |
 | C21 | P0 | Smazání účtu | Vyžádat smazání | GDPR flow funguje | | /delete-account | | neověřeno | |
+| C22 | P0 | Reset hesla | Zákazník „zapomenuté heslo" | Cesta k obnově hesla existuje a funguje | | /login | | neověřeno | **GAP: v routeru/UI nenalezen forgot/reset-password flow pro zákazníka (jen partner set-password). Ověřit, zda existuje — jinak P0 blocker.** |
+| C23 | P1 | Doporučení (invite) | „Pozvi přátele" + invite reward | Vlastní invite kód/odkaz, žádné cizí data | | /profile | | neotestováno | ReferralSection; RLS own-row |
 
 ## Admin (C)
 
@@ -84,11 +86,29 @@
 | L01 | P0 | Obchodní podmínky | Otevřít a ověřit obsah | Naplněno, aktuální | | /terms, /vop | | neověřeno | blocker |
 | L02 | P0 | Pravidla soutěží | Ověřit obsah | Tikety 1,2,3…, pozice předem, ne loterie | | /pravidla-souteze | | neověřeno | blocker |
 | L03 | P0 | GDPR/Privacy | Ověřit obsah | Naplněno | | /gdpr, /privacy | | neověřeno | blocker |
-| L04 | P0 | Cookies | Existuje lišta/policy? | Cookie souhlas dle potřeby | | — | | neověřeno | blocker |
+| L04 | P0 | Cookies | Ověřit cookie lištu + uložení souhlasu | `CookieConsentBanner` se zobrazí, souhlas se uloží do `cookie_consents`; ověřit i policy text | | (banner globálně) | | neotestováno | banner EXISTUJE (src/components/CookieConsentBanner.tsx) — ověřit funkci+text |
 | L05 | P0 | Kontakt | Reálné údaje | Dle COMPANY_CONTEXT.md | | /kontakt | | neověřeno | |
 | L06 | P1 | Reklamace/support | Cesta k podpoře | Bob/zprávy + e-mail | | /messages | | neověřeno | |
 | L07 | P1 | Veřejné texty | Re-audit wording | Žádný hazard/`referral`/B2B leak | | / a zákaznické | | prošlo | audit 13.06. |
 | L08 | P0 | 18+ gating | Věkový limit | Vynucen | | /onboarding/date-of-birth | | neověřeno | |
+
+## Affiliate / influencer (samostatný program — rozhodnout rozsah pro 1. veřejný test)
+
+| ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
+|----|------|--------|------|--------------------|----------|-------|-------|------|-------|
+| AF01 | P1 | Affiliate login gating | Login jen s `affiliate_accounts` | Pustí jen affiliate; jinak hláška+signOut | | /affiliate/login | | neotestováno | |
+| AF02 | P1 | Affiliate dashboard | Influencer/Obchodník/Profil | Statistiky, ref kód, profil uložen | | /affiliate/dashboard | | neotestováno | |
+| AF03 | P1 | B2B company lead | Přidat firmu (sales_rep) → confirm → admin approve | Stavy lead flow, žádná provize z approve | | /affiliate/dashboard, /partner/invite, /admin/company-leads | | neotestováno | spec 34–38 |
+| AF04 | P2 | Affiliate payouts | Dávka + Air Bank export + paid | `created→exported→paid`, .kpc export | | /admin/affiliate-payouts | | neotestováno | spec 40–42 |
+| AF05 | P1 | Rozhodnutí rozsahu | Je affiliate součástí 1. veřejného testu? | Jasné ano/ne; pokud ne → out-of-scope | | — | | neověřeno | **rozhodnout** |
+
+## Bezpečnost (SEC)
+
+| ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
+|----|------|--------|------|--------------------|----------|-------|-------|------|-------|
+| SEC01 | P0 | Security advisor backlog | Projít 23 pre-existing nálezů (CLAUDE.md SECURITY BACKLOG) | Rozhodnout fix vs vědomě akceptovat před veřejným spuštěním | | — | | neověřeno | **GAP: dosud neuzavřeno; RLS / public-execute SECURITY DEFINER nálezy z 2026-05-24** |
+| SEC02 | P1 | RLS izolace | Zákazník nevidí cizí data (faktury, invite, wallet) | Own-row scoping drží | | různé | | neotestováno | pokryto dřívějšími audity |
+| SEC03 | P2 | Push (OneSignal) | Notifikace pipeline | `notifications`→`push_log`→OneSignal | | — | | neověřeno | interní, P2 pro 1. test |
 
 ## Automatika (CI)
 

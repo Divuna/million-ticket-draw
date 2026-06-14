@@ -135,10 +135,17 @@ Kompletní v [ROUTE_CHECKLIST.md](./ROUTE_CHECKLIST.md) — všech ~70 rout s UR
 
 ### Co blokuje veřejné spuštění (P0 blockery)
 1. **NEOVĚŘENO: právní obsah** (VOP/GDPR/pravidla soutěží naplněný a správný) — bez toho nelze veřejně spustit.
-2. **NEOVĚŘENO: cookies řešení.**
+2. **Cookies:** banner `CookieConsentBanner` EXISTUJE (zapisuje `cookie_consents`) — zbývá ověřit funkci + policy text (nyní ne „existuje?", ale „funguje + má text").
 3. **NEOVĚŘENO: reálné kontaktní/reklamační údaje.**
 4. Zelený Full E2E + P0 smoke na aktuálním `main`.
 5. Reálné partner reward settings (ne `[TEST DATA]`) u partnerů, kteří půjdou živě.
+6. **GAP: reset hesla pro zákazníka** — v routeru/UI nenalezen forgot/reset-password flow (jen partner set-password). Ověřit existenci; pokud chybí, je to P0 (zákazníci by neměli jak obnovit heslo). Viz TODO C22.
+7. **GAP: security advisor backlog** — 23 pre-existing nálezů (CLAUDE.md „SECURITY BACKLOG") nutno projít a vědomě uzavřít/akceptovat před veřejným spuštěním. Viz TODO SEC01.
+
+### Doplněno po gap auditu (14. 06. 2026)
+- Cookie banner existuje → položka přeformulována (L04).
+- Přidáno: reset hesla zákazníka (C22), zákaznické doporučení/invite (C23), affiliate/influencer sekce (AF01–AF05) s rozhodnutím o rozsahu pro 1. test, bezpečnostní sekce (SEC01–SEC03).
+- Rozsah affiliate/influencer pro první veřejný test je **NEROZHODNUTO** — pokud nebude součástí, označit jako out-of-scope a nezdržovat launch.
 
 ### Doporučený pořádek testování
 1. **Statika/právní** (F) — naplnění VOP/GDPR/pravidel, cookies, kontakt.
