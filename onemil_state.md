@@ -1,5 +1,16 @@
 ﻿# OneMil – aktuální stav projektu
 
+## STAGING E2E CI ODBLOKOVANO + SPEC 48 ZELENY (14. 06. 2026)
+
+Globalni staging CI vypadek (vsechny staging E2E vcetne `main` padaly v kroku „Ensure staging admin E2E user has admin role" s curl exit 22) vyresen. Spec 48 ted v CI zelene.
+
+- **Root cause:** GoTrue admin endpoint `/auth/v1/admin/users` vracel HTTP 500 „Database error finding users". Priciny: 2 radky v staging `auth.users` mely `email_change = NULL`. GoTrue skenuje tento sloupec do non-nullable Go stringu → NULL shodi list cely projekt. Radky (`codex-partner-v1@test.local`, `codex-partner-v1-redeem@test.local`, vytvorene 13.06. 19:37–19:38) vlozil **odmitnuty Partner API v1 prototyp primym SQL INSERTem do auth.users** (obesel GoTrue, ktery by sloupec defaultoval na `''`). Casove presne mezi poslednim zelenym runem (17:42) a prvnim padem (19:43).
+- **Workflow fix (main-compatible):** `.github/workflows/playwright-staging.yml` — admin-seed list call uz nepouziva `curl -sf` (slepy exit 22), ale zachytava HTTP status + telo a vypise maskovanou diagnostiku; `per_page` snizen 1000 → 200. Diky tomu byl root cause vubec videt.
+- **Staging auth data repair (vyslovne schvaleno Pavlem, staging only, non-destructive):** `UPDATE auth.users SET email_change='' WHERE id IN (bd4dd766…, be53289f…) AND email_change IS NULL`. Pouze NULL → '' na 2 radcich; prototype radky NEsmazany (residue cleanup zustava pending). Postcheck: 0 zbylych NULL.
+- **Spec 48 test fix (test-only):** setup throwaway zakaznika nyni zaklada i `public.users` radek (`wallets.user_id` FK → `public.users(id)`, zadny auth→public trigger). Partner API logika nezmenena.
+- **Zeleny vysledek:** staging run `27490386537` — **3 passed** (48a–48d, 48e–48f, 48g). Cherry-pick commit `7b20a57c`, spec `c76dff74`.
+- **Produkce netknuta:** zadne produkcni SQL, zadny deploy, `xkzhjldrojjlrkezorey` nedotcen.
+
 ## CLEAN PARTNER API BRANCH + SPEC 48 (14. 06. 2026)
 
 Cista vetev `codex/partner-api-existing-system-clean` z aktualniho `main` (9a40cec8). Cherry-pick pouze commitu `590e4f5b` (Partner API order flow nad existujicim systemem); rejected prototyp ani duplicitni Partner Invoice prace z vetve `codex/affiliate-payouts-audit` NEzahrnuty. Doc konflikty vyreseny tak, ze `onemil_state.md`/`onemil_history.md`/`CLAUDE.md` zustaly identicke s `main` (doc zmeny commitu zahozeny, dokumentuje se zde).
