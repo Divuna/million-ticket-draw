@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 E09 SECURITY_INVOKER — PRODUKČNÍ FIX OVĚŘEN (14. 06. 2026, schválení Pavla)
+
+E09 `admin_winner_delivery_stats` → `security_invoker=on` na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_e09_admin_winner_delivery_stats_security_invoker`). Postcheck: invoker on, output 127/101 nezměněn. Prod advisor 8→7. P0 smoke `27512629715` success (5 passed). Bez rollbacku. SEC01 zůstává P0 blocker (7 ERROR: E05/E23 + Group 3). E05/E23 nelze (tickets RLS deny-all) — potřebují tickets admin-read policy nebo accept.
+
 ## SEC01 E09 SECURITY_INVOKER — STAGING OVĚŘEN (14. 06. 2026)
 
 E09 `admin_winner_delivery_stats` → `security_invoker=on` pouze na staging (migrace `sec01_e09_admin_winner_delivery_stats_security_invoker`). Bezpečné díky admin RLS na contests+winners. Postcheck: invoker on, výstup 786/297 nezměněn. Advisor staging 8→7. Full E2E `27512219000` 122 passed/0 fail (/admin/prize-delivery OK). Produkce NEDOTČENA. E05/E23 security_invoker NELZE (tickets RLS deny-all by vynulovalo totaly) — potřebují tickets admin-read policy (owner decision) nebo accept. SEC01 zůstává P0 blocker (produkce 8 ERROR).

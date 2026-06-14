@@ -1,5 +1,15 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SEC01 E09 SECURITY_INVOKER — APLIKOVÁN A OVĚŘEN NA PRODUKCI (14. 06. 2026, schválení Pavla)
+
+E09 `admin_winner_delivery_stats` přepnuto na `security_invoker = on` na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_e09_admin_winner_delivery_stats_security_invoker`).
+
+- **Baseline → postcheck:** invoker off→on; výstup nezměněn (127 řádků / 101 winners).
+- **Produkční advisor: ERROR 8 → 7** (E09 zmizel). Zbývá 7 = E05 `contest_activity_last_24h`, E23 `contest_revenue` + Group 3 (`contest_miocoin_totals`, `contest_progress`, `partner_api_activity`, `v_influencer_referrals_paid`, `winners_with_contest`).
+- **Produkční P0 smoke `27512629715` = success, 5 passed.** Bez rollbacku.
+- **SEC01 ZŮSTÁVÁ P0 BLOCKER:** produkce 7 ERROR. E05/E23 potřebují admin-read policy na `tickets` (owner decision) nebo accept; Group 3 + WARN/INFO zbývají.
+- Rollback: `ALTER VIEW public.admin_winner_delivery_stats RESET (security_invoker);`
+
 ## SEC01 E09 SECURITY_INVOKER — OVĚŘEN NA STAGINGU (14. 06. 2026)
 
 E09 `admin_winner_delivery_stats` přepnuto na `security_invoker = on` **POUZE na staging** `dxmowysntemfqfnanxua` (migrace `sec01_e09_admin_winner_delivery_stats_security_invoker`). Bezpečné, protože podkladové tabulky mají admin-čitelné RLS: `contests` (`contests_admin_select_all`) + `winners` (authenticated read true).
