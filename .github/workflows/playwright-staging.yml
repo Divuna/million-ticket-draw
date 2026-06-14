@@ -343,14 +343,30 @@ jobs:
           REST_API="${SUPABASE_URL}/rest/v1"
 
           # ── 1. Find admin E2E user in auth.users ────────────────────────────
-          # List all users and filter by email with jq --arg — email never
-          # appears in a curl URL or in an echo statement.
-          LIST=$(curl -sf \
-            "${ADMIN_API}?page=1&per_page=1000" \
+          # List users and filter by email with jq --arg — email never appears
+          # in a curl URL or in an echo statement.
+          #
+          # NOTE: do NOT use `curl -sf` here. With -f curl exits 22 on any HTTP
+          # >= 400 and discards the body, surfacing only an opaque "exit code 22"
+          # with no cause. Instead capture the status code + body so a real
+          # failure (bad key, GoTrue rejecting per_page, etc.) is diagnosable in
+          # the log. per_page kept modest (200) — current GoTrue rejects very
+          # large per_page values with HTTP 400.
+          LIST_RESP=$(curl -s -w $'\n%{http_code}' \
+            "${ADMIN_API}?page=1&per_page=200" \
             -H "apikey: ${SERVICE_ROLE_KEY}" \
             -H "Authorization: Bearer ${SERVICE_ROLE_KEY}")
+          LIST_CODE=$(printf '%s' "$LIST_RESP" | tail -n1)
+          LIST_BODY=$(printf '%s' "$LIST_RESP" | sed '$d')
 
-          ADMIN_UUID=$(echo "$LIST" | jq -r \
+          if [ -z "$LIST_CODE" ] || [ "$LIST_CODE" -lt 200 ] || [ "$LIST_CODE" -ge 300 ]; then
+            # Body may contain a GoTrue error message (never the key) — truncate.
+            echo "ERROR: admin/users list failed (HTTP ${LIST_CODE:-no_response})." \
+                 "Body (truncated): $(printf '%s' "$LIST_BODY" | head -c 300)" >&2
+            exit 1
+          fi
+
+          ADMIN_UUID=$(printf '%s' "$LIST_BODY" | jq -r \
             --arg e "${ADMIN_EMAIL}" \
             '.users[]? | select(.email == $e) | .id' | head -1)
 
