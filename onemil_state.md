@@ -4,6 +4,10 @@
 
 Clean branch z aktualniho `main`: `codex/customer-password-reset-clean`. Prenesena pouze C22 zakaznicka obnova hesla ze source commitu `daafb1d0` bez stare mixed vetve `codex/affiliate-payouts-audit`. Implementace pouziva existujici Supabase Auth reset flow: `/login` ma odkaz `Zapomenute heslo?`, nova route `/reset-password` umi poslat recovery e-mail a po recovery session nastavit nove heslo. `PASSWORD_RECOVERY` se rozlisuje podle aktualni routy: zakaznici zustavaji na `/reset-password`, partner setup zustava na `/partner/set-password`. Bez SQL, deploye, produkcnich dat, Partner API, fakturace nebo reward logiky.
 
+## C22 CUSTOMER PASSWORD RESET MERGED + VERIFIED (14. 06. 2026)
+
+PR #115 mergnut do `main` jako `a7690d0b63b9f0c46bcf96f8e2810605dd5e934a`. Prvni lokalni post-merge beh spec 44 selhal na timeoutu `page.goto('/login')`; rerun v CI modu lokalne prosel 3/3 a targeted GitHub staging workflow `27507097356` na `main`/`a7690d0b` prosel. Cause: lokalni dev-server reuse/startup timing, ne realna `/login` runtime chyba a ne chybejici staging build. C22 oznacen jako proslo v `docs/launch-readiness/LAUNCH_TODO.md`. Bez SQL, deploye, produkcnich dat, Partner API, fakturace nebo reward logiky.
+
 ## LAUNCH PLAN GAP AUDIT (14. 06. 2026, jen dokumentace)
 
 Read-only gap audit launch plan proti reálné app. Opravy/doplnky v `docs/launch-readiness/`: (1) cookie banner `CookieConsentBanner` EXISTUJE (zapisuje `cookie_consents`) → L04 preformulovan z „existuje?" na „funguje + policy text"; (2) **GAP P0: zakaznicky reset hesla nenalezen** v routeru/UI (jen partner set-password) → novy bod C22; (3) pridano C23 (zakaznicke doporuceni/invite), sekce AF01–AF05 (affiliate/influencer + rozhodnuti o rozsahu), SEC01–SEC03 (security advisor backlog 23 nalezu jako P0 launch consideration). Pocet bodu vzrostl z 65 na 75. Plan je po doplneni pripraveny ke spusteni; pred veřejnym testem nutno uzavrit P0 blockery (pravni obsah, reset hesla, kontakt/reklamace, security backlog, zeleny E2E, realne partner reward settings). Zadny kod/SQL/deploy/produkce.

@@ -30,7 +30,7 @@
 | C19 | P1 | Mobil | Layout na mobilu | Bez ořezů, bottom nav | | všechny | | neověřeno | jen spec 12 |
 | C20 | P0 | Wins | Taby Výhry/Nabídky | Partner Offers ≠ výhry | | /wins | | neotestováno | |
 | C21 | P0 | Smazání účtu | Vyžádat smazání | GDPR flow funguje | | /delete-account | | neověřeno | |
-| C22 | P0 | Reset hesla | Zákazník „zapomenuté heslo" | Cesta k obnově hesla existuje a funguje | | /login, /reset-password | | neověřeno | Implementováno: zákaznická route `/reset-password`, odkaz z loginu, Supabase recovery redirect, nové heslo přes recovery session; ověřit E2E spec 44. |
+| C22 | P0 | Reset hesla | Zákazník „zapomenuté heslo" | Cesta k obnově hesla existuje a funguje | Prošlo: odkaz z `/login`, recovery request i update hesla | /login, /reset-password | GH run 27507097356 | prošlo | Spec 44 zelený na `main` po merge PR #115 (`a7690d0b`). |
 | C23 | P1 | Doporučení (invite) | „Pozvi přátele" + invite reward | Vlastní invite kód/odkaz, žádné cizí data | | /profile | | neotestováno | ReferralSection; RLS own-row |
 
 ## Admin (C)

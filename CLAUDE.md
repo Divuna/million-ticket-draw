@@ -1151,4 +1151,6 @@ Pre-existing security findings z 2026-05-24 nejsou součástí Phase 2 a mají b
 
 Clean branch `codex/customer-password-reset-clean` brings only the customer password reset work from source commit `daafb1d0` onto current `main`. Keep this scoped: `/reset-password` is the customer Supabase Auth reset route, `/partner/set-password` remains the partner setup route. Do not mix this with the old `codex/affiliate-payouts-audit` branch, Partner API, invoices, reward logic, SQL, deploys, or production data.
 
+PR #115 merged to `main` as `a7690d0b63b9f0c46bcf96f8e2810605dd5e934a`. Targeted staging workflow `27507097356` ran spec 44 against `main`/`a7690d0b` and passed. Earlier local post-merge failure was a `page.goto('/login')` timeout caused by local dev-server startup/reuse timing; CI-mode local rerun also passed 3/3. No SQL, deploy, production data, Partner API, invoice, reward, or migration changes in the C22 verification follow-up.
+
 ---

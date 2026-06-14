@@ -4198,3 +4198,7 @@ Invariant:
 **Timestamp (Europe/Prague): 2026-06-14** - C22 customer password reset prenesen na cistou vetev `codex/customer-password-reset-clean` z aktualniho `main`. Preneseny pouze soubory souvisejici se zakaznickou obnovou hesla ze source commitu `daafb1d0`: `useAuth`, router, login odkaz, nova `ResetPassword` stranka, DOB guard exempt route, E2E smoke spec 44 a minimalni dokumentacni zaznamy. `docs/launch-readiness/LAUNCH_TODO.md` zustal aktualni z main a byl upraven jen radek C22. Bez SQL, deploye, produkcnich dat, Partner API, fakturace a reward logiky.
 
 ---
+
+**Timestamp (Europe/Prague): 2026-06-14** - C22 customer password reset mergnut a overen. PR #115 -> `main` merge commit `a7690d0b63b9f0c46bcf96f8e2810605dd5e934a`. Prvni lokalni post-merge run spec 44 selhal na timeoutu `page.goto('/login')`; lokalni CI-mode rerun prosel 3/3 a targeted staging workflow `27507097356` na `main`/`a7690d0b` prosel. Root cause: lokalni dev-server reuse/startup timing, ne realna `/login` runtime chyba. C22 v `docs/launch-readiness/LAUNCH_TODO.md` oznacen jako `proslo`. Pouze dokumentace; zadny SQL, deploy, produkcni data, Partner API, fakturace, reward logika ani migrace.
+
+---
