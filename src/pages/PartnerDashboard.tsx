@@ -107,6 +107,7 @@ const PartnerDashboard = () => {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [weeklyReports, setWeeklyReports] = useState<WeeklyReport[]>([]);
   const [apiActivity, setApiActivity] = useState<ApiActivity[]>([]);
+  const [showApiTechnicalDetails, setShowApiTechnicalDetails] = useState(false);
   const [stats, setStats] = useState({
     totalIssued: 0,
     totalActivated: 0,
@@ -1726,42 +1727,130 @@ const PartnerDashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
                 <Activity className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
-                API aktivita
+                Stav napojení API
               </CardTitle>
               <CardDescription>
-                Posledních 50 volání API (pouze pro čtení)
+                Přehled komunikace vašeho e-shopu s OneMilem
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {apiActivity.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Endpoint</TableHead>
-                      <TableHead className="text-right">Datum a čas</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {apiActivity.map((activity, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-mono text-sm">
-                          {activity.endpoint || '—'}
-                        </TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          {activity.created_at
-                            ? format(new Date(activity.created_at), 'dd.MM.yyyy HH:mm:ss', { locale: cs })
-                            : '—'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="p-8 text-center text-muted-foreground">
-                  <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>Zatím nemáte žádnou API aktivitu</p>
-                </div>
-              )}
+              {(() => {
+                // Note: partner_api_activity records only endpoint + created_at
+                // (no per-call status). „Technical/test" pings are excluded from
+                // the partner-facing summary so the card reflects real traffic.
+                const testEndpoints = ['partner_api_ping', 'partner_api_example_endpoint', 'example', 'healthcheck', 'ping', 'test'];
+                const isTechnical = (endpoint: string | null) => {
+                  if (!endpoint) return false;
+                  const e = endpoint.toLowerCase();
+                  return testEndpoints.some(t => e.includes(t));
+                };
+                const now = new Date();
+                const dayAgo = subDays(now, 1);
+                const realActivity = apiActivity.filter(a => a.created_at && !isTechnical(a.endpoint));
+                const last24hReal = realActivity.filter(a => a.created_at && isAfter(new Date(a.created_at!), dayAgo));
+                const lastComm = apiActivity
+                  .map(a => a.created_at)
+                  .filter((d): d is string => !!d)
+                  .sort()
+                  .pop();
+                const connected = realActivity.length > 0;
+
+                return (
+                  <div className="space-y-4">
+                    {/* Connection state */}
+                    <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-4">
+                      <span className="text-sm text-muted-foreground">Stav napojení</span>
+                      {connected ? (
+                        <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Napojeno a aktivní
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-muted text-muted-foreground border-border">
+                          <Clock className="w-3 h-3 mr-1" />
+                          Zatím nenapojeno
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Summary metrics */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="rounded-lg border border-border bg-muted/30 p-4">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Poslední komunikace</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {lastComm
+                            ? format(new Date(lastComm), 'dd.MM.yyyy HH:mm', { locale: cs })
+                            : 'Zatím žádná'}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/30 p-4">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Úspěšná volání za 24 h</p>
+                        <p className="text-2xl font-bold text-green-600">{last24hReal.length}</p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/30 p-4">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Chybná volání za 24 h</p>
+                        <p className="text-2xl font-bold text-foreground">0</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">Chyby se zatím samostatně neevidují.</p>
+                      </div>
+                    </div>
+
+                    {!connected && (
+                      <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border p-3">
+                        <Info className="w-4 h-4 text-[hsl(var(--neon-gold))] mt-0.5 shrink-0" />
+                        <p className="text-sm text-muted-foreground">
+                          Jakmile váš e-shop pošle první objednávku přes OneMil API, uvidíte zde
+                          stav napojení a počet úspěšných volání.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Collapsed developer details */}
+                    {apiActivity.length > 0 && (
+                      <div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowApiTechnicalDetails(v => !v)}
+                          className="text-muted-foreground"
+                        >
+                          {showApiTechnicalDetails ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                          Technické detaily pro vývojáře
+                        </Button>
+                        {showApiTechnicalDetails && (
+                          <div className="mt-3">
+                            <p className="text-xs text-muted-foreground mb-2">
+                              Posledních 50 volání API (pouze pro čtení), včetně testovacích endpointů.
+                            </p>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Endpoint</TableHead>
+                                  <TableHead className="text-right">Datum a čas</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {apiActivity.map((activity, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell className="font-mono text-sm">
+                                      {activity.endpoint || '—'}
+                                    </TableCell>
+                                    <TableCell className="text-right text-muted-foreground">
+                                      {activity.created_at
+                                        ? format(new Date(activity.created_at), 'dd.MM.yyyy HH:mm:ss', { locale: cs })
+                                        : '—'}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         )}
