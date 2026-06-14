@@ -4238,3 +4238,7 @@ Invariant:
 ---
 
 **Timestamp (Europe/Prague): 2026-06-14** — Dokumentační konzistence: v `docs/launch-readiness/SECURITY_FINDINGS.md` přepnuto 13 Group 1 řádků (E01, E02, E04, E06, E07, E08, E10, E11, E12, E13, E15, E16, E21) na status `fixed (production, verified)` v souladu s ověřenou hlavičkou (advisor 23→10, smoke 27511158470). Group 2/3 řádky (E03, E05, E09, E14, E17–E20, E22, E23) nedotčeny. Pouze dokumentace — žádné SQL, deploy, app kód ani produkční data.
+
+---
+
+**Timestamp (Europe/Prague): 2026-06-14** — SEC01 Group 2 safe/interim aplikován a ověřen POUZE na stagingu `dxmowysntemfqfnanxua` (migrace `sec01_group2_safe_interim_hardening`): E14 valid_partner_api_keys (revoke anon/auth + security_invoker=on, cleared); E03 _messages_policies_backup (ENABLE ROW LEVEL SECURITY + revoke anon/auth, NEsmazáno, „RLS Disabled in Public" cleared); E05 contest_activity_last_24h / E09 admin_winner_delivery_stats / E23 contest_revenue (revoke anon only, authenticated ponechán pro admin UI, Security Definer View ERROR zůstává — security_invoker = owner decision). Postcheck OK. Staging advisor ERROR 10→8 (zbytek = Security Definer View). Full Staging E2E run 27511465619 = success, 122 passed, 0 failures → žádná regrese admin stránek. Produkce pro Group 2 NEDOTČENA. SEC01 zůstává P0 blocker (na produkci 10 ERROR). Žádný deploy, žádná změna app kódu, žádný DROP tabulky, Group 3 a WARN/INFO nedotčeny.

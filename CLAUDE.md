@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 GROUP 2 SAFE/INTERIM — STAGING OVĚŘEN (14. 06. 2026)
+
+SEC01 Group 2 safe/interim aplikován pouze na staging `dxmowysntemfqfnanxua` (migrace `sec01_group2_safe_interim_hardening`): E14 `valid_partner_api_keys` revoke anon/auth + security_invoker (cleared); E03 `_messages_policies_backup` ENABLE RLS + revoke (cleared, NEsmazáno); E05/E09/E23 admin views revoke anon (authenticated ponechán, SDV ERROR zůstává). Advisor staging 10→8. Full E2E `27511465619` = 122 passed/0 fail. Produkce pro Group 2 NEDOTČENA. SEC01 zůstává P0 blocker. Pravidlo: tyto objekty nevracet anon SELECT; E05/E09/E23 security_invoker až po ověření admin RLS (owner decision); E03 DROP jen po schválení.
+
 ## SEC01 SECURITY_FINDINGS ŘÁDKY SROVNÁNY (14. 06. 2026, jen dokumentace)
 
 13 Group 1 řádků v `docs/launch-readiness/SECURITY_FINDINGS.md` (E01/E02/E04/E06/E07/E08/E10/E11/E12/E13/E15/E16/E21) přepnuto na `fixed (production, verified)` kvůli souladu s ověřenou hlavičkou. Group 2/3 řádky nezměněny. Jen dokumentace.
