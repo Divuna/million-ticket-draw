@@ -161,9 +161,14 @@ const Login: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Heslo
-              </label>
+              <div className="flex items-center justify-between gap-3">
+                <label htmlFor="password" className="text-sm font-medium">
+                  Heslo
+                </label>
+                <Link to="/reset-password" className="text-xs text-primary hover:underline">
+                  Zapomenuté heslo?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"

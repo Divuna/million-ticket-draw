@@ -25,6 +25,7 @@ interface AuthContextType {
    *  Stays true until the user navigates away or completes the password update.
    *  Route guards must not redirect while this is true. */
   isPasswordRecovery: boolean;
+  passwordRecoveryRoute: '/reset-password' | '/partner/set-password';
   signUp: (email: string, password: string, marketingConsent?: boolean) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -71,6 +72,7 @@ export const useAuthState = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const [passwordRecoveryRoute, setPasswordRecoveryRoute] = useState<'/reset-password' | '/partner/set-password'>('/reset-password');
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -79,6 +81,10 @@ export const useAuthState = () => {
         // All setX calls here are batched by React 18 into a single re-render,
         // so isPasswordRecovery=true and user are visible together on the same render.
         if (event === 'PASSWORD_RECOVERY') {
+          const pathname = window.location.pathname;
+          setPasswordRecoveryRoute(
+            pathname.startsWith('/partner/set-password') ? '/partner/set-password' : '/reset-password'
+          );
           setIsPasswordRecovery(true);
         }
         if (event === 'USER_UPDATED') {
@@ -208,6 +214,7 @@ export const useAuthState = () => {
     session,
     loading,
     isPasswordRecovery,
+    passwordRecoveryRoute,
     signUp,
     signIn,
     signOut,

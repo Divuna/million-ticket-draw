@@ -96,6 +96,7 @@ import AdminAffiliateCommissions from "@/pages/AdminAffiliateCommissions";
 import AdminAffiliatePayouts from "@/pages/AdminAffiliatePayouts";
 import AdminAffiliatePayoutDetail from "@/pages/AdminAffiliatePayoutDetail";
 import PartnerSetPassword from "@/pages/PartnerSetPassword";
+import ResetPassword from "@/pages/ResetPassword";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -370,7 +371,7 @@ function GlobalWinnersRealtimeFeed() {
 }
 
 function AppContent() {
-  const { user, loading: authLoading, isPasswordRecovery } = useAuth();
+  const { user, loading: authLoading, isPasswordRecovery, passwordRecoveryRoute } = useAuth();
   const { isAdmin, isPartner, isPartnerAccount, isInfluencerAccount, isAffiliateAccount, loading: roleLoading } = useUserRole();
   const location = useLocation();
   const navigate = useNavigate();
@@ -384,15 +385,14 @@ function AppContent() {
   useRetentionTriggers(user?.id);
   useHeartbeat(user?.id);
 
-  // PASSWORD_RECOVERY: when a partner clicks the one-time setup link from approval
-  // email, Supabase fires PASSWORD_RECOVERY via onAuthStateChange (tracked in useAuth).
-  // Navigate to /partner/set-password. isPasswordRecovery is set in the SAME React
-  // batch as user, so route guards below already see it as true and do not redirect.
+  // PASSWORD_RECOVERY: Supabase fires this for both customer reset links and
+  // partner one-time setup links. useAuth records the route where the event
+  // arrived so customers stay on /reset-password and partners keep /partner/set-password.
   React.useEffect(() => {
     if (isPasswordRecovery) {
-      navigate('/partner/set-password', { replace: true });
+      navigate(passwordRecoveryRoute, { replace: true });
     }
-  }, [isPasswordRecovery, navigate]);
+  }, [isPasswordRecovery, passwordRecoveryRoute, navigate]);
 
   // Hard-block: Redirect accounts away from unauthorized routes
   React.useEffect(() => {
@@ -412,6 +412,7 @@ function AppContent() {
         location.pathname === '/partner/register' ||
         location.pathname === '/partner/invite' ||
         location.pathname === '/partner/set-password' ||
+        location.pathname === '/reset-password' ||
         location.pathname === '/login' ||
         location.pathname === '/register' ||
         location.pathname === '/delete-account' ||
@@ -429,6 +430,7 @@ function AppContent() {
         location.pathname.startsWith('/affiliate') ||
         location.pathname === '/partner/invite' ||
         location.pathname === '/partner/set-password' ||
+        location.pathname === '/reset-password' ||
         location.pathname === '/login' ||
         location.pathname === '/register' ||
         location.pathname === '/delete-account' ||
@@ -467,6 +469,7 @@ function AppContent() {
   // Login/Register can finish redirect after signIn (otherwise spinner unmounts Login and pending nav is lost).
   const authEntryPath =
     location.pathname === "/login" ||
+    location.pathname === "/reset-password" ||
     location.pathname === "/register" ||
     location.pathname === "/partner/login" ||
     location.pathname === "/partner/register" ||
@@ -514,6 +517,7 @@ function AppContent() {
       location.pathname === '/partner/register' ||
       location.pathname === '/partner/invite' ||
       location.pathname === '/partner/set-password' ||
+      location.pathname === '/reset-password' ||
       location.pathname === '/login' ||
       location.pathname === '/register' ||
       location.pathname === '/delete-account' ||
@@ -534,6 +538,7 @@ function AppContent() {
       location.pathname.startsWith('/affiliate') ||
       location.pathname === '/partner/invite' ||
       location.pathname === '/partner/set-password' ||
+      location.pathname === '/reset-password' ||
       location.pathname === '/login' ||
       location.pathname === '/register' ||
       location.pathname === '/delete-account' ||
@@ -580,6 +585,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Homepage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/games" element={<Games />} />

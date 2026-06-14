@@ -13,6 +13,7 @@ interface DateOfBirthGuardProps {
 // Routes that don't require email confirmation or date of birth check
 const EXEMPT_ROUTES = [
   '/login',
+  '/reset-password',
   '/register',
   '/onboarding/date-of-birth',
   '/unsubscribe/marketing',
