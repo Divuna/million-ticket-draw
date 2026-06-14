@@ -1,5 +1,14 @@
 ﻿# OneMil – aktuální stav projektu
 
+## STAGING INTERNAL_FUNCTION_TOKEN REALIGNMENT — CI ZELENE (14. 06. 2026)
+
+Behem partner-API prace byl staging Supabase secret `INTERNAL_FUNCTION_TOKEN` nekolikrat rotovan, cimz prestal odpovidat GitHub Actions secretu `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` → spec 44 (44c) padalo na 401 (a navazne 44d–g). Slo o staging secret drift, NE o chybu testu, app/API ani produkce (produkcni `INTERNAL_FUNCTION_TOKEN` nikdy nezmenen).
+
+- **Fix (staging only, schvaleno Pavlem):** vygenerovan jeden novy sdileny token a nastaven jako (1) Supabase staging secret `INTERNAL_FUNCTION_TOKEN` (projekt `dxmowysntemfqfnanxua`) a (2) GitHub Actions secret `STAGING_VITE_INTERNAL_FUNCTION_TOKEN`. `VITE_INTERNAL_FUNCTION_TOKEN` ani zadny produkcni secret nezmenen. Token nikde netisten.
+- **Pozn.:** prvni pokus nastavil GitHub secret pres PowerShell pipe (` | gh secret set`), cimz se na zacatek hodnoty dostal BOM (U+FEFF) → 44c padalo s `TypeError: ... ByteString ... 65279`. Opraveno nastavenim pres `gh secret set --body` (bez BOM). **Pravidlo: GitHub secrety nastavovat pres `--body`, ne pipe.**
+- **Vysledek (cilene staging runy):** spec 44 `27500754646` zeleny (44a–44g, 7 passed); spec 43 `27500810383` zeleny; spec 22 `27500856702` zeleny.
+- Zadny kod/test/migrace/EF/deploy nezmenen; produkce netknuta.
+
 ## PARTNER API PR #114 — PRODUKCNI ROLLOUT PROVEDEN (14. 06. 2026)
 
 **Rollout PROVEDEN se schvalenim Pavla.** PR #114 mergnuto do `main` (merge commit `f5e508ca`). Produkce `xkzhjldrojjlrkezorey`: aplikovany migrace `20260613200202` (enum `pending` + idempotency index + RPC `create_partner_order_reward`/`update_partner_order_reward_status` + update `redeem_miocoin_code`/trigger) a `20260613200849` (crypto schema fix). EF `partner-activate` nasazena **v130**, `verify_jwt=false`.
