@@ -49,7 +49,7 @@
 | A10 | P1 | Referrals | `/admin/referrals` | Taby přítomny | | /admin/referrals | | neotestováno | spec 46 |
 | A11 | P0 | Izolace | Admin akce | Nemění nesouvisející data | | /admin/* | | neotestováno | |
 | A12 | P2 | Test dashboard | „Vytvořit Test User" | „Produkčně vypnut" toast | | /admin/tests | | neotestováno | |
-| A13 | P0 | CMS obsah | Naplnit VOP/GDPR/pravidla | Obsah uložen a zobrazen | Admin CMS route existuje; repo neobsahuje seed/prokazatelný obsah pro `vop`/`gdpr`/`pravidla-souteze` | /admin/content | static audit 14.06. | neověřeno | blocker F: potvrdit/naplnit CMS obsah v cílovém prostředí |
+| A13 | P0 | CMS obsah | Naplnit VOP/GDPR/pravidla | Obsah uložen a zobrazen | Známý DB výsledek: CMS stránky `vop`, `gdpr`, `pravidla-souteze` existují; právní kvalita/aktuálnost neověřena | /admin/content | DB result + email audit 14.06. | neověřeno | blocker F: právník/vlastník musí ověřit obsah |
 
 ## Partner (D)
 
@@ -83,11 +83,11 @@
 
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
 |----|------|--------|------|--------------------|----------|-------|-------|------|-------|
-| L01 | P0 | Obchodní podmínky | Otevřít a ověřit obsah | Naplněno, aktuální | `/terms` statická stránka existuje a má věcný obsah; `/vop` je CMS route bez repo seed důkazu obsahu | /terms, /vop | static audit 14.06. | neověřeno | P0 blocker: potvrdit/naplnit `/vop` CMS a právní aktuálnost |
-| L02 | P0 | Pravidla soutěží | Ověřit obsah | Tikety 1,2,3…, pozice předem, ne loterie | Route `/pravidla-souteze` existuje jako CMS; obsah není v repu prokazatelně naplněn | /pravidla-souteze | static audit 14.06. | neověřeno | P0 blocker: potvrdit/naplnit CMS pravidla soutěží |
-| L03 | P0 | GDPR/Privacy | Ověřit obsah | Naplněno | `/privacy` statická stránka existuje a má věcný obsah; `/gdpr` je CMS route bez repo seed důkazu obsahu | /gdpr, /privacy | static audit 14.06. | neověřeno | P0 blocker: potvrdit/naplnit `/gdpr` CMS a právní aktuálnost |
-| L04 | P0 | Cookies | Ověřit cookie lištu + uložení souhlasu | `CookieConsentBanner` se zobrazí, souhlas se uloží do `cookie_consents`; ověřit i policy text | Banner + nastavení existují; ukládá localStorage a vkládá `cookie_consents`; footer odkaz `/legal/cookies` je CMS/dynamic a obsah není prokázán | banner, /privacy, /legal/cookies | static audit 14.06. | neověřeno | P0 blocker: potvrdit cookie policy text/CMS; funkční E2E banneru zatím neproběhl |
-| L05 | P0 | Kontakt | Reálné údaje | Dle COMPANY_CONTEXT.md | `/kontakt` existuje a uvádí firmu/adresu/telefon; e-mail v app je `podpora@onemil.cz`, COMPANY_CONTEXT uvádí `support@onemil.cz`/`info@onemil.cz` | /kontakt | static audit 14.06. | neověřeno | P0 blocker: vlastník musí potvrdit kanonický veřejný support e-mail |
+| L01 | P0 | Obchodní podmínky | Otevřít a ověřit obsah | Naplněno, aktuální | `/terms` statická stránka existuje; známý DB výsledek: CMS `/vop` existuje; právní kvalita/aktuálnost neověřena | /terms, /vop | DB result + email audit 14.06. | neověřeno | P0 blocker: právní/owner review VOP |
+| L02 | P0 | Pravidla soutěží | Ověřit obsah | Tikety 1,2,3…, pozice předem, ne loterie | Známý DB výsledek: CMS `/pravidla-souteze` existuje; kvalita obsahu neověřena proti požadavku tikety 1,2,3…, předem dané pozice, ne loterie | /pravidla-souteze | DB result + email audit 14.06. | neověřeno | P0 blocker: právní/owner review pravidel soutěží |
+| L03 | P0 | GDPR/Privacy | Ověřit obsah | Naplněno | `/privacy` statická stránka existuje; známý DB výsledek: CMS `/gdpr` existuje; právní kvalita/aktuálnost neověřena | /gdpr, /privacy | DB result + email audit 14.06. | neověřeno | P0 blocker: právní/owner review GDPR/privacy |
+| L04 | P0 | Cookies | Ověřit cookie lištu + uložení souhlasu | `CookieConsentBanner` se zobrazí, souhlas se uloží do `cookie_consents`; ověřit i policy text | Banner + nastavení existují; ukládá localStorage a vkládá `cookie_consents`; známý DB výsledek: CMS `cookies` existuje (`content_length=2325`) | banner, /privacy, /legal/cookies | DB result + email audit 14.06. | neověřeno | P0 blocker: právní/owner review cookie text + funkční banner E2E |
+| L05 | P0 | Kontakt | Reálné údaje | Dle COMPANY_CONTEXT.md | App/legal/contact/footer/delete-account/support fallback konzistentně používají `podpora@onemil.cz`; `COMPANY_CONTEXT.md` uvádí `support@onemil.cz`/`info@onemil.cz` | /kontakt, /terms, /privacy, /delete-account, footer | email audit 14.06. | neověřeno | Doporučení: potvrdit `podpora@onemil.cz` jako kanonický veřejný support e-mail nebo sjednotit zdroj pravdy |
 | L06 | P1 | Reklamace/support | Cesta k podpoře | Bob/zprávy + e-mail | `/messages` support handoff existuje; e-mail je dostupný na `/kontakt`; samostatné `/support/*` stránky závisí na CMS obsahu | /messages, /kontakt, /support/nahlasit-problem | static audit 14.06. | neověřeno | potvrdit reklamační/support wording a CMS support stránky |
 | L07 | P1 | Veřejné texty | Re-audit wording | Žádný hazard/`referral`/B2B leak | | / a zákaznické | | prošlo | audit 13.06. |
 | L08 | P0 | 18+ gating | Věkový limit | Vynucen | | /onboarding/date-of-birth | | neověřeno | |

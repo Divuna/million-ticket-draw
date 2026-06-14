@@ -1,5 +1,9 @@
 ﻿# OneMil – aktuální stav projektu
 
+## CONTACT / LEGAL EMAIL CONSISTENCY AUDIT (14. 06. 2026, documentation-only)
+
+Repo audit verejnych e-mailu: app/legal/contact/footer/delete-account/support fallback a partner docs konzistentne pouzivaji `podpora@onemil.cz`; `COMPANY_CONTEXT.md` stale uvadi `support@onemil.cz` jako podporu a `info@onemil.cz` jako hlavni e-mail, `b2b@onemil.cz` jen pro spoluprace. `accounting_email` je interni affiliate payout setting, ne verejny support. Znamy DB vysledek doplnen do `LAUNCH_TODO.md`: CMS `vop`, `gdpr`, `pravidla-souteze` a `cookies` existuji, ale pravni kvalita/aktualnost zustava neoverena. Doporuceni: potvrdit `podpora@onemil.cz` jako kanonicky verejny support e-mail nebo sjednotit zdroj pravdy. Pouze dokumentace; zadny kod, SQL, deploy, produkcni data, Partner API, fakturace ani reward logika.
+
 ## C22 CUSTOMER PASSWORD RESET CLEAN BRANCH (14. 06. 2026)
 
 Clean branch z aktualniho `main`: `codex/customer-password-reset-clean`. Prenesena pouze C22 zakaznicka obnova hesla ze source commitu `daafb1d0` bez stare mixed vetve `codex/affiliate-payouts-audit`. Implementace pouziva existujici Supabase Auth reset flow: `/login` ma odkaz `Zapomenute heslo?`, nova route `/reset-password` umi poslat recovery e-mail a po recovery session nastavit nove heslo. `PASSWORD_RECOVERY` se rozlisuje podle aktualni routy: zakaznici zustavaji na `/reset-password`, partner setup zustava na `/partner/set-password`. Bez SQL, deploye, produkcnich dat, Partner API, fakturace nebo reward logiky.

@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## CONTACT / LEGAL EMAIL CONSISTENCY AUDIT (14. 06. 2026, jen dokumentace)
+
+Repo audit verejnych e-mailu: app/legal/contact/footer/delete-account/support fallback a partner docs konzistentne pouzivaji `podpora@onemil.cz`; `COMPANY_CONTEXT.md` stale uvadi `support@onemil.cz` jako podporu a `info@onemil.cz` jako hlavni e-mail, `b2b@onemil.cz` jen pro spoluprace. `accounting_email` je interni affiliate payout setting, ne verejny support. Znamy DB vysledek doplnen do `LAUNCH_TODO.md`: CMS `vop`, `gdpr`, `pravidla-souteze` a `cookies` existuji, ale pravni kvalita/aktualnost zustava neoverena. Doporuceni: potvrdit `podpora@onemil.cz` jako kanonicky verejny support e-mail nebo sjednotit zdroj pravdy. Zadny kod, SQL, deploy, produkcni data, Partner API, fakturace ani reward logika.
+
 ## LAUNCH READINESS DOKUMENTACE (14. 06. 2026, jen dokumentace)
 
 Launch testovaci plan ve `docs/launch-readiness/`: `LAUNCH_TEST_PLAN.md` (A–H), `ROUTE_CHECKLIST.md` (mapa rout P0/P1/P2), `LAUNCH_TODO.md` (65 bodu; P0=48/P1=16/P2=1). P0 blockery: pravni obsah (VOP/GDPR/pravidla), cookies, kontakt/reklamace, zeleny Full E2E + P0 smoke, realne partner reward settings. NEOVERENO oznacene jako todo. Zadny kod/SQL/deploy/produkce.
