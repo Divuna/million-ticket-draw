@@ -107,7 +107,7 @@
 
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
 |----|------|--------|------|--------------------|----------|-------|-------|------|-------|
-| SEC01 | P0 | Security advisor backlog | Projít 23 pre-existing nálezů (CLAUDE.md SECURITY BACKLOG) | Rozhodnout fix vs vědomě akceptovat před veřejným spuštěním | | — | | neověřeno | **GAP: dosud neuzavřeno; RLS / public-execute SECURITY DEFINER nálezy z 2026-05-24** |
+| SEC01 | P0 | Security advisor backlog | Projít a uzavřít/akceptovat nálezy Security Advisoru | Každý nález fixnut nebo výslovně akceptován ownerem | **Inventář vytvořen 14.06: 467 nálezů (23 ERROR / 20 INFO / 424 WARN). 23 ERROR = původní „23" (2 Exposed Auth Users + 1 RLS Disabled in Public + 20 Security Definer View). Fixnuto v inventáři=0; ERRORy open, WARN/INFO needs-owner-decision.** | [SECURITY_FINDINGS.md](./SECURITY_FINDINGS.md) | get_advisors(security) prod 14.06. | **selhalo (blocker)** | **P0 blocker dokud nejsou ERRORy fixnuty nebo ownerem akceptovány; viz SECURITY_FINDINGS.md** |
 | SEC02 | P1 | RLS izolace | Zákazník nevidí cizí data (faktury, invite, wallet) | Own-row scoping drží | | různé | | neotestováno | pokryto dřívějšími audity |
 | SEC03 | P2 | Push (OneSignal) | Notifikace pipeline | `notifications`→`push_log`→OneSignal | | — | | neověřeno | interní, P2 pro 1. test |
 

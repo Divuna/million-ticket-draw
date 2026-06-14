@@ -1,5 +1,9 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SEC01 SECURITY FINDINGS INVENTÁŘ — P0 BLOCKER (14. 06. 2026, jen dokumentace)
+
+Read-only `get_advisors(security)` na produkci `xkzhjldrojjlrkezorey` → vytvoren `docs/launch-readiness/SECURITY_FINDINGS.md`. **467 nalezu: 23 ERROR / 20 INFO / 424 WARN.** 23 ERROR = puvodni „23" ze SEC01 (2× Exposed Auth Users, 1× RLS Disabled in Public na `_messages_policies_backup`, 20× Security Definer View). Fixnuto v inventari = 0 (drivejsi invite-reward/affiliate fixy se v aktualnim seznamu uz neobjevuji — overeno absenci). Open = 23 ERROR + W1 (102 function search_path) + W7 (Leaked Password Protection off). Needs owner decision / accepted-risk = INFO(20) + WARN(424): public-execute SECURITY DEFINER (151/156, vetsinou by-design s is_admin/auth.uid guardem), public buckets (9, asset buckets; `partner-invoices` spravne neni public), RLS Policy Always True (3: cookie_consents/event_queue), Extension in Public (2). **SEC01 zustava P0 blocker** dokud nejsou ERRORy fixnuty nebo ownerem vyslovne akceptovany. Zadny kod/SQL/RLS/deploy/produkcni data nezmeneno.
+
 ## PRAVNI CMS TEXTY — EXPORT REVIEW, L01–L04 + L09 BLOCKER (14. 06. 2026, jen dokumentace)
 
 Owner exportoval produkcni CMS pravni texty (`content_pages`). Nalezy v `docs/launch-readiness/LAUNCH_TODO.md` (L01–L04, L09 = **selhalo / blocker**):

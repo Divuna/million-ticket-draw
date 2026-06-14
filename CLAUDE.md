@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 SECURITY FINDINGS INVENTÁŘ (14. 06. 2026, jen dokumentace)
+
+`docs/launch-readiness/SECURITY_FINDINGS.md` = read-only inventar produkcniho Security Advisoru (`xkzhjldrojjlrkezorey`): **467 nalezu (23 ERROR / 20 INFO / 424 WARN)**. 23 ERROR odpovida puvodni „23" ze SEC01 (2 Exposed Auth Users, 1 RLS Disabled in Public, 20 Security Definer View). Fixnuto=0 v inventari; ERRORy open, WARN/INFO needs-owner-decision/accepted-risk. **SEC01 = P0 blocker** dokud nejsou ERRORy fixnuty nebo ownerem akceptovany. Nic neoznaceno fixed bez dukazu. Zadny kod/SQL/RLS/deploy/produkce.
+
 ## PRAVNI CMS TEXTY — L01–L04 + L09 BLOCKER PO EXPORTU (14. 06. 2026, jen dokumentace)
 
 Po exportu produkcnich CMS pravnich textu (`content_pages`) zaznamenano v `docs/launch-readiness/LAUNCH_TODO.md` jako P0 blocker: /vop prilis kratky; /pravidla-souteze ma placeholdery (`[NÁZEV SOUTĚŽE]`/`[DATUM]`/`[POPIS HLAVNÍ VÝHRY]`/`[HODNOTA]`); /gdpr vs /legal/ochrana-osobnich-udaju se lisi (sjednotit); /legal/cookies overit proti realnym nastrojum+banneru; nektere pravni texty maji `info@onemil.cz` vs verejny `podpora@onemil.cz` (L09 — kontaktni e-maily potvrdit ownerem pred editaci). Zadny pravni text/CMS/SQL/deploy/produkce nezmenen. Dalsi krok: owner/legal review pred launchem.
