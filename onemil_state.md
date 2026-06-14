@@ -1,5 +1,9 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SEC01 SECURITY_FINDINGS — ŘÁDKY SROVNÁNY S HLAVIČKOU (14. 06. 2026, jen dokumentace)
+
+Opravena nekonzistence v `docs/launch-readiness/SECURITY_FINDINGS.md`: 13 Group 1 řádků (E01, E02, E04, E06, E07, E08, E10, E11, E12, E13, E15, E16, E21) přepnuto na status `fixed (production, verified)` v souladu s ověřenou hlavičkou (advisor 23→10, smoke `27511158470`). Group 2/3 řádky (E03, E05, E09, E14, E17–E20, E22, E23) nedotčeny. Pouze dokumentace — žádné SQL, deploy, app kód ani produkční data.
+
 ## SEC01 GROUP 1 — APLIKOVÁN A OVĚŘEN NA PRODUKCI (14. 06. 2026, schválení Pavla)
 
 SEC01 Group 1 (11 app-unused SECURITY DEFINER views) aplikován na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_group1_safe_view_hardening`): `REVOKE SELECT` od anon/authenticated + `SET (security_invoker = on)`.

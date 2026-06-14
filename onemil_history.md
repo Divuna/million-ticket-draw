@@ -4234,3 +4234,7 @@ Invariant:
 ---
 
 **Timestamp (Europe/Prague): 2026-06-14** — SEC01 Group 1 aplikován na PRODUKCI `xkzhjldrojjlrkezorey` (schválení Pavla, migrace `sec01_group1_safe_view_hardening`): REVOKE SELECT od anon/authenticated + `SET (security_invoker = on)` na 11 app-unused SECURITY DEFINER views. Precheck = zachycený baseline (shoda). Postcheck: 11/11 anon revoked / auth revoked / security_invoker on. Produkční advisor: ERROR 23 → 10 (všech 11 cílených views vyřešeno vč. obou Exposed Auth Users). Produkční P0 smoke run 27511158470 = success, 5 passed. Bez rollbacku. SEC01 zůstává P0 blocker — zbývá 10 ERROR (1 RLS Disabled in Public + 9 Security Definer View = Group 2/3) + WARN/INFO. Žádný deploy, žádná změna app kódu, Group 2/3 a WARN/INFO nedotčeny.
+
+---
+
+**Timestamp (Europe/Prague): 2026-06-14** — Dokumentační konzistence: v `docs/launch-readiness/SECURITY_FINDINGS.md` přepnuto 13 Group 1 řádků (E01, E02, E04, E06, E07, E08, E10, E11, E12, E13, E15, E16, E21) na status `fixed (production, verified)` v souladu s ověřenou hlavičkou (advisor 23→10, smoke 27511158470). Group 2/3 řádky (E03, E05, E09, E14, E17–E20, E22, E23) nedotčeny. Pouze dokumentace — žádné SQL, deploy, app kód ani produkční data.

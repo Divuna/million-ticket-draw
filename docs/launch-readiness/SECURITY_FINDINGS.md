@@ -22,27 +22,27 @@
 
 | # | Severity | Category | Affected object | Status | Evidence | Recommended next action |
 |---|----------|----------|-----------------|--------|----------|--------------------------|
-| E01 | ERROR | Exposed Auth Users | `public.v_influencer_referrals_valid` (view) | open | advisor 14.06 | Review view; stop exposing `auth.users` to anon/authenticated or restrict grants |
-| E02 | ERROR | Exposed Auth Users | `public.daily_platform_metrics` (view) | open | advisor 14.06 | Same — remove `auth.users` exposure / revoke PostgREST access |
+| E01 | ERROR | Exposed Auth Users | `public.v_influencer_referrals_valid` (view) | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
+| E02 | ERROR | Exposed Auth Users | `public.daily_platform_metrics` (view) | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E03 | ERROR | RLS Disabled in Public | `public._messages_policies_backup` (table) | needs owner decision | advisor 14.06; name suggests a backup | Confirm it's an obsolete backup → drop it (owner approval), or enable RLS |
-| E04 | ERROR | Security Definer View | `public.v_user_wallets` | open | advisor 14.06 | Review: view runs as owner, bypasses RLS — confirm no customer wallet leak |
+| E04 | ERROR | Security Definer View | `public.v_user_wallets` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E05 | ERROR | Security Definer View | `public.contest_activity_last_24h` | needs owner decision | advisor 14.06 | Likely admin analytics — confirm not anon/authenticated readable |
-| E06 | ERROR | Security Definer View | `public.daily_platform_metrics` | open | advisor 14.06 | Admin metrics + also Exposed Auth Users (E02) — prioritize |
-| E07 | ERROR | Security Definer View | `public.contest_analytics` | needs owner decision | advisor 14.06 | Confirm admin-only access |
-| E08 | ERROR | Security Definer View | `public.contest_ticket_map` | open | advisor 14.06 | Review exposure |
+| E06 | ERROR | Security Definer View | `public.daily_platform_metrics` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
+| E07 | ERROR | Security Definer View | `public.contest_analytics` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
+| E08 | ERROR | Security Definer View | `public.contest_ticket_map` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E09 | ERROR | Security Definer View | `public.admin_winner_delivery_stats` | needs owner decision | advisor 14.06 | Admin view — confirm scoping |
-| E10 | ERROR | Security Definer View | `public.event_queue_monitoring` | needs owner decision | advisor 14.06 | Internal monitoring — confirm not exposed |
-| E11 | ERROR | Security Definer View | `public.event_queue_failed_summary` | needs owner decision | advisor 14.06 | Internal monitoring |
-| E12 | ERROR | Security Definer View | `public.contest_integrity_check` | needs owner decision | advisor 14.06 | Internal/admin |
-| E13 | ERROR | Security Definer View | `public.system_health_monitor` | needs owner decision | advisor 14.06 | Internal/admin |
+| E10 | ERROR | Security Definer View | `public.event_queue_monitoring` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
+| E11 | ERROR | Security Definer View | `public.event_queue_failed_summary` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
+| E12 | ERROR | Security Definer View | `public.contest_integrity_check` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
+| E13 | ERROR | Security Definer View | `public.system_health_monitor` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E14 | ERROR | Security Definer View | `public.valid_partner_api_keys` | open | advisor 14.06 | **Priority** — partner API key view; confirm no key/hash exposure |
-| E15 | ERROR | Security Definer View | `public.admin_winner_delivery_detail` | needs owner decision | advisor 14.06 | Admin view |
-| E16 | ERROR | Security Definer View | `public.v_first_topup_valid` | open | advisor 14.06 | Review exposure |
+| E15 | ERROR | Security Definer View | `public.admin_winner_delivery_detail` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
+| E16 | ERROR | Security Definer View | `public.v_first_topup_valid` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E17 | ERROR | Security Definer View | `public.v_influencer_referrals_paid` | open | advisor 14.06 | Review exposure |
 | E18 | ERROR | Security Definer View | `public.partner_api_activity` | open | advisor 14.06 | Confirm partner-scoped, no cross-partner leak |
 | E19 | ERROR | Security Definer View | `public.contest_miocoin_totals` | needs owner decision | advisor 14.06 | Likely public/contest data |
 | E20 | ERROR | Security Definer View | `public.winners_with_contest` | needs owner decision | advisor 14.06 | Likely intentional public winners |
-| E21 | ERROR | Security Definer View | `public.v_influencer_referrals_valid` | open | advisor 14.06 | Also E01 (Exposed Auth Users) |
+| E21 | ERROR | Security Definer View | `public.v_influencer_referrals_valid` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E22 | ERROR | Security Definer View | `public.contest_progress` | needs owner decision | advisor 14.06 | Likely public contest data |
 | E23 | ERROR | Security Definer View | `public.contest_revenue` | open | advisor 14.06 | Revenue data — confirm admin-only |
 

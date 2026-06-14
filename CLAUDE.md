@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 SECURITY_FINDINGS ŘÁDKY SROVNÁNY (14. 06. 2026, jen dokumentace)
+
+13 Group 1 řádků v `docs/launch-readiness/SECURITY_FINDINGS.md` (E01/E02/E04/E06/E07/E08/E10/E11/E12/E13/E15/E16/E21) přepnuto na `fixed (production, verified)` kvůli souladu s ověřenou hlavičkou. Group 2/3 řádky nezměněny. Jen dokumentace.
+
 ## SEC01 GROUP 1 — PRODUKČNÍ FIX OVĚŘEN (14. 06. 2026, schválení Pavla)
 
 SEC01 Group 1 (11 app-unused SECURITY DEFINER views) aplikován na produkci `xkzhjldrojjlrkezorey` (REVOKE anon/auth + `security_invoker=on`, migrace `sec01_group1_safe_view_hardening`). Precheck=baseline; postcheck 11/11; advisor ERROR 23→10; P0 smoke `27511158470` success (5 passed); bez rollbacku. Pravidlo: těchto 11 views NESMÍ mít zpět anon/authenticated SELECT ani SECURITY DEFINER bez invoker. SEC01 zůstává P0 blocker — zbývá 10 ERROR (Group 2/3: 1 RLS Disabled in Public + 9 Security Definer View) + WARN/INFO; vyžadují fix nebo owner-accept.
