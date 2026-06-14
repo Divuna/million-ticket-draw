@@ -29,6 +29,10 @@
 > Staging advisor: **ERROR 10 → 8** (E03 + E14 cleared; 8 remaining all Security Definer View). Full Staging E2E `27511465619` = success, **122 passed, 0 failures** → no admin-page regression (`/admin/contest/:id`, `/admin/prize-delivery` covered).
 > **Production NOT touched.** SEC01 stays **P0 blocker** (8 ERROR remain on staging; production unchanged).
 >
+> ### UPDATE 14.06.2026 — E09 `security_invoker` APPLIED + VERIFIED on STAGING only
+> `ALTER VIEW public.admin_winner_delivery_stats SET (security_invoker = on)` (migration `sec01_e09_admin_winner_delivery_stats_security_invoker`). Safe because its underlying tables have admin-readable RLS (`contests.contests_admin_select_all` + `winners` authenticated read). Postcheck: invoker on; output unchanged (786 rows / 297 winners). Staging advisor **ERROR 8 → 7** (E09 gone). Full Staging E2E `27512219000` = success, **122 passed, 0 failures** → `/admin/prize-delivery` works. **Production NOT touched.**
+> **Important:** E05 (`contest_activity_last_24h`) and E23 (`contest_revenue`) must NOT get `security_invoker` — they read `tickets`, which has RLS enabled with **no policy** (deny-all for authenticated) → would zero out admin totals. They stay interim (anon revoked) pending a `tickets` admin-read policy (separate owner decision) or formal accept.
+>
 > Status values: `fixed` (proof in repo/docs) · `open` (must fix/triage) · `needs owner decision` · `accepted-risk candidate`.
 
 ## A) ERROR-level findings — the SEC01 "23" (must resolve or owner-accept before launch)
@@ -43,7 +47,7 @@
 | E06 | ERROR | Security Definer View | `public.daily_platform_metrics` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E07 | ERROR | Security Definer View | `public.contest_analytics` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E08 | ERROR | Security Definer View | `public.contest_ticket_map` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
-| E09 | ERROR | Security Definer View | `public.admin_winner_delivery_stats` | interim (production): anon revoked; SDV ERROR remains | migration `sec01_group2_safe_interim_hardening`; prod smoke 27511945205 | anon revoked (prod), authenticated kept for admin UI. `security_invoker` = owner decision |
+| E09 | ERROR | Security Definer View | `public.admin_winner_delivery_stats` | fixed (staging, verified) / prod pending | `security_invoker=on` (staging, migration `sec01_e09_admin_winner_delivery_stats_security_invoker`); staging advisor 8→7; E2E 27512219000; output unchanged 786 rows/297 winners | Safe because contests (admin read-all) + winners (authenticated read) cover RLS. Prod apply pending owner approval |
 | E10 | ERROR | Security Definer View | `public.event_queue_monitoring` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E11 | ERROR | Security Definer View | `public.event_queue_failed_summary` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E12 | ERROR | Security Definer View | `public.contest_integrity_check` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |

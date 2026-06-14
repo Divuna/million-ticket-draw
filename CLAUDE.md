@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 E09 SECURITY_INVOKER — STAGING OVĚŘEN (14. 06. 2026)
+
+E09 `admin_winner_delivery_stats` → `security_invoker=on` pouze na staging (migrace `sec01_e09_admin_winner_delivery_stats_security_invoker`). Bezpečné díky admin RLS na contests+winners. Postcheck: invoker on, výstup 786/297 nezměněn. Advisor staging 8→7. Full E2E `27512219000` 122 passed/0 fail (/admin/prize-delivery OK). Produkce NEDOTČENA. E05/E23 security_invoker NELZE (tickets RLS deny-all by vynulovalo totaly) — potřebují tickets admin-read policy (owner decision) nebo accept. SEC01 zůstává P0 blocker (produkce 8 ERROR).
+
 ## SEC01 GROUP 2 SAFE/INTERIM — PRODUKČNÍ FIX OVĚŘEN (14. 06. 2026, schválení Pavla)
 
 Group 2 safe/interim aplikován na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_group2_safe_interim_hardening`): E14 revoke anon/auth + security_invoker (cleared); E03 ENABLE RLS + revoke (cleared, NEsmazáno); E05/E09/E23 revoke anon (authenticated ponechán, SDV ERROR zůstává). Precheck=baseline; postcheck OK; prod advisor ERROR 10→8; P0 smoke `27511945205` success (5 passed); bez rollbacku. SEC01 zůstává P0 blocker (8 ERROR = Security Definer View). Pravidlo: nevracet anon SELECT; E05/E09/E23 security_invoker až po ověření admin RLS (owner decision); E03 DROP jen po schválení.

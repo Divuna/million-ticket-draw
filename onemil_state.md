@@ -1,5 +1,17 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SEC01 E09 SECURITY_INVOKER — OVĚŘEN NA STAGINGU (14. 06. 2026)
+
+E09 `admin_winner_delivery_stats` přepnuto na `security_invoker = on` **POUZE na staging** `dxmowysntemfqfnanxua` (migrace `sec01_e09_admin_winner_delivery_stats_security_invoker`). Bezpečné, protože podkladové tabulky mají admin-čitelné RLS: `contests` (`contests_admin_select_all`) + `winners` (authenticated read true).
+
+- **Postcheck:** security_invoker=on; výstup nezměněn (786 řádků / 297 winners vs baseline).
+- **Advisor staging: ERROR 8 → 7** (E09 zmizel).
+- **Full Staging E2E `27512219000` = success, 122 passed, 0 fail** → `/admin/prize-delivery` funguje.
+- **PRODUKCE pro E09 NEDOTČENA.**
+- **E05/E23 NELZE přepnout na security_invoker** — čtou `tickets`, kde je RLS zapnuté **bez policy** (deny-all pro authenticated) → vynulovalo by admin totaly. Zůstávají interim (anon revoked) dokud nevznikne admin-read policy na `tickets` (owner decision) nebo formální accept.
+- **SEC01 ZŮSTÁVÁ P0 BLOCKER:** produkce 8 ERROR; E09 čeká na produkční schválení; E05/E23 + Group 3 (E17–E20/E22) + WARN/INFO zbývají.
+- Rollback k dispozici: `ALTER VIEW public.admin_winner_delivery_stats RESET (security_invoker);`
+
 ## SEC01 GROUP 2 SAFE/INTERIM — APLIKOVÁN A OVĚŘEN NA PRODUKCI (14. 06. 2026, schválení Pavla)
 
 SEC01 Group 2 safe/interim aplikován na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_group2_safe_interim_hardening`; bez DROP tabulky, bez security_invoker na admin views).
