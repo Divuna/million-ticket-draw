@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-14 - P0 C22 zakaznicky reset hesla dokoncen
+
+- Nebyly nalezeny rozpracovane zmeny kolem Auth/App/Login/ResetPassword/reset E2E; implementace zacala ciste od aktualni vetve, mimo pre-existing `supabase/.temp` a stare untracked artefakty.
+- Pridana route `/reset-password` a stranka `src/pages/ResetPassword.tsx` pro zadost o reset e-mailem i nastaveni noveho hesla po recovery session.
+- `/login` ma odkaz `Zapomenute heslo?`.
+- `AuthContext` rozlisuje recovery cil: zakaznicke linky zustavaji na `/reset-password`, partnerske/company setup linky zustavaji na `/partner/set-password`.
+- `DateOfBirthGuard` exemptuje `/reset-password`.
+- Pridan smoke test `tests/e2e/44-customer-password-reset.spec.ts` (login link, recover request s redirectem na `/reset-password`, update hesla pri aktivni recovery session).
+- Overeno `npm run build` a `npx playwright test tests/e2e/44-customer-password-reset.spec.ts --project=chromium` (`3 passed`). Bez SQL, bez produkcnich dat, bez zmen Partner API/fakturace/reward logiky.
+
 ## 2026-06-13 - Partner API order flow na existujicim systemu aplikovan na staging
 
 - Implementace zustala v existujicim endpointu `partner-activate`; nevznikl novy endpoint, nova tabulka ani obnoveny `partner-api-v1` / `partner_api_v1_order_rewards`.

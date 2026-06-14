@@ -1,5 +1,14 @@
 # CLAUDE.md
 
+## P0 C22 - ZAKAZNICKY RESET HESLA HOTOVO (14. 06. 2026)
+
+Zakaznicky reset hesla ma samostatnou route `/reset-password`. `/login` obsahuje odkaz `Zapomenute heslo?`. Stranka `/reset-password` pouziva Supabase Auth: `resetPasswordForEmail(... redirectTo /reset-password)` pro poslani e-mailu a `updateUser({ password })` pro nastaveni noveho hesla po recovery session.
+
+Recovery routing invariant: `PASSWORD_RECOVERY` nesmi automaticky posilat vsechny uzivatele na `/partner/set-password`. `AuthContext` obsahuje `passwordRecoveryRoute`: zakaznicky reset zustava na `/reset-password`, partner/company setup zustava na `/partner/set-password`. `DateOfBirthGuard` musi `/reset-password` exemptovat.
+
+Test: `tests/e2e/44-customer-password-reset.spec.ts`. Overeno `npm run build` a `npx playwright test tests/e2e/44-customer-password-reset.spec.ts --project=chromium` (`3 passed`). Nedotykat se kvuli C22 Partner API, fakturace, reward logiky, SQL ani produkcnich dat.
+
+
 ## PARTNER API V1 — ODMÍTNUTÝ STAGING PROTOTYP `5b5d8270`
 
 Staging prototyp Partner API v1 z commitu `5b5d8270` byl odmítnutý, protože vytvořil paralelní Partner API systém: novou Edge Function `partner-api-v1`, novou tabulku `partner_api_v1_order_rewards` a nové `partner_api_v1_*` RPC vedle existujícího Partner API. Prototypové soubory byly odstraněny z repozitáře. Affiliate Payouts práce zůstává nedotčená.

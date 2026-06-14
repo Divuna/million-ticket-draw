@@ -10,6 +10,14 @@ Budoucí implementace Partner API v1 musí znovu použít existující systém: 
 
 Staging cleanup po odmítnutém prototypu je stále pending a vyžaduje samostatné výslovné schválení. Bez tohoto schválení neprovádět cleanup SQL, nedeployovat, nemazat staging Edge Function ani staging data a netýkat se produkce.
 
+## P0 C22 — ZAKAZNICKY RESET HESLA HOTOVO (14. 06. 2026)
+
+Zakaznicky reset hesla je implementovany bez DB zmen a bez zasahu do Partner API/fakturace/reward logiky. `/login` ma odkaz `Zapomenute heslo?`, nova route `/reset-password` umi poslat reset e-mail pres Supabase Auth `resetPasswordForEmail` a po otevreni recovery session nastavit nove heslo pres `supabase.auth.updateUser`.
+
+Auth recovery routing je opraveny: `PASSWORD_RECOVERY` uz neposila vsechny linky na `/partner/set-password`. `AuthContext` uklada `passwordRecoveryRoute` podle aktualni recovery URL, takze zakaznicky reset zustava na `/reset-password` a partner/company setup zustava na `/partner/set-password`.
+
+Overeno: `npm run build` proslo s existujicimi Vite/Tailwind/chunk warnings; `npx playwright test tests/e2e/44-customer-password-reset.spec.ts --project=chromium` proslo `3 passed`.
+
 ## PARTNER API ORDER FLOW — EXISTUJICI SYSTEM, STAGING HOTOVO (13. 06. 2026)
 
 Spravna implementace Partner API order flow byla aplikovana pouze na staging `dxmowysntemfqfnanxua` a zustava v existujicim systemu. Nebyl vytvoren novy endpoint, nebyla vytvorena nova tabulka, `partner-api-v1` ani `partner_api_v1_order_rewards` nebyly obnoveny.
