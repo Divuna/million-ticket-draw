@@ -4167,3 +4167,7 @@ Invariant:
 - Produkce se nesmí dotknout. Beze změny ticket, wallet, payment, `buy_ticket_atomic`, graphics, login placement, commission logic, partner registration logic a finální atribuce zůstává `affiliate_company_refs` + `partners.referred_by_affiliate_id`.
 
 ---
+
+---
+
+**Timestamp (Europe/Prague): 2026-06-14** — Partner API PR #114 produkcni rollout checklist pripraven (NEPROVEDEN). Produkce `xkzhjldrojjlrkezorey` netknuta: zadny merge, zadne SQL, zadny deploy. Rollout vyzaduje vyslovne pisemne schvaleni Pavla pred (1) merge PR #114, (2) aplikaci migraci `20260613200202` a `20260613200849` na produkci, (3) deploy EF `partner-activate`. Staging spec 48 proslo v runu `27490386537`. Pred rolloutem nutno potvrdit partner reward settings (`reward_base_czk`/`reward_mc`). Pri `create_order_reward` nesmi vzniknout faktura/e-mail/PDF/platba/wallet credit/`partner_coin_activations` radek; wallet credit a `partner_coin_activations` vznikaji az po redempci zakaznikem. Schvalovaci fraze: „Schvaluji produkcni rollout Partner API (PR #114): aplikovat migrace 20260613200202 a 20260613200849 na produkci xkzhjldrojjlrkezorey a nasadit Edge Function partner-activate. Rozumim, ze se nevytvari zadna faktura/e-mail/PDF/platba/wallet credit pri vytvoreni objednavky."

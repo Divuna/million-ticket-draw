@@ -1,5 +1,18 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PARTNER API PR #114 — PRODUKCNI ROLLOUT CHECKLIST PRIPRAVEN (14. 06. 2026)
+
+Pripraven (NEPROVEDEN) produkcni rollout checklist pro Partner API existing-system implementaci (PR #114). Produkce `xkzhjldrojjlrkezorey` zustava NETKNUTA — zadny merge, zadne SQL, zadny deploy. Detailni plan (preconditions, SQL poradi, EF deploy, postchecky, bezpecny prod test, rollback) byl predan; toto je zaznam.
+
+- **Vyzaduje vyslovne pisemne schvaleni Pavla PRED:** (1) merge PR #114, (2) aplikaci migraci `20260613200202` a `20260613200849` (v tomto poradi) na produkci, (3) deploy Edge Function `partner-activate` (musi zustat `verify_jwt=false`).
+- **Staging spec 48 zeleny:** run `27490386537` (3 passed).
+- **Pred rolloutem nutno potvrdit partner reward settings** (`partners.reward_base_czk` + `partners.reward_mc`) u kazdeho realneho partnera — jinak API vraci `invalid_partner_conversion_settings` (Botanic ma stale `[TEST DATA]`).
+- **Pri `create_order_reward` (krok pending) NESMI vzniknout:** zadna faktura, zadny e-mail, zadne PDF, zadna platba, zadny wallet credit, zadny `partner_coin_activations` radek.
+- **Wallet credit a `partner_coin_activations` vznikaji az po redempci zakaznikem** (`redeem_miocoin_code`); faktury az tydennim cronem.
+- **Produkcni stav (read-only overeno 14.06.):** `partner-activate` v129 (stara single-action), enum `partner_code_status` bez `pending`, nove RPC + idempotency index NEpritomny, reward sloupce pritomny.
+- **Presna schvalovaci fraze, kterou musi Pavel napsat:**
+  > Schvaluji produkcni rollout Partner API (PR #114): aplikovat migrace 20260613200202 a 20260613200849 na produkci xkzhjldrojjlrkezorey a nasadit Edge Function partner-activate. Rozumim, ze se nevytvari zadna faktura/e-mail/PDF/platba/wallet credit pri vytvoreni objednavky.
+
 ## STAGING E2E CI ODBLOKOVANO + SPEC 48 ZELENY (14. 06. 2026)
 
 Globalni staging CI vypadek (vsechny staging E2E vcetne `main` padaly v kroku „Ensure staging admin E2E user has admin role" s curl exit 22) vyresen. Spec 48 ted v CI zelene.

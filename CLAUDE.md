@@ -1,5 +1,14 @@
 # CLAUDE.md
 
+## PARTNER API PR #114 — PRODUKCNI ROLLOUT CHECKLIST (14. 06. 2026, NEPROVEDEN)
+
+Produkcni rollout checklist pro Partner API existing-system (PR #114) je pripraven; produkce `xkzhjldrojjlrkezorey` NETKNUTA. **Bez vyslovneho pisemneho schvaleni Pavla NEdelat:** merge PR #114, aplikaci migraci `20260613200202` + `20260613200849`, deploy EF `partner-activate`.
+
+- Staging spec 48 zeleny (run `27490386537`).
+- Pred rolloutem potvrdit `partners.reward_base_czk` + `reward_mc` u realnych partneru.
+- Pri `create_order_reward` NESMI vzniknout faktura/e-mail/PDF/platba/wallet credit/`partner_coin_activations` radek; wallet credit + activation az po `redeem_miocoin_code`.
+- Presna schvalovaci fraze: „Schvaluji produkcni rollout Partner API (PR #114): aplikovat migrace 20260613200202 a 20260613200849 na produkci xkzhjldrojjlrkezorey a nasadit Edge Function partner-activate. Rozumim, ze se nevytvari zadna faktura/e-mail/PDF/platba/wallet credit pri vytvoreni objednavky."
+
 ## PUBLIC CUSTOMER-FACING UI TEXT AUDIT — ✅ ČISTÉ (13. 06. 2026)
 
 Read-only audit zákaznických UI textů (routy `/`, `/games`, `/wins`, `/vouchers`, `/profile`, `/messages`, `/my-contests`).
