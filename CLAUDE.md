@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## PARTNER API GUIDE — ORDER-EVENT MODEL (14. 06. 2026, jen dokumentace)
+
+Partner-facing pruvodce Partner API je v `docs/partner-api/PARTNER_API_GUIDE.md` (PR #114 branch), revidovan na order-event model (objednavka vytvorena → cekajici odmena; paid/delivered/completed → aktivni odmena; cancelled/returned/unpaid/not_picked_up → zrusena). Checkout neceka na OneMil; retry se stejnym `external_order_id` (idempotence). Partner neposila konecny pocet MioCoinu. Pripraveno PO rolloutu PR #114 — NE zive; `settings.partner_api_documentation` nezmenen. Zadny kod/SQL/deploy/merge/produkce.
+
 ## PARTNER API PR #114 — PRODUKCNI ROLLOUT CHECKLIST (14. 06. 2026, NEPROVEDEN)
 
 Produkcni rollout checklist pro Partner API existing-system (PR #114) je pripraven; produkce `xkzhjldrojjlrkezorey` NETKNUTA. **Bez vyslovneho pisemneho schvaleni Pavla NEdelat:** merge PR #114, aplikaci migraci `20260613200202` + `20260613200849`, deploy EF `partner-activate`.

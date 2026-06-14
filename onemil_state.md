@@ -1,5 +1,9 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PARTNER API GUIDE — REVIDOVAN NA ORDER-EVENT MODEL (14. 06. 2026)
+
+Partner-facing pruvodce Partner API ulozen do `docs/partner-api/PARTNER_API_GUIDE.md` (PR #114 branch). Revidovan na **order-event model**: partner posila udalosti objednavky (vytvoreni → cekajici odmena; paid/delivered/completed → aktivni odmena; cancelled/returned/unpaid/not_picked_up → zrusena odmena). Checkout neceka na OneMil, volat na pozadi, pri vypadku retry se stejnym `external_order_id` (idempotence vraci stejny kod). Partner neposila konecny pocet MioCoinu — OneMil ho pocita z nastaveni partnera. Wording partner-facing („aktivni odmena"); raw `issued` jen v JSON prikladech. **Pripraveno pro stav PO rolloutu PR #114 — NE zive v produkci**; `settings.partner_api_documentation` zatim NEzmenen. Pouze dokumentace: zadny kod, SQL, deploy, merge ani produkcni zmena.
+
 ## PARTNER API PR #114 — PRODUKCNI ROLLOUT CHECKLIST PRIPRAVEN (14. 06. 2026)
 
 Pripraven (NEPROVEDEN) produkcni rollout checklist pro Partner API existing-system implementaci (PR #114). Produkce `xkzhjldrojjlrkezorey` zustava NETKNUTA — zadny merge, zadne SQL, zadny deploy. Detailni plan (preconditions, SQL poradi, EF deploy, postchecky, bezpecny prod test, rollback) byl predan; toto je zaznam.
