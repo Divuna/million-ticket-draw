@@ -1,5 +1,16 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PRAVNI CMS TEXTY — EXPORT REVIEW, L01–L04 + L09 BLOCKER (14. 06. 2026, jen dokumentace)
+
+Owner exportoval produkcni CMS pravni texty (`content_pages`). Nalezy v `docs/launch-readiness/LAUNCH_TODO.md` (L01–L04, L09 = **selhalo / blocker**):
+- **/vop** existuje + is_active, ale obsah **velmi kratky** → owner/legal review.
+- **/pravidla-souteze** existuje + is_active, ale obsahuje **placeholdery** `[NÁZEV SOUTĚŽE]`, `[DATUM]`, `[POPIS HLAVNÍ VÝHRY]`, `[HODNOTA]` — nesmi do verejneho spusteni.
+- **/gdpr** vs **/legal/ochrana-osobnich-udaju** oba existuji, **wording se lisi** → sjednotit/overit.
+- **/legal/cookies** existuje + is_active (content_length≈2325); overit policy proti realnym cookie nastrojum a chovani banneru.
+- Nektere pravni CMS texty obsahuji `info@onemil.cz`; verejny support je `podpora@onemil.cz` (L05 vyresen) → kontaktni e-maily v pravnich textech vyzaduji **owner/legal potvrzeni pred editaci** (L09).
+
+**Zadny pravni text nezmenen, zadny CMS obsah nezmenen, zadne SQL, zadny deploy, zadna produkcni data dotcena.** Dalsi krok: **owner/legal review CMS pravnich textu pred launchem**.
+
 ## CONTACT / LEGAL EMAIL CONSISTENCY AUDIT (14. 06. 2026, documentation-only)
 
 Owner potvrzeno: kanonicky verejny support e-mail pro OneMil launch readiness je `podpora@onemil.cz`. `COMPANY_CONTEXT.md` byl dokumentacne sjednocen na `podpora@onemil.cz` pro hlavni verejny support kontakt i podporu; `b2b@onemil.cz` zustava jen pro obchodni spoluprace. Cleanup audit potvrzuje, ze stara support adresa nezustava v live app code, email templates, Edge Functions, settings docs ani current source-of-truth docs; zbyle vyskyty jsou jen stare audit/history notes. `LAUNCH_TODO.md` L05 oznacen jako proslo. CMS `vop`, `gdpr`, `pravidla-souteze` a `cookies` existuji, ale pravni kvalita/aktualnost zustava neoverena v L01-L04. Pouze dokumentace; zadny kod, SQL, deploy, produkcni data, Partner API, fakturace ani reward logika.

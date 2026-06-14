@@ -4218,3 +4218,7 @@ Invariant:
 **Timestamp (Europe/Prague): 2026-06-14** - Public support e-mail cleanup complete (documentation-only). Full repo search for `support@onemil.cz` found no remaining live app code, email template, Edge Function, settings doc, or current source-of-truth usage. Remaining occurrences are old audit/history notes and were intentionally left unchanged. `podpora@onemil.cz` is canonical for public support; `LAUNCH_TODO.md` L05 remains `proslo`. No legal text content, app code, SQL, deploy, production data, Partner API, invoices, reward logic, or migrations touched.
 
 ---
+
+---
+
+**Timestamp (Europe/Prague): 2026-06-14** — P0 launch readiness: review exportovanych produkcnich CMS pravnich textu (`content_pages`). L01–L04 + nove L09 v `docs/launch-readiness/LAUNCH_TODO.md` = **selhalo / blocker**: /vop prilis kratky; /pravidla-souteze obsahuje placeholdery ([NÁZEV SOUTĚŽE], [DATUM], [POPIS HLAVNÍ VÝHRY], [HODNOTA]); /gdpr a /legal/ochrana-osobnich-udaju se lisi (sjednotit); /legal/cookies overit proti realnym cookie nastrojum a banneru; nektere pravni texty maji info@onemil.cz vs verejny podpora@onemil.cz (kontaktni e-maily v pravnich textech vyzaduji owner/legal potvrzeni pred editaci, L09 — L05 resil jen verejny support display). Zadny pravni text nezmenen, zadny CMS obsah nezmenen, zadne SQL, zadny deploy, zadna produkcni data dotcena. Dalsi krok: owner/legal review CMS pravnich textu pred verejnym spustenim.
