@@ -4175,3 +4175,7 @@ Invariant:
 ---
 
 **Timestamp (Europe/Prague): 2026-06-14** — Partner API partner-facing pruvodce revidovan na order-event model a ulozen do `docs/partner-api/PARTNER_API_GUIDE.md` (PR #114 branch). Model: objednavka vytvorena → cekajici odmena; paid/delivered/completed → aktivni odmena; cancelled/returned/unpaid/not_picked_up → zrusena odmena. Checkout neceka na OneMil (async, retry se stejnym `external_order_id`, idempotence vraci stejny kod). Partner neposila konecny pocet MioCoinu — pocita OneMil z nastaveni partnera. Pripraveno pro stav PO rolloutu PR #114, NE zive v produkci; `settings.partner_api_documentation` nezmenen. Pouze dokumentace — zadny kod, SQL, deploy, merge ani produkcni zmena.
+
+---
+
+**Timestamp (Europe/Prague): 2026-06-14** — Vytvorena kompletni Partner API onboarding sada ve `docs/partner-api/` (PR #114 branch): `README.md` (index), `PARTNER_OWNER_OVERVIEW.md` (netechnicky prehled pro majitele), `PARTNER_API_GUIDE.md` (vyvojarsky order-event guide, beze zmeny), `PARTNER_HANDOFF_EMAIL.md` (cesky predavaci e-mail). Jedna sada bez konkurencnich verzi, bez zminky o Botanicu, vsude oznaceno jako pripravene PO rolloutu PR #114 a NE zive v produkci. `settings.partner_api_documentation` nezmenen. Pouze dokumentace — zadny kod, SQL, deploy, merge ani produkcni zmena.
