@@ -1,5 +1,15 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PARTNER API PR #114 — PRODUKCNI ROLLOUT PROVEDEN (14. 06. 2026)
+
+**Rollout PROVEDEN se schvalenim Pavla.** PR #114 mergnuto do `main` (merge commit `f5e508ca`). Produkce `xkzhjldrojjlrkezorey`: aplikovany migrace `20260613200202` (enum `pending` + idempotency index + RPC `create_partner_order_reward`/`update_partner_order_reward_status` + update `redeem_miocoin_code`/trigger) a `20260613200849` (crypto schema fix). EF `partner-activate` nasazena **v130**, `verify_jwt=false`.
+
+- **Postchecky OK:** enum = `issued,activated,cancelled,expired,pending`; oba nove RPC existuji; EXECUTE jen `service_role` (anon=false, authenticated=false); idempotency index `idx_partner_reward_codes_order_api_idempotency` existuje; `redeem_miocoin_code` odmita `pending`; zadny `partner_api_v1` objekt nezaveden.
+- **Smoke test:** RPC service_role (presne to, co EF vola) — create order 250 Kc u partnera `fd004ae0` (Test Influencer A, 100 Kc=1 MC) → `pending` 2 coiny, kod GRT3XLP46KR6; duplicate se stejnym `external_order_id` → stejny kod, `duplicate=true`. Pri create: **0 partner_coin_activations, 0 partner_invoices, 0 wallet_transactions**. EF boundary: bez Authorization → 401, spatny klic → 401. Probe radek pote smazan. Full EF happy-path s realnym klicem zamerne NEspusten — vystaveni produkcniho API klice bylo blokovano bezpecnostnim guardem; overen ekvivalentni RPC.
+- **`settings.partner_api_documentation` NEZMENEN** — stale popisuje stary endpoint; pred prepsanim z `docs/partner-api/PARTNER_API_GUIDE.md` nutno doplnit realny base URL (misto `<onemil-api>`) a schvalit partner-facing wording.
+- **Rollback info zachyceno:** partner-activate v129 (zdroj), md5 definic `redeem_miocoin_code`/`log_partner_coin_activation_from_reward`/`activate_partner_reward_sql`.
+- **Otevreny bod pred ostrym partnerskym provozem:** potvrdit `reward_base_czk`/`reward_mc` u realnych partneru; aktualizovat zivou partner API dokumentaci.
+
 ## PARTNER API ONBOARDING SADA — KOMPLETNI (14. 06. 2026, jen dokumentace)
 
 Ucelena onboarding sada pro partnery ve `docs/partner-api/` (PR #114 branch): `README.md` (index), `PARTNER_OWNER_OVERVIEW.md` (netechnicky prehled pro majitele), `PARTNER_API_GUIDE.md` (vyvojarsky order-event API guide — beze zmeny), `PARTNER_HANDOFF_EMAIL.md` (cesky predavaci e-mail pro Pavla). Jedna sada, zadne konkurencni verze; bez zminky o Botanicu. Vsude oznaceno „pripraveno PO rolloutu PR #114, NE zive v produkci". Owner overview vysvetluje: zakaznik nakoupi → e-shop posila order events na pozadi → OneMil pocita MioCoiny → cekajici odmena → paid/delivered/completed aktivuje, cancelled/returned/unpaid/not_picked_up zrusi → zakaznik dostane MioCoiny az uplatnenim → partner plati pozdeji jen za aktivovane/uplatnene MioCoiny dle stavajici invoice logiky; pri vytvoreni objednavky zadna faktura/e-mail/PDF/platba/wallet credit. `settings.partner_api_documentation` NEzmenen. Pouze dokumentace: zadny kod, SQL, deploy, merge ani produkcni zmena.

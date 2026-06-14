@@ -8,9 +8,19 @@ Kompletni partner onboarding sada ve `docs/partner-api/`: `README.md` (index), `
 
 Partner-facing pruvodce Partner API je v `docs/partner-api/PARTNER_API_GUIDE.md` (PR #114 branch), revidovan na order-event model (objednavka vytvorena → cekajici odmena; paid/delivered/completed → aktivni odmena; cancelled/returned/unpaid/not_picked_up → zrusena). Checkout neceka na OneMil; retry se stejnym `external_order_id` (idempotence). Partner neposila konecny pocet MioCoinu. Pripraveno PO rolloutu PR #114 — NE zive; `settings.partner_api_documentation` nezmenen. Zadny kod/SQL/deploy/merge/produkce.
 
-## PARTNER API PR #114 — PRODUKCNI ROLLOUT CHECKLIST (14. 06. 2026, NEPROVEDEN)
+## PARTNER API PR #114 — PRODUKCNI ROLLOUT PROVEDEN (14. 06. 2026)
 
-Produkcni rollout checklist pro Partner API existing-system (PR #114) je pripraven; produkce `xkzhjldrojjlrkezorey` NETKNUTA. **Bez vyslovneho pisemneho schvaleni Pavla NEdelat:** merge PR #114, aplikaci migraci `20260613200202` + `20260613200849`, deploy EF `partner-activate`.
+**Rollout PROVEDEN se schvalenim Pavla.** PR #114 mergnuto do `main` (merge commit `f5e508ca`). Na produkci `xkzhjldrojjlrkezorey` aplikovany migrace `20260613200202` + `20260613200849`; nasazena EF `partner-activate` **v130** (`verify_jwt=false`).
+
+- **Postchecky OK:** enum `partner_code_status` ma `pending`; RPC `create_partner_order_reward` + `update_partner_order_reward_status` existuji s EXECUTE jen pro `service_role` (anon/authenticated=false); idempotency index existuje; `redeem_miocoin_code` odmita `pending`; zadny `partner_api_v1` objekt.
+- **Smoke (RPC service_role + EF 401 boundary):** create→`pending` 2 coiny (kod GRT3XLP46KR6, partner Test Influencer A, test e-mail prod-rollout-test@onemil.cz), duplicate→stejny kod, **0 activations / 0 invoices / 0 wallet txns** pri create; EF bez klice i se spatnym klicem → 401. Probe radek pote smazan. Full EF happy-path s realnym klicem zamerne NEspusten (vystaveni produkcniho klice blokovano bezpecnostnim guardem) — overen ekvivalentni RPC, ktery EF vola.
+- **`settings.partner_api_documentation` ZATIM NEZMENEN** (stale stary endpoint) — vyzaduje doplneni realneho base URL misto `<onemil-api>` a schvaleni partner-facing wordingu pred prepsanim.
+- **Rollback info zachyceno** pred zmenou: partner-activate v129 (zdroj ulozen), definice `redeem_miocoin_code`/`log_partner_coin_activation_from_reward`/`activate_partner_reward_sql` (md5).
+- Pri `create_order_reward` NEvznika faktura/e-mail/PDF/platba/wallet credit/activation — overeno.
+
+### Puvodni checklist (historicky, nyni PROVEDEN)
+
+Produkcni rollout checklist pro Partner API existing-system (PR #114) byl pripraven. **Schvalovaci fraze byla:** „Schvaluji produkcni rollout Partner API (PR #114)…". Puvodni gate pred provedenim:
 
 - Staging spec 48 zeleny (run `27490386537`).
 - Pred rolloutem potvrdit `partners.reward_base_czk` + `reward_mc` u realnych partneru.
