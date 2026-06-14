@@ -1,5 +1,19 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SEC01 GROUP 2 SAFE/INTERIM — APLIKOVÁN A OVĚŘEN NA PRODUKCI (14. 06. 2026, schválení Pavla)
+
+SEC01 Group 2 safe/interim aplikován na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_group2_safe_interim_hardening`; bez DROP tabulky, bez security_invoker na admin views).
+
+- **Precheck:** produkční stav = baseline (E03/E14 anon=false/auth=true; 3 admin views anon+auth; vše RLS off/invoker off) → shoda.
+- **E14 `valid_partner_api_keys`** → revoke anon+auth + `security_invoker=on` → **vyřešeno**.
+- **E03 `_messages_policies_backup`** → `ENABLE ROW LEVEL SECURITY` + revoke anon+auth (tabulka NEsmazána) → **„RLS Disabled in Public" vyřešeno**.
+- **E05/E09/E23** (contest_activity_last_24h, admin_winner_delivery_stats, contest_revenue) → revoke anon, authenticated ponechán. **Security Definer View ERROR zůstává** (security_invoker = owner decision).
+- **Postcheck:** E03 rls_enabled=true/anon=f/auth=f; E14 anon=f/auth=f/invoker=on; 3 admin views anon=f/auth=t.
+- **Produkční advisor: ERROR 10 → 8** (zbytek = vše Security Definer View).
+- **Produkční P0 smoke `27511945205` = success, 5 passed.** Bez rollbacku. (Staging dříve: Full E2E `27511465619` 122 passed.)
+- **SEC01 ZŮSTÁVÁ P0 BLOCKER:** 8 ERROR na produkci; zbývá E05/E09/E23 security_invoker (owner decision), E03 volitelný DROP, Group 3 (E17–E20/E22), WARN/INFO.
+- Rollback k dispozici.
+
 ## SEC01 GROUP 2 SAFE/INTERIM — OVĚŘEN NA STAGINGU (14. 06. 2026)
 
 SEC01 Group 2 safe/interim aplikován **POUZE na staging** `dxmowysntemfqfnanxua` (migrace `sec01_group2_safe_interim_hardening`; bez DROP tabulky, bez security_invoker na admin views):

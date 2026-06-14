@@ -16,7 +16,11 @@
 > Group-1 ERROR findings (E01/E02/E04/E06/E07/E08/E10/E11/E12/E13/E15/E16/E21) are now **fixed (production, verified)**.
 > **SEC01 STILL A P0 BLOCKER:** 10 ERROR remain in production — **1 RLS Disabled in Public** (`_messages_policies_backup`, Group 2) + **9 Security Definer View** (Group 2/3). Plus the WARN/INFO categories. Group 1 only is closed.
 >
-> ### UPDATE 14.06.2026 — Group 2 safe/interim APPLIED + VERIFIED on STAGING (`dxmowysntemfqfnanxua`) only
+> ### UPDATE 14.06.2026 — Group 2 safe/interim APPLIED + VERIFIED on PRODUCTION (`xkzhjldrojjlrkezorey`, owner-approved by Pavel)
+> Same migration `sec01_group2_safe_interim_hardening` applied to production after precheck matched baseline. Postcheck: E03 rls_enabled=true/anon=f/auth=f; E14 anon=f/auth=f/invoker=on; 3 admin views anon=f/auth=t. Production advisor **ERROR 10 → 8** (E03 + E14 cleared; remaining 8 all Security Definer View). Production P0 smoke `27511945205` = success, 5 passed. **No rollback needed.**
+> E03/E14 now **fixed (production, verified)**; E05/E09/E23 **interim (production): anon revoked; Security Definer View ERROR remains** (security_invoker = owner decision). SEC01 stays **P0 blocker** — 8 ERROR remain in production.
+>
+> ### (earlier) Group 2 safe/interim APPLIED + VERIFIED on STAGING (`dxmowysntemfqfnanxua`)
 > Migration `sec01_group2_safe_interim_hardening` (no table drops, no `security_invoker` on admin views):
 > - **E14 `valid_partner_api_keys`** — revoked anon+auth + `security_invoker=on` → **cleared on staging**.
 > - **E03 `_messages_policies_backup`** — `ENABLE ROW LEVEL SECURITY` + revoked anon+auth (table NOT dropped) → **cleared on staging** ("RLS Disabled in Public" gone).
@@ -33,18 +37,18 @@
 |---|----------|----------|-----------------|--------|----------|--------------------------|
 | E01 | ERROR | Exposed Auth Users | `public.v_influencer_referrals_valid` (view) | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E02 | ERROR | Exposed Auth Users | `public.daily_platform_metrics` (view) | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
-| E03 | ERROR | RLS Disabled in Public | `public._messages_policies_backup` (table) | fixed (staging, verified) / prod pending | migration `sec01_group2_safe_interim_hardening`; staging advisor 10→8; E2E 27511465619 | Done on staging (ENABLE RLS + revoke; not dropped). Prod apply + optional DROP = owner decision |
+| E03 | ERROR | RLS Disabled in Public | `public._messages_policies_backup` (table) | fixed (production, verified) | migration `sec01_group2_safe_interim_hardening`; prod advisor 10→8; smoke 27511945205 | Done (ENABLE RLS + revoke; NOT dropped). Optional DROP = separate owner decision |
 | E04 | ERROR | Security Definer View | `public.v_user_wallets` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
-| E05 | ERROR | Security Definer View | `public.contest_activity_last_24h` | interim (staging): anon revoked; SDV ERROR remains; prod pending | migration `sec01_group2_safe_interim_hardening`; E2E 27511465619 | anon revoked (staging), authenticated kept for admin UI. `security_invoker` = owner decision (needs admin-RLS verify) |
+| E05 | ERROR | Security Definer View | `public.contest_activity_last_24h` | interim (production): anon revoked; SDV ERROR remains | migration `sec01_group2_safe_interim_hardening`; prod smoke 27511945205 | anon revoked (prod), authenticated kept for admin UI. `security_invoker` = owner decision (needs admin-RLS verify) |
 | E06 | ERROR | Security Definer View | `public.daily_platform_metrics` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E07 | ERROR | Security Definer View | `public.contest_analytics` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E08 | ERROR | Security Definer View | `public.contest_ticket_map` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
-| E09 | ERROR | Security Definer View | `public.admin_winner_delivery_stats` | interim (staging): anon revoked; SDV ERROR remains; prod pending | migration `sec01_group2_safe_interim_hardening`; E2E 27511465619 | anon revoked (staging), authenticated kept for admin UI. `security_invoker` = owner decision |
+| E09 | ERROR | Security Definer View | `public.admin_winner_delivery_stats` | interim (production): anon revoked; SDV ERROR remains | migration `sec01_group2_safe_interim_hardening`; prod smoke 27511945205 | anon revoked (prod), authenticated kept for admin UI. `security_invoker` = owner decision |
 | E10 | ERROR | Security Definer View | `public.event_queue_monitoring` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E11 | ERROR | Security Definer View | `public.event_queue_failed_summary` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E12 | ERROR | Security Definer View | `public.contest_integrity_check` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E13 | ERROR | Security Definer View | `public.system_health_monitor` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
-| E14 | ERROR | Security Definer View | `public.valid_partner_api_keys` | fixed (staging, verified) / prod pending | migration `sec01_group2_safe_interim_hardening`; staging advisor 10→8; E2E 27511465619 | Done on staging (unused → revoked anon/auth + security_invoker on). Prod apply pending owner approval |
+| E14 | ERROR | Security Definer View | `public.valid_partner_api_keys` | fixed (production, verified) | migration `sec01_group2_safe_interim_hardening`; prod advisor 10→8; smoke 27511945205 | Done (unused → revoked anon/auth + security_invoker on) |
 | E15 | ERROR | Security Definer View | `public.admin_winner_delivery_detail` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E16 | ERROR | Security Definer View | `public.v_first_topup_valid` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E17 | ERROR | Security Definer View | `public.v_influencer_referrals_paid` | open | advisor 14.06 | Review exposure |
@@ -53,7 +57,7 @@
 | E20 | ERROR | Security Definer View | `public.winners_with_contest` | needs owner decision | advisor 14.06 | Likely intentional public winners |
 | E21 | ERROR | Security Definer View | `public.v_influencer_referrals_valid` | fixed (production, verified) | migration `sec01_group1_safe_view_hardening`; advisor 23→10; smoke 27511158470 | Done — revoked anon/auth + security_invoker on |
 | E22 | ERROR | Security Definer View | `public.contest_progress` | needs owner decision | advisor 14.06 | Likely public contest data |
-| E23 | ERROR | Security Definer View | `public.contest_revenue` | interim (staging): anon revoked; SDV ERROR remains; prod pending | migration `sec01_group2_safe_interim_hardening`; E2E 27511465619 | anon revoked (staging), authenticated kept for admin UI. `security_invoker` = owner decision |
+| E23 | ERROR | Security Definer View | `public.contest_revenue` | interim (production): anon revoked; SDV ERROR remains | migration `sec01_group2_safe_interim_hardening`; prod smoke 27511945205 | anon revoked (prod), authenticated kept for admin UI. `security_invoker` = owner decision |
 
 ## B) INFO-level findings — RLS Enabled, No Policy (20) — deny-all by default, confirm intended
 
