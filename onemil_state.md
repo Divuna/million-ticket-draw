@@ -1,5 +1,17 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SEC01 E05/E23 — VYŘEŠENO NA STAGINGU (tickets admin-read + security_invoker) (14. 06. 2026)
+
+Na staging `dxmowysntemfqfnanxua` (migrace `sec01_e05_e23_tickets_admin_read_and_invoker`): přidána aditivní RLS policy `tickets_admin_select_all` (`has_role` admin/superadmin) na `public.tickets`, poté `security_invoker = on` na E05 `contest_activity_last_24h` a E23 `contest_revenue`.
+
+- **Baseline = postcheck (service-role, nezměněno):** activity 7 řádků, revenue 789 řádků, tickets_sold celkem 1153; oba views invoker on; policy přítomná.
+- **Privacy:** policy gated admin rolí → zákazníci dál vidí jen vlastní tikety (own-row), žádný nový leak.
+- **Advisor staging: ERROR 7 → 5** (E05+E23 zmizely). Zbývajících 5 = pouze Group 3 (`contest_miocoin_totals`, `contest_progress`, `partner_api_activity`, `v_influencer_referrals_paid`, `winners_with_contest`).
+- **Full Staging E2E `27512846743` = success, 122 passed, 0 fail** → /admin/contest/:id, TicketMapAdmin, AdminContestManagement mají správná čísla.
+- **PRODUKCE pro E05/E23 security_invoker NEDOTČENA** (na produkci zůstává jen interim anon-revoke; prod stále 7 ERROR).
+- **SEC01 ZŮSTÁVÁ P0 BLOCKER.** Pozn.: staging tickets předtím nemělo žádnou policy (deny-all); produkce má own-row policy — aditivní admin policy tam půjde čistě, ale vyžaduje samostatné prod schválení.
+- Rollback: RESET invoker na obou views + DROP POLICY tickets_admin_select_all.
+
 ## SEC01 E09 SECURITY_INVOKER — APLIKOVÁN A OVĚŘEN NA PRODUKCI (14. 06. 2026, schválení Pavla)
 
 E09 `admin_winner_delivery_stats` přepnuto na `security_invoker = on` na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_e09_admin_winner_delivery_stats_security_invoker`).
