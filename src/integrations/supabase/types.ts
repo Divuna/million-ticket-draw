@@ -4737,6 +4737,16 @@ export type Database = {
           key_prefix: string
         }[]
       }
+      create_partner_order_reward: {
+        Args: {
+          p_customer_email: string
+          p_external_order_id: string
+          p_metadata?: Json
+          p_order_total_czk: number
+          p_partner_id: string
+        }
+        Returns: Json
+      }
       generate_partner_invoice: {
         Args: {
           p_partner_id: string
@@ -5068,6 +5078,14 @@ export type Database = {
         }[]
       }
       redeem_miocoin_code: { Args: { p_code: string }; Returns: Json }
+      update_partner_order_reward_status: {
+        Args: {
+          p_external_order_id: string
+          p_order_status: string
+          p_partner_id: string
+        }
+        Returns: Json
+      }
       register_affiliate_account:
         | {
             Args: {
@@ -5254,7 +5272,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "superadmin" | "user"
-      partner_code_status: "issued" | "activated" | "cancelled" | "expired"
+      partner_code_status:
+        | "issued"
+        | "activated"
+        | "cancelled"
+        | "expired"
+        | "pending"
       partner_invoice_status: "draft" | "issued" | "paid" | "void"
       partner_status: "pending" | "approved" | "suspended" | "rejected"
     }
@@ -5385,7 +5408,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "superadmin", "user"],
-      partner_code_status: ["issued", "activated", "cancelled", "expired"],
+      partner_code_status: ["issued", "activated", "cancelled", "expired", "pending"],
       partner_invoice_status: ["draft", "issued", "paid", "void"],
       partner_status: ["pending", "approved", "suspended", "rejected"],
     },

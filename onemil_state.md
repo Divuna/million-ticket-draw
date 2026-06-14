@@ -1,5 +1,48 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PARTNER API ONBOARDING SADA — KOMPLETNI (14. 06. 2026, jen dokumentace)
+
+Ucelena onboarding sada pro partnery ve `docs/partner-api/` (PR #114 branch): `README.md` (index), `PARTNER_OWNER_OVERVIEW.md` (netechnicky prehled pro majitele), `PARTNER_API_GUIDE.md` (vyvojarsky order-event API guide — beze zmeny), `PARTNER_HANDOFF_EMAIL.md` (cesky predavaci e-mail pro Pavla). Jedna sada, zadne konkurencni verze; bez zminky o Botanicu. Vsude oznaceno „pripraveno PO rolloutu PR #114, NE zive v produkci". Owner overview vysvetluje: zakaznik nakoupi → e-shop posila order events na pozadi → OneMil pocita MioCoiny → cekajici odmena → paid/delivered/completed aktivuje, cancelled/returned/unpaid/not_picked_up zrusi → zakaznik dostane MioCoiny az uplatnenim → partner plati pozdeji jen za aktivovane/uplatnene MioCoiny dle stavajici invoice logiky; pri vytvoreni objednavky zadna faktura/e-mail/PDF/platba/wallet credit. `settings.partner_api_documentation` NEzmenen. Pouze dokumentace: zadny kod, SQL, deploy, merge ani produkcni zmena.
+
+## PARTNER API GUIDE — REVIDOVAN NA ORDER-EVENT MODEL (14. 06. 2026)
+
+Partner-facing pruvodce Partner API ulozen do `docs/partner-api/PARTNER_API_GUIDE.md` (PR #114 branch). Revidovan na **order-event model**: partner posila udalosti objednavky (vytvoreni → cekajici odmena; paid/delivered/completed → aktivni odmena; cancelled/returned/unpaid/not_picked_up → zrusena odmena). Checkout neceka na OneMil, volat na pozadi, pri vypadku retry se stejnym `external_order_id` (idempotence vraci stejny kod). Partner neposila konecny pocet MioCoinu — OneMil ho pocita z nastaveni partnera. Wording partner-facing („aktivni odmena"); raw `issued` jen v JSON prikladech. **Pripraveno pro stav PO rolloutu PR #114 — NE zive v produkci**; `settings.partner_api_documentation` zatim NEzmenen. Pouze dokumentace: zadny kod, SQL, deploy, merge ani produkcni zmena.
+
+## PARTNER API PR #114 — PRODUKCNI ROLLOUT CHECKLIST PRIPRAVEN (14. 06. 2026)
+
+Pripraven (NEPROVEDEN) produkcni rollout checklist pro Partner API existing-system implementaci (PR #114). Produkce `xkzhjldrojjlrkezorey` zustava NETKNUTA — zadny merge, zadne SQL, zadny deploy. Detailni plan (preconditions, SQL poradi, EF deploy, postchecky, bezpecny prod test, rollback) byl predan; toto je zaznam.
+
+- **Vyzaduje vyslovne pisemne schvaleni Pavla PRED:** (1) merge PR #114, (2) aplikaci migraci `20260613200202` a `20260613200849` (v tomto poradi) na produkci, (3) deploy Edge Function `partner-activate` (musi zustat `verify_jwt=false`).
+- **Staging spec 48 zeleny:** run `27490386537` (3 passed).
+- **Pred rolloutem nutno potvrdit partner reward settings** (`partners.reward_base_czk` + `partners.reward_mc`) u kazdeho realneho partnera — jinak API vraci `invalid_partner_conversion_settings` (Botanic ma stale `[TEST DATA]`).
+- **Pri `create_order_reward` (krok pending) NESMI vzniknout:** zadna faktura, zadny e-mail, zadne PDF, zadna platba, zadny wallet credit, zadny `partner_coin_activations` radek.
+- **Wallet credit a `partner_coin_activations` vznikaji az po redempci zakaznikem** (`redeem_miocoin_code`); faktury az tydennim cronem.
+- **Produkcni stav (read-only overeno 14.06.):** `partner-activate` v129 (stara single-action), enum `partner_code_status` bez `pending`, nove RPC + idempotency index NEpritomny, reward sloupce pritomny.
+- **Presna schvalovaci fraze, kterou musi Pavel napsat:**
+  > Schvaluji produkcni rollout Partner API (PR #114): aplikovat migrace 20260613200202 a 20260613200849 na produkci xkzhjldrojjlrkezorey a nasadit Edge Function partner-activate. Rozumim, ze se nevytvari zadna faktura/e-mail/PDF/platba/wallet credit pri vytvoreni objednavky.
+
+## STAGING E2E CI ODBLOKOVANO + SPEC 48 ZELENY (14. 06. 2026)
+
+Globalni staging CI vypadek (vsechny staging E2E vcetne `main` padaly v kroku „Ensure staging admin E2E user has admin role" s curl exit 22) vyresen. Spec 48 ted v CI zelene.
+
+- **Root cause:** GoTrue admin endpoint `/auth/v1/admin/users` vracel HTTP 500 „Database error finding users". Priciny: 2 radky v staging `auth.users` mely `email_change = NULL`. GoTrue skenuje tento sloupec do non-nullable Go stringu → NULL shodi list cely projekt. Radky (`codex-partner-v1@test.local`, `codex-partner-v1-redeem@test.local`, vytvorene 13.06. 19:37–19:38) vlozil **odmitnuty Partner API v1 prototyp primym SQL INSERTem do auth.users** (obesel GoTrue, ktery by sloupec defaultoval na `''`). Casove presne mezi poslednim zelenym runem (17:42) a prvnim padem (19:43).
+- **Workflow fix (main-compatible):** `.github/workflows/playwright-staging.yml` — admin-seed list call uz nepouziva `curl -sf` (slepy exit 22), ale zachytava HTTP status + telo a vypise maskovanou diagnostiku; `per_page` snizen 1000 → 200. Diky tomu byl root cause vubec videt.
+- **Staging auth data repair (vyslovne schvaleno Pavlem, staging only, non-destructive):** `UPDATE auth.users SET email_change='' WHERE id IN (bd4dd766…, be53289f…) AND email_change IS NULL`. Pouze NULL → '' na 2 radcich; prototype radky NEsmazany (residue cleanup zustava pending). Postcheck: 0 zbylych NULL.
+- **Spec 48 test fix (test-only):** setup throwaway zakaznika nyni zaklada i `public.users` radek (`wallets.user_id` FK → `public.users(id)`, zadny auth→public trigger). Partner API logika nezmenena.
+- **Zeleny vysledek:** staging run `27490386537` — **3 passed** (48a–48d, 48e–48f, 48g). Cherry-pick commit `7b20a57c`, spec `c76dff74`.
+- **Produkce netknuta:** zadne produkcni SQL, zadny deploy, `xkzhjldrojjlrkezorey` nedotcen.
+
+## CLEAN PARTNER API BRANCH + SPEC 48 (14. 06. 2026)
+
+Cista vetev `codex/partner-api-existing-system-clean` z aktualniho `main` (9a40cec8). Cherry-pick pouze commitu `590e4f5b` (Partner API order flow nad existujicim systemem); rejected prototyp ani duplicitni Partner Invoice prace z vetve `codex/affiliate-payouts-audit` NEzahrnuty. Doc konflikty vyreseny tak, ze `onemil_state.md`/`onemil_history.md`/`CLAUDE.md` zustaly identicke s `main` (doc zmeny commitu zahozeny, dokumentuje se zde).
+
+- **Cherry-pick commit na clean vetvi:** `7b20a57c` (jen 4 kodove soubory: `partner-activate/index.ts`, `types.ts`, 2 migrace). Diff vs main = pouze Partner API; zadne `partner_api_v1` reference, zadne invoice duplicity.
+- **Reuse potvrzeno:** existujici EF `partner-activate`, `partner_reward_codes`, `partner_coin_activations`, `partner_api_keys`, `redeem_miocoin_code`. Zadny novy endpoint ani tabulka.
+- **Spec 48** `tests/e2e/48-partner-order-api.spec.ts` (commit `d7af1543`, staging-only, self-contained): create→pending, duplicate→stejny kod, pending nelze redeem, paid→issued, issued redeem kredituje wallet + vznikne activation, cancelled nelze redeem, zadna faktura/activation behem create.
+- **CI blocker (pre-existing, NESOUVISI s touto zmenou):** staging Full E2E workflow padá v pre-test kroku „Ensure staging admin E2E user has admin role" (curl exit 22). Stejny krok padá i na `main` (scheduled run `27477105656` 13.06. 19:43 selhal; posledni zeleny byl spec 47 run `27474214282` 17:42). Spec 48 si vytvari vlastni throwaway uzivatele a tento seed krok nepotrebuje, ale workflow ho ma jako tvrdou branu → spec 48 v CI zatim nedobehl.
+- **Manualni staging verifikace logiky (zelena, 14.06.):** pres nasazene RPC na partnerovi `99790c17` (100 Kc = 1 MioCoin): order 250 Kc → create `pending` 2 coiny (kod HI06EJ6KFUEU), duplicate → stejny kod, paid → `issued`, druhy order → cancel → `cancelled`; activations behem create = 0. Probe radky pote smazany. Redeem-rejection (pending/cancelled) je vynucen v `redeem_miocoin_code` a byl drive overen codex staging kody.
+- **Zbyva pred merge:** opravit/odblokovat staging admin-seed CI krok, pak nechat spec 48 dobehnout zelene v CI; produkcni rollout checklist + vyslovne schvaleni Pavla. Staging cleanup (rejected prototyp `partner_api_v1_order_rewards` + codex test data) zustava pending na samostatne schvaleni.
+
 ## ✅ STAGING PARTNER API REAL ACTIVATION TEST — PROŠEL (13. 06. 2026)
 
 Staging dxmowysntemfqfnanxua — real end-to-end partner API activation test prošel. Produkce nedotčena.

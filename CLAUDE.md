@@ -1,5 +1,22 @@
 # CLAUDE.md
 
+## PARTNER API ONBOARDING SADA (14. 06. 2026, jen dokumentace)
+
+Kompletni partner onboarding sada ve `docs/partner-api/`: `README.md` (index), `PARTNER_OWNER_OVERVIEW.md` (netechnicky majitel), `PARTNER_API_GUIDE.md` (vyvojar, order-event), `PARTNER_HANDOFF_EMAIL.md` (cesky predavaci e-mail). Jedna sada, zadne konkurencni verze, bez Botanicu. Owner: order events → OneMil pocita MioCoiny → cekajici → aktivni (paid/delivered/completed) / zrusena (cancelled/returned/unpaid/not_picked_up) → MioCoiny az uplatnenim → partner plati pozdeji jen za aktivovane/uplatnene dle stavajici invoice logiky; pri create zadna faktura/e-mail/PDF/platba/wallet credit. Pripraveno PO rolloutu PR #114, NE zive; `settings.partner_api_documentation` nezmenen. Zadny kod/SQL/deploy/merge/produkce.
+
+## PARTNER API GUIDE — ORDER-EVENT MODEL (14. 06. 2026, jen dokumentace)
+
+Partner-facing pruvodce Partner API je v `docs/partner-api/PARTNER_API_GUIDE.md` (PR #114 branch), revidovan na order-event model (objednavka vytvorena → cekajici odmena; paid/delivered/completed → aktivni odmena; cancelled/returned/unpaid/not_picked_up → zrusena). Checkout neceka na OneMil; retry se stejnym `external_order_id` (idempotence). Partner neposila konecny pocet MioCoinu. Pripraveno PO rolloutu PR #114 — NE zive; `settings.partner_api_documentation` nezmenen. Zadny kod/SQL/deploy/merge/produkce.
+
+## PARTNER API PR #114 — PRODUKCNI ROLLOUT CHECKLIST (14. 06. 2026, NEPROVEDEN)
+
+Produkcni rollout checklist pro Partner API existing-system (PR #114) je pripraven; produkce `xkzhjldrojjlrkezorey` NETKNUTA. **Bez vyslovneho pisemneho schvaleni Pavla NEdelat:** merge PR #114, aplikaci migraci `20260613200202` + `20260613200849`, deploy EF `partner-activate`.
+
+- Staging spec 48 zeleny (run `27490386537`).
+- Pred rolloutem potvrdit `partners.reward_base_czk` + `reward_mc` u realnych partneru.
+- Pri `create_order_reward` NESMI vzniknout faktura/e-mail/PDF/platba/wallet credit/`partner_coin_activations` radek; wallet credit + activation az po `redeem_miocoin_code`.
+- Presna schvalovaci fraze: „Schvaluji produkcni rollout Partner API (PR #114): aplikovat migrace 20260613200202 a 20260613200849 na produkci xkzhjldrojjlrkezorey a nasadit Edge Function partner-activate. Rozumim, ze se nevytvari zadna faktura/e-mail/PDF/platba/wallet credit pri vytvoreni objednavky."
+
 ## PUBLIC CUSTOMER-FACING UI TEXT AUDIT — ✅ ČISTÉ (13. 06. 2026)
 
 Read-only audit zákaznických UI textů (routy `/`, `/games`, `/wins`, `/vouchers`, `/profile`, `/messages`, `/my-contests`).
