@@ -4195,3 +4195,6 @@ Invariant:
 ---
 
 **Timestamp (Europe/Prague): 2026-06-14** — Launch plan gap audit (read-only). Doplneno do `docs/launch-readiness/*`: cookie banner existuje (L04 preformulovan), GAP P0 zakaznicky reset hesla (C22, nenalezen forgot/reset-password flow), zakaznicke doporuceni/invite (C23), affiliate/influencer sekce AF01–AF05 + rozhodnuti o rozsahu pro 1. test, security sekce SEC01–SEC03 (23 pre-existing advisor nalezu jako P0 consideration). Bodu 65 → 75. Nove P0 blockery: reset hesla zakaznika, security backlog. Pouze dokumentace.
+**Timestamp (Europe/Prague): 2026-06-14** - C22 customer password reset prenesen na cistou vetev `codex/customer-password-reset-clean` z aktualniho `main`. Preneseny pouze soubory souvisejici se zakaznickou obnovou hesla ze source commitu `daafb1d0`: `useAuth`, router, login odkaz, nova `ResetPassword` stranka, DOB guard exempt route, E2E smoke spec 44 a minimalni dokumentacni zaznamy. `docs/launch-readiness/LAUNCH_TODO.md` zustal aktualni z main a byl upraven jen radek C22. Bez SQL, deploye, produkcnich dat, Partner API, fakturace a reward logiky.
+
+---

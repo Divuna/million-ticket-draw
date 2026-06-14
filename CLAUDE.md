@@ -1147,3 +1147,8 @@ Phase 2 backend design invariant: approved design only, not implemented. Require
 ## SECURITY BACKLOG (09. 06. 2026)
 
 Pre-existing security findings z 2026-05-24 nejsou součástí Phase 2 a mají být řešeny samostatným bezpečnostním auditem. Při G3 publishi Phase 2 (`/admin/affiliate-commissions`) bylo 23 nálezů (Supabase linter + supabase_lov) označeno jako ignore s odůvodněním „pre-existing, unrelated to Phase 2". Tyto nálezy musí být znovu otevřeny a vyřešeny v samostatném security audit ticketu — netýkají se commission UI a nebyly zavedeny Phase 2 změnou.
+## C22 CUSTOMER PASSWORD RESET (14. 06. 2026)
+
+Clean branch `codex/customer-password-reset-clean` brings only the customer password reset work from source commit `daafb1d0` onto current `main`. Keep this scoped: `/reset-password` is the customer Supabase Auth reset route, `/partner/set-password` remains the partner setup route. Do not mix this with the old `codex/affiliate-payouts-audit` branch, Partner API, invoices, reward logic, SQL, deploys, or production data.
+
+---
